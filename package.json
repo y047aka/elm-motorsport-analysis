@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "build": "node ./build.js",
+    "start": "elm-live src/Main.elm --pushstate --hot --open -- --debug --output=elm.js"
+  },
+  "devDependencies": {
+    "elm": "^0.19.1-5",
+    "elm-format": "^0.8.5",
+    "elm-live": "^4.0.2",
+    "elm-review": "^2.5.3",
+    "esbuild": "^0.12.14",
+    "esbuild-plugin-elm": "0.0.4"
+  }
+}
