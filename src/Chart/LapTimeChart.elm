@@ -68,7 +68,7 @@ view { summary, raceHistories } =
     svg [ viewBox 0 0 w h ]
         [ xAxis lapTotal
         , yAxis fastestLap
-        , viewLapHistories
+        , lapHistories
             { x = .lapCount >> toFloat >> Scale.convert (xScale lapTotal)
             , y = .time >> Scale.convert (yScale fastestLap)
             }
@@ -76,12 +76,12 @@ view { summary, raceHistories } =
         ]
 
 
-viewLapHistories : { x : Lap -> Float, y : Lap -> Float } -> List History -> Svg msg
-viewLapHistories options histories =
+lapHistories : { x : Lap -> Float, y : Lap -> Float } -> List History -> Svg msg
+lapHistories options histories =
     g [] <|
         List.map
             (\history ->
-                viewLapHistory
+                lapHistory
                     { x = options.x
                     , y = options.y
                     , dotLabel = .lapCount >> String.fromInt
@@ -92,7 +92,7 @@ viewLapHistories options histories =
             histories
 
 
-viewLapHistory :
+lapHistory :
     { x : a -> Float
     , y : a -> Float
     , dotLabel : a -> String
@@ -100,10 +100,10 @@ viewLapHistory :
     }
     -> List a
     -> Svg msg
-viewLapHistory options laps =
+lapHistory options laps =
     g
         [ Svg.Styled.Attributes.class "history" ]
-        [ drawCurve
+        [ path
             { x = options.x
             , y = options.y
             , strokeColor = options.color
@@ -136,10 +136,10 @@ dotWithLabel options item =
         ]
 
 
-drawCurve : { x : a -> Float, y : a -> Float, strokeColor : String } -> List a -> Svg msg
-drawCurve { x, y, strokeColor } items =
+path : { x : a -> Float, y : a -> Float, strokeColor : String } -> List a -> Svg msg
+path { x, y, strokeColor } items =
     items
         |> List.map (\item -> Just ( x item, y item ))
         |> Shape.line Shape.linearCurve
-        |> (\path -> Path.element path [ style ("stroke: " ++ strokeColor) ])
+        |> (\path_ -> Path.element path_ [ style ("stroke: " ++ strokeColor) ])
         |> fromUnstyled
