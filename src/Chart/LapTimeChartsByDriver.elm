@@ -131,6 +131,7 @@ dot options item =
             , cy (options.y item)
             , r 1.5
             , fill options.fillColor
+            , stroke "#fff"
             ]
             []
         ]

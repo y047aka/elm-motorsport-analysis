@@ -2,6 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation exposing (Key)
+import Chart.GapChart as GapChart
 import Chart.LapTimeChart as LapTimeChart
 import Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Css exposing (..)
@@ -93,6 +94,7 @@ view model =
                 [ toUnstyled <|
                     div []
                         [ raceSummary analysis
+                        , GapChart.view analysis
                         , LapTimeChart.view analysis
                         , LapTimeChartsByDriver.view analysis
                         ]

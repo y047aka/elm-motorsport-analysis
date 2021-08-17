@@ -1,9 +1,10 @@
-module Chart.LapTimeChart exposing (view)
+module Chart.GapChart exposing (view)
 
 import Axis
 import Css exposing (Style, block, cursor, default, display, hex, hover, none, property)
 import Css.Global exposing (children, descendants, each, typeSelector)
 import Data.Analysis exposing (Analysis, History)
+import Data.Driver exposing (Driver)
 import Data.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html, text)
 import Path.Styled as Path
@@ -26,9 +27,9 @@ h =
     400
 
 
-padding : { top : Float, right : Float, bottom : Float, left : Float }
+padding : { top : Float, left : Float, bottom : Float, right : Float }
 padding =
-    { top = 20, right = 20, bottom = 30, left = 60 }
+    { top = 20, left = 60, bottom = 30, right = 20 }
 
 
 xScale : Int -> ContinuousScale Float
@@ -38,7 +39,7 @@ xScale lapTotal =
 
 yScale : Lap -> ContinuousScale Float
 yScale fastestLap =
-    Scale.linear ( h - padding.bottom, padding.top ) ( fastestLap.time, fastestLap.time * 1.2 )
+    Scale.linear ( h - padding.bottom, padding.top ) ( fastestLap.time * 25, 0 )
 
 
 xAxis : Int -> Svg msg
@@ -81,7 +82,7 @@ view { summary, raceHistories } =
         , yAxis fastestLap
         , lapHistories
             { x = .lapCount >> toFloat >> Scale.convert (xScale lapTotal)
-            , y = .time >> Scale.convert (yScale fastestLap)
+            , y = (\{ lapCount, elapsed } -> elapsed - (toFloat lapCount * fastestLap.time * 1.02)) >> Scale.convert (yScale fastestLap)
             }
             raceHistories
         ]
@@ -113,7 +114,9 @@ lapHistory :
     -> Svg msg
 lapHistory options laps =
     g []
-        [ path
+        [ --   text_ [ x 10, y (toFloat i * 20 + 15) ] [ Html.text history.carNumber ]
+          -- , text_ [ x 35, y (toFloat i * 20 + 15) ] [ Html.text history.driver.name ]
+          path
             { x = options.x
             , y = options.y
             , strokeColor = options.color
