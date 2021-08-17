@@ -39,8 +39,12 @@ analysisDecoder =
 
 toAnalysis : RaceSummary -> List History -> Analysis
 toAnalysis summary raceHistories =
+    let
+        histories =
+            standings summary.drivers raceHistories
+    in
     { summary = summary
-    , raceHistories = standings summary.drivers raceHistories
+    , raceHistories = histories
     }
 
 
@@ -71,20 +75,15 @@ toHistory carNumber laps maybePitStops =
 
 standings : List Driver -> List History -> List History
 standings drivers histories =
-    drivers
+    histories
         |> List.map
-            (\driver ->
+            (\history ->
                 let
-                    history =
-                        histories
-                            |> List.filter (\{ carNumber } -> driver.carNumber == carNumber)
+                    driver =
+                        drivers
+                            |> List.filter (\{ carNumber } -> history.carNumber == carNumber)
                             |> List.head
-                            |> Maybe.withDefault (History "" (Driver "" "" "" "" "") [] [] (Lap 0 0 0))
+                            |> Maybe.withDefault (Driver "" "" "" "" "")
                 in
-                { driver = driver
-                , carNumber = history.carNumber
-                , laps = history.laps
-                , pitStops = history.pitStops
-                , fastestLap = history.fastestLap
-                }
+                { history | driver = driver }
             )
