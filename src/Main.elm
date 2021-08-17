@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser exposing (Document)
 import Browser.Navigation exposing (Key)
 import Chart.LapTimeChart as LapTimeChart
+import Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Css exposing (..)
 import Data.Analysis exposing (Analysis, analysisDecoder)
 import Html.Styled as Html exposing (Html, div, td, text, th, toUnstyled, tr)
@@ -87,19 +88,18 @@ view : Model -> Document Msg
 view model =
     { title = "Race Analysis"
     , body =
-        [ toUnstyled <|
-            div []
-                [ model.analysis
-                    |> Maybe.map raceSummary
-                    |> Maybe.withDefault (text "")
-                , model.analysis
-                    |> Maybe.map dataTable
-                    |> Maybe.withDefault (text "")
-                , model.analysis
-                    |> Maybe.map LapTimeChart.view
-                    |> Maybe.withDefault (text "")
+        case model.analysis of
+            Just analysis ->
+                [ toUnstyled <|
+                    div []
+                        [ raceSummary analysis
+                        , LapTimeChart.view analysis
+                        , LapTimeChartsByDriver.view analysis
+                        ]
                 ]
-        ]
+
+            Nothing ->
+                []
     }
 
 

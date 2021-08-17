@@ -70,13 +70,13 @@ toHistory carNumber laps maybePitStops =
 
 
 standings : List Driver -> List History -> List History
-standings drivers raceHistories =
+standings drivers histories =
     drivers
         |> List.map
             (\driver ->
                 let
                     history =
-                        raceHistories
+                        histories
                             |> List.filter (\{ carNumber } -> driver.carNumber == carNumber)
                             |> List.head
                             |> Maybe.withDefault (History "" (Driver "" "" "" "" "") [] [] (Lap 0 0 0))

@@ -1,15 +1,15 @@
 module Chart.LapTimeChart exposing (view)
 
 import Axis
-import Css exposing (block, cursor, default, display, hex, hover, none, property)
+import Css exposing (Style, block, cursor, default, display, hex, hover, none, property)
 import Css.Global exposing (children, descendants, each, typeSelector)
 import Data.Analysis exposing (Analysis, History)
 import Data.Lap exposing (Lap, fastest)
-import Html.Styled exposing (Html, fromUnstyled, text)
+import Html.Styled exposing (Html, text)
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
-import Svg.Styled exposing (Svg, circle, g, svg, text_)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg, text_)
 import Svg.Styled.Attributes exposing (css, fill, stroke)
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx exposing (cx, cy, r, x, y)
@@ -44,33 +44,26 @@ yScale fastestLap =
 xAxis : Int -> Svg msg
 xAxis lapTotal =
     g
-        [ transform [ Translate 0 (h - padding.bottom) ]
-        , css
-            [ descendants
-                [ each [ typeSelector "line", typeSelector "path" ]
-                    [ property "stroke" "#999" ]
-                , typeSelector "text"
-                    [ Css.fill (hex "#999") ]
-                ]
-            ]
-        ]
+        [ transform [ Translate 0 (h - padding.bottom) ], css axisStyles ]
         [ fromUnstyled <| Axis.bottom [] (xScale lapTotal) ]
 
 
 yAxis : Lap -> Svg msg
 yAxis fastestLap =
     g
-        [ transform [ Translate padding.left 0 ]
-        , css
-            [ descendants
-                [ each [ typeSelector "line", typeSelector "path" ]
-                    [ property "stroke" "#999" ]
-                , typeSelector "text"
-                    [ Css.fill (hex "#999") ]
-                ]
-            ]
-        ]
+        [ transform [ Translate padding.left 0 ], css axisStyles ]
         [ fromUnstyled <| Axis.left [] (yScale fastestLap) ]
+
+
+axisStyles : List Style
+axisStyles =
+    [ descendants
+        [ each [ typeSelector "line", typeSelector "path" ]
+            [ property "stroke" "#999" ]
+        , typeSelector "text"
+            [ Css.fill (hex "#999") ]
+        ]
+    ]
 
 
 view : Analysis -> Html msg
