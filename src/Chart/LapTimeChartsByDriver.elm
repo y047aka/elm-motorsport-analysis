@@ -84,24 +84,24 @@ view { summary, raceHistories } =
             ]
         ]
         (List.map
-            (\history ->
+            (\{ carNumber, driver, laps } ->
                 li [ css [ listStyle none ] ]
-                    [ p [] [ text (history.carNumber ++ " " ++ history.driver.name) ]
-                    , lapTimeChart
+                    [ p [] [ text (carNumber ++ " " ++ driver.name) ]
+                    , dotHistory
                         { x = .lapCount >> toFloat >> Scale.convert (xScale summary.lapTotal)
                         , y = .time >> Scale.convert (yScale fastestLap)
                         , fastestLap = fastestLap
-                        , color = history.driver.teamColor
+                        , color = driver.teamColor
                         }
                         summary
-                        history.laps
+                        laps
                     ]
             )
             raceHistories
         )
 
 
-lapTimeChart :
+dotHistory :
     { x : Lap -> Float
     , y : Lap -> Float
     , fastestLap : Lap
@@ -110,36 +110,51 @@ lapTimeChart :
     -> RaceSummary
     -> List Lap
     -> Html msg
-lapTimeChart options { lapTotal } laps =
-    let
-        dot_ =
-            dot { x = options.x, y = options.y, fillColor = options.color }
-    in
+dotHistory options { lapTotal } laps =
     svg [ viewBox 0 0 w h ]
         [ xAxis lapTotal
         , yAxis options.fastestLap
-        , path { x = options.x, y = options.y, strokeColor = options.color } laps
-        , g [] (List.map dot_ laps)
+        , dotHistory_
+            { dots =
+                List.map
+                    (\lap ->
+                        dot
+                            { x = options.x lap
+                            , y = options.y lap
+                            , fillColor = options.color
+                            }
+                    )
+                    laps
+            , path =
+                laps
+                    |> List.map (\item -> Just ( options.x item, options.y item ))
+                    |> path { strokeColor = options.color }
+            }
         ]
 
 
-dot : { x : a -> Float, y : a -> Float, fillColor : String } -> a -> Svg msg
-dot options item =
+dotHistory_ : { dots : List (Svg msg), path : Svg msg } -> Svg msg
+dotHistory_ options =
     g []
-        [ circle
-            [ cx (options.x item)
-            , cy (options.y item)
-            , r 1.5
-            , fill options.fillColor
-            , stroke "#fff"
-            ]
-            []
+        [ options.path
+        , g [] options.dots
         ]
 
 
-path : { x : a -> Float, y : a -> Float, strokeColor : String } -> List a -> Svg msg
-path { x, y, strokeColor } items =
+dot : { x : Float, y : Float, fillColor : String } -> Svg msg
+dot { x, y, fillColor } =
+    circle
+        [ cx x
+        , cy y
+        , r 1.5
+        , fill fillColor
+        , stroke "#fff"
+        ]
+        []
+
+
+path : { strokeColor : String } -> List (Maybe ( Float, Float )) -> Svg msg
+path { strokeColor } items =
     items
-        |> List.map (\item -> Just ( x item, y item ))
         |> Shape.line Shape.linearCurve
         |> (\path_ -> Path.element path_ [ fill "none", stroke strokeColor ])

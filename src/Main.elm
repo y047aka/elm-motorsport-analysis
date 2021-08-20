@@ -229,7 +229,7 @@ view model =
 
             Nothing ->
                 [ toUnstyled <|
-                    Chart.lapChart model
+                    Chart.view model
                 ]
     }
 

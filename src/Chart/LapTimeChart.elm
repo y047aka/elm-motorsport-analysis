@@ -92,7 +92,7 @@ view { summary, raceHistories } =
 dotHistories : { x : Lap -> Float, y : Lap -> Float, dotLabel : Lap -> String } -> List History -> List (Svg msg)
 dotHistories { x, y, dotLabel } histories =
     List.map
-        (\{ laps, driver } ->
+        (\{ driver, laps } ->
             dotHistory
                 { dots =
                     List.map

@@ -1,4 +1,4 @@
-module Chart.Chart exposing (lapChart)
+module Chart.Chart exposing (view)
 
 import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
 import Css exposing (block, display)
@@ -7,12 +7,12 @@ import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
 import Data.Car exposing (Car)
 import Data.Class exposing (Class(..))
-import Html.Styled exposing (text)
+import Html.Styled exposing (Html)
 import Scale exposing (ContinuousScale)
-import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, svg)
-import Svg.Styled.Attributes as Svg
+import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
+import Svg.Styled.Attributes exposing (css)
 import TypedSvg.Styled.Attributes exposing (points, transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx exposing (height, width, x, y)
+import TypedSvg.Styled.Attributes.InPx as InPx exposing (height, width, x, y)
 import TypedSvg.Types exposing (Paint(..), Transform(..))
 
 
@@ -58,7 +58,7 @@ xAxis ordersByLap =
                     (xScale ordersByLap)
     in
     g
-        [ Svg.css
+        [ css
             [ descendants
                 [ Css.Global.typeSelector "text" [ svgPalette textOptional ]
                 , each
@@ -76,13 +76,13 @@ xAxis ordersByLap =
         ]
 
 
-lapChart : { a | cars : List Car, ordersByLap : OrdersByLap } -> Svg msg
-lapChart { cars, ordersByLap } =
+view : { a | cars : List Car, ordersByLap : OrdersByLap } -> Html msg
+view { cars, ordersByLap } =
     svg
         [ width w
         , height h
         , viewBox 0 0 w h
-        , Svg.css [ display block ]
+        , css [ display block ]
         ]
         [ xAxis ordersByLap
         , g []
@@ -99,51 +99,47 @@ lapChart { cars, ordersByLap } =
 
 
 historyFor : { x : Int -> Float, y : Int -> Float } -> Car -> Svg msg
-historyFor options car =
+historyFor { x, y } ({ startPosition, positions } as car) =
+    historyFor_
+        { heading =
+            heading
+                { x = x <| -20
+                , y = y startPosition + 5
+                }
+                [ text <| String.join " " [ String.fromInt car.carNumber, car.team ] ]
+        , polyline =
+            (startPosition :: positions)
+                |> List.indexedMap (\i position -> ( x i, y position ))
+                |> polyline_ { svgPalette = svgPalette_ car.class }
+        , positionLabels =
+            (startPosition :: positions)
+                |> List.indexedMap (\i position -> ( x i, y position ))
+                |> positionLabels { label = text (String.fromInt car.carNumber) }
+        }
+
+
+historyFor_ : { heading : Svg msg, positionLabels : List (Svg msg), polyline : Svg msg } -> Svg msg
+historyFor_ options =
     g []
-        [ heading
-            { x = options.x
-            , y = options.y
-            , label = String.join " " [ String.fromInt car.carNumber, car.team ]
-            }
-            car.startPosition
-
-        -- , positionsGroup
-        --     { x = options.x
-        --     , y = options.y
-        --     , label = String.fromInt car.carNumber
-        --     }
-        --     car
-        , polyline
-            { x = options.x
-            , y = options.y
-            , svgPalette = svgPalette_ car.class
-            }
-            car
+        [ options.heading
+        , options.polyline
+        , g [] options.positionLabels
         ]
 
 
-heading : { x : Int -> Float, y : Int -> Float, label : String } -> Int -> Svg msg
-heading options startPosition =
-    g []
-        [ Svg.text_
-            [ x <| options.x -20
-            , y <| (options.y >> (+) 5) startPosition
-            ]
-            [ text options.label ]
-        ]
+heading : { x : Float, y : Float } -> List (Svg msg) -> Svg msg
+heading { x, y } =
+    text_ [ InPx.x x, InPx.y y ]
 
 
-polyline : { x : Int -> Float, y : Int -> Float, svgPalette : SvgPalette } -> Car -> Svg msg
-polyline options { startPosition, positions } =
-    Svg.polyline
-        [ Svg.css [ svgPalette options.svgPalette ]
-        , points <|
-            List.indexedMap
-                (\index position -> ( options.x index, options.y position ))
-                (startPosition :: positions)
-        ]
-        []
+polyline_ : { svgPalette : SvgPalette } -> List ( Float, Float ) -> Svg msg
+polyline_ options points_ =
+    polyline [ css [ svgPalette options.svgPalette ], points points_ ] []
+
+
+positionLabels : { label : Svg msg } -> List ( Float, Float ) -> List (Svg msg)
+positionLabels { label } =
+    List.map (\( x, y ) -> text_ [ InPx.x x, InPx.y y ] [ label ])
 
 
 svgPalette_ : Class -> SvgPalette
@@ -160,17 +156,3 @@ svgPalette_ class =
 
         LMGTE_Am ->
             strokeGTEAm
-
-
-positionsGroup : { x : Int -> Float, y : Int -> Float, label : String } -> Car -> Svg msg
-positionsGroup options { startPosition, positions } =
-    g [] <|
-        List.indexedMap
-            (\index position ->
-                Svg.text_
-                    [ x (options.x index)
-                    , y (options.y position)
-                    ]
-                    [ text options.label ]
-            )
-            (startPosition :: positions)
