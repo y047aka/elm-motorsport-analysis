@@ -1,18 +1,16 @@
 module Chart.GapChart exposing (view)
 
 import Axis
-import Css exposing (Style, block, cursor, default, display, hex, hover, none, property)
-import Css.Global exposing (children, descendants, each, typeSelector)
+import Chart.Fragments exposing (dotWithLabel, path)
+import Css exposing (Style, fill, hex, property)
+import Css.Global exposing (descendants, each, typeSelector)
 import Data.Analysis exposing (Analysis)
 import Data.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html, text)
-import Path.Styled as Path
 import Scale exposing (ContinuousScale)
-import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg, text_)
-import Svg.Styled.Attributes exposing (css, fill, stroke)
+import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
+import Svg.Styled.Attributes exposing (css)
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx exposing (r)
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -59,7 +57,7 @@ axisStyles =
         [ each [ typeSelector "line", typeSelector "path" ]
             [ property "stroke" "#999" ]
         , typeSelector "text"
-            [ Css.fill (hex "#999") ]
+            [ fill (hex "#999") ]
         ]
     ]
 
@@ -128,43 +126,3 @@ dotHistory_ options =
         [ options.path
         , g [] options.dots
         ]
-
-
-dotWithLabel : { cx : Float, cy : Float, fillColor : String } -> List (Svg msg) -> Svg msg
-dotWithLabel options label =
-    g
-        [ css
-            [ children
-                [ typeSelector "text"
-                    [ display none, cursor default ]
-                ]
-            , hover
-                [ children
-                    [ typeSelector "text"
-                        [ display block ]
-                    ]
-                ]
-            ]
-        ]
-        [ dot options
-        , text_ [ InPx.x options.cx, InPx.y options.cy ] label
-        ]
-
-
-dot : { cx : Float, cy : Float, fillColor : String } -> Svg msg
-dot { cx, cy, fillColor } =
-    circle
-        [ InPx.cx cx
-        , InPx.cy cy
-        , r 2
-        , fill fillColor
-        , stroke "#fff"
-        ]
-        []
-
-
-path : { strokeColor : String } -> List (Maybe ( Float, Float )) -> Svg msg
-path { strokeColor } items =
-    items
-        |> Shape.line Shape.linearCurve
-        |> (\path_ -> Path.element path_ [ fill "none", stroke strokeColor ])

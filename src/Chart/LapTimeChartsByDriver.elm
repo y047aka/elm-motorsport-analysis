@@ -1,19 +1,17 @@
 module Chart.LapTimeChartsByDriver exposing (view)
 
 import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
-import Css exposing (Style, hex, listStyle, none, property, zero)
+import Chart.Fragments exposing (dot, path)
+import Css exposing (Style, fill, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
 import Data.Analysis exposing (Analysis)
 import Data.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
-import Path.Styled as Path
 import Scale exposing (ContinuousScale)
-import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
-import Svg.Styled.Attributes as Svg exposing (fill, stroke)
+import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
+import Svg.Styled.Attributes as Svg
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx exposing (r)
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -60,7 +58,7 @@ axisStyles =
         [ each [ typeSelector "line", typeSelector "path" ]
             [ property "stroke" "#999" ]
         , typeSelector "text"
-            [ Css.fill (hex "#999") ]
+            [ fill (hex "#999") ]
         ]
     ]
 
@@ -128,22 +126,3 @@ dotHistory_ options =
         [ options.path
         , g [] options.dots
         ]
-
-
-dot : { cx : Float, cy : Float, fillColor : String } -> Svg msg
-dot { cx, cy, fillColor } =
-    circle
-        [ InPx.cx cx
-        , InPx.cy cy
-        , r 1.5
-        , fill fillColor
-        , stroke "#fff"
-        ]
-        []
-
-
-path : { strokeColor : String } -> List (Maybe ( Float, Float )) -> Svg msg
-path { strokeColor } items =
-    items
-        |> Shape.line Shape.linearCurve
-        |> (\path_ -> Path.element path_ [ fill "none", stroke strokeColor ])
