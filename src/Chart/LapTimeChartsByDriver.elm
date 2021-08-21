@@ -5,7 +5,6 @@ import Css exposing (Style, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
 import Data.Analysis exposing (Analysis)
 import Data.Lap exposing (Lap, fastest)
-import Data.RaceSummary exposing (RaceSummary)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
 import Path.Styled as Path
@@ -14,7 +13,7 @@ import Shape
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as Svg exposing (fill, stroke)
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx exposing (cx, cy, r)
+import TypedSvg.Styled.Attributes.InPx as InPx exposing (r)
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -87,50 +86,40 @@ view { summary, raceHistories } =
             (\{ carNumber, driver, laps } ->
                 li [ css [ listStyle none ] ]
                     [ p [] [ text (carNumber ++ " " ++ driver.name) ]
-                    , dotHistory
-                        { x = .lapCount >> toFloat >> Scale.convert (xScale summary.lapTotal)
-                        , y = .time >> Scale.convert (yScale fastestLap)
-                        , fastestLap = fastestLap
-                        , color = driver.teamColor
-                        }
-                        summary
-                        laps
+                    , svg [ viewBox 0 0 w h ]
+                        [ xAxis summary.lapTotal
+                        , yAxis fastestLap
+                        , dotHistory
+                            { x = .lapCount >> toFloat >> Scale.convert (xScale summary.lapTotal)
+                            , y = .time >> Scale.convert (yScale fastestLap)
+                            , color = driver.teamColor
+                            }
+                            laps
+                        ]
                     ]
             )
             raceHistories
         )
 
 
-dotHistory :
-    { x : Lap -> Float
-    , y : Lap -> Float
-    , fastestLap : Lap
-    , color : String
-    }
-    -> RaceSummary
-    -> List Lap
-    -> Html msg
-dotHistory options { lapTotal } laps =
-    svg [ viewBox 0 0 w h ]
-        [ xAxis lapTotal
-        , yAxis options.fastestLap
-        , dotHistory_
-            { dots =
-                List.map
-                    (\lap ->
-                        dot
-                            { x = options.x lap
-                            , y = options.y lap
-                            , fillColor = options.color
-                            }
-                    )
-                    laps
-            , path =
+dotHistory : { x : a -> Float, y : a -> Float, color : String } -> List a -> Svg msg
+dotHistory { x, y, color } laps =
+    dotHistory_
+        { dots =
+            List.map
+                (\lap ->
+                    dot
+                        { cx = x lap
+                        , cy = y lap
+                        , fillColor = color
+                        }
+                )
                 laps
-                    |> List.map (\item -> Just ( options.x item, options.y item ))
-                    |> path { strokeColor = options.color }
-            }
-        ]
+        , path =
+            laps
+                |> List.map (\item -> Just ( x item, y item ))
+                |> path { strokeColor = color }
+        }
 
 
 dotHistory_ : { dots : List (Svg msg), path : Svg msg } -> Svg msg
@@ -141,11 +130,11 @@ dotHistory_ options =
         ]
 
 
-dot : { x : Float, y : Float, fillColor : String } -> Svg msg
-dot { x, y, fillColor } =
+dot : { cx : Float, cy : Float, fillColor : String } -> Svg msg
+dot { cx, cy, fillColor } =
     circle
-        [ cx x
-        , cy y
+        [ InPx.cx cx
+        , InPx.cy cy
         , r 1.5
         , fill fillColor
         , stroke "#fff"

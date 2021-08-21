@@ -3,7 +3,7 @@ module Chart.LapTimeChart exposing (view)
 import Axis
 import Css exposing (Style, block, cursor, default, display, hex, hover, none, property)
 import Css.Global exposing (children, descendants, each, typeSelector)
-import Data.Analysis exposing (Analysis, History)
+import Data.Analysis exposing (Analysis)
 import Data.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html)
 import Path.Styled as Path
@@ -12,7 +12,7 @@ import Shape
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, fill, stroke)
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx exposing (cx, cy, r)
+import TypedSvg.Styled.Attributes.InPx as InPx exposing (r)
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -80,50 +80,58 @@ view { summary, raceHistories } =
         [ xAxis lapTotal
         , yAxis fastestLap
         , g [] <|
-            dotHistories
-                { x = .lapCount >> toFloat >> Scale.convert (xScale lapTotal)
-                , y = .time >> Scale.convert (yScale fastestLap)
-                , dotLabel = .lapCount >> String.fromInt
-                }
+            List.map
+                (\{ driver, laps } ->
+                    dotHistory
+                        { x = .lapCount >> toFloat >> Scale.convert (xScale lapTotal)
+                        , y = .time >> Scale.convert (yScale fastestLap)
+                        , color = driver.teamColor
+                        , dotLabel = .lapCount >> String.fromInt
+                        }
+                        laps
+                )
                 raceHistories
         ]
 
 
-dotHistories : { x : Lap -> Float, y : Lap -> Float, dotLabel : Lap -> String } -> List History -> List (Svg msg)
-dotHistories { x, y, dotLabel } histories =
-    List.map
-        (\{ driver, laps } ->
-            dotHistory
-                { dots =
-                    List.map
-                        (\lap ->
-                            dotWithLabel
-                                { x = x lap
-                                , y = y lap
-                                , fillColor = driver.teamColor
-                                }
-                                [ text (dotLabel lap) ]
-                        )
-                        laps
-                , path =
-                    laps
-                        |> List.map (\item -> Just ( x item, y item ))
-                        |> path { strokeColor = driver.teamColor }
-                }
-        )
-        histories
+dotHistory :
+    { x : a -> Float
+    , y : a -> Float
+    , color : String
+    , dotLabel : a -> String
+    }
+    -> List a
+    -> Svg msg
+dotHistory { x, y, color, dotLabel } items =
+    dotHistory_
+        { dots =
+            List.map
+                (\item ->
+                    dotWithLabel
+                        { cx = x item
+                        , cy = y item
+                        , fillColor = color
+                        }
+                        [ text (dotLabel item) ]
+                )
+                items
+        , path =
+            items
+                |> List.map (\item -> Just ( x item, y item ))
+                |> path { strokeColor = color }
+        }
 
 
-dotHistory : { dots : List (Svg msg), path : Svg msg } -> Svg msg
-dotHistory options =
+dotHistory_ : { dots : List (Svg msg), path : Svg msg } -> Svg msg
+dotHistory_ options =
     g []
         [ options.path
         , g [] options.dots
         ]
 
 
-dotWithLabel : { x : Float, y : Float, fillColor : String } -> List (Svg msg) -> Svg msg
-dotWithLabel { x, y, fillColor } label =
+dotWithLabel : { cx : Float, cy : Float, fillColor : String } -> List (Svg msg) -> Svg msg
+dotWithLabel options label =
     g
         [ css
             [ children
@@ -138,16 +146,21 @@ dotWithLabel { x, y, fillColor } label =
                 ]
             ]
         ]
-        [ circle
-            [ cx x
-            , cy y
-            , r 2
-            , fill fillColor
-            , stroke "#fff"
-            ]
-            []
-        , text_ [ InPx.x x, InPx.y y ] label
+        [ dot options
+        , text_ [ InPx.x options.cx, InPx.y options.cy ] label
         ]
+
+
+dot : { cx : Float, cy : Float, fillColor : String } -> Svg msg
+dot { cx, cy, fillColor } =
+    circle
+        [ InPx.cx cx
+        , InPx.cy cy
+        , r 2
+        , fill fillColor
+        , stroke "#fff"
+        ]
+        []
 
 
 path : { strokeColor : String } -> List (Maybe ( Float, Float )) -> Svg msg

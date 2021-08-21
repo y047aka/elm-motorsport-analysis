@@ -12,7 +12,7 @@ import Scale exposing (ContinuousScale)
 import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
 import Svg.Styled.Attributes exposing (css)
 import TypedSvg.Styled.Attributes exposing (points, transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx exposing (height, width, x, y)
+import TypedSvg.Styled.Attributes.InPx as InPx exposing (height, width)
 import TypedSvg.Types exposing (Paint(..), Transform(..))
 
 
@@ -89,37 +89,48 @@ view { cars, ordersByLap } =
             (cars
                 |> List.sortBy .startPosition
                 |> List.map
-                    (historyFor
-                        { x = toFloat >> Scale.convert (xScale ordersByLap)
-                        , y = toFloat >> Scale.convert (yScale cars)
-                        }
+                    (\car ->
+                        history
+                            { x = toFloat >> Scale.convert (xScale ordersByLap)
+                            , y = toFloat >> Scale.convert (yScale cars)
+                            , svgPalette = svgPalette_ car.class
+                            , label = String.join " " [ String.fromInt car.carNumber, car.team ]
+                            }
+                            car
                     )
             )
         ]
 
 
-historyFor : { x : Int -> Float, y : Int -> Float } -> Car -> Svg msg
-historyFor { x, y } ({ startPosition, positions } as car) =
-    historyFor_
+history :
+    { x : Int -> Float
+    , y : Int -> Float
+    , svgPalette : SvgPalette
+    , label : String
+    }
+    -> Car
+    -> Svg msg
+history { x, y, svgPalette, label } { carNumber, startPosition, positions } =
+    history_
         { heading =
             heading
                 { x = x <| -20
                 , y = y startPosition + 5
                 }
-                [ text <| String.join " " [ String.fromInt car.carNumber, car.team ] ]
+                [ text label ]
         , polyline =
             (startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
-                |> polyline_ { svgPalette = svgPalette_ car.class }
+                |> polyline_ { svgPalette = svgPalette }
         , positionLabels =
             (startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
-                |> positionLabels { label = text (String.fromInt car.carNumber) }
+                |> positionLabels { label = text (String.fromInt carNumber) }
         }
 
 
-historyFor_ : { heading : Svg msg, positionLabels : List (Svg msg), polyline : Svg msg } -> Svg msg
-historyFor_ options =
+history_ : { heading : Svg msg, positionLabels : List (Svg msg), polyline : Svg msg } -> Svg msg
+history_ options =
     g []
         [ options.heading
         , options.polyline
