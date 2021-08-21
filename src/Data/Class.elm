@@ -2,7 +2,8 @@ module Data.Class exposing (Class(..), fromString, toString)
 
 
 type Class
-    = LMP1
+    = LMH
+    | LMP1
     | LMP2
     | LMGTE_Pro
     | LMGTE_Am
@@ -11,6 +12,9 @@ type Class
 fromString : String -> Maybe Class
 fromString class =
     case class of
+        "HYPERCAR" ->
+            Just LMH
+
         "LMP1" ->
             Just LMP1
 
@@ -30,6 +34,9 @@ fromString class =
 toString : Class -> String
 toString class =
     case class of
+        LMH ->
+            "HYPERCAR"
+
         LMP1 ->
             "LMP1"
 

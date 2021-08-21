@@ -156,6 +156,9 @@ positionLabels { label } =
 svgPalette_ : Class -> SvgPalette
 svgPalette_ class =
     case class of
+        LMH ->
+            strokeLMP1
+
         LMP1 ->
             strokeLMP1
 
