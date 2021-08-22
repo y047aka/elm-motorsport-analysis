@@ -24,30 +24,40 @@ h =
     400
 
 
-padding : { top : Float, left : Float, bottom : Float, right : Float }
+padding : Float
 padding =
-    { top = 20, left = 60, bottom = 30, right = 20 }
+    20
+
+
+paddingLeft : Float
+paddingLeft =
+    padding + 40
+
+
+paddingBottom : Float
+paddingBottom =
+    padding + 10
 
 
 xScale : Int -> ContinuousScale Float
 xScale lapTotal =
-    Scale.linear ( padding.left, w - padding.right ) ( 0, toFloat lapTotal )
+    Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
 yScale : Lap -> ContinuousScale Float
 yScale fastestLap =
-    Scale.linear ( h - padding.bottom, padding.top ) ( fastestLap.time * 25, 0 )
+    Scale.linear ( h - paddingBottom, padding ) ( fastestLap.time * 25, 0 )
 
 
 xAxis : Int -> Svg msg
 xAxis lapTotal =
-    g [ transform [ Translate 0 (h - padding.bottom) ], css axisStyles ]
+    g [ transform [ Translate 0 (h - paddingBottom) ], css axisStyles ]
         [ fromUnstyled <| Axis.bottom [] (xScale lapTotal) ]
 
 
 yAxis : Lap -> Svg msg
 yAxis fastestLap =
-    g [ transform [ Translate padding.left 0 ], css axisStyles ]
+    g [ transform [ Translate paddingLeft 0 ], css axisStyles ]
         [ fromUnstyled <| Axis.left [] (yScale fastestLap) ]
 
 

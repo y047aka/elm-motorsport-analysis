@@ -30,19 +30,29 @@ h =
     w * (9 / 16)
 
 
-padding : { top : Float, left : Float, bottom : Float, right : Float }
+padding : Float
 padding =
-    { top = 25 + 30, left = 20 + 190, bottom = 25 + 30, right = 20 }
+    20
+
+
+paddingLeft : Float
+paddingLeft =
+    padding + 190
+
+
+paddingVertical : Float
+paddingVertical =
+    padding + 30
 
 
 xScale : OrdersByLap -> ContinuousScale Float
 xScale ordersByLap =
-    Scale.linear ( padding.left, w - padding.right ) ( 0, toFloat (List.length ordersByLap) )
+    Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat (List.length ordersByLap) )
 
 
 yScale : List Car -> ContinuousScale Float
 yScale cars =
-    Scale.linear ( padding.top, h - padding.bottom ) ( 0, toFloat (List.length cars - 1) )
+    Scale.linear ( paddingVertical, h - paddingVertical ) ( 0, toFloat (List.length cars - 1) )
 
 
 xAxis : OrdersByLap -> Svg msg
@@ -71,8 +81,8 @@ xAxis ordersByLap =
                 ]
             ]
         ]
-        [ g [ transform [ Translate 0 (padding.top - 20) ] ] [ axis Axis.top ]
-        , g [ transform [ Translate 0 (h - padding.bottom + 20) ] ] [ axis Axis.bottom ]
+        [ g [ transform [ Translate 0 (paddingVertical - 20) ] ] [ axis Axis.top ]
+        , g [ transform [ Translate 0 (h - paddingVertical + 20) ] ] [ axis Axis.bottom ]
         ]
 
 
