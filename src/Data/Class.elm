@@ -7,6 +7,7 @@ type Class
     | LMP2
     | LMGTE_Pro
     | LMGTE_Am
+    | InnovativeCar
 
 
 fromString : String -> Maybe Class
@@ -26,6 +27,9 @@ fromString class =
 
         "LMGTE Am" ->
             Just LMGTE_Am
+
+        "INNOVATIVE CAR" ->
+            Just InnovativeCar
 
         _ ->
             Nothing
@@ -48,3 +52,6 @@ toString class =
 
         LMGTE_Am ->
             "LMGTE Am"
+
+        InnovativeCar ->
+            "INNOVATIVE CAR"

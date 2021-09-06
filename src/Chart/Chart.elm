@@ -124,7 +124,7 @@ history { x, y, svgPalette, label } { carNumber, startPosition, positions } =
     history_
         { heading =
             heading
-                { x = x <| -20
+                { x = x <| -50
                 , y = y startPosition + 5
                 }
                 [ text label ]
@@ -144,7 +144,8 @@ history_ options =
     g []
         [ options.heading
         , options.polyline
-        , g [] options.positionLabels
+
+        -- , g [] options.positionLabels
         ]
 
 
@@ -180,3 +181,6 @@ svgPalette_ class =
 
         LMGTE_Am ->
             strokeGTEAm
+
+        InnovativeCar ->
+            strokeLMP2

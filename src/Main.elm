@@ -79,7 +79,7 @@ fetchJson =
 fetchCsv : Cmd Msg
 fetchCsv =
     Http.get
-        { url = "/static" ++ "/23_Analysis_Race_Hour 6.csv"
+        { url = "/static" ++ "/23_Analysis_Race_Hour 24.csv"
         , expect = expectCsv Loaded2 lapDecoder
         }
 
@@ -111,8 +111,8 @@ expectCsv toMsg decoder =
                 CsvErrors _ ->
                     "Parse failed."
 
-                DecodeErrors _ ->
-                    "Decode failed."
+                DecodeErrors e ->
+                    Debug.toString e
     in
     expectStringResponse toMsg <|
         resolve
