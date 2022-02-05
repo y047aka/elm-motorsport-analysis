@@ -34,29 +34,29 @@ lapTimeDecoder =
 fromString : String -> Maybe LapTime
 fromString str =
     let
-        fromHours h =
+        h_fromString h =
             String.toInt h |> Maybe.map ((*) 3600000)
 
-        fromMinutes m =
+        m_fromString m =
             String.toInt m |> Maybe.map ((*) 60000)
 
-        fromSeconds s =
+        s_fromString s =
             String.toFloat s |> Maybe.map ((*) 1000 >> floor)
     in
     case String.split ":" str of
         [ h, m, s ] ->
             Maybe.map3 (\h_ m_ s_ -> h_ + m_ + s_)
-                (fromHours h)
-                (fromMinutes m)
-                (fromSeconds s)
+                (h_fromString h)
+                (m_fromString m)
+                (s_fromString s)
 
         [ m, s ] ->
             Maybe.map2 (+)
-                (fromMinutes m)
-                (fromSeconds s)
+                (m_fromString m)
+                (s_fromString s)
 
         [ s ] ->
-            fromSeconds s
+            s_fromString s
 
         _ ->
             Nothing
