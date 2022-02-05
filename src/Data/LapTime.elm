@@ -34,14 +34,14 @@ lapTimeDecoder =
 fromString : String -> Maybe LapTime
 fromString str =
     let
-        h_fromString h =
-            String.toInt h |> Maybe.map ((*) 3600000)
+        h_fromString =
+            String.toInt >> Maybe.map (\h -> h * 60 * 60 * 1000)
 
-        m_fromString m =
-            String.toInt m |> Maybe.map ((*) 60000)
+        m_fromString =
+            String.toInt >> Maybe.map (\m -> m * 60 * 1000)
 
-        s_fromString s =
-            String.toFloat s |> Maybe.map ((*) 1000 >> floor)
+        s_fromString =
+            String.toFloat >> Maybe.map ((*) 1000 >> floor)
     in
     case String.split ":" str of
         [ h, m, s ] ->
@@ -81,17 +81,17 @@ toString : LapTime -> String
 toString millis =
     let
         h =
-            (millis // 3600000)
+            (millis // (60 * 60 * 1000))
                 |> String.fromInt
                 |> String.padLeft 2 '0'
 
         m =
-            (remainderBy 3600000 millis // 60000)
+            (remainderBy (60 * 60 * 1000) millis // 60000)
                 |> String.fromInt
                 |> String.padLeft 2 '0'
 
         s =
-            (remainderBy 60000 millis // 1000)
+            (remainderBy (60 * 1000) millis // 1000)
                 |> String.fromInt
                 |> String.padLeft 2 '0'
 
@@ -101,7 +101,7 @@ toString millis =
                 |> String.padRight 3 '0'
                 |> (++) "."
     in
-    if millis >= 3600000 then
+    if millis >= (60 * 60 * 1000) then
         String.join ":" [ h, m, s ++ ms ]
 
     else
