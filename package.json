@@ -1,10 +1,13 @@
 {
   "scripts": {
     "start": "snowpack dev",
-    "build": "snowpack build"
+    "build": "snowpack build",
+    "test": "elm-verify-examples --run-tests"
   },
   "devDependencies": {
-    "elm-format": "^0.8.5"
+    "elm-format": "^0.8.5",
+    "elm-test": "^0.19.1-revision7",
+    "elm-verify-examples": "^5.2.0"
   },
   "dependencies": {
     "snowpack": "^3.8.8",
