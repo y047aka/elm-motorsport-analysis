@@ -8,12 +8,14 @@ import Chart.Chart as Chart
 import Chart.GapChart as GapChart
 import Chart.LapTimeChart as LapTimeChart
 import Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
+import Chart.LapTimes as LapTimes
 import Css exposing (..)
 import Csv
 import Csv.Decode as CD exposing (Decoder, Errors(..))
 import Data.Analysis exposing (Analysis, analysisDecoder)
 import Data.Car exposing (Car)
 import Data.Lap.Wec exposing (Lap, lapDecoder)
+import Data.LapTimes exposing (LapTimes, lapTimesDecoder)
 import Html.Styled as Html exposing (Html, div, td, text, th, toUnstyled, tr)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
@@ -42,7 +44,7 @@ main =
 
 
 type alias Model =
-    { analysis : Maybe Analysis
+    { lapTimes : Maybe LapTimes
     , cars : List Car
     , ordersByLap : OrdersByLap
     , hovered : Maybe Datum
@@ -59,20 +61,20 @@ type alias Datum =
 
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
-    ( { analysis = Nothing
+    ( { lapTimes = Nothing
       , cars = []
       , ordersByLap = []
       , hovered = Nothing
       }
-    , fetchCsv
+    , fetchJson
     )
 
 
 fetchJson : Cmd Msg
 fetchJson =
     Http.get
-        { url = "/static" ++ "" ++ "/raceHistoryAnalytics.json"
-        , expect = Http.expectJson Loaded analysisDecoder
+        { url = "/static" ++ "" ++ "/lapTimes.json"
+        , expect = Http.expectJson Loaded lapTimesDecoder
         }
 
 
@@ -131,7 +133,7 @@ expectCsv toMsg decoder =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
-    | Loaded (Result Http.Error Analysis)
+    | Loaded (Result Http.Error LapTimes)
     | Loaded2 (Result Http.Error (List Lap))
     | Hover (Maybe Datum)
 
@@ -139,8 +141,8 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Loaded (Ok analysis) ->
-            ( { model | analysis = Just analysis }, Cmd.none )
+        Loaded (Ok lapTimes) ->
+            ( { model | lapTimes = Just lapTimes }, Cmd.none )
 
         Loaded (Err _) ->
             ( model, Cmd.none )
@@ -216,14 +218,15 @@ view : Model -> Document Msg
 view model =
     { title = "Race Analysis"
     , body =
-        case model.analysis of
-            Just analysis ->
+        case model.lapTimes of
+            Just lapTimes ->
                 [ toUnstyled <|
                     div []
-                        [ raceSummary analysis
-                        , GapChart.view analysis
-                        , LapTimeChart.view analysis
-                        , LapTimeChartsByDriver.view analysis
+                        [ -- raceSummary analysis
+                          -- , GapChart.view analysis
+                          -- , LapTimeChart.view analysis
+                          -- , LapTimeChartsByDriver.view analysis
+                          LapTimes.view lapTimes
                         ]
                 ]
 
