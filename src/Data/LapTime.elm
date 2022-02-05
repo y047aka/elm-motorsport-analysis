@@ -65,16 +65,16 @@ fromString str =
 {-|
 
     toString 0
-    --> "00:00.000"
+    --> "0:00.000"
 
     toString 4321
-    --> "00:04.321"
+    --> "0:04.321"
 
     toString 414321
-    --> "06:54.321"
+    --> "6:54.321"
 
     toString 25614321
-    --> "07:06:54.321"
+    --> "7:06:54.321"
 
 -}
 toString : LapTime -> String
@@ -83,12 +83,10 @@ toString millis =
         h =
             (millis // (60 * 60 * 1000))
                 |> String.fromInt
-                |> String.padLeft 2 '0'
 
         m =
             (remainderBy (60 * 60 * 1000) millis // 60000)
                 |> String.fromInt
-                |> String.padLeft 2 '0'
 
         s =
             (remainderBy (60 * 1000) millis // 1000)
@@ -101,8 +99,8 @@ toString millis =
                 |> String.padRight 3 '0'
                 |> (++) "."
     in
-    if millis >= (60 * 60 * 1000) then
-        String.join ":" [ h, m, s ++ ms ]
+    if millis > (60 * 60 * 1000) then
+        String.join ":" [ h, String.padLeft 2 '0' m, s ++ ms ]
 
     else
         String.join ":" [ m, s ++ ms ]
