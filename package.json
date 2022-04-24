@@ -10,6 +10,7 @@
     "elm-verify-examples": "^5.2.0"
   },
   "dependencies": {
+    "elm": "^0.19.1-5",
     "snowpack": "^3.8.8",
     "snowpack-plugin-elm": "^0.5.1"
   }
