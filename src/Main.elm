@@ -8,20 +8,19 @@ import Chart.Chart as Chart
 import Chart.GapChart as GapChart
 import Chart.LapTimeChart as LapTimeChart
 import Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
-import Chart.LapTimes as LapTimes
-import Css exposing (..)
 import Csv
 import Csv.Decode as CD exposing (Decoder, Errors(..))
 import Data.Analysis exposing (Analysis, analysisDecoder)
 import Data.Car exposing (Car)
 import Data.Lap.Wec exposing (Lap, lapDecoder)
-import Data.LapTimes exposing (LapTimes, lapTimesDecoder)
-import Html.Styled as Html exposing (Html, div, td, text, th, toUnstyled, tr)
+import Html.Styled as Html exposing (Html, a, td, text, th, toUnstyled, tr)
+import Html.Styled.Attributes exposing (href)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
+import Page.LapTimeTable as LapTimeTable
 import Parser exposing (deadEndsToString)
 import Url exposing (Url)
-import Url.Parser exposing (Parser)
+import Url.Parser exposing (Parser, s)
 
 
 
@@ -46,17 +45,17 @@ main =
 
 type alias Model =
     { key : Key
-    , page : Page
-    , lapTimes : Maybe LapTimes
+    , subModel : SubModel
     , cars : List Car
     , ordersByLap : OrdersByLap
     , hovered : Maybe Datum
     }
 
 
-type Page
-    = NotFound
-    | Top
+type SubModel
+    = None
+    | TopModel
+    | LapTimeTableModel LapTimeTable.Model
 
 
 type alias OrdersByLap =
@@ -70,22 +69,12 @@ type alias Datum =
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
     { key = key
-    , page = Top
-    , lapTimes = Nothing
+    , subModel = TopModel
     , cars = []
     , ordersByLap = []
     , hovered = Nothing
     }
         |> routing url
-        |> (\( model, cmd ) -> ( model, Cmd.batch [ cmd, fetchJson ] ))
-
-
-fetchJson : Cmd Msg
-fetchJson =
-    Http.get
-        { url = "/static" ++ "" ++ "/lapTimes.json"
-        , expect = Http.expectJson Loaded lapTimesDecoder
-        }
 
 
 fetchCsv : Cmd Msg
@@ -140,17 +129,36 @@ expectCsv toMsg decoder =
 -- ROUTER
 
 
+type Page
+    = NotFound
+    | Top
+    | LapTimeTable
+
+
 parser : Parser (Page -> a) a
 parser =
     Url.Parser.oneOf
-        [ Url.Parser.map Top Url.Parser.top ]
+        [ Url.Parser.map Top Url.Parser.top
+        , Url.Parser.map LapTimeTable (s "laptime-table")
+        ]
 
 
 routing : Url -> Model -> ( Model, Cmd Msg )
 routing url model =
     Url.Parser.parse parser url
         |> Maybe.withDefault NotFound
-        |> (\page -> ( { model | page = page }, Cmd.none ))
+        |> (\page ->
+                case page of
+                    NotFound ->
+                        ( { model | subModel = None }, Cmd.none )
+
+                    Top ->
+                        ( { model | subModel = TopModel }, Cmd.none )
+
+                    LapTimeTable ->
+                        LapTimeTable.init
+                            |> updateWith LapTimeTableModel LapTimeTableMsg model
+           )
 
 
 
@@ -160,15 +168,15 @@ routing url model =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
-    | Loaded (Result Http.Error LapTimes)
+    | LapTimeTableMsg LapTimeTable.Msg
     | Loaded2 (Result Http.Error (List Lap))
     | Hover (Maybe Datum)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case msg of
-        UrlRequested urlRequest ->
+    case ( model.subModel, msg ) of
+        ( _, UrlRequested urlRequest ) ->
             case urlRequest of
                 Browser.Internal url ->
                     ( model, Nav.pushUrl model.key (Url.toString url) )
@@ -176,16 +184,14 @@ update msg model =
                 Browser.External href ->
                     ( model, Nav.load href )
 
-        UrlChanged url ->
+        ( _, UrlChanged url ) ->
             routing url model
 
-        Loaded (Ok lapTimes) ->
-            ( { model | lapTimes = Just lapTimes }, Cmd.none )
+        ( LapTimeTableModel subModel, LapTimeTableMsg submsg ) ->
+            LapTimeTable.update submsg subModel
+                |> updateWith LapTimeTableModel LapTimeTableMsg model
 
-        Loaded (Err _) ->
-            ( model, Cmd.none )
-
-        Loaded2 (Ok laps) ->
+        ( _, Loaded2 (Ok laps) ) ->
             let
                 ordersByLap =
                     laps
@@ -211,11 +217,21 @@ update msg model =
             , Cmd.none
             )
 
-        Loaded2 (Err _) ->
+        ( _, Loaded2 (Err _) ) ->
             ( model, Cmd.none )
 
-        Hover hovered ->
+        ( _, Hover hovered ) ->
             ( { model | hovered = hovered }, Cmd.none )
+
+        _ ->
+            ( model, Cmd.none )
+
+
+updateWith : (subModel -> SubModel) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
+updateWith toModel toMsg model ( subModel, subCmd ) =
+    ( { model | subModel = toModel subModel }
+    , Cmd.map toMsg subCmd
+    )
 
 
 summarize : OrdersByLap -> ( Int, List Lap ) -> Maybe Car
@@ -253,27 +269,21 @@ view : Model -> Document Msg
 view model =
     { title = "Race Analysis"
     , body =
-        case model.page of
-            Top ->
-                case model.lapTimes of
-                    Just lapTimes ->
-                        [ toUnstyled <|
-                            div []
-                                [ -- raceSummary analysis
-                                  -- , GapChart.view analysis
-                                  -- , LapTimeChart.view analysis
-                                  -- , LapTimeChartsByDriver.view analysis
-                                  LapTimes.view lapTimes
-                                ]
-                        ]
+        List.map toUnstyled <|
+            case model.subModel of
+                None ->
+                    []
 
-                    Nothing ->
-                        [ toUnstyled <|
-                            Chart.view model
-                        ]
+                TopModel ->
+                    [ -- raceSummary analysis
+                      -- , GapChart.view analysis
+                      -- , LapTimeChart.view analysis
+                      -- , LapTimeChartsByDriver.view analysis
+                      a [ href "/laptime-table" ] [ text "LapTime table" ]
+                    ]
 
-            _ ->
-                []
+                LapTimeTableModel subModel ->
+                    LapTimeTable.view subModel
     }
 
 
