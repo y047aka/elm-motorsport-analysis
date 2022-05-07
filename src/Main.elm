@@ -3,7 +3,7 @@ module Main exposing (main)
 import AssocList
 import AssocList.Extra
 import Browser exposing (Document)
-import Browser.Navigation exposing (Key)
+import Browser.Navigation as Nav exposing (Key)
 import Chart.Chart as Chart
 import Chart.GapChart as GapChart
 import Chart.LapTimeChart as LapTimeChart
@@ -21,6 +21,7 @@ import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
 import Parser exposing (deadEndsToString)
 import Url exposing (Url)
+import Url.Parser exposing (Parser)
 
 
 
@@ -44,11 +45,18 @@ main =
 
 
 type alias Model =
-    { lapTimes : Maybe LapTimes
+    { key : Key
+    , page : Page
+    , lapTimes : Maybe LapTimes
     , cars : List Car
     , ordersByLap : OrdersByLap
     , hovered : Maybe Datum
     }
+
+
+type Page
+    = NotFound
+    | Top
 
 
 type alias OrdersByLap =
@@ -61,13 +69,15 @@ type alias Datum =
 
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
-    ( { lapTimes = Nothing
-      , cars = []
-      , ordersByLap = []
-      , hovered = Nothing
-      }
-    , fetchJson
-    )
+    { key = key
+    , page = Top
+    , lapTimes = Nothing
+    , cars = []
+    , ordersByLap = []
+    , hovered = Nothing
+    }
+        |> routing url
+        |> (\( model, cmd ) -> ( model, Cmd.batch [ cmd, fetchJson ] ))
 
 
 fetchJson : Cmd Msg
@@ -127,6 +137,23 @@ expectCsv toMsg decoder =
 
 
 
+-- ROUTER
+
+
+parser : Parser (Page -> a) a
+parser =
+    Url.Parser.oneOf
+        [ Url.Parser.map Top Url.Parser.top ]
+
+
+routing : Url -> Model -> ( Model, Cmd Msg )
+routing url model =
+    Url.Parser.parse parser url
+        |> Maybe.withDefault NotFound
+        |> (\page -> ( { model | page = page }, Cmd.none ))
+
+
+
 -- UPDATE
 
 
@@ -141,6 +168,17 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
+        UrlRequested urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
+
+                Browser.External href ->
+                    ( model, Nav.load href )
+
+        UrlChanged url ->
+            routing url model
+
         Loaded (Ok lapTimes) ->
             ( { model | lapTimes = Just lapTimes }, Cmd.none )
 
@@ -179,9 +217,6 @@ update msg model =
         Hover hovered ->
             ( { model | hovered = hovered }, Cmd.none )
 
-        _ ->
-            ( model, Cmd.none )
-
 
 summarize : OrdersByLap -> ( Int, List Lap ) -> Maybe Car
 summarize ordersByLap ( carNumber, laps ) =
@@ -218,22 +253,27 @@ view : Model -> Document Msg
 view model =
     { title = "Race Analysis"
     , body =
-        case model.lapTimes of
-            Just lapTimes ->
-                [ toUnstyled <|
-                    div []
-                        [ -- raceSummary analysis
-                          -- , GapChart.view analysis
-                          -- , LapTimeChart.view analysis
-                          -- , LapTimeChartsByDriver.view analysis
-                          LapTimes.view lapTimes
+        case model.page of
+            Top ->
+                case model.lapTimes of
+                    Just lapTimes ->
+                        [ toUnstyled <|
+                            div []
+                                [ -- raceSummary analysis
+                                  -- , GapChart.view analysis
+                                  -- , LapTimeChart.view analysis
+                                  -- , LapTimeChartsByDriver.view analysis
+                                  LapTimes.view lapTimes
+                                ]
                         ]
-                ]
 
-            Nothing ->
-                [ toUnstyled <|
-                    Chart.view model
-                ]
+                    Nothing ->
+                        [ toUnstyled <|
+                            Chart.view model
+                        ]
+
+            _ ->
+                []
     }
 
 
