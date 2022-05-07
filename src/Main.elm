@@ -5,7 +5,6 @@ import AssocList.Extra
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
 import Chart.Chart as Chart
-import Chart.GapChart as GapChart
 import Csv
 import Csv.Decode as CD exposing (Decoder, Errors(..))
 import Data.Analysis exposing (Analysis, analysisDecoder)
@@ -15,6 +14,7 @@ import Html.Styled as Html exposing (Html, a, br, td, text, th, toUnstyled, tr)
 import Html.Styled.Attributes exposing (href)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
+import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.LapTimeTable as LapTimeTable
@@ -55,6 +55,7 @@ type alias Model =
 type SubModel
     = None
     | TopModel
+    | GapChartModel GapChart.Model
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
     | LapTimeTableModel LapTimeTable.Model
@@ -134,6 +135,7 @@ expectCsv toMsg decoder =
 type Page
     = NotFound
     | Top
+    | GapChart
     | LapTimeChart
     | LapTimeChartsByDriver
     | LapTimeTable
@@ -143,6 +145,7 @@ parser : Parser (Page -> a) a
 parser =
     Url.Parser.oneOf
         [ Url.Parser.map Top Url.Parser.top
+        , Url.Parser.map GapChart (s "gap-chart")
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
         , Url.Parser.map LapTimeTable (s "laptime-table")
@@ -160,6 +163,10 @@ routing url model =
 
                     Top ->
                         ( { model | subModel = TopModel }, Cmd.none )
+
+                    GapChart ->
+                        GapChart.init
+                            |> updateWith GapChartModel GapChartMsg model
 
                     LapTimeChart ->
                         LapTimeChart.init
@@ -182,6 +189,7 @@ routing url model =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
+    | GapChartMsg GapChart.Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LapTimeTableMsg LapTimeTable.Msg
@@ -202,6 +210,10 @@ update msg model =
 
         ( _, UrlChanged url ) ->
             routing url model
+
+        ( GapChartModel subModel, GapChartMsg submsg ) ->
+            GapChart.update submsg subModel
+                |> updateWith GapChartModel GapChartMsg model
 
         ( LapTimeChartModel subModel, LapTimeChartMsg submsg ) ->
             LapTimeChart.update submsg subModel
@@ -300,13 +312,17 @@ view model =
 
                 TopModel ->
                     [ -- raceSummary analysis
-                      -- , GapChart.view analysis
-                      a [ href "/lapTime-chart" ] [ text "LapTime Chart" ]
+                      a [ href "/gap-chart" ] [ text "Gap Chart" ]
+                    , br [] []
+                    , a [ href "/lapTime-chart" ] [ text "LapTime Chart" ]
                     , br [] []
                     , a [ href "/lapTime-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
                     , br [] []
                     , a [ href "/laptime-table" ] [ text "LapTime table" ]
                     ]
+
+                GapChartModel subModel ->
+                    GapChart.view subModel
 
                 LapTimeChartModel subModel ->
                     LapTimeChart.view subModel
