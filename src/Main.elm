@@ -1,25 +1,18 @@
 module Main exposing (main)
 
-import AssocList
-import AssocList.Extra
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
-import Chart.Chart as Chart
-import Csv
-import Csv.Decode as CD exposing (Decoder, Errors(..))
 import Data.Analysis exposing (Analysis, analysisDecoder)
 import Data.Car exposing (Car)
-import Data.Lap.Wec exposing (Lap, lapDecoder)
 import Html.Styled as Html exposing (Html, a, br, td, text, toUnstyled, tr)
 import Html.Styled.Attributes exposing (href)
-import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
 import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.LapTimeTable as LapTimeTable
 import Page.RaceSummary as RaceSummary
-import Parser exposing (deadEndsToString)
+import Page.Wec as Wec
 import Url exposing (Url)
 import Url.Parser exposing (Parser, s)
 
@@ -48,7 +41,6 @@ type alias Model =
     { key : Key
     , subModel : SubModel
     , cars : List Car
-    , ordersByLap : OrdersByLap
     , hovered : Maybe Datum
     }
 
@@ -61,10 +53,7 @@ type SubModel
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
     | LapTimeTableModel LapTimeTable.Model
-
-
-type alias OrdersByLap =
-    List { lapNumber : Int, order : List Int }
+    | WecModel Wec.Model
 
 
 type alias Datum =
@@ -76,58 +65,9 @@ init _ url key =
     { key = key
     , subModel = TopModel
     , cars = []
-    , ordersByLap = []
     , hovered = Nothing
     }
         |> routing url
-
-
-fetchCsv : Cmd Msg
-fetchCsv =
-    Http.get
-        { url = "/static" ++ "/23_Analysis_Race_Hour 24.csv"
-        , expect = expectCsv Loaded2 lapDecoder
-        }
-
-
-expectCsv : (Result Error (List a) -> msg) -> Decoder (a -> a) a -> Expect msg
-expectCsv toMsg decoder =
-    let
-        resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
-        resolve toResult response =
-            case response of
-                BadUrl_ url ->
-                    Err (BadUrl url)
-
-                Timeout_ ->
-                    Err Timeout
-
-                NetworkError_ ->
-                    Err NetworkError
-
-                BadStatus_ metadata _ ->
-                    Err (BadStatus metadata.statusCode)
-
-                GoodStatus_ _ body ->
-                    Result.mapError BadBody (toResult body)
-
-        errorsToString : Errors -> String
-        errorsToString error =
-            case error of
-                CsvErrors _ ->
-                    "Parse failed."
-
-                DecodeErrors e ->
-                    Debug.toString e
-    in
-    expectStringResponse toMsg <|
-        resolve
-            (Csv.parseWith ';'
-                >> Result.map (\csv -> { csv | headers = List.map String.trim csv.headers })
-                >> Result.mapError (deadEndsToString >> List.singleton >> CsvErrors)
-                >> Result.andThen (CD.decodeCsv decoder)
-                >> Result.mapError errorsToString
-            )
 
 
 
@@ -142,6 +82,7 @@ type Page
     | LapTimeChart
     | LapTimeChartsByDriver
     | LapTimeTable
+    | Wec
 
 
 parser : Parser (Page -> a) a
@@ -153,6 +94,7 @@ parser =
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
         , Url.Parser.map LapTimeTable (s "laptime-table")
+        , Url.Parser.map Wec (s "wec")
         ]
 
 
@@ -187,6 +129,10 @@ routing url model =
                     LapTimeTable ->
                         LapTimeTable.init
                             |> updateWith LapTimeTableModel LapTimeTableMsg model
+
+                    Wec ->
+                        Wec.init
+                            |> updateWith WecModel WecMsg model
            )
 
 
@@ -202,7 +148,7 @@ type Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LapTimeTableMsg LapTimeTable.Msg
-    | Loaded2 (Result Http.Error (List Lap))
+    | WecMsg Wec.Msg
     | Hover (Maybe Datum)
 
 
@@ -240,34 +186,9 @@ update msg model =
             LapTimeTable.update submsg subModel
                 |> updateWith LapTimeTableModel LapTimeTableMsg model
 
-        ( _, Loaded2 (Ok laps) ) ->
-            let
-                ordersByLap =
-                    laps
-                        |> AssocList.Extra.groupBy .lapNumber
-                        |> AssocList.toList
-                        |> List.map
-                            (\( lapNumber, order ) ->
-                                { lapNumber = lapNumber
-                                , order = order |> List.sortBy .elapsed |> List.map .carNumber
-                                }
-                            )
-
-                cars =
-                    laps
-                        |> AssocList.Extra.groupBy .carNumber
-                        |> AssocList.toList
-                        |> List.filterMap (summarize ordersByLap)
-            in
-            ( { model
-                | cars = cars
-                , ordersByLap = ordersByLap
-              }
-            , Cmd.none
-            )
-
-        ( _, Loaded2 (Err _) ) ->
-            ( model, Cmd.none )
+        ( WecModel subModel, WecMsg submsg ) ->
+            Wec.update submsg subModel
+                |> updateWith WecModel WecMsg model
 
         ( _, Hover hovered ) ->
             ( { model | hovered = hovered }, Cmd.none )
@@ -281,33 +202,6 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
     ( { model | subModel = toModel subModel }
     , Cmd.map toMsg subCmd
     )
-
-
-summarize : OrdersByLap -> ( Int, List Lap ) -> Maybe Car
-summarize ordersByLap ( carNumber, laps ) =
-    List.head laps
-        |> Maybe.map
-            (\{ class, group, team, manufacturer } ->
-                { carNumber = carNumber
-                , class = class
-                , group = group
-                , team = team
-                , manufacturer = manufacturer
-                , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
-                , positions =
-                    List.indexedMap
-                        (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
-                        laps
-                , laps = laps
-                }
-            )
-
-
-getPositionAt : { carNumber : Int, lapNumber : Int } -> OrdersByLap -> Maybe Int
-getPositionAt { carNumber, lapNumber } ordersByLap =
-    ordersByLap
-        |> List.find (.lapNumber >> (==) lapNumber)
-        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
 
 
 
@@ -333,6 +227,8 @@ view model =
                     , a [ href "/lapTime-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
                     , br [] []
                     , a [ href "/laptime-table" ] [ text "LapTime table" ]
+                    , br [] []
+                    , a [ href "/wec" ] [ text "Wec" ]
                     ]
 
                 RaceSummaryModel subModel ->
@@ -349,6 +245,9 @@ view model =
 
                 LapTimeTableModel subModel ->
                     LapTimeTable.view subModel
+
+                WecModel subModel ->
+                    Wec.view subModel
     }
 
 
