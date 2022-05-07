@@ -11,12 +11,12 @@ import Http
 
 
 type alias Model =
-    { lapTimes : Maybe LapTimes }
+    { lapTimes : LapTimes }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { lapTimes = Nothing }, fetchJson )
+    ( { lapTimes = [] }, fetchJson )
 
 
 fetchJson : Cmd Msg
@@ -39,7 +39,7 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Loaded (Ok lapTimes) ->
-            ( { model | lapTimes = Just lapTimes }, Cmd.none )
+            ( { model | lapTimes = lapTimes }, Cmd.none )
 
         Loaded (Err _) ->
             ( model, Cmd.none )
@@ -51,6 +51,4 @@ update msg model =
 
 view : Model -> List (Html msg)
 view { lapTimes } =
-    lapTimes
-        |> Maybe.map (\lapTimes_ -> [ LapTimes.view lapTimes_ ])
-        |> Maybe.withDefault []
+    [ LapTimes.view lapTimes ]
