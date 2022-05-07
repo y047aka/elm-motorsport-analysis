@@ -35,7 +35,7 @@ init =
 fetchCsv : Cmd Msg
 fetchCsv =
     Http.get
-        { url = "/staticbs/raceHistoryAnalytics.json"
+        { url = "/static/raceHistoryAnalytics.json"
         , expect = Http.expectJson Loaded analysisDecoder
         }
 
