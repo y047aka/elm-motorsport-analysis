@@ -2,9 +2,8 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
-import Data.Analysis exposing (Analysis, analysisDecoder)
 import Data.Car exposing (Car)
-import Html.Styled as Html exposing (Html, a, br, td, text, toUnstyled, tr)
+import Html.Styled as Html exposing (a, br, text, toUnstyled)
 import Html.Styled.Attributes exposing (href)
 import List.Extra as List
 import Page.GapChart as GapChart
@@ -41,7 +40,6 @@ type alias Model =
     { key : Key
     , subModel : SubModel
     , cars : List Car
-    , hovered : Maybe Datum
     }
 
 
@@ -56,16 +54,11 @@ type SubModel
     | WecModel Wec.Model
 
 
-type alias Datum =
-    { elapsed : Float, lapCount : Int, time : Float }
-
-
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
     { key = key
     , subModel = TopModel
     , cars = []
-    , hovered = Nothing
     }
         |> routing url
 
@@ -149,7 +142,6 @@ type Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LapTimeTableMsg LapTimeTable.Msg
     | WecMsg Wec.Msg
-    | Hover (Maybe Datum)
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -189,9 +181,6 @@ update msg model =
         ( WecModel subModel, WecMsg submsg ) ->
             Wec.update submsg subModel
                 |> updateWith WecModel WecMsg model
-
-        ( _, Hover hovered ) ->
-            ( { model | hovered = hovered }, Cmd.none )
 
         _ ->
             ( model, Cmd.none )
@@ -249,14 +238,3 @@ view model =
                 WecModel subModel ->
                     Wec.view subModel
     }
-
-
-dataTable : Analysis -> Html msg
-dataTable { raceHistories } =
-    let
-        tableRow history =
-            tr [] <|
-                List.map (\d -> td [] [ text d ])
-                    [ history.carNumber ]
-    in
-    Html.table [] (List.map tableRow raceHistories)
