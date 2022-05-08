@@ -1,9 +1,23 @@
-module Css.Extra exposing (palette, strokeWidth, svgPalette)
+module Css.Extra exposing (palette, strokeWidth, svgPalette, when)
 
-import Css exposing (ColorValue, Style, batch, property)
+import Css exposing (Style, batch, property)
 import Css.Color exposing (Color(..))
 import Css.Palette exposing (Palette)
 import Css.Palette.Svg exposing (SvgPalette)
+
+
+none : Style
+none =
+    batch []
+
+
+when : Bool -> Style -> Style
+when condition style =
+    if condition then
+        style
+
+    else
+        none
 
 
 strokeWidth : Float -> Style
