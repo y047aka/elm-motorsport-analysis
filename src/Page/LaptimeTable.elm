@@ -1,7 +1,7 @@
 module Page.LapTimeTable exposing (Model, Msg, init, update, view)
 
 import Data.LapTime as LapTime exposing (LapTime)
-import Data.LapTimes exposing (Car, Lap, LapTimes, lapTimesDecoder)
+import Data.LapTimes exposing (LapTimes, lapTimesDecoder)
 import Html.Styled as Html exposing (Html)
 import Http
 import UI.SortableData exposing (State, initialSort, intColumn, stringColumn, table)
@@ -90,7 +90,7 @@ type alias LapData =
 
 
 sortableTable : Model -> List LapData -> Html Msg
-sortableTable { tableState, query } =
+sortableTable { tableState } =
     let
         config =
             { toId = .lap >> String.fromInt
@@ -102,8 +102,5 @@ sortableTable { tableState, query } =
                 , stringColumn { label = "Time", getter = .time >> LapTime.toString }
                 ]
             }
-
-        lowerQuery =
-            String.toLower query
     in
     table config tableState
