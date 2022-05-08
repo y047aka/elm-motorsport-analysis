@@ -14,7 +14,6 @@
             "elm/parser": "1.1.0",
             "elm/url": "1.0.0",
             "elm-community/list-extra": "8.4.0",
-            "elm-community/list-split": "1.0.3",
             "elm-community/typed-svg": "7.0.0",
             "elm-explorations/test": "1.2.2",
             "ericgj/elm-csv-decode": "2.0.1",

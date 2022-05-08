@@ -234,6 +234,7 @@ view model =
 
                 LapTimeTableModel subModel ->
                     LapTimeTable.view subModel
+                        |> List.map (Html.map LapTimeTableMsg)
 
                 WecModel subModel ->
                     Wec.view subModel

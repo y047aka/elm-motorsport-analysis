@@ -1,9 +1,10 @@
 module Page.LapTimeTable exposing (Model, Msg, init, update, view)
 
-import Chart.LapTimes as LapTimes
-import Data.LapTimes exposing (LapTimes, lapTimesDecoder)
+import Data.LapTime as LapTime exposing (LapTime)
+import Data.LapTimes exposing (Car, Lap, LapTimes, lapTimesDecoder)
 import Html.Styled as Html exposing (Html)
 import Http
+import UI.SortableData exposing (State, initialSort, intColumn, stringColumn, table)
 
 
 
@@ -11,12 +12,20 @@ import Http
 
 
 type alias Model =
-    { lapTimes : LapTimes }
+    { lapTimes : LapTimes
+    , tableState : State
+    , query : String
+    }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { lapTimes = [] }, fetchJson )
+    ( { lapTimes = []
+      , tableState = initialSort "Driver"
+      , query = ""
+      }
+    , fetchJson
+    )
 
 
 fetchJson : Cmd Msg
@@ -33,6 +42,7 @@ fetchJson =
 
 type Msg
     = Loaded (Result Http.Error LapTimes)
+    | SetTableState State
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -44,11 +54,56 @@ update msg model =
         Loaded (Err _) ->
             ( model, Cmd.none )
 
+        SetTableState newState ->
+            ( { model | tableState = newState }, Cmd.none )
+
 
 
 -- VIEW
 
 
-view : Model -> List (Html msg)
-view { lapTimes } =
-    [ LapTimes.view lapTimes ]
+view : Model -> List (Html Msg)
+view model =
+    [ sortableTable model <|
+        List.concatMap
+            (\car ->
+                List.map
+                    (\{ lap, time } ->
+                        { carNumber = car.carNumber
+                        , driverName = car.driver.name
+                        , lap = lap
+                        , time = time
+                        }
+                    )
+                    car.laps
+            )
+            model.lapTimes
+    ]
+
+
+type alias LapData =
+    { carNumber : String
+    , driverName : String
+    , lap : Int
+    , time : LapTime
+    }
+
+
+sortableTable : Model -> List LapData -> Html Msg
+sortableTable { tableState, query } =
+    let
+        config =
+            { toId = .lap >> String.fromInt
+            , toMsg = SetTableState
+            , columns =
+                [ stringColumn { label = "Car", getter = .carNumber }
+                , stringColumn { label = "Driver", getter = .driverName }
+                , intColumn { label = "Lap", getter = .lap }
+                , stringColumn { label = "Time", getter = .time >> LapTime.toString }
+                ]
+            }
+
+        lowerQuery =
+            String.toLower query
+    in
+    table config tableState
