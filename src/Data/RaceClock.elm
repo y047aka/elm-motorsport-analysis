@@ -49,13 +49,17 @@ countDown c =
 
 elapsed_ : Int -> List (List Lap) -> LapTime
 elapsed_ lapCount lapTimes =
+    let
+        nextLap =
+            lapCount + 1
+    in
     lapTimes
         |> List.map
             (\laps ->
                 laps
                     |> List.filterMap
                         (\{ lap, elapsed } ->
-                            if lapCount == lap then
+                            if nextLap == lap then
                                 Just elapsed
 
                             else
@@ -65,6 +69,7 @@ elapsed_ lapCount lapTimes =
             )
         |> List.filterMap identity
         |> List.minimum
+        |> Maybe.map (\elapsed -> elapsed - 1)
         |> Maybe.withDefault 0
 
 
