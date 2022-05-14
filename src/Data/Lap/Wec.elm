@@ -2,7 +2,7 @@ module Data.Lap.Wec exposing (Lap, lapDecoder)
 
 import Csv.Decode as CD exposing (Decoder)
 import Data.Class as Class exposing (Class(..))
-import Data.RaceClock as RaceClock exposing (RaceClock)
+import Data.Old.RaceClock as RaceClock exposing (RaceClock)
 
 
 type alias Lap =
