@@ -6,7 +6,7 @@ import Data.LapTimes exposing (Lap)
 
 type alias RaceClock =
     { lapCount : Int
-    , time : Int
+    , elapsed : Int
     , lapTimes : List (List Lap)
     }
 
@@ -14,7 +14,7 @@ type alias RaceClock =
 init : List (List Lap) -> RaceClock
 init lapTimes =
     { lapCount = 0
-    , time = 0
+    , elapsed = 0
     , lapTimes = lapTimes
     }
 
@@ -27,7 +27,7 @@ countUp c =
     in
     { c
         | lapCount = newCount
-        , time = time newCount c.lapTimes
+        , elapsed = elapsed_ newCount c.lapTimes
     }
 
 
@@ -40,15 +40,15 @@ countDown c =
         in
         { c
             | lapCount = newCount
-            , time = time newCount c.lapTimes
+            , elapsed = elapsed_ newCount c.lapTimes
         }
 
     else
         c
 
 
-time : Int -> List (List Lap) -> LapTime
-time lapCount lapTimes =
+elapsed_ : Int -> List (List Lap) -> LapTime
+elapsed_ lapCount lapTimes =
     lapTimes
         |> List.map
             (\laps ->
@@ -70,4 +70,4 @@ time lapCount lapTimes =
 
 toString : RaceClock -> String
 toString =
-    .time >> LapTime.toString
+    .elapsed >> LapTime.toString

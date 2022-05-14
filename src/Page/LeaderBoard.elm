@@ -88,14 +88,16 @@ view { raceClock, lapTimes } =
                 , th [] [ text "LapTime" ]
                 , th [] [ text "Fastest" ]
                 , th [] [ text "Elapsed" ]
+                , th [] [ text "LapCount" ]
                 ]
             ]
         , tbody [] <|
             List.map
                 (\{ carNumber, driver, laps } ->
                     let
-                        { time, fastest, elapsed } =
-                            currentLap raceClock.lapCount laps
+                        { lap, time, fastest, elapsed } =
+                            findCompletedLap raceClock laps
+                                |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
                     in
                     tr []
                         [ td [] [ text carNumber ]
@@ -103,6 +105,7 @@ view { raceClock, lapTimes } =
                         , td [] [ text <| LapTime.toString time ]
                         , td [] [ text <| LapTime.toString fastest ]
                         , td [] [ text <| LapTime.toString elapsed ]
+                        , td [] [ text <| String.fromInt lap ]
                         ]
                 )
                 lapTimes
@@ -110,8 +113,8 @@ view { raceClock, lapTimes } =
     ]
 
 
-currentLap : Int -> List Lap -> Lap
-currentLap lapCount =
-    List.filter (\{ lap } -> lapCount == lap)
+findCompletedLap : RaceClock -> List Lap -> Maybe Lap
+findCompletedLap clock =
+    List.filter (\lap -> lap.elapsed <= clock.elapsed)
+        >> List.reverse
         >> List.head
-        >> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
