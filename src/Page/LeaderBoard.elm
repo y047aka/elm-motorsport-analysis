@@ -2,6 +2,7 @@ module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
 import Data.LapTime as LapTime
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
+import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, table, tbody, td, text, th, thead, tr)
 import Html.Styled.Events exposing (onClick)
 import Http
@@ -14,14 +15,14 @@ import UI.Label exposing (basicLabel)
 
 
 type alias Model =
-    { lapCount : Int
+    { raceClock : RaceClock
     , lapTimes : LapTimes
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( { lapCount = 0
+    ( { raceClock = RaceClock.init []
       , lapTimes = []
       }
     , fetchJson
@@ -50,25 +51,21 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         Loaded (Ok lapTimes) ->
-            ( { model | lapTimes = lapTimes }, Cmd.none )
+            ( { model
+                | raceClock = RaceClock.init (List.map .laps lapTimes)
+                , lapTimes = lapTimes
+              }
+            , Cmd.none
+            )
 
         Loaded (Err _) ->
             ( model, Cmd.none )
 
         CountUp ->
-            ( { model | lapCount = model.lapCount + 1 }, Cmd.none )
+            ( { model | raceClock = countUp model.raceClock }, Cmd.none )
 
         CountDown ->
-            ( { model
-                | lapCount =
-                    if model.lapCount > 0 then
-                        model.lapCount - 1
-
-                    else
-                        model.lapCount
-              }
-            , Cmd.none
-            )
+            ( { model | raceClock = countDown model.raceClock }, Cmd.none )
 
 
 
@@ -76,12 +73,13 @@ update msg model =
 
 
 view : Model -> List (Html Msg)
-view { lapCount, lapTimes } =
+view { raceClock, lapTimes } =
     [ labeledButton []
         [ button [ onClick CountDown ] [ text "-" ]
-        , basicLabel [] [ text (String.fromInt lapCount) ]
+        , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
         , button [ onClick CountUp ] [ text "+" ]
         ]
+    , text <| RaceClock.toString raceClock
     , table []
         [ thead []
             [ tr []
@@ -97,7 +95,7 @@ view { lapCount, lapTimes } =
                 (\{ carNumber, driver, laps } ->
                     let
                         { time, fastest, elapsed } =
-                            currentLap lapCount laps
+                            currentLap raceClock.lapCount laps
                     in
                     tr []
                         [ td [] [ text carNumber ]
