@@ -95,7 +95,7 @@ view { lapCount, lapTimes } =
                 (\{ carNumber, driver, laps } ->
                     let
                         { time } =
-                            currentLap laps lapCount
+                            currentLap lapCount laps
                     in
                     tr []
                         [ td [] [ text carNumber ]
@@ -108,9 +108,8 @@ view { lapCount, lapTimes } =
     ]
 
 
-currentLap : List Lap -> Int -> Lap
-currentLap laps lapCount =
-    laps
-        |> List.filter (\lap -> lapCount == lap.lap)
-        |> List.head
-        |> Maybe.withDefault { lap = 0, time = 0 }
+currentLap : Int -> List Lap -> Lap
+currentLap lapCount =
+    List.filter (\{ lap } -> lapCount == lap)
+        >> List.head
+        >> Maybe.withDefault { lap = 0, time = 0 }
