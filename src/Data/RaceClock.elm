@@ -62,8 +62,8 @@ elapsed_ lapCount lapTimes =
                                 Nothing
                         )
                     |> List.head
-                    |> Maybe.withDefault 0
             )
+        |> List.filterMap identity
         |> List.minimum
         |> Maybe.withDefault 0
 
