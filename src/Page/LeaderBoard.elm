@@ -88,19 +88,23 @@ view { lapCount, lapTimes } =
                 [ th [] [ text "CarNumber" ]
                 , th [] [ text "Driver" ]
                 , th [] [ text "LapTime" ]
+                , th [] [ text "Fastest" ]
+                , th [] [ text "Elapsed" ]
                 ]
             ]
         , tbody [] <|
             List.map
                 (\{ carNumber, driver, laps } ->
                     let
-                        { time } =
+                        { time, fastest, elapsed } =
                             currentLap lapCount laps
                     in
                     tr []
                         [ td [] [ text carNumber ]
                         , td [] [ text driver.name ]
                         , td [] [ text <| LapTime.toString time ]
+                        , td [] [ text <| LapTime.toString fastest ]
+                        , td [] [ text <| LapTime.toString elapsed ]
                         ]
                 )
                 lapTimes
@@ -112,4 +116,4 @@ currentLap : Int -> List Lap -> Lap
 currentLap lapCount =
     List.filter (\{ lap } -> lapCount == lap)
         >> List.head
-        >> Maybe.withDefault { lap = 0, time = 0 }
+        >> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }

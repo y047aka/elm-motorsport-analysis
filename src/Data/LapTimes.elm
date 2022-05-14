@@ -26,6 +26,8 @@ type alias Driver =
 type alias Lap =
     { lap : Int
     , time : LapTime
+    , fastest : LapTime
+    , elapsed : LapTime
     }
 
 
@@ -43,7 +45,7 @@ carDecoder =
     Decode.map3 Car
         (field "carNumber" string)
         (field "driver" driverDecoder)
-        (field "laps" (Decode.list lapDecoder))
+        (field "laps" lapsDecoder)
 
 
 driverDecoder : Decoder Driver
@@ -52,8 +54,35 @@ driverDecoder =
         (field "name" string)
 
 
-lapDecoder : Decoder Lap
+lapsDecoder : Decoder (List Lap)
+lapsDecoder =
+    Decode.map toLaps
+        (Decode.list lapDecoder)
+
+
+toLaps : List { lap : Int, time : LapTime } -> List Lap
+toLaps laps =
+    List.indexedMap
+        (\count { lap, time } ->
+            { lap = lap
+            , time = time
+            , fastest =
+                laps
+                    |> List.take (count + 1)
+                    |> List.map .time
+                    |> List.minimum
+                    |> Maybe.withDefault 0
+            , elapsed =
+                laps
+                    |> List.take (count + 1)
+                    |> List.foldl (.time >> (+)) 0
+            }
+        )
+        laps
+
+
+lapDecoder : Decoder { lap : Int, time : LapTime }
 lapDecoder =
-    Decode.map2 Lap
+    Decode.map2 (\lap time -> { lap = lap, time = time })
         (field "lap" int)
         (field "time" lapTimeDecoder)
