@@ -1,8 +1,7 @@
-module Css.Extra exposing (palette, strokeWidth, svgPalette, when)
+module Css.Extra exposing (strokeWidth, svgPalette, when)
 
 import Css exposing (Style, batch, property)
 import Css.Color exposing (Color(..))
-import Css.Palette exposing (Palette)
 import Css.Palette.Svg exposing (SvgPalette)
 
 
@@ -23,21 +22,6 @@ when condition style =
 strokeWidth : Float -> Style
 strokeWidth w =
     property "stroke-width" (String.fromFloat w)
-
-
-{-| Apply colors in batch according to `Palette`
-
-Currently supports `backgroundColor`, `color` and `borderColor`.
-It does not set `borderWith` and `borderStyle`, which should be individually set at call sites.
-
--}
-palette : Palette -> Style
-palette p =
-    batch
-        [ backgroundColor p.background
-        , color p.color
-        , borderColor p.border
-        ]
 
 
 svgPalette : SvgPalette -> Style

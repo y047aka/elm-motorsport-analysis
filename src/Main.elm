@@ -10,6 +10,7 @@ import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.LapTimeTable as LapTimeTable
+import Page.LeaderBoard as LeaderBoard
 import Page.RaceSummary as RaceSummary
 import Page.Wec as Wec
 import Url exposing (Url)
@@ -51,6 +52,7 @@ type SubModel
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
     | LapTimeTableModel LapTimeTable.Model
+    | LeaderBoardModel LeaderBoard.Model
     | WecModel Wec.Model
 
 
@@ -75,6 +77,7 @@ type Page
     | LapTimeChart
     | LapTimeChartsByDriver
     | LapTimeTable
+    | LeaderBoard
     | Wec
 
 
@@ -87,6 +90,7 @@ parser =
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
         , Url.Parser.map LapTimeTable (s "laptime-table")
+        , Url.Parser.map LeaderBoard (s "leader-board")
         , Url.Parser.map Wec (s "wec")
         ]
 
@@ -123,6 +127,10 @@ routing url model =
                         LapTimeTable.init
                             |> updateWith LapTimeTableModel LapTimeTableMsg model
 
+                    LeaderBoard ->
+                        LeaderBoard.init
+                            |> updateWith LeaderBoardModel LeaderBoardMsg model
+
                     Wec ->
                         Wec.init
                             |> updateWith WecModel WecMsg model
@@ -141,6 +149,7 @@ type Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LapTimeTableMsg LapTimeTable.Msg
+    | LeaderBoardMsg LeaderBoard.Msg
     | WecMsg Wec.Msg
 
 
@@ -177,6 +186,10 @@ update msg model =
         ( LapTimeTableModel subModel, LapTimeTableMsg submsg ) ->
             LapTimeTable.update submsg subModel
                 |> updateWith LapTimeTableModel LapTimeTableMsg model
+
+        ( LeaderBoardModel subModel, LeaderBoardMsg submsg ) ->
+            LeaderBoard.update submsg subModel
+                |> updateWith LeaderBoardModel LeaderBoardMsg model
 
         ( WecModel subModel, WecMsg submsg ) ->
             Wec.update submsg subModel
@@ -217,6 +230,8 @@ view model =
                     , br [] []
                     , a [ href "/laptime-table" ] [ text "LapTime table" ]
                     , br [] []
+                    , a [ href "/leader-board" ] [ text "Leader Board" ]
+                    , br [] []
                     , a [ href "/wec" ] [ text "Wec" ]
                     ]
 
@@ -235,6 +250,10 @@ view model =
                 LapTimeTableModel subModel ->
                     LapTimeTable.view subModel
                         |> List.map (Html.map LapTimeTableMsg)
+
+                LeaderBoardModel subModel ->
+                    LeaderBoard.view subModel
+                        |> List.map (Html.map LeaderBoardMsg)
 
                 WecModel subModel ->
                     Wec.view subModel
