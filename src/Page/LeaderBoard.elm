@@ -29,7 +29,6 @@ type alias LeaderBoard =
         , driver : String
         , lap : Int
         , diff : LapTime
-        , elapsed : Int
         , time : LapTime
         , fastest : LapTime
         }
@@ -77,7 +76,6 @@ update msg m =
                             , carNumber = carNumber
                             , driver = driver.name
                             , lap = 0
-                            , elapsed = 0
                             , time = 0
                             , fastest = 0
                             , diff = 0
@@ -172,7 +170,6 @@ toLeaderBoard raceClock cars =
                     List.head sortedCars
                         |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
                         |> Maybe.withDefault 0
-                , elapsed = lap.elapsed
                 , time = lap.time
                 , fastest = lap.fastest
                 }
@@ -206,13 +203,12 @@ view { raceClock, sortedCars } =
                 , th [] [ text "Diff" ]
                 , th [] [ text "Time" ]
                 , th [] [ text "Best" ]
-                , th [] [ text "Elapsed" ]
                 , th [] [ text "Completed" ]
                 ]
             ]
         , tbody [] <|
             List.map
-                (\{ position, carNumber, driver, lap, diff, elapsed, time, fastest } ->
+                (\{ position, carNumber, driver, lap, diff, time, fastest } ->
                     tr []
                         [ td [] [ text <| String.fromInt position ]
                         , td [] [ text carNumber ]
@@ -220,7 +216,6 @@ view { raceClock, sortedCars } =
                         , td [] [ text <| LapTime.toString diff ]
                         , td [] [ text <| LapTime.toString time ]
                         , td [] [ text <| LapTime.toString fastest ]
-                        , td [] [ text <| LapTime.toString elapsed ]
                         , td [] [ text <| String.fromInt lap ]
                         ]
                 )
