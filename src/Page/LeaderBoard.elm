@@ -28,6 +28,7 @@ type alias LeaderBoard =
         , carNumber : String
         , driver : String
         , lap : Int
+        , diff : LapTime
         , elapsed : Int
         , time : LapTime
         , fastest : LapTime
@@ -79,6 +80,7 @@ update msg m =
                             , elapsed = 0
                             , time = 0
                             , fastest = 0
+                            , diff = 0
                             }
                         )
                         lapTimes
@@ -126,50 +128,53 @@ update msg m =
 
 toLeaderBoard : RaceClock -> LapTimes -> LeaderBoard
 toLeaderBoard raceClock cars =
-    cars
-        |> List.map
-            (\car ->
-                let
-                    { lap, elapsed, time, fastest } =
-                        findCompletedLap raceClock car.laps
-                            |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
-                in
-                { lap = lap
-                , elapsed = elapsed
-                , time = time
-                , fastest = fastest
-                , car = car
-                }
-            )
-        |> List.sortWith
-            (\a b ->
-                case compare a.lap b.lap of
-                    LT ->
-                        GT
-
-                    EQ ->
-                        case compare a.elapsed b.elapsed of
+    let
+        sortedCars =
+            cars
+                |> List.map
+                    (\car ->
+                        let
+                            lap =
+                                findCompletedLap raceClock car.laps
+                                    |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
+                        in
+                        { car = car, lap = lap, elapsed = lap.elapsed }
+                    )
+                |> List.sortWith
+                    (\a b ->
+                        case compare a.lap.lap b.lap.lap of
                             LT ->
-                                LT
-
-                            EQ ->
-                                EQ
-
-                            GT ->
                                 GT
 
-                    GT ->
-                        LT
-            )
+                            EQ ->
+                                case compare a.elapsed b.elapsed of
+                                    LT ->
+                                        LT
+
+                                    EQ ->
+                                        EQ
+
+                                    GT ->
+                                        GT
+
+                            GT ->
+                                LT
+                    )
+    in
+    sortedCars
         |> List.indexedMap
-            (\index { lap, elapsed, car, time, fastest } ->
+            (\index { car, lap } ->
                 { position = index + 1
                 , driver = car.driver.name
                 , carNumber = car.carNumber
-                , lap = lap
-                , elapsed = elapsed
-                , time = time
-                , fastest = fastest
+                , lap = lap.lap
+                , diff =
+                    List.head sortedCars
+                        |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
+                        |> Maybe.withDefault 0
+                , elapsed = lap.elapsed
+                , time = lap.time
+                , fastest = lap.fastest
                 }
             )
 
@@ -198,6 +203,7 @@ view { raceClock, sortedCars } =
             [ tr []
                 [ th [] [ text "Position" ]
                 , th [ colspan 2 ] [ text "Driver" ]
+                , th [] [ text "Diff" ]
                 , th [] [ text "Time" ]
                 , th [] [ text "Best" ]
                 , th [] [ text "Elapsed" ]
@@ -206,11 +212,12 @@ view { raceClock, sortedCars } =
             ]
         , tbody [] <|
             List.map
-                (\{ position, carNumber, driver, lap, elapsed, time, fastest } ->
+                (\{ position, carNumber, driver, lap, diff, elapsed, time, fastest } ->
                     tr []
                         [ td [] [ text <| String.fromInt position ]
                         , td [] [ text carNumber ]
                         , td [] [ text driver ]
+                        , td [] [ text <| LapTime.toString diff ]
                         , td [] [ text <| LapTime.toString time ]
                         , td [] [ text <| LapTime.toString fastest ]
                         , td [] [ text <| LapTime.toString elapsed ]
