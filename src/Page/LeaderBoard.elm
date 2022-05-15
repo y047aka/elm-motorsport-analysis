@@ -17,6 +17,7 @@ import UI.Label exposing (basicLabel)
 type alias Model =
     { raceClock : RaceClock
     , lapTimes : LapTimes
+    , sortedCars : LapTimes
     }
 
 
@@ -24,6 +25,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { raceClock = RaceClock.init []
       , lapTimes = []
+      , sortedCars = []
       }
     , fetchJson
     )
@@ -54,6 +56,7 @@ update msg model =
             ( { model
                 | raceClock = RaceClock.init (List.map .laps lapTimes)
                 , lapTimes = lapTimes
+                , sortedCars = lapTimes
               }
             , Cmd.none
             )
@@ -62,10 +65,70 @@ update msg model =
             ( model, Cmd.none )
 
         CountUp ->
-            ( { model | raceClock = countUp model.raceClock }, Cmd.none )
+            let
+                updatedClock =
+                    countUp model.raceClock
+            in
+            ( { model
+                | raceClock = updatedClock
+                , sortedCars = sort updatedClock model.sortedCars
+              }
+            , Cmd.none
+            )
 
         CountDown ->
-            ( { model | raceClock = countDown model.raceClock }, Cmd.none )
+            let
+                updatedClock =
+                    countDown model.raceClock
+            in
+            ( { model
+                | raceClock = updatedClock
+                , sortedCars = sort updatedClock model.sortedCars
+              }
+            , Cmd.none
+            )
+
+
+sort : RaceClock -> LapTimes -> LapTimes
+sort raceClock cars =
+    cars
+        |> List.map
+            (\car ->
+                let
+                    { lap, elapsed } =
+                        findCompletedLap raceClock car.laps
+                            |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
+                in
+                { lap = lap, elapsed = elapsed, car = car }
+            )
+        |> List.sortWith
+            (\a b ->
+                case compare a.lap b.lap of
+                    LT ->
+                        GT
+
+                    EQ ->
+                        case compare a.elapsed b.elapsed of
+                            LT ->
+                                LT
+
+                            EQ ->
+                                EQ
+
+                            GT ->
+                                GT
+
+                    GT ->
+                        LT
+            )
+        |> List.map .car
+
+
+findCompletedLap : RaceClock -> List Lap -> Maybe Lap
+findCompletedLap clock =
+    List.filter (\lap -> lap.elapsed <= clock.elapsed)
+        >> List.reverse
+        >> List.head
 
 
 
@@ -73,7 +136,7 @@ update msg model =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, lapTimes } =
+view { raceClock, sortedCars } =
     [ labeledButton []
         [ button [ onClick CountDown ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
@@ -108,13 +171,6 @@ view { raceClock, lapTimes } =
                         , td [] [ text <| String.fromInt lap ]
                         ]
                 )
-                lapTimes
+                sortedCars
         ]
     ]
-
-
-findCompletedLap : RaceClock -> List Lap -> Maybe Lap
-findCompletedLap clock =
-    List.filter (\lap -> lap.elapsed <= clock.elapsed)
-        >> List.reverse
-        >> List.head
