@@ -1,7 +1,7 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
 import Data.LapTime as LapTime exposing (LapTime)
-import Data.LapTimes exposing (Car, Lap, LapTimes, lapTimesDecoder)
+import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, table, tbody, td, text, th, thead, tr)
 import Html.Styled.Attributes exposing (colspan)
