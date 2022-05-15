@@ -1,9 +1,10 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
 import Data.LapTime as LapTime
-import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
+import Data.LapTimes exposing (Car, Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, table, tbody, td, text, th, thead, tr)
+import Html.Styled.Attributes exposing (colspan)
 import Html.Styled.Events exposing (onClick)
 import Http
 import UI.Button exposing (button, labeledButton)
@@ -17,8 +18,12 @@ import UI.Label exposing (basicLabel)
 type alias Model =
     { raceClock : RaceClock
     , lapTimes : LapTimes
-    , sortedCars : LapTimes
+    , sortedCars : LeaderBoard
     }
+
+
+type alias LeaderBoard =
+    List ( Int, Car )
 
 
 init : ( Model, Cmd Msg )
@@ -56,7 +61,7 @@ update msg m =
             ( { m
                 | raceClock = RaceClock.init (List.map .laps lapTimes)
                 , lapTimes = lapTimes
-                , sortedCars = lapTimes
+                , sortedCars = List.indexedMap (\index car -> ( index + 1, car )) lapTimes
               }
             , Cmd.none
             )
@@ -71,7 +76,7 @@ update msg m =
             in
             ( { m
                 | raceClock = updatedClock
-                , sortedCars = sort updatedClock m.sortedCars
+                , sortedCars = toLeaderBoard updatedClock m.lapTimes
               }
             , Cmd.none
             )
@@ -83,14 +88,14 @@ update msg m =
             in
             ( { m
                 | raceClock = updatedClock
-                , sortedCars = sort updatedClock m.sortedCars
+                , sortedCars = toLeaderBoard updatedClock m.lapTimes
               }
             , Cmd.none
             )
 
 
-sort : RaceClock -> LapTimes -> LapTimes
-sort raceClock cars =
+toLeaderBoard : RaceClock -> LapTimes -> LeaderBoard
+toLeaderBoard raceClock cars =
     cars
         |> List.map
             (\car ->
@@ -121,7 +126,7 @@ sort raceClock cars =
                     GT ->
                         LT
             )
-        |> List.map .car
+        |> List.indexedMap (\index { car } -> ( index + 1, car ))
 
 
 findCompletedLap : RaceClock -> List Lap -> Maybe Lap
@@ -146,24 +151,25 @@ view { raceClock, sortedCars } =
     , table []
         [ thead []
             [ tr []
-                [ th [] [ text "CarNumber" ]
-                , th [] [ text "Driver" ]
-                , th [] [ text "LapTime" ]
-                , th [] [ text "Fastest" ]
+                [ th [] [ text "Position" ]
+                , th [ colspan 2 ] [ text "Driver" ]
+                , th [] [ text "Time" ]
+                , th [] [ text "Best" ]
                 , th [] [ text "Elapsed" ]
-                , th [] [ text "LapCount" ]
+                , th [] [ text "Completed" ]
                 ]
             ]
         , tbody [] <|
             List.map
-                (\{ carNumber, driver, laps } ->
+                (\( position, { carNumber, driver, laps } ) ->
                     let
                         { lap, time, fastest, elapsed } =
                             findCompletedLap raceClock laps
                                 |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
                     in
                     tr []
-                        [ td [] [ text carNumber ]
+                        [ td [] [ text <| String.fromInt position ]
+                        , td [] [ text carNumber ]
                         , td [] [ text driver.name ]
                         , td [] [ text <| LapTime.toString time ]
                         , td [] [ text <| LapTime.toString fastest ]
