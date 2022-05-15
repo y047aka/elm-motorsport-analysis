@@ -9,7 +9,6 @@ import List.Extra as List
 import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
-import Page.LapTimeTable as LapTimeTable
 import Page.LeaderBoard as LeaderBoard
 import Page.RaceSummary as RaceSummary
 import Page.Wec as Wec
@@ -51,7 +50,6 @@ type SubModel
     | GapChartModel GapChart.Model
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
-    | LapTimeTableModel LapTimeTable.Model
     | LeaderBoardModel LeaderBoard.Model
     | WecModel Wec.Model
 
@@ -76,7 +74,6 @@ type Page
     | GapChart
     | LapTimeChart
     | LapTimeChartsByDriver
-    | LapTimeTable
     | LeaderBoard
     | Wec
 
@@ -89,7 +86,6 @@ parser =
         , Url.Parser.map GapChart (s "gap-chart")
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
-        , Url.Parser.map LapTimeTable (s "laptime-table")
         , Url.Parser.map LeaderBoard (s "leader-board")
         , Url.Parser.map Wec (s "wec")
         ]
@@ -123,10 +119,6 @@ routing url model =
                         LapTimeChartsByDriver.init
                             |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
 
-                    LapTimeTable ->
-                        LapTimeTable.init
-                            |> updateWith LapTimeTableModel LapTimeTableMsg model
-
                     LeaderBoard ->
                         LeaderBoard.init
                             |> updateWith LeaderBoardModel LeaderBoardMsg model
@@ -148,7 +140,6 @@ type Msg
     | GapChartMsg GapChart.Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
-    | LapTimeTableMsg LapTimeTable.Msg
     | LeaderBoardMsg LeaderBoard.Msg
     | WecMsg Wec.Msg
 
@@ -182,10 +173,6 @@ update msg model =
         ( LapTimeChartsByDriverModel subModel, LapTimeChartsByDriverMsg submsg ) ->
             LapTimeChartsByDriver.update submsg subModel
                 |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
-
-        ( LapTimeTableModel subModel, LapTimeTableMsg submsg ) ->
-            LapTimeTable.update submsg subModel
-                |> updateWith LapTimeTableModel LapTimeTableMsg model
 
         ( LeaderBoardModel subModel, LeaderBoardMsg submsg ) ->
             LeaderBoard.update submsg subModel
@@ -228,8 +215,6 @@ view model =
                     , br [] []
                     , a [ href "/lapTime-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
                     , br [] []
-                    , a [ href "/laptime-table" ] [ text "LapTime table" ]
-                    , br [] []
                     , a [ href "/leader-board" ] [ text "Leader Board" ]
                     , br [] []
                     , a [ href "/wec" ] [ text "Wec" ]
@@ -246,10 +231,6 @@ view model =
 
                 LapTimeChartsByDriverModel subModel ->
                     LapTimeChartsByDriver.view subModel
-
-                LapTimeTableModel subModel ->
-                    LapTimeTable.view subModel
-                        |> List.map (Html.map LapTimeTableMsg)
 
                 LeaderBoardModel subModel ->
                     LeaderBoard.view subModel
