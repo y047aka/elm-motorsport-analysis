@@ -91,13 +91,23 @@ update msg m =
 
         CountUp ->
             let
+                maxCount =
+                    m.lapTimes
+                        |> List.map (.laps >> List.length)
+                        |> List.maximum
+                        |> Maybe.withDefault 0
+
                 updatedClock =
                     countUp m.raceClock
             in
-            ( { m
-                | raceClock = updatedClock
-                , sortedCars = toLeaderBoard updatedClock m.lapTimes
-              }
+            ( if m.raceClock.lapCount < maxCount then
+                { m
+                    | raceClock = updatedClock
+                    , sortedCars = toLeaderBoard updatedClock m.lapTimes
+                }
+
+              else
+                m
             , Cmd.none
             )
 
