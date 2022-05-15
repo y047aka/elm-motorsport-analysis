@@ -50,10 +50,10 @@ type Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update msg m =
     case msg of
         Loaded (Ok lapTimes) ->
-            ( { model
+            ( { m
                 | raceClock = RaceClock.init (List.map .laps lapTimes)
                 , lapTimes = lapTimes
                 , sortedCars = lapTimes
@@ -62,16 +62,16 @@ update msg model =
             )
 
         Loaded (Err _) ->
-            ( model, Cmd.none )
+            ( m, Cmd.none )
 
         CountUp ->
             let
                 updatedClock =
-                    countUp model.raceClock
+                    countUp m.raceClock
             in
-            ( { model
+            ( { m
                 | raceClock = updatedClock
-                , sortedCars = sort updatedClock model.sortedCars
+                , sortedCars = sort updatedClock m.sortedCars
               }
             , Cmd.none
             )
@@ -79,11 +79,11 @@ update msg model =
         CountDown ->
             let
                 updatedClock =
-                    countDown model.raceClock
+                    countDown m.raceClock
             in
-            ( { model
+            ( { m
                 | raceClock = updatedClock
-                , sortedCars = sort updatedClock model.sortedCars
+                , sortedCars = sort updatedClock m.sortedCars
               }
             , Cmd.none
             )
