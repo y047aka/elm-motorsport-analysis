@@ -3,12 +3,12 @@ module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 import Data.LapTime as LapTime exposing (LapTime)
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
-import Html.Styled as Html exposing (Html, table, tbody, td, text, th, thead, tr)
-import Html.Styled.Attributes exposing (colspan)
+import Html.Styled as Html exposing (Html, text)
 import Html.Styled.Events exposing (onClick)
 import Http
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
+import UI.SortableData exposing (State, initialSort, intColumn, stringColumn, table)
 
 
 
@@ -19,6 +19,8 @@ type alias Model =
     { raceClock : RaceClock
     , lapTimes : LapTimes
     , sortedCars : LeaderBoard
+    , tableState : State
+    , query : String
     }
 
 
@@ -39,6 +41,8 @@ init =
     ( { raceClock = RaceClock.init []
       , lapTimes = []
       , sortedCars = []
+      , tableState = initialSort "Position"
+      , query = ""
       }
     , fetchJson
     )
@@ -60,6 +64,7 @@ type Msg
     = Loaded (Result Http.Error LapTimes)
     | CountUp
     | CountDown
+    | SetTableState State
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -122,6 +127,9 @@ update msg m =
               }
             , Cmd.none
             )
+
+        SetTableState newState ->
+            ( { m | tableState = newState }, Cmd.none )
 
 
 toLeaderBoard : RaceClock -> LapTimes -> LeaderBoard
@@ -188,37 +196,32 @@ findCompletedLap clock =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, sortedCars } =
+view { raceClock, sortedCars, tableState } =
     [ labeledButton []
         [ button [ onClick CountDown ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
         , button [ onClick CountUp ] [ text "+" ]
         ]
     , text <| RaceClock.toString raceClock
-    , table []
-        [ thead []
-            [ tr []
-                [ th [] [ text "Position" ]
-                , th [ colspan 2 ] [ text "Driver" ]
-                , th [] [ text "Diff" ]
-                , th [] [ text "Time" ]
-                , th [] [ text "Best" ]
-                , th [] [ text "Completed" ]
-                ]
-            ]
-        , tbody [] <|
-            List.map
-                (\{ position, carNumber, driver, lap, diff, time, fastest } ->
-                    tr []
-                        [ td [] [ text <| String.fromInt position ]
-                        , td [] [ text carNumber ]
-                        , td [] [ text driver ]
-                        , td [] [ text <| LapTime.toString diff ]
-                        , td [] [ text <| LapTime.toString time ]
-                        , td [] [ text <| LapTime.toString fastest ]
-                        , td [] [ text <| String.fromInt lap ]
-                        ]
-                )
-                sortedCars
-        ]
+    , sortableTable tableState sortedCars
     ]
+
+
+sortableTable : State -> LeaderBoard -> Html Msg
+sortableTable tableState =
+    let
+        config =
+            { toId = .carNumber
+            , toMsg = SetTableState
+            , columns =
+                [ intColumn { label = "Position", getter = .position }
+                , stringColumn { label = "#", getter = .carNumber }
+                , stringColumn { label = "Driver", getter = .driver }
+                , intColumn { label = "Lap", getter = .lap }
+                , stringColumn { label = "Diff", getter = .diff >> LapTime.toString }
+                , stringColumn { label = "Time", getter = .time >> LapTime.toString }
+                , stringColumn { label = "Best", getter = .fastest >> LapTime.toString }
+                ]
+            }
+    in
+    table config tableState
