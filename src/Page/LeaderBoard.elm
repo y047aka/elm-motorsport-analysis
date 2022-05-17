@@ -218,10 +218,13 @@ sortableTable tableState =
                 , stringColumn { label = "#", getter = .carNumber }
                 , stringColumn { label = "Driver", getter = .driver }
                 , intColumn { label = "Lap", getter = .lap }
-                , stringColumn { label = "Diff", getter = .diff >> LapTime.toString }
-                , stringColumn { label = "Time", getter = .time >> LapTime.toString }
-                , stringColumn { label = "Best", getter = .fastest >> LapTime.toString }
+                , laptimeColumn { label = "Diff", getter = .diff }
+                , laptimeColumn { label = "Time", getter = .time }
+                , laptimeColumn { label = "Best", getter = .fastest }
                 ]
             }
+
+        laptimeColumn { label, getter } =
+            stringColumn { label = label, getter = getter >> LapTime.toString }
     in
     table config tableState
