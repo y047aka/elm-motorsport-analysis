@@ -2,6 +2,7 @@ module UI.SortableData exposing
     ( list, table
     , stringColumn, intColumn, floatColumn
     , State, initialSort
+    , increasingOrDecreasingBy
     , Config
     )
 
@@ -34,6 +35,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 ## Custom Columns
 
 @docs Column
+@docs increasingOrDecreasingBy
 
 -}
 

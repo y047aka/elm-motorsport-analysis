@@ -1,14 +1,21 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
+import Chart.Fragments exposing (dot)
+import Css exposing (px, width)
+import Data.Lap exposing (LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, slowestLap, toLapStatus)
 import Data.LapTime as LapTime exposing (LapTime)
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, text)
 import Html.Styled.Events exposing (onClick)
 import Http
+import Scale exposing (ContinuousScale)
+import Svg.Styled exposing (Svg, g, svg)
+import Svg.Styled.Attributes exposing (css)
+import TypedSvg.Styled.Attributes exposing (viewBox)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
-import UI.SortableData exposing (State, initialSort, intColumn, stringColumn, table)
+import UI.SortableData exposing (State, increasingOrDecreasingBy, initialSort, intColumn, stringColumn, table)
 
 
 
@@ -19,6 +26,11 @@ type alias Model =
     { raceClock : RaceClock
     , lapTimes : LapTimes
     , sortedCars : LeaderBoard
+    , analysis :
+        Maybe
+            { fastestLapTime : LapTime
+            , slowestLapTime : LapTime
+            }
     , tableState : State
     , query : String
     }
@@ -33,6 +45,7 @@ type alias LeaderBoard =
         , diff : LapTime
         , time : LapTime
         , fastest : LapTime
+        , history : List Lap
         }
 
 
@@ -41,6 +54,7 @@ init =
     ( { raceClock = RaceClock.init []
       , lapTimes = []
       , sortedCars = []
+      , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
       }
@@ -81,9 +95,10 @@ update msg m =
                             , carNumber = carNumber
                             , driver = driver.name
                             , lap = 0
+                            , diff = 0
                             , time = 0
                             , fastest = 0
-                            , diff = 0
+                            , history = []
                             }
                         )
                         lapTimes
@@ -109,6 +124,7 @@ update msg m =
                 { m
                     | raceClock = updatedClock
                     , sortedCars = toLeaderBoard updatedClock m.lapTimes
+                    , analysis = Just (analysis_ updatedClock m.lapTimes)
                 }
 
               else
@@ -124,6 +140,7 @@ update msg m =
             ( { m
                 | raceClock = updatedClock
                 , sortedCars = toLeaderBoard updatedClock m.lapTimes
+                , analysis = Just (analysis_ updatedClock m.lapTimes)
               }
             , Cmd.none
             )
@@ -140,11 +157,11 @@ toLeaderBoard raceClock cars =
                 |> List.map
                     (\car ->
                         let
-                            lap =
-                                findCompletedLap raceClock car.laps
+                            lastLap =
+                                findLastLapAt raceClock car.laps
                                     |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
                         in
-                        { car = car, lap = lap, elapsed = lap.elapsed }
+                        { car = car, lap = lastLap, elapsed = lastLap.elapsed }
                     )
                 |> List.sortWith
                     (\a b ->
@@ -180,15 +197,20 @@ toLeaderBoard raceClock cars =
                         |> Maybe.withDefault 0
                 , time = lap.time
                 , fastest = lap.fastest
+                , history = completedLapsAt raceClock car.laps
                 }
             )
 
 
-findCompletedLap : RaceClock -> List Lap -> Maybe Lap
-findCompletedLap clock =
-    List.filter (\lap -> lap.elapsed <= clock.elapsed)
-        >> List.reverse
-        >> List.head
+analysis_ : RaceClock -> LapTimes -> { fastestLapTime : LapTime, slowestLapTime : LapTime }
+analysis_ clock lapTimes =
+    let
+        completedLaps =
+            List.map (.laps >> completedLapsAt clock) lapTimes
+    in
+    { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
+    , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
+    }
 
 
 
@@ -196,19 +218,21 @@ findCompletedLap clock =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, sortedCars, tableState } =
+view { raceClock, sortedCars, analysis, tableState } =
     [ labeledButton []
         [ button [ onClick CountDown ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
         , button [ onClick CountUp ] [ text "+" ]
         ]
     , text <| RaceClock.toString raceClock
-    , sortableTable tableState sortedCars
+    , sortableTable tableState
+        (Maybe.withDefault { fastestLapTime = 0, slowestLapTime = 0 } analysis)
+        sortedCars
     ]
 
 
-sortableTable : State -> LeaderBoard -> Html Msg
-sortableTable tableState =
+sortableTable : State -> { fastestLapTime : LapTime, slowestLapTime : LapTime } -> LeaderBoard -> Html Msg
+sortableTable tableState analysis =
     let
         config =
             { toId = .carNumber
@@ -221,10 +245,106 @@ sortableTable tableState =
                 , laptimeColumn { label = "Diff", getter = .diff }
                 , laptimeColumn { label = "Time", getter = .time }
                 , laptimeColumn { label = "Best", getter = .fastest }
+                , htmlColumn
+                    { label = "Histogram"
+                    , getter = .history >> histogram analysis
+                    , sorter = increasingOrDecreasingBy .time
+                    }
                 ]
             }
 
         laptimeColumn { label, getter } =
-            stringColumn { label = label, getter = getter >> LapTime.toString }
+            { name = label
+            , view = getter >> LapTime.toString >> text
+            , sorter = increasingOrDecreasingBy getter
+            }
+
+        htmlColumn { label, getter, sorter } =
+            { name = label, view = getter, sorter = sorter }
     in
     table config tableState
+
+
+
+-- CHART
+
+
+w : Float
+w =
+    100
+
+
+h : Float
+h =
+    5
+
+
+padding : Float
+padding =
+    2
+
+
+paddingLeft : Float
+paddingLeft =
+    padding
+
+
+paddingBottom : Float
+paddingBottom =
+    padding
+
+
+xScale : Int -> Int -> ContinuousScale Float
+xScale fastest slowest =
+    Scale.linear ( paddingLeft, w - padding ) ( toFloat fastest, toFloat slowest )
+
+
+yScale : Float -> ContinuousScale Float
+yScale _ =
+    Scale.linear ( h - paddingBottom, padding ) ( 0, 0 )
+
+
+histogram : { fastestLapTime : LapTime, slowestLapTime : LapTime } -> List Lap -> Html msg
+histogram { fastestLapTime, slowestLapTime } laps =
+    let
+        color lap =
+            case
+                ( isCurrentLap lap, toLapStatus { time = fastestLapTime } lap )
+            of
+                ( True, Fastest ) ->
+                    "#F0F"
+
+                ( True, PersonalBest ) ->
+                    "#0C0"
+
+                ( True, Normal ) ->
+                    "#FC0"
+
+                ( False, _ ) ->
+                    "hsla(0, 0%, 50%, 0.5)"
+
+        isCurrentLap { lap } =
+            List.length laps == lap
+    in
+    svg [ viewBox 0 0 w h, css [ width (px 200) ] ]
+        [ dotHistory
+            { x = .time >> toFloat >> Scale.convert (xScale fastestLapTime slowestLapTime)
+            , y = always 0 >> Scale.convert (yScale 0)
+            , color = color
+            }
+            laps
+        ]
+
+
+dotHistory : { x : a -> Float, y : a -> Float, color : a -> String } -> List a -> Svg msg
+dotHistory { x, y, color } laps =
+    g [] <|
+        List.map
+            (\lap ->
+                dot
+                    { cx = x lap
+                    , cy = y lap
+                    , fillColor = color lap
+                    }
+            )
+            laps
