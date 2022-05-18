@@ -1,4 +1,4 @@
-module Data.Lap exposing (Lap, fastest, fromWithoutElapsed)
+module Data.Old.Lap exposing (Lap, fastest, fromWithoutElapsed)
 
 import Data.Lap.WithoutElapsed exposing (WithoutElapsed)
 import List.Extra

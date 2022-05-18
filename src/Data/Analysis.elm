@@ -1,8 +1,8 @@
 module Data.Analysis exposing (Analysis, History, analysisDecoder, standings)
 
 import Data.Driver exposing (Driver)
-import Data.Lap exposing (Lap, fastest, fromWithoutElapsed)
 import Data.Lap.WithoutElapsed as Lap
+import Data.Old.Lap exposing (Lap, fastest, fromWithoutElapsed)
 import Data.RaceSummary exposing (RaceSummary, raceSummaryDecoder)
 import Json.Decode as Decode exposing (field, int, maybe, string)
 
