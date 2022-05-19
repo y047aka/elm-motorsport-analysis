@@ -2,6 +2,7 @@ module UI.SortableData exposing
     ( list, table
     , stringColumn, intColumn, floatColumn
     , State, initialSort
+    , customColumn, veryCustomColumn
     , increasingOrDecreasingBy
     , Config
     )
@@ -34,7 +35,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 ## Custom Columns
 
-@docs Column
+@docs Column, customColumn, veryCustomColumn
 @docs increasingOrDecreasingBy
 
 -}
@@ -149,6 +150,34 @@ floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> text
     , sorter = increasingOrDecreasingBy getter
+    }
+
+
+{-| -}
+customColumn :
+    { label : String
+    , getter : data -> String
+    , sorter : Sorter data
+    }
+    -> Column data msg
+customColumn { label, getter, sorter } =
+    { name = label
+    , view = getter >> text
+    , sorter = sorter
+    }
+
+
+{-| -}
+veryCustomColumn :
+    { label : String
+    , getter : data -> Html msg
+    , sorter : Sorter data
+    }
+    -> Column data msg
+veryCustomColumn { label, getter, sorter } =
+    { name = label
+    , view = getter
+    , sorter = sorter
     }
 
 

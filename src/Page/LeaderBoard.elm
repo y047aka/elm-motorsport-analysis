@@ -1,21 +1,22 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
-import Css exposing (px)
-import Data.Lap exposing (LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, slowestLap, toLapStatus)
+import Css exposing (color, hex, px)
+import Data.Lap exposing (LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
 import Data.LapTime as LapTime exposing (LapTime)
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
-import Html.Styled as Html exposing (Html, text)
+import Html.Styled as Html exposing (Html, span, text)
+import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
-import Svg.Styled.Attributes exposing (css, fill)
+import Svg.Styled.Attributes as SvgAttributes exposing (fill)
 import TypedSvg.Styled.Attributes exposing (viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
-import UI.SortableData exposing (State, increasingOrDecreasingBy, initialSort, intColumn, stringColumn, table)
+import UI.SortableData exposing (State, customColumn, increasingOrDecreasingBy, initialSort, intColumn, stringColumn, table, veryCustomColumn)
 
 
 
@@ -44,6 +45,7 @@ type alias LeaderBoard =
         , lap : Int
         , diff : LapTime
         , time : LapTime
+        , best : LapTime
         , history : List Lap
         }
 
@@ -96,6 +98,7 @@ update msg m =
                             , lap = 0
                             , diff = 0
                             , time = 0
+                            , best = 0
                             , history = []
                             }
                         )
@@ -194,6 +197,7 @@ toLeaderBoard raceClock cars =
                         |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
                         |> Maybe.withDefault 0
                 , time = lap.time
+                , best = lap.fastest
                 , history = completedLapsAt raceClock car.laps
                 }
             )
@@ -239,24 +243,40 @@ sortableTable tableState analysis =
                 , stringColumn { label = "#", getter = .carNumber }
                 , stringColumn { label = "Driver", getter = .driver }
                 , intColumn { label = "Lap", getter = .lap }
-                , laptimeColumn { label = "Diff", getter = .diff }
-                , laptimeColumn { label = "Time", getter = .time }
-                , htmlColumn
+                , customColumn
+                    { label = "Diff"
+                    , getter = .diff >> LapTime.toString
+                    , sorter = increasingOrDecreasingBy .diff
+                    }
+                , veryCustomColumn
+                    { label = "Time"
+                    , getter =
+                        \item ->
+                            span
+                                [ css
+                                    [ color <|
+                                        hex <|
+                                            case lapStatus { time = analysis.fastestLapTime } item of
+                                                Fastest ->
+                                                    "#F0F"
+
+                                                PersonalBest ->
+                                                    "#0C0"
+
+                                                Normal ->
+                                                    "inherit"
+                                    ]
+                                ]
+                                [ text <| LapTime.toString item.time ]
+                    , sorter = increasingOrDecreasingBy .time
+                    }
+                , veryCustomColumn
                     { label = "Histogram"
                     , getter = .history >> histogram analysis
                     , sorter = increasingOrDecreasingBy .time
                     }
                 ]
             }
-
-        laptimeColumn { label, getter } =
-            { name = label
-            , view = getter >> LapTime.toString >> text
-            , sorter = increasingOrDecreasingBy getter
-            }
-
-        htmlColumn { label, getter, sorter } =
-            { name = label, view = getter, sorter = sorter }
     in
     table config tableState
 
@@ -302,7 +322,7 @@ histogram { fastestLapTime, slowestLapTime } laps =
 
         color lap =
             case
-                ( isCurrentLap lap, toLapStatus { time = fastestLapTime } lap )
+                ( isCurrentLap lap, lapStatus { time = fastestLapTime } { time = lap.time, best = lap.fastest } )
             of
                 ( True, Fastest ) ->
                     "#F0F"
@@ -319,7 +339,7 @@ histogram { fastestLapTime, slowestLapTime } laps =
         isCurrentLap { lap } =
             List.length laps == lap
     in
-    svg [ viewBox 0 0 w h, css [ Css.width (px 200) ] ]
+    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
             { x = .time >> toFloat >> Scale.convert (xScale fastestLapTime slowestLapTime)
             , y = always 0 >> Scale.convert (yScale 0)

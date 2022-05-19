@@ -1,14 +1,14 @@
 module Data.Lap exposing
     ( fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
-    , LapStatus(..), toLapStatus
+    , LapStatus(..), lapStatus
     )
 
 {-|
 
 @docs fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
-@docs LapStatus, toLapStatus
+@docs LapStatus, lapStatus
 
 -}
 
@@ -47,12 +47,12 @@ type LapStatus
     | Normal
 
 
-toLapStatus : { a | time : LapTime } -> { b | time : LapTime, fastest : LapTime } -> LapStatus
-toLapStatus fastestLap_ { time, fastest } =
+lapStatus : { a | time : LapTime } -> { b | time : LapTime, best : LapTime } -> LapStatus
+lapStatus fastestLap_ { time, best } =
     if time == fastestLap_.time then
         Fastest
 
-    else if time == fastest then
+    else if time == best then
         PersonalBest
 
     else
