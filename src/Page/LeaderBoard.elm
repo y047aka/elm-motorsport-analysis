@@ -1,7 +1,6 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
-import Chart.Fragments exposing (dot)
-import Css exposing (px, width)
+import Css exposing (px)
 import Data.Lap exposing (LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, slowestLap, toLapStatus)
 import Data.LapTime as LapTime exposing (LapTime)
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
@@ -10,9 +9,10 @@ import Html.Styled as Html exposing (Html, text)
 import Html.Styled.Events exposing (onClick)
 import Http
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg, g, svg)
-import Svg.Styled.Attributes exposing (css)
+import Svg.Styled exposing (Svg, g, rect, svg)
+import Svg.Styled.Attributes exposing (css, fill)
 import TypedSvg.Styled.Attributes exposing (viewBox)
+import TypedSvg.Styled.Attributes.InPx as InPx
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, increasingOrDecreasingBy, initialSort, intColumn, stringColumn, table)
@@ -271,42 +271,39 @@ sortableTable tableState analysis =
 
 w : Float
 w =
-    100
+    200
 
 
 h : Float
 h =
-    5
+    20
 
 
 padding : Float
 padding =
-    2
-
-
-paddingLeft : Float
-paddingLeft =
-    padding
-
-
-paddingBottom : Float
-paddingBottom =
-    padding
+    1
 
 
 xScale : Int -> Int -> ContinuousScale Float
 xScale fastest slowest =
-    Scale.linear ( paddingLeft, w - padding ) ( toFloat fastest, toFloat slowest )
+    Scale.linear ( padding, w - padding ) ( toFloat fastest, toFloat slowest )
 
 
 yScale : Float -> ContinuousScale Float
 yScale _ =
-    Scale.linear ( h - paddingBottom, padding ) ( 0, 0 )
+    Scale.linear ( h - padding, padding ) ( 0, 0 )
 
 
 histogram : { fastestLapTime : LapTime, slowestLapTime : LapTime } -> List Lap -> Html msg
 histogram { fastestLapTime, slowestLapTime } laps =
     let
+        width lap =
+            if isCurrentLap lap then
+                3
+
+            else
+                1
+
         color lap =
             case
                 ( isCurrentLap lap, toLapStatus { time = fastestLapTime } lap )
@@ -326,25 +323,32 @@ histogram { fastestLapTime, slowestLapTime } laps =
         isCurrentLap { lap } =
             List.length laps == lap
     in
-    svg [ viewBox 0 0 w h, css [ width (px 200) ] ]
-        [ dotHistory
+    svg [ viewBox 0 0 w h, css [ Css.width (px 200) ] ]
+        [ histogram_
             { x = .time >> toFloat >> Scale.convert (xScale fastestLapTime slowestLapTime)
             , y = always 0 >> Scale.convert (yScale 0)
+            , width = width
             , color = color
             }
             laps
         ]
 
 
-dotHistory : { x : a -> Float, y : a -> Float, color : a -> String } -> List a -> Svg msg
-dotHistory { x, y, color } laps =
+histogram_ :
+    { x : a -> Float, y : a -> Float, width : a -> Float, color : a -> String }
+    -> List a
+    -> Svg msg
+histogram_ { x, y, width, color } laps =
     g [] <|
         List.map
             (\lap ->
-                dot
-                    { cx = x lap
-                    , cy = y lap
-                    , fillColor = color lap
-                    }
+                rect
+                    [ InPx.x (x lap - 1)
+                    , InPx.y (y lap - 10)
+                    , InPx.width (width lap)
+                    , InPx.height 20
+                    , fill (color lap)
+                    ]
+                    []
             )
             laps
