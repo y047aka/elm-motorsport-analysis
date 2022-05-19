@@ -44,7 +44,6 @@ type alias LeaderBoard =
         , lap : Int
         , diff : LapTime
         , time : LapTime
-        , fastest : LapTime
         , history : List Lap
         }
 
@@ -97,7 +96,6 @@ update msg m =
                             , lap = 0
                             , diff = 0
                             , time = 0
-                            , fastest = 0
                             , history = []
                             }
                         )
@@ -196,7 +194,6 @@ toLeaderBoard raceClock cars =
                         |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
                         |> Maybe.withDefault 0
                 , time = lap.time
-                , fastest = lap.fastest
                 , history = completedLapsAt raceClock car.laps
                 }
             )
@@ -244,7 +241,6 @@ sortableTable tableState analysis =
                 , intColumn { label = "Lap", getter = .lap }
                 , laptimeColumn { label = "Diff", getter = .diff }
                 , laptimeColumn { label = "Time", getter = .time }
-                , laptimeColumn { label = "Best", getter = .fastest }
                 , htmlColumn
                     { label = "Histogram"
                     , getter = .history >> histogram analysis
