@@ -249,6 +249,11 @@ sortableTable tableState analysis =
                     , sorter = increasingOrDecreasingBy .diff
                     }
                 , veryCustomColumn
+                    { label = "Diff"
+                    , getter = .diff >> diff
+                    , sorter = increasingOrDecreasingBy .diff
+                    }
+                , veryCustomColumn
                     { label = "Time"
                     , getter =
                         \item ->
@@ -368,3 +373,18 @@ histogram_ { x, y, width, color } laps =
                     []
             )
             laps
+
+
+diff : LapTime -> Html msg
+diff time =
+    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
+        [ rect
+            [ InPx.x 0
+            , InPx.y 0
+            , InPx.width (time |> toFloat |> Scale.convert (xScale 0 100000))
+            , InPx.height 20
+            , fill "#999"
+            ]
+            []
+        ]
+
