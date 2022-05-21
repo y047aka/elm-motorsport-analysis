@@ -245,12 +245,18 @@ sortableTable tableState analysis =
                 , intColumn { label = "Lap", getter = .lap }
                 , customColumn
                     { label = "Diff"
-                    , getter = .diff >> Duration.toString
+                    , getter =
+                        \{ diff } ->
+                            if diff == 0 then
+                                "-"
+
+                            else
+                                "+ " ++ Duration.toString diff
                     , sorter = increasingOrDecreasingBy .diff
                     }
                 , veryCustomColumn
                     { label = "Diff"
-                    , getter = .diff >> diff
+                    , getter = .diff >> diff_
                     , sorter = increasingOrDecreasingBy .diff
                     }
                 , veryCustomColumn
@@ -375,8 +381,8 @@ histogram_ { x, y, width, color } laps =
             laps
 
 
-diff : Duration -> Html msg
-diff time =
+diff_ : Duration -> Html msg
+diff_ time =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ rect
             [ InPx.x 0
