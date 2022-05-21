@@ -1,8 +1,8 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
 import Css exposing (color, hex, px)
+import Data.Duration as Duration exposing (Duration)
 import Data.Lap exposing (LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
-import Data.LapTime as LapTime exposing (LapTime)
 import Data.LapTimes exposing (Lap, LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, span, text)
@@ -29,8 +29,8 @@ type alias Model =
     , sortedCars : LeaderBoard
     , analysis :
         Maybe
-            { fastestLapTime : LapTime
-            , slowestLapTime : LapTime
+            { fastestLapTime : Duration
+            , slowestLapTime : Duration
             }
     , tableState : State
     , query : String
@@ -43,9 +43,9 @@ type alias LeaderBoard =
         , carNumber : String
         , driver : String
         , lap : Int
-        , diff : LapTime
-        , time : LapTime
-        , best : LapTime
+        , diff : Duration
+        , time : Duration
+        , best : Duration
         , history : List Lap
         }
 
@@ -203,7 +203,7 @@ toLeaderBoard raceClock cars =
             )
 
 
-analysis_ : RaceClock -> LapTimes -> { fastestLapTime : LapTime, slowestLapTime : LapTime }
+analysis_ : RaceClock -> LapTimes -> { fastestLapTime : Duration, slowestLapTime : Duration }
 analysis_ clock lapTimes =
     let
         completedLaps =
@@ -232,7 +232,7 @@ view { raceClock, sortedCars, analysis, tableState } =
     ]
 
 
-sortableTable : State -> { fastestLapTime : LapTime, slowestLapTime : LapTime } -> LeaderBoard -> Html Msg
+sortableTable : State -> { fastestLapTime : Duration, slowestLapTime : Duration } -> LeaderBoard -> Html Msg
 sortableTable tableState analysis =
     let
         config =
@@ -245,7 +245,7 @@ sortableTable tableState analysis =
                 , intColumn { label = "Lap", getter = .lap }
                 , customColumn
                     { label = "Diff"
-                    , getter = .diff >> LapTime.toString
+                    , getter = .diff >> Duration.toString
                     , sorter = increasingOrDecreasingBy .diff
                     }
                 , veryCustomColumn
@@ -272,7 +272,7 @@ sortableTable tableState analysis =
                                                     "inherit"
                                     ]
                                 ]
-                                [ text <| LapTime.toString item.time ]
+                                [ text <| Duration.toString item.time ]
                     , sorter = increasingOrDecreasingBy .time
                     }
                 , veryCustomColumn
@@ -315,7 +315,7 @@ yScale _ =
     Scale.linear ( h - padding, padding ) ( 0, 0 )
 
 
-histogram : { fastestLapTime : LapTime, slowestLapTime : LapTime } -> List Lap -> Html msg
+histogram : { fastestLapTime : Duration, slowestLapTime : Duration } -> List Lap -> Html msg
 histogram { fastestLapTime, slowestLapTime } laps =
     let
         width lap =
@@ -375,7 +375,7 @@ histogram_ { x, y, width, color } laps =
             laps
 
 
-diff : LapTime -> Html msg
+diff : Duration -> Html msg
 diff time =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ rect
@@ -387,4 +387,3 @@ diff time =
             ]
             []
         ]
-

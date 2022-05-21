@@ -1,6 +1,6 @@
 module Data.RaceClock exposing (RaceClock, countDown, countUp, init, toString)
 
-import Data.LapTime as LapTime exposing (LapTime)
+import Data.Duration as Duration exposing (Duration)
 import Data.LapTimes exposing (Lap)
 
 
@@ -47,7 +47,7 @@ countDown c =
         c
 
 
-elapsed_ : Int -> List (List Lap) -> LapTime
+elapsed_ : Int -> List (List Lap) -> Duration
 elapsed_ lapCount lapTimes =
     let
         nextLap =
@@ -75,4 +75,4 @@ elapsed_ lapCount lapTimes =
 
 toString : RaceClock -> String
 toString =
-    .elapsed >> LapTime.toString
+    .elapsed >> Duration.toString

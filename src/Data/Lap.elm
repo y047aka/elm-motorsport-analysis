@@ -12,31 +12,31 @@ module Data.Lap exposing
 
 -}
 
-import Data.LapTime exposing (LapTime)
+import Data.Duration exposing (Duration)
 import Data.RaceClock exposing (RaceClock)
 import List.Extra
 
 
-fastestLap : List (List { a | time : LapTime }) -> Maybe { a | time : LapTime }
+fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 fastestLap =
     List.map (List.Extra.minimumBy .time)
         >> List.filterMap identity
         >> List.Extra.minimumBy .time
 
 
-slowestLap : List (List { a | time : LapTime }) -> Maybe { a | time : LapTime }
+slowestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 slowestLap =
     List.map (List.Extra.maximumBy .time)
         >> List.filterMap identity
         >> List.Extra.maximumBy .time
 
 
-completedLapsAt : RaceClock -> List { a | elapsed : LapTime } -> List { a | elapsed : LapTime }
+completedLapsAt : RaceClock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
 completedLapsAt clock =
     List.filter (\lap -> lap.elapsed <= clock.elapsed)
 
 
-findLastLapAt : RaceClock -> List { a | elapsed : LapTime } -> Maybe { a | elapsed : LapTime }
+findLastLapAt : RaceClock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
 findLastLapAt clock =
     completedLapsAt clock >> List.Extra.last
 
@@ -47,7 +47,7 @@ type LapStatus
     | Normal
 
 
-lapStatus : { a | time : LapTime } -> { b | time : LapTime, best : LapTime } -> LapStatus
+lapStatus : { a | time : Duration } -> { b | time : Duration, best : Duration } -> LapStatus
 lapStatus fastestLap_ { time, best } =
     if time == fastestLap_.time then
         Fastest

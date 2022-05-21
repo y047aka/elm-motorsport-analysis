@@ -1,6 +1,6 @@
 module Data.LapTimes exposing (Car, Driver, Lap, LapTimes, lapTimesDecoder)
 
-import Data.LapTime exposing (LapTime, lapTimeDecoder)
+import Data.Duration exposing (Duration, durationDecoder)
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 
 
@@ -25,9 +25,9 @@ type alias Driver =
 
 type alias Lap =
     { lap : Int
-    , time : LapTime
-    , fastest : LapTime
-    , elapsed : LapTime
+    , time : Duration
+    , fastest : Duration
+    , elapsed : Duration
     }
 
 
@@ -60,7 +60,7 @@ lapsDecoder =
         (Decode.list lapDecoder)
 
 
-toLaps : List { lap : Int, time : LapTime } -> List Lap
+toLaps : List { lap : Int, time : Duration } -> List Lap
 toLaps laps =
     List.indexedMap
         (\count { lap, time } ->
@@ -81,8 +81,8 @@ toLaps laps =
         laps
 
 
-lapDecoder : Decoder { lap : Int, time : LapTime }
+lapDecoder : Decoder { lap : Int, time : Duration }
 lapDecoder =
     Decode.map2 (\lap time -> { lap = lap, time = time })
         (field "lap" int)
-        (field "time" lapTimeDecoder)
+        (field "time" durationDecoder)
