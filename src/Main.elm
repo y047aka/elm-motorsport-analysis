@@ -10,7 +10,6 @@ import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.LeaderBoard as LeaderBoard
-import Page.RaceSummary as RaceSummary
 import Page.Wec as Wec
 import Url exposing (Url)
 import Url.Parser exposing (Parser, s)
@@ -46,7 +45,6 @@ type alias Model =
 type SubModel
     = None
     | TopModel
-    | RaceSummaryModel RaceSummary.Model
     | GapChartModel GapChart.Model
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
@@ -70,7 +68,6 @@ init _ url key =
 type Page
     = NotFound
     | Top
-    | RaceSummary
     | GapChart
     | LapTimeChart
     | LapTimeChartsByDriver
@@ -82,7 +79,6 @@ parser : Parser (Page -> a) a
 parser =
     Url.Parser.oneOf
         [ Url.Parser.map Top Url.Parser.top
-        , Url.Parser.map RaceSummary (s "race-summary")
         , Url.Parser.map GapChart (s "gap-chart")
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
@@ -102,10 +98,6 @@ routing url model =
 
                     Top ->
                         ( { model | subModel = TopModel }, Cmd.none )
-
-                    RaceSummary ->
-                        RaceSummary.init
-                            |> updateWith RaceSummaryModel RaceSummaryMsg model
 
                     GapChart ->
                         GapChart.init
@@ -136,7 +128,6 @@ routing url model =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
-    | RaceSummaryMsg RaceSummary.Msg
     | GapChartMsg GapChart.Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
@@ -157,10 +148,6 @@ update msg model =
 
         ( _, UrlChanged url ) ->
             routing url model
-
-        ( RaceSummaryModel subModel, RaceSummaryMsg submsg ) ->
-            RaceSummary.update submsg subModel
-                |> updateWith RaceSummaryModel RaceSummaryMsg model
 
         ( GapChartModel subModel, GapChartMsg submsg ) ->
             GapChart.update submsg subModel
@@ -207,9 +194,7 @@ view model =
                     []
 
                 TopModel ->
-                    [ a [ href "/race-summary" ] [ text "Race Summary" ]
-                    , br [] []
-                    , a [ href "/gap-chart" ] [ text "Gap Chart" ]
+                    [ a [ href "/gap-chart" ] [ text "Gap Chart" ]
                     , br [] []
                     , a [ href "/lapTime-chart" ] [ text "LapTime Chart" ]
                     , br [] []
@@ -219,9 +204,6 @@ view model =
                     , br [] []
                     , a [ href "/wec" ] [ text "Wec" ]
                     ]
-
-                RaceSummaryModel subModel ->
-                    RaceSummary.view subModel
 
                 GapChartModel subModel ->
                     GapChart.view subModel
