@@ -1,6 +1,6 @@
 module Data.Lap.Wec exposing (Lap, lapDecoder)
 
-import Csv.Decode as CD exposing (Decoder)
+import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
 import Data.Class as Class exposing (Class(..))
 import Data.Old.RaceClock as RaceClock exposing (RaceClock)
 
@@ -31,50 +31,37 @@ type alias Lap =
     }
 
 
-lapDecoder : Decoder (Lap -> a) a
+lapDecoder : Decoder Lap
 lapDecoder =
     let
-        stringToIntResult : String -> Result String Int
-        stringToIntResult s =
-            String.toInt s
-                |> Result.fromMaybe ("Cannot convert '" ++ s ++ "' to Int")
+        raceClockDecoder : Decoder RaceClock
+        raceClockDecoder =
+            string |> Decode.andThen (RaceClock.fromString >> Decode.fromMaybe "Expected a RaceClock")
 
-        stringToFloatResult : String -> Result String Float
-        stringToFloatResult s =
-            String.toFloat s
-                |> Result.fromMaybe ("Cannot convert '" ++ s ++ "' to Float")
-
-        stringToRaceClockResult : String -> Result String Int
-        stringToRaceClockResult s =
-            RaceClock.fromString s
-                |> Result.fromMaybe ("Cannot convert '" ++ s ++ "' to Int")
-
-        stringToClassResult : String -> Result String Class
-        stringToClassResult s =
-            Class.fromString s
-                |> Result.fromMaybe ("Cannot convert '" ++ s ++ "' to Class")
+        classDecoder : Decoder Class
+        classDecoder =
+            string |> Decode.andThen (Class.fromString >> Decode.fromMaybe "Expected a Class")
     in
-    CD.map Lap
-        (CD.field "NUMBER" stringToIntResult
-            |> CD.andMap (CD.field "DRIVER_NUMBER" stringToIntResult)
-            |> CD.andMap (CD.field "LAP_NUMBER" stringToIntResult)
-            |> CD.andMap (CD.field "LAP_TIME" stringToRaceClockResult)
-            |> CD.andMap (CD.field "LAP_IMPROVEMENT" stringToIntResult)
-            |> CD.andMap (CD.field "CROSSING_FINISH_LINE_IN_PIT" Ok)
-            |> CD.andMap (CD.field "S1" stringToRaceClockResult)
-            |> CD.andMap (CD.field "S1_IMPROVEMENT" stringToIntResult)
-            |> CD.andMap (CD.field "S2" stringToRaceClockResult)
-            |> CD.andMap (CD.field "S2_IMPROVEMENT" stringToIntResult)
-            |> CD.andMap (CD.field "S3" stringToRaceClockResult)
-            |> CD.andMap (CD.field "S3_IMPROVEMENT" stringToIntResult)
-            |> CD.andMap (CD.field "KPH" stringToFloatResult)
-            |> CD.andMap (CD.field "ELAPSED" stringToRaceClockResult)
-            |> CD.andMap (CD.field "HOUR" stringToRaceClockResult)
-            |> CD.andMap (CD.field "TOP_SPEED" stringToFloatResult)
-            |> CD.andMap (CD.field "DRIVER_NAME" Ok)
-            |> CD.andMap (CD.field "PIT_TIME" <| CD.maybe stringToRaceClockResult)
-            |> CD.andMap (CD.field "CLASS" <| stringToClassResult)
-            |> CD.andMap (CD.field "GROUP" Ok)
-            |> CD.andMap (CD.field "TEAM" Ok)
-            |> CD.andMap (CD.field "MANUFACTURER" Ok)
-        )
+    Decode.into Lap
+        |> pipeline (field "NUMBER" int)
+        |> pipeline (field "DRIVER_NUMBER" int)
+        |> pipeline (field "LAP_NUMBER" int)
+        |> pipeline (field "LAP_TIME" raceClockDecoder)
+        |> pipeline (field "LAP_IMPROVEMENT" int)
+        |> pipeline (field "CROSSING_FINISH_LINE_IN_PIT" string)
+        |> pipeline (field "S1" raceClockDecoder)
+        |> pipeline (field "S1_IMPROVEMENT" int)
+        |> pipeline (field "S2" raceClockDecoder)
+        |> pipeline (field "S2_IMPROVEMENT" int)
+        |> pipeline (field "S3" raceClockDecoder)
+        |> pipeline (field "S3_IMPROVEMENT" int)
+        |> pipeline (field "KPH" float)
+        |> pipeline (field "ELAPSED" raceClockDecoder)
+        |> pipeline (field "HOUR" raceClockDecoder)
+        |> pipeline (field "TOP_SPEED" float)
+        |> pipeline (field "DRIVER_NAME" string)
+        |> pipeline (field "PIT_TIME" <| Decode.blank raceClockDecoder)
+        |> pipeline (field "CLASS" classDecoder)
+        |> pipeline (field "GROUP" string)
+        |> pipeline (field "TEAM" string)
+        |> pipeline (field "MANUFACTURER" string)

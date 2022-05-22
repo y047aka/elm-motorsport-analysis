@@ -3,14 +3,12 @@ module Page.Wec exposing (Model, Msg, init, update, view)
 import AssocList
 import AssocList.Extra
 import Chart.Chart as Chart
-import Csv
-import Csv.Decode as CD exposing (Decoder, Errors(..))
+import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.Car exposing (Car)
 import Data.Lap.Wec exposing (Lap, lapDecoder)
 import Html.Styled as Html exposing (Html)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
-import Parser exposing (deadEndsToString)
 
 
 
@@ -44,7 +42,7 @@ fetchCsv =
         }
 
 
-expectCsv : (Result Error (List a) -> msg) -> Decoder (a -> a) a -> Expect msg
+expectCsv : (Result Error (List a) -> msg) -> Decoder a -> Expect msg
 expectCsv toMsg decoder =
     let
         resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
@@ -64,23 +62,11 @@ expectCsv toMsg decoder =
 
                 GoodStatus_ _ body ->
                     Result.mapError BadBody (toResult body)
-
-        errorsToString : Errors -> String
-        errorsToString error =
-            case error of
-                CsvErrors _ ->
-                    "Parse failed."
-
-                DecodeErrors e ->
-                    Debug.toString e
     in
     expectStringResponse toMsg <|
         resolve
-            (Csv.parseWith ';'
-                >> Result.map (\csv -> { csv | headers = List.map String.trim csv.headers })
-                >> Result.mapError (deadEndsToString >> List.singleton >> CsvErrors)
-                >> Result.andThen (CD.decodeCsv decoder)
-                >> Result.mapError errorsToString
+            (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder
+                >> Result.mapError Decode.errorToString
             )
 
 

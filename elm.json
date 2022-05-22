@@ -6,6 +6,7 @@
     "elm-version": "0.19.1",
     "dependencies": {
         "direct": {
+            "BrianHicks/elm-csv": "3.0.3",
             "avh4/elm-color": "1.0.0",
             "elm/browser": "1.0.2",
             "elm/core": "1.0.5",
@@ -16,10 +17,8 @@
             "elm-community/list-extra": "8.4.0",
             "elm-community/typed-svg": "7.0.0",
             "elm-explorations/test": "1.2.2",
-            "ericgj/elm-csv-decode": "2.0.1",
             "folkertdev/one-true-path-experiment": "6.0.0",
             "gampleman/elm-visualization": "2.3.0",
-            "periodic/elm-csv": "2.0.1",
             "pzp1997/assoc-list": "1.0.0",
             "rtfeldman/elm-css": "16.1.1",
             "skyqrose/assoc-list-extra": "1.0.0"
