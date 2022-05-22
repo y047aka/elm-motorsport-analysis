@@ -26,7 +26,7 @@ type alias Driver =
 type alias Lap =
     { lap : Int
     , time : Duration
-    , fastest : Duration
+    , best : Duration
     , elapsed : Duration
     }
 
@@ -66,7 +66,7 @@ toLaps laps =
         (\count { lap, time } ->
             { lap = lap
             , time = time
-            , fastest =
+            , best =
                 laps
                     |> List.take (count + 1)
                     |> List.map .time

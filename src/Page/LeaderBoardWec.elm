@@ -134,7 +134,7 @@ update msg m =
                                             (\index { lapNumber, lapTime, elapsed } ->
                                                 { lap = lapNumber
                                                 , time = lapTime
-                                                , fastest =
+                                                , best =
                                                     laps_
                                                         |> List.take (index + 1)
                                                         |> List.map .lapTime
@@ -227,7 +227,7 @@ toLeaderBoard raceClock cars =
                         let
                             lastLap =
                                 findLastLapAt raceClock car.laps
-                                    |> Maybe.withDefault { lap = 0, time = 0, fastest = 0, elapsed = 0 }
+                                    |> Maybe.withDefault { lap = 0, time = 0, best = 0, elapsed = 0 }
                         in
                         { car = car, lap = lastLap, elapsed = lastLap.elapsed }
                     )
@@ -264,7 +264,7 @@ toLeaderBoard raceClock cars =
                         |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
                         |> Maybe.withDefault 0
                 , time = lap.time
-                , best = lap.fastest
+                , best = lap.best
                 , history = completedLapsAt raceClock car.laps
                 }
             )
@@ -379,8 +379,8 @@ padding =
 
 
 xScale : Int -> Int -> ContinuousScale Float
-xScale fastest slowest =
-    Scale.linear ( padding, w - padding ) ( toFloat fastest, toFloat slowest )
+xScale min max =
+    Scale.linear ( padding, w - padding ) ( toFloat min, toFloat max )
 
 
 yScale : Float -> ContinuousScale Float
@@ -400,7 +400,7 @@ histogram { fastestLapTime, slowestLapTime } laps =
 
         color lap =
             case
-                ( isCurrentLap lap, lapStatus { time = fastestLapTime } { time = lap.time, best = lap.fastest } )
+                ( isCurrentLap lap, lapStatus { time = fastestLapTime } { time = lap.time, best = lap.best } )
             of
                 ( True, Fastest ) ->
                     "#F0F"
