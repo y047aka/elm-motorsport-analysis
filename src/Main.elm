@@ -10,6 +10,7 @@ import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.LeaderBoard as LeaderBoard
+import Page.LeaderBoardWec as LeaderBoardWec
 import Page.Wec as Wec
 import Url exposing (Url)
 import Url.Parser exposing (Parser, s)
@@ -49,6 +50,7 @@ type SubModel
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
     | LeaderBoardModel LeaderBoard.Model
+    | LeaderBoardWecModel LeaderBoardWec.Model
     | WecModel Wec.Model
 
 
@@ -72,6 +74,7 @@ type Page
     | LapTimeChart
     | LapTimeChartsByDriver
     | LeaderBoard
+    | LeaderBoardWec
     | Wec
 
 
@@ -83,6 +86,7 @@ parser =
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
         , Url.Parser.map LeaderBoard (s "leader-board")
+        , Url.Parser.map LeaderBoardWec (s "leader-board-wec")
         , Url.Parser.map Wec (s "wec")
         ]
 
@@ -115,6 +119,10 @@ routing url model =
                         LeaderBoard.init
                             |> updateWith LeaderBoardModel LeaderBoardMsg model
 
+                    LeaderBoardWec ->
+                        LeaderBoardWec.init
+                            |> updateWith LeaderBoardWecModel LeaderBoardWecMsg model
+
                     Wec ->
                         Wec.init
                             |> updateWith WecModel WecMsg model
@@ -132,6 +140,7 @@ type Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LeaderBoardMsg LeaderBoard.Msg
+    | LeaderBoardWecMsg LeaderBoardWec.Msg
     | WecMsg Wec.Msg
 
 
@@ -164,6 +173,10 @@ update msg model =
         ( LeaderBoardModel subModel, LeaderBoardMsg submsg ) ->
             LeaderBoard.update submsg subModel
                 |> updateWith LeaderBoardModel LeaderBoardMsg model
+
+        ( LeaderBoardWecModel subModel, LeaderBoardWecMsg submsg ) ->
+            LeaderBoardWec.update submsg subModel
+                |> updateWith LeaderBoardWecModel LeaderBoardWecMsg model
 
         ( WecModel subModel, WecMsg submsg ) ->
             Wec.update submsg subModel
@@ -202,6 +215,8 @@ view model =
                     , br [] []
                     , a [ href "/leader-board" ] [ text "Leader Board" ]
                     , br [] []
+                    , a [ href "/leader-board-wec" ] [ text "Leader Board WEC" ]
+                    , br [] []
                     , a [ href "/wec" ] [ text "Wec" ]
                     ]
 
@@ -217,6 +232,10 @@ view model =
                 LeaderBoardModel subModel ->
                     LeaderBoard.view subModel
                         |> List.map (Html.map LeaderBoardMsg)
+
+                LeaderBoardWecModel subModel ->
+                    LeaderBoardWec.view subModel
+                        |> List.map (Html.map LeaderBoardWecMsg)
 
                 WecModel subModel ->
                     Wec.view subModel
