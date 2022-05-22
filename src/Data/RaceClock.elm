@@ -2,6 +2,7 @@ module Data.RaceClock exposing (RaceClock, countDown, countUp, init, toString)
 
 import Data.Duration as Duration exposing (Duration)
 import Data.LapTimes exposing (Lap)
+import List.Extra
 
 
 type alias RaceClock =
@@ -54,20 +55,16 @@ elapsed_ lapCount lapTimes =
             lapCount + 1
     in
     lapTimes
-        |> List.map
-            (\laps ->
-                laps
-                    |> List.filterMap
-                        (\{ lap, elapsed } ->
-                            if nextLap == lap then
-                                Just elapsed
+        |> List.filterMap
+            (List.Extra.findMap
+                (\{ lap, elapsed } ->
+                    if nextLap == lap then
+                        Just elapsed
 
-                            else
-                                Nothing
-                        )
-                    |> List.head
+                    else
+                        Nothing
+                )
             )
-        |> List.filterMap identity
         |> List.minimum
         |> Maybe.map (\elapsed -> elapsed - 1)
         |> Maybe.withDefault 0

@@ -19,15 +19,13 @@ import List.Extra
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 fastestLap =
-    List.map (List.Extra.minimumBy .time)
-        >> List.filterMap identity
+    List.filterMap (List.Extra.minimumBy .time)
         >> List.Extra.minimumBy .time
 
 
 slowestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 slowestLap =
-    List.map (List.Extra.maximumBy .time)
-        >> List.filterMap identity
+    List.filterMap (List.Extra.maximumBy .time)
         >> List.Extra.maximumBy .time
 
 
