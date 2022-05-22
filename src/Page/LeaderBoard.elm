@@ -43,7 +43,7 @@ type alias LeaderBoard =
         , carNumber : String
         , driver : String
         , lap : Int
-        , diff : Duration
+        , gap : Duration
         , time : Duration
         , best : Duration
         , history : List Lap
@@ -96,7 +96,7 @@ update msg m =
                             , carNumber = carNumber
                             , driver = driver.name
                             , lap = 0
-                            , diff = 0
+                            , gap = 0
                             , time = 0
                             , best = 0
                             , history = []
@@ -192,7 +192,7 @@ toLeaderBoard raceClock cars =
                 , driver = car.driver.name
                 , carNumber = car.carNumber
                 , lap = lap.lap
-                , diff =
+                , gap =
                     List.head sortedCars
                         |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
                         |> Maybe.withDefault 0
@@ -244,20 +244,20 @@ sortableTable tableState analysis =
                 , stringColumn { label = "Driver", getter = .driver }
                 , intColumn { label = "Lap", getter = .lap }
                 , customColumn
-                    { label = "Diff"
+                    { label = "Gap"
                     , getter =
-                        \{ diff } ->
-                            if diff == 0 then
+                        \{ gap } ->
+                            if gap == 0 then
                                 "-"
 
                             else
-                                "+ " ++ Duration.toString diff
-                    , sorter = increasingOrDecreasingBy .diff
+                                "+ " ++ Duration.toString gap
+                    , sorter = increasingOrDecreasingBy .gap
                     }
                 , veryCustomColumn
-                    { label = "Diff"
-                    , getter = .diff >> diff_
-                    , sorter = increasingOrDecreasingBy .diff
+                    { label = "Gap"
+                    , getter = .gap >> gap_
+                    , sorter = increasingOrDecreasingBy .gap
                     }
                 , veryCustomColumn
                     { label = "Time"
@@ -381,8 +381,8 @@ histogram_ { x, y, width, color } laps =
             laps
 
 
-diff_ : Duration -> Html msg
-diff_ time =
+gap_ : Duration -> Html msg
+gap_ time =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ rect
             [ InPx.x 0
