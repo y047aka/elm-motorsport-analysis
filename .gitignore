@@ -8,4 +8,4 @@ elm-stuff
 tests/VerifyExamples
 
 # Distribution
-build
+dist

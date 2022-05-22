@@ -1,7 +1,7 @@
 {
   "scripts": {
-    "start": "snowpack dev",
-    "build": "snowpack build",
+    "start": "vite --open",
+    "build": "vite build",
     "test": "elm-verify-examples --run-tests"
   },
   "devDependencies": {
@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "elm": "^0.19.1-5",
-    "snowpack": "^3.8.8",
-    "snowpack-plugin-elm": "^0.5.1"
+    "vite": "^2.9.9",
+    "vite-plugin-elm": "^2.6.1"
   }
 }
