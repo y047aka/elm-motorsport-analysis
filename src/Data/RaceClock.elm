@@ -1,7 +1,7 @@
 module Data.RaceClock exposing (RaceClock, countDown, countUp, init, toString)
 
 import Data.Duration as Duration exposing (Duration)
-import Data.LapTimes exposing (Lap)
+import Data.Lap exposing (Lap)
 import List.Extra
 
 

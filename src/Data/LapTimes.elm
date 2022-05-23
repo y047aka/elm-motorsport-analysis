@@ -1,6 +1,7 @@
-module Data.LapTimes exposing (Car, Driver, Lap, LapTimes, lapTimesDecoder)
+module Data.LapTimes exposing (Car, Driver, LapTimes, lapTimesDecoder)
 
 import Data.Duration exposing (Duration, durationDecoder)
+import Data.Lap exposing (Lap)
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 
 
@@ -21,14 +22,6 @@ type alias Car =
 
 type alias Driver =
     { name : String }
-
-
-type alias Lap =
-    { lap : Int
-    , time : Duration
-    , best : Duration
-    , elapsed : Duration
-    }
 
 
 

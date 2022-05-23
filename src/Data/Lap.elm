@@ -1,11 +1,13 @@
 module Data.Lap exposing
-    ( fastestLap, slowestLap
+    ( Lap
+    , fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
     , LapStatus(..), lapStatus
     )
 
 {-|
 
+@docs Lap
 @docs fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
 @docs LapStatus, lapStatus
@@ -15,6 +17,14 @@ module Data.Lap exposing
 import Data.Duration exposing (Duration)
 import Data.RaceClock exposing (RaceClock)
 import List.Extra
+
+
+type alias Lap =
+    { lap : Int
+    , time : Duration
+    , best : Duration
+    , elapsed : Duration
+    }
 
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
