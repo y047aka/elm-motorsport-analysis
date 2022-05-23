@@ -19,7 +19,7 @@ import List.Extra
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 fastestLap =
-    List.filterMap (List.Extra.minimumBy .time)
+    List.filterMap (List.filter (.time >> (/=) 0) >> List.Extra.minimumBy .time)
         >> List.Extra.minimumBy .time
 
 
