@@ -52,7 +52,7 @@ type alias LeaderBoard =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { raceClock = RaceClock.init []
+    ( { raceClock = RaceClock.init
       , lapTimes = []
       , sortedCars = []
       , analysis = Nothing
@@ -87,7 +87,7 @@ update msg m =
     case msg of
         Loaded (Ok lapTimes) ->
             ( { m
-                | raceClock = RaceClock.init (List.map .laps lapTimes)
+                | raceClock = RaceClock.init
                 , lapTimes = lapTimes
                 , sortedCars =
                     List.indexedMap
@@ -119,7 +119,7 @@ update msg m =
                         |> Maybe.withDefault 0
 
                 updatedClock =
-                    countUp m.raceClock
+                    countUp (List.map .laps m.lapTimes) m.raceClock
             in
             ( if m.raceClock.lapCount < maxCount then
                 { m
@@ -136,7 +136,7 @@ update msg m =
         CountDown ->
             let
                 updatedClock =
-                    countDown m.raceClock
+                    countDown (List.map .laps m.lapTimes) m.raceClock
             in
             ( { m
                 | raceClock = updatedClock

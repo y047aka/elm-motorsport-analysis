@@ -15,13 +15,16 @@ module Data.Lap exposing
 -}
 
 import Data.Duration exposing (Duration)
-import Data.Internal as Internal
 import Data.RaceClock exposing (RaceClock)
 import List.Extra
 
 
 type alias Lap =
-    Internal.Lap
+    { lap : Int
+    , time : Duration
+    , best : Duration
+    , elapsed : Duration
+    }
 
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }

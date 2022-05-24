@@ -1,39 +1,32 @@
 module Data.RaceClock exposing (RaceClock, countDown, countUp, init, toString)
 
 import Data.Duration as Duration exposing (Duration)
-import Data.Internal exposing (Lap)
 import List.Extra
 
 
 type alias RaceClock =
-    { lapCount : Int
-    , elapsed : Int
-    , lapTimes : List (List Lap)
-    }
+    { lapCount : Int, elapsed : Duration }
 
 
-init : List (List Lap) -> RaceClock
-init lapTimes =
-    { lapCount = 0
-    , elapsed = 0
-    , lapTimes = lapTimes
-    }
+init : RaceClock
+init =
+    { lapCount = 0, elapsed = 0 }
 
 
-countUp : RaceClock -> RaceClock
-countUp c =
+countUp : List (List { a | lap : Int, elapsed : Duration }) -> RaceClock -> RaceClock
+countUp lapTimes c =
     let
         newCount =
             c.lapCount + 1
     in
     { c
         | lapCount = newCount
-        , elapsed = elapsed_ newCount c.lapTimes
+        , elapsed = elapsedAt newCount lapTimes
     }
 
 
-countDown : RaceClock -> RaceClock
-countDown c =
+countDown : List (List { a | lap : Int, elapsed : Duration }) -> RaceClock -> RaceClock
+countDown lapTimes c =
     if c.lapCount > 0 then
         let
             newCount =
@@ -41,15 +34,15 @@ countDown c =
         in
         { c
             | lapCount = newCount
-            , elapsed = elapsed_ newCount c.lapTimes
+            , elapsed = elapsedAt newCount lapTimes
         }
 
     else
         c
 
 
-elapsed_ : Int -> List (List Lap) -> Duration
-elapsed_ lapCount lapTimes =
+elapsedAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Duration
+elapsedAt lapCount lapTimes =
     let
         nextLap =
             lapCount + 1
