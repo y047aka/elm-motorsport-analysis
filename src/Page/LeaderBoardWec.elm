@@ -404,7 +404,7 @@ histogram : { fastestLapTime : Duration, slowestLapTime : Duration } -> List Lap
 histogram { fastestLapTime, slowestLapTime } laps =
     let
         xScale_ =
-            xScale ( fastestLapTime, min (toFloat fastestLapTime * 1.1) (toFloat slowestLapTime) )
+            xScale ( fastestLapTime, min (toFloat fastestLapTime * 1.2) (toFloat slowestLapTime) )
 
         width lap =
             if isCurrentLap lap then
@@ -482,7 +482,7 @@ performance raceClock { fastestLapTime } laps =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ dotHistory
             { x = .elapsed >> toFloat >> Scale.convert (xScale ( 0, toFloat <| raceClock.elapsed ))
-            , y = .time >> toFloat >> Scale.convert (yScale ( toFloat fastestLapTime * 1.1, toFloat fastestLapTime ))
+            , y = .time >> toFloat >> Scale.convert (yScale ( toFloat fastestLapTime * 1.2, toFloat fastestLapTime ))
             , color = "#999"
             }
             laps
