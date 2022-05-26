@@ -228,13 +228,14 @@ view { raceClock, sortedCars, analysis, tableState } =
         ]
     , text <| RaceClock.toString raceClock
     , sortableTable tableState
+        raceClock
         (Maybe.withDefault { fastestLapTime = 0, slowestLapTime = 0 } analysis)
         sortedCars
     ]
 
 
-sortableTable : State -> { fastestLapTime : Duration, slowestLapTime : Duration } -> LeaderBoard -> Html Msg
-sortableTable tableState analysis =
+sortableTable : State -> RaceClock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> LeaderBoard -> Html Msg
+sortableTable tableState raceClock analysis =
     let
         config =
             { toId = .carNumber
@@ -284,7 +285,7 @@ sortableTable tableState analysis =
                     }
                 , veryCustomColumn
                     { label = "Time"
-                    , getter = .history >> performance analysis
+                    , getter = .history >> performance raceClock analysis
                     , sorter = increasingOrDecreasingBy .time
                     }
                 , veryCustomColumn
@@ -404,11 +405,11 @@ gap_ time =
         ]
 
 
-performance : { a | fastestLapTime : Duration } -> List Lap -> Html msg
-performance { fastestLapTime } laps =
+performance : RaceClock -> { a | fastestLapTime : Duration } -> List Lap -> Html msg
+performance raceClock { fastestLapTime } laps =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ dotHistory
-            { x = .lap >> toFloat >> Scale.convert (xScale ( 0, toFloat <| List.length laps ))
+            { x = .elapsed >> toFloat >> Scale.convert (xScale ( 0, toFloat <| raceClock.elapsed ))
             , y = .time >> toFloat >> Scale.convert (yScale ( toFloat fastestLapTime * 1.1, toFloat fastestLapTime ))
             , color = "#999"
             }
