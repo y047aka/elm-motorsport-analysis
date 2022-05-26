@@ -1,5 +1,6 @@
 module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 
+import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Data.Duration as Duration exposing (Duration)
 import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
@@ -282,6 +283,11 @@ sortableTable tableState analysis =
                     , sorter = increasingOrDecreasingBy .time
                     }
                 , veryCustomColumn
+                    { label = "Time"
+                    , getter = .history >> performance analysis
+                    , sorter = increasingOrDecreasingBy .time
+                    }
+                , veryCustomColumn
                     { label = "Histogram"
                     , getter = .history >> histogram analysis
                     , sorter = increasingOrDecreasingBy .time
@@ -311,21 +317,21 @@ padding =
     1
 
 
-xScale : Int -> Float -> ContinuousScale Float
-xScale min max =
-    Scale.linear ( padding, w - padding ) ( toFloat min, max )
+xScale : ( Int, Float ) -> ContinuousScale Float
+xScale ( min, max ) =
+    ( toFloat min, max ) |> Scale.linear ( padding, w - padding )
 
 
-yScale : Float -> ContinuousScale Float
-yScale _ =
-    Scale.linear ( h - padding, padding ) ( 0, 0 )
+yScale : ( Float, Float ) -> ContinuousScale Float
+yScale ( min, max ) =
+    ( min, max ) |> Scale.linear ( h - padding, padding )
 
 
 histogram : { fastestLapTime : Duration, slowestLapTime : Duration } -> List Lap -> Html msg
 histogram { fastestLapTime, slowestLapTime } laps =
     let
         xScale_ =
-            xScale fastestLapTime <| min (toFloat fastestLapTime * 1.1) (toFloat slowestLapTime)
+            xScale ( fastestLapTime, min (toFloat fastestLapTime * 1.1) (toFloat slowestLapTime) )
 
         width lap =
             if isCurrentLap lap then
@@ -356,7 +362,7 @@ histogram { fastestLapTime, slowestLapTime } laps =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
             { x = .time >> toFloat >> Scale.convert xScale_
-            , y = always 0 >> Scale.convert (yScale 0)
+            , y = always 0 >> Scale.convert (yScale ( 0, 0 ))
             , width = width
             , color = color
             }
@@ -390,9 +396,49 @@ gap_ time =
         [ rect
             [ InPx.x 0
             , InPx.y 0
-            , InPx.width (time |> toFloat |> Scale.convert (xScale 0 100000))
+            , InPx.width (time |> toFloat |> Scale.convert (xScale ( 0, 100000 )))
             , InPx.height 20
             , fill "#999"
             ]
             []
+        ]
+
+
+performance : { a | fastestLapTime : Duration } -> List Lap -> Html msg
+performance { fastestLapTime } laps =
+    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
+        [ dotHistory
+            { x = .lap >> toFloat >> Scale.convert (xScale ( 0, toFloat <| List.length laps ))
+            , y = .time >> toFloat >> Scale.convert (yScale ( toFloat fastestLapTime * 1.1, toFloat fastestLapTime ))
+            , color = "#999"
+            }
+            laps
+        ]
+
+
+dotHistory : { x : a -> Float, y : a -> Float, color : String } -> List a -> Svg msg
+dotHistory { x, y, color } laps =
+    dotHistory_
+        { dots =
+            List.map
+                (\lap ->
+                    dot
+                        { cx = x lap
+                        , cy = y lap
+                        , fillColor = color
+                        }
+                )
+                laps
+        , path =
+            laps
+                |> List.map (\item -> Just ( x item, y item ))
+                |> path { strokeColor = color }
+        }
+
+
+dotHistory_ : { dots : List (Svg msg), path : Svg msg } -> Svg msg
+dotHistory_ options =
+    g []
+        [ options.path
+        , g [] options.dots
         ]
