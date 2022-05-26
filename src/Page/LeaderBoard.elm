@@ -311,9 +311,9 @@ padding =
     1
 
 
-xScale : Int -> Int -> ContinuousScale Float
+xScale : Int -> Float -> ContinuousScale Float
 xScale min max =
-    Scale.linear ( padding, w - padding ) ( toFloat min, toFloat max )
+    Scale.linear ( padding, w - padding ) ( toFloat min, max )
 
 
 yScale : Float -> ContinuousScale Float
@@ -324,6 +324,9 @@ yScale _ =
 histogram : { fastestLapTime : Duration, slowestLapTime : Duration } -> List Lap -> Html msg
 histogram { fastestLapTime, slowestLapTime } laps =
     let
+        xScale_ =
+            xScale fastestLapTime <| min (toFloat fastestLapTime * 1.1) (toFloat slowestLapTime)
+
         width lap =
             if isCurrentLap lap then
                 3
@@ -352,7 +355,7 @@ histogram { fastestLapTime, slowestLapTime } laps =
     in
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
-            { x = .time >> toFloat >> Scale.convert (xScale fastestLapTime slowestLapTime)
+            { x = .time >> toFloat >> Scale.convert xScale_
             , y = always 0 >> Scale.convert (yScale 0)
             , width = width
             , color = color
