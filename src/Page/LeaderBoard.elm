@@ -3,6 +3,7 @@ module Page.LeaderBoard exposing (Model, Msg, init, update, view)
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Data.Duration as Duration exposing (Duration)
+import Data.Gap as Gap exposing (Gap(..))
 import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
 import Data.LapTimes exposing (LapTimes, lapTimesDecoder)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
@@ -44,7 +45,7 @@ type alias LeaderBoard =
         , carNumber : String
         , driver : String
         , lap : Int
-        , gap : Duration
+        , gap : Gap
         , time : Duration
         , best : Duration
         , history : List Lap
@@ -97,7 +98,7 @@ update msg m =
                             , carNumber = carNumber
                             , driver = driver.name
                             , lap = 0
-                            , gap = 0
+                            , gap = None
                             , time = 0
                             , best = 0
                             , history = []
@@ -195,8 +196,8 @@ toLeaderBoard raceClock cars =
                 , lap = lap.lap
                 , gap =
                     List.head sortedCars
-                        |> Maybe.map (\leader -> lap.elapsed - leader.elapsed)
-                        |> Maybe.withDefault 0
+                        |> Maybe.map (\leader -> Gap.from leader.lap lap)
+                        |> Maybe.withDefault None
                 , time = lap.time
                 , best = lap.best
                 , history = completedLapsAt raceClock car.laps
@@ -247,19 +248,23 @@ sortableTable tableState raceClock analysis =
                 , intColumn { label = "Lap", getter = .lap }
                 , customColumn
                     { label = "Gap"
-                    , getter =
-                        \{ gap } ->
-                            if gap == 0 then
-                                "-"
-
-                            else
-                                "+ " ++ Duration.toString gap
-                    , sorter = increasingOrDecreasingBy .gap
+                    , getter = .gap >> Gap.toString
+                    , sorter = increasingOrDecreasingBy .position
                     }
                 , veryCustomColumn
                     { label = "Gap"
-                    , getter = .gap >> gap_
-                    , sorter = increasingOrDecreasingBy .gap
+                    , getter =
+                        \{ gap } ->
+                            case gap of
+                                None ->
+                                    text "-"
+
+                                Seconds duration ->
+                                    gap_ duration
+
+                                Laps _ ->
+                                    text "-"
+                    , sorter = increasingOrDecreasingBy .position
                     }
                 , veryCustomColumn
                     { label = "Time"
