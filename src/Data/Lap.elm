@@ -20,7 +20,9 @@ import List.Extra
 
 
 type alias Lap =
-    { lap : Int
+    { carNumber : String
+    , driver : String
+    , lap : Int
     , time : Duration
     , best : Duration
     , elapsed : Duration

@@ -1,4 +1,4 @@
-module Data.LapTimes exposing (Car, Driver, LapTimes, lapTimesDecoder)
+module Data.LapTimes exposing (LapTimes, lapTimesDecoder)
 
 import Data.Duration exposing (Duration, durationDecoder)
 import Data.Lap exposing (Lap)
@@ -10,14 +10,7 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 
 
 type alias LapTimes =
-    List Car
-
-
-type alias Car =
-    { carNumber : String
-    , driver : Driver
-    , laps : List Lap
-    }
+    List (List Lap)
 
 
 type alias Driver =
@@ -33,9 +26,9 @@ lapTimesDecoder =
     Decode.list carDecoder
 
 
-carDecoder : Decoder Car
+carDecoder : Decoder (List Lap)
 carDecoder =
-    Decode.map3 Car
+    Decode.map3 toLaps
         (field "carNumber" string)
         (field "driver" driverDecoder)
         (field "laps" lapsDecoder)
@@ -47,17 +40,18 @@ driverDecoder =
         (field "name" string)
 
 
-lapsDecoder : Decoder (List Lap)
+lapsDecoder : Decoder (List { lap : Int, time : Duration })
 lapsDecoder =
-    Decode.map toLaps
-        (Decode.list lapDecoder)
+    Decode.list lapDecoder
 
 
-toLaps : List { lap : Int, time : Duration } -> List Lap
-toLaps laps =
+toLaps : String -> Driver -> List { lap : Int, time : Duration } -> List Lap
+toLaps carNumber driver laps =
     List.indexedMap
         (\count { lap, time } ->
-            { lap = lap
+            { carNumber = carNumber
+            , driver = driver.name
+            , lap = lap
             , time = time
             , best =
                 laps

@@ -93,10 +93,16 @@ update msg m =
                 , lapTimes = lapTimes
                 , sortedCars =
                     List.indexedMap
-                        (\index { carNumber, driver } ->
+                        (\index laps ->
+                            let
+                                { carNumber, driver } =
+                                    List.head laps
+                                        |> Maybe.map (\l -> { carNumber = l.carNumber, driver = l.driver })
+                                        |> Maybe.withDefault { carNumber = "000", driver = "" }
+                            in
                             { position = index + 1
                             , carNumber = carNumber
-                            , driver = driver.name
+                            , driver = driver
                             , lap = 0
                             , gap = None
                             , time = 0
@@ -116,12 +122,12 @@ update msg m =
             let
                 maxCount =
                     m.lapTimes
-                        |> List.map (.laps >> List.length)
+                        |> List.map List.length
                         |> List.maximum
                         |> Maybe.withDefault 0
 
                 updatedClock =
-                    countUp (List.map .laps m.lapTimes) m.raceClock
+                    countUp m.lapTimes m.raceClock
             in
             ( if m.raceClock.lapCount < maxCount then
                 { m
@@ -138,7 +144,7 @@ update msg m =
         CountDown ->
             let
                 updatedClock =
-                    countDown (List.map .laps m.lapTimes) m.raceClock
+                    countDown m.lapTimes m.raceClock
             in
             ( { m
                 | raceClock = updatedClock
@@ -158,13 +164,13 @@ toLeaderBoard raceClock cars =
         sortedCars =
             cars
                 |> List.map
-                    (\car ->
+                    (\laps ->
                         let
                             lastLap =
-                                findLastLapAt raceClock car.laps
-                                    |> Maybe.withDefault { lap = 0, time = 0, best = 0, elapsed = 0 }
+                                findLastLapAt raceClock laps
+                                    |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
                         in
-                        { car = car, lap = lastLap, elapsed = lastLap.elapsed }
+                        { laps = laps, lap = lastLap }
                     )
                 |> List.sortWith
                     (\a b ->
@@ -173,7 +179,7 @@ toLeaderBoard raceClock cars =
                                 GT
 
                             EQ ->
-                                case compare a.elapsed b.elapsed of
+                                case compare a.lap.elapsed b.lap.elapsed of
                                     LT ->
                                         LT
 
@@ -189,10 +195,16 @@ toLeaderBoard raceClock cars =
     in
     sortedCars
         |> List.indexedMap
-            (\index { car, lap } ->
+            (\index { laps, lap } ->
+                let
+                    { carNumber, driver } =
+                        List.head laps
+                            |> Maybe.map (\l -> { carNumber = l.carNumber, driver = l.driver })
+                            |> Maybe.withDefault { carNumber = "000", driver = "" }
+                in
                 { position = index + 1
-                , driver = car.driver.name
-                , carNumber = car.carNumber
+                , driver = driver
+                , carNumber = carNumber
                 , lap = lap.lap
                 , gap =
                     List.head sortedCars
@@ -200,7 +212,7 @@ toLeaderBoard raceClock cars =
                         |> Maybe.withDefault None
                 , time = lap.time
                 , best = lap.best
-                , history = completedLapsAt raceClock car.laps
+                , history = completedLapsAt raceClock laps
                 }
             )
 
@@ -209,7 +221,7 @@ analysis_ : RaceClock -> LapTimes -> { fastestLapTime : Duration, slowestLapTime
 analysis_ clock lapTimes =
     let
         completedLaps =
-            List.map (.laps >> completedLapsAt clock) lapTimes
+            List.map (completedLapsAt clock) lapTimes
     in
     { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
