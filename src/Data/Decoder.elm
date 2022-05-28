@@ -1,4 +1,4 @@
-module Data.LapTimes exposing (LapTimes, lapTimesDecoder)
+module Data.Decoder exposing (Decoded, decoder)
 
 import Data.Duration exposing (Duration, durationDecoder)
 import Data.Lap exposing (Lap)
@@ -9,7 +9,7 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 -- TYPE
 
 
-type alias LapTimes =
+type alias Decoded =
     List (List Lap)
 
 
@@ -21,8 +21,8 @@ type alias Driver =
 -- DECODER
 
 
-lapTimesDecoder : Decoder LapTimes
-lapTimesDecoder =
+decoder : Decoder Decoded
+decoder =
     Decode.list carDecoder
 
 

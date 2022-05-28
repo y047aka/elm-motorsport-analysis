@@ -9,7 +9,7 @@ import Data.Duration as Duration exposing (Duration)
 import Data.Gap as Gap exposing (Gap(..))
 import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
 import Data.Lap.Wec exposing (lapDecoder)
-import Data.LapTimes exposing (LapTimes)
+import Data.Decoder exposing (Decoded)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
@@ -32,7 +32,7 @@ import UI.SortableData exposing (State, customColumn, increasingOrDecreasingBy, 
 
 type alias Model =
     { raceClock : RaceClock
-    , lapTimes : LapTimes
+    , decoded : Decoded
     , sortedCars : LeaderBoard
     , analysis :
         Maybe
@@ -60,7 +60,7 @@ type alias LeaderBoard =
 init : ( Model, Cmd Msg )
 init =
     ( { raceClock = RaceClock.init
-      , lapTimes = []
+      , decoded = []
       , sortedCars = []
       , analysis = Nothing
       , tableState = initialSort "Position"
@@ -122,7 +122,7 @@ update msg m =
     case msg of
         Loaded (Ok records) ->
             let
-                lapTimes =
+                decoded =
                     records
                         |> AssocList.Extra.groupBy .carNumber
                         |> AssocList.toList
@@ -148,7 +148,7 @@ update msg m =
             in
             ( { m
                 | raceClock = RaceClock.init
-                , lapTimes = lapTimes
+                , decoded = decoded
                 , sortedCars =
                     List.indexedMap
                         (\index laps ->
@@ -168,7 +168,7 @@ update msg m =
                             , history = []
                             }
                         )
-                        lapTimes
+                        decoded
               }
             , Cmd.none
             )
@@ -179,19 +179,19 @@ update msg m =
         CountUp ->
             let
                 maxCount =
-                    m.lapTimes
+                    m.decoded
                         |> List.map List.length
                         |> List.maximum
                         |> Maybe.withDefault 0
 
                 updatedClock =
-                    countUp m.lapTimes m.raceClock
+                    countUp m.decoded m.raceClock
             in
             ( if m.raceClock.lapCount < maxCount then
                 { m
                     | raceClock = updatedClock
-                    , sortedCars = toLeaderBoard updatedClock m.lapTimes
-                    , analysis = Just (analysis_ updatedClock m.lapTimes)
+                    , sortedCars = toLeaderBoard updatedClock m.decoded
+                    , analysis = Just (analysis_ updatedClock m.decoded)
                 }
 
               else
@@ -202,12 +202,12 @@ update msg m =
         CountDown ->
             let
                 updatedClock =
-                    countDown m.lapTimes m.raceClock
+                    countDown m.decoded m.raceClock
             in
             ( { m
                 | raceClock = updatedClock
-                , sortedCars = toLeaderBoard updatedClock m.lapTimes
-                , analysis = Just (analysis_ updatedClock m.lapTimes)
+                , sortedCars = toLeaderBoard updatedClock m.decoded
+                , analysis = Just (analysis_ updatedClock m.decoded)
               }
             , Cmd.none
             )
@@ -216,7 +216,7 @@ update msg m =
             ( { m | tableState = newState }, Cmd.none )
 
 
-toLeaderBoard : RaceClock -> LapTimes -> LeaderBoard
+toLeaderBoard : RaceClock -> Decoded -> LeaderBoard
 toLeaderBoard raceClock cars =
     let
         sortedCars =
@@ -275,11 +275,11 @@ toLeaderBoard raceClock cars =
             )
 
 
-analysis_ : RaceClock -> LapTimes -> { fastestLapTime : Duration, slowestLapTime : Duration }
-analysis_ clock lapTimes =
+analysis_ : RaceClock -> Decoded -> { fastestLapTime : Duration, slowestLapTime : Duration }
+analysis_ clock decoded =
     let
         completedLaps =
-            List.map (completedLapsAt clock) lapTimes
+            List.map (completedLapsAt clock) decoded
     in
     { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
