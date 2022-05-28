@@ -13,8 +13,12 @@ type alias Decoded =
     List (List Lap)
 
 
-type alias Driver =
+type alias InternalDriver =
     { name : String }
+
+
+type alias InternalLap =
+    { lap : Int, time : Duration }
 
 
 
@@ -23,29 +27,24 @@ type alias Driver =
 
 decoder : Decoder Decoded
 decoder =
-    Decode.list carDecoder
+    Decode.list decoderByCar
 
 
-carDecoder : Decoder (List Lap)
-carDecoder =
+decoderByCar : Decoder (List Lap)
+decoderByCar =
     Decode.map3 toLaps
         (field "carNumber" string)
         (field "driver" driverDecoder)
-        (field "laps" lapsDecoder)
+        (field "laps" <| Decode.list lapDecoder)
 
 
-driverDecoder : Decoder Driver
+driverDecoder : Decoder InternalDriver
 driverDecoder =
-    Decode.map Driver
+    Decode.map InternalDriver
         (field "name" string)
 
 
-lapsDecoder : Decoder (List { lap : Int, time : Duration })
-lapsDecoder =
-    Decode.list lapDecoder
-
-
-toLaps : String -> Driver -> List { lap : Int, time : Duration } -> List Lap
+toLaps : String -> InternalDriver -> List InternalLap -> List Lap
 toLaps carNumber driver laps =
     List.indexedMap
         (\count { lap, time } ->
@@ -68,7 +67,7 @@ toLaps carNumber driver laps =
         laps
 
 
-lapDecoder : Decoder { lap : Int, time : Duration }
+lapDecoder : Decoder InternalLap
 lapDecoder =
     Decode.map2 (\lap time -> { lap = lap, time = time })
         (field "lap" int)
