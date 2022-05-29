@@ -1,4 +1,4 @@
-module Data.Lap.Wec exposing (Lap, lapDecoder)
+module Decoder.Wec exposing (Lap, lapDecoder)
 
 import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
 import Data.Class as Class exposing (Class(..))

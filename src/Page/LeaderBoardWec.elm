@@ -5,12 +5,12 @@ import AssocList.Extra
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
+import Data.Decoder exposing (Decoded)
 import Data.Duration as Duration exposing (Duration)
 import Data.Gap as Gap exposing (Gap(..))
 import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
-import Data.Lap.Wec exposing (lapDecoder)
-import Data.Decoder exposing (Decoded)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
+import Decoder.Wec exposing (lapDecoder)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -111,7 +111,7 @@ expectCsv toMsg decoder =
 
 
 type Msg
-    = Loaded (Result Http.Error (List Data.Lap.Wec.Lap))
+    = Loaded (Result Http.Error (List Decoder.Wec.Lap))
     | CountUp
     | CountDown
     | SetTableState State
