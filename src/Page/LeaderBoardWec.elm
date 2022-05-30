@@ -1,11 +1,12 @@
-module Page.LeaderBoardWec exposing (Model, Msg, init, update, view)
+module Page.LeaderboardWec exposing (Model, Msg, init, update, view)
 
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.Duration as Duration exposing (Duration)
 import Data.Gap as Gap exposing (Gap(..))
-import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, maxLapCount, slowestLap)
+import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, lapStatus, maxLapCount, slowestLap)
+import Data.Leaderboard exposing (Leaderboard, leaderboard)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Decoder.Wec as Wec
 import Html.Styled as Html exposing (Html, input, span, text)
@@ -30,7 +31,7 @@ import UI.SortableData exposing (State, customColumn, increasingOrDecreasingBy, 
 type alias Model =
     { raceClock : RaceClock
     , preprocessed : Preprocessed
-    , sortedCars : LeaderBoard
+    , leaderboard : Leaderboard
     , analysis :
         Maybe
             { fastestLapTime : Duration
@@ -45,24 +46,11 @@ type alias Preprocessed =
     List (List Lap)
 
 
-type alias LeaderBoard =
-    List
-        { position : Int
-        , carNumber : String
-        , driver : String
-        , lap : Int
-        , gap : Gap
-        , time : Duration
-        , best : Duration
-        , history : List Lap
-        }
-
-
 init : ( Model, Cmd Msg )
 init =
     ( { raceClock = RaceClock.init
       , preprocessed = []
-      , sortedCars = []
+      , leaderboard = []
       , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
@@ -130,7 +118,7 @@ update msg m =
             ( { m
                 | raceClock = RaceClock.init
                 , preprocessed = preprocessed
-                , sortedCars =
+                , leaderboard =
                     List.indexedMap
                         (\index laps ->
                             let
@@ -165,7 +153,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                    , leaderboard = leaderboard updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -182,7 +170,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                    , leaderboard = leaderboard updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -198,7 +186,7 @@ update msg m =
             in
             ( { m
                 | raceClock = updatedClock
-                , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                , leaderboard = leaderboard updatedClock m.preprocessed
                 , analysis = Just (analysis_ updatedClock m.preprocessed)
               }
             , Cmd.none
@@ -206,65 +194,6 @@ update msg m =
 
         SetTableState newState ->
             ( { m | tableState = newState }, Cmd.none )
-
-
-toLeaderBoard : RaceClock -> Preprocessed -> LeaderBoard
-toLeaderBoard raceClock cars =
-    let
-        sortedCars =
-            cars
-                |> List.map
-                    (\laps ->
-                        let
-                            lastLap =
-                                findLastLapAt raceClock laps
-                                    |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
-                        in
-                        { laps = laps, lap = lastLap }
-                    )
-                |> List.sortWith
-                    (\a b ->
-                        case compare a.lap.lap b.lap.lap of
-                            LT ->
-                                GT
-
-                            EQ ->
-                                case compare a.lap.elapsed b.lap.elapsed of
-                                    LT ->
-                                        LT
-
-                                    EQ ->
-                                        EQ
-
-                                    GT ->
-                                        GT
-
-                            GT ->
-                                LT
-                    )
-    in
-    sortedCars
-        |> List.indexedMap
-            (\index { laps, lap } ->
-                let
-                    { carNumber, driver } =
-                        List.head laps
-                            |> Maybe.map (\l -> { carNumber = l.carNumber, driver = l.driver })
-                            |> Maybe.withDefault { carNumber = "000", driver = "" }
-                in
-                { position = index + 1
-                , driver = driver
-                , carNumber = carNumber
-                , lap = lap.lap
-                , gap =
-                    List.head sortedCars
-                        |> Maybe.map (\leader -> Gap.from leader.lap lap)
-                        |> Maybe.withDefault None
-                , time = lap.time
-                , best = lap.best
-                , history = completedLapsAt raceClock laps
-                }
-            )
 
 
 analysis_ : RaceClock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime : Duration }
@@ -283,7 +212,7 @@ analysis_ clock preprocessed =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, preprocessed, sortedCars, analysis, tableState } =
+view { raceClock, preprocessed, leaderboard, analysis, tableState } =
     [ input
         [ type_ "range"
         , Attributes.max <| String.fromInt (maxLapCount preprocessed)
@@ -300,11 +229,11 @@ view { raceClock, preprocessed, sortedCars, analysis, tableState } =
     , sortableTable tableState
         raceClock
         (Maybe.withDefault { fastestLapTime = 0, slowestLapTime = 0 } analysis)
-        sortedCars
+        leaderboard
     ]
 
 
-sortableTable : State -> RaceClock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> LeaderBoard -> Html Msg
+sortableTable : State -> RaceClock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> Leaderboard -> Html Msg
 sortableTable tableState raceClock analysis =
     let
         config =

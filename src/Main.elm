@@ -9,8 +9,8 @@ import List.Extra as List
 import Page.GapChart as GapChart
 import Page.LapTimeChart as LapTimeChart
 import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
-import Page.LeaderBoard as LeaderBoard
-import Page.LeaderBoardWec as LeaderBoardWec
+import Page.Leaderboard as Leaderboard
+import Page.LeaderboardWec as LeaderboardWec
 import Page.Wec as Wec
 import Url exposing (Url)
 import Url.Parser exposing (Parser, s)
@@ -49,8 +49,8 @@ type SubModel
     | GapChartModel GapChart.Model
     | LapTimeChartModel LapTimeChart.Model
     | LapTimeChartsByDriverModel LapTimeChartsByDriver.Model
-    | LeaderBoardModel LeaderBoard.Model
-    | LeaderBoardWecModel LeaderBoardWec.Model
+    | LeaderboardModel Leaderboard.Model
+    | LeaderboardWecModel LeaderboardWec.Model
     | WecModel Wec.Model
 
 
@@ -73,8 +73,8 @@ type Page
     | GapChart
     | LapTimeChart
     | LapTimeChartsByDriver
-    | LeaderBoard
-    | LeaderBoardWec
+    | Leaderboard
+    | LeaderboardWec
     | Wec
 
 
@@ -85,8 +85,8 @@ parser =
         , Url.Parser.map GapChart (s "gap-chart")
         , Url.Parser.map LapTimeChart (s "lapTime-chart")
         , Url.Parser.map LapTimeChartsByDriver (s "lapTime-charts-by-driver")
-        , Url.Parser.map LeaderBoard (s "leader-board")
-        , Url.Parser.map LeaderBoardWec (s "leader-board-wec")
+        , Url.Parser.map Leaderboard (s "leaderboard")
+        , Url.Parser.map LeaderboardWec (s "leaderboard-wec")
         , Url.Parser.map Wec (s "wec")
         ]
 
@@ -115,13 +115,13 @@ routing url model =
                         LapTimeChartsByDriver.init
                             |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
 
-                    LeaderBoard ->
-                        LeaderBoard.init
-                            |> updateWith LeaderBoardModel LeaderBoardMsg model
+                    Leaderboard ->
+                        Leaderboard.init
+                            |> updateWith LeaderboardModel LeaderboardMsg model
 
-                    LeaderBoardWec ->
-                        LeaderBoardWec.init
-                            |> updateWith LeaderBoardWecModel LeaderBoardWecMsg model
+                    LeaderboardWec ->
+                        LeaderboardWec.init
+                            |> updateWith LeaderboardWecModel LeaderboardWecMsg model
 
                     Wec ->
                         Wec.init
@@ -139,8 +139,8 @@ type Msg
     | GapChartMsg GapChart.Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
-    | LeaderBoardMsg LeaderBoard.Msg
-    | LeaderBoardWecMsg LeaderBoardWec.Msg
+    | LeaderboardMsg Leaderboard.Msg
+    | LeaderboardWecMsg LeaderboardWec.Msg
     | WecMsg Wec.Msg
 
 
@@ -170,13 +170,13 @@ update msg model =
             LapTimeChartsByDriver.update submsg subModel
                 |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
 
-        ( LeaderBoardModel subModel, LeaderBoardMsg submsg ) ->
-            LeaderBoard.update submsg subModel
-                |> updateWith LeaderBoardModel LeaderBoardMsg model
+        ( LeaderboardModel subModel, LeaderboardMsg submsg ) ->
+            Leaderboard.update submsg subModel
+                |> updateWith LeaderboardModel LeaderboardMsg model
 
-        ( LeaderBoardWecModel subModel, LeaderBoardWecMsg submsg ) ->
-            LeaderBoardWec.update submsg subModel
-                |> updateWith LeaderBoardWecModel LeaderBoardWecMsg model
+        ( LeaderboardWecModel subModel, LeaderboardWecMsg submsg ) ->
+            LeaderboardWec.update submsg subModel
+                |> updateWith LeaderboardWecModel LeaderboardWecMsg model
 
         ( WecModel subModel, WecMsg submsg ) ->
             Wec.update submsg subModel
@@ -213,9 +213,9 @@ view model =
                     , br [] []
                     , a [ href "/lapTime-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
                     , br [] []
-                    , a [ href "/leader-board" ] [ text "Leader Board" ]
+                    , a [ href "/leaderboard" ] [ text "Leader Board" ]
                     , br [] []
-                    , a [ href "/leader-board-wec" ] [ text "Leader Board WEC" ]
+                    , a [ href "/leaderboard-wec" ] [ text "Leader Board WEC" ]
                     , br [] []
                     , a [ href "/wec" ] [ text "Wec" ]
                     ]
@@ -229,13 +229,13 @@ view model =
                 LapTimeChartsByDriverModel subModel ->
                     LapTimeChartsByDriver.view subModel
 
-                LeaderBoardModel subModel ->
-                    LeaderBoard.view subModel
-                        |> List.map (Html.map LeaderBoardMsg)
+                LeaderboardModel subModel ->
+                    Leaderboard.view subModel
+                        |> List.map (Html.map LeaderboardMsg)
 
-                LeaderBoardWecModel subModel ->
-                    LeaderBoardWec.view subModel
-                        |> List.map (Html.map LeaderBoardWecMsg)
+                LeaderboardWecModel subModel ->
+                    LeaderboardWec.view subModel
+                        |> List.map (Html.map LeaderboardWecMsg)
 
                 WecModel subModel ->
                     Wec.view subModel
