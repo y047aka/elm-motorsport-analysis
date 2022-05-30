@@ -1,6 +1,6 @@
 module Data.Lap exposing
     ( Lap
-    , fastestLap, slowestLap
+    , maxLapCount, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
     , LapStatus(..), lapStatus
     )
@@ -8,7 +8,7 @@ module Data.Lap exposing
 {-|
 
 @docs Lap
-@docs fastestLap, slowestLap
+@docs maxLapCount, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
 @docs LapStatus, lapStatus
 
@@ -27,6 +27,13 @@ type alias Lap =
     , best : Duration
     , elapsed : Duration
     }
+
+
+maxLapCount : List (List Lap) -> Int
+maxLapCount =
+    List.map List.length
+        >> List.maximum
+        >> Maybe.withDefault 0
 
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }

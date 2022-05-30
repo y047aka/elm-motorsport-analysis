@@ -1,4 +1,4 @@
-module Data.RaceClock exposing (RaceClock, countDown, countUp, init, toString)
+module Data.RaceClock exposing (RaceClock, countDown, countUp, init, initWithCount, toString)
 
 import Data.Duration as Duration exposing (Duration)
 import List.Extra
@@ -11,6 +11,13 @@ type alias RaceClock =
 init : RaceClock
 init =
     { lapCount = 0, elapsed = 0 }
+
+
+initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> RaceClock
+initWithCount newCount lapTimes =
+    { lapCount = newCount
+    , elapsed = elapsedAt newCount lapTimes
+    }
 
 
 countUp : List (List { a | lap : Int, elapsed : Duration }) -> RaceClock -> RaceClock

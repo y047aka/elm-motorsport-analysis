@@ -4,12 +4,12 @@ import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Data.Duration as Duration exposing (Duration)
 import Data.Gap as Gap exposing (Gap(..))
-import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
+import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, maxLapCount, slowestLap)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Decoder.F1 as F1
-import Html.Styled as Html exposing (Html, span, text)
-import Html.Styled.Attributes exposing (css)
-import Html.Styled.Events exposing (onClick)
+import Html.Styled as Html exposing (Html, input, span, text)
+import Html.Styled.Attributes as Attributes exposing (css, type_, value)
+import Html.Styled.Events exposing (onClick, onInput)
 import Http
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -83,6 +83,7 @@ fetchJson =
 
 type Msg
     = Loaded (Result Http.Error (List F1.Car))
+    | SetCount String
     | CountUp
     | CountDown
     | SetTableState State
@@ -126,18 +127,29 @@ update msg m =
         Loaded (Err _) ->
             ( m, Cmd.none )
 
-        CountUp ->
-            let
-                maxCount =
-                    m.preprocessed
-                        |> List.map List.length
-                        |> List.maximum
-                        |> Maybe.withDefault 0
+        SetCount newCount ->
+            ( if m.raceClock.lapCount < maxLapCount m.preprocessed then
+                let
+                    updatedClock =
+                        RaceClock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) m.preprocessed
+                in
+                { m
+                    | raceClock = updatedClock
+                    , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                    , analysis = Just (analysis_ updatedClock m.preprocessed)
+                }
 
-                updatedClock =
-                    countUp m.preprocessed m.raceClock
-            in
-            ( if m.raceClock.lapCount < maxCount then
+              else
+                m
+            , Cmd.none
+            )
+
+        CountUp ->
+            ( if m.raceClock.lapCount < maxLapCount m.preprocessed then
+                let
+                    updatedClock =
+                        countUp m.preprocessed m.raceClock
+                in
                 { m
                     | raceClock = updatedClock
                     , sortedCars = toLeaderBoard updatedClock m.preprocessed
@@ -241,8 +253,15 @@ analysis_ clock preprocessed =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, sortedCars, analysis, tableState } =
-    [ labeledButton []
+view { raceClock, preprocessed, sortedCars, analysis, tableState } =
+    [ input
+        [ type_ "range"
+        , Attributes.max <| String.fromInt (maxLapCount preprocessed)
+        , value (String.fromInt raceClock.lapCount)
+        , onInput SetCount
+        ]
+        []
+    , labeledButton []
         [ button [ onClick CountDown ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
         , button [ onClick CountUp ] [ text "+" ]
