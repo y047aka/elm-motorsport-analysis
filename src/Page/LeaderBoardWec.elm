@@ -1,16 +1,13 @@
 module Page.LeaderBoardWec exposing (Model, Msg, init, update, view)
 
-import AssocList
-import AssocList.Extra
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
-import Data.Decoder exposing (Decoded)
 import Data.Duration as Duration exposing (Duration)
 import Data.Gap as Gap exposing (Gap(..))
 import Data.Lap exposing (Lap, LapStatus(..), completedLapsAt, fastestLap, findLastLapAt, lapStatus, slowestLap)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
-import Decoder.Wec exposing (lapDecoder)
+import Decoder.Wec as Wec
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -32,7 +29,7 @@ import UI.SortableData exposing (State, customColumn, increasingOrDecreasingBy, 
 
 type alias Model =
     { raceClock : RaceClock
-    , decoded : Decoded
+    , preprocessed : Preprocessed
     , sortedCars : LeaderBoard
     , analysis :
         Maybe
@@ -42,6 +39,10 @@ type alias Model =
     , tableState : State
     , query : String
     }
+
+
+type alias Preprocessed =
+    List (List Lap)
 
 
 type alias LeaderBoard =
@@ -60,7 +61,7 @@ type alias LeaderBoard =
 init : ( Model, Cmd Msg )
 init =
     ( { raceClock = RaceClock.init
-      , decoded = []
+      , preprocessed = []
       , sortedCars = []
       , analysis = Nothing
       , tableState = initialSort "Position"
@@ -74,7 +75,7 @@ fetchCsv : Cmd Msg
 fetchCsv =
     Http.get
         { url = "/static/23_Analysis_Race_Hour 24.csv"
-        , expect = expectCsv Loaded lapDecoder
+        , expect = expectCsv Loaded Wec.lapDecoder
         }
 
 
@@ -111,7 +112,7 @@ expectCsv toMsg decoder =
 
 
 type Msg
-    = Loaded (Result Http.Error (List Decoder.Wec.Lap))
+    = Loaded (Result Http.Error (List Wec.Lap))
     | CountUp
     | CountDown
     | SetTableState State
@@ -120,35 +121,14 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg m =
     case msg of
-        Loaded (Ok records) ->
+        Loaded (Ok decoded) ->
             let
-                decoded =
-                    records
-                        |> AssocList.Extra.groupBy .carNumber
-                        |> AssocList.toList
-                        |> List.map
-                            (\( carNumber, laps_ ) ->
-                                List.indexedMap
-                                    (\index { driverName, lapNumber, lapTime, elapsed } ->
-                                        { carNumber = String.fromInt carNumber
-                                        , driver = driverName
-                                        , lap = lapNumber
-                                        , time = lapTime
-                                        , best =
-                                            laps_
-                                                |> List.take (index + 1)
-                                                |> List.map .lapTime
-                                                |> List.minimum
-                                                |> Maybe.withDefault 0
-                                        , elapsed = elapsed
-                                        }
-                                    )
-                                    laps_
-                            )
+                preprocessed =
+                    Wec.preprocess decoded
             in
             ( { m
                 | raceClock = RaceClock.init
-                , decoded = decoded
+                , preprocessed = preprocessed
                 , sortedCars =
                     List.indexedMap
                         (\index laps ->
@@ -168,7 +148,7 @@ update msg m =
                             , history = []
                             }
                         )
-                        decoded
+                        preprocessed
               }
             , Cmd.none
             )
@@ -179,19 +159,19 @@ update msg m =
         CountUp ->
             let
                 maxCount =
-                    m.decoded
+                    m.preprocessed
                         |> List.map List.length
                         |> List.maximum
                         |> Maybe.withDefault 0
 
                 updatedClock =
-                    countUp m.decoded m.raceClock
+                    countUp m.preprocessed m.raceClock
             in
             ( if m.raceClock.lapCount < maxCount then
                 { m
                     | raceClock = updatedClock
-                    , sortedCars = toLeaderBoard updatedClock m.decoded
-                    , analysis = Just (analysis_ updatedClock m.decoded)
+                    , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                    , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
               else
@@ -202,12 +182,12 @@ update msg m =
         CountDown ->
             let
                 updatedClock =
-                    countDown m.decoded m.raceClock
+                    countDown m.preprocessed m.raceClock
             in
             ( { m
                 | raceClock = updatedClock
-                , sortedCars = toLeaderBoard updatedClock m.decoded
-                , analysis = Just (analysis_ updatedClock m.decoded)
+                , sortedCars = toLeaderBoard updatedClock m.preprocessed
+                , analysis = Just (analysis_ updatedClock m.preprocessed)
               }
             , Cmd.none
             )
@@ -216,7 +196,7 @@ update msg m =
             ( { m | tableState = newState }, Cmd.none )
 
 
-toLeaderBoard : RaceClock -> Decoded -> LeaderBoard
+toLeaderBoard : RaceClock -> Preprocessed -> LeaderBoard
 toLeaderBoard raceClock cars =
     let
         sortedCars =
@@ -275,11 +255,11 @@ toLeaderBoard raceClock cars =
             )
 
 
-analysis_ : RaceClock -> Decoded -> { fastestLapTime : Duration, slowestLapTime : Duration }
-analysis_ clock decoded =
+analysis_ : RaceClock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime : Duration }
+analysis_ clock preprocessed =
     let
         completedLaps =
-            List.map (completedLapsAt clock) decoded
+            List.map (completedLapsAt clock) preprocessed
     in
     { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0

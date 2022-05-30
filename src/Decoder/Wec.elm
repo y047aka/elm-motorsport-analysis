@@ -1,8 +1,15 @@
-module Decoder.Wec exposing (Lap, lapDecoder)
+module Decoder.Wec exposing (Lap, lapDecoder, preprocess)
 
+import AssocList
+import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
 import Data.Class as Class exposing (Class(..))
+import Data.Lap as Lap
 import Data.Old.RaceClock as RaceClock exposing (RaceClock)
+
+
+
+-- MODEL
 
 
 type alias Lap =
@@ -29,6 +36,10 @@ type alias Lap =
     , team : String
     , manufacturer : String
     }
+
+
+
+-- DECODER
 
 
 lapDecoder : Decoder Lap
@@ -65,3 +76,34 @@ lapDecoder =
         |> pipeline (field "GROUP" string)
         |> pipeline (field "TEAM" string)
         |> pipeline (field "MANUFACTURER" string)
+
+
+
+-- PREPROCESSOR
+
+
+preprocess : List Lap -> List (List Lap.Lap)
+preprocess =
+    AssocList.Extra.groupBy .carNumber
+        >> AssocList.toList
+        >> List.map preprocess_
+
+
+preprocess_ : ( Int, List Lap ) -> List Lap.Lap
+preprocess_ ( carNumber, laps ) =
+    List.indexedMap
+        (\index { driverName, lapNumber, lapTime, elapsed } ->
+            { carNumber = String.fromInt carNumber
+            , driver = driverName
+            , lap = lapNumber
+            , time = lapTime
+            , best =
+                laps
+                    |> List.take (index + 1)
+                    |> List.map .lapTime
+                    |> List.minimum
+                    |> Maybe.withDefault 0
+            , elapsed = elapsed
+            }
+        )
+        laps
