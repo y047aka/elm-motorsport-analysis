@@ -44,15 +44,6 @@ type alias Lap =
 
 lapDecoder : Decoder Lap
 lapDecoder =
-    let
-        raceClockDecoder : Decoder RaceClock
-        raceClockDecoder =
-            string |> Decode.andThen (RaceClock.fromString >> Decode.fromMaybe "Expected a RaceClock")
-
-        classDecoder : Decoder Class
-        classDecoder =
-            string |> Decode.andThen (Class.fromString >> Decode.fromMaybe "Expected a Class")
-    in
     Decode.into Lap
         |> pipeline (field "NUMBER" int)
         |> pipeline (field "DRIVER_NUMBER" int)
@@ -76,6 +67,16 @@ lapDecoder =
         |> pipeline (field "GROUP" string)
         |> pipeline (field "TEAM" string)
         |> pipeline (field "MANUFACTURER" string)
+
+
+raceClockDecoder : Decoder RaceClock
+raceClockDecoder =
+    string |> Decode.andThen (RaceClock.fromString >> Decode.fromMaybe "Expected a RaceClock")
+
+
+classDecoder : Decoder Class
+classDecoder =
+    string |> Decode.andThen (Class.fromString >> Decode.fromMaybe "Expected a Class")
 
 
 
