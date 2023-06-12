@@ -19,16 +19,16 @@ type alias Lap =
     , lapTime : RaceClock
     , lapImprovement : Int
     , crossingFinishLineInPit : String
-    , s1 : RaceClock
+    , s1 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
     , s1Improvement : Int
-    , s2 : RaceClock
+    , s2 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
     , s2Improvement : Int
     , s3 : RaceClock
     , s3Improvement : Int
     , kph : Float
     , elapsed : RaceClock
     , hour : RaceClock
-    , topSpeed : Float
+    , topSpeed : Maybe Float -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
     , driverName : String
     , pitTime : Maybe RaceClock
     , class : Class
@@ -51,16 +51,16 @@ lapDecoder =
         |> pipeline (field "LAP_TIME" raceClockDecoder)
         |> pipeline (field "LAP_IMPROVEMENT" int)
         |> pipeline (field "CROSSING_FINISH_LINE_IN_PIT" string)
-        |> pipeline (field "S1" raceClockDecoder)
+        |> pipeline (field "S1" <| Decode.blank raceClockDecoder)
         |> pipeline (field "S1_IMPROVEMENT" int)
-        |> pipeline (field "S2" raceClockDecoder)
+        |> pipeline (field "S2" <| Decode.blank raceClockDecoder)
         |> pipeline (field "S2_IMPROVEMENT" int)
         |> pipeline (field "S3" raceClockDecoder)
         |> pipeline (field "S3_IMPROVEMENT" int)
         |> pipeline (field "KPH" float)
         |> pipeline (field "ELAPSED" raceClockDecoder)
         |> pipeline (field "HOUR" raceClockDecoder)
-        |> pipeline (field "TOP_SPEED" float)
+        |> pipeline (field "TOP_SPEED" <| Decode.blank Decode.float)
         |> pipeline (field "DRIVER_NAME" string)
         |> pipeline (field "PIT_TIME" <| Decode.blank raceClockDecoder)
         |> pipeline (field "CLASS" classDecoder)
