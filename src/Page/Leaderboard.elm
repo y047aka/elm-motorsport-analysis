@@ -1,6 +1,7 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
 import Data.F1.Decoder as F1
+import Data.F1.Preprocess as F1
 import Data.Leaderboard exposing (Leaderboard, leaderboard)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)

@@ -3,6 +3,7 @@ module Page.LeaderboardWec exposing (Model, Msg, init, update, view)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.Leaderboard exposing (Leaderboard, leaderboard)
 import Data.Wec.Decoder as Wec
+import Data.Wec.Preprocess as Wec
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
