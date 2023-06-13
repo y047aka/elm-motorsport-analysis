@@ -56,7 +56,7 @@ fetchJson : Cmd Msg
 fetchJson =
     Http.get
         { url = "/static/lapTimes.json"
-        , expect = Http.expectJson Loaded F1.carsDecoder
+        , expect = Http.expectJson Loaded F1.decoder
         }
 
 

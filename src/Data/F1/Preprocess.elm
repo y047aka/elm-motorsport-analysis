@@ -4,7 +4,7 @@ import Data.F1.Decoder as F1
 import Motorsport.Lap exposing (Lap)
 
 
-preprocess : List F1.Car -> List (List Lap)
+preprocess : F1.Data -> List (List Lap)
 preprocess =
     List.map preprocess_
 
