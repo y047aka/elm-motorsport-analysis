@@ -3,7 +3,7 @@ module Data.Wec.Decoder exposing (Lap, lapDecoder, preprocess)
 import AssocList
 import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
-import Data.Class as Class exposing (Class(..))
+import Data.Wec as Wec exposing (Class(..))
 import Data.Lap as Lap
 import Data.Old.RaceClock as RaceClock exposing (RaceClock)
 
@@ -76,7 +76,7 @@ raceClockDecoder =
 
 classDecoder : Decoder Class
 classDecoder =
-    string |> Decode.andThen (Class.fromString >> Decode.fromMaybe "Expected a Class")
+    string |> Decode.andThen (Wec.classFromString >> Decode.fromMaybe "Expected a Class")
 
 
 

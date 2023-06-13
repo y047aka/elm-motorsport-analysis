@@ -1,4 +1,4 @@
-module Data.Class exposing (Class(..), fromString, toString)
+module Data.Wec exposing (Class(..), classFromString, classToString)
 
 
 type Class
@@ -10,8 +10,8 @@ type Class
     | InnovativeCar
 
 
-fromString : String -> Maybe Class
-fromString class =
+classFromString : String -> Maybe Class
+classFromString class =
     case class of
         "HYPERCAR" ->
             Just LMH
@@ -35,8 +35,8 @@ fromString class =
             Nothing
 
 
-toString : Class -> String
-toString class =
+classToString : Class -> String
+classToString class =
     case class of
         LMH ->
             "HYPERCAR"
