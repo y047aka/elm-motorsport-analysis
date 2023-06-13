@@ -2,7 +2,7 @@ module Main exposing (main)
 
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
-import Data.Car exposing (Car)
+import Data.Wec.Car exposing (Car)
 import Html.Styled as Html exposing (a, br, text, toUnstyled)
 import Html.Styled.Attributes exposing (href)
 import List.Extra as List

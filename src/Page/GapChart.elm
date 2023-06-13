@@ -1,8 +1,8 @@
 module Page.GapChart exposing (Model, Msg, init, update, view)
 
 import Chart.GapChart as GapChart
-import Data.Car exposing (Car)
 import Data.F1.Analysis exposing (Analysis, analysisDecoder)
+import Data.Wec.Car exposing (Car)
 import Html.Styled as Html exposing (Html)
 import Http
 

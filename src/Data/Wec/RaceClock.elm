@@ -1,4 +1,4 @@
-module Data.Old.RaceClock exposing (RaceClock, fromString, toString)
+module Data.Wec.RaceClock exposing (RaceClock, fromString, toString)
 
 
 type alias RaceClock =

@@ -3,9 +3,9 @@ module Data.Wec.Decoder exposing (Lap, lapDecoder, preprocess)
 import AssocList
 import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
-import Data.Wec as Wec exposing (Class(..))
 import Data.Lap as Lap
-import Data.Old.RaceClock as RaceClock exposing (RaceClock)
+import Data.Wec as Wec exposing (Class(..))
+import Data.Wec.RaceClock as RaceClock exposing (RaceClock)
 
 
 

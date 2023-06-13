@@ -4,7 +4,7 @@ import AssocList
 import AssocList.Extra
 import Chart.Chart as Chart
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
-import Data.Car exposing (Car)
+import Data.Wec.Car exposing (Car)
 import Data.Wec.Decoder exposing (Lap, lapDecoder)
 import Html.Styled as Html exposing (Html)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
