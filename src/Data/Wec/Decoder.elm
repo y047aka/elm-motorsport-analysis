@@ -1,4 +1,4 @@
-module Decoder.Wec exposing (Lap, lapDecoder, preprocess)
+module Data.Wec.Decoder exposing (Lap, lapDecoder, preprocess)
 
 import AssocList
 import AssocList.Extra
