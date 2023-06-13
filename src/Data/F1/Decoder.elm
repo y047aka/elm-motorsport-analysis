@@ -1,4 +1,4 @@
-module Data.F1.Decoder exposing (Car, Driver, Lap, carDecoder, carsDecoder)
+module Data.F1.Decoder exposing (Car, Driver, Lap, carsDecoder)
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Motorsport.Duration exposing (Duration, durationDecoder)
@@ -48,6 +48,6 @@ driverDecoder =
 
 lapDecoder : Decoder Lap
 lapDecoder =
-    Decode.map2 (\lap time -> { lap = lap, time = time })
+    Decode.map2 Lap
         (field "lap" int)
         (field "time" durationDecoder)
