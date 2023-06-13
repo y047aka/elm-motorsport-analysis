@@ -1,4 +1,4 @@
-module Decoder.F1 exposing (Car, Driver, Lap, carDecoder, carsDecoder, preprocess)
+module Data.F1.Decoder exposing (Car, Driver, Lap, carDecoder, carsDecoder, preprocess)
 
 import Data.Duration exposing (Duration, durationDecoder)
 import Data.Lap as Lap

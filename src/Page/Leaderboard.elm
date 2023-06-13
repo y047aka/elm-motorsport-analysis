@@ -5,7 +5,7 @@ import Data.Gap exposing (Gap(..))
 import Data.Lap exposing (Lap, completedLapsAt, fastestLap, maxLapCount, slowestLap)
 import Data.Leaderboard exposing (Leaderboard, leaderboard)
 import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
-import Decoder.F1 as F1
+import Data.F1.Decoder as F1
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
