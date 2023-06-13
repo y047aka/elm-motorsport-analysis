@@ -2,13 +2,13 @@ module View.Leaderboard exposing (view)
 
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
-import Data.Duration as Duration exposing (Duration)
-import Data.Gap as Gap exposing (Gap(..))
-import Data.Lap exposing (Lap, LapStatus(..), lapStatus)
 import Data.Leaderboard exposing (Leaderboard)
-import Data.RaceClock exposing (RaceClock)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
+import Motorsport.Clock exposing (Clock)
+import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Lap exposing (Lap, LapStatus(..), lapStatus)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes exposing (fill)
@@ -17,7 +17,7 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import UI.SortableData exposing (State, customColumn, increasingOrDecreasingBy, intColumn, stringColumn, table, veryCustomColumn)
 
 
-view : State -> RaceClock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> (State -> msg) -> Float -> Leaderboard -> Html msg
+view : State -> Clock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> (State -> msg) -> Float -> Leaderboard -> Html msg
 view tableState raceClock analysis toMsg coefficient =
     let
         config =
@@ -188,7 +188,7 @@ gap_ time =
         ]
 
 
-performance : RaceClock -> { a | fastestLapTime : Duration } -> Float -> List Lap -> Html msg
+performance : Clock -> { a | fastestLapTime : Duration } -> Float -> List Lap -> Html msg
 performance raceClock { fastestLapTime } coefficient laps =
     svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ dotHistory

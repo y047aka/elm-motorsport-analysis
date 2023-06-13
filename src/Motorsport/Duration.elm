@@ -1,4 +1,4 @@
-module Data.Duration exposing (Duration, durationDecoder, toString)
+module Motorsport.Duration exposing (Duration, durationDecoder, toString)
 
 import Json.Decode as Decode exposing (Decoder)
 

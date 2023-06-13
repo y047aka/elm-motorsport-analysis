@@ -1,4 +1,4 @@
-module Data.Lap exposing
+module Motorsport.Lap exposing
     ( Lap
     , maxLapCount, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
@@ -14,9 +14,9 @@ module Data.Lap exposing
 
 -}
 
-import Data.Duration exposing (Duration)
-import Data.RaceClock exposing (RaceClock)
 import List.Extra
+import Motorsport.Clock exposing (Clock)
+import Motorsport.Duration exposing (Duration)
 
 
 type alias Lap =
@@ -48,12 +48,12 @@ slowestLap =
         >> List.Extra.maximumBy .time
 
 
-completedLapsAt : RaceClock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
+completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
 completedLapsAt clock =
     List.filter (\lap -> lap.elapsed <= clock.elapsed)
 
 
-findLastLapAt : RaceClock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
 findLastLapAt clock =
     completedLapsAt clock >> List.Extra.last
 

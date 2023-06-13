@@ -1,7 +1,7 @@
-module Data.Gap exposing (Gap(..), from, toString)
+module Motorsport.Gap exposing (Gap(..), from, toString)
 
-import Data.Duration as Duration exposing (Duration)
-import Data.Lap exposing (Lap)
+import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Lap exposing (Lap)
 
 
 type Gap

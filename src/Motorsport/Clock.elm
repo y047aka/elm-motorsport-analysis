@@ -1,26 +1,26 @@
-module Data.RaceClock exposing (RaceClock, countDown, countUp, init, initWithCount, toString)
+module Motorsport.Clock exposing (Clock, countDown, countUp, init, initWithCount, toString)
 
-import Data.Duration as Duration exposing (Duration)
 import List.Extra
+import Motorsport.Duration as Duration exposing (Duration)
 
 
-type alias RaceClock =
+type alias Clock =
     { lapCount : Int, elapsed : Duration }
 
 
-init : RaceClock
+init : Clock
 init =
     { lapCount = 0, elapsed = 0 }
 
 
-initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> RaceClock
+initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Clock
 initWithCount newCount lapTimes =
     { lapCount = newCount
     , elapsed = elapsedAt newCount lapTimes
     }
 
 
-countUp : List (List { a | lap : Int, elapsed : Duration }) -> RaceClock -> RaceClock
+countUp : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
 countUp lapTimes c =
     let
         newCount =
@@ -32,7 +32,7 @@ countUp lapTimes c =
     }
 
 
-countDown : List (List { a | lap : Int, elapsed : Duration }) -> RaceClock -> RaceClock
+countDown : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
 countDown lapTimes c =
     if c.lapCount > 0 then
         let
@@ -70,6 +70,6 @@ elapsedAt lapCount lapTimes =
         |> Maybe.withDefault 0
 
 
-toString : RaceClock -> String
+toString : Clock -> String
 toString =
     .elapsed >> Duration.toString

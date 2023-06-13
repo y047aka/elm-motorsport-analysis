@@ -1,9 +1,9 @@
 module Data.Leaderboard exposing (Leaderboard, leaderboard)
 
-import Data.Duration exposing (Duration)
-import Data.Gap as Gap exposing (Gap(..))
-import Data.Lap exposing (Lap, completedLapsAt, findLastLapAt)
-import Data.RaceClock exposing (RaceClock)
+import Motorsport.Clock exposing (Clock)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Lap exposing (Lap, completedLapsAt, findLastLapAt)
 
 
 type alias Leaderboard =
@@ -19,7 +19,7 @@ type alias Leaderboard =
         }
 
 
-leaderboard : RaceClock -> List (List Lap) -> Leaderboard
+leaderboard : Clock -> List (List Lap) -> Leaderboard
 leaderboard raceClock cars =
     let
         sortedCars =

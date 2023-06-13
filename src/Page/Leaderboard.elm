@@ -1,15 +1,15 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
-import Data.Duration exposing (Duration)
-import Data.Gap exposing (Gap(..))
-import Data.Lap exposing (Lap, completedLapsAt, fastestLap, maxLapCount, slowestLap)
-import Data.Leaderboard exposing (Leaderboard, leaderboard)
-import Data.RaceClock as RaceClock exposing (RaceClock, countDown, countUp)
 import Data.F1.Decoder as F1
+import Data.Leaderboard exposing (Leaderboard, leaderboard)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
+import Motorsport.Clock as Clock exposing (Clock, countDown, countUp)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Gap exposing (Gap(..))
+import Motorsport.Lap exposing (Lap, completedLapsAt, fastestLap, maxLapCount, slowestLap)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -21,7 +21,7 @@ import View.Leaderboard as Leaderboard
 
 
 type alias Model =
-    { raceClock : RaceClock
+    { raceClock : Clock
     , preprocessed : Preprocessed
     , leaderboard : Leaderboard
     , analysis :
@@ -40,7 +40,7 @@ type alias Preprocessed =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { raceClock = RaceClock.init
+    ( { raceClock = Clock.init
       , preprocessed = []
       , leaderboard = []
       , analysis = Nothing
@@ -80,7 +80,7 @@ update msg m =
                     F1.preprocess decoded
             in
             ( { m
-                | raceClock = RaceClock.init
+                | raceClock = Clock.init
                 , preprocessed = preprocessed
                 , leaderboard =
                     List.indexedMap
@@ -113,7 +113,7 @@ update msg m =
             ( if m.raceClock.lapCount < maxLapCount m.preprocessed then
                 let
                     updatedClock =
-                        RaceClock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) m.preprocessed
+                        Clock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) m.preprocessed
                 in
                 { m
                     | raceClock = updatedClock
@@ -160,7 +160,7 @@ update msg m =
             ( { m | tableState = newState }, Cmd.none )
 
 
-analysis_ : RaceClock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime : Duration }
+analysis_ : Clock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime : Duration }
 analysis_ clock preprocessed =
     let
         completedLaps =
@@ -189,7 +189,7 @@ view { raceClock, preprocessed, leaderboard, analysis, tableState } =
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
         , button [ onClick CountUp ] [ text "+" ]
         ]
-    , text <| RaceClock.toString raceClock
+    , text <| Clock.toString raceClock
     , Leaderboard.view tableState
         raceClock
         (Maybe.withDefault { fastestLapTime = 0, slowestLapTime = 0 } analysis)
