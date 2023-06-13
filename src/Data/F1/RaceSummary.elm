@@ -1,6 +1,6 @@
-module Data.RaceSummary exposing (RaceSummary, raceSummaryDecoder)
+module Data.F1.RaceSummary exposing (RaceSummary, raceSummaryDecoder)
 
-import Data.Driver exposing (Driver, driverDecoder)
+import Data.F1.Driver exposing (Driver, driverDecoder)
 import Json.Decode as Decode exposing (at, field, int, string)
 
 

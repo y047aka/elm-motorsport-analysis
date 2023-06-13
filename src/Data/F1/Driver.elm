@@ -1,4 +1,4 @@
-module Data.Driver exposing (Driver, driverDecoder)
+module Data.F1.Driver exposing (Driver, driverDecoder)
 
 import Json.Decode as Decode exposing (field, string)
 

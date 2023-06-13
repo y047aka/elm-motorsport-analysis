@@ -1,6 +1,6 @@
-module Data.Old.Lap exposing (Lap, fastest, fromWithoutElapsed)
+module Data.F1.Lap exposing (Lap, fastest, fromWithoutElapsed)
 
-import Data.Lap.WithoutElapsed exposing (WithoutElapsed)
+import Data.F1.Lap.WithoutElapsed exposing (WithoutElapsed)
 import List.Extra
 
 

@@ -1,9 +1,9 @@
-module Data.Analysis exposing (Analysis, History, analysisDecoder, standings)
+module Data.F1.Analysis exposing (Analysis, History, analysisDecoder, standings)
 
-import Data.Driver exposing (Driver)
-import Data.Lap.WithoutElapsed as Lap
-import Data.Old.Lap exposing (Lap, fastest, fromWithoutElapsed)
-import Data.RaceSummary exposing (RaceSummary, raceSummaryDecoder)
+import Data.F1.Driver exposing (Driver)
+import Data.F1.Lap exposing (Lap, fastest, fromWithoutElapsed)
+import Data.F1.Lap.WithoutElapsed as Lap
+import Data.F1.RaceSummary exposing (RaceSummary, raceSummaryDecoder)
 import Json.Decode as Decode exposing (field, int, maybe, string)
 
 

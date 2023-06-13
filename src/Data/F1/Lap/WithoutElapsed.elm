@@ -1,4 +1,4 @@
-module Data.Lap.WithoutElapsed exposing (WithoutElapsed, withoutElapsedDecoder)
+module Data.F1.Lap.WithoutElapsed exposing (WithoutElapsed, withoutElapsedDecoder)
 
 import Json.Decode as Decode exposing (field, float, int)
 
