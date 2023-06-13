@@ -2,7 +2,6 @@ module Motorsport.Lap exposing
     ( Lap
     , maxLapCount, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
-    , LapStatus(..), lapStatus
     )
 
 {-|
@@ -10,7 +9,6 @@ module Motorsport.Lap exposing
 @docs Lap
 @docs maxLapCount, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
-@docs LapStatus, lapStatus
 
 -}
 
@@ -56,21 +54,3 @@ completedLapsAt clock =
 findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
 findLastLapAt clock =
     completedLapsAt clock >> List.Extra.last
-
-
-type LapStatus
-    = Fastest
-    | PersonalBest
-    | Normal
-
-
-lapStatus : { a | time : Duration } -> { b | time : Duration, best : Duration } -> LapStatus
-lapStatus fastestLap_ { time, best } =
-    if time == fastestLap_.time then
-        Fastest
-
-    else if time == best then
-        PersonalBest
-
-    else
-        Normal
