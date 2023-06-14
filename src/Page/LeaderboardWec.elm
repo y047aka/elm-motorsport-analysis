@@ -12,8 +12,9 @@ import List.Extra as List
 import Motorsport.Clock as Clock exposing (Clock, countDown, countUp)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap(..))
-import Motorsport.Lap exposing (Lap, completedLapsAt, fastestLap, maxLapCount, slowestLap)
+import Motorsport.Lap exposing (Lap, completedLapsAt, fastestLap, slowestLap)
 import Motorsport.LapStatus exposing (LapStatus(..))
+import Motorsport.Summary as Summary exposing (Summary)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -27,6 +28,7 @@ import View.Leaderboard as Leaderboard
 type alias Model =
     { raceClock : Clock
     , preprocessed : Preprocessed
+    , summary : Summary
     , leaderboard : Leaderboard
     , analysis :
         Maybe
@@ -46,6 +48,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { raceClock = Clock.init
       , preprocessed = []
+      , summary = Summary.init
       , leaderboard = []
       , analysis = Nothing
       , tableState = initialSort "Position"
@@ -114,6 +117,7 @@ update msg m =
             ( { m
                 | raceClock = Clock.init
                 , preprocessed = preprocessed
+                , summary = { lapTotal = Summary.calcLapTotal preprocessed }
                 , leaderboard =
                     List.indexedMap
                         (\index laps ->
@@ -142,7 +146,7 @@ update msg m =
             ( m, Cmd.none )
 
         SetCount newCount ->
-            ( if m.raceClock.lapCount < maxLapCount m.preprocessed then
+            ( if m.raceClock.lapCount < m.summary.lapTotal then
                 let
                     updatedClock =
                         Clock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) m.preprocessed
@@ -159,7 +163,7 @@ update msg m =
             )
 
         CountUp ->
-            ( if m.raceClock.lapCount < maxLapCount m.preprocessed then
+            ( if m.raceClock.lapCount < m.summary.lapTotal then
                 let
                     updatedClock =
                         countUp m.preprocessed m.raceClock
@@ -208,10 +212,10 @@ analysis_ clock preprocessed =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, preprocessed, leaderboard, analysis, tableState } =
+view { raceClock, leaderboard, analysis, tableState, summary } =
     [ input
         [ type_ "range"
-        , Attributes.max <| String.fromInt (maxLapCount preprocessed)
+        , Attributes.max <| String.fromInt summary.lapTotal
         , value (String.fromInt raceClock.lapCount)
         , onInput SetCount
         ]

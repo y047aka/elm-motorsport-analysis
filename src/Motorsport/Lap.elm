@@ -1,13 +1,13 @@
 module Motorsport.Lap exposing
     ( Lap
-    , maxLapCount, fastestLap, slowestLap
+    , fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
     )
 
 {-|
 
 @docs Lap
-@docs maxLapCount, fastestLap, slowestLap
+@docs fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
 
 -}
@@ -25,13 +25,6 @@ type alias Lap =
     , best : Duration
     , elapsed : Duration
     }
-
-
-maxLapCount : List (List Lap) -> Int
-maxLapCount =
-    List.map List.length
-        >> List.maximum
-        >> Maybe.withDefault 0
 
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
