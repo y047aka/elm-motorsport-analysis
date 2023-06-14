@@ -10,7 +10,7 @@ import Data.Wec.RaceClock as RaceClock exposing (RaceClock)
 
 
 type alias Lap =
-    { carNumber : Int
+    { carNumber : String
     , driverNumber : Int
     , lapNumber : Int
     , lapTime : RaceClock
@@ -42,7 +42,7 @@ type alias Lap =
 lapDecoder : Decoder Lap
 lapDecoder =
     Decode.into Lap
-        |> pipeline (field "NUMBER" int)
+        |> pipeline (field "NUMBER" string)
         |> pipeline (field "DRIVER_NUMBER" int)
         |> pipeline (field "LAP_NUMBER" int)
         |> pipeline (field "LAP_TIME" raceClockDecoder)

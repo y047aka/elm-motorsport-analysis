@@ -22,7 +22,7 @@ type alias Model =
 
 
 type alias OrdersByLap =
-    List { lapNumber : Int, order : List Int }
+    List { lapNumber : Int, order : List String }
 
 
 init : ( Model, Cmd Msg )
@@ -111,7 +111,7 @@ update msg model =
             ( model, Cmd.none )
 
 
-summarize : OrdersByLap -> ( Int, List Lap ) -> Maybe Car
+summarize : OrdersByLap -> ( String, List Lap ) -> Maybe Car
 summarize ordersByLap ( carNumber, laps ) =
     List.head laps
         |> Maybe.map
@@ -131,7 +131,7 @@ summarize ordersByLap ( carNumber, laps ) =
             )
 
 
-getPositionAt : { carNumber : Int, lapNumber : Int } -> OrdersByLap -> Maybe Int
+getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
 getPositionAt { carNumber, lapNumber } ordersByLap =
     ordersByLap
         |> List.find (.lapNumber >> (==) lapNumber)

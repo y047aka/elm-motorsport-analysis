@@ -10,7 +10,7 @@ module Motorsport.Summary exposing
 
 -}
 
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Car exposing (Car)
 
 
 type alias Summary =
@@ -22,8 +22,8 @@ init =
     { lapTotal = 0 }
 
 
-calcLapTotal : List (List Lap) -> Int
+calcLapTotal : List Car -> Int
 calcLapTotal =
-    List.map List.length
+    List.map (.laps >> List.length)
         >> List.maximum
         >> Maybe.withDefault 0

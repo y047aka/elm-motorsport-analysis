@@ -17,7 +17,7 @@ import TypedSvg.Types exposing (Paint(..), Transform(..))
 
 
 type alias OrdersByLap =
-    List { lapNumber : Int, order : List Int }
+    List { lapNumber : Int, order : List String }
 
 
 w : Float
@@ -104,7 +104,7 @@ view { cars, ordersByLap } =
                             { x = toFloat >> Scale.convert (xScale ordersByLap)
                             , y = toFloat >> Scale.convert (yScale cars)
                             , svgPalette = svgPalette_ car.class
-                            , label = String.join " " [ String.fromInt car.carNumber, car.team ]
+                            , label = String.join " " [ car.carNumber, car.team ]
                             }
                             car
                     )
@@ -135,7 +135,7 @@ history { x, y, svgPalette, label } { carNumber, startPosition, positions } =
         , positionLabels =
             (startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
-                |> positionLabels { label = text (String.fromInt carNumber) }
+                |> positionLabels { label = text carNumber }
         }
 
 

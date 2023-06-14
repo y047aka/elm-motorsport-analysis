@@ -7,10 +7,11 @@ import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
+import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock, countDown, countUp)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap(..))
-import Motorsport.Lap exposing (Lap, completedLapsAt, fastestLap, slowestLap)
+import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
 import Motorsport.Summary as Summary exposing (Summary)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
@@ -38,7 +39,7 @@ type alias Model =
 
 
 type alias Preprocessed =
-    List (List Lap)
+    List Car
 
 
 init : ( Model, Cmd Msg )
@@ -89,16 +90,10 @@ update msg m =
                 , summary = { lapTotal = Summary.calcLapTotal preprocessed }
                 , leaderboard =
                     List.indexedMap
-                        (\index laps ->
-                            let
-                                { carNumber, driver } =
-                                    List.head laps
-                                        |> Maybe.map (\l -> { carNumber = l.carNumber, driver = l.driver })
-                                        |> Maybe.withDefault { carNumber = "000", driver = "" }
-                            in
+                        (\index { carNumber, driverName } ->
                             { position = index + 1
                             , carNumber = carNumber
-                            , driver = driver
+                            , driver = driverName
                             , lap = 0
                             , gap = None
                             , time = 0
@@ -118,7 +113,7 @@ update msg m =
             ( if m.raceClock.lapCount < m.summary.lapTotal then
                 let
                     updatedClock =
-                        Clock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) m.preprocessed
+                        Clock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) (List.map .laps m.preprocessed)
                 in
                 { m
                     | raceClock = updatedClock
@@ -135,7 +130,7 @@ update msg m =
             ( if m.raceClock.lapCount < m.summary.lapTotal then
                 let
                     updatedClock =
-                        countUp m.preprocessed m.raceClock
+                        countUp (List.map .laps m.preprocessed) m.raceClock
                 in
                 { m
                     | raceClock = updatedClock
@@ -151,7 +146,7 @@ update msg m =
         CountDown ->
             let
                 updatedClock =
-                    countDown m.preprocessed m.raceClock
+                    countDown (List.map .laps m.preprocessed) m.raceClock
             in
             ( { m
                 | raceClock = updatedClock
@@ -169,7 +164,7 @@ analysis_ : Clock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime
 analysis_ clock preprocessed =
     let
         completedLaps =
-            List.map (completedLapsAt clock) preprocessed
+            List.map (.laps >> completedLapsAt clock) preprocessed
     in
     { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0

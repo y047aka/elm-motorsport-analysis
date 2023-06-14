@@ -5,7 +5,7 @@ import Data.Wec.Decoder exposing (Lap)
 
 
 type alias Car =
-    { carNumber : Int
+    { carNumber : String
     , class : Class
     , group : String
     , team : String
