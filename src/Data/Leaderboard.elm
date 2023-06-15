@@ -74,25 +74,17 @@ sortCars raceClock cars =
                 in
                 { laps = laps, lap = lastLap }
             )
-        |> List.sortWith (\a b -> compare a b)
+        |> List.sortWith (\a b -> compare a.lap b.lap)
 
 
-compare : { laps : List Lap, lap : Lap } -> { laps : List Lap, lap : Lap } -> Order
+compare : Lap -> Lap -> Order
 compare a b =
-    case Basics.compare a.lap.lap b.lap.lap of
+    case Basics.compare a.lap b.lap of
         LT ->
             GT
 
         EQ ->
-            case Basics.compare a.lap.elapsed b.lap.elapsed of
-                LT ->
-                    LT
-
-                EQ ->
-                    EQ
-
-                GT ->
-                    GT
+            Basics.compare a.elapsed b.elapsed
 
         GT ->
             LT
