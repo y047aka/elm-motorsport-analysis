@@ -74,26 +74,28 @@ sortCars raceClock cars =
                 in
                 { laps = laps, lap = lastLap }
             )
-        |> List.sortWith
-            (\a b ->
-                case compare a.lap.lap b.lap.lap of
-                    LT ->
-                        GT
+        |> List.sortWith (\a b -> compare a b)
 
-                    EQ ->
-                        case compare a.lap.elapsed b.lap.elapsed of
-                            LT ->
-                                LT
 
-                            EQ ->
-                                EQ
+compare : { laps : List Lap, lap : Lap } -> { laps : List Lap, lap : Lap } -> Order
+compare a b =
+    case Basics.compare a.lap.lap b.lap.lap of
+        LT ->
+            GT
 
-                            GT ->
-                                GT
+        EQ ->
+            case Basics.compare a.lap.elapsed b.lap.elapsed of
+                LT ->
+                    LT
 
-                    GT ->
-                        LT
-            )
+                EQ ->
+                    EQ
+
+                GT ->
+                    GT
+
+        GT ->
+            LT
 
 
 view : State -> Clock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> (State -> msg) -> Float -> Leaderboard -> Html msg
