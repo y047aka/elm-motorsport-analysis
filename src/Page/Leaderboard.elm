@@ -2,7 +2,7 @@ module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as F1
-import Data.Leaderboard exposing (Leaderboard, leaderboard)
+import Data.Leaderboard as Leaderboard exposing (Leaderboard)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
@@ -47,7 +47,7 @@ init =
     ( { raceClock = Clock.init
       , preprocessed = []
       , summary = Summary.init
-      , leaderboard = []
+      , leaderboard = Leaderboard.empty
       , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
@@ -117,7 +117,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , leaderboard = leaderboard updatedClock m.preprocessed
+                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -134,7 +134,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , leaderboard = leaderboard updatedClock m.preprocessed
+                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -150,7 +150,7 @@ update msg m =
             in
             ( { m
                 | raceClock = updatedClock
-                , leaderboard = leaderboard updatedClock m.preprocessed
+                , leaderboard = Leaderboard.init updatedClock m.preprocessed
                 , analysis = Just (analysis_ updatedClock m.preprocessed)
               }
             , Cmd.none

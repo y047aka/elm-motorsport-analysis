@@ -1,7 +1,7 @@
 module Page.LeaderboardWec exposing (Model, Msg, init, update, view)
 
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
-import Data.Leaderboard exposing (Leaderboard, leaderboard)
+import Data.Leaderboard as Leaderboard exposing (Leaderboard)
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Wec
 import Html.Styled as Html exposing (Html, input, text)
@@ -50,7 +50,7 @@ init =
     ( { raceClock = Clock.init
       , preprocessed = []
       , summary = Summary.init
-      , leaderboard = []
+      , leaderboard = Leaderboard.empty
       , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
@@ -148,7 +148,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , leaderboard = leaderboard updatedClock m.preprocessed
+                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -165,7 +165,7 @@ update msg m =
                 in
                 { m
                     | raceClock = updatedClock
-                    , leaderboard = leaderboard updatedClock m.preprocessed
+                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
 
@@ -181,7 +181,7 @@ update msg m =
             in
             ( { m
                 | raceClock = updatedClock
-                , leaderboard = leaderboard updatedClock m.preprocessed
+                , leaderboard = Leaderboard.init updatedClock m.preprocessed
                 , analysis = Just (analysis_ updatedClock m.preprocessed)
               }
             , Cmd.none

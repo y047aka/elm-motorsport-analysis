@@ -1,4 +1,10 @@
-module Data.Leaderboard exposing (Leaderboard, leaderboard)
+module Data.Leaderboard exposing (Leaderboard, empty, init)
+
+{-|
+
+@docs Leaderboard, empty, init
+
+-}
 
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
@@ -20,8 +26,13 @@ type alias Leaderboard =
         }
 
 
-leaderboard : Clock -> List Car -> Leaderboard
-leaderboard raceClock cars =
+empty : Leaderboard
+empty =
+    []
+
+
+init : Clock -> List Car -> Leaderboard
+init raceClock cars =
     let
         sortedCars =
             cars
