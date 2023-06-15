@@ -19,7 +19,7 @@ import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap exposing (completedLapsAt, findLastLapAt)
+import Motorsport.Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import UI.SortableData exposing (State)
 
 
@@ -36,36 +36,7 @@ init : Clock -> List Car -> Leaderboard
 init raceClock cars =
     let
         sortedCars =
-            cars
-                |> List.map
-                    (\{ laps } ->
-                        let
-                            lastLap =
-                                findLastLapAt raceClock laps
-                                    |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
-                        in
-                        { laps = laps, lap = lastLap }
-                    )
-                |> List.sortWith
-                    (\a b ->
-                        case compare a.lap.lap b.lap.lap of
-                            LT ->
-                                GT
-
-                            EQ ->
-                                case compare a.lap.elapsed b.lap.elapsed of
-                                    LT ->
-                                        LT
-
-                                    EQ ->
-                                        EQ
-
-                                    GT ->
-                                        GT
-
-                            GT ->
-                                LT
-                    )
+            sortCars raceClock cars
     in
     sortedCars
         |> List.indexedMap
@@ -88,6 +59,40 @@ init raceClock cars =
                 , best = lap.best
                 , history = completedLapsAt raceClock laps
                 }
+            )
+
+
+sortCars : Clock -> List Car -> List { laps : List Lap, lap : Lap }
+sortCars raceClock cars =
+    cars
+        |> List.map
+            (\{ laps } ->
+                let
+                    lastLap =
+                        findLastLapAt raceClock laps
+                            |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
+                in
+                { laps = laps, lap = lastLap }
+            )
+        |> List.sortWith
+            (\a b ->
+                case compare a.lap.lap b.lap.lap of
+                    LT ->
+                        GT
+
+                    EQ ->
+                        case compare a.lap.elapsed b.lap.elapsed of
+                            LT ->
+                                LT
+
+                            EQ ->
+                                EQ
+
+                            GT ->
+                                GT
+
+                    GT ->
+                        LT
             )
 
 
