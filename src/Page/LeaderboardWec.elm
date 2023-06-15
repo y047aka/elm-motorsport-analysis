@@ -19,7 +19,6 @@ import Motorsport.Summary as Summary exposing (Summary)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
-import View.Leaderboard as Leaderboard
 
 
 

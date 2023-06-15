@@ -1,8 +1,8 @@
-module View.Leaderboard exposing (view)
+module Data.Leaderboard.View exposing (view)
 
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
-import Data.Leaderboard exposing (Leaderboard)
+import Data.Leaderboard.Type exposing (Leaderboard)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Clock exposing (Clock)

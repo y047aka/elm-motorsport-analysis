@@ -1,29 +1,30 @@
-module Data.Leaderboard exposing (Leaderboard, empty, init)
+module Data.Leaderboard exposing
+    ( Leaderboard
+    , empty, init
+    , view
+    )
 
 {-|
 
-@docs Leaderboard, empty, init
+@docs Leaderboard
+@docs empty, init
+@docs view
 
 -}
 
+import Data.Leaderboard.Type
+import Data.Leaderboard.View
+import Html.Styled as Html exposing (Html)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap exposing (Lap, completedLapsAt, findLastLapAt)
+import Motorsport.Lap exposing (completedLapsAt, findLastLapAt)
+import UI.SortableData exposing (State)
 
 
 type alias Leaderboard =
-    List
-        { position : Int
-        , carNumber : String
-        , driver : String
-        , lap : Int
-        , gap : Gap
-        , time : Duration
-        , best : Duration
-        , history : List Lap
-        }
+    Data.Leaderboard.Type.Leaderboard
 
 
 empty : Leaderboard
@@ -88,3 +89,8 @@ init raceClock cars =
                 , history = completedLapsAt raceClock laps
                 }
             )
+
+
+view : State -> Clock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> (State -> msg) -> Float -> Leaderboard -> Html msg
+view =
+    Data.Leaderboard.View.view
