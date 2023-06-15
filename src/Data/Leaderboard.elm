@@ -40,41 +40,35 @@ init raceClock cars =
     in
     sortedCars
         |> List.indexedMap
-            (\index { laps, lap } ->
-                let
-                    { carNumber, driver } =
-                        List.head laps
-                            |> Maybe.map (\l -> { carNumber = l.carNumber, driver = l.driver })
-                            |> Maybe.withDefault { carNumber = "000", driver = "" }
-                in
+            (\index { car, lastLap } ->
                 { position = index + 1
-                , driver = driver
-                , carNumber = carNumber
-                , lap = lap.lap
+                , driver = car.driverName
+                , carNumber = car.carNumber
+                , lap = lastLap.lap
                 , gap =
                     List.head sortedCars
-                        |> Maybe.map (\leader -> Gap.from leader.lap lap)
+                        |> Maybe.map (\leader -> Gap.from leader.lastLap lastLap)
                         |> Maybe.withDefault None
-                , time = lap.time
-                , best = lap.best
-                , history = completedLapsAt raceClock laps
+                , time = lastLap.time
+                , best = lastLap.best
+                , history = completedLapsAt raceClock car.laps
                 }
             )
 
 
-sortCars : Clock -> List Car -> List { laps : List Lap, lap : Lap }
+sortCars : Clock -> List Car -> List { car : Car, lastLap : Lap }
 sortCars raceClock cars =
     cars
         |> List.map
-            (\{ laps } ->
+            (\car ->
                 let
                     lastLap =
-                        findLastLapAt raceClock laps
+                        findLastLapAt raceClock car.laps
                             |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
                 in
-                { laps = laps, lap = lastLap }
+                { car = car, lastLap = lastLap }
             )
-        |> List.sortWith (\a b -> compare a.lap b.lap)
+        |> List.sortWith (\a b -> compare a.lastLap b.lastLap)
 
 
 compare : Lap -> Lap -> Order
