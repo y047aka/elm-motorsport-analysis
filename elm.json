@@ -21,7 +21,8 @@
             "gampleman/elm-visualization": "2.4.0",
             "pzp1997/assoc-list": "1.0.0",
             "rtfeldman/elm-css": "18.0.0",
-            "skyqrose/assoc-list-extra": "1.0.0"
+            "skyqrose/assoc-list-extra": "1.0.0",
+            "y047aka/elm-css-palette": "1.0.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8",

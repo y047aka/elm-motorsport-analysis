@@ -17,7 +17,8 @@ module UI.Button exposing
 import Css exposing (..)
 import Css.Global exposing (children, descendants, selector, typeSelector)
 import Css.Layout as Layout exposing (layout)
-import Css.Palette exposing (..)
+import Css.Palette exposing (Palette, palette)
+import Css.Palette.Extra exposing (..)
 import Css.Typography as Typography exposing (fomanticFontFamilies, init, typography)
 import Data exposing (PresetColor(..))
 import Html.Styled as Html exposing (Attribute, Html)
@@ -428,17 +429,17 @@ paletteSelector presetColor =
 
 basisDefault : Palette
 basisDefault =
-    { background = hex "#E0E1E2"
-    , color = textColor
-    , border = transparent_
+    { background = Just (hex "#E0E1E2")
+    , color = Just textColor
+    , border = Nothing
     }
 
 
 basisOnHover : Palette
 basisOnHover =
     { basisDefault
-        | background = hex "#CACBCD"
-        , color = hoverColor
+        | background = Just (hex "#CACBCD")
+        , color = Just hoverColor
     }
 
 
@@ -450,24 +451,24 @@ basisOnFocus =
 basisOnActive : Palette
 basisOnActive =
     { basisDefault
-        | background = hex "#BABBBC"
-        , color = rgba 0 0 0 0.9
+        | background = Just (hex "#BABBBC")
+        , color = Just (rgba 0 0 0 0.9)
     }
 
 
 basic : Palette
 basic =
-    { background = rgba 0 0 0 0
-    , color = textColor
-    , border = transparent_
+    { background = Just (rgba 0 0 0 0)
+    , color = Just textColor
+    , border = Nothing
     }
 
 
 basicOnHover : Palette
 basicOnHover =
     { basic
-        | background = hex "#FFFFFF"
-        , color = hoverColor
+        | background = Just (hex "#FFFFFF")
+        , color = Just hoverColor
     }
 
 
@@ -479,6 +480,6 @@ basicOnFocus =
 basicOnActive : Palette
 basicOnActive =
     { basic
-        | background = hex "#F8F8F8"
-        , color = rgba 0 0 0 0.9
+        | background = Just (hex "#F8F8F8")
+        , color = Just (rgba 0 0 0 0.9)
     }

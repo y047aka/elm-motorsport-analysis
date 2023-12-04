@@ -17,7 +17,8 @@ module UI.Label exposing
 import Css exposing (..)
 import Css.Global exposing (children)
 import Css.Layout as Layout exposing (layout)
-import Css.Palette exposing (..)
+import Css.Palette exposing (Palette, palette)
+import Css.Palette.Extra exposing (..)
 import Css.Typography as Typography exposing (init, typography)
 import Html.Styled as Html exposing (Attribute, Html)
 
@@ -100,12 +101,12 @@ coloredLabel palettes =
 
 primaryLabel : List (Attribute msg) -> List (Html msg) -> Html msg
 primaryLabel =
-    coloredLabel { blue | color = rgba 255 255 255 0.9 }
+    coloredLabel { blue | color = Just (rgba 255 255 255 0.9) }
 
 
 secondaryLabel : List (Attribute msg) -> List (Html msg) -> Html msg
 secondaryLabel =
-    coloredLabel { black | color = rgba 255 255 255 0.9 }
+    coloredLabel { black | color = Just (rgba 255 255 255 0.9) }
 
 
 redLabel : List (Attribute msg) -> List (Html msg) -> Html msg
@@ -179,15 +180,15 @@ blackLabel =
 
 basis_ : Palette
 basis_ =
-    { background = hex "#E8E8E8"
-    , color = textColor
-    , border = transparent_
+    { background = Just (hex "#E8E8E8")
+    , color = Just textColor
+    , border = Nothing
     }
 
 
 basic : Palette
 basic =
-    { background = hex "#FFFFFF"
-    , color = rgba 0 0 0 0.87
-    , border = transparent_
+    { background = Just (hex "#FFFFFF")
+    , color = Just (rgba 0 0 0 0.87)
+    , border = Nothing
     }
