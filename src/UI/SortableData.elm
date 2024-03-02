@@ -40,7 +40,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 -}
 
-import Css exposing (color, hex)
+import Css exposing (color, fontSize, hex, px)
 import Html.Styled as Html exposing (Attribute, Html, li, span, text, ul)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events as Events
@@ -203,7 +203,7 @@ table { toId, toMsg, columns } state data =
         sortedData =
             sort state columns data
     in
-    Table.table []
+    Table.table [ css [ fontSize (px 14) ] ]
         [ thead []
             [ tr [] <|
                 List.map (toHeaderInfo state toMsg >> simpleTheadHelp) columns
