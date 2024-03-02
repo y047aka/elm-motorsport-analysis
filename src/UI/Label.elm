@@ -23,7 +23,7 @@ import Css.Typography as Typography exposing (init, typography)
 import Html.Styled as Html exposing (Attribute, Html)
 
 
-basis : { border : Bool, palette : Maybe Palette } -> List Style -> List (Attribute msg) -> List (Html msg) -> Html msg
+basis : { border : Bool, palette : Maybe (Palette Color) } -> List Style -> List (Attribute msg) -> List (Html msg) -> Html msg
 basis options additionalStyles =
     Html.styled Html.div
         [ -- .ui.label
@@ -94,7 +94,7 @@ basicLabel =
         ]
 
 
-coloredLabel : Palette -> List (Attribute msg) -> List (Html msg) -> Html msg
+coloredLabel : Palette Color -> List (Attribute msg) -> List (Html msg) -> Html msg
 coloredLabel palettes =
     basis { border = False, palette = Just palettes } []
 
@@ -178,7 +178,7 @@ blackLabel =
 -- PALETTE
 
 
-basis_ : Palette
+basis_ : Palette Color
 basis_ =
     { background = Just (hex "#E8E8E8")
     , color = Just textColor
@@ -186,7 +186,7 @@ basis_ =
     }
 
 
-basic : Palette
+basic : Palette Color
 basic =
     { background = Just (hex "#FFFFFF")
     , color = Just (rgba 0 0 0 0.87)

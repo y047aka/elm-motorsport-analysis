@@ -353,10 +353,10 @@ blackButton =
 
 
 type alias PalettesByState =
-    { default : Palette
-    , onHover : Palette
-    , onFocus : Palette
-    , onActive : Palette
+    { default : Palette Color
+    , onHover : Palette Color
+    , onFocus : Palette Color
+    , onActive : Palette Color
     }
 
 
@@ -427,7 +427,7 @@ paletteSelector presetColor =
 -- PALETTE
 
 
-basisDefault : Palette
+basisDefault : Palette Color
 basisDefault =
     { background = Just (hex "#E0E1E2")
     , color = Just textColor
@@ -435,7 +435,7 @@ basisDefault =
     }
 
 
-basisOnHover : Palette
+basisOnHover : Palette Color
 basisOnHover =
     { basisDefault
         | background = Just (hex "#CACBCD")
@@ -443,12 +443,12 @@ basisOnHover =
     }
 
 
-basisOnFocus : Palette
+basisOnFocus : Palette Color
 basisOnFocus =
     basisOnHover
 
 
-basisOnActive : Palette
+basisOnActive : Palette Color
 basisOnActive =
     { basisDefault
         | background = Just (hex "#BABBBC")
@@ -456,7 +456,7 @@ basisOnActive =
     }
 
 
-basic : Palette
+basic : Palette Color
 basic =
     { background = Just (rgba 0 0 0 0)
     , color = Just textColor
@@ -464,7 +464,7 @@ basic =
     }
 
 
-basicOnHover : Palette
+basicOnHover : Palette Color
 basicOnHover =
     { basic
         | background = Just (hex "#FFFFFF")
@@ -472,12 +472,12 @@ basicOnHover =
     }
 
 
-basicOnFocus : Palette
+basicOnFocus : Palette Color
 basicOnFocus =
     basicOnHover
 
 
-basicOnActive : Palette
+basicOnActive : Palette Color
 basicOnActive =
     { basic
         | background = Just (hex "#F8F8F8")

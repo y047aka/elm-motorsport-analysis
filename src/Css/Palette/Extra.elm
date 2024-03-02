@@ -42,12 +42,12 @@ import Css.Palette exposing (Palette, init)
 -- COLORED
 
 
-colored : Palette
+colored : Palette Color
 colored =
     { init | color = Just (hex "#FFFFFF") }
 
 
-red : Palette
+red : Palette Color
 red =
     { colored
         | background = Just (hex "#DB2828")
@@ -55,22 +55,22 @@ red =
     }
 
 
-redOnHover : Palette
+redOnHover : Palette Color
 redOnHover =
     { red | background = Just (hex "#d01919") }
 
 
-redOnFocus : Palette
+redOnFocus : Palette Color
 redOnFocus =
     { red | background = Just (hex "#ca1010") }
 
 
-redOnActive : Palette
+redOnActive : Palette Color
 redOnActive =
     { red | background = Just (hex "#b21e1e") }
 
 
-orange : Palette
+orange : Palette Color
 orange =
     { colored
         | background = Just (hex "#F2711C")
@@ -78,22 +78,22 @@ orange =
     }
 
 
-orangeOnHover : Palette
+orangeOnHover : Palette Color
 orangeOnHover =
     { orange | background = Just (hex "#f26202") }
 
 
-orangeOnFocus : Palette
+orangeOnFocus : Palette Color
 orangeOnFocus =
     { orange | background = Just (hex "#e55b00") }
 
 
-orangeOnActive : Palette
+orangeOnActive : Palette Color
 orangeOnActive =
     { orange | background = Just (hex "#cf590c") }
 
 
-yellow : Palette
+yellow : Palette Color
 yellow =
     { colored
         | background = Just (hex "#FBBD08")
@@ -101,22 +101,22 @@ yellow =
     }
 
 
-yellowOnHover : Palette
+yellowOnHover : Palette Color
 yellowOnHover =
     { yellow | background = Just (hex "#eaae00") }
 
 
-yellowOnFocus : Palette
+yellowOnFocus : Palette Color
 yellowOnFocus =
     { yellow | background = Just (hex "#daa300") }
 
 
-yellowOnActive : Palette
+yellowOnActive : Palette Color
 yellowOnActive =
     { yellow | background = Just (hex "#cd9903") }
 
 
-olive : Palette
+olive : Palette Color
 olive =
     { colored
         | background = Just (hex "#B5CC18")
@@ -124,22 +124,22 @@ olive =
     }
 
 
-oliveOnHover : Palette
+oliveOnHover : Palette Color
 oliveOnHover =
     { olive | background = Just (hex "#a7bd0d") }
 
 
-oliveOnFocus : Palette
+oliveOnFocus : Palette Color
 oliveOnFocus =
     { olive | background = Just (hex "#a0b605") }
 
 
-oliveOnActive : Palette
+oliveOnActive : Palette Color
 oliveOnActive =
     { olive | background = Just (hex "#8d9e13") }
 
 
-green : Palette
+green : Palette Color
 green =
     { colored
         | background = Just (hex "#21BA45")
@@ -147,22 +147,22 @@ green =
     }
 
 
-greenOnHover : Palette
+greenOnHover : Palette Color
 greenOnHover =
     { green | background = Just (hex "#16ab39") }
 
 
-greenOnFocus : Palette
+greenOnFocus : Palette Color
 greenOnFocus =
     { green | background = Just (hex "#0ea432") }
 
 
-greenOnActive : Palette
+greenOnActive : Palette Color
 greenOnActive =
     { green | background = Just (hex "#198f35") }
 
 
-teal : Palette
+teal : Palette Color
 teal =
     { colored
         | background = Just (hex "#00B5AD")
@@ -170,22 +170,22 @@ teal =
     }
 
 
-tealOnHover : Palette
+tealOnHover : Palette Color
 tealOnHover =
     { teal | background = Just (hex "#009c95") }
 
 
-tealOnFocus : Palette
+tealOnFocus : Palette Color
 tealOnFocus =
     { teal | background = Just (hex "#008c86") }
 
 
-tealOnActive : Palette
+tealOnActive : Palette Color
 tealOnActive =
     { teal | background = Just (hex "#00827c") }
 
 
-blue : Palette
+blue : Palette Color
 blue =
     { colored
         | background = Just (hex "#2185D0")
@@ -193,22 +193,22 @@ blue =
     }
 
 
-blueOnHover : Palette
+blueOnHover : Palette Color
 blueOnHover =
     { blue | background = Just (hex "#1678c2") }
 
 
-blueOnFocus : Palette
+blueOnFocus : Palette Color
 blueOnFocus =
     { blue | background = Just (hex "#0d71bb") }
 
 
-blueOnActive : Palette
+blueOnActive : Palette Color
 blueOnActive =
     { blue | background = Just (hex "#1a69a4") }
 
 
-violet : Palette
+violet : Palette Color
 violet =
     { colored
         | background = Just (hex "#6435C9")
@@ -216,22 +216,22 @@ violet =
     }
 
 
-violetOnHover : Palette
+violetOnHover : Palette Color
 violetOnHover =
     { violet | background = Just (hex "#5829bb") }
 
 
-violetOnFocus : Palette
+violetOnFocus : Palette Color
 violetOnFocus =
     { violet | background = Just (hex "#4f20b5") }
 
 
-violetOnActive : Palette
+violetOnActive : Palette Color
 violetOnActive =
     { violet | background = Just (hex "#502aa1") }
 
 
-purple : Palette
+purple : Palette Color
 purple =
     { colored
         | background = Just (hex "#A333C8")
@@ -239,22 +239,22 @@ purple =
     }
 
 
-purpleOnHover : Palette
+purpleOnHover : Palette Color
 purpleOnHover =
     { purple | background = Just (hex "#9627ba") }
 
 
-purpleOnFocus : Palette
+purpleOnFocus : Palette Color
 purpleOnFocus =
     { purple | background = Just (hex "#8f1eb4") }
 
 
-purpleOnActive : Palette
+purpleOnActive : Palette Color
 purpleOnActive =
     { purple | background = Just (hex "#82299f") }
 
 
-pink : Palette
+pink : Palette Color
 pink =
     { colored
         | background = Just (hex "#E03997")
@@ -262,22 +262,22 @@ pink =
     }
 
 
-pinkOnHover : Palette
+pinkOnHover : Palette Color
 pinkOnHover =
     { pink | background = Just (hex "#e61a8d") }
 
 
-pinkOnFocus : Palette
+pinkOnFocus : Palette Color
 pinkOnFocus =
     { pink | background = Just (hex "#e10f85") }
 
 
-pinkOnActive : Palette
+pinkOnActive : Palette Color
 pinkOnActive =
     { pink | background = Just (hex "#c71f7e") }
 
 
-brown : Palette
+brown : Palette Color
 brown =
     { colored
         | background = Just (hex "#A5673F")
@@ -285,22 +285,22 @@ brown =
     }
 
 
-brownOnHover : Palette
+brownOnHover : Palette Color
 brownOnHover =
     { brown | background = Just (hex "#975b33") }
 
 
-brownOnFocus : Palette
+brownOnFocus : Palette Color
 brownOnFocus =
     { brown | background = Just (hex "#90532b") }
 
 
-brownOnActive : Palette
+brownOnActive : Palette Color
 brownOnActive =
     { brown | background = Just (hex "#805031") }
 
 
-grey : Palette
+grey : Palette Color
 grey =
     { colored
         | background = Just (hex "#767676")
@@ -308,22 +308,22 @@ grey =
     }
 
 
-greyOnHover : Palette
+greyOnHover : Palette Color
 greyOnHover =
     { grey | background = Just (hex "#838383") }
 
 
-greyOnFocus : Palette
+greyOnFocus : Palette Color
 greyOnFocus =
     { grey | background = Just (hex "#8a8a8a") }
 
 
-greyOnActive : Palette
+greyOnActive : Palette Color
 greyOnActive =
     { grey | background = Just (hex "#909090") }
 
 
-black : Palette
+black : Palette Color
 black =
     { colored
         | background = Just (hex "#1B1C1D")
@@ -331,17 +331,17 @@ black =
     }
 
 
-blackOnHover : Palette
+blackOnHover : Palette Color
 blackOnHover =
     { black | background = Just (hex "#27292a") }
 
 
-blackOnFocus : Palette
+blackOnFocus : Palette Color
 blackOnFocus =
     { black | background = Just (hex "#2f3032") }
 
 
-blackOnActive : Palette
+blackOnActive : Palette Color
 blackOnActive =
     { black | background = Just (hex "#343637") }
 
