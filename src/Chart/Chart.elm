@@ -6,7 +6,7 @@ import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
 import Data.Wec.Car exposing (Car)
-import Data.Wec.Class as Class exposing (Class(..))
+import Data.Wec.Class as Class
 import Html.Styled exposing (Html)
 import Scale exposing (ContinuousScale)
 import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
