@@ -2,7 +2,7 @@ module Data.Wec.Decoder exposing (Lap, lapDecoder)
 
 import Csv.Decode as Decode exposing (Decoder, field, float, int, pipeline, string)
 import Data.Wec.Class as Class exposing (Class)
-import Data.Wec.RaceClock as RaceClock exposing (RaceClock)
+import Motorsport.Duration as Duration exposing (Duration)
 
 
 
@@ -33,6 +33,10 @@ type alias Lap =
     , team : String
     , manufacturer : String
     }
+
+
+type alias RaceClock =
+    Duration
 
 
 
@@ -68,7 +72,7 @@ lapDecoder =
 
 raceClockDecoder : Decoder RaceClock
 raceClockDecoder =
-    string |> Decode.andThen (RaceClock.fromString >> Decode.fromMaybe "Expected a RaceClock")
+    string |> Decode.andThen (Duration.fromString >> Decode.fromMaybe "Expected a RaceClock")
 
 
 classDecoder : Decoder Class

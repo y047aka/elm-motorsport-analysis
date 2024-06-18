@@ -1,4 +1,4 @@
-module Motorsport.Duration exposing (Duration, durationDecoder, toString)
+module Motorsport.Duration exposing (Duration, durationDecoder, fromString, toString)
 
 import Json.Decode as Decode exposing (Decoder)
 
@@ -101,3 +101,49 @@ toStringInHours milliseconds =
                 |> String.padRight 3 '0'
     in
     String.join ":" [ h, m, s ++ "." ++ ms ]
+
+
+{-|
+
+    fromString "0.000"
+    --> Just 0
+
+    fromString "4.321"
+    --> Just 4321
+
+    fromString "06:54.321"
+    --> Just 414321
+
+    fromString "7:06:54.321"
+    --> Just 25614321
+
+-}
+fromString : String -> Maybe Duration
+fromString str =
+    let
+        fromHours h =
+            String.toInt h |> Maybe.map ((*) 3600000)
+
+        fromMinutes m =
+            String.toInt m |> Maybe.map ((*) 60000)
+
+        fromSeconds s =
+            String.toFloat s |> Maybe.map ((*) 1000 >> floor)
+    in
+    case String.split ":" str of
+        [ h, m, s ] ->
+            Maybe.map3 (\h_ m_ s_ -> h_ + m_ + s_)
+                (fromHours h)
+                (fromMinutes m)
+                (fromSeconds s)
+
+        [ m, s ] ->
+            Maybe.map2 (+)
+                (fromMinutes m)
+                (fromSeconds s)
+
+        [ s ] ->
+            fromSeconds s
+
+        _ ->
+            Nothing
