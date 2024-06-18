@@ -7,6 +7,7 @@ type Class
     | LMP2
     | LMGTE_Pro
     | LMGTE_Am
+    | LMGT3
     | InnovativeCar
 
 
@@ -27,6 +28,9 @@ classFromString class =
 
         "LMGTE Am" ->
             Just LMGTE_Am
+
+        "LMGT3" ->
+            Just LMGT3
 
         "INNOVATIVE CAR" ->
             Just InnovativeCar
@@ -52,6 +56,9 @@ classToString class =
 
         LMGTE_Am ->
             "LMGTE Am"
+
+        LMGT3 ->
+            "LMGT3"
 
         InnovativeCar ->
             "INNOVATIVE CAR"

@@ -182,5 +182,8 @@ svgPalette_ class =
         LMGTE_Am ->
             strokeGTEAm
 
+        LMGT3 ->
+            strokeLMGT3
+
         InnovativeCar ->
             strokeLMP2

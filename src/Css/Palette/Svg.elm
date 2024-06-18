@@ -1,6 +1,6 @@
-module Css.Palette.Svg exposing (SvgPalette, strokeAxis, strokeGTEAm, strokeGTEPro, strokeLMP1, strokeLMP2, textOptional)
+module Css.Palette.Svg exposing (SvgPalette, strokeAxis, strokeGTEAm, strokeGTEPro, strokeLMGT3, strokeLMP1, strokeLMP2, textOptional)
 
-import Css.Color exposing (Color, gray, gteAm, gtePro, lmp1, lmp2, transparent)
+import Css.Color exposing (Color, gray, gteAm, gtePro, lmgt3, lmp1, lmp2, transparent)
 
 
 type alias SvgPalette =
@@ -44,3 +44,8 @@ strokeGTEPro =
 strokeGTEAm : SvgPalette
 strokeGTEAm =
     { empty | stroke = gteAm }
+
+
+strokeLMGT3 : SvgPalette
+strokeLMGT3 =
+    { empty | stroke = lmgt3 }

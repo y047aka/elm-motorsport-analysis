@@ -20,7 +20,7 @@ type alias Lap =
     , s1Improvement : Int
     , s2 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
     , s2Improvement : Int
-    , s3 : RaceClock
+    , s3 : Maybe RaceClock -- 2024年のデータで部分的に欠落しているのでMaybeを付けている
     , s3Improvement : Int
     , kph : Float
     , elapsed : RaceClock
@@ -52,7 +52,7 @@ lapDecoder =
         |> pipeline (field "S1_IMPROVEMENT" int)
         |> pipeline (field "S2" <| Decode.blank raceClockDecoder)
         |> pipeline (field "S2_IMPROVEMENT" int)
-        |> pipeline (field "S3" raceClockDecoder)
+        |> pipeline (field "S3" <| Decode.blank raceClockDecoder)
         |> pipeline (field "S3_IMPROVEMENT" int)
         |> pipeline (field "KPH" float)
         |> pipeline (field "ELAPSED" raceClockDecoder)

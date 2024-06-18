@@ -1,4 +1,4 @@
-module Css.Color exposing (Color(..), currentColor, gray, gteAm, gtePro, lmp1, lmp2, transparent)
+module Css.Color exposing (Color(..), currentColor, gray, gteAm, gtePro, lmgt3, lmp1, lmp2, transparent)
 
 import Css
 
@@ -42,3 +42,8 @@ gtePro =
 gteAm : Color
 gteAm =
     ColorValue (Css.hex "#f60")
+
+
+lmgt3 : Color
+lmgt3 =
+    gteAm
