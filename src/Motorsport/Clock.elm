@@ -1,4 +1,4 @@
-module Motorsport.Clock exposing (Clock, countDown, countUp, init, initWithCount, toString)
+module Motorsport.Clock exposing (Clock, init, initWithCount, jumpToNextLap, jumpToPreviousLap, toString)
 
 import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
@@ -20,8 +20,8 @@ initWithCount newCount lapTimes =
     }
 
 
-countUp : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
-countUp lapTimes c =
+jumpToNextLap : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
+jumpToNextLap lapTimes c =
     let
         newCount =
             c.lapCount + 1
@@ -32,8 +32,8 @@ countUp lapTimes c =
     }
 
 
-countDown : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
-countDown lapTimes c =
+jumpToPreviousLap : List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
+jumpToPreviousLap lapTimes c =
     if c.lapCount > 0 then
         let
             newCount =

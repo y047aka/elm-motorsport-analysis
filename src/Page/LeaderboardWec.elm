@@ -10,7 +10,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import List.Extra as List
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock, countDown, countUp)
+import Motorsport.Clock as Clock exposing (Clock, jumpToNextLap, jumpToPreviousLap)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap(..))
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
@@ -101,8 +101,8 @@ expectCsv toMsg decoder =
 type Msg
     = Loaded (Result Http.Error (List Wec.Lap))
     | SetCount String
-    | CountUp
-    | CountDown
+    | NextLap
+    | PreviousLap
     | SetTableState State
 
 
@@ -156,11 +156,11 @@ update msg m =
             , Cmd.none
             )
 
-        CountUp ->
+        NextLap ->
             ( if m.raceClock.lapCount < m.summary.lapTotal then
                 let
                     updatedClock =
-                        countUp (List.map .laps m.preprocessed) m.raceClock
+                        jumpToNextLap (List.map .laps m.preprocessed) m.raceClock
                 in
                 { m
                     | raceClock = updatedClock
@@ -173,10 +173,10 @@ update msg m =
             , Cmd.none
             )
 
-        CountDown ->
+        PreviousLap ->
             let
                 updatedClock =
-                    countDown (List.map .laps m.preprocessed) m.raceClock
+                    jumpToPreviousLap (List.map .laps m.preprocessed) m.raceClock
             in
             ( { m
                 | raceClock = updatedClock
@@ -215,9 +215,9 @@ view { raceClock, leaderboard, analysis, tableState, summary } =
         ]
         []
     , labeledButton []
-        [ button [ onClick CountDown ] [ text "-" ]
+        [ button [ onClick PreviousLap ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
-        , button [ onClick CountUp ] [ text "+" ]
+        , button [ onClick NextLap ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
     , Leaderboard.view tableState
