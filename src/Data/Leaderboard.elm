@@ -1,13 +1,11 @@
 module Data.Leaderboard exposing
-    ( Leaderboard
-    , empty, init
+    ( init
     , view
     )
 
 {-|
 
-@docs Leaderboard
-@docs empty, init
+@docs init
 @docs view
 
 -}
@@ -25,11 +23,6 @@ import UI.SortableData exposing (State)
 
 type alias Leaderboard =
     Data.Leaderboard.Type.Leaderboard
-
-
-empty : Leaderboard
-empty =
-    []
 
 
 init : Clock -> List Car -> Leaderboard

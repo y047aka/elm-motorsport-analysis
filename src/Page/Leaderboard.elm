@@ -2,13 +2,12 @@ module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as F1
-import Data.Leaderboard as Leaderboard exposing (Leaderboard)
+import Data.Leaderboard as Leaderboard
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
-import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock)
+import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap(..))
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
@@ -25,8 +24,6 @@ import UI.SortableData exposing (State, initialSort)
 
 type alias Model =
     { raceControl : RaceControl.Model
-    , preprocessed : Preprocessed
-    , leaderboard : Leaderboard
     , analysis :
         Maybe
             { fastestLapTime : Duration
@@ -37,15 +34,9 @@ type alias Model =
     }
 
 
-type alias Preprocessed =
-    List Car
-
-
 init : ( Model, Cmd Msg )
 init =
     ( { raceControl = RaceControl.empty
-      , preprocessed = []
-      , leaderboard = Leaderboard.empty
       , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
@@ -82,24 +73,7 @@ update msg m =
                 preprocessed =
                     F1.preprocess decoded
             in
-            ( { m
-                | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed
-                , preprocessed = preprocessed
-                , leaderboard =
-                    List.indexedMap
-                        (\index { carNumber, driverName } ->
-                            { position = index + 1
-                            , carNumber = carNumber
-                            , driver = driverName
-                            , lap = 0
-                            , gap = None
-                            , time = 0
-                            , best = 0
-                            , history = []
-                            }
-                        )
-                        preprocessed
-              }
+            ( { m | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed }
             , Cmd.none
             )
 
@@ -115,14 +89,10 @@ update msg m =
                 let
                     raceControl =
                         RaceControl.update (RaceControl.SetCount newCount) m.raceControl
-
-                    updatedClock =
-                        raceControl.raceClock
                 in
                 { m
                     | raceControl = raceControl
-                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
-                    , analysis = Just (analysis_ updatedClock m.preprocessed)
+                    , analysis = Just (analysis_ raceControl)
                 }
 
               else
@@ -135,14 +105,10 @@ update msg m =
                 let
                     raceControl =
                         RaceControl.update RaceControl.NextLap m.raceControl
-
-                    updatedClock =
-                        raceControl.raceClock
                 in
                 { m
                     | raceControl = raceControl
-                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
-                    , analysis = Just (analysis_ updatedClock m.preprocessed)
+                    , analysis = Just (analysis_ raceControl)
                 }
 
               else
@@ -154,15 +120,11 @@ update msg m =
             let
                 raceControl =
                     RaceControl.update RaceControl.PreviousLap m.raceControl
-
-                updatedClock =
-                    raceControl.raceClock
             in
             ( if m.raceControl.raceClock.lapCount > 0 then
                 { m
                     | raceControl = raceControl
-                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
-                    , analysis = Just (analysis_ updatedClock m.preprocessed)
+                    , analysis = Just (analysis_ raceControl)
                 }
 
               else
@@ -174,11 +136,11 @@ update msg m =
             ( { m | tableState = newState }, Cmd.none )
 
 
-analysis_ : Clock -> Preprocessed -> { fastestLapTime : Duration, slowestLapTime : Duration }
-analysis_ clock preprocessed =
+analysis_ : RaceControl.Model -> { fastestLapTime : Duration, slowestLapTime : Duration }
+analysis_ { raceClock, cars } =
     let
         completedLaps =
-            List.map (.laps >> completedLapsAt clock) preprocessed
+            List.map (.laps >> completedLapsAt raceClock) cars
     in
     { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
@@ -190,10 +152,13 @@ analysis_ clock preprocessed =
 
 
 view : Model -> List (Html Msg)
-view { raceControl, leaderboard, analysis, tableState } =
+view { raceControl, analysis, tableState } =
     let
-        { raceClock, lapTotal } =
+        { raceClock, lapTotal, cars } =
             raceControl
+
+        leaderboard =
+            Leaderboard.init raceClock cars
     in
     [ input
         [ type_ "range"
