@@ -8,12 +8,10 @@ import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
-import List.Extra as List
-import Motorsport.Clock as Clock
+import Motorsport.Car exposing (Car)
+import Motorsport.Clock as Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Gap exposing (Gap(..))
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
-import Motorsport.LapStatus exposing (LapStatus(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.Summary as Summary
 import UI.Button exposing (button, labeledButton)
@@ -27,11 +25,6 @@ import UI.SortableData exposing (State, initialSort)
 
 type alias Model =
     { raceControl : RaceControl.Model
-    , analysis :
-        Maybe
-            { fastestLapTime : Duration
-            , slowestLapTime : Duration
-            }
     , tableState : State
     , query : String
     }
@@ -40,7 +33,6 @@ type alias Model =
 init : ( Model, Cmd Msg )
 init =
     ( { raceControl = RaceControl.empty
-      , analysis = Nothing
       , tableState = initialSort "Position"
       , query = ""
       }
@@ -116,50 +108,17 @@ update msg m =
                 newCount =
                     Maybe.withDefault 0 (String.toInt newCount_)
             in
-            ( if newCount >= 0 && newCount <= m.raceControl.lapTotal then
-                let
-                    raceControl =
-                        RaceControl.update (RaceControl.SetCount newCount) m.raceControl
-                in
-                { m
-                    | raceControl = raceControl
-                    , analysis = Just (analysis_ raceControl)
-                }
-
-              else
-                m
+            ( { m | raceControl = RaceControl.update (RaceControl.SetCount newCount) m.raceControl }
             , Cmd.none
             )
 
         NextLap ->
-            ( if m.raceControl.raceClock.lapCount < m.raceControl.lapTotal then
-                let
-                    raceControl =
-                        RaceControl.update RaceControl.NextLap m.raceControl
-                in
-                { m
-                    | raceControl = raceControl
-                    , analysis = Just (analysis_ raceControl)
-                }
-
-              else
-                m
+            ( { m | raceControl = RaceControl.update RaceControl.NextLap m.raceControl }
             , Cmd.none
             )
 
         PreviousLap ->
-            let
-                raceControl =
-                    RaceControl.update RaceControl.PreviousLap m.raceControl
-            in
-            ( if m.raceControl.raceClock.lapCount > 0 then
-                { m
-                    | raceControl = raceControl
-                    , analysis = Just (analysis_ raceControl)
-                }
-
-              else
-                m
+            ( { m | raceControl = RaceControl.update RaceControl.PreviousLap m.raceControl }
             , Cmd.none
             )
 
@@ -167,23 +126,12 @@ update msg m =
             ( { m | tableState = newState }, Cmd.none )
 
 
-analysis_ : RaceControl.Model -> { fastestLapTime : Duration, slowestLapTime : Duration }
-analysis_ { raceClock, cars } =
-    let
-        completedLaps =
-            List.map (.laps >> completedLapsAt raceClock) cars
-    in
-    { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
-    , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
-    }
-
-
 
 -- VIEW
 
 
 view : Model -> List (Html Msg)
-view { raceControl, analysis, tableState } =
+view { raceControl, tableState } =
     let
         { raceClock, lapTotal, cars } =
             raceControl
@@ -206,8 +154,19 @@ view { raceControl, analysis, tableState } =
     , text <| Clock.toString raceClock
     , Leaderboard.view tableState
         raceClock
-        (Maybe.withDefault { fastestLapTime = 0, slowestLapTime = 0 } analysis)
+        (analysis raceControl)
         SetTableState
         1.2
         leaderboard
     ]
+
+
+analysis : { a | raceClock : Clock, cars : List Car } -> { fastestLapTime : Duration, slowestLapTime : Duration }
+analysis { raceClock, cars } =
+    let
+        completedLaps =
+            List.map (.laps >> completedLapsAt raceClock) cars
+    in
+    { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
+    , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
+    }
