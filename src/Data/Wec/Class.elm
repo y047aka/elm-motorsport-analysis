@@ -1,4 +1,4 @@
-module Data.Wec.Class exposing (Class(..), fromString, toString, toStrokePalette)
+module Data.Wec.Class exposing (Class, fromString, toString, toStrokePalette)
 
 import Css
 import Css.Color exposing (Color(..))
