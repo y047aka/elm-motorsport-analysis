@@ -82,9 +82,7 @@ expectCsv toMsg decoder =
 
 type Msg
     = Loaded (Result Http.Error (List Wec.Lap))
-    | SetCount String
-    | NextLap
-    | PreviousLap
+    | RaceControlMsg RaceControl.Msg
     | SetTableState State
 
 
@@ -103,24 +101,8 @@ update msg m =
         Loaded (Err _) ->
             ( m, Cmd.none )
 
-        SetCount newCount_ ->
-            let
-                newCount =
-                    Maybe.withDefault 0 (String.toInt newCount_)
-            in
-            ( { m | raceControl = RaceControl.update (RaceControl.SetCount newCount) m.raceControl }
-            , Cmd.none
-            )
-
-        NextLap ->
-            ( { m | raceControl = RaceControl.update RaceControl.NextLap m.raceControl }
-            , Cmd.none
-            )
-
-        PreviousLap ->
-            ( { m | raceControl = RaceControl.update RaceControl.PreviousLap m.raceControl }
-            , Cmd.none
-            )
+        RaceControlMsg raceControlMsg ->
+            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Cmd.none )
 
         SetTableState newState ->
             ( { m | tableState = newState }, Cmd.none )
@@ -143,13 +125,13 @@ view { raceControl, tableState } =
         [ type_ "range"
         , Attributes.max <| String.fromInt lapTotal
         , value (String.fromInt raceClock.lapCount)
-        , onInput SetCount
+        , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
         ]
         []
     , labeledButton []
-        [ button [ onClick PreviousLap ] [ text "-" ]
+        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
-        , button [ onClick NextLap ] [ text "+" ]
+        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
     , Leaderboard.view tableState
