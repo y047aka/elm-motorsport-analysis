@@ -8,11 +8,12 @@ import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Http
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock, jumpToNextLap, jumpToPreviousLap)
+import Motorsport.Clock as Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap(..))
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
-import Motorsport.Summary as Summary exposing (Summary)
+import Motorsport.RaceControl as RaceControl
+import Motorsport.Summary as Summary
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -23,9 +24,8 @@ import UI.SortableData exposing (State, initialSort)
 
 
 type alias Model =
-    { raceClock : Clock
+    { raceControl : RaceControl.Model
     , preprocessed : Preprocessed
-    , summary : Summary
     , leaderboard : Leaderboard
     , analysis :
         Maybe
@@ -43,9 +43,8 @@ type alias Preprocessed =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { raceClock = Clock.init
+    ( { raceControl = RaceControl.empty
       , preprocessed = []
-      , summary = Summary.init
       , leaderboard = Leaderboard.empty
       , analysis = Nothing
       , tableState = initialSort "Position"
@@ -84,9 +83,8 @@ update msg m =
                     F1.preprocess decoded
             in
             ( { m
-                | raceClock = Clock.init
+                | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed
                 , preprocessed = preprocessed
-                , summary = { lapTotal = Summary.calcLapTotal preprocessed }
                 , leaderboard =
                     List.indexedMap
                         (\index { carNumber, driverName } ->
@@ -108,14 +106,21 @@ update msg m =
         Loaded (Err _) ->
             ( m, Cmd.none )
 
-        SetCount newCount ->
-            ( if m.raceClock.lapCount < m.summary.lapTotal then
+        SetCount newCount_ ->
+            let
+                newCount =
+                    Maybe.withDefault 0 (String.toInt newCount_)
+            in
+            ( if newCount >= 0 && newCount <= m.raceControl.lapTotal then
                 let
+                    raceControl =
+                        RaceControl.update (RaceControl.SetCount newCount) m.raceControl
+
                     updatedClock =
-                        Clock.initWithCount (Maybe.withDefault 0 (String.toInt newCount)) (List.map .laps m.preprocessed)
+                        raceControl.raceClock
                 in
                 { m
-                    | raceClock = updatedClock
+                    | raceControl = raceControl
                     , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
@@ -126,13 +131,16 @@ update msg m =
             )
 
         NextLap ->
-            ( if m.raceClock.lapCount < m.summary.lapTotal then
+            ( if m.raceControl.raceClock.lapCount < m.raceControl.lapTotal then
                 let
+                    raceControl =
+                        RaceControl.update RaceControl.NextLap m.raceControl
+
                     updatedClock =
-                        jumpToNextLap (List.map .laps m.preprocessed) m.raceClock
+                        raceControl.raceClock
                 in
                 { m
-                    | raceClock = updatedClock
+                    | raceControl = raceControl
                     , leaderboard = Leaderboard.init updatedClock m.preprocessed
                     , analysis = Just (analysis_ updatedClock m.preprocessed)
                 }
@@ -144,14 +152,21 @@ update msg m =
 
         PreviousLap ->
             let
+                raceControl =
+                    RaceControl.update RaceControl.PreviousLap m.raceControl
+
                 updatedClock =
-                    jumpToPreviousLap (List.map .laps m.preprocessed) m.raceClock
+                    raceControl.raceClock
             in
-            ( { m
-                | raceClock = updatedClock
-                , leaderboard = Leaderboard.init updatedClock m.preprocessed
-                , analysis = Just (analysis_ updatedClock m.preprocessed)
-              }
+            ( if m.raceControl.raceClock.lapCount > 0 then
+                { m
+                    | raceControl = raceControl
+                    , leaderboard = Leaderboard.init updatedClock m.preprocessed
+                    , analysis = Just (analysis_ updatedClock m.preprocessed)
+                }
+
+              else
+                m
             , Cmd.none
             )
 
@@ -175,10 +190,14 @@ analysis_ clock preprocessed =
 
 
 view : Model -> List (Html Msg)
-view { raceClock, leaderboard, analysis, tableState, summary } =
+view { raceControl, leaderboard, analysis, tableState } =
+    let
+        { raceClock, lapTotal } =
+            raceControl
+    in
     [ input
         [ type_ "range"
-        , Attributes.max <| String.fromInt summary.lapTotal
+        , Attributes.max <| String.fromInt lapTotal
         , value (String.fromInt raceClock.lapCount)
         , onInput SetCount
         ]
