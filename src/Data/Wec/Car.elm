@@ -1,6 +1,6 @@
 module Data.Wec.Car exposing (Car)
 
-import Data.Wec exposing (Class)
+import Data.Wec.Class exposing (Class)
 import Data.Wec.Decoder exposing (Lap)
 
 

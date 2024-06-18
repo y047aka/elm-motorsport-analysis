@@ -1,4 +1,4 @@
-module Data.Wec exposing (Class(..), classFromString, classToString)
+module Data.Wec.Class exposing (Class(..), classFromString, classToString)
 
 
 type Class
