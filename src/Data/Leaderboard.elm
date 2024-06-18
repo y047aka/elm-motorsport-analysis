@@ -12,7 +12,6 @@ module Data.Leaderboard exposing
 
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
-import Data.Leaderboard.Type exposing (Leaderboard)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Car exposing (Car)
