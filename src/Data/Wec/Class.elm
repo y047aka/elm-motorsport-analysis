@@ -1,4 +1,8 @@
-module Data.Wec.Class exposing (Class(..), fromString, toString)
+module Data.Wec.Class exposing (Class(..), fromString, toString, toStrokePalette)
+
+import Css
+import Css.Color exposing (Color(..))
+import Css.Palette.Svg exposing (SvgPalette, empty)
 
 
 type Class
@@ -62,3 +66,33 @@ fromString class =
 
         _ ->
             Nothing
+
+
+toStrokePalette : Class -> SvgPalette
+toStrokePalette class =
+    { empty | stroke = ColorValue (toHexColor class) }
+
+
+toHexColor : Class -> Css.Color
+toHexColor class =
+    case class of
+        LMH ->
+            Css.hex "#f00"
+
+        LMP1 ->
+            Css.hex "#f00"
+
+        LMP2 ->
+            Css.hex "#00f"
+
+        LMGTE_Pro ->
+            Css.hex "#060"
+
+        LMGTE_Am ->
+            Css.hex "#f60"
+
+        LMGT3 ->
+            Css.hex "#f60"
+
+        InnovativeCar ->
+            Css.hex "#00f"

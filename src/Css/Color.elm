@@ -1,4 +1,4 @@
-module Css.Color exposing (Color(..), currentColor, gray, gteAm, gtePro, lmgt3, lmp1, lmp2, transparent)
+module Css.Color exposing (Color(..), currentColor, gray, transparent)
 
 import Css
 
@@ -22,28 +22,3 @@ transparent =
 gray : Color
 gray =
     ColorValue (Css.hex "#999")
-
-
-lmp1 : Color
-lmp1 =
-    ColorValue (Css.hex "#f00")
-
-
-lmp2 : Color
-lmp2 =
-    ColorValue (Css.hex "#00f")
-
-
-gtePro : Color
-gtePro =
-    ColorValue (Css.hex "#060")
-
-
-gteAm : Color
-gteAm =
-    ColorValue (Css.hex "#f60")
-
-
-lmgt3 : Color
-lmgt3 =
-    gteAm

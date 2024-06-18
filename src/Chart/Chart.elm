@@ -6,7 +6,7 @@ import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
 import Data.Wec.Car exposing (Car)
-import Data.Wec.Class exposing (Class(..))
+import Data.Wec.Class as Class exposing (Class(..))
 import Html.Styled exposing (Html)
 import Scale exposing (ContinuousScale)
 import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
@@ -103,7 +103,7 @@ view { cars, ordersByLap } =
                         history
                             { x = toFloat >> Scale.convert (xScale ordersByLap)
                             , y = toFloat >> Scale.convert (yScale cars)
-                            , svgPalette = svgPalette_ car.class
+                            , svgPalette = Class.toStrokePalette car.class
                             , label = String.join " " [ car.carNumber, car.team ]
                             }
                             car
@@ -162,28 +162,3 @@ polyline_ options points_ =
 positionLabels : { label : Svg msg } -> List ( Float, Float ) -> List (Svg msg)
 positionLabels { label } =
     List.map (\( x, y ) -> text_ [ InPx.x x, InPx.y y ] [ label ])
-
-
-svgPalette_ : Class -> SvgPalette
-svgPalette_ class =
-    case class of
-        LMH ->
-            strokeLMP1
-
-        LMP1 ->
-            strokeLMP1
-
-        LMP2 ->
-            strokeLMP2
-
-        LMGTE_Pro ->
-            strokeGTEPro
-
-        LMGTE_Am ->
-            strokeGTEAm
-
-        LMGT3 ->
-            strokeLMGT3
-
-        InnovativeCar ->
-            strokeLMP2
