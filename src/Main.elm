@@ -3,6 +3,7 @@ module Main exposing (main)
 import Browser exposing (Document)
 import Browser.Navigation as Nav exposing (Key)
 import Data.Wec.Car exposing (Car)
+import Effect exposing (Effect)
 import Html.Styled as Html exposing (a, br, text, toUnstyled)
 import Html.Styled.Attributes exposing (href)
 import List.Extra as List
@@ -38,12 +39,12 @@ main =
 
 type alias Model =
     { key : Key
-    , subModel : SubModel
+    , page : PageModel
     , cars : List Car
     }
 
 
-type SubModel
+type PageModel
     = None
     | TopModel
     | GapChartModel GapChart.Model
@@ -57,7 +58,7 @@ type SubModel
 init : () -> Url -> Key -> ( Model, Cmd Msg )
 init _ url key =
     { key = key
-    , subModel = TopModel
+    , page = TopModel
     , cars = []
     }
         |> routing url
@@ -96,36 +97,48 @@ routing url model =
     Url.Parser.parse parser url
         |> Maybe.withDefault NotFound
         |> (\page ->
-                case page of
-                    NotFound ->
-                        ( { model | subModel = None }, Cmd.none )
+                let
+                    ( pageModel, effect ) =
+                        case page of
+                            NotFound ->
+                                ( None, Effect.none )
 
-                    Top ->
-                        ( { model | subModel = TopModel }, Cmd.none )
+                            Top ->
+                                ( TopModel, Effect.none )
 
-                    GapChart ->
-                        GapChart.init
-                            |> updateWith GapChartModel GapChartMsg model
+                            GapChart ->
+                                GapChart.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith GapChartModel GapChartMsg
 
-                    LapTimeChart ->
-                        LapTimeChart.init
-                            |> updateWith LapTimeChartModel LapTimeChartMsg model
+                            LapTimeChart ->
+                                LapTimeChart.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith LapTimeChartModel LapTimeChartMsg
 
-                    LapTimeChartsByDriver ->
-                        LapTimeChartsByDriver.init
-                            |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
+                            LapTimeChartsByDriver ->
+                                LapTimeChartsByDriver.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg
 
-                    Leaderboard ->
-                        Leaderboard.init
-                            |> updateWith LeaderboardModel LeaderboardMsg model
+                            Leaderboard ->
+                                Leaderboard.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith LeaderboardModel LeaderboardMsg
 
-                    LeaderboardWec ->
-                        LeaderboardWec.init
-                            |> updateWith LeaderboardWecModel LeaderboardWecMsg model
+                            LeaderboardWec ->
+                                LeaderboardWec.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith LeaderboardWecModel LeaderboardWecMsg
 
-                    Wec ->
-                        Wec.init
-                            |> updateWith WecModel WecMsg model
+                            Wec ->
+                                Wec.init
+                                    |> Tuple.mapSecond Effect.fromCmd
+                                    |> updateWith WecModel WecMsg
+                in
+                ( { model | page = pageModel }
+                , Effect.toCmd Page effect
+                )
            )
 
 
@@ -136,7 +149,11 @@ routing url model =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
-    | GapChartMsg GapChart.Msg
+    | Page PageMsg
+
+
+type PageMsg
+    = GapChartMsg GapChart.Msg
     | LapTimeChartMsg LapTimeChart.Msg
     | LapTimeChartsByDriverMsg LapTimeChartsByDriver.Msg
     | LeaderboardMsg Leaderboard.Msg
@@ -146,8 +163,8 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    case ( model.subModel, msg ) of
-        ( _, UrlRequested urlRequest ) ->
+    case msg of
+        UrlRequested urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
                     ( model, Nav.pushUrl model.key (Url.toString url) )
@@ -155,42 +172,54 @@ update msg model =
                 Browser.External href ->
                     ( model, Nav.load href )
 
-        ( _, UrlChanged url ) ->
+        UrlChanged url ->
             routing url model
 
-        ( GapChartModel subModel, GapChartMsg submsg ) ->
-            GapChart.update submsg subModel
-                |> updateWith GapChartModel GapChartMsg model
+        Page pageMsg ->
+            let
+                ( pageModel, effect ) =
+                    case ( model.page, pageMsg ) of
+                        ( GapChartModel pageModel_, GapChartMsg pageMsg_ ) ->
+                            GapChart.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith GapChartModel GapChartMsg
 
-        ( LapTimeChartModel subModel, LapTimeChartMsg submsg ) ->
-            LapTimeChart.update submsg subModel
-                |> updateWith LapTimeChartModel LapTimeChartMsg model
+                        ( LapTimeChartModel pageModel_, LapTimeChartMsg pageMsg_ ) ->
+                            LapTimeChart.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith LapTimeChartModel LapTimeChartMsg
 
-        ( LapTimeChartsByDriverModel subModel, LapTimeChartsByDriverMsg submsg ) ->
-            LapTimeChartsByDriver.update submsg subModel
-                |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg model
+                        ( LapTimeChartsByDriverModel pageModel_, LapTimeChartsByDriverMsg pageMsg_ ) ->
+                            LapTimeChartsByDriver.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith LapTimeChartsByDriverModel LapTimeChartsByDriverMsg
 
-        ( LeaderboardModel subModel, LeaderboardMsg submsg ) ->
-            Leaderboard.update submsg subModel
-                |> updateWith LeaderboardModel LeaderboardMsg model
+                        ( LeaderboardModel pageModel_, LeaderboardMsg pageMsg_ ) ->
+                            Leaderboard.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith LeaderboardModel LeaderboardMsg
 
-        ( LeaderboardWecModel subModel, LeaderboardWecMsg submsg ) ->
-            LeaderboardWec.update submsg subModel
-                |> updateWith LeaderboardWecModel LeaderboardWecMsg model
+                        ( LeaderboardWecModel pageModel_, LeaderboardWecMsg pageMsg_ ) ->
+                            LeaderboardWec.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith LeaderboardWecModel LeaderboardWecMsg
 
-        ( WecModel subModel, WecMsg submsg ) ->
-            Wec.update submsg subModel
-                |> updateWith WecModel WecMsg model
+                        ( WecModel pageModel_, WecMsg pageMsg_ ) ->
+                            Wec.update pageMsg_ pageModel_
+                                |> Tuple.mapSecond Effect.fromCmd
+                                |> updateWith WecModel WecMsg
 
-        _ ->
-            ( model, Cmd.none )
+                        _ ->
+                            ( None, Effect.none )
+            in
+            ( { model | page = pageModel }
+            , Effect.toCmd Page effect
+            )
 
 
-updateWith : (subModel -> SubModel) -> (subMsg -> Msg) -> Model -> ( subModel, Cmd subMsg ) -> ( Model, Cmd Msg )
-updateWith toModel toMsg model ( subModel, subCmd ) =
-    ( { model | subModel = toModel subModel }
-    , Cmd.map toMsg subCmd
-    )
+updateWith : (pageModel -> PageModel) -> (pageMsg_ -> PageMsg) -> ( pageModel, Effect pageMsg_ ) -> ( PageModel, Effect PageMsg )
+updateWith toModel toMsg ( pageModel, pageEffect ) =
+    ( toModel pageModel, Effect.map toMsg pageEffect )
 
 
 
@@ -202,7 +231,7 @@ view model =
     { title = "Race Analysis"
     , body =
         List.map toUnstyled <|
-            case model.subModel of
+            case model.page of
                 None ->
                     []
 
@@ -220,23 +249,27 @@ view model =
                     , a [ href "/wec" ] [ text "Wec" ]
                     ]
 
-                GapChartModel subModel ->
-                    GapChart.view subModel
+                GapChartModel pageModel ->
+                    GapChart.view pageModel
+                        |> List.map (Html.map (GapChartMsg >> Page))
 
-                LapTimeChartModel subModel ->
-                    LapTimeChart.view subModel
+                LapTimeChartModel pageModel ->
+                    LapTimeChart.view pageModel
+                        |> List.map (Html.map (LapTimeChartMsg >> Page))
 
-                LapTimeChartsByDriverModel subModel ->
-                    LapTimeChartsByDriver.view subModel
+                LapTimeChartsByDriverModel pageModel ->
+                    LapTimeChartsByDriver.view pageModel
+                        |> List.map (Html.map (LapTimeChartsByDriverMsg >> Page))
 
-                LeaderboardModel subModel ->
-                    Leaderboard.view subModel
-                        |> List.map (Html.map LeaderboardMsg)
+                LeaderboardModel pageModel ->
+                    Leaderboard.view pageModel
+                        |> List.map (Html.map (LeaderboardMsg >> Page))
 
-                LeaderboardWecModel subModel ->
-                    LeaderboardWec.view subModel
-                        |> List.map (Html.map LeaderboardWecMsg)
+                LeaderboardWecModel pageModel ->
+                    LeaderboardWec.view pageModel
+                        |> List.map (Html.map (LeaderboardWecMsg >> Page))
 
-                WecModel subModel ->
-                    Wec.view subModel
+                WecModel pageModel ->
+                    Wec.view pageModel
+                        |> List.map (Html.map (WecMsg >> Page))
     }
