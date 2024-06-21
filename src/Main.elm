@@ -13,6 +13,7 @@ import Page.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page.Leaderboard as Leaderboard
 import Page.LeaderboardWec as LeaderboardWec
 import Page.Wec as Wec
+import Shared
 import Url exposing (Url)
 import Url.Parser exposing (Parser, s)
 
@@ -21,7 +22,7 @@ import Url.Parser exposing (Parser, s)
 -- MAIN
 
 
-main : Program () Model Msg
+main : Program Shared.Flags Model Msg
 main =
     Browser.application
         { init = init
@@ -39,6 +40,7 @@ main =
 
 type alias Model =
     { key : Key
+    , shared : Shared.Model
     , page : PageModel
     , cars : List Car
     }
@@ -55,9 +57,14 @@ type PageModel
     | WecModel Wec.Model
 
 
-init : () -> Url -> Key -> ( Model, Cmd Msg )
-init _ url key =
+init : Shared.Flags -> Url -> Key -> ( Model, Cmd Msg )
+init flags url key =
+    let
+        ( shared, sharedCmd ) =
+            Shared.init flags
+    in
     { key = key
+    , shared = shared
     , page = TopModel
     , cars = []
     }
@@ -137,7 +144,7 @@ routing url model =
                                     |> updateWith WecModel WecMsg
                 in
                 ( { model | page = pageModel }
-                , Effect.toCmd Page effect
+                , Effect.toCmd ( Shared, Page ) effect
                 )
            )
 
@@ -149,6 +156,7 @@ routing url model =
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url
+    | Shared Shared.Msg
     | Page PageMsg
 
 
@@ -174,6 +182,15 @@ update msg model =
 
         UrlChanged url ->
             routing url model
+
+        Shared sharedMsg ->
+            let
+                ( shared, sharedCmd ) =
+                    Shared.update sharedMsg model.shared
+            in
+            ( { model | shared = shared }
+            , Cmd.map Shared sharedCmd
+            )
 
         Page pageMsg ->
             let
@@ -213,7 +230,7 @@ update msg model =
                             ( None, Effect.none )
             in
             ( { model | page = pageModel }
-            , Effect.toCmd Page effect
+            , Effect.toCmd ( Shared, Page ) effect
             )
 
 

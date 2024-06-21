@@ -1,6 +1,6 @@
 module Effect exposing
     ( Effect, none, map, batch
-    , fromCmd
+    , fromCmd, fromShared
     , toCmd
     )
 
@@ -12,15 +12,14 @@ module Effect exposing
 
 -}
 
--- import Shared
-
+import Shared
 import Task
 
 
 type Effect msg
     = None
     | Cmd (Cmd msg)
-      -- | Shared Shared.Msg
+    | Shared Shared.Msg
     | Batch (List (Effect msg))
 
 
@@ -38,8 +37,9 @@ map fn effect =
         Cmd cmd ->
             Cmd (Cmd.map fn cmd)
 
-        -- Shared msg ->
-        --     Shared msg
+        Shared msg ->
+            Shared msg
+
         Batch list ->
             Batch (List.map (map fn) list)
 
@@ -49,10 +49,9 @@ fromCmd =
     Cmd
 
 
-
--- fromShared : Shared.Msg -> Effect msg
--- fromShared =
---     Shared
+fromShared : Shared.Msg -> Effect msg
+fromShared =
+    Shared
 
 
 batch : List (Effect msg) -> Effect msg
@@ -64,8 +63,8 @@ batch =
 -- Used by Main.elm
 
 
-toCmd : (pageMsg -> msg) -> Effect pageMsg -> Cmd msg
-toCmd fromPageMsg effect =
+toCmd : ( Shared.Msg -> msg, pageMsg -> msg ) -> Effect pageMsg -> Cmd msg
+toCmd ( fromSharedMsg, fromPageMsg ) effect =
     case effect of
         None ->
             Cmd.none
@@ -73,8 +72,9 @@ toCmd fromPageMsg effect =
         Cmd cmd ->
             Cmd.map fromPageMsg cmd
 
-        -- Shared msg ->
-        --     Task.succeed msg
-        --         |> Task.perform fromSharedMsg
+        Shared msg ->
+            Task.succeed msg
+                |> Task.perform fromSharedMsg
+
         Batch list ->
-            Cmd.batch (List.map (toCmd fromPageMsg) list)
+            Cmd.batch (List.map (toCmd ( fromSharedMsg, fromPageMsg )) list)
