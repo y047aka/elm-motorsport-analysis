@@ -147,7 +147,6 @@ routing url model =
 
                             Wec ->
                                 Wec.init
-                                    |> Tuple.mapSecond Effect.fromCmd
                                     |> updateWith WecModel WecMsg
                 in
                 ( { model | page = pageModel }
@@ -229,7 +228,6 @@ update msg model =
 
                         ( WecModel pageModel_, WecMsg pageMsg_ ) ->
                             Wec.update pageMsg_ pageModel_
-                                |> Tuple.mapSecond Effect.fromCmd
                                 |> updateWith WecModel WecMsg
 
                         _ ->
@@ -293,6 +291,6 @@ view { shared, page } =
                         |> List.map (Html.map (LeaderboardWecMsg >> Page))
 
                 WecModel pageModel ->
-                    Wec.view pageModel
+                    Wec.view shared pageModel
                         |> List.map (Html.map (WecMsg >> Page))
     }
