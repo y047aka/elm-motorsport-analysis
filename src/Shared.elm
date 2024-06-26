@@ -44,7 +44,6 @@ decoder =
 
 type alias Model =
     { raceControl : RaceControl.Model
-    , cars : List Wec.Car
     , ordersByLap : OrdersByLap
     }
 
@@ -56,7 +55,6 @@ type alias OrdersByLap =
 init : Flags -> ( Model, Cmd Msg )
 init flagsResult =
     ( { raceControl = RaceControl.empty
-      , cars = []
       , ordersByLap = []
       }
     , Cmd.none
@@ -99,16 +97,9 @@ update msg m =
                                 , order = order |> List.sortBy .elapsed |> List.map .carNumber
                                 }
                             )
-
-                cars =
-                    decoded
-                        |> AssocList.Extra.groupBy .carNumber
-                        |> AssocList.toList
-                        |> List.filterMap (summarize ordersByLap)
             in
             ( { m
                 | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed
-                , cars = cars
                 , ordersByLap = ordersByLap
               }
             , Cmd.none
@@ -147,33 +138,6 @@ expectCsv toMsg decoder_ =
             (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder_
                 >> Result.mapError Decode.errorToString
             )
-
-
-summarize : OrdersByLap -> ( String, List Wec.Lap ) -> Maybe Wec.Car
-summarize ordersByLap ( carNumber, laps ) =
-    List.head laps
-        |> Maybe.map
-            (\{ class, group, team, manufacturer } ->
-                { carNumber = carNumber
-                , class = class
-                , group = group
-                , team = team
-                , manufacturer = manufacturer
-                , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
-                , positions =
-                    List.indexedMap
-                        (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
-                        laps
-                , laps = laps
-                }
-            )
-
-
-getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
-getPositionAt { carNumber, lapNumber } ordersByLap =
-    ordersByLap
-        |> List.find (.lapNumber >> (==) lapNumber)
-        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
 
 
 

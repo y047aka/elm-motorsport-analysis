@@ -1,8 +1,12 @@
 module Page.Wec exposing (Model, Msg, init, update, view)
 
 import Chart.Chart as Chart
+import Data.Wec.Car as Wec
+import Data.Wec.Decoder as Wec
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html)
+import List.Extra as List
+import Motorsport.Car as Motorsport
 import Shared
 
 
@@ -41,5 +45,45 @@ update msg model =
 
 
 view : Shared.Model -> Model -> List (Html msg)
-view shared _ =
-    [ Chart.view shared ]
+view { raceControl, ordersByLap } _ =
+    let
+        cars =
+            raceControl.cars
+                |> List.filterMap (summarize ordersByLap)
+    in
+    [ Chart.view
+        { cars = cars
+        , ordersByLap = ordersByLap
+        }
+    ]
+
+
+type alias OrdersByLap =
+    List { lapNumber : Int, order : List String }
+
+
+summarize : OrdersByLap -> Motorsport.Car -> Maybe Wec.Car
+summarize ordersByLap { carNumber, class, group, team, manufacturer, laps } =
+    List.head laps
+        |> Maybe.map
+            (\{} ->
+                { carNumber = carNumber
+                , class = class
+                , group = group
+                , team = team
+                , manufacturer = manufacturer
+                , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
+                , positions =
+                    List.indexedMap
+                        (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
+                        laps
+                , laps = laps
+                }
+            )
+
+
+getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
+getPositionAt { carNumber, lapNumber } ordersByLap =
+    ordersByLap
+        |> List.find (.lapNumber >> (==) lapNumber)
+        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))

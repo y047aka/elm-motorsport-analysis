@@ -1,7 +1,7 @@
 module Data.Wec.Car exposing (Car)
 
 import Data.Wec.Class exposing (Class)
-import Data.Wec.Decoder exposing (Lap)
+import Motorsport.Lap exposing (Lap)
 
 
 type alias Car =

@@ -1,4 +1,4 @@
-module Data.Wec.Class exposing (Class, fromString, toString, toStrokePalette)
+module Data.Wec.Class exposing (Class, fromString, none, toString, toStrokePalette)
 
 import Css
 import Css.Color exposing (Color(..))
@@ -6,7 +6,8 @@ import Css.Palette.Svg exposing (SvgPalette, empty)
 
 
 type Class
-    = LMH
+    = None
+    | LMH
     | LMP1
     | LMP2
     | LMGTE_Pro
@@ -15,9 +16,17 @@ type Class
     | InnovativeCar
 
 
+none : Class
+none =
+    None
+
+
 toString : Class -> String
 toString class =
     case class of
+        None ->
+            "None"
+
         LMH ->
             "HYPERCAR"
 
@@ -76,6 +85,9 @@ toStrokePalette class =
 toHexColor : Class -> Css.Color
 toHexColor class =
     case class of
+        None ->
+            Css.hex "#000"
+
         LMH ->
             Css.hex "#f00"
 

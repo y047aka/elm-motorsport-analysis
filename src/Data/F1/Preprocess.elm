@@ -1,6 +1,7 @@
 module Data.F1.Preprocess exposing (preprocess)
 
 import Data.F1.Decoder as F1
+import Data.Wec.Class
 import Motorsport.Car exposing (Car)
 
 
@@ -33,6 +34,10 @@ preprocess_ { carNumber, driver, laps } =
         |> (\laps_ ->
                 { carNumber = carNumber
                 , driverName = driver.name
+                , class = Data.Wec.Class.none
+                , group = "TODO"
+                , team = "TODO"
+                , manufacturer = "TODO"
                 , laps = laps_
                 }
            )
