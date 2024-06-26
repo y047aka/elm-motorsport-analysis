@@ -1,19 +1,16 @@
 module Page.LeaderboardWec exposing (Model, Msg, init, update, view)
 
-import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.Leaderboard as Leaderboard
-import Data.Wec.Decoder as Wec
-import Data.Wec.Preprocess as Wec
+import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Summary as Summary
+import Shared
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -24,56 +21,18 @@ import UI.SortableData exposing (State, initialSort)
 
 
 type alias Model =
-    { raceControl : RaceControl.Model
-    , tableState : State
+    { tableState : State
     , query : String
     }
 
 
-init : ( Model, Cmd Msg )
+init : ( Model, Effect Msg )
 init =
-    ( { raceControl = RaceControl.empty
-      , tableState = initialSort "Position"
+    ( { tableState = initialSort "Position"
       , query = ""
       }
-    , fetchCsv
+    , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
     )
-
-
-fetchCsv : Cmd Msg
-fetchCsv =
-    Http.get
-        { url = "/static/23_Analysis_Race_Hour 24.csv"
-        , expect = expectCsv Loaded Wec.lapDecoder
-        }
-
-
-expectCsv : (Result Error (List a) -> msg) -> Decoder a -> Expect msg
-expectCsv toMsg decoder =
-    let
-        resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
-        resolve toResult response =
-            case response of
-                BadUrl_ url ->
-                    Err (BadUrl url)
-
-                Timeout_ ->
-                    Err Timeout
-
-                NetworkError_ ->
-                    Err NetworkError
-
-                BadStatus_ metadata _ ->
-                    Err (BadStatus metadata.statusCode)
-
-                GoodStatus_ _ body ->
-                    Result.mapError BadBody (toResult body)
-    in
-    expectStringResponse toMsg <|
-        resolve
-            (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder
-                >> Result.mapError Decode.errorToString
-            )
 
 
 
@@ -81,39 +40,26 @@ expectCsv toMsg decoder =
 
 
 type Msg
-    = Loaded (Result Http.Error (List Wec.Lap))
-    | RaceControlMsg RaceControl.Msg
+    = RaceControlMsg RaceControl.Msg
     | SetTableState State
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        Loaded (Ok decoded) ->
-            let
-                preprocessed =
-                    Wec.preprocess decoded
-            in
-            ( { m | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed }
-            , Cmd.none
-            )
-
-        Loaded (Err _) ->
-            ( m, Cmd.none )
-
         RaceControlMsg raceControlMsg ->
-            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Cmd.none )
+            ( m, Effect.updateRaceControl raceControlMsg )
 
         SetTableState newState ->
-            ( { m | tableState = newState }, Cmd.none )
+            ( { m | tableState = newState }, Effect.none )
 
 
 
 -- VIEW
 
 
-view : Model -> List (Html Msg)
-view { raceControl, tableState } =
+view : Shared.Model -> Model -> List (Html Msg)
+view { raceControl } { tableState } =
     let
         { raceClock, lapTotal, cars } =
             raceControl

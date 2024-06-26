@@ -1,17 +1,21 @@
 module Effect exposing
     ( Effect, none, map, batch
-    , fromCmd, fromShared
+    , fromCmd
     , toCmd
+    , fetchCsv, updateRaceControl
     )
 
 {-|
 
 @docs Effect, none, map, batch
-@docs fromCmd, fromShared
+@docs fromCmd
 @docs toCmd
+
+@docs fetchCsv, updateRaceControl
 
 -}
 
+import Motorsport.RaceControl as RaceControl
 import Shared
 import Task
 
@@ -49,11 +53,6 @@ fromCmd =
     Cmd
 
 
-fromShared : Shared.Msg -> Effect msg
-fromShared =
-    Shared
-
-
 batch : List (Effect msg) -> Effect msg
 batch =
     Batch
@@ -78,3 +77,17 @@ toCmd ( fromSharedMsg, fromPageMsg ) effect =
 
         Batch list ->
             Cmd.batch (List.map (toCmd ( fromSharedMsg, fromPageMsg )) list)
+
+
+
+-- Shared messages
+
+
+fetchCsv : String -> Effect msg
+fetchCsv =
+    Shared.FetchCsv >> Shared
+
+
+updateRaceControl : RaceControl.Msg -> Effect msg
+updateRaceControl =
+    Shared.RaceControlMsg >> Shared

@@ -62,13 +62,21 @@ init flags url key =
     let
         ( shared, sharedCmd ) =
             Shared.init flags
+
+        ( model, cmd ) =
+            { key = key
+            , shared = shared
+            , page = TopModel
+            , cars = []
+            }
+                |> routing url
     in
-    { key = key
-    , shared = shared
-    , page = TopModel
-    , cars = []
-    }
-        |> routing url
+    ( model
+    , Cmd.batch
+        [ Cmd.map Shared sharedCmd
+        , cmd
+        ]
+    )
 
 
 
@@ -135,7 +143,6 @@ routing url model =
 
                             LeaderboardWec ->
                                 LeaderboardWec.init
-                                    |> Tuple.mapSecond Effect.fromCmd
                                     |> updateWith LeaderboardWecModel LeaderboardWecMsg
 
                             Wec ->
@@ -218,7 +225,6 @@ update msg model =
 
                         ( LeaderboardWecModel pageModel_, LeaderboardWecMsg pageMsg_ ) ->
                             LeaderboardWec.update pageMsg_ pageModel_
-                                |> Tuple.mapSecond Effect.fromCmd
                                 |> updateWith LeaderboardWecModel LeaderboardWecMsg
 
                         ( WecModel pageModel_, WecMsg pageMsg_ ) ->
@@ -244,11 +250,11 @@ updateWith toModel toMsg ( pageModel, pageEffect ) =
 
 
 view : Model -> Document Msg
-view model =
+view { shared, page } =
     { title = "Race Analysis"
     , body =
         List.map toUnstyled <|
-            case model.page of
+            case page of
                 None ->
                     []
 
@@ -283,7 +289,7 @@ view model =
                         |> List.map (Html.map (LeaderboardMsg >> Page))
 
                 LeaderboardWecModel pageModel ->
-                    LeaderboardWec.view pageModel
+                    LeaderboardWec.view shared pageModel
                         |> List.map (Html.map (LeaderboardWecMsg >> Page))
 
                 WecModel pageModel ->
