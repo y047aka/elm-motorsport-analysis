@@ -1,5 +1,6 @@
 module Motorsport.Lap exposing
     ( Lap
+    , compare
     , fastestLap, slowestLap
     , completedLapsAt, findLastLapAt
     )
@@ -7,6 +8,7 @@ module Motorsport.Lap exposing
 {-|
 
 @docs Lap
+@docs compare
 @docs fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt
 
@@ -25,6 +27,19 @@ type alias Lap =
     , best : Duration
     , elapsed : Duration
     }
+
+
+compare : Lap -> Lap -> Order
+compare a b =
+    case Basics.compare a.lap b.lap of
+        LT ->
+            GT
+
+        EQ ->
+            Basics.compare a.elapsed b.elapsed
+
+        GT ->
+            LT
 
 
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }

@@ -18,7 +18,7 @@ import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap exposing (Lap, completedLapsAt, findLastLapAt)
+import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -45,7 +45,7 @@ init : Clock -> List Car -> Leaderboard
 init raceClock cars =
     let
         sortedCars =
-            sortCars raceClock cars
+            sortCarsAt raceClock cars
     in
     sortedCars
         |> List.indexedMap
@@ -65,8 +65,8 @@ init raceClock cars =
             )
 
 
-sortCars : Clock -> List Car -> List { car : Car, lastLap : Lap }
-sortCars raceClock cars =
+sortCarsAt : Clock -> List Car -> List { car : Car, lastLap : Lap }
+sortCarsAt raceClock cars =
     cars
         |> List.map
             (\car ->
@@ -77,20 +77,7 @@ sortCars raceClock cars =
                 in
                 { car = car, lastLap = lastLap }
             )
-        |> List.sortWith (\a b -> compare a.lastLap b.lastLap)
-
-
-compare : Lap -> Lap -> Order
-compare a b =
-    case Basics.compare a.lap b.lap of
-        LT ->
-            GT
-
-        EQ ->
-            Basics.compare a.elapsed b.elapsed
-
-        GT ->
-            LT
+        |> List.sortWith (\a b -> Lap.compare a.lastLap b.lastLap)
 
 
 
