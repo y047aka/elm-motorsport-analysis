@@ -20,26 +20,26 @@ preprocess_ ( carNumber, laps ) =
             List.head laps
                 |> Maybe.map .driverName
                 |> Maybe.withDefault ""
+
+        laps_ =
+            laps
+                |> List.indexedMap
+                    (\index { driverName, lapNumber, lapTime, elapsed } ->
+                        { carNumber = carNumber
+                        , driver = driverName
+                        , lap = lapNumber
+                        , time = lapTime
+                        , best =
+                            laps
+                                |> List.take (index + 1)
+                                |> List.map .lapTime
+                                |> List.minimum
+                                |> Maybe.withDefault 0
+                        , elapsed = elapsed
+                        }
+                    )
     in
-    laps
-        |> List.indexedMap
-            (\index { driverName, lapNumber, lapTime, elapsed } ->
-                { carNumber = carNumber
-                , driver = driverName
-                , lap = lapNumber
-                , time = lapTime
-                , best =
-                    laps
-                        |> List.take (index + 1)
-                        |> List.map .lapTime
-                        |> List.minimum
-                        |> Maybe.withDefault 0
-                , elapsed = elapsed
-                }
-            )
-        |> (\laps_ ->
-                { carNumber = carNumber
-                , driverName = driverName_
-                , laps = laps_
-                }
-           )
+    { carNumber = carNumber
+    , driverName = driverName_
+    , laps = laps_
+    }
