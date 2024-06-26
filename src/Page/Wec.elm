@@ -46,13 +46,8 @@ update msg model =
 
 view : Shared.Model -> Model -> List (Html msg)
 view { raceControl, ordersByLap } _ =
-    let
-        cars =
-            raceControl.cars
-                |> List.filterMap (summarize ordersByLap)
-    in
     [ Chart.view
-        { cars = cars
+        { cars = List.map (summarize ordersByLap) raceControl.cars
         , ordersByLap = ordersByLap
         }
     ]
@@ -62,24 +57,20 @@ type alias OrdersByLap =
     List { lapNumber : Int, order : List String }
 
 
-summarize : OrdersByLap -> Motorsport.Car -> Maybe Wec.Car
+summarize : OrdersByLap -> Motorsport.Car -> Wec.Car
 summarize ordersByLap { carNumber, class, group, team, manufacturer, laps } =
-    List.head laps
-        |> Maybe.map
-            (\{} ->
-                { carNumber = carNumber
-                , class = class
-                , group = group
-                , team = team
-                , manufacturer = manufacturer
-                , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
-                , positions =
-                    List.indexedMap
-                        (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
-                        laps
-                , laps = laps
-                }
-            )
+    { carNumber = carNumber
+    , class = class
+    , group = group
+    , team = team
+    , manufacturer = manufacturer
+    , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
+    , positions =
+        List.indexedMap
+            (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
+            laps
+    , laps = laps
+    }
 
 
 getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
