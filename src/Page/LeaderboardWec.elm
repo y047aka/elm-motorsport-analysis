@@ -5,10 +5,8 @@ import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock)
-import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
+import Motorsport.Analysis as Analysis
+import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
@@ -82,19 +80,8 @@ view { raceControl } { tableState } =
     , text <| Clock.toString raceClock
     , Leaderboard.view tableState
         raceClock
-        (analysis raceControl)
+        (Analysis.fromRaceControl raceControl)
         SetTableState
         1.2
         leaderboard
     ]
-
-
-analysis : { a | raceClock : Clock, cars : List Car } -> { fastestLapTime : Duration, slowestLapTime : Duration }
-analysis { raceClock, cars } =
-    let
-        completedLaps =
-            List.map (.laps >> completedLapsAt raceClock) cars
-    in
-    { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
-    , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
-    }

@@ -14,6 +14,7 @@ import Chart.Fragments exposing (dot, path)
 import Css exposing (color, hex, px)
 import Html.Styled as Html exposing (Html, span, text)
 import Html.Styled.Attributes exposing (css)
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -84,7 +85,7 @@ sortCarsAt raceClock cars =
 -- VIEW
 
 
-view : State -> Clock -> { fastestLapTime : Duration, slowestLapTime : Duration } -> (State -> msg) -> Float -> Leaderboard -> Html msg
+view : State -> Clock -> Analysis -> (State -> msg) -> Float -> Leaderboard -> Html msg
 view tableState raceClock analysis toMsg coefficient =
     let
         config =
@@ -178,7 +179,7 @@ yScale ( min, max ) =
     ( min, max ) |> Scale.linear ( h - padding, padding )
 
 
-histogram : { fastestLapTime : Duration, slowestLapTime : Duration } -> Float -> List Lap -> Html msg
+histogram : Analysis -> Float -> List Lap -> Html msg
 histogram { fastestLapTime, slowestLapTime } coefficient laps =
     let
         xScale_ =
