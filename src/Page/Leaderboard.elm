@@ -10,7 +10,6 @@ import Http
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Summary as Summary
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -63,7 +62,7 @@ update msg m =
                 preprocessed =
                     F1.preprocess decoded
             in
-            ( { m | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed }
+            ( { m | raceControl = RaceControl.init preprocessed }
             , Cmd.none
             )
 

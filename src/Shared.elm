@@ -22,7 +22,6 @@ import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
 import Json.Decode
 import List.Extra as List
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Summary as Summary
 
 
 
@@ -99,7 +98,7 @@ update msg m =
                             )
             in
             ( { m
-                | raceControl = RaceControl.init (Summary.calcLapTotal preprocessed) preprocessed
+                | raceControl = RaceControl.init preprocessed
                 , ordersByLap = ordersByLap
               }
             , Cmd.none

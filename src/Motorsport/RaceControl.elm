@@ -23,12 +23,19 @@ empty =
     }
 
 
-init : Int -> List Car -> Model
-init lapTotal cars =
+init : List Car -> Model
+init cars =
     { raceClock = Clock.init
-    , lapTotal = lapTotal
+    , lapTotal = calcLapTotal cars
     , cars = cars
     }
+
+
+calcLapTotal : List Car -> Int
+calcLapTotal =
+    List.map (.laps >> List.length)
+        >> List.maximum
+        >> Maybe.withDefault 0
 
 
 
