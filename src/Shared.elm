@@ -15,6 +15,8 @@ module Shared exposing
 import AssocList
 import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
+import Data.F1.Decoder as F1
+import Data.F1.Preprocess as F1
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Wec
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
@@ -64,7 +66,9 @@ init flagsResult =
 
 
 type Msg
-    = FetchCsv String
+    = FetchJson String
+    | JsonLoaded (Result Http.Error (List F1.Car))
+    | FetchCsv String
     | CsvLoaded (Result Http.Error (List Wec.Lap))
     | RaceControlMsg RaceControl.Msg
 
@@ -72,6 +76,26 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg m =
     case msg of
+        FetchJson url ->
+            ( m
+            , Http.get
+                { url = url
+                , expect = Http.expectJson JsonLoaded F1.decoder
+                }
+            )
+
+        JsonLoaded (Ok decoded) ->
+            let
+                preprocessed =
+                    F1.preprocess decoded
+            in
+            ( { m | raceControl = RaceControl.init preprocessed }
+            , Cmd.none
+            )
+
+        JsonLoaded (Err _) ->
+            ( m, Cmd.none )
+
         FetchCsv url ->
             ( m
             , Http.get

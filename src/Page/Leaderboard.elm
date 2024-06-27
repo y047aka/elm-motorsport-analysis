@@ -1,15 +1,14 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
-import Data.F1.Decoder as F1
-import Data.F1.Preprocess as F1
 import Data.Leaderboard as Leaderboard
+import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
+import Shared
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import UI.SortableData exposing (State, initialSort)
@@ -20,28 +19,18 @@ import UI.SortableData exposing (State, initialSort)
 
 
 type alias Model =
-    { raceControl : RaceControl.Model
-    , tableState : State
+    { tableState : State
     , query : String
     }
 
 
-init : ( Model, Cmd Msg )
+init : ( Model, Effect Msg )
 init =
-    ( { raceControl = RaceControl.empty
-      , tableState = initialSort "Position"
+    ( { tableState = initialSort "Position"
       , query = ""
       }
-    , fetchJson
+    , Effect.fetchJson "/static/lapTimes.json"
     )
-
-
-fetchJson : Cmd Msg
-fetchJson =
-    Http.get
-        { url = "/static/lapTimes.json"
-        , expect = Http.expectJson Loaded F1.decoder
-        }
 
 
 
@@ -49,39 +38,26 @@ fetchJson =
 
 
 type Msg
-    = Loaded (Result Http.Error (List F1.Car))
-    | RaceControlMsg RaceControl.Msg
+    = RaceControlMsg RaceControl.Msg
     | SetTableState State
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
+update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        Loaded (Ok decoded) ->
-            let
-                preprocessed =
-                    F1.preprocess decoded
-            in
-            ( { m | raceControl = RaceControl.init preprocessed }
-            , Cmd.none
-            )
-
-        Loaded (Err _) ->
-            ( m, Cmd.none )
-
         RaceControlMsg raceControlMsg ->
-            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Cmd.none )
+            ( m, Effect.updateRaceControl raceControlMsg )
 
         SetTableState newState ->
-            ( { m | tableState = newState }, Cmd.none )
+            ( { m | tableState = newState }, Effect.none )
 
 
 
 -- VIEW
 
 
-view : Model -> List (Html Msg)
-view { raceControl, tableState } =
+view : Shared.Model -> Model -> List (Html Msg)
+view { raceControl } { tableState } =
     let
         { raceClock, lapTotal, cars } =
             raceControl

@@ -138,7 +138,6 @@ routing url model =
 
                             Leaderboard ->
                                 Leaderboard.init
-                                    |> Tuple.mapSecond Effect.fromCmd
                                     |> updateWith LeaderboardModel LeaderboardMsg
 
                             LeaderboardWec ->
@@ -219,7 +218,6 @@ update msg model =
 
                         ( LeaderboardModel pageModel_, LeaderboardMsg pageMsg_ ) ->
                             Leaderboard.update pageMsg_ pageModel_
-                                |> Tuple.mapSecond Effect.fromCmd
                                 |> updateWith LeaderboardModel LeaderboardMsg
 
                         ( LeaderboardWecModel pageModel_, LeaderboardWecMsg pageMsg_ ) ->
@@ -283,7 +281,7 @@ view { shared, page } =
                         |> List.map (Html.map (LapTimeChartsByDriverMsg >> Page))
 
                 LeaderboardModel pageModel ->
-                    Leaderboard.view pageModel
+                    Leaderboard.view shared pageModel
                         |> List.map (Html.map (LeaderboardMsg >> Page))
 
                 LeaderboardWecModel pageModel ->

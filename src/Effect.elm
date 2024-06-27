@@ -2,7 +2,7 @@ module Effect exposing
     ( Effect, none, map, batch
     , fromCmd
     , toCmd
-    , fetchCsv, updateRaceControl
+    , fetchJson, fetchCsv, updateRaceControl
     )
 
 {-|
@@ -11,7 +11,7 @@ module Effect exposing
 @docs fromCmd
 @docs toCmd
 
-@docs fetchCsv, updateRaceControl
+@docs fetchJson, fetchCsv, updateRaceControl
 
 -}
 
@@ -81,6 +81,11 @@ toCmd ( fromSharedMsg, fromPageMsg ) effect =
 
 
 -- Shared messages
+
+
+fetchJson : String -> Effect msg
+fetchJson =
+    Shared.FetchJson >> Shared
 
 
 fetchCsv : String -> Effect msg
