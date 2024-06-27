@@ -15,7 +15,6 @@ module Shared exposing
 import AssocList
 import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
-import Data.Wec.Car as Wec
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Wec
 import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
@@ -66,7 +65,7 @@ init flagsResult =
 
 type Msg
     = FetchCsv String
-    | Loaded (Result Http.Error (List Wec.Lap))
+    | CsvLoaded (Result Http.Error (List Wec.Lap))
     | RaceControlMsg RaceControl.Msg
 
 
@@ -77,11 +76,11 @@ update msg m =
             ( m
             , Http.get
                 { url = url
-                , expect = expectCsv Loaded Wec.lapDecoder
+                , expect = expectCsv CsvLoaded Wec.lapDecoder
                 }
             )
 
-        Loaded (Ok decoded) ->
+        CsvLoaded (Ok decoded) ->
             let
                 preprocessed =
                     Wec.preprocess decoded
@@ -104,7 +103,7 @@ update msg m =
             , Cmd.none
             )
 
-        Loaded (Err _) ->
+        CsvLoaded (Err _) ->
             ( m, Cmd.none )
 
         RaceControlMsg raceControlMsg ->
