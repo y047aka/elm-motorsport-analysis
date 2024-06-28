@@ -1,6 +1,6 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
-import Data.Leaderboard as Leaderboard
+import Data.Leaderboard as Leaderboard exposing (State, initialSort)
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
@@ -11,7 +11,6 @@ import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
-import UI.SortableData exposing (State, initialSort)
 
 
 
@@ -78,7 +77,7 @@ view { raceControl } { tableState } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view tableState
+    , Leaderboard.view_ tableState
         raceClock
         (Analysis.fromRaceControl raceControl)
         SetTableState
