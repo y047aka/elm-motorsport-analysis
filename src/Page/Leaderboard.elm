@@ -77,10 +77,12 @@ view { raceControl } { tableState } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view_ tableState
-        raceClock
-        (Analysis.fromRaceControl raceControl)
-        SetTableState
-        1.1
+    , Leaderboard.view_
+        { tableState = tableState
+        , raceClock = raceClock
+        , analysis = Analysis.fromRaceControl raceControl
+        , toMsg = SetTableState
+        , coefficient = 1.1
+        }
         leaderboard
     ]

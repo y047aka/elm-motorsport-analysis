@@ -453,8 +453,16 @@ sortCarsAt raceClock cars =
 -- VIEW
 
 
-view_ : State -> Clock -> Analysis -> (State -> msg) -> Float -> Leaderboard -> Html msg
-view_ tableState raceClock analysis toMsg coefficient =
+view_ :
+    { tableState : State
+    , raceClock : Clock
+    , analysis : Analysis
+    , toMsg : State -> msg
+    , coefficient : Float
+    }
+    -> Leaderboard
+    -> Html msg
+view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
     let
         config =
             { toId = .carNumber
@@ -519,7 +527,7 @@ view_ tableState raceClock analysis toMsg coefficient =
                 ]
             }
     in
-    table config tableState
+    table config tableState data
 
 
 w : Float
