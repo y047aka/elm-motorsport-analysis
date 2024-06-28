@@ -1,4 +1,4 @@
-module Data.Leaderboard exposing
+module Motorsport.Leaderboard exposing
     ( list, table
     , stringColumn, intColumn, floatColumn
     , State, initialSort

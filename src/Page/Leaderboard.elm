@@ -1,12 +1,12 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
-import Data.Leaderboard as Leaderboard exposing (State, initialSort)
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (Html, input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
+import Motorsport.Leaderboard as Leaderboard exposing (State, initialSort)
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
