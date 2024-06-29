@@ -4,7 +4,8 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , Config, Leaderboard, LeaderboardItem, gap_, histogram, init, performance
+    , timeColumn, histogramColumn, performanceColumn
+    , Config, Leaderboard, LeaderboardItem, gap_, init
     )
 
 {-| This library helps you create sortable tables. The crucial feature is that it
@@ -42,6 +43,8 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 @docs Column, customColumn, veryCustomColumn
 
+@docs timeColumn, histogramColumn, performanceColumn
+
 -}
 
 import Chart.Fragments exposing (dot, path)
@@ -55,7 +58,7 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
@@ -233,6 +236,68 @@ veryCustomColumn :
 veryCustomColumn { label, getter, sorter } =
     { name = label
     , view = getter
+    , sorter = sorter
+    }
+
+
+timeColumn :
+    { label : String
+    , getter : data -> { a | time : Duration, best : Duration }
+    , sorter : List data -> List data
+    , analysis : Analysis
+    }
+    -> Column data msg
+timeColumn { label, getter, sorter, analysis } =
+    { name = label
+    , view =
+        getter
+            >> (\item ->
+                    span
+                        [ css
+                            [ color <|
+                                hex <|
+                                    case lapStatus { time = analysis.fastestLapTime } item of
+                                        Fastest ->
+                                            "#F0F"
+
+                                        PersonalBest ->
+                                            "#0C0"
+
+                                        Normal ->
+                                            "inherit"
+                            ]
+                        ]
+                        [ text <| Duration.toString item.time ]
+               )
+    , sorter = sorter
+    }
+
+
+histogramColumn :
+    { getter : data -> List Lap
+    , sorter : List data -> List data
+    , analysis : Analysis
+    , coefficient : Float
+    }
+    -> Column data msg
+histogramColumn { getter, sorter, analysis, coefficient } =
+    { name = "Histogram"
+    , view = getter >> histogram analysis coefficient
+    , sorter = sorter
+    }
+
+
+performanceColumn :
+    { getter : data -> List Lap
+    , sorter : List data -> List data
+    , raceClock : Clock
+    , analysis : Analysis
+    , coefficient : Float
+    }
+    -> Column data msg
+performanceColumn { getter, sorter, raceClock, analysis, coefficient } =
+    { name = "Performance"
+    , view = getter >> performance raceClock analysis coefficient
     , sorter = sorter
     }
 

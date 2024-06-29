@@ -1,16 +1,13 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
-import Css exposing (color, hex)
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (Html, input, span, text)
-import Html.Styled.Attributes as Attributes exposing (css, type_, value)
+import Html.Styled as Html exposing (Html, input, text)
+import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
-import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, gap_, histogram, initialSort, intColumn, performance, stringColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, gap_, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
@@ -92,9 +89,6 @@ config raceControl =
     let
         analysis =
             Analysis.fromRaceControl raceControl
-
-        coefficient =
-            1.2
     in
     { toId = .carNumber
     , toMsg = LeaderboardMsg
@@ -123,37 +117,24 @@ config raceControl =
                             text "-"
             , sorter = List.sortBy .position
             }
-        , veryCustomColumn
+        , timeColumn
             { label = "Time"
-            , getter =
-                \item ->
-                    span
-                        [ css
-                            [ color <|
-                                hex <|
-                                    case lapStatus { time = analysis.fastestLapTime } item of
-                                        Fastest ->
-                                            "#F0F"
-
-                                        PersonalBest ->
-                                            "#0C0"
-
-                                        Normal ->
-                                            "inherit"
-                            ]
-                        ]
-                        [ text <| Duration.toString item.time ]
+            , getter = identity
             , sorter = List.sortBy .time
+            , analysis = analysis
             }
-        , veryCustomColumn
-            { label = "Time"
-            , getter = .history >> performance raceControl.raceClock analysis coefficient
+        , performanceColumn
+            { getter = .history
             , sorter = List.sortBy .time
+            , raceClock = raceControl.raceClock
+            , analysis = analysis
+            , coefficient = 1.2
             }
-        , veryCustomColumn
-            { label = "Histogram"
-            , getter = .history >> histogram analysis coefficient
+        , histogramColumn
+            { getter = .history
             , sorter = List.sortBy .time
+            , analysis = analysis
+            , coefficient = 1.2
             }
         ]
     }
