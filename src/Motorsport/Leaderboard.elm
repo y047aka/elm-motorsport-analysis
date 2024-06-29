@@ -48,10 +48,9 @@ import Chart.Fragments exposing (dot, path)
 import Css exposing (color, fontSize, hex, px)
 import Html.Styled as Html exposing (Attribute, Html, li, span, text, ul)
 import Html.Styled.Attributes exposing (css)
-import Html.Styled.Events as Events
+import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy2)
-import Json.Decode as Json
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
@@ -306,14 +305,10 @@ table { toId, toMsg, columns } state data =
 
 toHeaderInfo : List Sorting -> (Msg -> msg) -> Column data msg -> ( String, Direction, Attribute msg )
 toHeaderInfo sortings toMsg { name } =
-    ( name, findSorting name sortings, onClick name toMsg )
-
-
-onClick : String -> (Msg -> msg) -> Attribute msg
-onClick name toMsg =
-    Events.on "click" <|
-        Json.map (Sort >> toMsg) <|
-            Json.succeed name
+    ( name
+    , findSorting name sortings
+    , onClick <| toMsg <| Sort name
+    )
 
 
 simpleTheadHelp : ( String, Direction, Attribute msg ) -> Html msg
