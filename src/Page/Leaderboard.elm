@@ -80,7 +80,7 @@ view { raceControl } { leaderboard } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.table (config raceControl) leaderboard leaderboardData
+    , Leaderboard.view (config raceControl) leaderboard leaderboardData
     ]
 
 

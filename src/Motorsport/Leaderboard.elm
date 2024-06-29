@@ -1,11 +1,10 @@
 module Motorsport.Leaderboard exposing
-    ( list, table
-    , stringColumn, intColumn, floatColumn
+    ( stringColumn, intColumn, floatColumn
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
     , gapPreviewColumn, timeColumn, histogramColumn, performanceColumn
-    , Config, Leaderboard, LeaderboardItem, init
+    , Config, Leaderboard, LeaderboardItem, init, view
     )
 
 {-| This library helps you create sortable tables. The crucial feature is that it
@@ -49,7 +48,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 import Chart.Fragments exposing (dot, path)
 import Css exposing (color, fontSize, hex, px)
-import Html.Styled as Html exposing (Attribute, Html, li, span, text, ul)
+import Html.Styled as Html exposing (Attribute, Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
@@ -365,20 +364,8 @@ applySorter direction sorter data =
 -- VIEW
 
 
-list : Config data msg -> Model -> (data -> List (Html msg)) -> List data -> Html msg
-list { columns } state toListItem data =
-    let
-        sortedData =
-            sort state columns data
-
-        listItem d =
-            li [] (toListItem d)
-    in
-    ul [] <| List.map listItem sortedData
-
-
-table : Config data msg -> Model -> List data -> Html msg
-table { toId, toMsg, columns } state data =
+view : Config data msg -> Model -> List data -> Html msg
+view { toId, toMsg, columns } state data =
     let
         sortedData =
             sort state columns data
@@ -434,7 +421,7 @@ lightGrey symbol =
 tableRow : (data -> String) -> List (Column data msg) -> data -> ( String, Html msg )
 tableRow toId columns data =
     ( toId data
-    , lazy2 tr [] <| List.map (\{ view } -> td [] [ view data ]) columns
+    , lazy2 tr [] <| List.map (\column -> td [] [ column.view data ]) columns
     )
 
 
