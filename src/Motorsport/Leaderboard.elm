@@ -4,7 +4,6 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , increasingOrDecreasingBy
     , Config, init, view_
     )
 
@@ -42,7 +41,6 @@ I recommend checking out the [examples] to get a feel for how it works.
 ## Custom Columns
 
 @docs Column, customColumn, veryCustomColumn
-@docs increasingOrDecreasingBy
 
 -}
 
@@ -54,6 +52,7 @@ import Html.Styled.Events as Events
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy2)
 import Json.Decode as Json
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
@@ -76,9 +75,17 @@ import UI.Table as Table exposing (td, th, thead, tr)
 {-| Tracks which column to sort by.
 -}
 type alias Model =
-    { selectedColumn : String
-    , isReversed : Bool
-    }
+    { sorting : List Sorting }
+
+
+type alias Sorting =
+    ( String, Direction )
+
+
+type Direction
+    = Ascending
+    | Descending
+    | None
 
 
 {-| Create a table state. By providing a column name, you determine which
@@ -92,9 +99,7 @@ yachts to be sorted by length by default, you might say:
 -}
 initialSort : String -> Model
 initialSort header =
-    { selectedColumn = header
-    , isReversed = False
-    }
+    { sorting = [] }
 
 
 
@@ -102,14 +107,50 @@ initialSort header =
 
 
 type Msg
-    = Sort Model
+    = Sort String
 
 
 update : Msg -> Model -> Model
-update msg _ =
+update msg model =
     case msg of
-        Sort newModel ->
-            newModel
+        Sort key ->
+            let
+                newDirection =
+                    findSorting key model.sorting |> stepDirection
+
+                sorting =
+                    case newDirection of
+                        None ->
+                            List.filter (\s -> Tuple.first s /= key) model.sorting
+
+                        _ ->
+                            let
+                                newSorting =
+                                    List.filter (\s -> Tuple.first s /= key) model.sorting
+                            in
+                            List.append newSorting [ ( key, newDirection ) ]
+            in
+            { model | sorting = sorting }
+
+
+stepDirection : Direction -> Direction
+stepDirection direction =
+    case direction of
+        Ascending ->
+            Descending
+
+        Descending ->
+            None
+
+        None ->
+            Ascending
+
+
+findSorting : String -> List Sorting -> Direction
+findSorting key sorting =
+    List.Extra.find (\( key_, _ ) -> key_ == key) sorting
+        |> Maybe.map (\( _, direction ) -> direction)
+        |> Maybe.withDefault None
 
 
 
@@ -129,28 +170,6 @@ type alias Config data msg =
     }
 
 
-{-| The status of a particular column, for use in the `thead` field of your
-`Customizations`.
-
-  - If the column is unsortable, the status will always be `Unsortable`.
-  - If the column can be sorted in one direction, the status will be `Sortable`.
-    The associated boolean represents whether this column is selected. So it is
-    `True` if the table is currently sorted by this column, and `False` otherwise.
-  - If the column can be sorted in either direction, the status will be `Reversible`.
-    The associated maybe tells you whether this column is selected. It is
-    `Just isReversed` if the table is currently sorted by this column, and
-    `Nothing` otherwise. The `isReversed` boolean lets you know which way it
-    is sorted.
-
-This information lets you do custom header decorations for each scenario.
-
--}
-type Status
-    = Unsortable
-    | Sortable Bool
-    | Reversible (Maybe Bool)
-
-
 
 -- COLUMNS
 
@@ -160,7 +179,7 @@ type Status
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sorter : Sorter data
+    , sorter : data -> String
     }
 
 
@@ -169,7 +188,7 @@ stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
     , view = getter >> text
-    , sorter = increasingOrDecreasingBy getter
+    , sorter = getter
     }
 
 
@@ -178,7 +197,7 @@ intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
     , view = getter >> String.fromInt >> text
-    , sorter = increasingOrDecreasingBy getter
+    , sorter = getter >> String.fromInt
     }
 
 
@@ -187,7 +206,7 @@ floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> text
-    , sorter = increasingOrDecreasingBy getter
+    , sorter = getter >> String.fromFloat
     }
 
 
@@ -195,7 +214,7 @@ floatColumn { label, getter } =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : Sorter data
+    , sorter : data -> String
     }
     -> Column data msg
 customColumn { label, getter, sorter } =
@@ -209,7 +228,7 @@ customColumn { label, getter, sorter } =
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : Sorter data
+    , sorter : data -> String
     }
     -> Column data msg
 veryCustomColumn { label, getter, sorter } =
@@ -224,82 +243,33 @@ veryCustomColumn { label, getter, sorter } =
 
 
 sort : Model -> List (Column data msg) -> List data -> List data
-sort { selectedColumn, isReversed } columns data =
-    case findSorter selectedColumn columns of
-        Nothing ->
-            data
-
-        Just sorter ->
-            applySorter isReversed sorter data
-
-
-findSorter : String -> List (Column data msg) -> Maybe (Sorter data)
-findSorter selectedColumn columns =
-    case columns of
-        [] ->
-            Nothing
-
-        { name, sorter } :: remainingColumns ->
-            if name == selectedColumn then
-                Just sorter
-
-            else
-                findSorter selectedColumn remainingColumns
+sort { sorting } columns prevData =
+    List.foldl
+        (\( key, direction ) data ->
+            findSorter key columns
+                |> Maybe.map (\sorter -> applySorter direction sorter data)
+                |> Maybe.withDefault data
+        )
+        prevData
+        sorting
 
 
-applySorter : Bool -> Sorter data -> List data -> List data
-applySorter isReversed sorter data =
-    case sorter of
-        None ->
-            data
-
-        Increasing sort_ ->
-            sort_ data
-
-        Decreasing sort_ ->
-            List.reverse (sort_ data)
-
-        IncOrDec sort_ ->
-            if isReversed then
-                List.reverse (sort_ data)
-
-            else
-                sort_ data
-
-        DecOrInc sort_ ->
-            if isReversed then
-                sort_ data
-
-            else
-                List.reverse (sort_ data)
+findSorter : String -> List (Column data msg) -> Maybe (data -> String)
+findSorter key columns =
+    columns
+        |> List.Extra.find (\c -> c.name == key)
+        |> Maybe.map .sorter
 
 
+applySorter : Direction -> (data -> comparable) -> List data -> List data
+applySorter direction sorter data =
+    case direction of
+        Descending ->
+            List.sortBy sorter data
+                |> List.reverse
 
--- SORTERS
-
-
-{-| Specifies a particular way of sorting data.
--}
-type Sorter data
-    = None
-    | Increasing (List data -> List data)
-    | Decreasing (List data -> List data)
-    | IncOrDec (List data -> List data)
-    | DecOrInc (List data -> List data)
-
-
-{-| Sometimes you want to be able to sort data in increasing _or_ decreasing
-order. Maybe you have race times for the 100 meter sprint. This function lets
-sort by best time by default, but also see the other order.
-
-    sorter : Sorter { a | time : comparable }
-    sorter =
-        increasingOrDecreasingBy .time
-
--}
-increasingOrDecreasingBy : (data -> comparable) -> Sorter data
-increasingOrDecreasingBy toComparable =
-    IncOrDec (List.sortBy toComparable)
+        _ ->
+            List.sortBy sorter data
 
 
 
@@ -327,76 +297,41 @@ table { toId, toMsg, columns } state data =
     Table.table [ css [ fontSize (px 14) ] ]
         [ thead []
             [ tr [] <|
-                List.map (toHeaderInfo state toMsg >> simpleTheadHelp) columns
+                List.map (toHeaderInfo state.sorting toMsg >> simpleTheadHelp) columns
             ]
         , Keyed.node "tbody" [] <|
             List.map (tableRow toId columns) sortedData
         ]
 
 
-toHeaderInfo : Model -> (Msg -> msg) -> Column data msg -> ( String, Status, Attribute msg )
-toHeaderInfo { selectedColumn, isReversed } toMsg { name, sorter } =
-    case sorter of
-        None ->
-            ( name, Unsortable, onClick selectedColumn isReversed toMsg )
-
-        Increasing _ ->
-            ( name, Sortable (name == selectedColumn), onClick name False toMsg )
-
-        Decreasing _ ->
-            ( name, Sortable (name == selectedColumn), onClick name False toMsg )
-
-        IncOrDec _ ->
-            if name == selectedColumn then
-                ( name, Reversible (Just isReversed), onClick name (not isReversed) toMsg )
-
-            else
-                ( name, Reversible Nothing, onClick name False toMsg )
-
-        DecOrInc _ ->
-            if name == selectedColumn then
-                ( name, Reversible (Just isReversed), onClick name (not isReversed) toMsg )
-
-            else
-                ( name, Reversible Nothing, onClick name False toMsg )
+toHeaderInfo : List Sorting -> (Msg -> msg) -> Column data msg -> ( String, Direction, Attribute msg )
+toHeaderInfo sortings toMsg { name } =
+    ( name, findSorting name sortings, onClick name toMsg )
 
 
-onClick : String -> Bool -> (Msg -> msg) -> Attribute msg
-onClick name isReversed toMsg =
+onClick : String -> (Msg -> msg) -> Attribute msg
+onClick name toMsg =
     Events.on "click" <|
         Json.map (Sort >> toMsg) <|
-            Json.map2 Model (Json.succeed name) (Json.succeed isReversed)
+            Json.succeed name
 
 
-simpleTheadHelp : ( String, Status, Attribute msg ) -> Html msg
-simpleTheadHelp ( name, status, onClick_ ) =
+simpleTheadHelp : ( String, Direction, Attribute msg ) -> Html msg
+simpleTheadHelp ( name, direction, onClick_ ) =
     let
         symbol =
-            case status of
-                Unsortable ->
-                    []
+            case direction of
+                Ascending ->
+                    darkGrey "↑"
 
-                Sortable selected ->
-                    [ if selected then
-                        darkGrey "↓"
+                Descending ->
+                    darkGrey "↓"
 
-                      else
-                        lightGrey "↓"
-                    ]
-
-                Reversible Nothing ->
-                    [ lightGrey "↕" ]
-
-                Reversible (Just isReversed) ->
-                    [ if isReversed then
-                        darkGrey "↑"
-
-                      else
-                        darkGrey "↓"
-                    ]
+                None ->
+                    lightGrey "↕"
 
         content =
-            text (name ++ " ") :: symbol
+            [ text (name ++ " "), symbol ]
     in
     th [ onClick_ ] content
 
@@ -500,7 +435,7 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
                 , customColumn
                     { label = "Gap"
                     , getter = .gap >> Gap.toString
-                    , sorter = increasingOrDecreasingBy .position
+                    , sorter = .position >> String.fromInt
                     }
                 , veryCustomColumn
                     { label = "Gap"
@@ -515,7 +450,7 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
 
                                 Laps _ ->
                                     text "-"
-                    , sorter = increasingOrDecreasingBy .position
+                    , sorter = .position >> String.fromInt
                     }
                 , veryCustomColumn
                     { label = "Time"
@@ -537,17 +472,17 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
                                     ]
                                 ]
                                 [ text <| Duration.toString item.time ]
-                    , sorter = increasingOrDecreasingBy .time
+                    , sorter = .time >> Duration.toString
                     }
                 , veryCustomColumn
                     { label = "Time"
                     , getter = .history >> performance raceClock analysis coefficient
-                    , sorter = increasingOrDecreasingBy .time
+                    , sorter = .time >> Duration.toString
                     }
                 , veryCustomColumn
                     { label = "Histogram"
                     , getter = .history >> histogram analysis coefficient
-                    , sorter = increasingOrDecreasingBy .time
+                    , sorter = .time >> Duration.toString
                     }
                 ]
             }
