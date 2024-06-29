@@ -19,14 +19,14 @@ import UI.Label exposing (basicLabel)
 
 
 type alias Model =
-    { leaderboard : Leaderboard.Model
+    { leaderboardState : Leaderboard.Model
     , query : String
     }
 
 
 init : ( Model, Effect Msg )
 init =
-    ( { leaderboard = initialSort "Position"
+    ( { leaderboardState = initialSort "Position"
       , query = ""
       }
     , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
@@ -49,7 +49,7 @@ update msg m =
             ( m, Effect.updateRaceControl raceControlMsg )
 
         LeaderboardMsg leaderboardMsg ->
-            ( { m | leaderboard = Leaderboard.update leaderboardMsg m.leaderboard }
+            ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
             , Effect.none
             )
 
@@ -59,7 +59,7 @@ update msg m =
 
 
 view : Shared.Model -> Model -> List (Html Msg)
-view { raceControl } { leaderboard } =
+view { raceControl } { leaderboardState } =
     let
         { raceClock, lapTotal, cars } =
             raceControl
@@ -80,7 +80,7 @@ view { raceControl } { leaderboard } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view (config raceControl) leaderboard leaderboardData
+    , Leaderboard.view (config raceControl) leaderboardState leaderboardData
     ]
 
 
