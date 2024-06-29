@@ -4,7 +4,7 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , Config, init, view_
+    , Config, Leaderboard, LeaderboardItem, gap_, histogram, init, performance
     )
 
 {-| This library helps you create sortable tables. The crucial feature is that it
@@ -55,7 +55,7 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock exposing (Clock)
-import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
@@ -353,16 +353,19 @@ tableRow toId columns data =
 
 
 type alias Leaderboard =
-    List
-        { position : Int
-        , carNumber : String
-        , driver : String
-        , lap : Int
-        , gap : Gap
-        , time : Duration
-        , best : Duration
-        , history : List Lap
-        }
+    List LeaderboardItem
+
+
+type alias LeaderboardItem =
+    { position : Int
+    , carNumber : String
+    , driver : String
+    , lap : Int
+    , gap : Gap
+    , time : Duration
+    , best : Duration
+    , history : List Lap
+    }
 
 
 init : Clock -> List Car -> Leaderboard
@@ -406,83 +409,6 @@ sortCarsAt raceClock cars =
 
 
 -- VIEW
-
-
-view_ :
-    { tableState : Model
-    , raceClock : Clock
-    , analysis : Analysis
-    , toMsg : Msg -> msg
-    , coefficient : Float
-    }
-    -> Leaderboard
-    -> Html msg
-view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
-    let
-        config =
-            { toId = .carNumber
-            , toMsg = toMsg
-            , columns =
-                [ intColumn { label = "Position", getter = .position }
-                , stringColumn { label = "#", getter = .carNumber }
-                , stringColumn { label = "Driver", getter = .driver }
-                , intColumn { label = "Lap", getter = .lap }
-                , customColumn
-                    { label = "Gap"
-                    , getter = .gap >> Gap.toString
-                    , sorter = List.sortBy .position
-                    }
-                , veryCustomColumn
-                    { label = "Gap"
-                    , getter =
-                        \{ gap } ->
-                            case gap of
-                                Gap.None ->
-                                    text "-"
-
-                                Seconds duration ->
-                                    gap_ duration
-
-                                Laps _ ->
-                                    text "-"
-                    , sorter = List.sortBy .position
-                    }
-                , veryCustomColumn
-                    { label = "Time"
-                    , getter =
-                        \item ->
-                            span
-                                [ css
-                                    [ color <|
-                                        hex <|
-                                            case lapStatus { time = analysis.fastestLapTime } item of
-                                                Fastest ->
-                                                    "#F0F"
-
-                                                PersonalBest ->
-                                                    "#0C0"
-
-                                                Normal ->
-                                                    "inherit"
-                                    ]
-                                ]
-                                [ text <| Duration.toString item.time ]
-                    , sorter = List.sortBy .time
-                    }
-                , veryCustomColumn
-                    { label = "Time"
-                    , getter = .history >> performance raceClock analysis coefficient
-                    , sorter = List.sortBy .time
-                    }
-                , veryCustomColumn
-                    { label = "Histogram"
-                    , getter = .history >> histogram analysis coefficient
-                    , sorter = List.sortBy .time
-                    }
-                ]
-            }
-    in
-    table config tableState data
 
 
 w : Float

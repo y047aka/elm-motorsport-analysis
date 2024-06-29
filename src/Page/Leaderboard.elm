@@ -1,12 +1,16 @@
 module Page.Leaderboard exposing (Model, Msg, init, update, view)
 
+import Css exposing (color, hex)
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (Html, input, text)
-import Html.Styled.Attributes as Attributes exposing (type_, value)
+import Html.Styled as Html exposing (Html, input, span, text)
+import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
-import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
+import Motorsport.Duration as Duration
+import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, gap_, histogram, initialSort, intColumn, performance, stringColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
@@ -79,12 +83,77 @@ view { raceControl } { leaderboard } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view_
-        { tableState = leaderboard
-        , raceClock = raceClock
-        , analysis = Analysis.fromRaceControl raceControl
-        , toMsg = LeaderboardMsg
-        , coefficient = 1.1
-        }
-        leaderboardData
+    , Leaderboard.table (config raceControl) leaderboard leaderboardData
     ]
+
+
+config : RaceControl.Model -> Leaderboard.Config LeaderboardItem Msg
+config raceControl =
+    let
+        analysis =
+            Analysis.fromRaceControl raceControl
+
+        coefficient =
+            1.2
+    in
+    { toId = .carNumber
+    , toMsg = LeaderboardMsg
+    , columns =
+        [ intColumn { label = "Position", getter = .position }
+        , stringColumn { label = "#", getter = .carNumber }
+        , stringColumn { label = "Driver", getter = .driver }
+        , intColumn { label = "Lap", getter = .lap }
+        , customColumn
+            { label = "Gap"
+            , getter = .gap >> Gap.toString
+            , sorter = List.sortBy .position
+            }
+        , veryCustomColumn
+            { label = "Gap"
+            , getter =
+                \{ gap } ->
+                    case gap of
+                        None ->
+                            text "-"
+
+                        Seconds duration ->
+                            gap_ duration
+
+                        Laps _ ->
+                            text "-"
+            , sorter = List.sortBy .position
+            }
+        , veryCustomColumn
+            { label = "Time"
+            , getter =
+                \item ->
+                    span
+                        [ css
+                            [ color <|
+                                hex <|
+                                    case lapStatus { time = analysis.fastestLapTime } item of
+                                        Fastest ->
+                                            "#F0F"
+
+                                        PersonalBest ->
+                                            "#0C0"
+
+                                        Normal ->
+                                            "inherit"
+                            ]
+                        ]
+                        [ text <| Duration.toString item.time ]
+            , sorter = List.sortBy .time
+            }
+        , veryCustomColumn
+            { label = "Time"
+            , getter = .history >> performance raceControl.raceClock analysis coefficient
+            , sorter = List.sortBy .time
+            }
+        , veryCustomColumn
+            { label = "Histogram"
+            , getter = .history >> histogram analysis coefficient
+            , sorter = List.sortBy .time
+            }
+        ]
+    }
