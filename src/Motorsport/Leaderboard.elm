@@ -4,8 +4,8 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , timeColumn, histogramColumn, performanceColumn
-    , Config, Leaderboard, LeaderboardItem, gap_, init
+    , gapPreviewColumn, timeColumn, histogramColumn, performanceColumn
+    , Config, Leaderboard, LeaderboardItem, init
     )
 
 {-| This library helps you create sortable tables. The crucial feature is that it
@@ -43,7 +43,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs timeColumn, histogramColumn, performanceColumn
+@docs gapPreviewColumn, timeColumn, histogramColumn, performanceColumn
 
 -}
 
@@ -236,6 +236,31 @@ veryCustomColumn :
 veryCustomColumn { label, getter, sorter } =
     { name = label
     , view = getter
+    , sorter = sorter
+    }
+
+
+gapPreviewColumn :
+    { label : String
+    , getter : data -> { a | gap : Gap }
+    , sorter : List data -> List data
+    }
+    -> Column data msg
+gapPreviewColumn { label, getter, sorter } =
+    { name = label
+    , view =
+        getter
+            >> (\{ gap } ->
+                    case gap of
+                        Gap.None ->
+                            text "-"
+
+                        Seconds duration ->
+                            gap_ duration
+
+                        Laps _ ->
+                            text "-"
+               )
     , sorter = sorter
     }
 
