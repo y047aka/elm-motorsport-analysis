@@ -178,7 +178,7 @@ type alias Config data msg =
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sorter : data -> String
+    , sorter : List data -> List data
     }
 
 
@@ -187,7 +187,7 @@ stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
     , view = getter >> text
-    , sorter = getter
+    , sorter = List.sortBy getter
     }
 
 
@@ -196,7 +196,7 @@ intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
     , view = getter >> String.fromInt >> text
-    , sorter = getter >> String.fromInt
+    , sorter = List.sortBy getter
     }
 
 
@@ -205,7 +205,7 @@ floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> text
-    , sorter = getter >> String.fromFloat
+    , sorter = List.sortBy getter
     }
 
 
@@ -213,7 +213,7 @@ floatColumn { label, getter } =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : data -> String
+    , sorter : List data -> List data
     }
     -> Column data msg
 customColumn { label, getter, sorter } =
@@ -227,7 +227,7 @@ customColumn { label, getter, sorter } =
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : data -> String
+    , sorter : List data -> List data
     }
     -> Column data msg
 veryCustomColumn { label, getter, sorter } =
@@ -253,22 +253,22 @@ sort { sorting } columns prevData =
         sorting
 
 
-findSorter : String -> List (Column data msg) -> Maybe (data -> String)
+findSorter : String -> List (Column data msg) -> Maybe (List data -> List data)
 findSorter key columns =
     columns
         |> List.Extra.find (\c -> c.name == key)
         |> Maybe.map .sorter
 
 
-applySorter : Direction -> (data -> comparable) -> List data -> List data
+applySorter : Direction -> (List data -> List data) -> List data -> List data
 applySorter direction sorter data =
     case direction of
         Descending ->
-            List.sortBy sorter data
+            sorter data
                 |> List.reverse
 
         _ ->
-            List.sortBy sorter data
+            sorter data
 
 
 
@@ -430,7 +430,7 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
                 , customColumn
                     { label = "Gap"
                     , getter = .gap >> Gap.toString
-                    , sorter = .position >> String.fromInt
+                    , sorter = List.sortBy .position
                     }
                 , veryCustomColumn
                     { label = "Gap"
@@ -445,7 +445,7 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
 
                                 Laps _ ->
                                     text "-"
-                    , sorter = .position >> String.fromInt
+                    , sorter = List.sortBy .position
                     }
                 , veryCustomColumn
                     { label = "Time"
@@ -467,17 +467,17 @@ view_ { tableState, raceClock, analysis, toMsg, coefficient } data =
                                     ]
                                 ]
                                 [ text <| Duration.toString item.time ]
-                    , sorter = .time >> Duration.toString
+                    , sorter = List.sortBy .time
                     }
                 , veryCustomColumn
                     { label = "Time"
                     , getter = .history >> performance raceClock analysis coefficient
-                    , sorter = .time >> Duration.toString
+                    , sorter = List.sortBy .time
                     }
                 , veryCustomColumn
                     { label = "Histogram"
                     , getter = .history >> histogram analysis coefficient
-                    , sorter = .time >> Duration.toString
+                    , sorter = List.sortBy .time
                     }
                 ]
             }
