@@ -2,6 +2,7 @@ module Motorsport.Leaderboard exposing
     ( list, table
     , stringColumn, intColumn, floatColumn
     , Model, initialSort
+    , Msg, update
     , customColumn, veryCustomColumn
     , increasingOrDecreasingBy
     , Config, init, view_
@@ -31,6 +32,11 @@ I recommend checking out the [examples] to get a feel for how it works.
 # Model
 
 @docs Model, initialSort
+
+
+# Update
+
+@docs Msg, update
 
 
 ## Custom Columns
@@ -64,7 +70,7 @@ import UI.Table as Table exposing (td, th, thead, tr)
 
 
 
--- STATE
+-- MODEL
 
 
 {-| Tracks which column to sort by.
@@ -92,6 +98,21 @@ initialSort header =
 
 
 
+-- UPDATE
+
+
+type Msg
+    = Sort Model
+
+
+update : Msg -> Model -> Model
+update msg _ =
+    case msg of
+        Sort newModel ->
+            newModel
+
+
+
 -- CONFIG
 
 
@@ -103,7 +124,7 @@ It should only appear in `view` code.
 -}
 type alias Config data msg =
     { toId : data -> String
-    , toMsg : Model -> msg
+    , toMsg : Msg -> msg
     , columns : List (Column data msg)
     }
 
@@ -313,7 +334,7 @@ table { toId, toMsg, columns } state data =
         ]
 
 
-toHeaderInfo : Model -> (Model -> msg) -> Column data msg -> ( String, Status, Attribute msg )
+toHeaderInfo : Model -> (Msg -> msg) -> Column data msg -> ( String, Status, Attribute msg )
 toHeaderInfo { selectedColumn, isReversed } toMsg { name, sorter } =
     case sorter of
         None ->
@@ -340,10 +361,10 @@ toHeaderInfo { selectedColumn, isReversed } toMsg { name, sorter } =
                 ( name, Reversible Nothing, onClick name False toMsg )
 
 
-onClick : String -> Bool -> (Model -> msg) -> Attribute msg
+onClick : String -> Bool -> (Msg -> msg) -> Attribute msg
 onClick name isReversed toMsg =
     Events.on "click" <|
-        Json.map toMsg <|
+        Json.map (Sort >> toMsg) <|
             Json.map2 Model (Json.succeed name) (Json.succeed isReversed)
 
 
@@ -461,7 +482,7 @@ view_ :
     { tableState : Model
     , raceClock : Clock
     , analysis : Analysis
-    , toMsg : Model -> msg
+    , toMsg : Msg -> msg
     , coefficient : Float
     }
     -> Leaderboard

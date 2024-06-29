@@ -18,14 +18,14 @@ import UI.Label exposing (basicLabel)
 
 
 type alias Model =
-    { tableState : Leaderboard.Model
+    { leaderboard : Leaderboard.Model
     , query : String
     }
 
 
 init : ( Model, Effect Msg )
 init =
-    ( { tableState = initialSort "Position"
+    ( { leaderboard = initialSort "Position"
       , query = ""
       }
     , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
@@ -38,7 +38,7 @@ init =
 
 type Msg
     = RaceControlMsg RaceControl.Msg
-    | SetTableState Leaderboard.Model
+    | LeaderboardMsg Leaderboard.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -47,8 +47,10 @@ update msg m =
         RaceControlMsg raceControlMsg ->
             ( m, Effect.updateRaceControl raceControlMsg )
 
-        SetTableState newState ->
-            ( { m | tableState = newState }, Effect.none )
+        LeaderboardMsg leaderboardMsg ->
+            ( { m | leaderboard = Leaderboard.update leaderboardMsg m.leaderboard }
+            , Effect.none
+            )
 
 
 
@@ -56,12 +58,12 @@ update msg m =
 
 
 view : Shared.Model -> Model -> List (Html Msg)
-view { raceControl } { tableState } =
+view { raceControl } { leaderboard } =
     let
         { raceClock, lapTotal, cars } =
             raceControl
 
-        leaderboard =
+        leaderboardData =
             Leaderboard.init raceClock cars
     in
     [ input
@@ -78,11 +80,11 @@ view { raceControl } { tableState } =
         ]
     , text <| Clock.toString raceClock
     , Leaderboard.view_
-        { tableState = tableState
+        { tableState = leaderboard
         , raceClock = raceClock
         , analysis = Analysis.fromRaceControl raceControl
-        , toMsg = SetTableState
+        , toMsg = LeaderboardMsg
         , coefficient = 1.2
         }
-        leaderboard
+        leaderboardData
     ]
