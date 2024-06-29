@@ -69,8 +69,10 @@ import UI.Table as Table exposing (td, th, thead, tr)
 
 {-| Tracks which column to sort by.
 -}
-type Model
-    = State String Bool
+type alias Model =
+    { selectedColumn : String
+    , isReversed : Bool
+    }
 
 
 {-| Create a table state. By providing a column name, you determine which
@@ -84,7 +86,9 @@ yachts to be sorted by length by default, you might say:
 -}
 initialSort : String -> Model
 initialSort header =
-    State header False
+    { selectedColumn = header
+    , isReversed = False
+    }
 
 
 
@@ -199,7 +203,7 @@ veryCustomColumn { label, getter, sorter } =
 
 
 sort : Model -> List (Column data msg) -> List data -> List data
-sort (State selectedColumn isReversed) columns data =
+sort { selectedColumn, isReversed } columns data =
     case findSorter selectedColumn columns of
         Nothing ->
             data
@@ -310,26 +314,26 @@ table { toId, toMsg, columns } state data =
 
 
 toHeaderInfo : Model -> (Model -> msg) -> Column data msg -> ( String, Status, Attribute msg )
-toHeaderInfo (State sortName isReversed) toMsg { name, sorter } =
+toHeaderInfo { selectedColumn, isReversed } toMsg { name, sorter } =
     case sorter of
         None ->
-            ( name, Unsortable, onClick sortName isReversed toMsg )
+            ( name, Unsortable, onClick selectedColumn isReversed toMsg )
 
         Increasing _ ->
-            ( name, Sortable (name == sortName), onClick name False toMsg )
+            ( name, Sortable (name == selectedColumn), onClick name False toMsg )
 
         Decreasing _ ->
-            ( name, Sortable (name == sortName), onClick name False toMsg )
+            ( name, Sortable (name == selectedColumn), onClick name False toMsg )
 
         IncOrDec _ ->
-            if name == sortName then
+            if name == selectedColumn then
                 ( name, Reversible (Just isReversed), onClick name (not isReversed) toMsg )
 
             else
                 ( name, Reversible Nothing, onClick name False toMsg )
 
         DecOrInc _ ->
-            if name == sortName then
+            if name == selectedColumn then
                 ( name, Reversible (Just isReversed), onClick name (not isReversed) toMsg )
 
             else
@@ -340,7 +344,7 @@ onClick : String -> Bool -> (Model -> msg) -> Attribute msg
 onClick name isReversed toMsg =
     Events.on "click" <|
         Json.map toMsg <|
-            Json.map2 State (Json.succeed name) (Json.succeed isReversed)
+            Json.map2 Model (Json.succeed name) (Json.succeed isReversed)
 
 
 simpleTheadHelp : ( String, Status, Attribute msg ) -> Html msg
