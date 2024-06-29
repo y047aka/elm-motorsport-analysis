@@ -6,7 +6,7 @@ import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
-import Motorsport.Leaderboard as Leaderboard exposing (State, initialSort)
+import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
@@ -18,7 +18,7 @@ import UI.Label exposing (basicLabel)
 
 
 type alias Model =
-    { tableState : State
+    { tableState : Leaderboard.Model
     , query : String
     }
 
@@ -38,7 +38,7 @@ init =
 
 type Msg
     = RaceControlMsg RaceControl.Msg
-    | SetTableState State
+    | SetTableState Leaderboard.Model
 
 
 update : Msg -> Model -> ( Model, Effect Msg )

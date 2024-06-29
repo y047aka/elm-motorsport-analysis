@@ -1,7 +1,7 @@
 module Motorsport.Leaderboard exposing
     ( list, table
     , stringColumn, intColumn, floatColumn
-    , State, initialSort
+    , Model, initialSort
     , customColumn, veryCustomColumn
     , increasingOrDecreasingBy
     , Config, init, view_
@@ -28,9 +28,9 @@ I recommend checking out the [examples] to get a feel for how it works.
 @docs stringColumn, intColumn, floatColumn
 
 
-# State
+# Model
 
-@docs State, initialSort
+@docs Model, initialSort
 
 
 ## Custom Columns
@@ -69,7 +69,7 @@ import UI.Table as Table exposing (td, th, thead, tr)
 
 {-| Tracks which column to sort by.
 -}
-type State
+type Model
     = State String Bool
 
 
@@ -82,7 +82,7 @@ yachts to be sorted by length by default, you might say:
     Table.initialSort "Length"
 
 -}
-initialSort : String -> State
+initialSort : String -> Model
 initialSort header =
     State header False
 
@@ -99,7 +99,7 @@ It should only appear in `view` code.
 -}
 type alias Config data msg =
     { toId : data -> String
-    , toMsg : State -> msg
+    , toMsg : Model -> msg
     , columns : List (Column data msg)
     }
 
@@ -198,7 +198,7 @@ veryCustomColumn { label, getter, sorter } =
 -- SORTING
 
 
-sort : State -> List (Column data msg) -> List data -> List data
+sort : Model -> List (Column data msg) -> List data -> List data
 sort (State selectedColumn isReversed) columns data =
     case findSorter selectedColumn columns of
         Nothing ->
@@ -281,7 +281,7 @@ increasingOrDecreasingBy toComparable =
 -- VIEW
 
 
-list : Config data msg -> State -> (data -> List (Html msg)) -> List data -> Html msg
+list : Config data msg -> Model -> (data -> List (Html msg)) -> List data -> Html msg
 list { columns } state toListItem data =
     let
         sortedData =
@@ -293,7 +293,7 @@ list { columns } state toListItem data =
     ul [] <| List.map listItem sortedData
 
 
-table : Config data msg -> State -> List data -> Html msg
+table : Config data msg -> Model -> List data -> Html msg
 table { toId, toMsg, columns } state data =
     let
         sortedData =
@@ -309,7 +309,7 @@ table { toId, toMsg, columns } state data =
         ]
 
 
-toHeaderInfo : State -> (State -> msg) -> Column data msg -> ( String, Status, Attribute msg )
+toHeaderInfo : Model -> (Model -> msg) -> Column data msg -> ( String, Status, Attribute msg )
 toHeaderInfo (State sortName isReversed) toMsg { name, sorter } =
     case sorter of
         None ->
@@ -336,7 +336,7 @@ toHeaderInfo (State sortName isReversed) toMsg { name, sorter } =
                 ( name, Reversible Nothing, onClick name False toMsg )
 
 
-onClick : String -> Bool -> (State -> msg) -> Attribute msg
+onClick : String -> Bool -> (Model -> msg) -> Attribute msg
 onClick name isReversed toMsg =
     Events.on "click" <|
         Json.map toMsg <|
@@ -454,10 +454,10 @@ sortCarsAt raceClock cars =
 
 
 view_ :
-    { tableState : State
+    { tableState : Model
     , raceClock : Clock
     , analysis : Analysis
-    , toMsg : State -> msg
+    , toMsg : Model -> msg
     , coefficient : Float
     }
     -> Leaderboard
