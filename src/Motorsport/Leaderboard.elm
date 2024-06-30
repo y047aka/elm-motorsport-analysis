@@ -364,8 +364,8 @@ applySorter direction sorter data =
 -- VIEW
 
 
-view : Config LeaderboardItem msg -> Model -> Clock -> List Car -> Html msg
-view config state raceClock cars =
+view : Config LeaderboardItem msg -> Model -> { a | raceClock : Clock, cars : List Car } -> Html msg
+view config state { raceClock, cars } =
     let
         leaderboardData =
             init raceClock cars
@@ -374,7 +374,6 @@ view config state raceClock cars =
             sort state config.columns leaderboardData
     in
     viewHelper config state sortedData
-
 
 
 viewHelper : Config data msg -> Model -> List data -> Html msg

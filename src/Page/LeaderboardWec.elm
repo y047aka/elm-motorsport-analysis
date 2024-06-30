@@ -61,7 +61,7 @@ update msg m =
 view : Shared.Model -> Model -> List (Html Msg)
 view { raceControl } { leaderboardState } =
     let
-        { raceClock, lapTotal, cars } =
+        { raceClock, lapTotal } =
             raceControl
     in
     [ input
@@ -77,7 +77,7 @@ view { raceControl } { leaderboardState } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view (config raceControl) leaderboardState raceClock cars
+    , Leaderboard.view (config raceControl) leaderboardState raceControl
     ]
 
 
