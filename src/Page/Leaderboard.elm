@@ -63,9 +63,6 @@ view { raceControl } { leaderboardState } =
     let
         { raceClock, lapTotal, cars } =
             raceControl
-
-        leaderboardData =
-            Leaderboard.init raceClock cars
     in
     [ input
         [ type_ "range"
@@ -80,7 +77,7 @@ view { raceControl } { leaderboardState } =
         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
         ]
     , text <| Clock.toString raceClock
-    , Leaderboard.view (config raceControl) leaderboardState leaderboardData
+    , Leaderboard.view (config raceControl) leaderboardState raceClock cars
     ]
 
 

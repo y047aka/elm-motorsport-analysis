@@ -364,19 +364,28 @@ applySorter direction sorter data =
 -- VIEW
 
 
-view : Config data msg -> Model -> List data -> Html msg
-view { toId, toMsg, columns } state data =
+view : Config LeaderboardItem msg -> Model -> Clock -> List Car -> Html msg
+view config state raceClock cars =
     let
+        leaderboardData =
+            init raceClock cars
+
         sortedData =
-            sort state columns data
+            sort state config.columns leaderboardData
     in
+    viewHelper config state sortedData
+
+
+
+viewHelper : Config data msg -> Model -> List data -> Html msg
+viewHelper { toId, toMsg, columns } state data =
     Table.table [ css [ fontSize (px 14) ] ]
         [ thead []
             [ tr [] <|
                 List.map (toHeaderInfo state.sorting toMsg >> simpleTheadHelp) columns
             ]
         , Keyed.node "tbody" [] <|
-            List.map (tableRow toId columns) sortedData
+            List.map (tableRow toId columns) data
         ]
 
 
