@@ -1,13 +1,13 @@
 module Pages.Home_ exposing (page)
 
-import Html exposing (a, br, text)
-import Html.Attributes exposing (href)
+import Html.Styled exposing (a, br, text)
+import Html.Styled.Attributes exposing (href)
 import View exposing (View)
 
 
 page : View msg
 page =
-    { title = "Homepage"
+    { title = "Race Analysis"
     , body =
         [ a [ href "/gap-chart" ] [ text "Gap Chart" ]
         , br [] []
