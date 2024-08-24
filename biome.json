@@ -5,6 +5,7 @@
   },
   "formatter": {
     "enabled": true,
+    "ignore": ["elm.json", "static/*.json"],
     "indentStyle": "space"
   },
   "linter": {

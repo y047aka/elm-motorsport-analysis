@@ -1,6 +1,3 @@
 {
-  "recommendations": [
-    "biomejs.biome",
-    "elmTooling.elm-ls-vscode"
-  ]
+  "recommendations": ["biomejs.biome", "elmTooling.elm-ls-vscode"]
 }

@@ -1,6 +1,4 @@
 {
-    "root": "../src",
-    "tests": [
-      "Data.LapTime"
-    ]
-  }
+  "root": "../src",
+  "tests": ["Data.LapTime"]
+}
