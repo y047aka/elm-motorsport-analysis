@@ -7,7 +7,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, gapPreviewColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import Shared
 import UI.Button exposing (button, labeledButton)
@@ -97,11 +97,6 @@ config raceControl =
         , customColumn
             { label = "Gap"
             , getter = .gap >> Gap.toString
-            , sorter = List.sortBy .position
-            }
-        , gapPreviewColumn
-            { label = "Gap"
-            , getter = identity
             , sorter = List.sortBy .position
             }
         , timeColumn

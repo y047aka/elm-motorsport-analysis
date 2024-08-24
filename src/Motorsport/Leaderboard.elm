@@ -3,7 +3,7 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , gapPreviewColumn, timeColumn, histogramColumn, performanceColumn
+    , timeColumn, histogramColumn, performanceColumn
     , Config, Leaderboard, LeaderboardItem, init, view
     )
 
@@ -42,7 +42,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs gapPreviewColumn, timeColumn, histogramColumn, performanceColumn
+@docs timeColumn, histogramColumn, performanceColumn
 
 -}
 
@@ -235,31 +235,6 @@ veryCustomColumn :
 veryCustomColumn { label, getter, sorter } =
     { name = label
     , view = getter
-    , sorter = sorter
-    }
-
-
-gapPreviewColumn :
-    { label : String
-    , getter : data -> { a | gap : Gap }
-    , sorter : List data -> List data
-    }
-    -> Column data msg
-gapPreviewColumn { label, getter, sorter } =
-    { name = label
-    , view =
-        getter
-            >> (\{ gap } ->
-                    case gap of
-                        Gap.None ->
-                            text "-"
-
-                        Seconds duration ->
-                            gap_ duration
-
-                        Laps _ ->
-                            text "-"
-               )
     , sorter = sorter
     }
 
@@ -582,20 +557,6 @@ histogram_ { x, y, width, color } laps =
                     []
             )
             laps
-
-
-gap_ : Duration -> Html msg
-gap_ time =
-    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
-        [ rect
-            [ InPx.x 0
-            , InPx.y 0
-            , InPx.width (time |> toFloat |> Scale.convert (xScale ( 0, 100000 )))
-            , InPx.height 20
-            , fill "#999"
-            ]
-            []
-        ]
 
 
 performance : Clock -> { a | fastestLapTime : Duration } -> Float -> List Lap -> Html msg
