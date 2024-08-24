@@ -1,6 +1,6 @@
 {
   "recommendations": [
-    "esbenp.prettier-vscode",
+    "biomejs.biome",
     "elmTooling.elm-ls-vscode"
   ]
 }
