@@ -1,6 +1,6 @@
 module Shared exposing
     ( Flags, decoder
-    , Model, Msg(..)
+    , Model, Msg
     , init, update, subscriptions
     )
 
@@ -16,13 +16,17 @@ import AssocList
 import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.F1.Decoder as F1
-import Data.F1.Preprocess as F1
+import Data.F1.Preprocess as Preprocess_F1
 import Data.Wec.Decoder as Wec
-import Data.Wec.Preprocess as Wec
-import Http exposing (Error(..), Expect, Response(..), expectStringResponse)
+import Data.Wec.Preprocess as Preprocess_Wec
+import Effect exposing (Effect)
+import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode
 import List.Extra as List
 import Motorsport.RaceControl as RaceControl
+import Route exposing (Route)
+import Shared.Model
+import Shared.Msg exposing (Msg(..))
 
 
 
@@ -43,21 +47,15 @@ decoder =
 
 
 type alias Model =
-    { raceControl : RaceControl.Model
-    , ordersByLap : OrdersByLap
-    }
+    Shared.Model.Model
 
 
-type alias OrdersByLap =
-    List { lapNumber : Int, order : List String }
-
-
-init : Flags -> ( Model, Cmd Msg )
-init flagsResult =
+init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
+init flagsResult route =
     ( { raceControl = RaceControl.empty
       , ordersByLap = []
       }
-    , Cmd.none
+    , Effect.none
     )
 
 
@@ -65,49 +63,47 @@ init flagsResult =
 -- UPDATE
 
 
-type Msg
-    = FetchJson String
-    | JsonLoaded (Result Http.Error (List F1.Car))
-    | FetchCsv String
-    | CsvLoaded (Result Http.Error (List Wec.Lap))
-    | RaceControlMsg RaceControl.Msg
+type alias Msg =
+    Shared.Msg.Msg
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg m =
+update : Route () -> Msg -> Model -> ( Model, Effect Msg )
+update route msg m =
     case msg of
         FetchJson url ->
             ( m
-            , Http.get
-                { url = url
-                , expect = Http.expectJson JsonLoaded F1.decoder
-                }
+            , Effect.sendCmd <|
+                Http.get
+                    { url = url
+                    , expect = Http.expectJson JsonLoaded F1.decoder
+                    }
             )
 
         JsonLoaded (Ok decoded) ->
             let
                 preprocessed =
-                    F1.preprocess decoded
+                    Preprocess_F1.preprocess decoded
             in
             ( { m | raceControl = RaceControl.init preprocessed }
-            , Cmd.none
+            , Effect.none
             )
 
         JsonLoaded (Err _) ->
-            ( m, Cmd.none )
+            ( m, Effect.none )
 
         FetchCsv url ->
             ( m
-            , Http.get
-                { url = url
-                , expect = expectCsv CsvLoaded Wec.lapDecoder
-                }
+            , Effect.sendCmd <|
+                Http.get
+                    { url = url
+                    , expect = expectCsv CsvLoaded Wec.lapDecoder
+                    }
             )
 
         CsvLoaded (Ok decoded) ->
             let
                 preprocessed =
-                    Wec.preprocess decoded
+                    Preprocess_Wec.preprocess decoded
 
                 ordersByLap =
                     decoded
@@ -124,17 +120,17 @@ update msg m =
                 | raceControl = RaceControl.init preprocessed
                 , ordersByLap = ordersByLap
               }
-            , Cmd.none
+            , Effect.none
             )
 
         CsvLoaded (Err _) ->
-            ( m, Cmd.none )
+            ( m, Effect.none )
 
         RaceControlMsg raceControlMsg ->
-            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Cmd.none )
+            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Effect.none )
 
 
-expectCsv : (Result Error (List a) -> msg) -> Decoder a -> Expect msg
+expectCsv : (Result Http.Error (List a) -> msg) -> Decoder a -> Expect msg
 expectCsv toMsg decoder_ =
     let
         resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
@@ -155,7 +151,7 @@ expectCsv toMsg decoder_ =
                 GoodStatus_ _ body ->
                     Result.mapError BadBody (toResult body)
     in
-    expectStringResponse toMsg <|
+    Http.expectStringResponse toMsg <|
         resolve
             (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder_
                 >> Result.mapError Decode.errorToString
@@ -166,6 +162,6 @@ expectCsv toMsg decoder_ =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Model -> Sub Msg
-subscriptions model =
+subscriptions : Route () -> Model -> Sub Msg
+subscriptions route model =
     Sub.none

@@ -1,13 +1,25 @@
-module Page.Wec exposing (Model, Msg, init, update, view)
+module Pages.Wec exposing (Model, Msg, page)
 
 import Chart.Chart as Chart
 import Data.Wec.Car as Wec
 import Data.Wec.Decoder as Wec
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (Html)
 import List.Extra as List
 import Motorsport.Car as Motorsport
+import Page exposing (Page)
+import Route exposing (Route)
 import Shared
+import View exposing (View)
+
+
+page : Shared.Model -> Route () -> Page Model Msg
+page shared route =
+    Page.new
+        { init = init
+        , update = update
+        , view = view shared
+        , subscriptions = \_ -> Sub.none
+        }
 
 
 
@@ -18,8 +30,8 @@ type alias Model =
     {}
 
 
-init : ( Model, Effect Msg )
-init =
+init : () -> ( Model, Effect Msg )
+init () =
     ( {}
     , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
     )
@@ -44,13 +56,16 @@ update msg model =
 -- VIEW
 
 
-view : Shared.Model -> Model -> List (Html msg)
+view : Shared.Model -> Model -> View Msg
 view { raceControl, ordersByLap } _ =
-    [ Chart.view
-        { cars = List.map (summarize ordersByLap) raceControl.cars
-        , ordersByLap = ordersByLap
-        }
-    ]
+    { title = "Wec"
+    , body =
+        [ Chart.view
+            { cars = List.map (summarize ordersByLap) raceControl.cars
+            , ordersByLap = ordersByLap
+            }
+        ]
+    }
 
 
 type alias OrdersByLap =

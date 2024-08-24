@@ -1,7 +1,7 @@
-module Page.LeaderboardWec exposing (Model, Msg, init, update, view)
+module Pages.LeaderboardWec exposing (Model, Msg, page)
 
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (Html, input, text)
+import Html.Styled as Html exposing (input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
@@ -9,9 +9,22 @@ import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
+import Page exposing (Page)
+import Route exposing (Route)
 import Shared
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
+import View exposing (View)
+
+
+page : Shared.Model -> Route () -> Page Model Msg
+page shared route =
+    Page.new
+        { init = init
+        , update = update
+        , view = view shared
+        , subscriptions = \_ -> Sub.none
+        }
 
 
 
@@ -24,8 +37,8 @@ type alias Model =
     }
 
 
-init : ( Model, Effect Msg )
-init =
+init : () -> ( Model, Effect Msg )
+init () =
     ( { leaderboardState = initialSort "Position"
       , query = ""
       }
@@ -58,27 +71,30 @@ update msg m =
 -- VIEW
 
 
-view : Shared.Model -> Model -> List (Html Msg)
+view : Shared.Model -> Model -> View Msg
 view { raceControl } { leaderboardState } =
-    let
-        { raceClock, lapTotal } =
-            raceControl
-    in
-    [ input
-        [ type_ "range"
-        , Attributes.max <| String.fromInt lapTotal
-        , value (String.fromInt raceClock.lapCount)
-        , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+    { title = "Leaderboard Wec"
+    , body =
+        let
+            { raceClock, lapTotal } =
+                raceControl
+        in
+        [ input
+            [ type_ "range"
+            , Attributes.max <| String.fromInt lapTotal
+            , value (String.fromInt raceClock.lapCount)
+            , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+            ]
+            []
+        , labeledButton []
+            [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+            , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
+            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+            ]
+        , text <| Clock.toString raceClock
+        , Leaderboard.view (config raceControl) leaderboardState raceControl
         ]
-        []
-    , labeledButton []
-        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-        , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
-        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
-        ]
-    , text <| Clock.toString raceClock
-    , Leaderboard.view (config raceControl) leaderboardState raceControl
-    ]
+    }
 
 
 config : RaceControl.Model -> Leaderboard.Config LeaderboardItem Msg
