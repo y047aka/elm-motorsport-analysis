@@ -1,14 +1,17 @@
 module Pages.Wec exposing (Model, Msg, page)
 
 import Chart.Chart as Chart
-import Data.Wec.Car as Wec
-import Data.Wec.Decoder as Wec
 import Effect exposing (Effect)
-import List.Extra as List
-import Motorsport.Car as Motorsport
+import Html.Styled as Html exposing (input, text)
+import Html.Styled.Attributes as Attributes exposing (type_, value)
+import Html.Styled.Events exposing (onClick, onInput)
+import Motorsport.Clock as Clock
+import Motorsport.RaceControl as RaceControl
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared
+import UI.Button exposing (button, labeledButton)
+import UI.Label exposing (basicLabel)
 import View exposing (View)
 
 
@@ -42,14 +45,14 @@ init () =
 
 
 type Msg
-    = NoOp
+    = RaceControlMsg RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Effect.none )
+        RaceControlMsg raceControlMsg ->
+            ( model, Effect.updateRaceControl raceControlMsg )
 
 
 
@@ -60,36 +63,23 @@ view : Shared.Model -> Model -> View Msg
 view { raceControl, ordersByLap } _ =
     { title = "Wec"
     , body =
-        [ Chart.view
-            { cars = List.map (summarize ordersByLap) raceControl.cars
-            , ordersByLap = ordersByLap
-            }
+        let
+            { raceClock, lapTotal } =
+                raceControl
+        in
+        [ input
+            [ type_ "range"
+            , Attributes.max <| String.fromInt lapTotal
+            , value (String.fromInt raceClock.lapCount)
+            , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+            ]
+            []
+        , labeledButton []
+            [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+            , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
+            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+            ]
+        , text <| Clock.toString raceClock
+        , Chart.view { raceControl = raceControl, ordersByLap = ordersByLap }
         ]
     }
-
-
-type alias OrdersByLap =
-    List { lapNumber : Int, order : List String }
-
-
-summarize : OrdersByLap -> Motorsport.Car -> Wec.Car
-summarize ordersByLap { carNumber, class, group, team, manufacturer, laps } =
-    { carNumber = carNumber
-    , class = class
-    , group = group
-    , team = team
-    , manufacturer = manufacturer
-    , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
-    , positions =
-        List.indexedMap
-            (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
-            laps
-    , laps = laps
-    }
-
-
-getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
-getPositionAt { carNumber, lapNumber } ordersByLap =
-    ordersByLap
-        |> List.find (.lapNumber >> (==) lapNumber)
-        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))

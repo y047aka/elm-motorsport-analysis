@@ -5,9 +5,13 @@ import Css exposing (block, display)
 import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
-import Data.Wec.Car exposing (Car)
+import Data.Wec.Car as Wec
 import Data.Wec.Class as Class
 import Html.Styled exposing (Html)
+import List.Extra as List
+import Motorsport.Car as Motorsport
+import Motorsport.Lap exposing (completedLapsAt)
+import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
 import Svg.Styled.Attributes exposing (css)
@@ -50,7 +54,7 @@ xScale ordersByLap =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat (List.length ordersByLap) )
 
 
-yScale : List Car -> ContinuousScale Float
+yScale : List Wec.Car -> ContinuousScale Float
 yScale cars =
     Scale.linear ( paddingVertical, h - paddingVertical ) ( 0, toFloat (List.length cars - 1) )
 
@@ -86,8 +90,12 @@ xAxis ordersByLap =
         ]
 
 
-view : { a | cars : List Car, ordersByLap : OrdersByLap } -> Html msg
-view { cars, ordersByLap } =
+view : { raceControl : RaceControl.Model, ordersByLap : OrdersByLap } -> Html msg
+view { raceControl, ordersByLap } =
+    let
+        wecCars =
+            List.map (summarize ordersByLap) raceControl.cars
+    in
     svg
         [ width w
         , height h
@@ -96,20 +104,43 @@ view { cars, ordersByLap } =
         ]
         [ xAxis ordersByLap
         , g []
-            (cars
+            (wecCars
                 |> List.sortBy .startPosition
                 |> List.map
                     (\car ->
                         history
                             { x = toFloat >> Scale.convert (xScale ordersByLap)
-                            , y = toFloat >> Scale.convert (yScale cars)
+                            , y = toFloat >> Scale.convert (yScale wecCars)
                             , svgPalette = Class.toStrokePalette car.class
                             , label = String.join " " [ car.carNumber, car.team ]
                             }
-                            car
+                            (car |> (\c -> { c | positions = List.take (List.length <| completedLapsAt raceControl.raceClock car.laps) car.positions }))
                     )
             )
         ]
+
+
+summarize : OrdersByLap -> Motorsport.Car -> Wec.Car
+summarize ordersByLap { carNumber, class, group, team, manufacturer, laps } =
+    { carNumber = carNumber
+    , class = class
+    , group = group
+    , team = team
+    , manufacturer = manufacturer
+    , startPosition = Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = 1 } ordersByLap
+    , positions =
+        List.indexedMap
+            (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = carNumber, lapNumber = index + 1 } ordersByLap)
+            laps
+    , laps = laps
+    }
+
+
+getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
+getPositionAt { carNumber, lapNumber } ordersByLap =
+    ordersByLap
+        |> List.find (.lapNumber >> (==) lapNumber)
+        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
 
 
 history :
@@ -118,7 +149,7 @@ history :
     , svgPalette : SvgPalette
     , label : String
     }
-    -> Car
+    -> Wec.Car
     -> Svg msg
 history { x, y, svgPalette, label } { carNumber, startPosition, positions } =
     history_
