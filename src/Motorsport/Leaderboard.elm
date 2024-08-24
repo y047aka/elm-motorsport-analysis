@@ -60,6 +60,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
+import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes exposing (fill)
@@ -336,11 +337,11 @@ applySorter direction sorter data =
 -- VIEW
 
 
-view : Config LeaderboardItem msg -> Model -> { a | raceClock : Clock, cars : List Car } -> Html msg
-view config state { raceClock, cars } =
+view : Config LeaderboardItem msg -> Model -> RaceControl.Model -> Html msg
+view config state raceControl =
     let
         leaderboardData =
-            init raceClock cars
+            init raceControl
 
         sortedData =
             sort state config.columns leaderboardData
@@ -425,11 +426,11 @@ type alias LeaderboardItem =
     }
 
 
-init : Clock -> List Car -> Leaderboard
-init raceClock cars =
+init : RaceControl.Model -> Leaderboard
+init ({ raceClock } as raceControl) =
     let
         sortedCars =
-            sortCarsAt raceClock cars
+            sortCarsAt raceControl
     in
     sortedCars
         |> List.indexedMap
@@ -449,8 +450,8 @@ init raceClock cars =
             )
 
 
-sortCarsAt : Clock -> List Car -> List { car : Car, lastLap : Lap }
-sortCarsAt raceClock cars =
+sortCarsAt : RaceControl.Model -> List { car : Car, lastLap : Lap }
+sortCarsAt { raceClock, cars } =
     cars
         |> List.map
             (\car ->
