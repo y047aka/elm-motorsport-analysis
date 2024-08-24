@@ -4,6 +4,7 @@ module Motorsport.Leaderboard exposing
     , Msg, update
     , customColumn, veryCustomColumn
     , timeColumn, histogramColumn, performanceColumn
+    , driverNameColumn
     , Config, Leaderboard, LeaderboardItem, init, view
     )
 
@@ -43,6 +44,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 @docs Column, customColumn, veryCustomColumn
 
 @docs timeColumn, histogramColumn, performanceColumn
+@docs driverNameColumn
 
 -}
 
@@ -296,6 +298,29 @@ performanceColumn { getter, sorter, analysis } =
     { name = "Performance"
     , view = getter >> performanceHistory analysis
     , sorter = sorter
+    }
+
+
+driverNameColumn : { label : String, getter : data -> String } -> Column data msg
+driverNameColumn { label, getter } =
+    let
+        formatName name =
+            let
+                firstNameInitial =
+                    String.left 1 name
+
+                formattedLastName =
+                    String.split " " name
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.map String.toUpper
+                        |> Maybe.withDefault ""
+            in
+            firstNameInitial ++ "." ++ formattedLastName
+    in
+    { name = label
+    , view = getter >> formatName >> text
+    , sorter = List.sortBy getter
     }
 
 

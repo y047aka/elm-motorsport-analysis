@@ -7,7 +7,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import Page exposing (Page)
 import Route exposing (Route)
@@ -108,7 +108,7 @@ config raceControl =
     , columns =
         [ intColumn { label = "Position", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , stringColumn { label = "Driver", getter = .driver }
+        , driverNameColumn { label = "Driver", getter = .driver }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
