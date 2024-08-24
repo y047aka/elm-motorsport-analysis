@@ -1,11 +1,10 @@
-# Dependency directories
-node_modules
-
-# elm-package generated files
-elm-stuff
+/dist
+/.elm-land
+/.env
+/elm-stuff
+/node_modules
+.DS_Store
+*.pem
 
 # elm-verify-examples generated files
 tests/VerifyExamples
-
-# Distribution
-dist

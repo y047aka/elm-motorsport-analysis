@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "start": "vite --open",
+    "start": "elm-land server",
     "build": "vite build",
     "test": "elm-verify-examples --run-tests"
   },
@@ -9,6 +9,7 @@
     "@biomejs/biome": "^1.8.3",
     "elm": "^0.19.1-6",
     "elm-format": "^0.8.7",
+    "elm-land": "^0.20.1",
     "elm-test": "^0.19.1-revision12",
     "elm-verify-examples": "^6.0.3",
     "vite": "^5.3.1",
