@@ -11,9 +11,9 @@ page =
     , body =
         [ a [ href "/gap-chart" ] [ text "Gap Chart" ]
         , br [] []
-        , a [ href "/lapTime-chart" ] [ text "LapTime Chart" ]
+        , a [ href "/lap-time-chart" ] [ text "LapTime Chart" ]
         , br [] []
-        , a [ href "/lapTime-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
+        , a [ href "/lap-time-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
         , br [] []
         , a [ href "/leaderboard" ] [ text "Leader Board" ]
         , br [] []
