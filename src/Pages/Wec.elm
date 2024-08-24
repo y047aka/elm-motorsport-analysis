@@ -5,7 +5,10 @@ import Effect exposing (Effect)
 import Html.Styled as Html exposing (input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Motorsport.Analysis as Analysis
 import Motorsport.Clock as Clock
+import Motorsport.Gap as Gap
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import Page exposing (Page)
 import Route exposing (Route)
@@ -30,12 +33,16 @@ page shared route =
 
 
 type alias Model =
-    {}
+    { leaderboardState : Leaderboard.Model
+    , query : String
+    }
 
 
 init : () -> ( Model, Effect Msg )
 init () =
-    ( {}
+    ( { leaderboardState = initialSort "Position"
+      , query = ""
+      }
     , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
     )
 
@@ -46,13 +53,19 @@ init () =
 
 type Msg
     = RaceControlMsg RaceControl.Msg
+    | LeaderboardMsg Leaderboard.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update msg m =
     case msg of
         RaceControlMsg raceControlMsg ->
-            ( model, Effect.updateRaceControl raceControlMsg )
+            ( m, Effect.updateRaceControl raceControlMsg )
+
+        LeaderboardMsg leaderboardMsg ->
+            ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
+            , Effect.none
+            )
 
 
 
@@ -60,7 +73,7 @@ update msg model =
 
 
 view : Shared.Model -> Model -> View Msg
-view { raceControl, ordersByLap } _ =
+view { raceControl, ordersByLap } { leaderboardState } =
     { title = "Wec"
     , body =
         let
@@ -81,5 +94,45 @@ view { raceControl, ordersByLap } _ =
             ]
         , text <| Clock.toString raceClock
         , PositionHistoryChart.view { raceControl = raceControl, ordersByLap = ordersByLap }
+        , Leaderboard.view (config raceControl) leaderboardState raceControl
+        ]
+    }
+
+
+config : RaceControl.Model -> Leaderboard.Config LeaderboardItem Msg
+config raceControl =
+    let
+        analysis =
+            Analysis.fromRaceControl raceControl
+    in
+    { toId = .carNumber
+    , toMsg = LeaderboardMsg
+    , columns =
+        [ intColumn { label = "Position", getter = .position }
+        , stringColumn { label = "#", getter = .carNumber }
+        , stringColumn { label = "Driver", getter = .driver }
+        , intColumn { label = "Lap", getter = .lap }
+        , customColumn
+            { label = "Gap"
+            , getter = .gap >> Gap.toString
+            , sorter = List.sortBy .position
+            }
+        , timeColumn
+            { label = "Time"
+            , getter = identity
+            , sorter = List.sortBy .time
+            , analysis = analysis
+            }
+        , performanceColumn
+            { getter = .history
+            , sorter = List.sortBy .time
+            , analysis = analysis
+            }
+        , histogramColumn
+            { getter = .history
+            , sorter = List.sortBy .time
+            , analysis = analysis
+            , coefficient = 1.2
+            }
         ]
     }

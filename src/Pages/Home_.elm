@@ -17,8 +17,6 @@ page =
         , br [] []
         , a [ href "/leaderboard" ] [ text "Leader Board" ]
         , br [] []
-        , a [ href "/leaderboard-wec" ] [ text "Leader Board WEC" ]
-        , br [] []
         , a [ href "/wec" ] [ text "Wec" ]
         ]
     }
