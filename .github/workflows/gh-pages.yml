@@ -6,7 +6,7 @@ on:
   pull_request:
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -19,11 +19,6 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run build
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-24.04
-    steps:
       - uses: peaceiris/actions-gh-pages@v4
         if: github.ref == 'refs/heads/main'
         with:
