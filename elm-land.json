@@ -7,14 +7,17 @@
     "env": [],
     "html": {
       "attributes": {
-        "html": { "lang": "en" },
+        "html": { "lang": "ja" },
         "head": {}
       },
-      "title": "Elm Land",
+      "title": "Race Analysis",
       "meta": [
         { "charset": "UTF-8" },
         { "http-equiv": "X-UA-Compatible", "content": "IE=edge" },
-        { "name": "viewport", "content": "width=device-width, initial-scale=1.0" }
+        {
+          "name": "viewport",
+          "content": "width=device-width, initial-scale=1.0"
+        }
       ],
       "link": [],
       "script": []
@@ -22,6 +25,8 @@
     "router": {
       "useHashRouting": false
     },
-    "proxy": null
+    "proxy": {
+      "/": "https://y047aka.github.io/elm-motorsport-analysis/"
+    }
   }
 }
