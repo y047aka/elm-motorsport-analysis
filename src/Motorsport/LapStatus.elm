@@ -1,8 +1,14 @@
-module Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
+module Motorsport.LapStatus exposing
+    ( LapStatus, lapStatus
+    , isNormal
+    , toHexColorString
+    )
 
 {-|
 
 @docs LapStatus, lapStatus
+@docs isNormal
+@docs toHexColorString
 
 -}
 
@@ -25,3 +31,21 @@ lapStatus fastestLap_ { time, best } =
 
     else
         Normal
+
+
+isNormal : LapStatus -> Bool
+isNormal status =
+    status == Normal
+
+
+toHexColorString : LapStatus -> String
+toHexColorString status =
+    case status of
+        Fastest ->
+            "#F0F"
+
+        PersonalBest ->
+            "#0C0"
+
+        Normal ->
+            "#FC0"

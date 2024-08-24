@@ -46,7 +46,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 -}
 
-import Css exposing (Color, backgroundColor, borderLeft3, borderRadius, color, firstChild, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
+import Css exposing (Color, backgroundColor, batch, borderLeft3, borderRadius, color, firstChild, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
 import Html.Styled as Html exposing (Attribute, Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -59,7 +59,7 @@ import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
-import Motorsport.LapStatus exposing (LapStatus(..), lapStatus)
+import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes exposing (fill)
@@ -252,17 +252,17 @@ timeColumn { label, getter, sorter, analysis } =
             >> (\item ->
                     span
                         [ css
-                            [ color <|
-                                hex <|
-                                    case lapStatus { time = analysis.fastestLapTime } item of
-                                        Fastest ->
-                                            "#F0F"
+                            [ let
+                                status =
+                                    lapStatus { time = analysis.fastestLapTime } item
+                              in
+                              if LapStatus.isNormal status then
+                                batch []
 
-                                        PersonalBest ->
-                                            "#0C0"
-
-                                        Normal ->
-                                            "inherit"
+                              else
+                                LapStatus.toHexColorString status
+                                    |> hex
+                                    |> color
                             ]
                         ]
                         [ text <| Duration.toString item.time ]
@@ -507,20 +507,12 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
                 1
 
         color lap =
-            case
-                ( isCurrentLap lap, lapStatus { time = fastestLapTime } { time = lap.time, best = lap.best } )
-            of
-                ( True, Fastest ) ->
-                    "#F0F"
+            if isCurrentLap lap then
+                lapStatus { time = fastestLapTime } lap
+                    |> LapStatus.toHexColorString
 
-                ( True, PersonalBest ) ->
-                    "#0C0"
-
-                ( True, Normal ) ->
-                    "#FC0"
-
-                ( False, _ ) ->
-                    "hsla(0, 0%, 50%, 0.5)"
+            else
+                "hsla(0, 0%, 50%, 0.5)"
 
         isCurrentLap { lap } =
             List.length laps == lap
@@ -570,16 +562,8 @@ performanceHistory analysis laps =
 performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg
 performanceHistory_ { fastestLapTime } laps =
     let
-        toColor lap =
-            case lapStatus { time = fastestLapTime } lap of
-                Fastest ->
-                    hex "#F0F"
-
-                PersonalBest ->
-                    hex "#0C0"
-
-                Normal ->
-                    hex "#FC0"
+        toCssColor lap =
+            (lapStatus { time = fastestLapTime } >> LapStatus.toHexColorString >> hex) lap
     in
     div
         [ css
@@ -597,7 +581,7 @@ performanceHistory_ { fastestLapTime } laps =
                 [ property "padding-inline-end" "0" ]
             ]
         ]
-        (List.map (\lap -> coloredCell (toColor lap)) laps)
+        (List.map (\lap -> coloredCell (toCssColor lap)) laps)
 
 
 coloredCell : Color -> Html msg
