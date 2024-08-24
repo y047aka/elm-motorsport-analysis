@@ -1,4 +1,4 @@
-module Pages.Leaderboard exposing (Model, Msg, page)
+module Pages.F1 exposing (Model, Msg, page)
 
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (input, text)

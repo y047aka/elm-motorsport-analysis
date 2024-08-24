@@ -15,7 +15,7 @@ page =
         , br [] []
         , a [ href "/lap-time-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
         , br [] []
-        , a [ href "/leaderboard" ] [ text "Leader Board" ]
+        , a [ href "/f1" ] [ text "F1" ]
         , br [] []
         , a [ href "/wec" ] [ text "Wec" ]
         ]
