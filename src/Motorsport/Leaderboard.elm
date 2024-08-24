@@ -46,9 +46,8 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 -}
 
-import Chart.Fragments exposing (dot, path)
-import Css exposing (color, fontSize, hex, px)
-import Html.Styled as Html exposing (Attribute, Html, span, text)
+import Css exposing (Color, backgroundColor, borderLeft3, borderRadius, color, firstChild, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
+import Html.Styled as Html exposing (Attribute, Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
@@ -289,14 +288,12 @@ histogramColumn { getter, sorter, analysis, coefficient } =
 performanceColumn :
     { getter : data -> List Lap
     , sorter : List data -> List data
-    , raceClock : Clock
     , analysis : Analysis
-    , coefficient : Float
     }
     -> Column data msg
-performanceColumn { getter, sorter, raceClock, analysis, coefficient } =
+performanceColumn { getter, sorter, analysis } =
     { name = "Performance"
-    , view = getter >> performance raceClock analysis coefficient
+    , view = getter >> performanceHistory analysis
     , sorter = sorter
     }
 
@@ -559,41 +556,58 @@ histogram_ { x, y, width, color } laps =
             laps
 
 
-performance : Clock -> { a | fastestLapTime : Duration } -> Float -> List Lap -> Html msg
-performance raceClock { fastestLapTime } coefficient laps =
-    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
-        [ dotHistory
-            { x = .elapsed >> toFloat >> Scale.convert (xScale ( 0, toFloat <| raceClock.elapsed ))
-            , y = .time >> toFloat >> Scale.convert (yScale ( toFloat fastestLapTime * coefficient, toFloat fastestLapTime ))
-            , color = "#999"
-            }
-            laps
+performanceHistory : { a | fastestLapTime : Duration } -> List Lap -> Html msg
+performanceHistory analysis laps =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "repeat(7, auto)"
+            ]
         ]
+        [ performanceHistory_ analysis laps ]
 
 
-dotHistory : { x : a -> Float, y : a -> Float, color : String } -> List a -> Svg msg
-dotHistory { x, y, color } laps =
-    dotHistory_
-        { dots =
-            List.map
-                (\lap ->
-                    dot
-                        { cx = x lap
-                        , cy = y lap
-                        , fillColor = color
-                        }
-                )
-                laps
-        , path =
-            laps
-                |> List.map (\item -> Just ( x item, y item ))
-                |> path { strokeColor = color }
-        }
+performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg
+performanceHistory_ { fastestLapTime } laps =
+    let
+        toColor lap =
+            case lapStatus { time = fastestLapTime } lap of
+                Fastest ->
+                    hex "#F0F"
 
+                PersonalBest ->
+                    hex "#0C0"
 
-dotHistory_ : { dots : List (Svg msg), path : Svg msg } -> Svg msg
-dotHistory_ options =
-    g []
-        [ options.path
-        , g [] options.dots
+                Normal ->
+                    hex "#FC0"
+    in
+    div
+        [ css
+            [ property "padding-inline" "0.3vw"
+            , property "display" "grid"
+            , property "grid-auto-flow" "column"
+            , property "grid-auto-columns" "max(5px, 0.4vw)"
+            , property "grid-template-rows" "repeat(5, max(5px, 0.4vw))"
+            , property "gap" "max(1.5px, 0.1vw)"
+            , firstChild
+                [ property "padding-inline-start" "0" ]
+            , nthChild "n+2"
+                [ borderLeft3 (px 1) solid (hsl 0 0 0) ]
+            , lastChild
+                [ property "padding-inline-end" "0" ]
+            ]
         ]
+        (List.map (\lap -> coloredCell (toColor lap)) laps)
+
+
+coloredCell : Color -> Html msg
+coloredCell backgroundColor_ =
+    div
+        [ css
+            [ width (pct 100)
+            , height (pct 100)
+            , borderRadius (pct 10)
+            , backgroundColor backgroundColor_
+            ]
+        ]
+        []

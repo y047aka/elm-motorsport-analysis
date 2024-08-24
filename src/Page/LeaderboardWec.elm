@@ -108,9 +108,7 @@ config raceControl =
         , performanceColumn
             { getter = .history
             , sorter = List.sortBy .time
-            , raceClock = raceControl.raceClock
             , analysis = analysis
-            , coefficient = 1.2
             }
         , histogramColumn
             { getter = .history
