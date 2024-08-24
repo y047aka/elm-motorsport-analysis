@@ -1,6 +1,6 @@
 module Pages.Wec exposing (Model, Msg, page)
 
-import Chart.Chart as Chart
+import Chart.PositionHistory as PositionHistoryChart
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
@@ -80,6 +80,6 @@ view { raceControl, ordersByLap } _ =
             , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
             ]
         , text <| Clock.toString raceClock
-        , Chart.view { raceControl = raceControl, ordersByLap = ordersByLap }
+        , PositionHistoryChart.view { raceControl = raceControl, ordersByLap = ordersByLap }
         ]
     }

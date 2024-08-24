@@ -1,4 +1,4 @@
-module Chart.Chart exposing (view)
+module Chart.PositionHistory exposing (view)
 
 import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
 import Css exposing (block, display)
