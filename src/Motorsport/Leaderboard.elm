@@ -4,7 +4,7 @@ module Motorsport.Leaderboard exposing
     , Msg, update
     , customColumn, veryCustomColumn
     , timeColumn, histogramColumn, performanceColumn
-    , driverNameColumn
+    , driverNameColumn_F1, driverAndTeamColumn_Wec
     , Config, Leaderboard, LeaderboardItem, init, view
     )
 
@@ -44,11 +44,11 @@ I recommend checking out the [examples] to get a feel for how it works.
 @docs Column, customColumn, veryCustomColumn
 
 @docs timeColumn, histogramColumn, performanceColumn
-@docs driverNameColumn
+@docs driverNameColumn_F1, driverAndTeamColumn_Wec
 
 -}
 
-import Css exposing (Color, backgroundColor, batch, borderLeft3, borderRadius, color, firstChild, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
+import Css exposing (Color, backgroundColor, batch, borderLeft3, borderRadius, color, column, displayFlex, firstChild, flexDirection, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
 import Html.Styled as Html exposing (Attribute, Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
@@ -300,8 +300,24 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
-driverNameColumn : { label : String, getter : data -> String } -> Column data msg
-driverNameColumn { label, getter } =
+driverNameColumn_F1 : { label : String, getter : data -> String } -> Column data msg
+driverNameColumn_F1 { label, getter } =
+    let
+        formatName name =
+            String.split " " name
+                |> List.reverse
+                |> List.head
+                |> Maybe.map String.toUpper
+                |> Maybe.withDefault ""
+    in
+    { name = label
+    , view = getter >> formatName >> text
+    , sorter = List.sortBy getter
+    }
+
+
+driverAndTeamColumn_Wec : { label : String, driver : data -> String, team : data -> String } -> Column data msg
+driverAndTeamColumn_Wec { label, driver, team } =
     let
         formatName name =
             let
@@ -318,8 +334,13 @@ driverNameColumn { label, getter } =
             firstNameInitial ++ "." ++ formattedLastName
     in
     { name = label
-    , view = getter >> formatName >> text
-    , sorter = List.sortBy getter
+    , view =
+        \data ->
+            div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                [ div [] [ text (team data) ]
+                , div [ css [ fontSize (px 10) ] ] [ driver data |> formatName |> text ]
+                ]
+    , sorter = List.sortBy team
     }
 
 

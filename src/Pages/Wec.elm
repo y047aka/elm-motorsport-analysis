@@ -9,7 +9,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import Page exposing (Page)
 import Route exposing (Route)
@@ -130,8 +130,7 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , stringColumn { label = "Team", getter = .team }
-        , driverNameColumn { label = "Driver", getter = .driver }
+        , driverAndTeamColumn_Wec { label = "Team / Driver", driver = .driver, team = .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
