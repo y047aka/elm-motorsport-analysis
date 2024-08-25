@@ -128,9 +128,10 @@ config analysis =
     { toId = .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ intColumn { label = "Position", getter = .position }
+        [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
         , driverNameColumn { label = "Driver", getter = .driver }
+        , stringColumn { label = "Team", getter = .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"

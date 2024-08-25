@@ -442,6 +442,7 @@ type alias LeaderboardItem =
     { position : Int
     , carNumber : String
     , driver : String
+    , team : String
     , lap : Int
     , gap : Gap
     , time : Duration
@@ -462,6 +463,7 @@ init ({ raceClock } as raceControl) =
                 { position = index + 1
                 , driver = car.driverName
                 , carNumber = car.carNumber
+                , team = car.team
                 , lap = lastLap.lap
                 , gap =
                     List.head sortedCars

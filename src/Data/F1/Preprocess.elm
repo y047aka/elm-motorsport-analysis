@@ -115,8 +115,75 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     , driverName = driver.name
     , class = Data.Wec.Class.none
     , group = "TODO"
-    , team = "TODO"
+    , team = driverToTeamName_2022 driver.name
     , manufacturer = "TODO"
     , startPosition = startPosition
     , laps = laps_
     }
+
+
+driverToTeamName_2022 : String -> String
+driverToTeamName_2022 driver =
+    case driver of
+        "Max Verstappen" ->
+            "Red Bull Racing"
+
+        "Sergio Pérez" ->
+            "Red Bull Racing"
+
+        "Lewis Hamilton" ->
+            "Mercedes"
+
+        "George Russell" ->
+            "Mercedes"
+
+        "Charles Leclerc" ->
+            "Ferrari"
+
+        "Carlos Sainz" ->
+            "Ferrari"
+
+        "Lando Norris" ->
+            "McLaren"
+
+        "Daniel Ricciardo" ->
+            "McLaren"
+
+        "Sebastian Vettel" ->
+            "Aston Martin"
+
+        "Lance Stroll" ->
+            "Aston Martin"
+
+        "Fernando Alonso" ->
+            "Alpine"
+
+        "Esteban Ocon" ->
+            "Alpine"
+
+        "Pierre Gasly" ->
+            "AlphaTauri"
+
+        "Yuki Tsunoda" ->
+            "AlphaTauri"
+
+        "Valtteri Bottas" ->
+            "Alfa Romeo"
+
+        "Zhou Guanyu" ->
+            "Alfa Romeo"
+
+        "Kevin Magnussen" ->
+            "Haas"
+
+        "Mick Schumacher" ->
+            "Haas"
+
+        "Alexander Albon" ->
+            "Williams"
+
+        "Nicholas Latifi" ->
+            "Williams"
+
+        _ ->
+            "Unknown"
