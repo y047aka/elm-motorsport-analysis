@@ -4,18 +4,26 @@ import AssocList
 import AssocList.Extra
 import Data.Wec.Class
 import Data.Wec.Decoder as Wec
+import List.Extra as List
 import Motorsport.Car exposing (Car)
 
 
 preprocess : List Wec.Lap -> List Car
-preprocess =
-    AssocList.Extra.groupBy .carNumber
-        >> AssocList.toList
-        >> List.map preprocess_
+preprocess laps =
+    let
+        startPositions =
+            List.filter (\{ lapNumber } -> lapNumber == 1) laps
+                |> List.sortBy .elapsed
+                |> List.map .carNumber
+    in
+    laps
+        |> AssocList.Extra.groupBy .carNumber
+        |> AssocList.toList
+        |> List.map (preprocess_ startPositions)
 
 
-preprocess_ : ( String, List Wec.Lap ) -> Car
-preprocess_ ( carNumber, laps ) =
+preprocess_ : List String -> ( String, List Wec.Lap ) -> Car
+preprocess_ startPositions ( carNumber, laps ) =
     let
         { driverName_, class_, group_, team_, manufacturer_ } =
             List.head laps
@@ -35,6 +43,11 @@ preprocess_ ( carNumber, laps ) =
                     , driverName_ = ""
                     , manufacturer_ = ""
                     }
+
+        startPosition =
+            startPositions
+                |> List.findIndex ((==) carNumber)
+                |> Maybe.withDefault 0
 
         laps_ =
             laps
@@ -60,5 +73,6 @@ preprocess_ ( carNumber, laps ) =
     , group = group_
     , team = team_
     , manufacturer = manufacturer_
+    , startPosition = startPosition
     , laps = laps_
     }

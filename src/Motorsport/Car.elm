@@ -11,5 +11,6 @@ type alias Car =
     , group : String
     , team : String
     , manufacturer : String
+    , startPosition : Int
     , laps : List Lap
     }
