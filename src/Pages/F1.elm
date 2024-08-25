@@ -4,7 +4,7 @@ import Effect exposing (Effect)
 import Html.Styled as Html exposing (input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis as Analysis exposing (Analysis)
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
@@ -72,15 +72,12 @@ update msg m =
 
 
 view : Shared.Model -> Model -> View Msg
-view { raceControl } { leaderboardState } =
+view { raceControl, analysis } { leaderboardState } =
     { title = "Leaderboard"
     , body =
         let
             { raceClock, lapTotal } =
                 raceControl
-
-            analysis =
-                Analysis.fromRaceControl raceControl
         in
         [ input
             [ type_ "range"

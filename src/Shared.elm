@@ -23,6 +23,7 @@ import Effect exposing (Effect)
 import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode
 import List.Extra as List
+import Motorsport.Analysis as Analysis
 import Motorsport.RaceControl as RaceControl
 import Route exposing (Route)
 import Shared.Model
@@ -53,6 +54,7 @@ type alias Model =
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
     ( { raceControl = RaceControl.empty
+      , analysis = Analysis.fromRaceControl RaceControl.empty
       , ordersByLap = []
       }
     , Effect.none
@@ -127,7 +129,16 @@ update route msg m =
             ( m, Effect.none )
 
         RaceControlMsg raceControlMsg ->
-            ( { m | raceControl = RaceControl.update raceControlMsg m.raceControl }, Effect.none )
+            let
+                rcNew =
+                    RaceControl.update raceControlMsg m.raceControl
+            in
+            ( { m
+                | raceControl = rcNew
+                , analysis = Analysis.fromRaceControl rcNew
+              }
+            , Effect.none
+            )
 
 
 expectCsv : (Result Http.Error (List a) -> msg) -> Decoder a -> Expect msg

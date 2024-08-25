@@ -2,6 +2,7 @@ module Shared.Model exposing (Model)
 
 {-| -}
 
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
 
 
@@ -14,6 +15,7 @@ own file, so they can be imported by `Effect.elm`
 -}
 type alias Model =
     { raceControl : RaceControl.Model
+    , analysis : Analysis
     , ordersByLap : OrdersByLap
     }
 
