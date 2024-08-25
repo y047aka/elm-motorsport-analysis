@@ -21,4 +21,4 @@ transparent =
 
 gray : Color
 gray =
-    ColorValue (Css.hex "#999")
+    ColorValue (Css.hex "#eee")

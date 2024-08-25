@@ -13,6 +13,8 @@ module View exposing
 -}
 
 import Browser
+import Css exposing (..)
+import Css.Global exposing (global)
 import Html.Styled
 import Route exposing (Route)
 import Shared.Model
@@ -35,7 +37,16 @@ toBrowserDocument :
     -> Browser.Document msg
 toBrowserDocument { view } =
     { title = view.title
-    , body = List.map Html.Styled.toUnstyled view.body
+    , body =
+        List.map Html.Styled.toUnstyled
+            (global
+                [ Css.Global.body
+                    [ backgroundColor (hsl 0 0 0.4)
+                    , color (hsla 0 0 1 0.9)
+                    ]
+                ]
+                :: view.body
+            )
     }
 
 

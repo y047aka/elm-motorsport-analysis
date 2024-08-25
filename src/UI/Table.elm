@@ -36,11 +36,11 @@ basis options additionalStyles =
         , padding = Nothing
         , borderRadius = Just (rem 0.28571429)
         , palette =
-            { background = Just (hex "#FFF")
-            , color = Just (rgba 0 0 0 0.87)
+            { background = Nothing
+            , color = Nothing
             , border =
                 if options.border then
-                    Just (rgba 34 36 38 0.15)
+                    Just (hsla 0 0 1 0.1)
 
                 else
                     Nothing
@@ -116,7 +116,7 @@ basis options additionalStyles =
                           -- .ui.celled.table > tr > td
                           -- .ui.celled.table > tbody > tr > td
                           -- .ui.celled.table > tfoot > tr > td
-                          borderLeft3 (px 1) solid (rgba 34 36 38 0.1)
+                          borderLeft3 (px 1) solid (hsla 0 0 1 0.1)
 
                         -- .ui.celled.table > tr > th:first-child
                         -- .ui.celled.table > thead > tr > th:first-child
@@ -139,8 +139,7 @@ basis options additionalStyles =
             if options.thead then
                 [ descendants
                     [ -- .ui.table > thead > tr > th
-                      Css.Global.th
-                        [ backgroundColor (hex "#F9FAFB") ]
+                      Css.Global.th []
                     ]
                 ]
 
@@ -229,7 +228,7 @@ tr =
           -- .ui.table > tbody > tr > td
           children
             [ Css.Global.td
-                [ borderTop3 (px 1) solid (rgba 34 36 38 0.1) ]
+                [ borderTop3 (px 1) solid (hsla 0 0 1 0.1) ]
             ]
 
         -- .ui.table > tr:first-child > td
@@ -277,9 +276,8 @@ th =
                 , fontWeight = Typography.bold
                 , textTransform = Typography.none
             }
-        , color (rgba 0 0 0 0.87)
         , padding2 (em 0.92857143) (em 0.78571429)
-        , borderBottom3 (px 1) solid (rgba 34 36 38 0.1)
+        , borderBottom3 (px 1) solid (hsla 0 0 1 0.1)
         , property "border-left" "none"
 
         -- .ui.table > thead > tr > th:first-child

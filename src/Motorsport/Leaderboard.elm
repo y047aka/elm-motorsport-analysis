@@ -537,7 +537,7 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
                     |> LapStatus.toHexColorString
 
             else
-                "hsla(0, 0%, 50%, 0.5)"
+                "hsla(0, 0%, 100%, 0.2)"
 
         isCurrentLap { lap } =
             List.length laps == lap

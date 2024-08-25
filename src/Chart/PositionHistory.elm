@@ -1,7 +1,7 @@
 module Chart.PositionHistory exposing (view)
 
 import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
-import Css exposing (block, display)
+import Css exposing (block, display, fill, hsla)
 import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
@@ -155,8 +155,8 @@ history_ options =
 
 
 heading : { x : Float, y : Float } -> List (Svg msg) -> Svg msg
-heading { x, y } =
-    text_ [ InPx.x x, InPx.y y ]
+heading { x, y } children =
+    g [ css [ fill (hsla 0 0 1 0.8) ] ] [ text_ [ InPx.x x, InPx.y y ] children ]
 
 
 polyline_ : { svgPalette : SvgPalette } -> List ( Float, Float ) -> Svg msg
