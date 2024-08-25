@@ -23,6 +23,7 @@ type alias Lap =
     { carNumber : String
     , driver : String
     , lap : Int
+    , position : Maybe Int
     , time : Duration
     , best : Duration
     , elapsed : Duration

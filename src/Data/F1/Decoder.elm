@@ -1,4 +1,4 @@
-module Data.F1.Decoder exposing (Car, Data, decoder)
+module Data.F1.Decoder exposing (Car, Data, Driver, Lap, decoder)
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Motorsport.Duration exposing (Duration, durationDecoder)

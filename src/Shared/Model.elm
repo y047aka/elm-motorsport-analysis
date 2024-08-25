@@ -16,9 +16,4 @@ own file, so they can be imported by `Effect.elm`
 type alias Model =
     { raceControl : RaceControl.Model
     , analysis : Analysis
-    , ordersByLap : OrdersByLap
     }
-
-
-type alias OrdersByLap =
-    List { lapNumber : Int, order : List String }

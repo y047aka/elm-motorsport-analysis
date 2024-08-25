@@ -19,10 +19,6 @@ import TypedSvg.Styled.Attributes.InPx as InPx exposing (height, width)
 import TypedSvg.Types exposing (Paint(..), Transform(..))
 
 
-type alias OrdersByLap =
-    List { lapNumber : Int, order : List String }
-
-
 w : Float
 w =
     1600
@@ -48,9 +44,9 @@ paddingVertical =
     padding + 30
 
 
-xScale : OrdersByLap -> ContinuousScale Float
-xScale ordersByLap =
-    Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat (List.length ordersByLap) )
+xScale : Int -> ContinuousScale Float
+xScale lapTotal =
+    Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
 yScale : List Car -> ContinuousScale Float
@@ -58,17 +54,17 @@ yScale cars =
     Scale.linear ( paddingVertical, h - paddingVertical ) ( 0, toFloat (List.length cars - 1) )
 
 
-xAxis : OrdersByLap -> Svg msg
-xAxis ordersByLap =
+xAxis : Int -> Svg msg
+xAxis lapTotal =
     let
         axis tag =
             fromUnstyled <|
                 tag
-                    [ tickCount <| (List.length ordersByLap // 10)
+                    [ tickCount <| (lapTotal // 10)
                     , tickSizeOuter 5
                     , tickSizeInner 5
                     ]
-                    (xScale ordersByLap)
+                    (xScale lapTotal)
     in
     g
         [ css
@@ -89,29 +85,29 @@ xAxis ordersByLap =
         ]
 
 
-view : { raceControl : RaceControl.Model, ordersByLap : OrdersByLap } -> Html msg
-view { raceControl, ordersByLap } =
+view : RaceControl.Model -> Html msg
+view { raceClock, lapTotal, cars } =
     svg
         [ width w
         , height h
         , viewBox 0 0 w h
         , css [ display block ]
         ]
-        [ xAxis ordersByLap
+        [ xAxis lapTotal
         , g []
-            (raceControl.cars
+            (cars
                 |> List.sortBy .startPosition
                 |> List.map
                     (\car ->
                         let
                             positions =
                                 car.laps
-                                    |> List.indexedMap (\index _ -> Maybe.withDefault 0 <| getPositionAt { carNumber = car.carNumber, lapNumber = index + 1 } ordersByLap)
-                                    |> List.take (List.length <| completedLapsAt raceControl.raceClock car.laps)
+                                    |> List.map (.position >> Maybe.withDefault 0)
+                                    |> List.take (List.length <| completedLapsAt raceClock car.laps)
                         in
                         history
-                            { x = toFloat >> Scale.convert (xScale ordersByLap)
-                            , y = toFloat >> Scale.convert (yScale raceControl.cars)
+                            { x = toFloat >> Scale.convert (xScale lapTotal)
+                            , y = toFloat >> Scale.convert (yScale cars)
                             , svgPalette = Class.toStrokePalette car.class
                             , label = String.join " " [ car.carNumber, car.team ]
                             }
@@ -119,13 +115,6 @@ view { raceControl, ordersByLap } =
                     )
             )
         ]
-
-
-getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
-getPositionAt { carNumber, lapNumber } ordersByLap =
-    ordersByLap
-        |> List.find (.lapNumber >> (==) lapNumber)
-        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
 
 
 history :

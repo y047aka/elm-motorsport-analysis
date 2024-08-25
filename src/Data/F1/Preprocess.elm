@@ -1,5 +1,7 @@
 module Data.F1.Preprocess exposing (preprocess)
 
+import AssocList
+import AssocList.Extra
 import Data.F1.Decoder as F1
 import Data.Wec.Class
 import List.Extra as List
@@ -19,12 +21,67 @@ preprocess cars =
                 |> List.concat
                 |> List.sortBy .time
                 |> List.map .carNumber
+
+        ordersByLap =
+            cars
+                |> List.map
+                    (\{ carNumber, laps } ->
+                        List.map
+                            (\{ lap, time } ->
+                                { carNumber = carNumber
+                                , lapNumber = lap
+                                , time = time
+                                , elapsed =
+                                    laps
+                                        |> List.take (lap + 1)
+                                        |> List.foldl (.time >> (+)) 0
+                                }
+                            )
+                            laps
+                    )
+                |> List.concat
+                |> AssocList.Extra.groupBy .lapNumber
+                |> AssocList.toList
+                |> List.map
+                    (\( lapNumber, cars_ ) ->
+                        { lapNumber = lapNumber
+                        , order = cars_ |> List.sortBy .elapsed |> List.map .carNumber
+                        }
+                    )
     in
-    List.map (preprocess_ startPositions) cars
+    List.map
+        (\{ carNumber, driver, laps } ->
+            preprocess_
+                { carNumber = carNumber
+                , driver = driver
+                , laps = laps
+                , startPositions = startPositions
+                , ordersByLap = ordersByLap
+                }
+        )
+        cars
 
 
-preprocess_ : List String -> F1.Car -> Car
-preprocess_ startPositions { carNumber, driver, laps } =
+type alias OrdersByLap =
+    List { lapNumber : Int, order : List String }
+
+
+getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
+getPositionAt { carNumber, lapNumber } ordersByLap =
+    ordersByLap
+        |> List.find (.lapNumber >> (==) lapNumber)
+        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
+
+
+preprocess_ :
+    { carNumber : String
+    , driver : F1.Driver
+    , laps : List F1.Lap
+    , startPositions : List String
+    , ordersByLap : OrdersByLap
+    }
+    -> Car
+preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
         startPosition =
             startPositions
@@ -38,6 +95,8 @@ preprocess_ startPositions { carNumber, driver, laps } =
                         { carNumber = carNumber
                         , driver = driver.name
                         , lap = lap
+                        , position =
+                            getPositionAt { carNumber = carNumber, lapNumber = lap } ordersByLap
                         , time = time
                         , best =
                             laps

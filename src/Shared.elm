@@ -12,8 +12,6 @@ module Shared exposing
 
 -}
 
-import AssocList
-import AssocList.Extra
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
@@ -22,7 +20,6 @@ import Data.Wec.Preprocess as Preprocess_Wec
 import Effect exposing (Effect)
 import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode
-import List.Extra as List
 import Motorsport.Analysis as Analysis
 import Motorsport.RaceControl as RaceControl
 import Route exposing (Route)
@@ -55,7 +52,6 @@ init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
     ( { raceControl = RaceControl.empty
       , analysis = Analysis.fromRaceControl RaceControl.empty
-      , ordersByLap = []
       }
     , Effect.none
     )
@@ -104,23 +100,12 @@ update route msg m =
 
         CsvLoaded (Ok decoded) ->
             let
-                preprocessed =
-                    Preprocess_Wec.preprocess decoded
-
-                ordersByLap =
-                    decoded
-                        |> AssocList.Extra.groupBy .lapNumber
-                        |> AssocList.toList
-                        |> List.map
-                            (\( lapNumber, order ) ->
-                                { lapNumber = lapNumber
-                                , order = order |> List.sortBy .elapsed |> List.map .carNumber
-                                }
-                            )
+                rcNew =
+                    RaceControl.init (Preprocess_Wec.preprocess decoded)
             in
             ( { m
-                | raceControl = RaceControl.init preprocessed
-                , ordersByLap = ordersByLap
+                | raceControl = rcNew
+                , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )

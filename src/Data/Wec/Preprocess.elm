@@ -15,15 +15,51 @@ preprocess laps =
             List.filter (\{ lapNumber } -> lapNumber == 1) laps
                 |> List.sortBy .elapsed
                 |> List.map .carNumber
+
+        ordersByLap =
+            laps
+                |> AssocList.Extra.groupBy .lapNumber
+                |> AssocList.toList
+                |> List.map
+                    (\( lapNumber, cars ) ->
+                        { lapNumber = lapNumber
+                        , order = cars |> List.sortBy .elapsed |> List.map .carNumber
+                        }
+                    )
     in
     laps
         |> AssocList.Extra.groupBy .carNumber
         |> AssocList.toList
-        |> List.map (preprocess_ startPositions)
+        |> List.map
+            (\( carNumber, laps_ ) ->
+                preprocess_
+                    { carNumber = carNumber
+                    , laps = laps_
+                    , startPositions = startPositions
+                    , ordersByLap = ordersByLap
+                    }
+            )
 
 
-preprocess_ : List String -> ( String, List Wec.Lap ) -> Car
-preprocess_ startPositions ( carNumber, laps ) =
+type alias OrdersByLap =
+    List { lapNumber : Int, order : List String }
+
+
+getPositionAt : { carNumber : String, lapNumber : Int } -> OrdersByLap -> Maybe Int
+getPositionAt { carNumber, lapNumber } ordersByLap =
+    ordersByLap
+        |> List.find (.lapNumber >> (==) lapNumber)
+        |> Maybe.andThen (.order >> List.findIndex ((==) carNumber))
+
+
+preprocess_ :
+    { carNumber : String
+    , laps : List Wec.Lap
+    , startPositions : List String
+    , ordersByLap : OrdersByLap
+    }
+    -> Car
+preprocess_ { carNumber, laps, startPositions, ordersByLap } =
     let
         { driverName_, class_, group_, team_, manufacturer_ } =
             List.head laps
@@ -56,6 +92,8 @@ preprocess_ startPositions ( carNumber, laps ) =
                         { carNumber = carNumber
                         , driver = driverName
                         , lap = lapNumber
+                        , position =
+                            getPositionAt { carNumber = carNumber, lapNumber = lapNumber } ordersByLap
                         , time = lapTime
                         , best =
                             laps

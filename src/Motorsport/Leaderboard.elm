@@ -57,7 +57,6 @@ import Html.Styled.Lazy exposing (lazy2)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
@@ -483,7 +482,7 @@ sortCarsAt { raceClock, cars } =
                 let
                     lastLap =
                         findLastLapAt raceClock car.laps
-                            |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, time = 0, best = 0, elapsed = 0 }
+                            |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, position = Nothing, time = 0, best = 0, elapsed = 0 }
                 in
                 { car = car, lastLap = lastLap }
             )

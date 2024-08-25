@@ -85,7 +85,7 @@ update msg m =
 
 
 view : Shared.Model -> Model -> View Msg
-view { raceControl, analysis, ordersByLap } { mode, leaderboardState } =
+view { raceControl, analysis } { mode, leaderboardState } =
     { title = "Wec"
     , body =
         let
@@ -118,7 +118,7 @@ view { raceControl, analysis, ordersByLap } { mode, leaderboardState } =
                 Leaderboard.view (config analysis) leaderboardState raceControl
 
             PositionHistory ->
-                PositionHistoryChart.view { raceControl = raceControl, ordersByLap = ordersByLap }
+                PositionHistoryChart.view raceControl
         ]
     }
 
