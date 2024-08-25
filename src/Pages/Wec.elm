@@ -6,7 +6,7 @@ import Effect exposing (Effect)
 import Html.Styled as Html exposing (header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis as Analysis
+import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
@@ -91,6 +91,9 @@ view { raceControl, ordersByLap } { mode, leaderboardState } =
         let
             { raceClock, lapTotal } =
                 raceControl
+
+            analysis =
+                Analysis.fromRaceControl raceControl
         in
         [ header [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []
@@ -115,7 +118,7 @@ view { raceControl, ordersByLap } { mode, leaderboardState } =
             ]
         , case mode of
             Leaderboard ->
-                Leaderboard.view (config raceControl) leaderboardState raceControl
+                Leaderboard.view (config analysis) leaderboardState raceControl
 
             PositionHistory ->
                 PositionHistoryChart.view { raceControl = raceControl, ordersByLap = ordersByLap }
@@ -123,12 +126,8 @@ view { raceControl, ordersByLap } { mode, leaderboardState } =
     }
 
 
-config : RaceControl.Model -> Leaderboard.Config LeaderboardItem Msg
-config raceControl =
-    let
-        analysis =
-            Analysis.fromRaceControl raceControl
-    in
+config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config analysis =
     { toId = .carNumber
     , toMsg = LeaderboardMsg
     , columns =

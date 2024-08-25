@@ -4,7 +4,7 @@ import Effect exposing (Effect)
 import Html.Styled as Html exposing (input, text)
 import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis as Analysis
+import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
@@ -78,6 +78,9 @@ view { raceControl } { leaderboardState } =
         let
             { raceClock, lapTotal } =
                 raceControl
+
+            analysis =
+                Analysis.fromRaceControl raceControl
         in
         [ input
             [ type_ "range"
@@ -92,17 +95,13 @@ view { raceControl } { leaderboardState } =
             , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
             ]
         , text <| Clock.toString raceClock
-        , Leaderboard.view (config raceControl) leaderboardState raceControl
+        , Leaderboard.view (config analysis) leaderboardState raceControl
         ]
     }
 
 
-config : RaceControl.Model -> Leaderboard.Config LeaderboardItem Msg
-config raceControl =
-    let
-        analysis =
-            Analysis.fromRaceControl raceControl
-    in
+config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config analysis =
     { toId = .carNumber
     , toMsg = LeaderboardMsg
     , columns =
