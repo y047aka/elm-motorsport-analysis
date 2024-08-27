@@ -4,9 +4,10 @@ import Axis
 import Chart.Fragments exposing (dotWithLabel, path)
 import Css exposing (Style, fill, hex, property)
 import Css.Global exposing (descendants, each, typeSelector)
-import Data.F1.Analysis exposing (Analysis)
-import Data.F1.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html, text)
+import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
 import Svg.Styled.Attributes exposing (css)
@@ -44,9 +45,9 @@ xScale lapTotal =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
-yScale : Lap -> ContinuousScale Float
-yScale fastestLap =
-    Scale.linear ( h - paddingBottom, padding ) ( fastestLap.time * 25, 0 )
+yScale : Duration -> ContinuousScale Float
+yScale fastestLapTime =
+    Scale.linear ( h - paddingBottom, padding ) ( toFloat fastestLapTime * 10, 0 )
 
 
 xAxis : Int -> Svg msg
@@ -55,10 +56,10 @@ xAxis lapTotal =
         [ fromUnstyled <| Axis.bottom [] (xScale lapTotal) ]
 
 
-yAxis : Lap -> Svg msg
-yAxis fastestLap =
+yAxis : Duration -> Svg msg
+yAxis fastestLapTime =
     g [ transform [ Translate paddingLeft 0 ], css axisStyles ]
-        [ fromUnstyled <| Axis.left [] (yScale fastestLap) ]
+        [ fromUnstyled <| Axis.left [] (yScale fastestLapTime) ]
 
 
 axisStyles : List Style
@@ -72,33 +73,27 @@ axisStyles =
     ]
 
 
-view : Analysis -> Html msg
-view { summary, raceHistories } =
+view : Analysis -> RaceControl.Model -> Html msg
+view analysis { lapTotal, cars } =
     let
-        lapTotal =
-            summary.lapTotal
-
-        fastestLap =
-            raceHistories
-                |> List.filterMap (.laps >> fastest)
-                |> fastest
-                |> Maybe.withDefault (Lap 0 0 0)
+        fastestLapTime =
+            analysis.fastestLapTime
     in
     svg [ viewBox 0 0 w h ]
         [ xAxis lapTotal
-        , yAxis fastestLap
+        , yAxis fastestLapTime
         , g [] <|
             List.map
-                (\{ driver, laps } ->
+                (\{ laps } ->
                     dotHistory
-                        { x = .lapCount >> toFloat >> Scale.convert (xScale lapTotal)
-                        , y = (\{ lapCount, elapsed } -> elapsed - (toFloat lapCount * fastestLap.time * 1.02)) >> Scale.convert (yScale fastestLap)
-                        , color = driver.teamColor
-                        , dotLabel = .lapCount >> String.fromInt
+                        { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
+                        , y = (\{ lap, elapsed } -> toFloat elapsed - (toFloat (lap * fastestLapTime) * 1.02)) >> Scale.convert (yScale fastestLapTime)
+                        , color = "#000"
+                        , dotLabel = .lap >> String.fromInt
                         }
                         laps
                 )
-                raceHistories
+                cars
         ]
 
 

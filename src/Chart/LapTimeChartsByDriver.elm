@@ -4,10 +4,11 @@ import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
 import Chart.Fragments exposing (dot, path)
 import Css exposing (Style, fill, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
-import Data.F1.Analysis exposing (Analysis)
-import Data.F1.Lap exposing (Lap, fastest)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
+import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as Svg
@@ -45,9 +46,9 @@ xScale lapTotal =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
-yScale : Lap -> ContinuousScale Float
-yScale fastestLap =
-    Scale.linear ( h - paddingBottom, padding ) ( fastestLap.time, fastestLap.time * 1.2 )
+yScale : Duration -> ContinuousScale Float
+yScale fastestLapTime =
+    Scale.linear ( h - paddingBottom, padding ) ( toFloat fastestLapTime, toFloat fastestLapTime * 1.2 )
 
 
 xAxis : Int -> Svg msg
@@ -56,10 +57,10 @@ xAxis lapTotal =
         [ fromUnstyled <| Axis.bottom [ tickCount 5, tickSizeInner 4, tickSizeOuter 4 ] (xScale lapTotal) ]
 
 
-yAxis : Lap -> Svg msg
-yAxis fastestLap =
+yAxis : Duration -> Svg msg
+yAxis fastestLapTime =
     g [ transform [ Translate paddingLeft 0 ], Svg.css axisStyles ]
-        [ fromUnstyled <| Axis.left [ tickCount 2, tickSizeInner 3, tickSizeOuter 3 ] (yScale fastestLap) ]
+        [ fromUnstyled <| Axis.left [ tickCount 2, tickSizeInner 3, tickSizeOuter 3 ] (yScale fastestLapTime) ]
 
 
 axisStyles : List Style
@@ -73,14 +74,11 @@ axisStyles =
     ]
 
 
-view : Analysis -> Html msg
-view { summary, raceHistories } =
+view : Analysis -> RaceControl.Model -> Html msg
+view analysis { lapTotal, cars } =
     let
-        fastestLap =
-            raceHistories
-                |> List.filterMap (.laps >> fastest)
-                |> fastest
-                |> Maybe.withDefault (Lap 0 0 0)
+        fastestLapTime =
+            analysis.fastestLapTime
     in
     ul
         [ css
@@ -91,22 +89,22 @@ view { summary, raceHistories } =
             ]
         ]
         (List.map
-            (\{ carNumber, driver, laps } ->
+            (\{ carNumber, laps } ->
                 li [ css [ listStyle none ] ]
-                    [ p [] [ text (carNumber ++ " " ++ driver.name) ]
+                    [ p [] [ text carNumber ]
                     , svg [ viewBox 0 0 w h ]
-                        [ xAxis summary.lapTotal
-                        , yAxis fastestLap
+                        [ xAxis lapTotal
+                        , yAxis fastestLapTime
                         , dotHistory
-                            { x = .lapCount >> toFloat >> Scale.convert (xScale summary.lapTotal)
-                            , y = .time >> Scale.convert (yScale fastestLap)
-                            , color = driver.teamColor
+                            { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
+                            , y = .time >> toFloat >> Scale.convert (yScale fastestLapTime)
+                            , color = "#000"
                             }
                             laps
                         ]
                     ]
             )
-            raceHistories
+            cars
         )
 
 

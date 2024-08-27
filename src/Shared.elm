@@ -51,7 +51,7 @@ type alias Model =
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
     ( { raceControl = RaceControl.empty
-      , analysis = Analysis.fromRaceControl RaceControl.empty
+      , analysis = Analysis.finished RaceControl.empty
       }
     , Effect.none
     )
@@ -79,10 +79,13 @@ update route msg m =
 
         JsonLoaded (Ok decoded) ->
             let
-                preprocessed =
-                    Preprocess_F1.preprocess decoded
+                rcNew =
+                    RaceControl.init (Preprocess_F1.preprocess decoded)
             in
-            ( { m | raceControl = RaceControl.init preprocessed }
+            ( { m
+                | raceControl = rcNew
+                , analysis = Analysis.finished rcNew
+              }
             , Effect.none
             )
 
@@ -105,7 +108,7 @@ update route msg m =
             in
             ( { m
                 | raceControl = rcNew
-                , analysis = Analysis.fromRaceControl rcNew
+                , analysis = Analysis.finished rcNew
               }
             , Effect.none
             )
