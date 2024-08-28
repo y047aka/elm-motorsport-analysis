@@ -1,7 +1,7 @@
 module Pages.GapChart exposing (Model, Msg, page)
 
-import Chart.GapChart as GapChart
 import Effect exposing (Effect)
+import Motorsport.Chart.GapChart as GapChart
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared

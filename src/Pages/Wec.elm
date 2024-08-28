@@ -1,12 +1,12 @@
 module Pages.Wec exposing (Model, Msg, page)
 
-import Chart.PositionHistory as PositionHistoryChart
 import Css exposing (displayFlex, justifyContent, spaceBetween)
 import Effect exposing (Effect)
 import Html.Styled as Html exposing (header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)

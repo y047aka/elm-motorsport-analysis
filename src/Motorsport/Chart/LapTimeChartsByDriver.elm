@@ -1,12 +1,12 @@
-module Chart.LapTimeChartsByDriver exposing (view)
+module Motorsport.Chart.LapTimeChartsByDriver exposing (view)
 
 import Axis exposing (tickCount, tickSizeInner, tickSizeOuter)
-import Chart.Fragments exposing (dot, path)
 import Css exposing (Style, fill, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Chart.Fragments exposing (dot, path)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)

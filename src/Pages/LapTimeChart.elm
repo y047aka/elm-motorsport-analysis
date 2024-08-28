@@ -1,7 +1,7 @@
 module Pages.LapTimeChart exposing (Model, Msg, page)
 
-import Chart.LapTimeChart as LapTimeChart
 import Effect exposing (Effect)
+import Motorsport.Chart.LapTimeChart as LapTimeChart
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared

@@ -1,4 +1,4 @@
-module Chart.Fragments exposing (dot, dotWithLabel, path)
+module Motorsport.Chart.Fragments exposing (dot, dotWithLabel, path)
 
 import Css exposing (block, cursor, default, display, hover, none)
 import Css.Global exposing (children, typeSelector)

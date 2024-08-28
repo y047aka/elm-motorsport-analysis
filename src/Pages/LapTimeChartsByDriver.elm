@@ -1,7 +1,7 @@
 module Pages.LapTimeChartsByDriver exposing (Model, Msg, page)
 
-import Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Effect exposing (Effect)
+import Motorsport.Chart.LapTimeChartsByDriver as LapTimeChartsByDriver
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared

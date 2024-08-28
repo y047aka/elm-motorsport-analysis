@@ -1,11 +1,11 @@
-module Chart.GapChart exposing (view)
+module Motorsport.Chart.GapChart exposing (view)
 
 import Axis
-import Chart.Fragments exposing (dotWithLabel, path)
 import Css exposing (Style, fill, hex, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, text)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Chart.Fragments exposing (dotWithLabel, path)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
