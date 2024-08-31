@@ -1,16 +1,21 @@
 {
   "type": "module",
   "scripts": {
-    "start": "elm-land server",
-    "build": "elm-land build",
+    "start": "elm-pages dev",
+    "build": "elm-pages build",
     "test": "elm-verify-examples --run-tests"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",
     "elm": "^0.19.1-6",
+    "elm-codegen": "^0.5.3",
     "elm-format": "^0.8.7",
-    "elm-land": "^0.20.1",
+    "elm-optimize-level-2": "^0.3.5",
+    "elm-pages": "^3.0.16",
+    "elm-review": "^2.12.0",
     "elm-test": "^0.19.1-revision12",
-    "elm-verify-examples": "^6.0.3"
+    "elm-verify-examples": "^6.0.3",
+    "lamdera": "^0.19.1-1.2.1-1",
+    "vite": "^5.3.3"
   }
 }
