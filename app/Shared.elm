@@ -87,9 +87,7 @@ init flags maybePagePath =
 
 
 type Msg
-    = FetchJson String
-    | JsonLoaded (Result Http.Error (List F1.Car))
-    | FetchCsv String
+    = JsonLoaded (Result Http.Error (List F1.Car))
     | CsvLoaded (Result Http.Error (List Wec.Lap))
     | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg_Wec RaceControl.Msg
@@ -98,15 +96,6 @@ type Msg
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        FetchJson url ->
-            ( m
-            , Effect.fromCmd <|
-                Http.get
-                    { url = url
-                    , expect = Http.expectJson JsonLoaded F1.decoder
-                    }
-            )
-
         JsonLoaded (Ok decoded) ->
             let
                 rcNew =
@@ -121,15 +110,6 @@ update msg m =
 
         JsonLoaded (Err _) ->
             ( m, Effect.none )
-
-        FetchCsv url ->
-            ( m
-            , Effect.fromCmd <|
-                Http.get
-                    { url = url
-                    , expect = expectCsv CsvLoaded Wec.lapDecoder
-                    }
-            )
 
         CsvLoaded (Ok decoded) ->
             let
