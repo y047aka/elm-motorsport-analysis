@@ -1,43 +1,41 @@
-module Shared exposing
-    ( Flags, decoder
-    , Model, Msg
-    , init, update, subscriptions
-    )
+module Shared exposing (Data, Model, Msg(..), template)
 
-{-|
-
-@docs Flags, decoder
-@docs Model, Msg
-@docs init, update, subscriptions
-
--}
-
+import BackendTask exposing (BackendTask)
+import Css exposing (..)
+import Css.Global exposing (global)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Preprocess_Wec
 import Effect exposing (Effect)
+import FatalError exposing (FatalError)
+import Html
+import Html.Styled exposing (main_)
 import Http exposing (Error(..), Expect, Response(..))
-import Json.Decode
-import Motorsport.Analysis as Analysis
+import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
+import Pages.Flags
+import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
-import Shared.Model
-import Shared.Msg exposing (Msg(..))
+import SharedTemplate exposing (SharedTemplate)
+import UrlPath exposing (UrlPath)
+import View exposing (View)
 
 
+template : SharedTemplate Msg Model Data msg
+template =
+    { init = init
+    , update = update
+    , view = view
+    , data = data
+    , subscriptions = subscriptions
+    , onPageChange = Nothing
+    }
 
--- FLAGS
 
-
-type alias Flags =
-    {}
-
-
-decoder : Json.Decode.Decoder Flags
-decoder =
-    Json.Decode.succeed {}
+type alias Data =
+    ()
 
 
 
@@ -45,15 +43,33 @@ decoder =
 
 
 type alias Model =
-    Shared.Model.Model
+    { raceControl : RaceControl.Model
+    , analysis : Analysis
+    }
 
 
-init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
-init flagsResult route =
+init :
+    Pages.Flags.Flags
+    ->
+        Maybe
+            { path :
+                { path : UrlPath
+                , query : Maybe String
+                , fragment : Maybe String
+                }
+            , metadata : route
+            , pageUrl : Maybe PageUrl
+            }
+    -> ( Model, Effect Msg )
+init flags maybePagePath =
     ( { raceControl = RaceControl.empty
       , analysis = Analysis.finished RaceControl.empty
       }
-    , Effect.none
+    , Effect.fromCmd <|
+        Http.get
+            { url = "/static/lapTimes.json"
+            , expect = Http.expectJson JsonLoaded F1.decoder
+            }
     )
 
 
@@ -61,16 +77,20 @@ init flagsResult route =
 -- UPDATE
 
 
-type alias Msg =
-    Shared.Msg.Msg
+type Msg
+    = FetchJson String
+    | JsonLoaded (Result Http.Error (List F1.Car))
+    | FetchCsv String
+    | CsvLoaded (Result Http.Error (List Wec.Lap))
+    | RaceControlMsg RaceControl.Msg
 
 
-update : Route () -> Msg -> Model -> ( Model, Effect Msg )
-update route msg m =
+update : Msg -> Model -> ( Model, Effect Msg )
+update msg m =
     case msg of
         FetchJson url ->
             ( m
-            , Effect.sendCmd <|
+            , Effect.fromCmd <|
                 Http.get
                     { url = url
                     , expect = Http.expectJson JsonLoaded F1.decoder
@@ -94,7 +114,7 @@ update route msg m =
 
         FetchCsv url ->
             ( m
-            , Effect.sendCmd <|
+            , Effect.fromCmd <|
                 Http.get
                     { url = url
                     , expect = expectCsv CsvLoaded Wec.lapDecoder
@@ -161,6 +181,44 @@ expectCsv toMsg decoder_ =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Route () -> Model -> Sub Msg
-subscriptions route model =
+subscriptions : UrlPath -> Model -> Sub Msg
+subscriptions _ _ =
     Sub.none
+
+
+
+-- DATA
+
+
+data : BackendTask FatalError Data
+data =
+    BackendTask.succeed ()
+
+
+
+-- VIEW
+
+
+view :
+    Data
+    ->
+        { path : UrlPath
+        , route : Maybe Route
+        }
+    -> Model
+    -> (Msg -> msg)
+    -> View msg
+    -> { body : List (Html.Html msg), title : String }
+view sharedData page model toMsg pageView =
+    { title = pageView.title
+    , body =
+        List.map Html.Styled.toUnstyled
+            [ global
+                [ Css.Global.body
+                    [ backgroundColor (hsl 0 0 0.4)
+                    , color (hsla 0 0 1 0.9)
+                    ]
+                ]
+            , main_ [] pageView.body
+            ]
+    }
