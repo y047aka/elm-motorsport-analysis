@@ -43,7 +43,8 @@ type alias Data =
 
 
 type alias Model =
-    { raceControl : RaceControl.Model
+    { raceControl_F1 : RaceControl.Model
+    , raceControl_Wec : RaceControl.Model
     , analysis : Analysis
     }
 
@@ -62,14 +63,22 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
-    ( { raceControl = RaceControl.empty
+    ( { raceControl_F1 = RaceControl.empty
+      , raceControl_Wec = RaceControl.empty
       , analysis = Analysis.finished RaceControl.empty
       }
-    , Effect.fromCmd <|
-        Http.get
-            { url = "/static/lapTimes.json"
-            , expect = Http.expectJson JsonLoaded F1.decoder
-            }
+    , Effect.batch
+        [ Effect.fromCmd <|
+            Http.get
+                { url = "/static/lapTimes.json"
+                , expect = Http.expectJson JsonLoaded F1.decoder
+                }
+        , Effect.fromCmd <|
+            Http.get
+                { url = "/static/23_Analysis_Race_Hour 24.csv"
+                , expect = expectCsv CsvLoaded Wec.lapDecoder
+                }
+        ]
     )
 
 
@@ -82,7 +91,8 @@ type Msg
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchCsv String
     | CsvLoaded (Result Http.Error (List Wec.Lap))
-    | RaceControlMsg RaceControl.Msg
+    | RaceControlMsg_F1 RaceControl.Msg
+    | RaceControlMsg_Wec RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -103,7 +113,7 @@ update msg m =
                     RaceControl.init (Preprocess_F1.preprocess decoded)
             in
             ( { m
-                | raceControl = rcNew
+                | raceControl_F1 = rcNew
                 , analysis = Analysis.finished rcNew
               }
             , Effect.none
@@ -127,7 +137,7 @@ update msg m =
                     RaceControl.init (Preprocess_Wec.preprocess decoded)
             in
             ( { m
-                | raceControl = rcNew
+                | raceControl_Wec = rcNew
                 , analysis = Analysis.finished rcNew
               }
             , Effect.none
@@ -136,13 +146,25 @@ update msg m =
         CsvLoaded (Err _) ->
             ( m, Effect.none )
 
-        RaceControlMsg raceControlMsg ->
+        RaceControlMsg_F1 raceControlMsg ->
             let
                 rcNew =
-                    RaceControl.update raceControlMsg m.raceControl
+                    RaceControl.update raceControlMsg m.raceControl_F1
             in
             ( { m
-                | raceControl = rcNew
+                | raceControl_F1 = rcNew
+                , analysis = Analysis.fromRaceControl rcNew
+              }
+            , Effect.none
+            )
+
+        RaceControlMsg_Wec raceControlMsg ->
+            let
+                rcNew =
+                    RaceControl.update raceControlMsg m.raceControl_Wec
+            in
+            ( { m
+                | raceControl_Wec = rcNew
                 , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none

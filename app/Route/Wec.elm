@@ -1,4 +1,4 @@
-module Route.F1 exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
+module Route.Wec exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
 
 import BackendTask exposing (BackendTask)
 import Css exposing (displayFlex, justifyContent, spaceBetween)
@@ -11,7 +11,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -86,7 +86,7 @@ update app shared msg m =
             ( { m | mode = mode }, Effect.none, Nothing )
 
         RaceControlMsg raceControlMsg ->
-            ( m, Effect.none, Just (Shared.RaceControlMsg_F1 raceControlMsg) )
+            ( m, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
@@ -121,13 +121,13 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis, raceControl_F1 } { mode, leaderboardState } =
+view app { analysis, raceControl_Wec } { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
-        { title = "Leaderboard"
+        { title = "Wec"
         , body =
             let
                 { raceClock, lapTotal } =
-                    raceControl_F1
+                    raceControl_Wec
             in
             [ header [ css [ displayFlex, justifyContent spaceBetween ] ]
                 [ nav []
@@ -152,10 +152,10 @@ view app { analysis, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config analysis) leaderboardState raceControl_F1
+                    Leaderboard.view (config analysis) leaderboardState raceControl_Wec
 
                 PositionHistory ->
-                    PositionHistoryChart.view raceControl_F1
+                    PositionHistoryChart.view raceControl_Wec
             ]
         }
 
@@ -167,8 +167,7 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , driverNameColumn_F1 { label = "Driver", getter = .driver }
-        , stringColumn { label = "Team", getter = .team }
+        , driverAndTeamColumn_Wec { label = "Team / Driver", driver = .driver, team = .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"

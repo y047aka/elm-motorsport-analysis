@@ -44,7 +44,7 @@ view :
     App Data ActionData RouteParams
     -> Shared.Model
     -> View (PagesMsg Msg)
-view app { analysis, raceControl } =
+view app { analysis, raceControl_F1 } =
     { title = "LapTime Chart"
-    , body = [ LapTimeChart.view analysis raceControl ]
+    , body = [ LapTimeChart.view analysis raceControl_F1 ]
     }
