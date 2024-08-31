@@ -45,7 +45,8 @@ type alias Data =
 type alias Model =
     { raceControl_F1 : RaceControl.Model
     , raceControl_Wec : RaceControl.Model
-    , analysis : Analysis
+    , analysis_F1 : Analysis
+    , analysis_Wec : Analysis
     }
 
 
@@ -65,7 +66,8 @@ init :
 init flags maybePagePath =
     ( { raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
-      , analysis = Analysis.finished RaceControl.empty
+      , analysis_F1 = Analysis.finished RaceControl.empty
+      , analysis_Wec = Analysis.finished RaceControl.empty
       }
     , Effect.batch
         [ Effect.fromCmd <|
@@ -103,7 +105,7 @@ update msg m =
             in
             ( { m
                 | raceControl_F1 = rcNew
-                , analysis = Analysis.finished rcNew
+                , analysis_F1 = Analysis.finished rcNew
               }
             , Effect.none
             )
@@ -118,7 +120,7 @@ update msg m =
             in
             ( { m
                 | raceControl_Wec = rcNew
-                , analysis = Analysis.finished rcNew
+                , analysis_Wec = Analysis.finished rcNew
               }
             , Effect.none
             )
@@ -133,7 +135,7 @@ update msg m =
             in
             ( { m
                 | raceControl_F1 = rcNew
-                , analysis = Analysis.fromRaceControl rcNew
+                , analysis_F1 = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )
@@ -145,7 +147,7 @@ update msg m =
             in
             ( { m
                 | raceControl_Wec = rcNew
-                , analysis = Analysis.fromRaceControl rcNew
+                , analysis_Wec = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )

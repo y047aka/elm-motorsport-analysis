@@ -121,7 +121,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis, raceControl_F1 } { mode, leaderboardState } =
+view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Leaderboard"
         , body =
@@ -152,7 +152,7 @@ view app { analysis, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config analysis) leaderboardState raceControl_F1
+                    Leaderboard.view (config analysis_F1) leaderboardState raceControl_F1
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
