@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "start": "elm-pages dev",
-    "build": "elm-pages build",
+    "build": "elm-pages build --base elm-motorsport-analysis && mv ./dist/elm-motorsport-analysis/* ./dist/",
     "test": "elm-verify-examples --run-tests"
   },
   "devDependencies": {

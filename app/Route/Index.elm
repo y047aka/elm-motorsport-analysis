@@ -49,14 +49,14 @@ view :
 view app shared =
     { title = "Race Analysis"
     , body =
-        [ a [ href "/gap-chart" ] [ text "Gap Chart" ]
+        [ a [ href (Route.GapChart |> Route.toString) ] [ text "Gap Chart" ]
         , br [] []
-        , a [ href "/lap-time-chart" ] [ text "LapTime Chart" ]
+        , a [ href (Route.LapTimeChart |> Route.toString) ] [ text "LapTime Chart" ]
         , br [] []
-        , a [ href "/lap-time-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
+        , a [ href (Route.LapTimeChartsByDriver |> Route.toString) ] [ text "LapTime Charts By Driver" ]
         , br [] []
-        , a [ href "/f1" ] [ text "F1" ]
+        , a [ href (Route.F1 |> Route.toString) ] [ text "F1" ]
         , br [] []
-        , a [ href "/wec" ] [ text "Wec" ]
+        , a [ href (Route.Wec |> Route.toString) ] [ text "Wec" ]
         ]
     }
