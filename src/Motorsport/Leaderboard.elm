@@ -320,18 +320,10 @@ driverAndTeamColumn_Wec : { label : String, driver : data -> String, team : data
 driverAndTeamColumn_Wec { label, driver, team } =
     let
         formatName name =
-            let
-                firstNameInitial =
-                    String.left 1 name
-
-                formattedLastName =
-                    String.split " " name
-                        |> List.reverse
-                        |> List.head
-                        |> Maybe.map String.toUpper
-                        |> Maybe.withDefault ""
-            in
-            firstNameInitial ++ "." ++ formattedLastName
+            String.split " " name
+                |> List.Extra.unconsLast
+                |> Maybe.map (\( lastName, rest ) -> String.join "." (List.map (String.left 1) rest ++ [ String.toUpper lastName ]))
+                |> Maybe.withDefault (String.toUpper name)
     in
     { name = label
     , view =
