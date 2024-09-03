@@ -2,26 +2,13 @@ module Motorsport.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
     , Model, initialSort
     , Msg, update
-    , customColumn, veryCustomColumn
+    , customColumn
     , timeColumn, histogramColumn, performanceColumn
     , driverNameColumn_F1, driverAndTeamColumn_Wec
-    , Config, Leaderboard, LeaderboardItem, init, view
+    , Config, Leaderboard, LeaderboardItem, view
     )
 
-{-| This library helps you create sortable tables. The crucial feature is that it
-lets you own your data separately and keep it in whatever format is best for
-you. This way you are free to change your data without worrying about the table
-&ldquo;getting out of sync&rdquo; with the data. Having a single source of
-truth is pretty great!
-
-I recommend checking out the [examples] to get a feel for how it works.
-
-[examples]: https://github.com/evancz/elm-sortable-table/tree/master/examples
-
-
-# View
-
-@docs list, table
+{-|
 
 
 # Configuration
@@ -48,12 +35,9 @@ I recommend checking out the [examples] to get a feel for how it works.
 
 -}
 
-import Css exposing (Color, backgroundColor, batch, borderLeft3, borderRadius, color, column, displayFlex, firstChild, flexDirection, fontSize, height, hex, hsl, lastChild, nthChild, pct, property, px, solid, width)
-import Html.Styled as Html exposing (Attribute, Html, div, span, text)
+import Css exposing (..)
+import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
-import Html.Styled.Events exposing (onClick)
-import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy exposing (lazy2)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
@@ -61,155 +45,65 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
+import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
-import Svg.Styled.Attributes as SvgAttributes exposing (fill)
-import TypedSvg.Styled.Attributes exposing (viewBox)
+import Svg.Styled.Attributes as SvgAttributes
+import TypedSvg.Styled.Attributes as TypedSvgAttributes
 import TypedSvg.Styled.Attributes.InPx as InPx
-import UI.Table as Table exposing (td, th, thead, tr)
 
 
 
 -- MODEL
 
 
-{-| Tracks which column to sort by.
--}
 type alias Model =
-    { sorting : List Sorting }
+    Motorsport.Leaderboard.Internal.Model
 
 
-type alias Sorting =
-    ( String, Direction )
-
-
-type Direction
-    = Ascending
-    | Descending
-    | None
-
-
-{-| Create a table state. By providing a column name, you determine which
-column should be used for sorting by default. So if you want your table of
-yachts to be sorted by length by default, you might say:
-
-    import Table
-
-    Table.initialSort "Length"
-
--}
 initialSort : String -> Model
-initialSort header =
-    { sorting = [] }
+initialSort =
+    Motorsport.Leaderboard.Internal.init
 
 
 
 -- UPDATE
 
 
-type Msg
-    = Sort String
+type alias Msg =
+    Motorsport.Leaderboard.Internal.Msg
 
 
 update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        Sort key ->
-            let
-                newDirection =
-                    findSorting key model.sorting |> stepDirection
-
-                sorting =
-                    case newDirection of
-                        None ->
-                            List.filter (\s -> Tuple.first s /= key) model.sorting
-
-                        _ ->
-                            let
-                                newSorting =
-                                    List.filter (\s -> Tuple.first s /= key) model.sorting
-                            in
-                            List.append newSorting [ ( key, newDirection ) ]
-            in
-            { model | sorting = sorting }
+update =
+    Motorsport.Leaderboard.Internal.update
 
 
-stepDirection : Direction -> Direction
-stepDirection direction =
-    case direction of
-        Ascending ->
-            Descending
-
-        Descending ->
-            None
-
-        None ->
-            Ascending
-
-
-findSorting : String -> List Sorting -> Direction
-findSorting key sorting =
-    List.Extra.find (\( key_, _ ) -> key_ == key) sorting
-        |> Maybe.map (\( _, direction ) -> direction)
-        |> Maybe.withDefault None
-
-
-
--- CONFIG
-
-
-{-| Configuration for your table, describing your columns.
-
-**Note:** Your `Config` should _never_ be held in your model.
-It should only appear in `view` code.
-
--}
 type alias Config data msg =
-    { toId : data -> String
-    , toMsg : Msg -> msg
-    , columns : List (Column data msg)
-    }
+    Motorsport.Leaderboard.Internal.Config data msg
 
 
 
 -- COLUMNS
 
 
-{-| Describes how to turn `data` into a column in your table.
--}
-type alias Column data msg =
-    { name : String
-    , view : data -> Html msg
-    , sorter : List data -> List data
-    }
-
-
 {-| -}
 stringColumn : { label : String, getter : data -> String } -> Column data msg
-stringColumn { label, getter } =
-    { name = label
-    , view = getter >> text
-    , sorter = List.sortBy getter
-    }
+stringColumn =
+    Motorsport.Leaderboard.Internal.stringColumn
 
 
 {-| -}
 intColumn : { label : String, getter : data -> Int } -> Column data msg
-intColumn { label, getter } =
-    { name = label
-    , view = getter >> String.fromInt >> text
-    , sorter = List.sortBy getter
-    }
+intColumn =
+    Motorsport.Leaderboard.Internal.intColumn
 
 
 {-| -}
 floatColumn : { label : String, getter : data -> Float } -> Column data msg
-floatColumn { label, getter } =
-    { name = label
-    , view = getter >> String.fromFloat >> text
-    , sorter = List.sortBy getter
-    }
+floatColumn =
+    Motorsport.Leaderboard.Internal.floatColumn
 
 
 {-| -}
@@ -219,25 +113,8 @@ customColumn :
     , sorter : List data -> List data
     }
     -> Column data msg
-customColumn { label, getter, sorter } =
-    { name = label
-    , view = getter >> text
-    , sorter = sorter
-    }
-
-
-{-| -}
-veryCustomColumn :
-    { label : String
-    , getter : data -> Html msg
-    , sorter : List data -> List data
-    }
-    -> Column data msg
-veryCustomColumn { label, getter, sorter } =
-    { name = label
-    , view = getter
-    , sorter = sorter
-    }
+customColumn =
+    Motorsport.Leaderboard.Internal.customColumn
 
 
 timeColumn :
@@ -337,110 +214,12 @@ driverAndTeamColumn_Wec { label, driver, team } =
 
 
 
--- SORTING
-
-
-sort : Model -> List (Column data msg) -> List data -> List data
-sort { sorting } columns prevData =
-    List.foldl
-        (\( key, direction ) data ->
-            findSorter key columns
-                |> Maybe.map (\sorter -> applySorter direction sorter data)
-                |> Maybe.withDefault data
-        )
-        prevData
-        sorting
-
-
-findSorter : String -> List (Column data msg) -> Maybe (List data -> List data)
-findSorter key columns =
-    columns
-        |> List.Extra.find (\c -> c.name == key)
-        |> Maybe.map .sorter
-
-
-applySorter : Direction -> (List data -> List data) -> List data -> List data
-applySorter direction sorter data =
-    case direction of
-        Descending ->
-            sorter data
-                |> List.reverse
-
-        _ ->
-            sorter data
-
-
-
 -- VIEW
 
 
 view : Config LeaderboardItem msg -> Model -> RaceControl.Model -> Html msg
 view config state raceControl =
-    let
-        leaderboardData =
-            init raceControl
-
-        sortedData =
-            sort state config.columns leaderboardData
-    in
-    viewHelper config state sortedData
-
-
-viewHelper : Config data msg -> Model -> List data -> Html msg
-viewHelper { toId, toMsg, columns } state data =
-    Table.table [ css [ fontSize (px 14) ] ]
-        [ thead []
-            [ tr [] <|
-                List.map (toHeaderInfo state.sorting toMsg >> simpleTheadHelp) columns
-            ]
-        , Keyed.node "tbody" [] <|
-            List.map (tableRow toId columns) data
-        ]
-
-
-toHeaderInfo : List Sorting -> (Msg -> msg) -> Column data msg -> ( String, Direction, Attribute msg )
-toHeaderInfo sortings toMsg { name } =
-    ( name
-    , findSorting name sortings
-    , onClick <| toMsg <| Sort name
-    )
-
-
-simpleTheadHelp : ( String, Direction, Attribute msg ) -> Html msg
-simpleTheadHelp ( name, direction, onClick_ ) =
-    let
-        symbol =
-            case direction of
-                Ascending ->
-                    darkGrey "↑"
-
-                Descending ->
-                    darkGrey "↓"
-
-                None ->
-                    lightGrey "↕"
-
-        content =
-            [ text (name ++ " "), symbol ]
-    in
-    th [ onClick_ ] content
-
-
-darkGrey : String -> Html msg
-darkGrey symbol =
-    span [ css [ color (hex "#555") ] ] [ text symbol ]
-
-
-lightGrey : String -> Html msg
-lightGrey symbol =
-    span [ css [ color (hex "#ccc") ] ] [ text symbol ]
-
-
-tableRow : (data -> String) -> List (Column data msg) -> data -> ( String, Html msg )
-tableRow toId columns data =
-    ( toId data
-    , lazy2 tr [] <| List.map (\column -> td [] [ column.view data ]) columns
-    )
+    Motorsport.Leaderboard.Internal.table config state (init raceControl)
 
 
 
@@ -557,7 +336,7 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
         isCurrentLap { lap } =
             List.length laps == lap
     in
-    svg [ viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
+    svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
             { x = .time >> toFloat >> Scale.convert xScale_
             , y = always 0 >> Scale.convert (yScale ( 0, 0 ))
@@ -581,7 +360,7 @@ histogram_ { x, y, width, color } laps =
                     , InPx.y (y lap - 10)
                     , InPx.width (width lap)
                     , InPx.height 20
-                    , fill (color lap)
+                    , SvgAttributes.fill (color lap)
                     ]
                     []
             )
