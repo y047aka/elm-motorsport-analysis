@@ -61,11 +61,11 @@ preprocess_ :
     -> Car
 preprocess_ { carNumber, laps, startPositions, ordersByLap } =
     let
-        { driverName_, class_, group_, team_, manufacturer_ } =
+        { currentDriver_, class_, group_, team_, manufacturer_ } =
             List.head laps
                 |> Maybe.map
                     (\{ driverName, class, group, team, manufacturer } ->
-                        { driverName_ = driverName
+                        { currentDriver_ = driverName
                         , class_ = class
                         , group_ = group
                         , team_ = team
@@ -76,9 +76,13 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                     { class_ = Data.Wec.Class.none
                     , team_ = ""
                     , group_ = ""
-                    , driverName_ = ""
+                    , currentDriver_ = ""
                     , manufacturer_ = ""
                     }
+
+        drivers =
+            List.uniqueBy .driverName laps
+                |> List.map .driverName
 
         startPosition =
             startPositions
@@ -106,7 +110,8 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                     )
     in
     { carNumber = carNumber
-    , driverName = driverName_
+    , drivers = drivers
+    , currentDriver = currentDriver_
     , class = class_
     , group = group_
     , team = team_

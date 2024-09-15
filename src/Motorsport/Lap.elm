@@ -2,7 +2,7 @@ module Motorsport.Lap exposing
     ( Lap
     , compare
     , fastestLap, slowestLap
-    , completedLapsAt, findLastLapAt
+    , completedLapsAt, findLastLapAt, findCurrentLap
     )
 
 {-|
@@ -10,7 +10,7 @@ module Motorsport.Lap exposing
 @docs Lap
 @docs compare
 @docs fastestLap, slowestLap
-@docs completedLapsAt, findLastLapAt
+@docs completedLapsAt, findLastLapAt, findCurrentLap
 
 -}
 
@@ -60,6 +60,16 @@ completedLapsAt clock =
     List.filter (\lap -> lap.elapsed <= clock.elapsed)
 
 
+imcompletedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
+imcompletedLapsAt clock =
+    List.filter (\lap -> lap.elapsed > clock.elapsed)
+
+
 findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
 findLastLapAt clock =
     completedLapsAt clock >> List.Extra.last
+
+
+findCurrentLap : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findCurrentLap clock =
+    imcompletedLapsAt clock >> List.head

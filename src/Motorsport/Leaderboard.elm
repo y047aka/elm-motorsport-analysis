@@ -193,8 +193,14 @@ driverNameColumn_F1 { label, getter } =
     }
 
 
-driverAndTeamColumn_Wec : { label : String, driver : data -> String, team : data -> String } -> Column data msg
-driverAndTeamColumn_Wec { label, driver, team } =
+driverAndTeamColumn_Wec :
+    { label : String
+    , drivers : data -> List String
+    , currentDriver : data -> String
+    , team : data -> String
+    }
+    -> Column data msg
+driverAndTeamColumn_Wec { label, drivers, currentDriver, team } =
     let
         formatName name =
             String.split " " name
@@ -207,7 +213,23 @@ driverAndTeamColumn_Wec { label, driver, team } =
         \data ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ div [] [ text (team data) ]
-                , div [ css [ fontSize (px 10) ] ] [ driver data |> formatName |> text ]
+                , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
+                    List.map
+                        (\driver ->
+                            div
+                                [ css
+                                    [ fontSize (px 10)
+                                    , fontStyle italic
+                                    , if driver == currentDriver data then
+                                        batch []
+
+                                      else
+                                        color (hsl 0 0 0.75)
+                                    ]
+                                ]
+                                [ text (formatName driver) ]
+                        )
+                        (drivers data)
                 ]
     , sorter = List.sortBy team
     }
@@ -233,7 +255,8 @@ type alias Leaderboard =
 type alias LeaderboardItem =
     { position : Int
     , carNumber : String
-    , driver : String
+    , drivers : List String
+    , currentDriver : String
     , team : String
     , lap : Int
     , gap : Gap
@@ -253,7 +276,8 @@ init ({ raceClock } as raceControl) =
         |> List.indexedMap
             (\index { car, lastLap } ->
                 { position = index + 1
-                , driver = car.driverName
+                , drivers = car.drivers
+                , currentDriver = car.currentDriver
                 , carNumber = car.carNumber
                 , team = car.team
                 , lap = lastLap.lap

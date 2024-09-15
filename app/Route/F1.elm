@@ -167,7 +167,7 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , driverNameColumn_F1 { label = "Driver", getter = .driver }
+        , driverNameColumn_F1 { label = "Driver", getter = .currentDriver }
         , stringColumn { label = "Team", getter = .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn

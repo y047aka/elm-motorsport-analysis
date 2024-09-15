@@ -112,7 +112,8 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                     )
     in
     { carNumber = carNumber
-    , driverName = driver.name
+    , drivers = [ driver.name ]
+    , currentDriver = driver.name
     , class = Data.Wec.Class.none
     , group = "TODO"
     , team = driverToTeamName_2022 driver.name

@@ -6,7 +6,8 @@ import Motorsport.Lap exposing (Lap)
 
 type alias Car =
     { carNumber : String
-    , driverName : String
+    , drivers : List String
+    , currentDriver : String
     , class : Class
     , group : String
     , team : String

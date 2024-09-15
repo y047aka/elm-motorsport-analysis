@@ -167,7 +167,12 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , driverAndTeamColumn_Wec { label = "Team / Driver", driver = .driver, team = .team }
+        , driverAndTeamColumn_Wec
+            { label = "Team / Driver"
+            , drivers = .drivers
+            , currentDriver = .currentDriver
+            , team = .team
+            }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
