@@ -4,6 +4,7 @@ module Motorsport.Leaderboard exposing
     , Msg, update
     , customColumn
     , timeColumn, histogramColumn, performanceColumn
+    , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , Config, Leaderboard, LeaderboardItem, view
     )
@@ -31,6 +32,7 @@ module Motorsport.Leaderboard exposing
 @docs Column, customColumn, veryCustomColumn
 
 @docs timeColumn, histogramColumn, performanceColumn
+@docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
 
 -}
@@ -41,6 +43,7 @@ import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
@@ -177,6 +180,27 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
+carNumberColumn_Wec : { carNumber : data -> String, class : data -> Class } -> Column data msg
+carNumberColumn_Wec { carNumber, class } =
+    { name = "#"
+    , view =
+        \data ->
+            div
+                [ css
+                    [ width (em 2.5)
+                    , property "padding-block" "5px"
+                    , textAlign center
+                    , fontSize (px 14)
+                    , fontWeight bold
+                    , backgroundColor (class data |> Class.toHexColor)
+                    , borderRadius (px 5)
+                    ]
+                ]
+                [ text (carNumber data) ]
+    , sorter = List.sortBy (class >> Class.toString)
+    }
+
+
 driverNameColumn_F1 : { label : String, getter : data -> String } -> Column data msg
 driverNameColumn_F1 { label, getter } =
     let
@@ -257,6 +281,7 @@ type alias LeaderboardItem =
     , carNumber : String
     , drivers : List String
     , currentDriver : String
+    , class : Class
     , team : String
     , lap : Int
     , gap : Gap
@@ -279,6 +304,7 @@ init ({ raceClock } as raceControl) =
                 , drivers = car.drivers
                 , currentDriver = car.currentDriver
                 , carNumber = car.carNumber
+                , class = car.class
                 , team = car.team
                 , lap = lastLap.lap
                 , gap =

@@ -11,7 +11,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -166,7 +166,7 @@ config analysis =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , stringColumn { label = "#", getter = .carNumber }
+        , carNumberColumn_Wec { carNumber = .carNumber, class = .class }
         , driverAndTeamColumn_Wec
             { label = "Team / Driver"
             , drivers = .drivers
