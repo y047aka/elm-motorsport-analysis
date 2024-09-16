@@ -5,10 +5,10 @@ import Css exposing (block, display, fill, hsla)
 import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
-import Data.Wec.Class as Class
 import Html.Styled exposing (Html)
 import List.Extra as List
 import Motorsport.Car exposing (Car)
+import Motorsport.Class as Class
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)

@@ -2,10 +2,10 @@ module Data.Wec.Preprocess exposing (..)
 
 import AssocList
 import AssocList.Extra
-import Data.Wec.Class
 import Data.Wec.Decoder as Wec
 import List.Extra as List
 import Motorsport.Car exposing (Car)
+import Motorsport.Class as Class
 
 
 preprocess : List Wec.Lap -> List Car
@@ -73,7 +73,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                         }
                     )
                 |> Maybe.withDefault
-                    { class_ = Data.Wec.Class.none
+                    { class_ = Class.none
                     , team_ = ""
                     , group_ = ""
                     , currentDriver_ = ""

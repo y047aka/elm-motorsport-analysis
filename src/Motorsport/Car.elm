@@ -1,6 +1,6 @@
 module Motorsport.Car exposing (Car)
 
-import Data.Wec.Class exposing (Class)
+import Motorsport.Class exposing (Class)
 import Motorsport.Lap exposing (Lap)
 
 

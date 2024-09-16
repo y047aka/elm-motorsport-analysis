@@ -1,4 +1,4 @@
-module Data.Wec.Class exposing (Class, fromString, none, toString, toStrokePalette)
+module Motorsport.Class exposing (Class, fromString, none, toString, toStrokePalette)
 
 import Css
 import Css.Color exposing (Color(..))

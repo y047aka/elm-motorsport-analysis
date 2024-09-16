@@ -3,9 +3,9 @@ module Data.F1.Preprocess exposing (preprocess)
 import AssocList
 import AssocList.Extra
 import Data.F1.Decoder as F1
-import Data.Wec.Class
 import List.Extra as List
 import Motorsport.Car exposing (Car)
+import Motorsport.Class as Class
 
 
 preprocess : F1.Data -> List Car
@@ -114,7 +114,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     { carNumber = carNumber
     , drivers = [ driver.name ]
     , currentDriver = driver.name
-    , class = Data.Wec.Class.none
+    , class = Class.none
     , group = "TODO"
     , team = driverToTeamName_2022 driver.name
     , manufacturer = "TODO"
