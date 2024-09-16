@@ -77,7 +77,7 @@ init flags maybePagePath =
                 }
         , Effect.fromCmd <|
             Http.get
-                { url = "/static/23_Analysis_Race_Hour 24.csv"
+                { url = "/static/23_Analysis_Race_Hour 6.csv"
                 , expect = expectCsv CsvLoaded Wec.lapDecoder
                 }
         ]
