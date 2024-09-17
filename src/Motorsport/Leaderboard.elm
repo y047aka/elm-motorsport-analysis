@@ -38,12 +38,14 @@ module Motorsport.Leaderboard exposing
 -}
 
 import Css exposing (..)
+import Css.Extra exposing (when)
 import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
@@ -219,12 +221,11 @@ driverNameColumn_F1 { label, getter } =
 
 driverAndTeamColumn_Wec :
     { label : String
-    , drivers : data -> List String
-    , currentDriver : data -> String
+    , drivers : data -> List Driver
     , team : data -> String
     }
     -> Column data msg
-driverAndTeamColumn_Wec { label, drivers, currentDriver, team } =
+driverAndTeamColumn_Wec { label, drivers, team } =
     let
         formatName name =
             String.split " " name
@@ -239,19 +240,16 @@ driverAndTeamColumn_Wec { label, drivers, currentDriver, team } =
                 [ div [] [ text (team data) ]
                 , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
                     List.map
-                        (\driver ->
+                        (\{ name, isCurrentDriver } ->
                             div
                                 [ css
                                     [ fontSize (px 10)
                                     , fontStyle italic
-                                    , if driver == currentDriver data then
-                                        batch []
-
-                                      else
-                                        color (hsl 0 0 0.75)
+                                    , when (not isCurrentDriver)
+                                        (color (hsl 0 0 0.75))
                                     ]
                                 ]
-                                [ text (formatName driver) ]
+                                [ text (formatName name) ]
                         )
                         (drivers data)
                 ]
@@ -279,8 +277,7 @@ type alias Leaderboard =
 type alias LeaderboardItem =
     { position : Int
     , carNumber : String
-    , drivers : List String
-    , currentDriver : String
+    , drivers : List Driver
     , class : Class
     , team : String
     , lap : Int
@@ -302,7 +299,6 @@ init ({ raceClock } as raceControl) =
             (\index { car, lastLap } ->
                 { position = index + 1
                 , drivers = car.drivers
-                , currentDriver = car.currentDriver
                 , carNumber = car.carNumber
                 , class = car.class
                 , team = car.team

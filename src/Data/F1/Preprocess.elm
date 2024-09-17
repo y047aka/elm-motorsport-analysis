@@ -112,8 +112,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                     )
     in
     { carNumber = carNumber
-    , drivers = [ driver.name ]
-    , currentDriver = driver.name
+    , drivers = [ { name = driver.name, isCurrentDriver = True } ]
     , class = Class.none
     , group = "TODO"
     , team = driverToTeamName_2022 driver.name

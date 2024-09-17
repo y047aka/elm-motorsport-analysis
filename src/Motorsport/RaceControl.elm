@@ -105,6 +105,14 @@ updateCars raceClock cars =
                         findCurrentLap raceClock car.laps
                             |> Maybe.map .driver
                             |> Maybe.withDefault ""
+
+                    updateDrivers =
+                        List.map
+                            (\{ name } ->
+                                { name = name
+                                , isCurrentDriver = name == currentDriver
+                                }
+                            )
                 in
-                { car | currentDriver = currentDriver }
+                { car | drivers = updateDrivers car.drivers }
             )

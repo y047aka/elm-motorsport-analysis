@@ -82,7 +82,12 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
 
         drivers =
             List.uniqueBy .driverName laps
-                |> List.map .driverName
+                |> List.map
+                    (\{ driverName } ->
+                        { name = driverName
+                        , isCurrentDriver = driverName == currentDriver_
+                        }
+                    )
 
         startPosition =
             startPositions
@@ -111,7 +116,6 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
     in
     { carNumber = carNumber
     , drivers = drivers
-    , currentDriver = currentDriver_
     , class = class_
     , group = group_
     , team = team_

@@ -170,7 +170,6 @@ config analysis =
         , driverAndTeamColumn_Wec
             { label = "Team / Driver"
             , drivers = .drivers
-            , currentDriver = .currentDriver
             , team = .team
             }
         , intColumn { label = "Lap", getter = .lap }

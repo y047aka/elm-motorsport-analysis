@@ -10,6 +10,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
@@ -167,7 +168,10 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , stringColumn { label = "#", getter = .carNumber }
-        , driverNameColumn_F1 { label = "Driver", getter = .currentDriver }
+        , driverNameColumn_F1
+            { label = "Driver"
+            , getter = .drivers >> Driver.findCurrentDriver >> Maybe.map .name >> Maybe.withDefault ""
+            }
         , stringColumn { label = "Team", getter = .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
