@@ -3,7 +3,7 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn
-    , timeColumn, histogramColumn, performanceColumn
+    , timeColumn, bestTimeColumn, histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , Config, Leaderboard, LeaderboardItem, view
@@ -31,7 +31,7 @@ module Motorsport.Leaderboard exposing
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs timeColumn, histogramColumn, performanceColumn
+@docs timeColumn, bestTimeColumn, histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
 
@@ -153,6 +153,19 @@ timeColumn { label, getter, sorter, analysis } =
                )
     , sorter = sorter
     }
+
+
+bestTimeColumn :
+    { label : String
+    , getter : data -> Duration
+    }
+    -> Column data msg
+bestTimeColumn { label, getter } =
+    Motorsport.Leaderboard.Internal.customColumn
+        { label = label
+        , getter = getter >> Duration.toString
+        , sorter = List.sortBy getter
+        }
 
 
 histogramColumn :

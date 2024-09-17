@@ -6,6 +6,7 @@ import Data.F1.Decoder as F1
 import List.Extra as List
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
+import Motorsport.Lap as Lap
 
 
 preprocess : F1.Data -> List Car
@@ -101,8 +102,8 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         , best =
                             laps
                                 |> List.take (count + 1)
-                                |> List.map .time
-                                |> List.minimum
+                                |> Lap.personalBestLap
+                                |> Maybe.map .time
                                 |> Maybe.withDefault 0
                         , elapsed =
                             laps

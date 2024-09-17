@@ -12,7 +12,7 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -185,6 +185,7 @@ config analysis =
             , sorter = List.sortBy .time
             , analysis = analysis
             }
+        , bestTimeColumn { label = "Best", getter = .best }
         , performanceColumn
             { getter = .history
             , sorter = List.sortBy .time

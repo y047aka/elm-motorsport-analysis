@@ -1,7 +1,7 @@
 module Motorsport.Lap exposing
     ( Lap
     , compare
-    , fastestLap, slowestLap
+    , personalBestLap, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt, findCurrentLap
     )
 
@@ -9,7 +9,7 @@ module Motorsport.Lap exposing
 
 @docs Lap
 @docs compare
-@docs fastestLap, slowestLap
+@docs personalBestLap, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
 -}
@@ -43,9 +43,15 @@ compare a b =
             LT
 
 
+personalBestLap : List { a | time : Duration } -> Maybe { a | time : Duration }
+personalBestLap =
+    List.filter (.time >> (/=) 0)
+        >> List.Extra.minimumBy .time
+
+
 fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
 fastestLap =
-    List.filterMap (List.filter (.time >> (/=) 0) >> List.Extra.minimumBy .time)
+    List.filterMap personalBestLap
         >> List.Extra.minimumBy .time
 
 
