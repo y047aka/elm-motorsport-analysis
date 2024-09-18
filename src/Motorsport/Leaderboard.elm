@@ -3,7 +3,8 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn
-    , timeColumn, bestTimeColumn, histogramColumn, performanceColumn
+    , timeColumn, sectorTimeColumn, bestTimeColumn
+    , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , Config, Leaderboard, LeaderboardItem, view
@@ -31,7 +32,8 @@ module Motorsport.Leaderboard exposing
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs timeColumn, bestTimeColumn, histogramColumn, performanceColumn
+@docs timeColumn, sectorTimeColumn, bestTimeColumn
+@docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
 
@@ -151,6 +153,16 @@ timeColumn { getter, sorter, analysis } =
                         [ text <| Duration.toString item.time ]
                )
     , sorter = sorter
+    }
+
+
+sectorTimeColumn :
+    { label : String, getter : data -> Duration }
+    -> Column data msg
+sectorTimeColumn { label, getter } =
+    { name = label
+    , view = getter >> Duration.toString >> text
+    , sorter = List.sortBy getter
     }
 
 
@@ -286,6 +298,9 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , time : Duration
+    , sector_1 : Duration
+    , sector_2 : Duration
+    , sector_3 : Duration
     , best : Duration
     , history : List Lap
     }
@@ -311,6 +326,9 @@ init ({ raceClock } as raceControl) =
                         |> Maybe.map (\leader -> Gap.from leader.lastLap lastLap)
                         |> Maybe.withDefault Gap.None
                 , time = lastLap.time
+                , sector_1 = lastLap.sector_1
+                , sector_2 = lastLap.sector_2
+                , sector_3 = lastLap.sector_3
                 , best = lastLap.best
                 , history = completedLapsAt raceClock car.laps
                 }
@@ -325,7 +343,18 @@ sortCarsAt { raceClock, cars } =
                 let
                     lastLap =
                         findLastLapAt raceClock car.laps
-                            |> Maybe.withDefault { carNumber = "", driver = "", lap = 0, position = Nothing, time = 0, best = 0, elapsed = 0 }
+                            |> Maybe.withDefault
+                                { carNumber = ""
+                                , driver = ""
+                                , lap = 0
+                                , position = Nothing
+                                , time = 0
+                                , sector_1 = 0
+                                , sector_2 = 0
+                                , sector_3 = 0
+                                , best = 0
+                                , elapsed = 0
+                                }
                 in
                 { car = car, lastLap = lastLap }
             )

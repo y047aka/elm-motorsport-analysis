@@ -105,6 +105,9 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                                 |> Lap.personalBestLap
                                 |> Maybe.map .time
                                 |> Maybe.withDefault 0
+                        , sector_1 = 0
+                        , sector_2 = 0
+                        , sector_3 = 0
                         , elapsed =
                             laps
                                 |> List.take (count + 1)

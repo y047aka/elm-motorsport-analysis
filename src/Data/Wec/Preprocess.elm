@@ -97,7 +97,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
         laps_ =
             laps
                 |> List.indexedMap
-                    (\index { driverName, lapNumber, lapTime, elapsed } ->
+                    (\index { driverName, lapNumber, lapTime, s1, s2, s3, elapsed } ->
                         { carNumber = carNumber
                         , driver = driverName
                         , lap = lapNumber
@@ -110,6 +110,9 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                                 |> List.map .lapTime
                                 |> List.minimum
                                 |> Maybe.withDefault 0
+                        , sector_1 = Maybe.withDefault 0 s1
+                        , sector_2 = Maybe.withDefault 0 s2
+                        , sector_3 = Maybe.withDefault 0 s3
                         , elapsed = elapsed
                         }
                     )

@@ -26,6 +26,9 @@ type alias Lap =
     , position : Maybe Int
     , time : Duration
     , best : Duration
+    , sector_1 : Duration
+    , sector_2 : Duration
+    , sector_3 : Duration
     , elapsed : Duration
     }
 
