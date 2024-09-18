@@ -123,14 +123,13 @@ customColumn =
 
 
 timeColumn :
-    { label : String
-    , getter : data -> { a | time : Duration, best : Duration }
+    { getter : data -> { a | time : Duration, best : Duration }
     , sorter : List data -> List data
     , analysis : Analysis
     }
     -> Column data msg
-timeColumn { label, getter, sorter, analysis } =
-    { name = label
+timeColumn { getter, sorter, analysis } =
+    { name = "Time"
     , view =
         getter
             >> (\item ->
@@ -155,14 +154,10 @@ timeColumn { label, getter, sorter, analysis } =
     }
 
 
-bestTimeColumn :
-    { label : String
-    , getter : data -> Duration
-    }
-    -> Column data msg
-bestTimeColumn { label, getter } =
+bestTimeColumn : { getter : data -> Duration } -> Column data msg
+bestTimeColumn { getter } =
     Motorsport.Leaderboard.Internal.customColumn
-        { label = label
+        { label = "Best"
         , getter = getter >> Duration.toString
         , sorter = List.sortBy getter
         }
@@ -232,13 +227,8 @@ driverNameColumn_F1 { label, getter } =
     }
 
 
-driverAndTeamColumn_Wec :
-    { label : String
-    , drivers : data -> List Driver
-    , team : data -> String
-    }
-    -> Column data msg
-driverAndTeamColumn_Wec { label, drivers, team } =
+driverAndTeamColumn_Wec : Column { a | drivers : List Driver, team : String } msg
+driverAndTeamColumn_Wec =
     let
         formatName name =
             String.split " " name
@@ -246,11 +236,11 @@ driverAndTeamColumn_Wec { label, drivers, team } =
                 |> Maybe.map (\( lastName, rest ) -> String.join "." (List.map (String.left 1) rest ++ [ String.toUpper lastName ]))
                 |> Maybe.withDefault (String.toUpper name)
     in
-    { name = label
+    { name = "Team / Driver"
     , view =
-        \data ->
+        \{ drivers, team } ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ div [] [ text (team data) ]
+                [ div [] [ text team ]
                 , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
                     List.map
                         (\{ name, isCurrentDriver } ->
@@ -264,9 +254,9 @@ driverAndTeamColumn_Wec { label, drivers, team } =
                                 ]
                                 [ text (formatName name) ]
                         )
-                        (drivers data)
+                        drivers
                 ]
-    , sorter = List.sortBy team
+    , sorter = List.sortBy .team
     }
 
 

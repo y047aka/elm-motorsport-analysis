@@ -168,10 +168,6 @@ config analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec { carNumber = .carNumber, class = .class }
         , driverAndTeamColumn_Wec
-            { label = "Team / Driver"
-            , drivers = .drivers
-            , team = .team
-            }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
@@ -179,12 +175,11 @@ config analysis =
             , sorter = List.sortBy .position
             }
         , timeColumn
-            { label = "Time"
-            , getter = identity
+            { getter = identity
             , sorter = List.sortBy .time
             , analysis = analysis
             }
-        , bestTimeColumn { label = "Best", getter = .best }
+        , bestTimeColumn { getter = .best }
         , performanceColumn
             { getter = .history
             , sorter = List.sortBy .time

@@ -180,12 +180,11 @@ config analysis =
             , sorter = List.sortBy .position
             }
         , timeColumn
-            { label = "Time"
-            , getter = identity
+            { getter = identity
             , sorter = List.sortBy .time
             , analysis = analysis
             }
-        , bestTimeColumn { label = "Best", getter = .best }
+        , bestTimeColumn { getter = .best }
         , performanceColumn
             { getter = .history
             , sorter = List.sortBy .time
