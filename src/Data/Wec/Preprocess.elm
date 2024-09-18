@@ -113,6 +113,24 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                         , sector_1 = Maybe.withDefault 0 s1
                         , sector_2 = Maybe.withDefault 0 s2
                         , sector_3 = Maybe.withDefault 0 s3
+                        , s1_best =
+                            laps
+                                |> List.take (index + 1)
+                                |> List.filterMap .s1
+                                |> List.minimum
+                                |> Maybe.withDefault 0
+                        , s2_best =
+                            laps
+                                |> List.take (index + 1)
+                                |> List.filterMap .s2
+                                |> List.minimum
+                                |> Maybe.withDefault 0
+                        , s3_best =
+                            laps
+                                |> List.take (index + 1)
+                                |> List.filterMap .s3
+                                |> List.minimum
+                                |> Maybe.withDefault 0
                         , elapsed = elapsed
                         }
                     )

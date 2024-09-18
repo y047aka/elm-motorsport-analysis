@@ -108,6 +108,9 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         , sector_1 = 0
                         , sector_2 = 0
                         , sector_3 = 0
+                        , s1_best = 0
+                        , s2_best = 0
+                        , s3_best = 0
                         , elapsed =
                             laps
                                 |> List.take (count + 1)

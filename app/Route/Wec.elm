@@ -174,9 +174,9 @@ config analysis =
             , getter = .gap >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , sectorTimeColumn { label = "S1", getter = .sector_1 }
-        , sectorTimeColumn { label = "S2", getter = .sector_2 }
-        , sectorTimeColumn { label = "S3", getter = .sector_3 }
+        , sectorTimeColumn { label = "S1", getter = \{ sector_1, s1_best } -> { time = sector_1, best = s1_best } }
+        , sectorTimeColumn { label = "S2", getter = \{ sector_2, s2_best } -> { time = sector_2, best = s2_best } }
+        , sectorTimeColumn { label = "S3", getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best } }
         , timeColumn
             { getter = identity
             , sorter = List.sortBy .time

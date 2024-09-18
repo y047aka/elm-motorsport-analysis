@@ -134,12 +134,12 @@ timeColumn { getter, sorter, analysis } =
     { name = "Time"
     , view =
         getter
-            >> (\item ->
+            >> (\lap ->
                     span
                         [ css
                             [ let
                                 status =
-                                    lapStatus { time = analysis.fastestLapTime } item
+                                    lapStatus { time = analysis.fastestLapTime } lap
                               in
                               if LapStatus.isNormal status then
                                 batch []
@@ -150,19 +150,40 @@ timeColumn { getter, sorter, analysis } =
                                     |> color
                             ]
                         ]
-                        [ text <| Duration.toString item.time ]
+                        [ text <| Duration.toString lap.time ]
                )
     , sorter = sorter
     }
 
 
 sectorTimeColumn :
-    { label : String, getter : data -> Duration }
+    { label : String
+    , getter : data -> { time : Duration, best : Duration }
+    }
     -> Column data msg
 sectorTimeColumn { label, getter } =
     { name = label
-    , view = getter >> Duration.toString >> text
-    , sorter = List.sortBy getter
+    , view =
+        getter
+            >> (\sector ->
+                    span
+                        [ css
+                            [ let
+                                status =
+                                    lapStatus { time = 0 } sector
+                              in
+                              if LapStatus.isNormal status then
+                                batch []
+
+                              else
+                                LapStatus.toHexColorString status
+                                    |> hex
+                                    |> color
+                            ]
+                        ]
+                        [ text (Duration.toString sector.time) ]
+               )
+    , sorter = List.sortBy (getter >> .time)
     }
 
 
@@ -301,6 +322,9 @@ type alias LeaderboardItem =
     , sector_1 : Duration
     , sector_2 : Duration
     , sector_3 : Duration
+    , s1_best : Duration
+    , s2_best : Duration
+    , s3_best : Duration
     , best : Duration
     , history : List Lap
     }
@@ -329,6 +353,9 @@ init ({ raceClock } as raceControl) =
                 , sector_1 = lastLap.sector_1
                 , sector_2 = lastLap.sector_2
                 , sector_3 = lastLap.sector_3
+                , s1_best = lastLap.s1_best
+                , s2_best = lastLap.s2_best
+                , s3_best = lastLap.s3_best
                 , best = lastLap.best
                 , history = completedLapsAt raceClock car.laps
                 }
@@ -352,6 +379,9 @@ sortCarsAt { raceClock, cars } =
                                 , sector_1 = 0
                                 , sector_2 = 0
                                 , sector_3 = 0
+                                , s1_best = 0
+                                , s2_best = 0
+                                , s3_best = 0
                                 , best = 0
                                 , elapsed = 0
                                 }

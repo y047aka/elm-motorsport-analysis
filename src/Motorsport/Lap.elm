@@ -29,6 +29,9 @@ type alias Lap =
     , sector_1 : Duration
     , sector_2 : Duration
     , sector_3 : Duration
+    , s1_best : Duration
+    , s2_best : Duration
+    , s3_best : Duration
     , elapsed : Duration
     }
 
