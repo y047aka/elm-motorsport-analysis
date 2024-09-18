@@ -159,9 +159,10 @@ timeColumn { getter, sorter, analysis } =
 sectorTimeColumn :
     { label : String
     , getter : data -> { time : Duration, best : Duration }
+    , fastestSectorTime : Duration
     }
     -> Column data msg
-sectorTimeColumn { label, getter } =
+sectorTimeColumn { label, getter, fastestSectorTime } =
     { name = label
     , view =
         getter
@@ -170,7 +171,7 @@ sectorTimeColumn { label, getter } =
                         [ css
                             [ let
                                 status =
-                                    lapStatus { time = 0 } sector
+                                    lapStatus { time = fastestSectorTime } sector
                               in
                               if LapStatus.isNormal status then
                                 batch []
