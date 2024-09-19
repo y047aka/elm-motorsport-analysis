@@ -24,6 +24,9 @@ durationDecoder =
     toString 4321
     --> "4.321"
 
+    toString 28076
+    --> "28.076"
+
     toString 414321
     --> "6:54.321"
 
