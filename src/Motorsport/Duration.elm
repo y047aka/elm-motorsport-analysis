@@ -56,7 +56,7 @@ toStringInSeconds milliseconds =
         ms =
             remainderBy 1000 milliseconds
                 |> String.fromInt
-                |> String.padRight 3 '0'
+                |> String.padLeft 3 '0'
     in
     s ++ "." ++ ms
 
@@ -76,7 +76,7 @@ toStringInMinutes milliseconds =
         ms =
             remainderBy 1000 milliseconds
                 |> String.fromInt
-                |> String.padRight 3 '0'
+                |> String.padLeft 3 '0'
     in
     String.join ":" [ m, s ++ "." ++ ms ]
 
@@ -101,7 +101,7 @@ toStringInHours milliseconds =
         ms =
             remainderBy 1000 milliseconds
                 |> String.fromInt
-                |> String.padRight 3 '0'
+                |> String.padLeft 3 '0'
     in
     String.join ":" [ h, m, s ++ "." ++ ms ]
 
