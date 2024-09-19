@@ -1,4 +1,4 @@
 {
   "root": "../src",
-  "tests": ["Data.LapTime"]
+  "tests": ["Motorsport.Duration"]
 }
