@@ -11,7 +11,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, driverAndTeamColumn_Wec, initialSort, intColumn, sectorTimeColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, sectorTimeColumn, timeColumn)
 import Motorsport.Leaderboard.Internal
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
@@ -170,15 +170,30 @@ config analysis =
             , getter = \{ sector_1, s1_best } -> { time = sector_1, best = s1_best }
             , fastestSectorTime = analysis.sector_1_fastest
             }
+        , customColumn
+            { label = "S1 Best"
+            , getter = .s1_best >> Duration.toString
+            , sorter = List.sortBy (.s1_best >> Duration.toString)
+            }
         , sectorTimeColumn
             { label = "S2"
             , getter = \{ sector_2, s2_best } -> { time = sector_2, best = s2_best }
             , fastestSectorTime = analysis.sector_2_fastest
             }
+        , customColumn
+            { label = "S2 Best"
+            , getter = .s2_best >> Duration.toString
+            , sorter = List.sortBy (.s2_best >> Duration.toString)
+            }
         , sectorTimeColumn
             { label = "S3"
             , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
             , fastestSectorTime = analysis.sector_3_fastest
+            }
+        , customColumn
+            { label = "S3 Best"
+            , getter = .s3_best >> Duration.toString
+            , sorter = List.sortBy (.s3_best >> Duration.toString)
             }
         , timeColumn
             { getter = identity
