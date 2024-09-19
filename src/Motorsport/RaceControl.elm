@@ -2,7 +2,6 @@ module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock)
-import Motorsport.Lap exposing (findCurrentLap)
 
 
 
@@ -54,65 +53,21 @@ update msg m =
     case msg of
         SetCount newCount ->
             if newCount >= 0 && newCount <= m.lapTotal then
-                let
-                    now =
-                        Clock.initWithCount newCount (List.map .laps m.cars)
-                in
-                { m
-                    | raceClock = now
-                    , cars = updateCars now m.cars
-                }
+                { m | raceClock = Clock.initWithCount newCount (List.map .laps m.cars) }
 
             else
                 m
 
         NextLap ->
             if m.raceClock.lapCount < m.lapTotal then
-                let
-                    now =
-                        Clock.jumpToNextLap (List.map .laps m.cars) m.raceClock
-                in
-                { m
-                    | raceClock = now
-                    , cars = updateCars now m.cars
-                }
+                { m | raceClock = Clock.jumpToNextLap (List.map .laps m.cars) m.raceClock }
 
             else
                 m
 
         PreviousLap ->
             if m.raceClock.lapCount > 0 then
-                let
-                    now =
-                        Clock.jumpToPreviousLap (List.map .laps m.cars) m.raceClock
-                in
-                { m
-                    | raceClock = now
-                    , cars = updateCars now m.cars
-                }
+                { m | raceClock = Clock.jumpToPreviousLap (List.map .laps m.cars) m.raceClock }
 
             else
                 m
-
-
-updateCars : Clock -> List Car -> List Car
-updateCars raceClock cars =
-    cars
-        |> List.map
-            (\car ->
-                let
-                    currentDriver =
-                        findCurrentLap raceClock car.laps
-                            |> Maybe.map .driver
-                            |> Maybe.withDefault ""
-
-                    updateDrivers =
-                        List.map
-                            (\{ name } ->
-                                { name = name
-                                , isCurrentDriver = name == currentDriver
-                                }
-                            )
-                in
-                { car | drivers = updateDrivers car.drivers }
-            )

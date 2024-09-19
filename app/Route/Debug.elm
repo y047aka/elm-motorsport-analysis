@@ -197,9 +197,9 @@ raceControlToLeaderboard { raceClock, cars } =
                             , drivers =
                                 car.drivers
                                     |> List.map
-                                        (\driver ->
-                                            { name = driver.name
-                                            , isCurrentDriver = driver.name == lap.driver
+                                        (\{ name } ->
+                                            { name = name
+                                            , isCurrentDriver = name == lap.driver
                                             }
                                         )
                             , carNumber = car.carNumber

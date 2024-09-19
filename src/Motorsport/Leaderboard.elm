@@ -341,7 +341,14 @@ init ({ raceClock } as raceControl) =
         |> List.indexedMap
             (\index { car, lastLap } ->
                 { position = index + 1
-                , drivers = car.drivers
+                , drivers =
+                    car.drivers
+                        |> List.map
+                            (\{ name } ->
+                                { name = name
+                                , isCurrentDriver = name == lastLap.driver
+                                }
+                            )
                 , carNumber = car.carNumber
                 , class = car.class
                 , team = car.team
