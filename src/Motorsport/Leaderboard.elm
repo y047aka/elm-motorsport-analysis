@@ -167,22 +167,16 @@ sectorTimeColumn { label, getter, fastestSectorTime } =
     , view =
         getter
             >> (\sector ->
-                    span
+                    div
                         [ css
-                            [ let
-                                status =
-                                    lapStatus { time = fastestSectorTime } sector
-                              in
-                              if LapStatus.isNormal status then
-                                batch []
-
-                              else
-                                LapStatus.toHexColorString status
-                                    |> hex
-                                    |> color
+                            [ height (px 18)
+                            , borderRadius (px 1)
+                            , lapStatus { time = fastestSectorTime } sector
+                                |> LapStatus.toHexColorString
+                                |> (\c -> backgroundColor (hex c))
                             ]
                         ]
-                        [ text (Duration.toString sector.time) ]
+                        []
                )
     , sorter = List.sortBy (getter >> .time)
     }
