@@ -230,6 +230,7 @@ raceControlToLeaderboard { raceClock, cars } =
                             , team = car.team
                             , lap = lap.lap
                             , gap = Gap.None
+                            , interval = Gap.None
                             , time = lap.time
                             , sector_1 = lap.sector_1
                             , sector_2 = lap.sector_2

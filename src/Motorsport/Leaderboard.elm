@@ -313,6 +313,7 @@ type alias LeaderboardItem =
     , team : String
     , lap : Int
     , gap : Gap
+    , interval : Gap
     , time : Duration
     , sector_1 : Duration
     , sector_2 : Duration
@@ -350,6 +351,10 @@ init ({ raceClock } as raceControl) =
                 , gap =
                     List.head sortedCars
                         |> Maybe.map (\leader -> Gap.from leader.lastLap lastLap)
+                        |> Maybe.withDefault Gap.None
+                , interval =
+                    List.Extra.getAt (index - 1) sortedCars
+                        |> Maybe.map (\target -> Gap.from target.lastLap lastLap)
                         |> Maybe.withDefault Gap.None
                 , time = lastLap.time
                 , sector_1 = lastLap.sector_1

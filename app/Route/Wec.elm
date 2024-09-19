@@ -182,6 +182,11 @@ config analysis =
             , getter = .gap >> Gap.toString
             , sorter = List.sortBy .position
             }
+        , customColumn
+            { label = "Interval"
+            , getter = .interval >> Gap.toString
+            , sorter = List.sortBy .position
+            }
         , sectorTimeColumn
             { label = "S1"
             , getter = \{ sector_1, s1_best } -> { time = sector_1, best = s1_best }
