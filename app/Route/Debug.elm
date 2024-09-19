@@ -192,7 +192,14 @@ raceControlToLeaderboard { raceClock, cars } =
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1
-                            , drivers = car.drivers
+                            , drivers =
+                                car.drivers
+                                    |> List.map
+                                        (\driver ->
+                                            { name = driver.name
+                                            , isCurrentDriver = driver.name == lap.driver
+                                            }
+                                        )
                             , carNumber = car.carNumber
                             , class = car.class
                             , team = car.team
