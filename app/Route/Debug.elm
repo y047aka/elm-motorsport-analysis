@@ -4,11 +4,12 @@ import BackendTask exposing (BackendTask)
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (header, input, nav, text)
+import Html.Styled as Html exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
+import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, driverAndTeamColumn_Wec, initialSort, intColumn, sectorTimeColumn, timeColumn)
 import Motorsport.Leaderboard.Internal
@@ -141,6 +142,13 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
                     , text <| Clock.toString raceClock
+                    ]
+                , div []
+                    [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis_Wec.fastestLapTime) ]
+                    , div [] [ text "slowestLapTime: ", text (Duration.toString analysis_Wec.slowestLapTime) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString analysis_Wec.sector_1_fastest) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString analysis_Wec.sector_2_fastest) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
                     ]
                 ]
             , Motorsport.Leaderboard.Internal.table (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
