@@ -184,7 +184,9 @@ config analysis =
 
 raceControlToLeaderboard : RaceControl.Model -> Leaderboard
 raceControlToLeaderboard { raceClock, cars } =
-    List.head cars
+    cars
+        |> List.filter (\{ carNumber } -> carNumber == "2")
+        |> List.head
         |> Maybe.map
             (\car ->
                 car.laps
