@@ -1,7 +1,7 @@
 module Route.Debug exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
 
 import BackendTask exposing (BackendTask)
-import Css exposing (displayFlex, justifyContent, spaceBetween)
+import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (header, input, nav, text)
@@ -118,7 +118,15 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
                 { raceClock, lapTotal } =
                     raceControl_Wec
             in
-            [ header [ css [ displayFlex, justifyContent spaceBetween ] ]
+            [ header
+                [ css
+                    [ position sticky
+                    , top zero
+                    , displayFlex
+                    , justifyContent spaceBetween
+                    , backgroundColor (hsl 0 0 0.4)
+                    ]
+                ]
                 [ nav []
                     [ input
                         [ type_ "range"
