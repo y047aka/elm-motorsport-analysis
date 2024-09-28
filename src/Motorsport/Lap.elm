@@ -4,6 +4,7 @@ module Motorsport.Lap exposing
     , personalBestLap, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Sector(..)
+    , currentSector
     )
 
 {-|
@@ -14,6 +15,7 @@ module Motorsport.Lap exposing
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
 @docs Sector
+@docs currentSector
 
 -}
 

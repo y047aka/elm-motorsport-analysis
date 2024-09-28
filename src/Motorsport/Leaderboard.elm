@@ -343,14 +343,7 @@ init { raceClock, cars } =
             (\index { car, currentLap, lastLap } ->
                 let
                     currentSector =
-                        if raceClock.elapsed >= lastLap.elapsed && raceClock.elapsed < (lastLap.elapsed + currentLap.sector_1) then
-                            S1
-
-                        else if raceClock.elapsed >= (lastLap.elapsed + currentLap.sector_1) && raceClock.elapsed < (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2) then
-                            S2
-
-                        else
-                            S3
+                        Lap.currentSector raceClock currentLap
                 in
                 { position = index + 1
                 , drivers =
