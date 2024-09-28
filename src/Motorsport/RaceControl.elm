@@ -43,8 +43,8 @@ calcLapTotal =
 
 
 type Msg
-    = AddOneMinute
-    | SubtractOneMinute
+    = Add10seconds
+    | Subtract10seconds
     | SetCount Int
     | NextLap
     | PreviousLap
@@ -53,16 +53,16 @@ type Msg
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        AddOneMinute ->
+        Add10seconds ->
             if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
-                { m | raceClock = Clock.add (60 * 1000) (List.map .laps m.cars) m.raceClock }
+                { m | raceClock = Clock.add (10 * 1000) (List.map .laps m.cars) m.raceClock }
 
             else
                 m
 
-        SubtractOneMinute ->
+        Subtract10seconds ->
             if m.raceClock.elapsed > 0 then
-                { m | raceClock = Clock.subtract (60 * 1000) (List.map .laps m.cars) m.raceClock }
+                { m | raceClock = Clock.subtract (10 * 1000) (List.map .laps m.cars) m.raceClock }
 
             else
                 m

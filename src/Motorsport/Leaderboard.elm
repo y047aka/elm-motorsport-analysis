@@ -158,7 +158,7 @@ lastLapColumn { getter, sorter, analysis } =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> { time : Duration, best : Duration }
+    , getter : data -> { time : Maybe Duration, best : Duration }
     , fastestSectorTime : Duration
     }
     -> Column data msg
@@ -167,18 +167,23 @@ sectorTimeColumn { label, getter, fastestSectorTime } =
     , view =
         getter
             >> (\sector ->
-                    div
-                        [ css
-                            [ height (px 18)
-                            , borderRadius (px 1)
-                            , lapStatus { time = fastestSectorTime } sector
-                                |> LapStatus.toHexColorString
-                                |> (\c -> backgroundColor (hex c))
-                            ]
-                        ]
-                        []
+                    sector.time
+                        |> Maybe.map
+                            (\sectorTime ->
+                                div
+                                    [ css
+                                        [ height (px 18)
+                                        , borderRadius (px 1)
+                                        , lapStatus { time = fastestSectorTime } { time = sectorTime, best = sector.best }
+                                            |> LapStatus.toHexColorString
+                                            |> (\c -> backgroundColor (hex c))
+                                        ]
+                                    ]
+                                    []
+                            )
+                        |> Maybe.withDefault (text "")
                )
-    , sorter = List.sortBy (getter >> .time)
+    , sorter = List.sortBy (getter >> .time >> Maybe.withDefault 0)
     }
 
 
@@ -314,9 +319,9 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , sector_1 : Duration
-    , sector_2 : Duration
-    , sector_3 : Duration
+    , sector_1 : Maybe Duration
+    , sector_2 : Maybe Duration
+    , sector_3 : Maybe Duration
     , s1_best : Duration
     , s2_best : Duration
     , s3_best : Duration
@@ -335,6 +340,17 @@ init ({ raceClock } as raceControl) =
     sortedCars
         |> List.indexedMap
             (\index { car, currentLap, lastLap } ->
+                let
+                    currentSector =
+                        if raceClock.elapsed >= lastLap.elapsed && raceClock.elapsed < (lastLap.elapsed + currentLap.sector_1) then
+                            S1
+
+                        else if raceClock.elapsed >= (lastLap.elapsed + currentLap.sector_1) && raceClock.elapsed < (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2) then
+                            S2
+
+                        else
+                            S3
+                in
                 { position = index + 1
                 , drivers =
                     car.drivers
@@ -356,12 +372,45 @@ init ({ raceClock } as raceControl) =
                     List.Extra.getAt (index - 1) sortedCars
                         |> Maybe.map (\target -> Gap.from target.lastLap lastLap)
                         |> Maybe.withDefault Gap.None
-                , sector_1 = lastLap.sector_1
-                , sector_2 = lastLap.sector_2
-                , sector_3 = lastLap.sector_3
-                , s1_best = lastLap.s1_best
-                , s2_best = lastLap.s2_best
-                , s3_best = lastLap.s3_best
+                , sector_1 =
+                    if currentSector == S1 then
+                        Just lastLap.sector_1
+
+                    else
+                        Just currentLap.sector_1
+                , sector_2 =
+                    if currentSector == S1 then
+                        Just lastLap.sector_2
+
+                    else if currentSector == S2 then
+                        Nothing
+
+                    else
+                        Just currentLap.sector_2
+                , sector_3 =
+                    if currentSector == S1 then
+                        Just lastLap.sector_3
+
+                    else
+                        Nothing
+                , s1_best =
+                    if currentSector == S1 then
+                        lastLap.s1_best
+
+                    else
+                        currentLap.s1_best
+                , s2_best =
+                    if currentSector == S1 then
+                        lastLap.s2_best
+
+                    else
+                        currentLap.s2_best
+                , s3_best =
+                    if currentSector == S1 then
+                        lastLap.s3_best
+
+                    else
+                        currentLap.s3_best
                 , lastLapTime = lastLap.time
                 , best = lastLap.best
                 , history = completedLapsAt raceClock car.laps
@@ -417,6 +466,12 @@ sortCarsAt { raceClock, cars } =
                 }
             )
         |> List.sortWith (\a b -> Lap.compare a.lastLap b.lastLap)
+
+
+type Sector
+    = S1
+    | S2
+    | S3
 
 
 
