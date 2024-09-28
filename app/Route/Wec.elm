@@ -11,7 +11,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, performanceColumn, sectorTimeColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -207,20 +207,20 @@ config analysis =
             , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
             , fastestSectorTime = analysis.sector_3_fastest
             }
-        , timeColumn
+        , lastLapColumn
             { getter = identity
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             }
         , bestTimeColumn { getter = .best }
         , performanceColumn
             { getter = .history
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             }
         , histogramColumn
             { getter = .history
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             , coefficient = 1.2
             }

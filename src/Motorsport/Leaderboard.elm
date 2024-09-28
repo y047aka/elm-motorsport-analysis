@@ -3,7 +3,7 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn
-    , timeColumn, sectorTimeColumn, bestTimeColumn
+    , sectorTimeColumn, lastLapColumn, bestTimeColumn
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
@@ -32,7 +32,7 @@ module Motorsport.Leaderboard exposing
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs timeColumn, sectorTimeColumn, bestTimeColumn
+@docs sectorTimeColumn, lastLapColumn, bestTimeColumn
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
@@ -50,7 +50,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findLastLapAt)
+import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findCurrentLap, findLastLapAt)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
@@ -124,22 +124,22 @@ customColumn =
     Motorsport.Leaderboard.Internal.customColumn
 
 
-timeColumn :
-    { getter : data -> { a | time : Duration, best : Duration }
+lastLapColumn :
+    { getter : data -> { a | lastLapTime : Duration, best : Duration }
     , sorter : List data -> List data
     , analysis : Analysis
     }
     -> Column data msg
-timeColumn { getter, sorter, analysis } =
+lastLapColumn { getter, sorter, analysis } =
     { name = "Time"
     , view =
         getter
-            >> (\lap ->
+            >> (\{ lastLapTime, best } ->
                     span
                         [ css
                             [ let
                                 status =
-                                    lapStatus { time = analysis.fastestLapTime } lap
+                                    lapStatus { time = analysis.fastestLapTime } { time = lastLapTime, best = best }
                               in
                               if LapStatus.isNormal status then
                                 batch []
@@ -150,7 +150,7 @@ timeColumn { getter, sorter, analysis } =
                                     |> color
                             ]
                         ]
-                        [ text <| Duration.toString lap.time ]
+                        [ text <| Duration.toString lastLapTime ]
                )
     , sorter = sorter
     }
@@ -314,13 +314,13 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , time : Duration
     , sector_1 : Duration
     , sector_2 : Duration
     , sector_3 : Duration
     , s1_best : Duration
     , s2_best : Duration
     , s3_best : Duration
+    , lastLapTime : Duration
     , best : Duration
     , history : List Lap
     }
@@ -334,7 +334,7 @@ init ({ raceClock } as raceControl) =
     in
     sortedCars
         |> List.indexedMap
-            (\index { car, lastLap } ->
+            (\index { car, currentLap, lastLap } ->
                 { position = index + 1
                 , drivers =
                     car.drivers
@@ -356,25 +356,43 @@ init ({ raceClock } as raceControl) =
                     List.Extra.getAt (index - 1) sortedCars
                         |> Maybe.map (\target -> Gap.from target.lastLap lastLap)
                         |> Maybe.withDefault Gap.None
-                , time = lastLap.time
                 , sector_1 = lastLap.sector_1
                 , sector_2 = lastLap.sector_2
                 , sector_3 = lastLap.sector_3
                 , s1_best = lastLap.s1_best
                 , s2_best = lastLap.s2_best
                 , s3_best = lastLap.s3_best
+                , lastLapTime = lastLap.time
                 , best = lastLap.best
                 , history = completedLapsAt raceClock car.laps
                 }
             )
 
 
-sortCarsAt : RaceControl.Model -> List { car : Car, lastLap : Lap }
+sortCarsAt : RaceControl.Model -> List { car : Car, currentLap : Lap, lastLap : Lap }
 sortCarsAt { raceClock, cars } =
     cars
         |> List.map
             (\car ->
                 let
+                    currentLap =
+                        findCurrentLap raceClock car.laps
+                            |> Maybe.withDefault
+                                { carNumber = ""
+                                , driver = ""
+                                , lap = 0
+                                , position = Nothing
+                                , time = 0
+                                , sector_1 = 0
+                                , sector_2 = 0
+                                , sector_3 = 0
+                                , s1_best = 0
+                                , s2_best = 0
+                                , s3_best = 0
+                                , best = 0
+                                , elapsed = 0
+                                }
+
                     lastLap =
                         findLastLapAt raceClock car.laps
                             |> Maybe.withDefault
@@ -393,7 +411,10 @@ sortCarsAt { raceClock, cars } =
                                 , elapsed = 0
                                 }
                 in
-                { car = car, lastLap = lastLap }
+                { car = car
+                , currentLap = currentLap
+                , lastLap = lastLap
+                }
             )
         |> List.sortWith (\a b -> Lap.compare a.lastLap b.lastLap)
 

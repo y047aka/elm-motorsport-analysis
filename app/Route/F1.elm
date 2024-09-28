@@ -12,7 +12,7 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, performanceColumn, stringColumn, timeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -179,20 +179,20 @@ config analysis =
             , getter = .gap >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , timeColumn
+        , lastLapColumn
             { getter = identity
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             }
         , bestTimeColumn { getter = .best }
         , performanceColumn
             { getter = .history
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             }
         , histogramColumn
             { getter = .history
-            , sorter = List.sortBy .time
+            , sorter = List.sortBy .lastLapTime
             , analysis = analysis
             , coefficient = 1.2
             }
