@@ -131,7 +131,7 @@ lastLapColumn :
     }
     -> Column data msg
 lastLapColumn { getter, sorter, analysis } =
-    { name = "Time"
+    { name = "Last Lap"
     , view =
         getter
             >> (\{ lastLapTime, best } ->
