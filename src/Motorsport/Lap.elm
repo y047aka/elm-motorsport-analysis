@@ -1,5 +1,5 @@
 module Motorsport.Lap exposing
-    ( Lap
+    ( Lap, empty
     , compare
     , personalBestLap, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt, findCurrentLap
@@ -7,7 +7,7 @@ module Motorsport.Lap exposing
 
 {-|
 
-@docs Lap
+@docs Lap, empty
 @docs compare
 @docs personalBestLap, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt, findCurrentLap
@@ -33,6 +33,24 @@ type alias Lap =
     , s2_best : Duration
     , s3_best : Duration
     , elapsed : Duration
+    }
+
+
+empty : Lap
+empty =
+    { carNumber = ""
+    , driver = ""
+    , lap = 0
+    , position = Nothing
+    , time = 0
+    , sector_1 = 0
+    , sector_2 = 0
+    , sector_3 = 0
+    , s1_best = 0
+    , s2_best = 0
+    , s3_best = 0
+    , best = 0
+    , elapsed = 0
     }
 
 

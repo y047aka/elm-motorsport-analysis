@@ -426,39 +426,11 @@ sortCarsAt { raceClock, cars } =
                 let
                     currentLap =
                         findCurrentLap raceClock car.laps
-                            |> Maybe.withDefault
-                                { carNumber = ""
-                                , driver = ""
-                                , lap = 0
-                                , position = Nothing
-                                , time = 0
-                                , sector_1 = 0
-                                , sector_2 = 0
-                                , sector_3 = 0
-                                , s1_best = 0
-                                , s2_best = 0
-                                , s3_best = 0
-                                , best = 0
-                                , elapsed = 0
-                                }
+                            |> Maybe.withDefault Lap.empty
 
                     lastLap =
                         findLastLapAt raceClock car.laps
-                            |> Maybe.withDefault
-                                { carNumber = ""
-                                , driver = ""
-                                , lap = 0
-                                , position = Nothing
-                                , time = 0
-                                , sector_1 = 0
-                                , sector_2 = 0
-                                , sector_3 = 0
-                                , s1_best = 0
-                                , s2_best = 0
-                                , s3_best = 0
-                                , best = 0
-                                , elapsed = 0
-                                }
+                            |> Maybe.withDefault Lap.empty
                 in
                 { car = car
                 , currentLap = currentLap
