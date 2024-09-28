@@ -1,16 +1,19 @@
 module Motorsport.Lap exposing
     ( Lap, empty
-    , compare
+    , compareAt
     , personalBestLap, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt, findCurrentLap
+    , Sector(..)
     )
 
 {-|
 
 @docs Lap, empty
-@docs compare
+@docs compareAt
 @docs personalBestLap, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt, findCurrentLap
+
+@docs Sector
 
 -}
 
@@ -54,14 +57,29 @@ empty =
     }
 
 
-compare : Lap -> Lap -> Order
-compare a b =
+compareAt : Clock -> Lap -> Lap -> Order
+compareAt clock a b =
     case Basics.compare a.lap b.lap of
         LT ->
             GT
 
         EQ ->
-            Basics.compare a.elapsed b.elapsed
+            let
+                currentSector_a =
+                    currentSector clock a
+
+                currentSector_b =
+                    currentSector clock b
+            in
+            case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
+                LT ->
+                    GT
+
+                EQ ->
+                    Basics.compare (sectorToElapsed a currentSector_a) (sectorToElapsed b currentSector_b)
+
+                GT ->
+                    LT
 
         GT ->
             LT
@@ -91,8 +109,17 @@ completedLapsAt clock =
 
 
 imcompletedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
-imcompletedLapsAt clock =
-    List.filter (\lap -> lap.elapsed > clock.elapsed)
+imcompletedLapsAt clock laps =
+    let
+        incompletedLaps =
+            List.filter (\lap -> lap.elapsed > clock.elapsed) laps
+    in
+    case incompletedLaps of
+        [] ->
+            List.filterMap identity [ List.Extra.last laps ]
+
+        _ ->
+            incompletedLaps
 
 
 findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
@@ -103,3 +130,59 @@ findLastLapAt clock =
 findCurrentLap : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
 findCurrentLap clock =
     imcompletedLapsAt clock >> List.head
+
+
+
+-- SECTOR
+
+
+type Sector
+    = S1
+    | S2
+    | S3
+
+
+currentSector : Clock -> Lap -> Sector
+currentSector clock lap =
+    let
+        elapsed_lastLap =
+            lap.elapsed - lap.time
+    in
+    if clock.elapsed >= elapsed_lastLap && clock.elapsed < (elapsed_lastLap + lap.sector_1) then
+        S1
+
+    else if clock.elapsed >= (elapsed_lastLap + lap.sector_1) && clock.elapsed < (elapsed_lastLap + lap.sector_1 + lap.sector_2) then
+        S2
+
+    else
+        S3
+
+
+sectorToString : Sector -> String
+sectorToString sector =
+    case sector of
+        S1 ->
+            "S1"
+
+        S2 ->
+            "S2"
+
+        S3 ->
+            "S3"
+
+
+sectorToElapsed : Lap -> Sector -> Duration
+sectorToElapsed lap sector =
+    let
+        elapsed_lastLap =
+            lap.elapsed - lap.time
+    in
+    case sector of
+        S1 ->
+            elapsed_lastLap + lap.sector_1
+
+        S2 ->
+            elapsed_lastLap + lap.sector_1 + lap.sector_2
+
+        S3 ->
+            elapsed_lastLap + lap.sector_1 + lap.sector_2 + lap.sector_3

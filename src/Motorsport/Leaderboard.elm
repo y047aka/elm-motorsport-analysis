@@ -47,10 +47,11 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Clock exposing (Clock)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap as Lap exposing (Lap, completedLapsAt, findCurrentLap, findLastLapAt)
+import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt, findCurrentLap, findLastLapAt)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
@@ -332,10 +333,10 @@ type alias LeaderboardItem =
 
 
 init : RaceControl.Model -> Leaderboard
-init ({ raceClock } as raceControl) =
+init { raceClock, cars } =
     let
         sortedCars =
-            sortCarsAt raceControl
+            sortCarsAt raceClock cars
     in
     sortedCars
         |> List.indexedMap
@@ -418,8 +419,8 @@ init ({ raceClock } as raceControl) =
             )
 
 
-sortCarsAt : RaceControl.Model -> List { car : Car, currentLap : Lap, lastLap : Lap }
-sortCarsAt { raceClock, cars } =
+sortCarsAt : Clock -> List Car -> List { car : Car, currentLap : Lap, lastLap : Lap }
+sortCarsAt raceClock cars =
     cars
         |> List.map
             (\car ->
@@ -437,13 +438,7 @@ sortCarsAt { raceClock, cars } =
                 , lastLap = lastLap
                 }
             )
-        |> List.sortWith (\a b -> Lap.compare a.lastLap b.lastLap)
-
-
-type Sector
-    = S1
-    | S2
-    | S3
+        |> List.sortWith (\a b -> Lap.compareAt raceClock a.currentLap b.currentLap)
 
 
 
