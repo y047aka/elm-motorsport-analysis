@@ -1,4 +1,16 @@
-module Motorsport.Clock exposing (Clock, init, initWithCount, jumpToNextLap, jumpToPreviousLap, toString)
+module Motorsport.Clock exposing
+    ( Clock, init, initWithCount
+    , add, subtract, jumpToNextLap, jumpToPreviousLap
+    , toString
+    )
+
+{-|
+
+@docs Clock, init, initWithCount
+@docs add, subtract, jumpToNextLap, jumpToPreviousLap
+@docs toString
+
+-}
 
 import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
@@ -17,6 +29,30 @@ initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Cloc
 initWithCount newCount lapTimes =
     { lapCount = newCount
     , elapsed = elapsedAt newCount lapTimes
+    }
+
+
+add : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
+add duration lapTimes c =
+    let
+        newElapsed =
+            c.elapsed + duration
+    in
+    { c
+        | lapCount = lapAt newElapsed lapTimes
+        , elapsed = newElapsed
+    }
+
+
+subtract : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Clock -> Clock
+subtract duration lapTimes c =
+    let
+        newElapsed =
+            c.elapsed - duration
+    in
+    { c
+        | lapCount = lapAt newElapsed lapTimes
+        , elapsed = newElapsed
     }
 
 
@@ -46,6 +82,23 @@ jumpToPreviousLap lapTimes c =
 
     else
         c
+
+
+lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int
+lapAt elapsed lapTimes =
+    lapTimes
+        |> List.filterMap
+            (List.Extra.findMap
+                (\lap ->
+                    if lap.elapsed > elapsed then
+                        Just (lap.lap - 1)
+
+                    else
+                        Nothing
+                )
+            )
+        |> List.maximum
+        |> Maybe.withDefault 0
 
 
 elapsedAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Duration

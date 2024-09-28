@@ -16,6 +16,7 @@ import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
 import Shared
+import String exposing (dropRight)
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import View exposing (View)
@@ -147,11 +148,15 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                         ]
                         []
                     , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-1 Lap" ]
                         , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
-                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                         ]
-                    , text ((6 * 60 * 60 * 1000 - raceClock.elapsed) |> Duration.toString)
+                    , labeledButton []
+                        [ button [ onClick (RaceControlMsg RaceControl.SubtractOneMinute) ] [ text "-1 Minute" ]
+                        , basicLabel [] [ text ((6 * 60 * 60 * 1000 - raceClock.elapsed) |> Duration.toString |> dropRight 4) ]
+                        , button [ onClick (RaceControlMsg RaceControl.AddOneMinute) ] [ text "+1 Minute" ]
+                        ]
                     ]
                 , nav []
                     [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
