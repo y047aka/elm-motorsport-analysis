@@ -344,6 +344,13 @@ init { raceClock, cars } =
                 let
                     currentSector =
                         Lap.currentSector raceClock currentLap
+
+                    { s1_best, s2_best, s3_best } =
+                        if currentSector == S1 then
+                            lastLap
+
+                        else
+                            currentLap
                 in
                 { position = index + 1
                 , drivers =
@@ -387,24 +394,9 @@ init { raceClock, cars } =
 
                     else
                         Nothing
-                , s1_best =
-                    if currentSector == S1 then
-                        lastLap.s1_best
-
-                    else
-                        currentLap.s1_best
-                , s2_best =
-                    if currentSector == S1 then
-                        lastLap.s2_best
-
-                    else
-                        currentLap.s2_best
-                , s3_best =
-                    if currentSector == S1 then
-                        lastLap.s3_best
-
-                    else
-                        currentLap.s3_best
+                , s1_best = s1_best
+                , s2_best = s2_best
+                , s3_best = s3_best
                 , lastLapTime = lastLap.time
                 , best = lastLap.best
                 , history = completedLapsAt raceClock car.laps
