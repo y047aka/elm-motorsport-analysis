@@ -346,21 +346,23 @@ init { raceClock, cars } =
                         Lap.currentSector raceClock currentLap
 
                     ( sector_1, sector_2, sector_3 ) =
-                        if currentSector == S1 then
-                            ( Just lastLap.sector_1, Just lastLap.sector_2, Just lastLap.sector_3 )
+                        case currentSector of
+                            S1 ->
+                                ( Just lastLap.sector_1, Just lastLap.sector_2, Just lastLap.sector_3 )
 
-                        else if currentSector == S2 then
-                            ( Just currentLap.sector_1, Nothing, Nothing )
+                            S2 ->
+                                ( Just currentLap.sector_1, Nothing, Nothing )
 
-                        else
-                            ( Just currentLap.sector_1, Just currentLap.sector_2, Nothing )
+                            S3 ->
+                                ( Just currentLap.sector_1, Just currentLap.sector_2, Nothing )
 
                     { s1_best, s2_best, s3_best } =
-                        if currentSector == S1 then
-                            lastLap
+                        case currentSector of
+                            S1 ->
+                                lastLap
 
-                        else
-                            currentLap
+                            _ ->
+                                currentLap
                 in
                 { position = index + 1
                 , drivers =
