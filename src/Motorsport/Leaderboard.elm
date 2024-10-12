@@ -45,13 +45,11 @@ import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.Clock exposing (Clock)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt, findCurrentLap, findLastLapAt)
+import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
@@ -334,14 +332,16 @@ type alias LeaderboardItem =
 
 init : RaceControl.Model -> Leaderboard
 init { raceClock, cars } =
-    let
-        sortedCars =
-            sortCarsAt raceClock cars
-    in
-    sortedCars
+    cars
         |> List.indexedMap
-            (\index { car, currentLap, lastLap } ->
+            (\index car ->
                 let
+                    currentLap =
+                        Maybe.withDefault Lap.empty car.currentLap
+
+                    lastLap =
+                        Maybe.withDefault Lap.empty car.lastLap
+
                     currentSector =
                         Lap.currentSector raceClock currentLap
 
@@ -378,12 +378,14 @@ init { raceClock, cars } =
                 , team = car.team
                 , lap = lastLap.lap
                 , gap =
-                    List.head sortedCars
-                        |> Maybe.map (\leader -> Gap.from leader.lastLap lastLap)
+                    List.head cars
+                        |> Maybe.andThen .lastLap
+                        |> Maybe.map (\leader_lastLap -> Gap.from leader_lastLap lastLap)
                         |> Maybe.withDefault Gap.None
                 , interval =
-                    List.Extra.getAt (index - 1) sortedCars
-                        |> Maybe.map (\target -> Gap.from target.lastLap lastLap)
+                    List.Extra.getAt (index - 1) cars
+                        |> Maybe.andThen .lastLap
+                        |> Maybe.map (\target_lastLap -> Gap.from target_lastLap lastLap)
                         |> Maybe.withDefault Gap.None
                 , sector_1 = sector_1
                 , sector_2 = sector_2
@@ -396,28 +398,6 @@ init { raceClock, cars } =
                 , history = completedLapsAt raceClock car.laps
                 }
             )
-
-
-sortCarsAt : Clock -> List Car -> List { car : Car, currentLap : Lap, lastLap : Lap }
-sortCarsAt raceClock cars =
-    cars
-        |> List.map
-            (\car ->
-                let
-                    currentLap =
-                        findCurrentLap raceClock car.laps
-                            |> Maybe.withDefault Lap.empty
-
-                    lastLap =
-                        findLastLapAt raceClock car.laps
-                            |> Maybe.withDefault Lap.empty
-                in
-                { car = car
-                , currentLap = currentLap
-                , lastLap = lastLap
-                }
-            )
-        |> List.sortWith (\a b -> Lap.compareAt raceClock a.currentLap b.currentLap)
 
 
 

@@ -126,6 +126,8 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     , manufacturer = "TODO"
     , startPosition = startPosition
     , laps = laps_
+    , currentLap = Nothing
+    , lastLap = Nothing
     }
 
 

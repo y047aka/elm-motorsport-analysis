@@ -2,6 +2,7 @@ module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock)
+import Motorsport.Lap as Lap
 
 
 
@@ -52,38 +53,62 @@ type Msg
 
 update : Msg -> Model -> Model
 update msg m =
-    case msg of
-        Add10seconds ->
-            if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
-                { m | raceClock = Clock.add (10 * 1000) (List.map .laps m.cars) m.raceClock }
+    let
+        newClock =
+            case msg of
+                Add10seconds ->
+                    if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
+                        Clock.add (10 * 1000) (List.map .laps m.cars) m.raceClock
 
-            else
-                m
+                    else
+                        m.raceClock
 
-        Subtract10seconds ->
-            if m.raceClock.elapsed > 0 then
-                { m | raceClock = Clock.subtract (10 * 1000) (List.map .laps m.cars) m.raceClock }
+                Subtract10seconds ->
+                    if m.raceClock.elapsed > 0 then
+                        Clock.subtract (10 * 1000) (List.map .laps m.cars) m.raceClock
 
-            else
-                m
+                    else
+                        m.raceClock
 
-        SetCount newCount ->
-            if newCount >= 0 && newCount <= m.lapTotal then
-                { m | raceClock = Clock.initWithCount newCount (List.map .laps m.cars) }
+                SetCount newCount ->
+                    if newCount >= 0 && newCount <= m.lapTotal then
+                        Clock.initWithCount newCount (List.map .laps m.cars)
 
-            else
-                m
+                    else
+                        m.raceClock
 
-        NextLap ->
-            if m.raceClock.lapCount < m.lapTotal then
-                { m | raceClock = Clock.jumpToNextLap (List.map .laps m.cars) m.raceClock }
+                NextLap ->
+                    if m.raceClock.lapCount < m.lapTotal then
+                        Clock.jumpToNextLap (List.map .laps m.cars) m.raceClock
 
-            else
-                m
+                    else
+                        m.raceClock
 
-        PreviousLap ->
-            if m.raceClock.lapCount > 0 then
-                { m | raceClock = Clock.jumpToPreviousLap (List.map .laps m.cars) m.raceClock }
+                PreviousLap ->
+                    if m.raceClock.lapCount > 0 then
+                        Clock.jumpToPreviousLap (List.map .laps m.cars) m.raceClock
 
-            else
-                m
+                    else
+                        m.raceClock
+    in
+    { m
+        | raceClock = newClock
+        , cars = updateCars newClock m.cars
+    }
+
+
+updateCars : Clock -> List Car -> List Car
+updateCars raceClock cars =
+    cars
+        |> List.map
+            (\car ->
+                { car
+                    | currentLap = Lap.findCurrentLap raceClock car.laps
+                    , lastLap = Lap.findLastLapAt raceClock car.laps
+                }
+            )
+        |> List.sortWith
+            (\a b ->
+                Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
+                    |> Maybe.withDefault EQ
+            )

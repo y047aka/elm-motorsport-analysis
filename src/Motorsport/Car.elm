@@ -14,4 +14,6 @@ type alias Car =
     , manufacturer : String
     , startPosition : Int
     , laps : List Lap
+    , currentLap : Maybe Lap
+    , lastLap : Maybe Lap
     }
