@@ -345,6 +345,16 @@ init { raceClock, cars } =
                     currentSector =
                         Lap.currentSector raceClock currentLap
 
+                    ( sector_1, sector_2, sector_3 ) =
+                        if currentSector == S1 then
+                            ( Just lastLap.sector_1, Just lastLap.sector_2, Just lastLap.sector_3 )
+
+                        else if currentSector == S2 then
+                            ( Just currentLap.sector_1, Nothing, Nothing )
+
+                        else
+                            ( Just currentLap.sector_1, Just currentLap.sector_2, Nothing )
+
                     { s1_best, s2_best, s3_best } =
                         if currentSector == S1 then
                             lastLap
@@ -373,27 +383,9 @@ init { raceClock, cars } =
                     List.Extra.getAt (index - 1) sortedCars
                         |> Maybe.map (\target -> Gap.from target.lastLap lastLap)
                         |> Maybe.withDefault Gap.None
-                , sector_1 =
-                    if currentSector == S1 then
-                        Just lastLap.sector_1
-
-                    else
-                        Just currentLap.sector_1
-                , sector_2 =
-                    if currentSector == S1 then
-                        Just lastLap.sector_2
-
-                    else if currentSector == S2 then
-                        Nothing
-
-                    else
-                        Just currentLap.sector_2
-                , sector_3 =
-                    if currentSector == S1 then
-                        Just lastLap.sector_3
-
-                    else
-                        Nothing
+                , sector_1 = sector_1
+                , sector_2 = sector_2
+                , sector_3 = sector_3
                 , s1_best = s1_best
                 , s2_best = s2_best
                 , s3_best = s3_best
