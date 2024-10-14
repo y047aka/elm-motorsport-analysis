@@ -181,10 +181,10 @@ sectorToElapsed lap sector =
     in
     case sector of
         S1 ->
-            elapsed_lastLap + lap.sector_1
+            elapsed_lastLap
 
         S2 ->
-            elapsed_lastLap + lap.sector_1 + lap.sector_2
+            elapsed_lastLap + lap.sector_1
 
         S3 ->
-            elapsed_lastLap + lap.sector_1 + lap.sector_2 + lap.sector_3
+            elapsed_lastLap + lap.sector_1 + lap.sector_2
