@@ -3,7 +3,8 @@
   "scripts": {
     "start": "elm-pages dev",
     "build": "elm-pages build --base elm-motorsport-analysis && mv ./dist/elm-motorsport-analysis/* ./dist/",
-    "test": "elm-verify-examples --run-tests"
+    "test": "elm-verify-examples --run-tests",
+    "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.3",
