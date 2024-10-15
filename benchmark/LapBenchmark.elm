@@ -1,4 +1,4 @@
-module Lap exposing (main)
+module LapBenchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
