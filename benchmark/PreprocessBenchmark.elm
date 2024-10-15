@@ -1,4 +1,4 @@
-module PreprocessBenchmark exposing (main)
+module PreprocessBenchmark exposing (main, mockDecoded)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
@@ -16,12 +16,12 @@ suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess"
         [ benchmark "preprocess"
-            (\_ -> Preprocess_Wec.preprocess decoded)
+            (\_ -> Preprocess_Wec.preprocess mockDecoded)
         ]
 
 
-decoded : List Wec.Lap
-decoded =
+mockDecoded : List Wec.Lap
+mockDecoded =
     case Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow Wec.lapDecoder mockData of
         Ok decoded_ ->
             decoded_
