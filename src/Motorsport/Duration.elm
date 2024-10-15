@@ -1,4 +1,18 @@
-module Motorsport.Duration exposing (Duration, durationDecoder, fromString, toString)
+module Motorsport.Duration exposing
+    ( Duration
+    , durationDecoder
+    , toString
+    , fromString, fromStringWithDefault
+    )
+
+{-|
+
+@docs Duration
+@docs durationDecoder
+@docs toString
+@docs fromString, fromStringWithDefault
+
+-}
 
 import Json.Decode as Decode exposing (Decoder)
 
@@ -150,3 +164,8 @@ fromString str =
 
         _ ->
             Nothing
+
+
+fromStringWithDefault : Duration -> String -> Duration
+fromStringWithDefault default =
+    fromString >> Maybe.withDefault default
