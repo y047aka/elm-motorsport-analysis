@@ -3,6 +3,7 @@ module RaceControlBenchmark exposing (main)
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec.Preprocess as Preprocess_Wec
+import Motorsport.Car exposing (Car)
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 import PreprocessBenchmark exposing (mockDecoded)
 
@@ -14,20 +15,26 @@ main =
 
 suite : Benchmark
 suite =
+    let
+        rc =
+            RaceControl.init preprocessed
+    in
     describe "RaceControl"
-        [ benchmark "Add10seconds"
-            (\_ -> RaceControl.update Add10seconds raceControl)
-        , benchmark "Subtract10seconds"
-            (\_ -> RaceControl.update Subtract10seconds raceControl)
-        , benchmark "SetCount 60min"
-            (\_ -> RaceControl.update (SetCount (60 * 60 * 1000)) raceControl)
-        , benchmark "NextLap"
-            (\_ -> RaceControl.update NextLap raceControl)
-        , benchmark "PreviousLap"
-            (\_ -> RaceControl.update PreviousLap raceControl)
+        [ benchmark "init"
+            (\_ -> RaceControl.init preprocessed)
+        , benchmark "update Add10seconds"
+            (\_ -> RaceControl.update Add10seconds rc)
+        , benchmark "update Subtract10seconds"
+            (\_ -> RaceControl.update Subtract10seconds rc)
+        , benchmark "update (SetCount 60min)"
+            (\_ -> RaceControl.update (SetCount (60 * 60 * 1000)) rc)
+        , benchmark "update NextLap"
+            (\_ -> RaceControl.update NextLap rc)
+        , benchmark "update PreviousLap"
+            (\_ -> RaceControl.update PreviousLap rc)
         ]
 
 
-raceControl : RaceControl.Model
-raceControl =
-    RaceControl.init (Preprocess_Wec.preprocess mockDecoded)
+preprocessed : List Car
+preprocessed =
+    Preprocess_Wec.preprocess mockDecoded
