@@ -3,9 +3,9 @@ module RaceControlBenchmark exposing (main)
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec.Preprocess as Preprocess_Wec
+import MockData
 import Motorsport.Car exposing (Car)
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
-import PreprocessBenchmark exposing (mockDecoded)
 
 
 main : BenchmarkProgram
@@ -37,4 +37,4 @@ suite =
 
 preprocessed : List Car
 preprocessed =
-    Preprocess_Wec.preprocess mockDecoded
+    Preprocess_Wec.preprocess MockData.csvDecoded
