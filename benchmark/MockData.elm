@@ -1,7 +1,14 @@
-module MockData exposing (csv, csvDecoded)
+module MockData exposing (csv, csvDecoded, preprocessed)
 
 import Csv.Decode as Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
+import Data.Wec.Preprocess as Preprocess_Wec
+import Motorsport.Car exposing (Car)
+
+
+preprocessed : List Car
+preprocessed =
+    Preprocess_Wec.preprocess csvDecoded
 
 
 csvDecoded : List Wec.Lap

@@ -7,7 +7,7 @@ module Motorsport.Leaderboard exposing
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
-    , Config, Leaderboard, LeaderboardItem, view
+    , Config, Leaderboard, LeaderboardItem, init, view
     )
 
 {-|
