@@ -20,19 +20,28 @@ suite =
                     { lapCount = 2, elapsed = carA.lap1.elapsed + 1 }
               in
               benchmark "Deffient lap"
-                (\_ -> Lap.compareAt clock carA.lap2 carB.lap1)
+                (\_ ->
+                    -- 220,789,174 runs/s (GoF: 99.95%)
+                    Lap.compareAt clock carA.lap2 carB.lap1
+                )
             , let
                 clock =
                     { lapCount = 2, elapsed = carA.lap1.elapsed + carA.lap2.sector_1 + 1 }
               in
               benchmark "Same lap, Deffient sector"
-                (\_ -> Lap.compareAt clock carA.lap2 carB.lap2)
+                (\_ ->
+                    -- 35,922,633 runs/s (GoF: 99.73%)
+                    Lap.compareAt clock carA.lap2 carB.lap2
+                )
             , let
                 clock =
                     { lapCount = 2, elapsed = carA.lap1.elapsed + carA.lap2.sector_1 - 1 }
               in
               benchmark "Same lap, Same sector"
-                (\_ -> Lap.compareAt clock carA.lap2 carB.lap2)
+                (\_ ->
+                    -- 40,308,466 runs/s (GoF: 99.86%)
+                    Lap.compareAt clock carA.lap2 carB.lap2
+                )
             ]
         ]
 

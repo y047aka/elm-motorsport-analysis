@@ -21,17 +21,35 @@ suite =
     in
     describe "RaceControl"
         [ benchmark "init"
-            (\_ -> RaceControl.init preprocessed)
+            (\_ ->
+                -- 262,541 runs/s (GoF: 99.99%)
+                RaceControl.init preprocessed
+            )
         , benchmark "update Add10seconds"
-            (\_ -> RaceControl.update Add10seconds rc)
+            (\_ ->
+                -- 55,202 runs/s (GoF: 99.98%)
+                RaceControl.update Add10seconds rc
+            )
         , benchmark "update Subtract10seconds"
-            (\_ -> RaceControl.update Subtract10seconds rc)
+            (\_ ->
+                -- 55,065 runs/s (GoF: 99.95%)
+                RaceControl.update Subtract10seconds rc
+            )
         , benchmark "update (SetCount 60min)"
-            (\_ -> RaceControl.update (SetCount (60 * 60 * 1000)) rc)
+            (\_ ->
+                -- 55,250 runs/s (GoF: 99.98%)
+                RaceControl.update (SetCount (60 * 60 * 1000)) rc
+            )
         , benchmark "update NextLap"
-            (\_ -> RaceControl.update NextLap rc)
+            (\_ ->
+                -- 54,822 runs/s (GoF: 99.97%)
+                RaceControl.update NextLap rc
+            )
         , benchmark "update PreviousLap"
-            (\_ -> RaceControl.update PreviousLap rc)
+            (\_ ->
+                -- 54,678 runs/s (GoF: 99.93%)
+                RaceControl.update PreviousLap rc
+            )
         ]
 
 
