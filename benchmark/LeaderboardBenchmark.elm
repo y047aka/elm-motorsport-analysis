@@ -3,7 +3,7 @@ module LeaderboardBenchmark exposing (main)
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode exposing (FieldNames(..))
-import MockData
+import Fixture
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
@@ -23,7 +23,7 @@ suite =
                 -- 93,439 runs/s (GoF: 99.98%)
                 let
                     rc =
-                        RaceControl.init MockData.preprocessed
+                        RaceControl.init Fixture.preprocessed
                 in
                 Leaderboard.init rc
             )
@@ -32,7 +32,7 @@ suite =
                 -- 4,280 runs/s (GoF: 99.97%)
                 let
                     rc =
-                        RaceControl.init MockData.preprocessed
+                        RaceControl.init Fixture.preprocessed
 
                     analysis =
                         Analysis.finished rc

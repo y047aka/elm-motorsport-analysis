@@ -2,7 +2,7 @@ module RaceControlBenchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import MockData
+import Fixture
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 
 
@@ -15,13 +15,13 @@ suite : Benchmark
 suite =
     let
         rc =
-            RaceControl.init MockData.preprocessed
+            RaceControl.init Fixture.preprocessed
     in
     describe "RaceControl"
         [ benchmark "init"
             (\_ ->
                 -- 262,541 runs/s (GoF: 99.99%)
-                RaceControl.init MockData.preprocessed
+                RaceControl.init Fixture.preprocessed
             )
         , benchmark "update Add10seconds"
             (\_ ->

@@ -1,4 +1,4 @@
-module MockData exposing (csv, csvDecoded, preprocessed)
+module Fixture exposing (csv, csvDecoded, preprocessed)
 
 import Csv.Decode as Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec

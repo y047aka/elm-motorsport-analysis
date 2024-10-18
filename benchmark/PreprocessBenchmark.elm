@@ -4,7 +4,7 @@ import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode exposing (FieldNames(..))
 import Data.Wec.Preprocess as Preprocess_Wec
-import MockData
+import Fixture
 
 
 main : BenchmarkProgram
@@ -18,6 +18,6 @@ suite =
         [ benchmark "preprocess"
             (\_ ->
                 -- 92 runs/s (GoF: 99.97%)
-                Preprocess_Wec.preprocess MockData.csvDecoded
+                Preprocess_Wec.preprocess Fixture.csvDecoded
             )
         ]
