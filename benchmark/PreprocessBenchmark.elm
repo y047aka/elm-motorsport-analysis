@@ -17,7 +17,7 @@ suite =
     describe "Data.Wec.Preprocess"
         [ benchmark "preprocess"
             (\_ ->
-                -- 92 runs/s (GoF: 99.97%)
+                -- 98 runs/s (GoF: 100%)
                 Preprocess_Wec.preprocess Fixture.csvDecoded
             )
         ]

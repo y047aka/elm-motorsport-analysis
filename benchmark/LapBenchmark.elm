@@ -21,7 +21,7 @@ suite =
               in
               benchmark "Deffient lap"
                 (\_ ->
-                    -- 220,789,174 runs/s (GoF: 99.95%)
+                    -- 209,480,172 runs/s (GoF: 100%)
                     Lap.compareAt clock carA.lap2 carB.lap1
                 )
             , let
@@ -30,7 +30,7 @@ suite =
               in
               benchmark "Same lap, Deffient sector"
                 (\_ ->
-                    -- 35,922,633 runs/s (GoF: 99.73%)
+                    -- 29,408,271 runs/s (GoF: 99.89%)
                     Lap.compareAt clock carA.lap2 carB.lap2
                 )
             , let
@@ -39,7 +39,7 @@ suite =
               in
               benchmark "Same lap, Same sector"
                 (\_ ->
-                    -- 40,308,466 runs/s (GoF: 99.86%)
+                    -- 38,638,244 runs/s (GoF: 99.93%)
                     Lap.compareAt clock carA.lap2 carB.lap2
                 )
             ]
