@@ -7,7 +7,7 @@ import Fixture
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 
 
 main : BenchmarkProgram
@@ -20,19 +20,21 @@ suite =
     describe "Leaderboard"
         [ benchmark "init"
             (\_ ->
-                -- 94,535 runs/s (GoF: 99.99%)
+                -- 35,503 runs/s (GoF: 99.99%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
+                            |> RaceControl.update (SetCount (60 * 60 * 1000))
                 in
                 Leaderboard.init rc
             )
         , benchmark "view"
             (\_ ->
-                -- 4,263 runs/s (GoF: 99.98%)
+                -- 4,030 runs/s (GoF: 99.99%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
+                            |> RaceControl.update (SetCount (60 * 60 * 1000))
 
                     analysis =
                         Analysis.finished rc
