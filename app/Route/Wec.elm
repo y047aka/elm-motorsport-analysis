@@ -1,10 +1,10 @@
 module Route.Wec exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
 
 import BackendTask exposing (BackendTask)
-import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
+import Css exposing (alignItems, backgroundColor, center, displayFlex, hsl, justifyContent, position, property, right, spaceBetween, sticky, textAlign, top, zero)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (header, input, nav, text)
+import Html.Styled as Html exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
@@ -12,14 +12,13 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl as RaceControl exposing (State(..))
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
 import Shared
 import String exposing (dropRight)
 import Time
 import UI.Button exposing (button, labeledButton)
-import UI.Label exposing (basicLabel)
 import UrlPath exposing (UrlPath)
 import View exposing (View)
 
@@ -103,8 +102,13 @@ update app shared msg m =
 
 
 subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
-subscriptions _ _ _ model =
-    Time.every 100 (\_ -> RaceControlMsg RaceControl.Tick)
+subscriptions _ _ shared model =
+    case shared.raceControl_Wec.state of
+        Running ->
+            Time.every 100 (\_ -> RaceControlMsg RaceControl.Tick)
+
+        _ ->
+            Sub.none
 
 
 
@@ -137,10 +141,6 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
-            let
-                { raceClock, lapTotal } =
-                    raceControl_Wec
-            in
             [ header
                 [ css
                     [ position sticky
@@ -151,24 +151,24 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                     ]
                 ]
                 [ nav []
-                    [ input
-                        [ type_ "range"
-                        , Attributes.max <| String.fromInt lapTotal
-                        , value (String.fromInt raceClock.lapCount)
-                        , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
-                        ]
-                        []
+                    [ case raceControl_Wec.state of
+                        Initial ->
+                            button [ onClick (RaceControlMsg RaceControl.Start) ] [ text "Start" ]
+
+                        Running ->
+                            button [ onClick (RaceControlMsg RaceControl.Pause) ] [ text "Pause" ]
+
+                        Paused ->
+                            button [ onClick (RaceControlMsg RaceControl.Start) ] [ text "Resume" ]
+
+                        _ ->
+                            text ""
                     , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-1 Lap" ]
-                        , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
+                        [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                         ]
-                    , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.Subtract10seconds) ] [ text "-10s" ]
-                        , basicLabel [] [ text ((6 * 60 * 60 * 1000 - raceClock.elapsed) |> Duration.toString |> dropRight 4) ]
-                        , button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                        ]
                     ]
+                , statusBar raceControl_Wec
                 , nav []
                     [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
                     , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
@@ -182,6 +182,27 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                     PositionHistoryChart.view raceControl_Wec
             ]
         }
+
+
+statusBar : RaceControl.Model -> Html.Html Msg
+statusBar { raceClock, lapTotal } =
+    div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
+        [ div []
+            [ div [] [ text "Elapsed" ]
+            , div [] [ text (raceClock.elapsed |> Duration.toString |> dropRight 4) ]
+            ]
+        , input
+            [ type_ "range"
+            , Attributes.max <| String.fromInt lapTotal
+            , value (String.fromInt raceClock.lapCount)
+            , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+            ]
+            []
+        , div [ css [ textAlign right ] ]
+            [ div [] [ text "Remaining" ]
+            , div [] [ text ((6 * 60 * 60 * 1000 - raceClock.elapsed) |> Duration.toString |> dropRight 4) ]
+            ]
+        ]
 
 
 config : Analysis -> Leaderboard.Config LeaderboardItem Msg
