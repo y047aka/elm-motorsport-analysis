@@ -45,9 +45,8 @@ add duration lapTimes c =
         newElapsed =
             c.elapsed + duration
     in
-    { c
-        | lapCount = lapAt newElapsed lapTimes
-        , elapsed = newElapsed
+    { lapCount = lapAt newElapsed lapTimes
+    , elapsed = newElapsed
     }
 
 
@@ -57,9 +56,8 @@ subtract duration lapTimes c =
         newElapsed =
             c.elapsed - duration
     in
-    { c
-        | lapCount = lapAt newElapsed lapTimes
-        , elapsed = newElapsed
+    { lapCount = lapAt newElapsed lapTimes
+    , elapsed = newElapsed
     }
 
 
@@ -69,9 +67,8 @@ jumpToNextLap lapTimes c =
         newCount =
             c.lapCount + 1
     in
-    { c
-        | lapCount = newCount
-        , elapsed = elapsedAt newCount lapTimes
+    { lapCount = newCount
+    , elapsed = elapsedAt newCount lapTimes
     }
 
 
@@ -82,9 +79,8 @@ jumpToPreviousLap lapTimes c =
             newCount =
                 c.lapCount - 1
         in
-        { c
-            | lapCount = newCount
-            , elapsed = elapsedAt newCount lapTimes
+        { lapCount = newCount
+        , elapsed = elapsedAt newCount lapTimes
         }
 
     else
