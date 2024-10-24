@@ -44,7 +44,8 @@ calcLapTotal =
 
 
 type Msg
-    = Add10seconds
+    = Tick
+    | Add10seconds
     | Subtract10seconds
     | SetCount Int
     | NextLap
@@ -56,6 +57,13 @@ update msg m =
     let
         newClock =
             case msg of
+                Tick ->
+                    if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
+                        Clock.add 1000 (List.map .laps m.cars) m.raceClock
+
+                    else
+                        m.raceClock
+
                 Add10seconds ->
                     if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
                         Clock.add (10 * 1000) (List.map .laps m.cars) m.raceClock

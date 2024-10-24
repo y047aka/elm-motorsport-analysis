@@ -17,8 +17,10 @@ import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
 import Shared
 import String exposing (dropRight)
+import Time
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
+import UrlPath exposing (UrlPath)
 import View exposing (View)
 
 
@@ -32,7 +34,7 @@ route =
             { init = init
             , update = update
             , view = view
-            , subscriptions = \_ _ _ _ -> Sub.none
+            , subscriptions = subscriptions
             }
 
 
@@ -94,6 +96,15 @@ update app shared msg m =
             , Effect.none
             , Nothing
             )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
+subscriptions _ _ _ model =
+    Time.every 100 (\_ -> RaceControlMsg RaceControl.Tick)
 
 
 
