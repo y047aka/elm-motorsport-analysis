@@ -110,7 +110,7 @@ subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions _ _ shared model =
     case shared.raceControl_Wec.state of
         Started _ _ ->
-            Time.every 100 (RaceControl.Tick >> RaceControlMsg)
+            Time.every (1000 / 60) (RaceControl.Tick >> RaceControlMsg)
 
         _ ->
             Sub.none
