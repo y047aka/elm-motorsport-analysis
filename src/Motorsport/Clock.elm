@@ -1,12 +1,12 @@
 module Motorsport.Clock exposing
-    ( Clock, init, initWithCount
+    ( Clock, init, initWithCount, initWithElapsed
     , add, subtract, jumpToNextLap, jumpToPreviousLap
     , toString
     )
 
 {-|
 
-@docs Clock, init, initWithCount
+@docs Clock, init, initWithCount, initWithElapsed
 @docs add, subtract, jumpToNextLap, jumpToPreviousLap
 @docs toString
 
@@ -29,6 +29,13 @@ initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Cloc
 initWithCount newCount lapTimes =
     { lapCount = newCount
     , elapsed = elapsedAt newCount lapTimes
+    }
+
+
+initWithElapsed : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Clock
+initWithElapsed newElapsed lapTimes =
+    { lapCount = lapAt newElapsed lapTimes
+    , elapsed = newElapsed
     }
 
 

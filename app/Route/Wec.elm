@@ -17,6 +17,7 @@ import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
 import Shared
 import String exposing (dropRight)
+import Task
 import Time
 import UI.Button exposing (button, labeledButton)
 import UrlPath exposing (UrlPath)
@@ -71,7 +72,8 @@ init app shared =
 
 
 type Msg
-    = ModeChange Mode
+    = StartRace
+    | ModeChange Mode
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
 
@@ -84,6 +86,9 @@ update :
     -> ( Model, Effect Msg, Maybe Shared.Msg )
 update app shared msg m =
     case msg of
+        StartRace ->
+            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
+
         ModeChange mode ->
             ( { m | mode = mode }, Effect.none, Nothing )
 
@@ -104,8 +109,8 @@ update app shared msg m =
 subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions _ _ shared model =
     case shared.raceControl_Wec.state of
-        Running ->
-            Time.every 100 (\_ -> RaceControlMsg RaceControl.Tick)
+        Started _ _ ->
+            Time.every 100 (RaceControl.Tick >> RaceControlMsg)
 
         _ ->
             Sub.none
@@ -153,20 +158,25 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                 [ nav []
                     [ case raceControl_Wec.state of
                         Initial ->
-                            button [ onClick (RaceControlMsg RaceControl.Start) ] [ text "Start" ]
+                            button [ onClick StartRace ] [ text "Start" ]
 
-                        Running ->
+                        Started _ _ ->
                             button [ onClick (RaceControlMsg RaceControl.Pause) ] [ text "Pause" ]
 
                         Paused ->
-                            button [ onClick (RaceControlMsg RaceControl.Start) ] [ text "Resume" ]
+                            button [ onClick StartRace ] [ text "Resume" ]
 
                         _ ->
                             text ""
-                    , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
-                        ]
+                    , case raceControl_Wec.state of
+                        Started _ _ ->
+                            text ""
+
+                        _ ->
+                            labeledButton []
+                                [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                                , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                                ]
                     ]
                 , statusBar raceControl_Wec
                 , nav []

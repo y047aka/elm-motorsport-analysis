@@ -2,7 +2,9 @@ module Motorsport.RaceControl exposing (Model, Msg(..), State(..), empty, init, 
 
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
+import Time exposing (Posix)
 
 
 
@@ -19,7 +21,7 @@ type alias Model =
 
 type State
     = Initial
-    | Running
+    | Started Duration Posix
     | Paused
     | Finished
 
@@ -54,10 +56,10 @@ calcLapTotal =
 
 
 type Msg
-    = Start
+    = Start Posix
     | Pause
     | Finish
-    | Tick
+    | Tick Posix
     | Add10seconds
     | SetCount Int
     | NextLap
@@ -67,8 +69,33 @@ type Msg
 update : Msg -> Model -> Model
 update msg m =
     case msg of
-        Start ->
-            { m | state = Running }
+        Start now ->
+            { m | state = Started m.raceClock.elapsed now }
+
+        Tick now ->
+            case m.state of
+                Started splitTime started ->
+                    let
+                        speed =
+                            10
+
+                        elapsed =
+                            splitTime + ((Time.posixToMillis now - Time.posixToMillis started) * speed)
+
+                        newClock =
+                            if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
+                                Clock.initWithElapsed elapsed (List.map .laps m.cars)
+
+                            else
+                                m.raceClock
+                    in
+                    { m
+                        | raceClock = newClock
+                        , cars = updateCars newClock m.cars
+                    }
+
+                _ ->
+                    m
 
         Pause ->
             { m | state = Paused }
@@ -80,13 +107,6 @@ update msg m =
             let
                 newClock =
                     case msg of
-                        Tick ->
-                            if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
-                                Clock.add 1000 (List.map .laps m.cars) m.raceClock
-
-                            else
-                                m.raceClock
-
                         Add10seconds ->
                             if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
                                 Clock.add (10 * 1000) (List.map .laps m.cars) m.raceClock
