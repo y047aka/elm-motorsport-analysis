@@ -73,8 +73,8 @@ update msg m =
             { m | state = Started m.raceClock.elapsed now }
 
         Tick now ->
-            case m.state of
-                Started splitTime started ->
+            case ( m.state, m.raceClock.elapsed < 6 * 60 * 60 * 1000 ) of
+                ( Started splitTime started, True ) ->
                     let
                         speed =
                             10
@@ -83,11 +83,7 @@ update msg m =
                             splitTime + ((Time.posixToMillis now - Time.posixToMillis started) * speed)
 
                         newClock =
-                            if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
-                                Clock.initWithElapsed elapsed (List.map .laps m.cars)
-
-                            else
-                                m.raceClock
+                            Clock.initWithElapsed elapsed (List.map .laps m.cars)
                     in
                     { m
                         | raceClock = newClock
