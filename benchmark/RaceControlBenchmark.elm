@@ -28,11 +28,6 @@ suite =
                 -- 55,202 runs/s (GoF: 99.98%)
                 RaceControl.update Add10seconds rc
             )
-        , benchmark "update Subtract10seconds"
-            (\_ ->
-                -- 55,065 runs/s (GoF: 99.95%)
-                RaceControl.update Subtract10seconds rc
-            )
         , benchmark "update (SetCount 60min)"
             (\_ ->
                 -- 55,250 runs/s (GoF: 99.98%)
