@@ -1,10 +1,15 @@
 module Motorsport.Clock exposing
-    ( Clock, init, initWithCount, initWithElapsed
+    ( Model(..), init
+    , Msg(..), update
+    , Clock, initWithCount, initWithElapsed
     , add, subtract, jumpToNextLap, jumpToPreviousLap
     , toString
     )
 
 {-|
+
+@docs Model, init
+@docs Msg, update
 
 @docs Clock, init, initWithCount, initWithElapsed
 @docs add, subtract, jumpToNextLap, jumpToPreviousLap
@@ -14,15 +19,46 @@ module Motorsport.Clock exposing
 
 import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
+import Time exposing (Posix)
+
+
+type Model
+    = Initial
+    | Started Duration Posix
+    | Paused
+    | Finished
+
+
+init : Model
+init =
+    Initial
+
+
+type Msg
+    = Start Posix
+    | Pause
+    | Finish
+
+
+update : Msg -> Model -> Model
+update msg m =
+    case msg of
+        Start now ->
+            Started 0 now
+
+        Pause ->
+            Paused
+
+        Finish ->
+            Finished
+
+
+
+-- OUTDATED
 
 
 type alias Clock =
     { lapCount : Int, elapsed : Duration }
-
-
-init : Clock
-init =
-    { lapCount = 0, elapsed = 0 }
 
 
 initWithCount : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Clock

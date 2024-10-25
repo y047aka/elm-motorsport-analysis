@@ -1,8 +1,7 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), State(..), empty, init, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Clock as Clock exposing (Clock, Model(..))
 import Motorsport.Lap as Lap
 import Time exposing (Posix)
 
@@ -12,24 +11,17 @@ import Time exposing (Posix)
 
 
 type alias Model =
-    { state : State
+    { state : Clock.Model
     , raceClock : Clock
     , lapTotal : Int
     , cars : List Car
     }
 
 
-type State
-    = Initial
-    | Started Duration Posix
-    | Paused
-    | Finished
-
-
 empty : Model
 empty =
     { state = Initial
-    , raceClock = Clock.init
+    , raceClock = { lapCount = 0, elapsed = 0 }
     , lapTotal = 0
     , cars = []
     }
@@ -38,7 +30,7 @@ empty =
 init : List Car -> Model
 init cars =
     { state = Initial
-    , raceClock = Clock.init
+    , raceClock = { lapCount = 0, elapsed = 0 }
     , lapTotal = calcLapTotal cars
     , cars = cars
     }
@@ -94,10 +86,10 @@ update msg m =
                     m
 
         Pause ->
-            { m | state = Paused }
+            { m | state = Clock.update Clock.Pause m.state }
 
         Finish ->
-            { m | state = Finished }
+            { m | state = Clock.update Clock.Finish m.state }
 
         _ ->
             let
@@ -132,7 +124,7 @@ update msg m =
                                 m.raceClock
 
                         _ ->
-                            Clock.init
+                            { lapCount = 0, elapsed = 0 }
             in
             { m
                 | raceClock = newClock
