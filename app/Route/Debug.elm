@@ -116,7 +116,7 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
         { title = "Wec"
         , body =
             let
-                { raceClock, lapTotal } =
+                { raceClock, lapTotal, lapCount } =
                     raceControl_Wec
             in
             [ header
@@ -132,13 +132,13 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
                     [ input
                         [ type_ "range"
                         , Attributes.max <| String.fromInt lapTotal
-                        , value (String.fromInt raceClock.lapCount)
+                        , value (String.fromInt lapCount)
                         , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
                         ]
                         []
                     , labeledButton []
                         [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                        , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
+                        , basicLabel [] [ text (String.fromInt lapCount) ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
                     , text <| Clock.toString raceClock
@@ -206,14 +206,14 @@ config analysis =
 
 
 raceControlToLeaderboard : RaceControl.Model -> Leaderboard
-raceControlToLeaderboard { raceClock, cars } =
+raceControlToLeaderboard { lapCount, cars } =
     cars
         |> List.filter (\{ carNumber } -> carNumber == "2")
         |> List.head
         |> Maybe.map
             (\car ->
                 car.laps
-                    |> List.take raceClock.lapCount
+                    |> List.take lapCount
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1

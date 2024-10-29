@@ -17,7 +17,7 @@ suite =
         [ describe "compareAt"
             [ let
                 clock =
-                    { lapCount = 2, elapsed = carA.lap1.elapsed + 1 }
+                    { elapsed = carA.lap1.elapsed + 1 }
               in
               benchmark "Deffient lap"
                 (\_ ->
@@ -26,7 +26,7 @@ suite =
                 )
             , let
                 clock =
-                    { lapCount = 2, elapsed = carA.lap1.elapsed + carA.lap2.sector_1 + 1 }
+                    { elapsed = carA.lap1.elapsed + carA.lap2.sector_1 + 1 }
               in
               benchmark "Same lap, Deffient sector"
                 (\_ ->
@@ -35,7 +35,7 @@ suite =
                 )
             , let
                 clock =
-                    { lapCount = 2, elapsed = carA.lap1.elapsed + carA.lap2.sector_1 - 1 }
+                    { elapsed = carA.lap1.elapsed + carA.lap2.sector_1 - 1 }
               in
               benchmark "Same lap, Same sector"
                 (\_ ->

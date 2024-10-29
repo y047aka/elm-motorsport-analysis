@@ -127,7 +127,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         { title = "Leaderboard"
         , body =
             let
-                { raceClock, lapTotal } =
+                { raceClock, lapTotal, lapCount } =
                     raceControl_F1
             in
             [ header [ css [ displayFlex, justifyContent spaceBetween ] ]
@@ -135,13 +135,13 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                     [ input
                         [ type_ "range"
                         , Attributes.max <| String.fromInt lapTotal
-                        , value (String.fromInt raceClock.lapCount)
+                        , value (String.fromInt lapCount)
                         , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
                         ]
                         []
                     , labeledButton []
                         [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                        , basicLabel [] [ text (String.fromInt raceClock.lapCount) ]
+                        , basicLabel [] [ text (String.fromInt lapCount) ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
                     , text <| Clock.toString raceClock

@@ -196,7 +196,7 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
-statusBar { raceClock, lapTotal } =
+statusBar { raceClock, lapTotal, lapCount } =
     div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
         [ div []
             [ div [] [ text "Elapsed" ]
@@ -205,7 +205,7 @@ statusBar { raceClock, lapTotal } =
         , input
             [ type_ "range"
             , Attributes.max <| String.fromInt lapTotal
-            , value (String.fromInt raceClock.lapCount)
+            , value (String.fromInt lapCount)
             , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
             ]
             []
