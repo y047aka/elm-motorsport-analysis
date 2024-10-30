@@ -9,8 +9,8 @@ import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
-import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
+import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
@@ -144,7 +144,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                         , basicLabel [] [ text (String.fromInt lapCount) ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
-                    , text <| Clock.toString raceClock
+                    , text <| (.elapsed >> Duration.toString) raceClock
                     ]
                 , nav []
                     [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]

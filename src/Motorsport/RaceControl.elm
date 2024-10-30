@@ -54,8 +54,8 @@ calcLapTotal =
 
 type Msg
     = Start Posix
-    | Pause
-    | Finish
+    | Pause Posix
+    | Finish Posix
     | Tick Posix
     | Add10seconds
     | SetCount Int
@@ -67,17 +67,14 @@ update : Msg -> Model -> Model
 update msg m =
     case msg of
         Start now ->
-            { m | state = Started m.raceClock.elapsed now }
+            { m | state = Clock.update now Clock.Start m.state }
 
         Tick now ->
             case ( m.state, m.raceClock.elapsed < 6 * 60 * 60 * 1000 ) of
-                ( Started splitTime started, True ) ->
+                ( Started splitTime { startedAt }, True ) ->
                     let
-                        speed =
-                            10
-
                         newElapsed =
-                            splitTime + ((Time.posixToMillis now - Time.posixToMillis started) * speed)
+                            Clock.calcElapsed startedAt now splitTime
 
                         newClock =
                             { lapCount = lapAt newElapsed (List.map .laps m.cars)
@@ -85,7 +82,8 @@ update msg m =
                             }
                     in
                     { m
-                        | raceClock = { elapsed = newClock.elapsed }
+                        | state = Clock.update now Clock.Tick m.state
+                        , raceClock = { elapsed = newClock.elapsed }
                         , lapCount = newClock.lapCount
                         , cars = updateCars { elapsed = newClock.elapsed } m.cars
                     }
@@ -93,11 +91,11 @@ update msg m =
                 _ ->
                     m
 
-        Pause ->
-            { m | state = Clock.update Clock.Pause m.state }
+        Pause now ->
+            { m | state = Clock.update now Clock.Pause m.state }
 
-        Finish ->
-            { m | state = Clock.update Clock.Finish m.state }
+        Finish now ->
+            { m | state = Clock.update now Clock.Finish m.state }
 
         _ ->
             let

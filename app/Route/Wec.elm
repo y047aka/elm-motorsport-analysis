@@ -9,7 +9,7 @@ import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
-import Motorsport.Clock exposing (Model(..))
+import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
@@ -74,6 +74,7 @@ init app shared =
 
 type Msg
     = StartRace
+    | PauseRace
     | ModeChange Mode
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
@@ -89,6 +90,9 @@ update app shared msg m =
     case msg of
         StartRace ->
             ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
+
+        PauseRace ->
+            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
 
         ModeChange mode ->
             ( { m | mode = mode }, Effect.none, Nothing )
@@ -162,9 +166,9 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                             button [ onClick StartRace ] [ text "Start" ]
 
                         Started _ _ ->
-                            button [ onClick (RaceControlMsg RaceControl.Pause) ] [ text "Pause" ]
+                            button [ onClick PauseRace ] [ text "Pause" ]
 
-                        Paused ->
+                        Paused _ ->
                             button [ onClick StartRace ] [ text "Resume" ]
 
                         _ ->
@@ -196,11 +200,11 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
-statusBar { raceClock, lapTotal, lapCount } =
+statusBar { state, raceClock, lapTotal, lapCount } =
     div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
         [ div []
             [ div [] [ text "Elapsed" ]
-            , div [] [ text (raceClock.elapsed |> Duration.toString |> dropRight 4) ]
+            , div [] [ text (Clock.toString state) ]
             ]
         , input
             [ type_ "range"
