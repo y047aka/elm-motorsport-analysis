@@ -45,6 +45,7 @@ import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -382,14 +383,10 @@ init { clock, cars } =
                 , team = car.team
                 , lap = lastLap.lap
                 , gap =
-                    List.head cars
-                        |> Maybe.andThen .lastLap
-                        |> Maybe.map (\leader_lastLap -> Gap.from leader_lastLap lastLap)
+                    Maybe.map2 calcGap (List.head cars) (Just car)
                         |> Maybe.withDefault Gap.None
                 , interval =
-                    List.Extra.getAt (index - 1) cars
-                        |> Maybe.andThen .lastLap
-                        |> Maybe.map (\target_lastLap -> Gap.from target_lastLap lastLap)
+                    Maybe.map2 calcGap (List.Extra.getAt (index - 1) cars) (Just car)
                         |> Maybe.withDefault Gap.None
                 , sector_1 = sector_1
                 , sector_2 = sector_2
@@ -402,6 +399,16 @@ init { clock, cars } =
                 , history = completedLapsAt raceClock car.laps
                 }
             )
+
+
+calcGap : Car -> Car -> Gap
+calcGap carA carB =
+    case ( carA.lastLap, carB.lastLap ) of
+        ( Just carA_lastLap, Just carB_lastLap ) ->
+            Gap.from carA_lastLap carB_lastLap
+
+        _ ->
+            Gap.None
 
 
 
