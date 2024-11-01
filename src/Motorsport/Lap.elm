@@ -20,7 +20,6 @@ module Motorsport.Lap exposing
 -}
 
 import List.Extra
-import Motorsport.Clock exposing (Clock)
 import Motorsport.Duration exposing (Duration)
 
 
@@ -57,6 +56,10 @@ empty =
     , best = 0
     , elapsed = 0
     }
+
+
+type alias Clock =
+    { elapsed : Duration }
 
 
 compareAt : Clock -> Lap -> Lap -> Order

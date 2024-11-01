@@ -3,7 +3,6 @@ module Motorsport.Clock exposing
     , Msg(..), update
     , toString
     , getElapsed
-    , Clock
     , calcElapsed
     )
 
@@ -13,8 +12,6 @@ module Motorsport.Clock exposing
 @docs Msg, update
 @docs toString
 @docs getElapsed
-
-@docs Clock
 
 -}
 
@@ -136,11 +133,3 @@ calcElapsed startedAt now splitTime =
             10
     in
     (diff startedAt now * speed) + splitTime
-
-
-
--- OUTDATED
-
-
-type alias Clock =
-    { elapsed : Duration }

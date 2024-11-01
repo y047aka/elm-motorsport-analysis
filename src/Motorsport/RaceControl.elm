@@ -2,7 +2,7 @@ module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import List.Extra
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock exposing (Clock, Model(..))
+import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Time exposing (Posix, millisToPosix)
@@ -175,6 +175,10 @@ update msg m =
                 , lapCount = lapCount
                 , cars = updateCars { elapsed = elapsed } m.cars
             }
+
+
+type alias Clock =
+    { elapsed : Duration }
 
 
 updateCars : Clock -> List Car -> List Car
