@@ -25,7 +25,7 @@ suite =
             )
         , benchmark "update Add10seconds"
             (\_ ->
-                -- 55,202 runs/s (GoF: 99.98%)
+                -- 56,532 runs/s (GoF: 99.99%)
                 RaceControl.update Add10seconds rc
             )
         , benchmark "update (SetCount 60min)"
@@ -40,7 +40,7 @@ suite =
             )
         , benchmark "update PreviousLap"
             (\_ ->
-                -- 54,678 runs/s (GoF: 99.93%)
+                -- 57,277 runs/s (GoF: 100%)
                 RaceControl.update PreviousLap rc
             )
         ]

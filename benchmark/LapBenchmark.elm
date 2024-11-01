@@ -39,7 +39,7 @@ suite =
               in
               benchmark "Same lap, Same sector"
                 (\_ ->
-                    -- 38,638,244 runs/s (GoF: 99.93%)
+                    -- 38,635,046 runs/s (GoF: 99.98%)
                     Lap.compareAt clock carA.lap2 carB.lap2
                 )
             ]
