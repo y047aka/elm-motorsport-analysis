@@ -2,7 +2,7 @@ module Motorsport.Analysis exposing (Analysis, finished, fromRaceControl)
 
 import List.Extra
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock exposing (Clock)
+import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt, fastestLap, slowestLap)
 
@@ -16,9 +16,12 @@ type alias Analysis =
     }
 
 
-fromRaceControl : { a | raceClock : Clock, cars : List Car } -> Analysis
-fromRaceControl { raceClock, cars } =
+fromRaceControl : { a | clock : Clock.Model, cars : List Car } -> Analysis
+fromRaceControl { clock, cars } =
     let
+        raceClock =
+            { elapsed = Clock.getElapsed clock }
+
         completedLaps =
             List.map (.laps >> completedLapsAt raceClock) cars
     in

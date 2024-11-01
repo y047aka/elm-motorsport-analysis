@@ -113,7 +113,7 @@ update app shared msg m =
 
 subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions _ _ shared model =
-    case shared.raceControl_Wec.state of
+    case shared.raceControl_Wec.clock of
         Started _ _ ->
             Time.every (1000 / 60) (RaceControl.Tick >> RaceControlMsg)
 
@@ -161,7 +161,7 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                     ]
                 ]
                 [ nav []
-                    [ case raceControl_Wec.state of
+                    [ case raceControl_Wec.clock of
                         Initial ->
                             button [ onClick StartRace ] [ text "Start" ]
 
@@ -173,7 +173,7 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
 
                         _ ->
                             text ""
-                    , case raceControl_Wec.state of
+                    , case raceControl_Wec.clock of
                         Started _ _ ->
                             text ""
 
@@ -200,11 +200,18 @@ view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
-statusBar { state, raceClock, lapTotal, lapCount } =
+statusBar { clock, lapTotal, lapCount } =
+    let
+        elapsed =
+            Clock.getElapsed clock
+
+        remaining =
+            6 * 60 * 60 * 1000 - elapsed
+    in
     div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
         [ div []
             [ div [] [ text "Elapsed" ]
-            , div [] [ text (Clock.toString state) ]
+            , div [] [ text (Clock.toString clock) ]
             ]
         , input
             [ type_ "range"
@@ -215,7 +222,7 @@ statusBar { state, raceClock, lapTotal, lapCount } =
             []
         , div [ css [ textAlign right ] ]
             [ div [] [ text "Remaining" ]
-            , div [] [ text ((6 * 60 * 60 * 1000 - raceClock.elapsed) |> Duration.toString |> dropRight 4) ]
+            , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
         ]
 

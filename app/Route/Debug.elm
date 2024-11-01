@@ -8,6 +8,7 @@ import Html.Styled as Html exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
@@ -115,7 +116,7 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
         { title = "Wec"
         , body =
             let
-                { raceClock, lapTotal, lapCount } =
+                { clock, lapTotal, lapCount } =
                     raceControl_Wec
             in
             [ header
@@ -140,7 +141,7 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
                         , basicLabel [] [ text (String.fromInt lapCount) ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
-                    , text <| (.elapsed >> Duration.toString) raceClock
+                    , text (Clock.getElapsed clock |> Duration.toString)
                     ]
                 , div []
                     [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis_Wec.fastestLapTime) ]

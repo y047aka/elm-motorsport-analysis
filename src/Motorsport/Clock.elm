@@ -2,6 +2,7 @@ module Motorsport.Clock exposing
     ( Model(..), init
     , Msg(..), update
     , toString
+    , getElapsed
     , Clock
     , calcElapsed
     )
@@ -11,6 +12,7 @@ module Motorsport.Clock exposing
 @docs Model, init
 @docs Msg, update
 @docs toString
+@docs getElapsed
 
 @docs Clock
 
@@ -37,6 +39,7 @@ type Msg
     | Tick
     | Pause
     | Finish
+    | Set Duration
 
 
 update : Posix -> Msg -> Model -> Model
@@ -72,6 +75,17 @@ update now msg m =
         Finish ->
             Finished
 
+        Set duration ->
+            case m of
+                Started _ timer ->
+                    Started duration timer
+
+                Paused _ ->
+                    Paused duration
+
+                _ ->
+                    m
+
 
 toString : Model -> String
 toString m =
@@ -88,6 +102,22 @@ toString m =
 
         Finished ->
             "00:00:00"
+
+
+getElapsed : Model -> Int
+getElapsed m =
+    case m of
+        Initial ->
+            0
+
+        Started splitTime { now, startedAt } ->
+            calcElapsed startedAt now splitTime
+
+        Paused splitTime ->
+            splitTime
+
+        Finished ->
+            0
 
 
 

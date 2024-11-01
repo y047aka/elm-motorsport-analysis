@@ -9,6 +9,7 @@ import Html.Styled exposing (Html)
 import List.Extra as List
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
+import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
@@ -86,7 +87,11 @@ xAxis lapTotal =
 
 
 view : RaceControl.Model -> Html msg
-view { raceClock, lapTotal, cars } =
+view { clock, lapTotal, cars } =
+    let
+        raceClock =
+            { elapsed = Clock.getElapsed clock }
+    in
     svg
         [ width w
         , height h

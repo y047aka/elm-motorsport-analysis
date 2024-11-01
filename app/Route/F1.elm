@@ -9,6 +9,7 @@ import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
+import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -127,7 +128,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         { title = "Leaderboard"
         , body =
             let
-                { raceClock, lapTotal, lapCount } =
+                { clock, lapTotal, lapCount } =
                     raceControl_F1
             in
             [ header [ css [ displayFlex, justifyContent spaceBetween ] ]
@@ -144,7 +145,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                         , basicLabel [] [ text (String.fromInt lapCount) ]
                         , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
-                    , text <| (.elapsed >> Duration.toString) raceClock
+                    , text (Clock.getElapsed clock |> Duration.toString)
                     ]
                 , nav []
                     [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]

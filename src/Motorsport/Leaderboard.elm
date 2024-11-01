@@ -46,6 +46,7 @@ import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
@@ -331,11 +332,14 @@ type alias LeaderboardItem =
 
 
 init : RaceControl.Model -> Leaderboard
-init { raceClock, cars } =
+init { clock, cars } =
     cars
         |> List.indexedMap
             (\index car ->
                 let
+                    raceClock =
+                        { elapsed = Clock.getElapsed clock }
+
                     currentLap =
                         Maybe.withDefault Lap.empty car.currentLap
 

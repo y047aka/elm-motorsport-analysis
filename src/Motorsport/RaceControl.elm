@@ -5,7 +5,7 @@ import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Clock, Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
-import Time exposing (Posix)
+import Time exposing (Posix, millisToPosix)
 
 
 
@@ -13,8 +13,7 @@ import Time exposing (Posix)
 
 
 type alias Model =
-    { state : Clock.Model
-    , raceClock : Clock
+    { clock : Clock.Model
     , lapCount : Int
     , lapTotal : Int
     , cars : List Car
@@ -23,8 +22,7 @@ type alias Model =
 
 empty : Model
 empty =
-    { state = Initial
-    , raceClock = { elapsed = 0 }
+    { clock = Initial
     , lapCount = 0
     , lapTotal = 0
     , cars = []
@@ -33,8 +31,7 @@ empty =
 
 init : List Car -> Model
 init cars =
-    { state = Initial
-    , raceClock = { elapsed = 0 }
+    { clock = Initial
     , lapCount = 0
     , lapTotal = calcLapTotal cars
     , cars = cars
@@ -67,48 +64,58 @@ update : Msg -> Model -> Model
 update msg m =
     case msg of
         Start now ->
-            { m | state = Clock.update now Clock.Start m.state }
+            { m | clock = Clock.update now Clock.Start m.clock }
 
         Tick now ->
-            case ( m.state, m.raceClock.elapsed < 6 * 60 * 60 * 1000 ) of
-                ( Started splitTime { startedAt }, True ) ->
-                    let
-                        newElapsed =
-                            Clock.calcElapsed startedAt now splitTime
+            case m.clock of
+                Started splitTime { startedAt } ->
+                    if Clock.calcElapsed startedAt now splitTime < 6 * 60 * 60 * 1000 then
+                        let
+                            newElapsed =
+                                Clock.calcElapsed startedAt now splitTime
 
-                        newClock =
-                            { lapCount = lapAt newElapsed (List.map .laps m.cars)
-                            , elapsed = newElapsed
-                            }
-                    in
-                    { m
-                        | state = Clock.update now Clock.Tick m.state
-                        , raceClock = { elapsed = newClock.elapsed }
-                        , lapCount = newClock.lapCount
-                        , cars = updateCars { elapsed = newClock.elapsed } m.cars
-                    }
+                            newClock =
+                                { lapCount = lapAt newElapsed (List.map .laps m.cars)
+                                , elapsed = newElapsed
+                                }
+                        in
+                        { m
+                            | clock = Clock.update now Clock.Tick m.clock
+                            , lapCount = newClock.lapCount
+                            , cars = updateCars { elapsed = newClock.elapsed } m.cars
+                        }
+
+                    else
+                        m
 
                 _ ->
                     m
 
         Pause now ->
-            { m | state = Clock.update now Clock.Pause m.state }
+            { m | clock = Clock.update now Clock.Pause m.clock }
 
         Finish now ->
-            { m | state = Clock.update now Clock.Finish m.state }
+            { m | clock = Clock.update now Clock.Finish m.clock }
 
         _ ->
             let
+                dummyPosix =
+                    millisToPosix 0
+
                 lapTimes =
                     List.map .laps m.cars
 
-                newClock =
+                { lapCount, elapsed } =
+                    let
+                        elapsed_ =
+                            Clock.getElapsed m.clock
+                    in
                     case msg of
                         Add10seconds ->
-                            if m.raceClock.elapsed < 6 * 60 * 60 * 1000 then
+                            if elapsed_ < 6 * 60 * 60 * 1000 then
                                 let
                                     newElapsed =
-                                        m.raceClock.elapsed + (10 * 1000)
+                                        elapsed_ + (10 * 1000)
                                 in
                                 { lapCount = lapAt newElapsed lapTimes
                                 , elapsed = newElapsed
@@ -116,7 +123,7 @@ update msg m =
 
                             else
                                 { lapCount = m.lapCount
-                                , elapsed = m.raceClock.elapsed
+                                , elapsed = elapsed_
                                 }
 
                         SetCount newCount ->
@@ -127,7 +134,7 @@ update msg m =
 
                             else
                                 { lapCount = m.lapCount
-                                , elapsed = m.raceClock.elapsed
+                                , elapsed = elapsed_
                                 }
 
                         NextLap ->
@@ -142,7 +149,7 @@ update msg m =
 
                             else
                                 { lapCount = m.lapCount
-                                , elapsed = m.raceClock.elapsed
+                                , elapsed = elapsed_
                                 }
 
                         PreviousLap ->
@@ -157,16 +164,16 @@ update msg m =
 
                             else
                                 { lapCount = m.lapCount
-                                , elapsed = m.raceClock.elapsed
+                                , elapsed = elapsed_
                                 }
 
                         _ ->
                             { lapCount = 0, elapsed = 0 }
             in
             { m
-                | raceClock = { elapsed = newClock.elapsed }
-                , lapCount = newClock.lapCount
-                , cars = updateCars { elapsed = newClock.elapsed } m.cars
+                | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
+                , lapCount = lapCount
+                , cars = updateCars { elapsed = elapsed } m.cars
             }
 
 
