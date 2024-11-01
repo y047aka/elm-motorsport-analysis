@@ -6,7 +6,6 @@ import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
 import Html.Styled exposing (Html)
-import List.Extra as List
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
