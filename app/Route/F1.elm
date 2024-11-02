@@ -181,19 +181,19 @@ config analysis =
             , sorter = List.sortBy .position
             }
         , lastLapColumn_F1
-            { getter = identity
-            , sorter = List.sortBy .lastLapTime
+            { getter = .lastLap
+            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
-        , bestTimeColumn { getter = .best }
+        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
         , performanceColumn
             { getter = .history
-            , sorter = List.sortBy .lastLapTime
+            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
             { getter = .history
-            , sorter = List.sortBy .lastLapTime
+            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2
             }

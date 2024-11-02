@@ -196,11 +196,11 @@ config analysis =
             , sorter = List.sortBy (.s3_best >> Duration.toString)
             }
         , lastLapColumn_F1
-            { getter = identity
-            , sorter = List.sortBy .lastLapTime
+            { getter = .lastLap
+            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
-        , bestTimeColumn { getter = .best }
+        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
         ]
     }
 
@@ -237,8 +237,7 @@ raceControlToLeaderboard { lapCount, cars } =
                             , s1_best = lap.s1_best
                             , s2_best = lap.s2_best
                             , s3_best = lap.s3_best
-                            , lastLapTime = lap.time
-                            , best = lap.best
+                            , lastLap = Just lap
                             , history = []
                             }
                         )
