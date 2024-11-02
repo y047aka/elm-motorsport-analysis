@@ -297,7 +297,8 @@ carImageUrl carNumber =
             "/ecm-prod/media/cache/easy_thumb/assets/1/engage"
     in
     carImageFileName carNumber
-        |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
+        -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
+        |> Maybe.map (\fileName -> String.concat [ "/static/image", String.dropLeft 6 fileName ])
 
 
 carImageFileName : String -> Maybe String
