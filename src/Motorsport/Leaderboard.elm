@@ -3,10 +3,11 @@ module Motorsport.Leaderboard exposing
     , Model, initialSort
     , Msg, update
     , customColumn, veryCustomColumn
-    , sectorTimeColumn, lastLapColumn, bestTimeColumn
+    , sectorTimeColumn, bestTimeColumn
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
+    , lastLapColumn
     , Config, Leaderboard, LeaderboardItem, init, view
     )
 
@@ -32,10 +33,11 @@ module Motorsport.Leaderboard exposing
 
 @docs Column, customColumn, veryCustomColumn
 
-@docs sectorTimeColumn, lastLapColumn, bestTimeColumn
+@docs sectorTimeColumn, bestTimeColumn
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
+@docs lastLapColumn
 
 -}
 
@@ -133,38 +135,6 @@ veryCustomColumn :
     -> Column data msg
 veryCustomColumn =
     Motorsport.Leaderboard.Internal.veryCustomColumn
-
-
-lastLapColumn :
-    { getter : data -> { a | lastLapTime : Duration, best : Duration }
-    , sorter : List data -> List data
-    , analysis : Analysis
-    }
-    -> Column data msg
-lastLapColumn { getter, sorter, analysis } =
-    { name = "Last Lap"
-    , view =
-        getter
-            >> (\{ lastLapTime, best } ->
-                    span
-                        [ css
-                            [ let
-                                status =
-                                    lapStatus { time = analysis.fastestLapTime } { time = lastLapTime, best = best }
-                              in
-                              if LapStatus.isNormal status then
-                                batch []
-
-                              else
-                                LapStatus.toHexColorString status
-                                    |> hex
-                                    |> color
-                            ]
-                        ]
-                        [ text <| Duration.toString lastLapTime ]
-               )
-    , sorter = sorter
-    }
 
 
 sectorTimeColumn :
@@ -301,6 +271,38 @@ driverAndTeamColumn_Wec =
                         drivers
                 ]
     , sorter = List.sortBy .team
+    }
+
+
+lastLapColumn :
+    { getter : data -> { a | lastLapTime : Duration, best : Duration }
+    , sorter : List data -> List data
+    , analysis : Analysis
+    }
+    -> Column data msg
+lastLapColumn { getter, sorter, analysis } =
+    { name = "Last Lap"
+    , view =
+        getter
+            >> (\{ lastLapTime, best } ->
+                    span
+                        [ css
+                            [ let
+                                status =
+                                    lapStatus { time = analysis.fastestLapTime } { time = lastLapTime, best = best }
+                              in
+                              if LapStatus.isNormal status then
+                                batch []
+
+                              else
+                                LapStatus.toHexColorString status
+                                    |> hex
+                                    |> color
+                            ]
+                        ]
+                        [ text <| Duration.toString lastLapTime ]
+               )
+    , sorter = sorter
     }
 
 
