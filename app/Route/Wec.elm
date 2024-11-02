@@ -12,7 +12,7 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, sectorTimeColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -266,7 +266,7 @@ config analysis =
             , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
             , fastestSectorTime = analysis.sector_3_fastest
             }
-        , lastLapColumn
+        , lastLapColumn_Wec
             { getter = identity
             , sorter = List.sortBy .lastLapTime
             , analysis = analysis

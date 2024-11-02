@@ -11,7 +11,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
 import Motorsport.Leaderboard.Internal
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
@@ -195,7 +195,7 @@ config analysis =
             , getter = .s3_best >> Duration.toString
             , sorter = List.sortBy (.s3_best >> Duration.toString)
             }
-        , lastLapColumn
+        , lastLapColumn_F1
             { getter = identity
             , sorter = List.sortBy .lastLapTime
             , analysis = analysis

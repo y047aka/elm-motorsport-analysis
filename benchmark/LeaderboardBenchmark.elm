@@ -6,7 +6,7 @@ import Csv.Decode exposing (FieldNames(..))
 import Fixture
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, sectorTimeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, sectorTimeColumn)
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 
 
@@ -82,7 +82,7 @@ config analysis =
             , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
             , fastestSectorTime = analysis.sector_3_fastest
             }
-        , lastLapColumn
+        , lastLapColumn_Wec
             { getter = identity
             , sorter = List.sortBy .lastLapTime
             , analysis = analysis

@@ -13,7 +13,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn, performanceColumn, stringColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -180,7 +180,7 @@ config analysis =
             , getter = .gap >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , lastLapColumn
+        , lastLapColumn_F1
             { getter = identity
             , sorter = List.sortBy .lastLapTime
             , analysis = analysis
