@@ -30,7 +30,7 @@ suite =
             )
         , benchmark "update (SetCount 60min)"
             (\_ ->
-                -- 55,250 runs/s (GoF: 99.98%)
+                -- 57,529 runs/s (GoF: 99.99%)
                 RaceControl.update (SetCount (60 * 60 * 1000)) rc
             )
         , benchmark "update NextLap"
