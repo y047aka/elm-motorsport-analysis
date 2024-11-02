@@ -2,7 +2,7 @@ module Motorsport.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
     , Model, initialSort
     , Msg, update
-    , customColumn
+    , customColumn, veryCustomColumn
     , sectorTimeColumn, lastLapColumn, bestTimeColumn
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
@@ -45,7 +45,6 @@ import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -123,6 +122,17 @@ customColumn :
     -> Column data msg
 customColumn =
     Motorsport.Leaderboard.Internal.customColumn
+
+
+{-| -}
+veryCustomColumn :
+    { label : String
+    , getter : data -> Html msg
+    , sorter : List data -> List data
+    }
+    -> Column data msg
+veryCustomColumn =
+    Motorsport.Leaderboard.Internal.veryCustomColumn
 
 
 lastLapColumn :
