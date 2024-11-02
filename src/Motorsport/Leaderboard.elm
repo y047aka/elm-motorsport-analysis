@@ -383,10 +383,10 @@ init { clock, cars } =
                 , team = car.team
                 , lap = lastLap.lap
                 , gap =
-                    Maybe.map2 calcGap (List.head cars) (Just car)
+                    Maybe.map2 (Gap.at clock) (List.head cars) (Just car)
                         |> Maybe.withDefault Gap.None
                 , interval =
-                    Maybe.map2 calcGap (List.Extra.getAt (index - 1) cars) (Just car)
+                    Maybe.map2 (Gap.at clock) (List.Extra.getAt (index - 1) cars) (Just car)
                         |> Maybe.withDefault Gap.None
                 , sector_1 = sector_1
                 , sector_2 = sector_2
@@ -399,16 +399,6 @@ init { clock, cars } =
                 , history = completedLapsAt raceClock car.laps
                 }
             )
-
-
-calcGap : Car -> Car -> Gap
-calcGap carA carB =
-    case ( carA.lastLap, carB.lastLap ) of
-        ( Just carA_lastLap, Just carB_lastLap ) ->
-            Gap.from carA_lastLap carB_lastLap
-
-        _ ->
-            Gap.None
 
 
 

@@ -5,6 +5,7 @@ module Motorsport.Lap exposing
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Sector(..)
     , currentSector
+    , sectorToElapsed
     )
 
 {-|
