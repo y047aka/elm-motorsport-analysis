@@ -139,7 +139,7 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration }
+    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration, inProgress : Bool }
     }
     -> Column data msg
 sectorTimeColumn { label, getter } =
@@ -152,9 +152,14 @@ sectorTimeColumn { label, getter } =
                         [ css
                             [ height (px 18)
                             , borderRadius (px 1)
-                            , lapStatus sector
-                                |> LapStatus.toHexColorString
-                                |> (\c -> backgroundColor (hex c))
+                            , backgroundColor <|
+                                if sector.inProgress then
+                                    hsla 0 0 1 0.9
+
+                                else
+                                    lapStatus sector
+                                        |> LapStatus.toHexColorString
+                                        |> hex
                             ]
                         ]
                         []
@@ -394,9 +399,9 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , sector_1 : Maybe { time : Duration, personalBest : Duration }
-    , sector_2 : Maybe { time : Duration, personalBest : Duration }
-    , sector_3 : Maybe { time : Duration, personalBest : Duration }
+    , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , lastLap : Maybe Lap
     , history : List Lap
     }
@@ -423,18 +428,21 @@ init { clock, cars } =
                     ( sector_1, sector_2, sector_3 ) =
                         case currentSector of
                             S1 ->
-                                ( Nothing, Nothing, Nothing )
-
-                            S2 ->
-                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best }
+                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = True }
                                 , Nothing
                                 , Nothing
                                 )
 
-                            S3 ->
-                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best }
-                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best }
+                            S2 ->
+                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
+                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = True }
                                 , Nothing
+                                )
+
+                            S3 ->
+                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
+                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = False }
+                                , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
                                 )
                 in
                 { position = index + 1

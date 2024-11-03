@@ -167,7 +167,16 @@ config analysis =
         , intColumn { label = "Lap", getter = .lap }
         , sectorTimeColumn
             { label = "S1"
-            , getter = .sector_1 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_1_fastest })
+            , getter =
+                .sector_1
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_1_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , customColumn
             { label = "S1 Best"
@@ -176,7 +185,16 @@ config analysis =
             }
         , sectorTimeColumn
             { label = "S2"
-            , getter = .sector_2 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_2_fastest })
+            , getter =
+                .sector_2
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_2_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , customColumn
             { label = "S2 Best"
@@ -185,7 +203,16 @@ config analysis =
             }
         , sectorTimeColumn
             { label = "S3"
-            , getter = .sector_3 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_3_fastest })
+            , getter =
+                .sector_3
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_3_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , customColumn
             { label = "S3 Best"
@@ -228,9 +255,9 @@ raceControlToLeaderboard { lapCount, cars } =
                             , lap = lap.lap
                             , gap = Gap.None
                             , interval = Gap.None
-                            , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best }
-                            , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best }
-                            , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best }
+                            , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, inProgress = False }
+                            , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, inProgress = False }
+                            , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, inProgress = False }
                             , lastLap = Just lap
                             , history = []
                             }

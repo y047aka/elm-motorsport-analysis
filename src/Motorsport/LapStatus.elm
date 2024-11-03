@@ -21,12 +21,7 @@ type LapStatus
     | Normal
 
 
-lapStatus :
-    { time : Duration
-    , personalBest : Duration
-    , overallBest : Duration
-    }
-    -> LapStatus
+lapStatus : { a | time : Duration, personalBest : Duration, overallBest : Duration } -> LapStatus
 lapStatus { time, personalBest, overallBest } =
     if time == overallBest then
         Fastest
