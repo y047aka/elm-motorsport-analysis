@@ -139,7 +139,7 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> { time : Maybe Duration, best : Duration }
+    , getter : data -> Maybe { time : Duration, best : Duration }
     , fastestSectorTime : Duration
     }
     -> Column data msg
@@ -147,24 +147,21 @@ sectorTimeColumn { label, getter, fastestSectorTime } =
     { name = label
     , view =
         getter
-            >> (\sector ->
-                    sector.time
-                        |> Maybe.map
-                            (\sectorTime ->
-                                div
-                                    [ css
-                                        [ height (px 18)
-                                        , borderRadius (px 1)
-                                        , lapStatus { time = fastestSectorTime } { time = sectorTime, best = sector.best }
-                                            |> LapStatus.toHexColorString
-                                            |> (\c -> backgroundColor (hex c))
-                                        ]
-                                    ]
-                                    []
-                            )
-                        |> Maybe.withDefault (text "")
-               )
-    , sorter = List.sortBy (getter >> .time >> Maybe.withDefault 0)
+            >> Maybe.map
+                (\sector ->
+                    div
+                        [ css
+                            [ height (px 18)
+                            , borderRadius (px 1)
+                            , lapStatus { time = fastestSectorTime } sector
+                                |> LapStatus.toHexColorString
+                                |> (\c -> backgroundColor (hex c))
+                            ]
+                        ]
+                        []
+                )
+            >> Maybe.withDefault (text "")
+    , sorter = List.sortBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
     }
 
 
@@ -398,12 +395,9 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , sector_1 : Maybe Duration
-    , sector_2 : Maybe Duration
-    , sector_3 : Maybe Duration
-    , s1_best : Duration
-    , s2_best : Duration
-    , s3_best : Duration
+    , sector_1 : Maybe { time : Duration, best : Duration }
+    , sector_2 : Maybe { time : Duration, best : Duration }
+    , sector_3 : Maybe { time : Duration, best : Duration }
     , lastLap : Maybe Lap
     , history : List Lap
     }
@@ -433,10 +427,16 @@ init { clock, cars } =
                                 ( Nothing, Nothing, Nothing )
 
                             S2 ->
-                                ( Just currentLap.sector_1, Nothing, Nothing )
+                                ( Just { time = currentLap.sector_1, best = currentLap.s1_best }
+                                , Nothing
+                                , Nothing
+                                )
 
                             S3 ->
-                                ( Just currentLap.sector_1, Just currentLap.sector_2, Nothing )
+                                ( Just { time = currentLap.sector_1, best = currentLap.s1_best }
+                                , Just { time = currentLap.sector_2, best = currentLap.s2_best }
+                                , Nothing
+                                )
                 in
                 { position = index + 1
                 , drivers =
@@ -460,9 +460,6 @@ init { clock, cars } =
                 , sector_1 = sector_1
                 , sector_2 = sector_2
                 , sector_3 = sector_3
-                , s1_best = currentLap.s1_best
-                , s2_best = currentLap.s2_best
-                , s3_best = currentLap.s3_best
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
                 }

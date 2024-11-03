@@ -165,35 +165,23 @@ config analysis =
         , carNumberColumn_Wec { carNumber = .carNumber, class = .class }
         , driverAndTeamColumn_Wec
         , intColumn { label = "Lap", getter = .lap }
-        , sectorTimeColumn
-            { label = "S1"
-            , getter = \{ sector_1, s1_best } -> { time = sector_1, best = s1_best }
-            , fastestSectorTime = analysis.sector_1_fastest
-            }
+        , sectorTimeColumn { label = "S1", getter = .sector_1, fastestSectorTime = analysis.sector_1_fastest }
         , customColumn
             { label = "S1 Best"
-            , getter = .s1_best >> Duration.toString
-            , sorter = List.sortBy (.s1_best >> Duration.toString)
+            , getter = .sector_1 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.sector_1 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault "0")
             }
-        , sectorTimeColumn
-            { label = "S2"
-            , getter = \{ sector_2, s2_best } -> { time = sector_2, best = s2_best }
-            , fastestSectorTime = analysis.sector_2_fastest
-            }
+        , sectorTimeColumn { label = "S2", getter = .sector_2, fastestSectorTime = analysis.sector_2_fastest }
         , customColumn
             { label = "S2 Best"
-            , getter = .s2_best >> Duration.toString
-            , sorter = List.sortBy (.s2_best >> Duration.toString)
+            , getter = .sector_2 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.sector_2 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault "0")
             }
-        , sectorTimeColumn
-            { label = "S3"
-            , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
-            , fastestSectorTime = analysis.sector_3_fastest
-            }
+        , sectorTimeColumn { label = "S3", getter = .sector_3, fastestSectorTime = analysis.sector_3_fastest }
         , customColumn
             { label = "S3 Best"
-            , getter = .s3_best >> Duration.toString
-            , sorter = List.sortBy (.s3_best >> Duration.toString)
+            , getter = .sector_3 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.sector_3 >> Maybe.map (.best >> Duration.toString) >> Maybe.withDefault "0")
             }
         , lastLapColumn_F1
             { getter = .lastLap
@@ -231,12 +219,9 @@ raceControlToLeaderboard { lapCount, cars } =
                             , lap = lap.lap
                             , gap = Gap.None
                             , interval = Gap.None
-                            , sector_1 = Just lap.sector_1
-                            , sector_2 = Just lap.sector_2
-                            , sector_3 = Just lap.sector_3
-                            , s1_best = lap.s1_best
-                            , s2_best = lap.s2_best
-                            , s3_best = lap.s3_best
+                            , sector_1 = Just { time = lap.sector_1, best = lap.s1_best }
+                            , sector_2 = Just { time = lap.sector_2, best = lap.s2_best }
+                            , sector_3 = Just { time = lap.sector_3, best = lap.s3_best }
                             , lastLap = Just lap
                             , history = []
                             }

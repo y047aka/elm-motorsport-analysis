@@ -251,21 +251,9 @@ config analysis =
             , getter = .interval >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , sectorTimeColumn
-            { label = "S1"
-            , getter = \{ sector_1, s1_best } -> { time = sector_1, best = s1_best }
-            , fastestSectorTime = analysis.sector_1_fastest
-            }
-        , sectorTimeColumn
-            { label = "S2"
-            , getter = \{ sector_2, s2_best } -> { time = sector_2, best = s2_best }
-            , fastestSectorTime = analysis.sector_2_fastest
-            }
-        , sectorTimeColumn
-            { label = "S3"
-            , getter = \{ sector_3, s3_best } -> { time = sector_3, best = s3_best }
-            , fastestSectorTime = analysis.sector_3_fastest
-            }
+        , sectorTimeColumn { label = "S1", getter = .sector_1, fastestSectorTime = analysis.sector_1_fastest }
+        , sectorTimeColumn { label = "S2", getter = .sector_2, fastestSectorTime = analysis.sector_2_fastest }
+        , sectorTimeColumn { label = "S3", getter = .sector_3, fastestSectorTime = analysis.sector_3_fastest }
         , lastLapColumn_Wec
             { getter = .lastLap
             , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
