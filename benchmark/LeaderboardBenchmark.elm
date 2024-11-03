@@ -69,15 +69,42 @@ config analysis =
             }
         , sectorTimeColumn
             { label = "S1"
-            , getter = .sector_1 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_1_fastest, inProgress = False })
+            , getter =
+                .sector_1
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_1_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , sectorTimeColumn
             { label = "S2"
-            , getter = .sector_2 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_2_fastest, inProgress = False })
+            , getter =
+                .sector_2
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_2_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , sectorTimeColumn
             { label = "S3"
-            , getter = .sector_3 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_3_fastest, inProgress = False })
+            , getter =
+                .sector_3
+                    >> Maybe.map
+                        (\{ time, personalBest, inProgress } ->
+                            { time = time
+                            , personalBest = personalBest
+                            , overallBest = analysis.sector_3_fastest
+                            , inProgress = inProgress
+                            }
+                        )
             }
         , lastLapColumn_Wec
             { getter = .lastLap
