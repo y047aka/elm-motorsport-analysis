@@ -430,21 +430,13 @@ init { clock, cars } =
                     ( sector_1, sector_2, sector_3 ) =
                         case currentSector of
                             S1 ->
-                                ( Just lastLap.sector_1, Just lastLap.sector_2, Just lastLap.sector_3 )
+                                ( Nothing, Nothing, Nothing )
 
                             S2 ->
                                 ( Just currentLap.sector_1, Nothing, Nothing )
 
                             S3 ->
                                 ( Just currentLap.sector_1, Just currentLap.sector_2, Nothing )
-
-                    { s1_best, s2_best, s3_best } =
-                        case currentSector of
-                            S1 ->
-                                lastLap
-
-                            _ ->
-                                currentLap
                 in
                 { position = index + 1
                 , drivers =
@@ -468,9 +460,9 @@ init { clock, cars } =
                 , sector_1 = sector_1
                 , sector_2 = sector_2
                 , sector_3 = sector_3
-                , s1_best = s1_best
-                , s2_best = s2_best
-                , s3_best = s3_best
+                , s1_best = currentLap.s1_best
+                , s2_best = currentLap.s2_best
+                , s3_best = currentLap.s3_best
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
                 }
