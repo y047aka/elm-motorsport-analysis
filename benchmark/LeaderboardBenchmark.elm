@@ -67,9 +67,18 @@ config analysis =
             , getter = .interval >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , sectorTimeColumn { label = "S1", getter = .sector_1, fastestSectorTime = analysis.sector_1_fastest }
-        , sectorTimeColumn { label = "S2", getter = .sector_2, fastestSectorTime = analysis.sector_2_fastest }
-        , sectorTimeColumn { label = "S3", getter = .sector_3, fastestSectorTime = analysis.sector_3_fastest }
+        , sectorTimeColumn
+            { label = "S1"
+            , getter = .sector_1 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_1_fastest })
+            }
+        , sectorTimeColumn
+            { label = "S2"
+            , getter = .sector_2 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_2_fastest })
+            }
+        , sectorTimeColumn
+            { label = "S3"
+            , getter = .sector_3 >> Maybe.map (\{ time, personalBest } -> { time = time, personalBest = personalBest, overallBest = analysis.sector_3_fastest })
+            }
         , lastLapColumn_Wec
             { getter = .lastLap
             , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)

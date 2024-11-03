@@ -21,12 +21,17 @@ type LapStatus
     | Normal
 
 
-lapStatus : { a | time : Duration } -> { b | time : Duration, best : Duration } -> LapStatus
-lapStatus fastestLap_ { time, best } =
-    if time == fastestLap_.time then
+lapStatus :
+    { time : Duration
+    , personalBest : Duration
+    , overallBest : Duration
+    }
+    -> LapStatus
+lapStatus { time, personalBest, overallBest } =
+    if time == overallBest then
         Fastest
 
-    else if time == best then
+    else if time == personalBest then
         PersonalBest
 
     else

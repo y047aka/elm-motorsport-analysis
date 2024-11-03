@@ -139,11 +139,10 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, best : Duration }
-    , fastestSectorTime : Duration
+    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration }
     }
     -> Column data msg
-sectorTimeColumn { label, getter, fastestSectorTime } =
+sectorTimeColumn { label, getter } =
     { name = label
     , view =
         getter
@@ -153,7 +152,7 @@ sectorTimeColumn { label, getter, fastestSectorTime } =
                         [ css
                             [ height (px 18)
                             , borderRadius (px 1)
-                            , lapStatus { time = fastestSectorTime } sector
+                            , lapStatus sector
                                 |> LapStatus.toHexColorString
                                 |> (\c -> backgroundColor (hex c))
                             ]
@@ -282,12 +281,12 @@ lastLapColumn_F1 { getter, sorter, analysis } =
     , view =
         getter
             >> Maybe.map
-                (\lap ->
+                (\{ time, best } ->
                     span
                         [ css
                             [ let
                                 status =
-                                    lapStatus { time = analysis.fastestLapTime } lap
+                                    lapStatus { time = time, personalBest = best, overallBest = analysis.fastestLapTime }
                               in
                               if LapStatus.isNormal status then
                                 batch []
@@ -298,7 +297,7 @@ lastLapColumn_F1 { getter, sorter, analysis } =
                                     |> color
                             ]
                         ]
-                        [ text (Duration.toString lap.time) ]
+                        [ text (Duration.toString time) ]
                 )
             >> Maybe.withDefault (text "-")
     , sorter = sorter
@@ -313,13 +312,13 @@ lastLapColumn_Wec :
     -> Column data msg
 lastLapColumn_Wec { getter, sorter, analysis } =
     let
-        lapTime lap =
+        lapTime { time, personalBest } =
             div
                 [ css
                     [ textAlign center
                     , let
                         status =
-                            lapStatus { time = analysis.fastestLapTime } lap
+                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
                       in
                       if LapStatus.isNormal status then
                         batch []
@@ -330,14 +329,14 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                             |> color
                     ]
                 ]
-                [ text (Duration.toString lap.time) ]
+                [ text (Duration.toString time) ]
 
-        sector fastestSectorTime s =
+        sector sector_ =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , lapStatus { time = fastestSectorTime } { time = s.time, best = s.best }
+                    , lapStatus sector_
                         |> LapStatus.toHexColorString
                         |> (\c -> backgroundColor (hex c))
                     ]
@@ -350,7 +349,7 @@ lastLapColumn_Wec { getter, sorter, analysis } =
             >> Maybe.map
                 (\{ time, best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = time, best = best }
+                        [ lapTime { time = time, personalBest = best }
                         , div
                             [ css
                                 [ property "display" "grid"
@@ -358,9 +357,9 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                                 , property "column-gap" "4px"
                                 ]
                             ]
-                            [ sector analysis.sector_1_fastest { time = sector_1, best = s1_best }
-                            , sector analysis.sector_2_fastest { time = sector_2, best = s2_best }
-                            , sector analysis.sector_3_fastest { time = sector_3, best = s3_best }
+                            [ sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest }
+                            , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest }
+                            , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest }
                             ]
                         ]
                 )
@@ -395,9 +394,9 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , sector_1 : Maybe { time : Duration, best : Duration }
-    , sector_2 : Maybe { time : Duration, best : Duration }
-    , sector_3 : Maybe { time : Duration, best : Duration }
+    , sector_1 : Maybe { time : Duration, personalBest : Duration }
+    , sector_2 : Maybe { time : Duration, personalBest : Duration }
+    , sector_3 : Maybe { time : Duration, personalBest : Duration }
     , lastLap : Maybe Lap
     , history : List Lap
     }
@@ -427,14 +426,14 @@ init { clock, cars } =
                                 ( Nothing, Nothing, Nothing )
 
                             S2 ->
-                                ( Just { time = currentLap.sector_1, best = currentLap.s1_best }
+                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best }
                                 , Nothing
                                 , Nothing
                                 )
 
                             S3 ->
-                                ( Just { time = currentLap.sector_1, best = currentLap.s1_best }
-                                , Just { time = currentLap.sector_2, best = currentLap.s2_best }
+                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best }
+                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best }
                                 , Nothing
                                 )
                 in
@@ -510,7 +509,7 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                lapStatus { time = fastestLapTime } lap
+                lapStatus { time = lap.time, personalBest = lap.best, overallBest = fastestLapTime }
                     |> LapStatus.toHexColorString
 
             else
@@ -564,8 +563,10 @@ performanceHistory analysis laps =
 performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg
 performanceHistory_ { fastestLapTime } laps =
     let
-        toCssColor lap =
-            (lapStatus { time = fastestLapTime } >> LapStatus.toHexColorString >> hex) lap
+        toCssColor { time, best } =
+            lapStatus { time = time, personalBest = best, overallBest = fastestLapTime }
+                |> LapStatus.toHexColorString
+                |> hex
     in
     div
         [ css
