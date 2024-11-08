@@ -69,7 +69,7 @@ update msg m =
         Tick now ->
             case m.clock of
                 Started splitTime { startedAt } ->
-                    if Clock.calcElapsed startedAt now splitTime < 6 * 60 * 60 * 1000 then
+                    if Clock.calcElapsed startedAt now splitTime < 24 * 60 * 60 * 1000 then
                         let
                             newElapsed =
                                 Clock.calcElapsed startedAt now splitTime
@@ -112,7 +112,7 @@ update msg m =
                     in
                     case msg of
                         Add10seconds ->
-                            if elapsed_ < 6 * 60 * 60 * 1000 then
+                            if elapsed_ < 24 * 60 * 60 * 1000 then
                                 let
                                     newElapsed =
                                         elapsed_ + (10 * 1000)

@@ -206,7 +206,7 @@ statusBar { clock, lapTotal, lapCount } =
             Clock.getElapsed clock
 
         remaining =
-            6 * 60 * 60 * 1000 - elapsed
+            24 * 60 * 60 * 1000 - elapsed
     in
     div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
         [ div []
