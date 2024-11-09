@@ -1,6 +1,6 @@
 module PreprocessInternalBenchmark exposing (main)
 
-import Array
+import Array exposing (Array)
 import AssocList
 import AssocList.Extra
 import Benchmark exposing (Benchmark, describe)
@@ -27,7 +27,7 @@ suite =
             "startPositions_array"
             (\_ ->
                 -- 172,226 runs/s (GoF: 99.94%)
-                startPositions_array Fixture.csvDecoded
+                startPositions_array (Array.fromList Fixture.csvDecoded)
             )
         , Benchmark.compare "ordersByLap"
             "ordersByLap_list"
@@ -50,10 +50,9 @@ startPositions_list laps =
         |> List.map .carNumber
 
 
-startPositions_array : List Wec.Lap -> List String
+startPositions_array : Array Wec.Lap -> List String
 startPositions_array laps =
-    Array.fromList laps
-        |> Array.filter (\{ lapNumber } -> lapNumber == 1)
+    Array.filter (\{ lapNumber } -> lapNumber == 1) laps
         |> Array.toList
         |> List.sortBy .elapsed
         |> List.map .carNumber
