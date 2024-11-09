@@ -20,23 +20,23 @@ suite =
         [ Benchmark.compare "startPositions"
             "startPositions_list"
             (\_ ->
-                -- 154,969 runs/s (GoF: 99.91%)
+                -- 127,809 runs/s (GoF: 99.98%)
                 startPositions_list Fixture.csvDecoded
             )
             "startPositions_list"
             (\_ ->
-                -- 154,969 runs/s (GoF: 99.91%)
-                startPositions_list Fixture.csvDecoded
+                -- 127,809 runs/s (GoF: 99.98%)
+                startPositions_array Fixture.csvDecoded
             )
         , Benchmark.compare "ordersByLap"
             "ordersByLap_list"
             (\_ ->
-                -- 514 runs/s (GoF: 99.98%)
+                -- 463 runs/s (GoF: 99.99%)
                 ordersByLap_list Fixture.csvDecoded
             )
             "ordersByLap_list"
             (\_ ->
-                -- 514 runs/s (GoF: 99.98%)
+                -- 463 runs/s (GoF: 99.99%)
                 ordersByLap_list Fixture.csvDecoded
             )
         ]
