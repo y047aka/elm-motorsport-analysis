@@ -1,8 +1,9 @@
 module PreprocessInternalBenchmark exposing (main)
 
+import Array
 import AssocList
 import AssocList.Extra
-import Benchmark exposing (Benchmark, benchmark, describe)
+import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
@@ -23,9 +24,9 @@ suite =
                 -- 127,809 runs/s (GoF: 99.98%)
                 startPositions_list Fixture.csvDecoded
             )
-            "startPositions_list"
+            "startPositions_array"
             (\_ ->
-                -- 127,809 runs/s (GoF: 99.98%)
+                -- 172,226 runs/s (GoF: 99.94%)
                 startPositions_array Fixture.csvDecoded
             )
         , Benchmark.compare "ordersByLap"
@@ -45,6 +46,15 @@ suite =
 startPositions_list : List Wec.Lap -> List String
 startPositions_list laps =
     List.filter (\{ lapNumber } -> lapNumber == 1) laps
+        |> List.sortBy .elapsed
+        |> List.map .carNumber
+
+
+startPositions_array : List Wec.Lap -> List String
+startPositions_array laps =
+    Array.fromList laps
+        |> Array.filter (\{ lapNumber } -> lapNumber == 1)
+        |> Array.toList
         |> List.sortBy .elapsed
         |> List.map .carNumber
 
