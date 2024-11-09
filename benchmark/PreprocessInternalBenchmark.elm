@@ -35,10 +35,10 @@ suite =
                 -- 463 runs/s (GoF: 99.99%)
                 ordersByLap_list Fixture.csvDecoded
             )
-            "ordersByLap_list"
+            "ordersByLap_array"
             (\_ ->
                 -- 463 runs/s (GoF: 99.99%)
-                ordersByLap_list Fixture.csvDecoded
+                ordersByLap_array Fixture.csvDecoded
             )
         ]
 
@@ -69,3 +69,18 @@ ordersByLap_list laps =
                 , order = cars |> List.sortBy .elapsed |> List.map .carNumber
                 }
             )
+
+
+ordersByLap_array : List Wec.Lap -> List { lapNumber : Int, order : List String }
+ordersByLap_array laps =
+    laps
+        |> AssocList.Extra.groupBy .lapNumber
+        |> AssocList.toList
+        |> Array.fromList
+        |> Array.map
+            (\( lapNumber, cars ) ->
+                { lapNumber = lapNumber
+                , order = cars |> List.sortBy .elapsed |> List.map .carNumber
+                }
+            )
+        |> Array.toList
