@@ -17,28 +17,40 @@ main =
 suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess"
-        [ benchmark "startPositions"
+        [ Benchmark.compare "startPositions"
+            "startPositions_list"
             (\_ ->
                 -- 154,969 runs/s (GoF: 99.91%)
-                startPositions Fixture.csvDecoded
+                startPositions_list Fixture.csvDecoded
             )
-        , benchmark "ordersByLap"
+            "startPositions_list"
+            (\_ ->
+                -- 154,969 runs/s (GoF: 99.91%)
+                startPositions_list Fixture.csvDecoded
+            )
+        , Benchmark.compare "ordersByLap"
+            "ordersByLap_list"
             (\_ ->
                 -- 514 runs/s (GoF: 99.98%)
-                ordersByLap Fixture.csvDecoded
+                ordersByLap_list Fixture.csvDecoded
+            )
+            "ordersByLap_list"
+            (\_ ->
+                -- 514 runs/s (GoF: 99.98%)
+                ordersByLap_list Fixture.csvDecoded
             )
         ]
 
 
-startPositions : List Wec.Lap -> List String
-startPositions laps =
+startPositions_list : List Wec.Lap -> List String
+startPositions_list laps =
     List.filter (\{ lapNumber } -> lapNumber == 1) laps
         |> List.sortBy .elapsed
         |> List.map .carNumber
 
 
-ordersByLap : List Wec.Lap -> List { lapNumber : Int, order : List String }
-ordersByLap laps =
+ordersByLap_list : List Wec.Lap -> List { lapNumber : Int, order : List String }
+ordersByLap_list laps =
     laps
         |> AssocList.Extra.groupBy .lapNumber
         |> AssocList.toList
