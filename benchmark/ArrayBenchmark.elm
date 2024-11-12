@@ -19,11 +19,7 @@ suite =
                 -- 295,670 runs/s (GoF: 99.98%)
                 List.length Fixture.csvDecoded
             )
-        , let
-            csvDecoded_array =
-                Array.fromList Fixture.csvDecoded
-          in
-          Benchmark.compare "Array.length"
+        , Benchmark.compare "Array.length"
             "List.length"
             (\_ ->
                 -- 296,394 runs/s (GoF: 99.99%)
@@ -32,7 +28,7 @@ suite =
             "Array.length"
             (\_ ->
                 -- 290,366,954 runs/s (GoF: 99.99%)
-                Array.length csvDecoded_array
+                Array.length Fixture.csvDecoded_array
             )
         , Benchmark.compare "Array.fromList >> Array.length"
             "List.length"
