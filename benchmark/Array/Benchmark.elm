@@ -1,7 +1,7 @@
-module ArrayBenchmark exposing (main)
+module Array.Benchmark exposing (main)
 
 import Array
-import Benchmark exposing (Benchmark, benchmark, describe)
+import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture
 
@@ -13,13 +13,8 @@ main =
 
 suite : Benchmark
 suite =
-    describe "length" <|
-        [ benchmark "List.length"
-            (\_ ->
-                -- 295,670 runs/s (GoF: 99.98%)
-                List.length Fixture.csvDecoded
-            )
-        , Benchmark.compare "Array.length"
+    describe "Array" <|
+        [  Benchmark.compare "length"
             "List.length"
             (\_ ->
                 -- 296,394 runs/s (GoF: 99.99%)
@@ -30,7 +25,7 @@ suite =
                 -- 290,366,954 runs/s (GoF: 99.99%)
                 Array.length Fixture.csvDecoded_array
             )
-        , Benchmark.compare "Array.fromList >> Array.length"
+        , Benchmark.compare "fromList >> length"
             "List.length"
             (\_ ->
                 -- 296,512 runs/s (GoF: 99.98%)
