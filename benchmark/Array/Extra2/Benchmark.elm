@@ -18,23 +18,23 @@ suite =
         [ Benchmark.compare "find"
             "List.Extra.find"
             (\_ ->
-                -- 32,161,542 runs/s (GoF: 99.91%)
+                -- 21,632,561 runs/s (GoF: 99.96%)
                 List.Extra.find (.lapNumber >> (==) 2) Fixture.csvDecoded
             )
             "Array.Extra2.find"
             (\_ ->
-                -- 108,133 runs/s (GoF: 99.89%)
+                -- 107,375 runs/s (GoF: 99.87%)
                 Array.Extra2.find (.lapNumber >> (==) 2) Fixture.csvDecoded_array
             )
         , Benchmark.compare "find"
             "List.Extra.find"
             (\_ ->
-                -- 32,161,542 runs/s (GoF: 99.91%)
+                -- 307,584 runs/s (GoF: 99.99%)
                 List.Extra.find (.lapNumber >> (==) 200) Fixture.csvDecoded
             )
             "Array.Extra2.find"
             (\_ ->
-                -- 108,133 runs/s (GoF: 99.89%)
+                -- 86,520 runs/s (GoF: 99.96%)
                 Array.Extra2.find (.lapNumber >> (==) 200) Fixture.csvDecoded_array
             )
         ]
