@@ -1,4 +1,4 @@
-module PreprocessInternalBenchmark exposing (main)
+module Preprocess.Helper.Benchmark exposing (main)
 
 import Array exposing (Array)
 import Array.Extra2
