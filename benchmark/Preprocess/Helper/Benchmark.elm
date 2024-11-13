@@ -19,28 +19,30 @@ main =
 suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess"
-        [ Benchmark.compare "startPositions"
-            "startPositions_list"
-            (\_ ->
-                -- 127,809 runs/s (GoF: 99.98%)
-                startPositions_list Fixture.csvDecoded
-            )
-            "startPositions_array"
-            (\_ ->
-                -- 168,996 runs/s (GoF: 99.96%)
-                startPositions_array (Array.fromList Fixture.csvDecoded)
-            )
-        , Benchmark.compare "ordersByLap"
-            "ordersByLap_list"
-            (\_ ->
-                -- 463 runs/s (GoF: 99.99%)
-                ordersByLap_list Fixture.csvDecoded
-            )
-            "ordersByLap_array"
-            (\_ ->
-                -- 463 runs/s (GoF: 99.99%)
-                ordersByLap_array Fixture.csvDecoded
-            )
+        [ Benchmark.scale "startPositions"
+            [ ( "startPositions_list"
+              , \_ ->
+                    -- 127,809 runs/s (GoF: 99.98%)
+                    startPositions_list Fixture.csvDecoded
+              )
+            , ( "startPositions_array"
+              , \_ ->
+                    -- 168,996 runs/s (GoF: 99.96%)
+                    startPositions_array (Array.fromList Fixture.csvDecoded)
+              )
+            ]
+        , Benchmark.scale "ordersByLap"
+            [ ( "ordersByLap_list"
+              , \_ ->
+                    -- 463 runs/s (GoF: 99.99%)
+                    ordersByLap_list Fixture.csvDecoded
+              )
+            , ( "ordersByLap_array"
+              , \_ ->
+                    -- 463 runs/s (GoF: 99.99%)
+                    ordersByLap_array Fixture.csvDecoded
+              )
+            ]
         ]
 
 
