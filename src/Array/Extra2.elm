@@ -1,4 +1,4 @@
-module Array.Extra2 exposing (find, sortBy)
+module Array.Extra2 exposing (find, findMap, sortBy)
 
 import Array exposing (Array)
 
@@ -9,7 +9,7 @@ sortBy f =
 
 
 find : (a -> Bool) -> Array a -> Maybe a
-find predicate arr =
+find predicate array =
     Array.foldl
         (\item acc ->
             if acc == Nothing && predicate item then
@@ -19,4 +19,19 @@ find predicate arr =
                 acc
         )
         Nothing
-        arr
+        array
+
+
+findMap : (a -> Maybe b) -> Array a -> Maybe b
+findMap f array =
+    Array.foldl
+        (\item acc ->
+            case acc of
+                Just found ->
+                    Just found
+
+                Nothing ->
+                    f item
+        )
+        Nothing
+        array
