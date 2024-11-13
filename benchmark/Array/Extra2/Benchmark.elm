@@ -14,8 +14,8 @@ main =
 
 suite : Benchmark
 suite =
-    describe "Array.Extra2" <|
-        [ Benchmark.compare "find"
+    describe "Array.Extra2.find" <|
+        [ Benchmark.compare ".lapNumber >> (==) 2"
             "List.Extra.find"
             (\_ ->
                 -- 21,632,561 runs/s (GoF: 99.96%)
@@ -26,7 +26,7 @@ suite =
                 -- 107,375 runs/s (GoF: 99.87%)
                 Array.Extra2.find (.lapNumber >> (==) 2) Fixture.csvDecoded_array
             )
-        , Benchmark.compare "find"
+        , Benchmark.compare ".lapNumber >> (==) 200"
             "List.Extra.find"
             (\_ ->
                 -- 307,584 runs/s (GoF: 99.99%)
