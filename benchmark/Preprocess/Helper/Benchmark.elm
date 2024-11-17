@@ -20,19 +20,19 @@ suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess"
         [ Benchmark.scale "startPositions_list"
-            ([ 0 -- 32,796,129 runs/s (GoF: 99.97%)
-             , 100 -- 847,795 runs/s (GoF: 99.99%)
-             , 200 -- 398,531 runs/s (GoF: 99.99%)
-             , 500 -- 153,345 runs/s (GoF: 99.98%)
+            ([ 1 -- 15,411,092 runs/s (GoF: 99.99%)
+             , 10 -- 6,253,707 runs/s (GoF: 99.97%)
+             , 100 -- 850,407 runs/s (GoF: 99.91%)
+             , 1000 -- 76,407 runs/s (GoF: 99.91%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_list target ))
             )
         , Benchmark.scale "startPositions_array"
-            ([ 0 -- 10,061,597 runs/s (GoF: 99.99%)
-             , 100 -- 817,089 runs/s (GoF: 99.97%)
-             , 200 -- 484,857 runs/s (GoF: 99.96%)
-             , 500 -- 202,018 runs/s (GoF: 99.94%)
+            ([ 1 -- 4,410,251 runs/s (GoF: 99.99%)
+             , 10 -- 3,240,275 runs/s (GoF: 99.98%)
+             , 100 -- 847,416 runs/s (GoF: 100%)
+             , 1000 -- 105,293 runs/s (GoF: 99.96%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_array (Array.fromList target) ))

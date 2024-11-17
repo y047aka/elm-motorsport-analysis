@@ -16,16 +16,18 @@ suite : Benchmark
 suite =
     describe "Array.Extra2.find" <|
         [ Benchmark.scale "List.Extra.find"
-            ([ 2 -- 19,662,511 runs/s (GoF: 99.95%)
-             , 20 -- 2,889,796 runs/s (GoF: 99.91%)
-             , 200 -- 309,931 runs/s (GoF: 99.94%)
+            ([ 1 -- 26,782,994 runs/s (GoF: 99.96%)
+             , 10 -- 5,211,758 runs/s (GoF: 99.93%)
+             , 100 -- 601,940 runs/s (GoF: 99.92%)
+             , 1000 -- 33,614 runs/s (GoF: 99.96%)
              ]
                 |> List.map (\n -> ( toString n, \_ -> List.Extra.find (.lapNumber >> (==) n) Fixture.csvDecoded ))
             )
         , Benchmark.scale "Array.Extra2.find"
-            ([ 2 -- 104,597 runs/s (GoF: 99.96%)
-             , 20 -- 102,423 runs/s (GoF: 99.95%)
-             , 200 -- 84,687 runs/s (GoF: 99.95%)
+            ([ 1 -- 35,143 runs/s (GoF: 99.95%)
+             , 10 -- 34,960 runs/s (GoF: 99.94%)
+             , 100 -- 33,680 runs/s (GoF: 99.95%)
+             , 1000 -- 20,287 runs/s (GoF: 99.92%)
              ]
                 |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
             )

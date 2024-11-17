@@ -15,24 +15,26 @@ suite : Benchmark
 suite =
     describe "length" <|
         [ Benchmark.scale "List.length"
-            ([ 0 -- 108,239,200 runs/s (GoF: 99.84%)
-             , 100 -- 1,754,214 runs/s (GoF: 99.99%)
-             , 500 -- 367,023 runs/s (GoF: 99.99%)
+            ([ 1 -- 77,132,868 runs/s (GoF: 99.8%)
+             , 10 -- 15,269,244 runs/s (GoF: 99.95%)
+             , 100 -- 1,760,120 runs/s (GoF: 99.99%)
+             , 1000 -- 183,538 runs/s (GoF: 99.99%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> List.length target ))
             )
         , Benchmark.scale "Array.length"
-            ([ 0 -- 269,282,707 runs/s (GoF: 99.99%)
-             , 500 -- 269,150,399 runs/s (GoF: 99.99%)
+            ([ 1 -- 269,380,493 runs/s (GoF: 100%)
+             , 1000 -- 269,402,075 runs/s (GoF: 100%)
              ]
                 |> List.map (\size -> ( size, Array.fromList (Fixture.csvDecodedOfSize size) ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> Array.length target ))
             )
         , Benchmark.scale "Array.fromList >> Array.length"
-            ([ 0 -- 41,046,798 runs/s (GoF: 99.98%)
-             , 100 -- 2,625,093 runs/s (GoF: 99.99%)
-             , 500 -- 780,566 runs/s (GoF: 100%)
+            ([ 1 -- 18,101,073 runs/s (GoF: 99.99%)
+             , 10 -- 14,530,005 runs/s (GoF: 99.99%)
+             , 100 -- 2,532,302 runs/s (GoF: 99.99%)
+             , 1000 -- 402,667 runs/s (GoF: 99.99%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> (Array.fromList >> Array.length) target ))
