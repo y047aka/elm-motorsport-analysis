@@ -1,4 +1,4 @@
-module Fixture exposing (csv, csvDecoded, csvDecoded_array, preprocessed)
+module Fixture exposing (csv, csvDecoded, csvDecodedOfSize, csvDecoded_array, preprocessed)
 
 import Array exposing (Array)
 import Csv.Decode as Decode exposing (FieldNames(..))
@@ -20,6 +20,11 @@ csvDecoded =
 
         Err _ ->
             []
+
+
+csvDecodedOfSize : Int -> List Wec.Lap
+csvDecodedOfSize size =
+    List.take size csvDecoded
 
 
 csvDecoded_array : Array Wec.Lap

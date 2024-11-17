@@ -13,27 +13,28 @@ main =
 
 suite : Benchmark
 suite =
-    describe "Array" <|
-        [  Benchmark.compare "length"
-            "List.length"
-            (\_ ->
-                -- 296,394 runs/s (GoF: 99.99%)
-                List.length Fixture.csvDecoded
+    describe "length" <|
+        [ Benchmark.scale "List.length"
+            ([ 0 -- 108,239,200 runs/s (GoF: 99.84%)
+             , 100 -- 1,754,214 runs/s (GoF: 99.99%)
+             , 500 -- 367,023 runs/s (GoF: 99.99%)
+             ]
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> List.length target ))
             )
-            "Array.length"
-            (\_ ->
-                -- 290,366,954 runs/s (GoF: 99.99%)
-                Array.length Fixture.csvDecoded_array
+        , Benchmark.scale "Array.length"
+            ([ 0 -- 269,282,707 runs/s (GoF: 99.99%)
+             , 500 -- 269,150,399 runs/s (GoF: 99.99%)
+             ]
+                |> List.map (\size -> ( size, Array.fromList (Fixture.csvDecodedOfSize size) ))
+                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> Array.length target ))
             )
-        , Benchmark.compare "fromList >> length"
-            "List.length"
-            (\_ ->
-                -- 296,512 runs/s (GoF: 99.98%)
-                List.length Fixture.csvDecoded
-            )
-            "Array.length"
-            (\_ ->
-                -- 644,729 runs/s (GoF: 99.99%)
-                (Array.fromList >> Array.length) Fixture.csvDecoded
+        , Benchmark.scale "Array.fromList >> Array.length"
+            ([ 0 -- 41,046,798 runs/s (GoF: 99.98%)
+             , 100 -- 2,625,093 runs/s (GoF: 99.99%)
+             , 500 -- 780,566 runs/s (GoF: 100%)
+             ]
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> (Array.fromList >> Array.length) target ))
             )
         ]

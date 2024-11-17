@@ -16,11 +16,6 @@ main =
     program suite
 
 
-csvDecodedOfSize : Int -> List Wec.Lap
-csvDecodedOfSize size =
-    List.take size Fixture.csvDecoded
-
-
 suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess"
@@ -30,7 +25,7 @@ suite =
              , 200 -- 398,531 runs/s (GoF: 99.99%)
              , 500 -- 153,345 runs/s (GoF: 99.98%)
              ]
-                |> List.map (\size -> ( size, csvDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_list target ))
             )
         , Benchmark.scale "startPositions_array"
@@ -39,7 +34,7 @@ suite =
              , 200 -- 484,857 runs/s (GoF: 99.96%)
              , 500 -- 202,018 runs/s (GoF: 99.94%)
              ]
-                |> List.map (\size -> ( size, csvDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_array (Array.fromList target) ))
             )
         , Benchmark.scale "ordersByLap"
