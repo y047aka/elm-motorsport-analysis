@@ -24,7 +24,11 @@ csvDecoded =
 
 csvDecodedOfSize : Int -> List Wec.Lap
 csvDecodedOfSize size =
-    List.take size csvDecoded
+    if size < 500 then
+        List.take size csvDecoded
+
+    else
+        (Array.fromList >> Array.slice 0 size >> Array.toList) csvDecoded
 
 
 csvDecoded_array : Array Wec.Lap
