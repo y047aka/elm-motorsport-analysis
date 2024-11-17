@@ -20,13 +20,18 @@ suite =
              , 20 -- 2,889,796 runs/s (GoF: 99.91%)
              , 200 -- 309,931 runs/s (GoF: 99.94%)
              ]
-                |> List.map (\n -> ( "n = " ++ String.fromInt n, \_ -> List.Extra.find (.lapNumber >> (==) n) Fixture.csvDecoded ))
+                |> List.map (\n -> ( toString n, \_ -> List.Extra.find (.lapNumber >> (==) n) Fixture.csvDecoded ))
             )
         , Benchmark.scale "Array.Extra2.find"
             ([ 2 -- 104,597 runs/s (GoF: 99.96%)
              , 20 -- 102,423 runs/s (GoF: 99.95%)
              , 200 -- 84,687 runs/s (GoF: 99.95%)
              ]
-                |> List.map (\n -> ( "n = " ++ String.fromInt n, \_ -> Array.Extra2.find (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
+                |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
             )
         ]
+
+
+toString : Int -> String
+toString n =
+    "n = " ++ String.fromInt n

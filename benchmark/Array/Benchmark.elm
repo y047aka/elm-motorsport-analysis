@@ -41,5 +41,5 @@ suite =
 
 
 toString : Int -> String
-toString size =
-    "n = " ++ String.fromInt size
+toString n =
+    "n = " ++ String.fromInt n
