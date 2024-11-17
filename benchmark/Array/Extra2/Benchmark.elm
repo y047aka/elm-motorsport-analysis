@@ -15,26 +15,18 @@ main =
 suite : Benchmark
 suite =
     describe "Array.Extra2.find" <|
-        [ Benchmark.compare ".lapNumber >> (==) 2"
-            "List.Extra.find"
-            (\_ ->
-                -- 21,632,561 runs/s (GoF: 99.96%)
-                List.Extra.find (.lapNumber >> (==) 2) Fixture.csvDecoded
+        [ Benchmark.scale "List.Extra.find"
+            ([ 2 -- 19,662,511 runs/s (GoF: 99.95%)
+             , 20 -- 2,889,796 runs/s (GoF: 99.91%)
+             , 200 -- 309,931 runs/s (GoF: 99.94%)
+             ]
+                |> List.map (\n -> ( "n = " ++ String.fromInt n, \_ -> List.Extra.find (.lapNumber >> (==) n) Fixture.csvDecoded ))
             )
-            "Array.Extra2.find"
-            (\_ ->
-                -- 107,375 runs/s (GoF: 99.87%)
-                Array.Extra2.find (.lapNumber >> (==) 2) Fixture.csvDecoded_array
-            )
-        , Benchmark.compare ".lapNumber >> (==) 200"
-            "List.Extra.find"
-            (\_ ->
-                -- 307,584 runs/s (GoF: 99.99%)
-                List.Extra.find (.lapNumber >> (==) 200) Fixture.csvDecoded
-            )
-            "Array.Extra2.find"
-            (\_ ->
-                -- 86,520 runs/s (GoF: 99.96%)
-                Array.Extra2.find (.lapNumber >> (==) 200) Fixture.csvDecoded_array
+        , Benchmark.scale "Array.Extra2.find"
+            ([ 2 -- 104,597 runs/s (GoF: 99.96%)
+             , 20 -- 102,423 runs/s (GoF: 99.95%)
+             , 200 -- 84,687 runs/s (GoF: 99.95%)
+             ]
+                |> List.map (\n -> ( "n = " ++ String.fromInt n, \_ -> Array.Extra2.find (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
             )
         ]
