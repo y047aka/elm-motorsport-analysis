@@ -20,14 +20,14 @@ suite =
              , 500 -- 367,023 runs/s (GoF: 99.99%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
-                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> List.length target ))
+                |> List.map (\( size, target ) -> ( toString size, \_ -> List.length target ))
             )
         , Benchmark.scale "Array.length"
             ([ 0 -- 269,282,707 runs/s (GoF: 99.99%)
              , 500 -- 269,150,399 runs/s (GoF: 99.99%)
              ]
                 |> List.map (\size -> ( size, Array.fromList (Fixture.csvDecodedOfSize size) ))
-                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> Array.length target ))
+                |> List.map (\( size, target ) -> ( toString size, \_ -> Array.length target ))
             )
         , Benchmark.scale "Array.fromList >> Array.length"
             ([ 0 -- 41,046,798 runs/s (GoF: 99.98%)
@@ -35,6 +35,11 @@ suite =
              , 500 -- 780,566 runs/s (GoF: 100%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
-                |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> (Array.fromList >> Array.length) target ))
+                |> List.map (\( size, target ) -> ( toString size, \_ -> (Array.fromList >> Array.length) target ))
             )
         ]
+
+
+toString : Int -> String
+toString size =
+    "n = " ++ String.fromInt size
