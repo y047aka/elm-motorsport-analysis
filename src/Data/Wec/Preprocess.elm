@@ -1,4 +1,4 @@
-module Data.Wec.Preprocess exposing (..)
+module Data.Wec.Preprocess exposing (preprocess, preprocess_)
 
 import AssocList
 import AssocList.Extra
