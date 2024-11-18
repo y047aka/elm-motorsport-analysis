@@ -13,8 +13,8 @@ main =
 
 suite : Benchmark
 suite =
-    describe "Preprocess"
-        [ benchmark "Data.Wec.Preprocess.preprocess"
+    describe "Data.Wec.Preprocess"
+        [ benchmark "preprocess"
             (\_ ->
                 -- 32 runs/s (GoF: 99.99%)
                 Preprocess_Wec.preprocess Fixture.csvDecoded
