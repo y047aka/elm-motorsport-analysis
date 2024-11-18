@@ -30,19 +30,19 @@ suite =
 startPositionsSuite : List Benchmark
 startPositionsSuite =
     [ Benchmark.scale "startPositions_list"
-        ([ 1 -- 15,411,092 runs/s (GoF: 99.99%)
-         , 10 -- 6,253,707 runs/s (GoF: 99.97%)
-         , 100 -- 850,407 runs/s (GoF: 99.91%)
-         , 1000 -- 76,407 runs/s (GoF: 99.91%)
+        ([ 5 -- 10,777,648 runs/s (GoF: 99.95%)
+         , 50 -- 2,137,145 runs/s (GoF: 99.93%)
+         , 500 -- 206,667 runs/s (GoF: 99.84%)
+         , 5000 -- 21,238 runs/s (GoF: 99.85%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_list target ))
         )
     , Benchmark.scale "startPositions_array"
-        ([ 1 -- 4,410,251 runs/s (GoF: 99.99%)
-         , 10 -- 3,240,275 runs/s (GoF: 99.98%)
-         , 100 -- 847,416 runs/s (GoF: 100%)
-         , 1000 -- 105,293 runs/s (GoF: 99.96%)
+        ([ 5 -- 3,936,471 runs/s (GoF: 99.95%)
+         , 50 -- 1,500,727 runs/s (GoF: 99.97%)
+         , 500 -- 230,693 runs/s (GoF: 99.96%)
+         , 5000 -- 22,697 runs/s (GoF: 99.96%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_array (Array.fromList target) ))
@@ -53,19 +53,19 @@ startPositionsSuite =
 ordersByLapSuite : List Benchmark
 ordersByLapSuite =
     [ Benchmark.scale "ordersByLap_list"
-        ([ 1 -- 5,988,633 runs/s (GoF: 99.96%)
-         , 10 -- 589,535 runs/s (GoF: 99.99%)
-         , 100 -- 24,241 runs/s (GoF: 99.99%)
-         , 1000 -- 249 runs/s (GoF: 99.99%)
+        ([ 5 -- 1,387,510 runs/s (GoF: 99.92%)
+         , 50 -- 85,140 runs/s (GoF: 99.95%)
+         , 500 -- 835 runs/s (GoF: 99.94%)
+         , 5000 -- 54 runs/s (GoF: 99.96%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_list target ))
         )
     , Benchmark.scale "ordersByLap_array"
-        ([ 1 -- 4,851,584 runs/s (GoF: 99.98%)
-         , 10 -- 586,185 runs/s (GoF: 99.99%)
-         , 100 -- 24,479 runs/s (GoF: 99.99%)
-         , 1000 -- 249 runs/s (GoF: 99.99%)
+        ([ 5 -- 1,333,480 runs/s (GoF: 99.98%)
+         , 50 -- 84,749 runs/s (GoF: 99.95%)
+         , 500 -- 831 runs/s (GoF: 99.94%)
+         , 5000 -- 53 runs/s (GoF: 99.94%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_array target ))

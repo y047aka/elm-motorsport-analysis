@@ -20,27 +20,27 @@ suite =
     describe "RaceControl"
         [ benchmark "init"
             (\_ ->
-                -- 92,110 runs/s (GoF: 99.99%)
+                -- 37,171 runs/s (GoF: 99.96%)
                 RaceControl.init Fixture.preprocessed
             )
         , benchmark "update Add10seconds"
             (\_ ->
-                -- 18,971 runs/s (GoF: 99.98%)
+                -- 7,218 runs/s (GoF: 99.88%)
                 RaceControl.update Add10seconds rc
             )
         , benchmark "update (SetCount 60min)"
             (\_ ->
-                -- 19,193 runs/s (GoF: 99.99%)
+                -- 7,332 runs/s (GoF: 99.97%)
                 RaceControl.update (SetCount (60 * 60 * 1000)) rc
             )
         , benchmark "update NextLap"
             (\_ ->
-                -- 18,577 runs/s (GoF: 99.99%)
+                -- 6,977 runs/s (GoF: 99.86%)
                 RaceControl.update NextLap rc
             )
         , benchmark "update PreviousLap"
             (\_ ->
-                -- 19,132 runs/s (GoF: 99.99%)
+                -- 7,264 runs/s (GoF: 99.85%)
                 RaceControl.update PreviousLap rc
             )
         ]
