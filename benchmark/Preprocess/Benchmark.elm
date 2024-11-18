@@ -1,4 +1,4 @@
-module PreprocessBenchmark exposing (main)
+module Preprocess.Benchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
