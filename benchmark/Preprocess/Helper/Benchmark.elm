@@ -36,7 +36,7 @@ startPositionsSuite =
          , 1000 -- 76,407 runs/s (GoF: 99.91%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
-            |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_list target ))
+            |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_list target ))
         )
     , Benchmark.scale "startPositions_array"
         ([ 1 -- 4,410,251 runs/s (GoF: 99.99%)
@@ -45,25 +45,31 @@ startPositionsSuite =
          , 1000 -- 105,293 runs/s (GoF: 99.96%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
-            |> List.map (\( size, target ) -> ( "n = " ++ String.fromInt size, \_ -> startPositions_array (Array.fromList target) ))
+            |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_array (Array.fromList target) ))
         )
     ]
 
 
 ordersByLapSuite : List Benchmark
 ordersByLapSuite =
-    [ Benchmark.scale "ordersByLap"
-        [ ( "ordersByLap_list"
-          , \_ ->
-                -- 463 runs/s (GoF: 99.99%)
-                ordersByLap_list Fixture.csvDecoded
-          )
-        , ( "ordersByLap_array"
-          , \_ ->
-                -- 463 runs/s (GoF: 99.99%)
-                ordersByLap_array Fixture.csvDecoded
-          )
-        ]
+    [ Benchmark.scale "ordersByLap_list"
+        ([ 1 -- 5,988,633 runs/s (GoF: 99.96%)
+         , 10 -- 589,535 runs/s (GoF: 99.99%)
+         , 100 -- 24,241 runs/s (GoF: 99.99%)
+         , 1000 -- 249 runs/s (GoF: 99.99%)
+         ]
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+            |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_list target ))
+        )
+    , Benchmark.scale "ordersByLap_array"
+        ([ 1 -- 4,851,584 runs/s (GoF: 99.98%)
+         , 10 -- 586,185 runs/s (GoF: 99.99%)
+         , 100 -- 24,479 runs/s (GoF: 99.99%)
+         , 1000 -- 249 runs/s (GoF: 99.99%)
+         ]
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+            |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_array target ))
+        )
     ]
 
 
@@ -83,6 +89,11 @@ preprocess_Suite =
             Data.Wec.Preprocess.preprocess_ options
         )
     ]
+
+
+toString : Int -> String
+toString n =
+    "n = " ++ String.fromInt n
 
 
 startPositions_list : List Wec.Lap -> List String
