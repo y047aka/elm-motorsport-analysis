@@ -1,4 +1,4 @@
-module Data.Wec.Preprocess exposing (preprocess, preprocess_)
+module Data.Wec.Preprocess exposing (getPositionAt, preprocess, preprocess_)
 
 import AssocList
 import AssocList.Extra

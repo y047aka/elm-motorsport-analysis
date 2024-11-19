@@ -11,6 +11,7 @@ import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Fixture
 import List.Extra
+import Motorsport.Lap exposing (Lap)
 
 
 main : BenchmarkProgram
@@ -27,6 +28,7 @@ suite =
             , preprocess_Suite
 
             -- ,preprocess_driversSuite
+            , preprocess_laps_Suite
             ]
 
 
@@ -108,6 +110,23 @@ preprocess_driversSuite =
     ]
 
 
+preprocess_laps_Suite : List Benchmark
+preprocess_laps_Suite =
+    let
+        options =
+            { carNumber = "15"
+            , laps = List.filter (.carNumber >> (==) "15") Fixture.csvDecoded
+            , ordersByLap = ordersByLap_list Fixture.csvDecoded
+            }
+    in
+    [ Benchmark.benchmark "laps_"
+        (\_ ->
+            -- 351 runs/s (GoF: 99.99%)
+            laps_ options
+        )
+    ]
+
+
 toString : Int -> String
 toString n =
     "n = " ++ String.fromInt n
@@ -172,5 +191,57 @@ drivers laps =
             (\{ driverName } ->
                 { name = driverName
                 , isCurrentDriver = driverName == currentDriver_
+                }
+            )
+
+
+type alias OrdersByLap =
+    List { lapNumber : Int, order : List String }
+
+
+laps_ :
+    { carNumber : String
+    , laps : List Wec.Lap
+    , ordersByLap : OrdersByLap
+    }
+    -> List Lap
+laps_ { carNumber, laps, ordersByLap } =
+    laps
+        |> List.indexedMap
+            (\index { driverName, lapNumber, lapTime, s1, s2, s3, elapsed } ->
+                { carNumber = carNumber
+                , driver = driverName
+                , lap = lapNumber
+                , position =
+                    Data.Wec.Preprocess.getPositionAt { carNumber = carNumber, lapNumber = lapNumber } ordersByLap
+                , time = lapTime
+                , best =
+                    laps
+                        |> List.take (index + 1)
+                        |> List.map .lapTime
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                , sector_1 = Maybe.withDefault 0 s1
+                , sector_2 = Maybe.withDefault 0 s2
+                , sector_3 = Maybe.withDefault 0 s3
+                , s1_best =
+                    laps
+                        |> List.take (index + 1)
+                        |> List.filterMap .s1
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                , s2_best =
+                    laps
+                        |> List.take (index + 1)
+                        |> List.filterMap .s2
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                , s3_best =
+                    laps
+                        |> List.take (index + 1)
+                        |> List.filterMap .s3
+                        |> List.minimum
+                        |> Maybe.withDefault 0
+                , elapsed = elapsed
                 }
             )
