@@ -1,4 +1,20 @@
-module Fixture exposing (csv, csvDecoded, csvDecodedOfSize, csvDecoded_array, preprocessed)
+module Fixture exposing
+    ( preprocessed
+    , csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
+    , csvDecoded_array
+    , csv
+    )
+
+{-|
+
+@docs preprocessed
+
+@docs csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
+@docs csvDecoded_array
+
+@docs csv
+
+-}
 
 import Array exposing (Array)
 import Csv.Decode as Decode exposing (FieldNames(..))
@@ -29,6 +45,11 @@ csvDecodedOfSize size =
 
     else
         (Array.fromList >> Array.slice 0 size >> Array.toList) csvDecoded
+
+
+csvDecodedForCarNumber : String -> List Wec.Lap
+csvDecodedForCarNumber str =
+    List.filter (\{ carNumber } -> carNumber == str) csvDecoded
 
 
 csvDecoded_array : Array Wec.Lap

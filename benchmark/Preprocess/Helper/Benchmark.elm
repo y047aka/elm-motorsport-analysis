@@ -83,7 +83,7 @@ preprocess_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = List.filter (.carNumber >> (==) "15") Fixture.csvDecoded
+            , laps = Fixture.csvDecodedForCarNumber "15"
             , startPositions = startPositions_list Fixture.csvDecoded
             , ordersByLap = ordersByLap_list Fixture.csvDecoded
             }
@@ -115,7 +115,7 @@ preprocess_laps_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = List.filter (.carNumber >> (==) "15") Fixture.csvDecoded
+            , laps = Fixture.csvDecodedForCarNumber "15"
             , ordersByLap = ordersByLap_list Fixture.csvDecoded
             }
     in
