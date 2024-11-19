@@ -10,6 +10,7 @@ import Csv.Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Fixture
+import List.Extra
 
 
 main : BenchmarkProgram
@@ -24,6 +25,8 @@ suite =
             [ startPositionsSuite
             , ordersByLapSuite
             , preprocess_Suite
+
+            -- ,preprocess_driversSuite
             ]
 
 
@@ -91,6 +94,20 @@ preprocess_Suite =
     ]
 
 
+preprocess_driversSuite : List Benchmark
+preprocess_driversSuite =
+    [ Benchmark.scale "drivers"
+        ([ 5 -- 10,902,054 runs/s (GoF: 99.99%)
+         , 50 -- 1,952,700 runs/s (GoF: 100%)
+         , 500 -- 113,370 runs/s (GoF: 99.87%)
+         , 5000 -- 8,006 runs/s (GoF: 99.94%)
+         ]
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+            |> List.map (\( size, target ) -> ( toString size, \_ -> drivers target ))
+        )
+    ]
+
+
 toString : Int -> String
 toString n =
     "n = " ++ String.fromInt n
@@ -137,3 +154,23 @@ ordersByLap_array laps =
                 }
             )
         |> Array.toList
+
+
+
+-- HELPERS For `preprocess_`
+
+
+drivers : List Wec.Lap -> List { name : String, isCurrentDriver : Bool }
+drivers laps =
+    let
+        currentDriver_ =
+            "dummyName"
+    in
+    laps
+        |> List.Extra.uniqueBy .driverName
+        |> List.map
+            (\{ driverName } ->
+                { name = driverName
+                , isCurrentDriver = driverName == currentDriver_
+                }
+            )
