@@ -23,12 +23,11 @@ suite : Benchmark
 suite =
     describe "Data.Wec.Preprocess" <|
         List.concat
-            [ startPositionsSuite
-            , ordersByLapSuite
-            , preprocess_Suite
-
-            -- ,preprocess_driversSuite
-            , preprocess_laps_Suite
+            [ -- startPositionsSuite
+              -- , ordersByLapSuite
+              -- , preprocess_Suite
+              -- , preprocess_driversSuite
+              preprocess_laps_Suite
             ]
 
 
@@ -119,11 +118,13 @@ preprocess_laps_Suite =
             , ordersByLap = ordersByLap_list Fixture.csvDecoded
             }
     in
-    [ Benchmark.benchmark "laps_"
-        (\_ ->
-            -- 351 runs/s (GoF: 99.99%)
-            laps_ options
-        )
+    [ Benchmark.compare "laps_"
+        "old"
+        -- 294 runs/s (GoF: 99.99%)
+        (\_ -> laps_ options)
+        "improved"
+        -- 2,199 runs/s (GoF: 99.96%)
+        (\_ -> laps_improved options)
     ]
 
 
@@ -245,3 +246,69 @@ laps_ { carNumber, laps, ordersByLap } =
                 , elapsed = elapsed
                 }
             )
+
+
+type alias Acc =
+    { bestLapTime : Maybe Int
+    , bestS1 : Maybe Int
+    , bestS2 : Maybe Int
+    , bestS3 : Maybe Int
+    , laps : List Lap
+    }
+
+
+laps_improved :
+    { carNumber : String
+    , laps : List Wec.Lap
+    , ordersByLap : OrdersByLap
+    }
+    -> List Lap
+laps_improved { carNumber, laps, ordersByLap } =
+    let
+        step : Wec.Lap -> Acc -> Acc
+        step { driverName, lapNumber, lapTime, s1, s2, s3, elapsed } acc =
+            let
+                bestLapTime =
+                    List.minimum (lapTime :: List.filterMap identity [ acc.bestLapTime ])
+
+                ( bestS1, bestS2, bestS3 ) =
+                    ( List.minimum (List.filterMap identity [ s1, acc.bestS1 ])
+                    , List.minimum (List.filterMap identity [ s2, acc.bestS2 ])
+                    , List.minimum (List.filterMap identity [ s3, acc.bestS3 ])
+                    )
+
+                currentLap =
+                    { carNumber = carNumber
+                    , driver = driverName
+                    , lap = lapNumber
+                    , position = Data.Wec.Preprocess.getPositionAt { carNumber = carNumber, lapNumber = lapNumber } ordersByLap
+                    , time = lapTime
+                    , best = Maybe.withDefault 0 bestLapTime
+                    , sector_1 = Maybe.withDefault 0 s1
+                    , sector_2 = Maybe.withDefault 0 s2
+                    , sector_3 = Maybe.withDefault 0 s3
+                    , s1_best = Maybe.withDefault 0 bestS1
+                    , s2_best = Maybe.withDefault 0 bestS2
+                    , s3_best = Maybe.withDefault 0 bestS3
+                    , elapsed = elapsed
+                    }
+            in
+            { bestLapTime = bestLapTime
+            , bestS1 = bestS1
+            , bestS2 = bestS2
+            , bestS3 = bestS3
+            , laps = currentLap :: acc.laps
+            }
+
+        initialAcc =
+            { bestLapTime = Nothing
+            , bestS1 = Nothing
+            , bestS2 = Nothing
+            , bestS3 = Nothing
+            , laps = []
+            }
+    in
+    laps
+        |> List.foldl step initialAcc
+        |> .laps
+        |> List.reverse
