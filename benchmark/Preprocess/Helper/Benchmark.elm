@@ -1,4 +1,4 @@
-module Preprocess.Helper.Benchmark exposing (main)
+module Preprocess.Helper.Benchmark exposing (main, preprocess_deprecated)
 
 import Array exposing (Array)
 import Array.Extra2
