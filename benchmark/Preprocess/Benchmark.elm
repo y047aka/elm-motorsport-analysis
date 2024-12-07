@@ -30,11 +30,11 @@ suite =
                 |> List.map (\( size, target ) -> ( toString size, \_ -> deprecated target ))
             )
         , Benchmark.scale "improved"
-            ([ 10 -- 117,702 runs/s (GoF: 99.99%)
-             , 100 -- 5,654 runs/s (GoF: 99.98%)
+            ([ 10 -- 110,453 runs/s (GoF: 99.99%)
+             , 100 -- 5,921 runs/s (GoF: 99.99%)
+             , 1000 -- 379 runs/s (GoF: 99.99%)
 
-             --  , 1000 -- 167 runs/s (GoF: 99.99%)
-             --  , 5000 -- 27 runs/s (GoF: 100%)
+             --  , 5000 -- 71 runs/s (GoF: 100%)
              ]
                 |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> Preprocess_Wec.preprocess target ))
