@@ -10,16 +10,25 @@ sortBy f =
 
 find : (a -> Bool) -> Array a -> Maybe a
 find predicate array =
-    Array.foldl
-        (\item acc ->
-            if acc == Nothing && predicate item then
-                Just item
+    findHelp predicate array 0 (Array.length array) Nothing
 
-            else
-                acc
-        )
-        Nothing
-        array
+
+findHelp : (a -> Bool) -> Array a -> Int -> Int -> Maybe a -> Maybe a
+findHelp predicate array index until acc =
+    if index >= until then
+        acc
+
+    else
+        let
+            element =
+                Array.get index array
+        in
+        case Maybe.map predicate element of
+            Just True ->
+                element
+
+            _ ->
+                findHelp predicate array (index + 1) until acc
 
 
 findMap : (a -> Maybe b) -> Array a -> Maybe b
