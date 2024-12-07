@@ -26,9 +26,9 @@ suite =
     describe "Data.Wec.Preprocess" <|
         List.concat
             [ -- startPositionsSuite
-              -- , ordersByLapSuite
-              preprocess_Suite
+              ordersByLapSuite
 
+            --   preprocess_Suite
             -- , preprocess_laps_Suite
             ]
 
@@ -59,19 +59,19 @@ startPositionsSuite =
 ordersByLapSuite : List Benchmark
 ordersByLapSuite =
     [ Benchmark.scale "ordersByLap_list"
-        ([ 5 -- 1,387,510 runs/s (GoF: 99.92%)
-         , 50 -- 85,140 runs/s (GoF: 99.95%)
-         , 500 -- 835 runs/s (GoF: 99.94%)
-         , 5000 -- 54 runs/s (GoF: 99.96%)
+        ([ 5 -- 1,290,015 runs/s (GoF: 99.97%)
+         , 50 -- 71,653 runs/s (GoF: 99.98%)
+         , 500 -- 625 runs/s (GoF: 99.99%)
+         , 5000 -- 46 runs/s (GoF: 99.97%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_list target ))
         )
     , Benchmark.scale "ordersByLap_array"
-        ([ 5 -- 1,333,480 runs/s (GoF: 99.98%)
-         , 50 -- 84,749 runs/s (GoF: 99.95%)
-         , 500 -- 831 runs/s (GoF: 99.94%)
-         , 5000 -- 53 runs/s (GoF: 99.94%)
+        ([ 5 -- 1,239,767 runs/s (GoF: 99.99%)
+         , 50 -- 72,129 runs/s (GoF: 99.98%)
+         , 500 -- 625 runs/s (GoF: 99.99%)
+         , 5000 -- 44 runs/s (GoF: 99.99%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_array target ))
