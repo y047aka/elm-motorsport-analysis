@@ -17,28 +17,28 @@ suite : Benchmark
 suite =
     describe "find" <|
         [ Benchmark.scale "List.Extra.find"
-            ([ 5 -- 9,524,184 runs/s (GoF: 99.97%)
-             , 50 -- 1,193,032 runs/s (GoF: 99.99%)
-             , 500 -- 12,420 runs/s (GoF: 100%)
-             , 5000 -- 12,435 runs/s (GoF: 100%)
+            ([ 5 -- 37,757,037 runs/s (GoF: 99.98%)
+             , 50 -- 4,935,546 runs/s (GoF: 100%)
+             , 500 -- 53,338 runs/s (GoF: 99.98%)
+             , 5000 -- 53,221 runs/s (GoF: 99.98%)
              ]
-                |> List.map (\n -> ( toString n, \_ -> List.Extra.find (.lapNumber >> (==) n) Fixture.csvDecoded ))
+                |> List.map (\n -> ( toString n, \_ -> List.Extra.find (\{ lapNumber } -> lapNumber == n) Fixture.csvDecoded ))
             )
         , Benchmark.scale "再帰とfindHelp による末尾最適化の組み合わせ"
-            ([ 5 -- 5,042,456 runs/s (GoF: 99.98%)
-             , 50 -- 580,771 runs/s (GoF: 99.99%)
-             , 500 -- 5,898 runs/s (GoF: 99.99%)
-             , 5000 -- 5,905 runs/s (GoF: 100%)
+            ([ 5 -- 8,159,839 runs/s (GoF: 99.93%)
+             , 50 -- 950,765 runs/s (GoF: 99.86%)
+             , 500 -- 9,608 runs/s (GoF: 99.85%)
+             , 5000 -- 9,627 runs/s (GoF: 99.87%)
              ]
-                |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
+                |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (\{ lapNumber } -> lapNumber == n) Fixture.csvDecoded_array ))
             )
         , Benchmark.scale "Array.foldl を使う場合（deprecated）"
-            ([ 5 -- 7,149 runs/s (GoF: 99.98%)
-             , 50 -- 7,172 runs/s (GoF: 99.97%)
-             , 500 -- 7,514 runs/s (GoF: 99.97%)
-             , 5000 -- 7,548 runs/s (GoF: 99.96%)
+            ([ 5 -- 12,909 runs/s (GoF: 99.94%)
+             , 50 -- 12,915 runs/s (GoF: 99.95%)
+             , 500 -- 14,976 runs/s (GoF: 99.96%)
+             , 5000 -- 15,021 runs/s (GoF: 99.97%)
              ]
-                |> List.map (\n -> ( toString n, \_ -> find_old (.lapNumber >> (==) n) Fixture.csvDecoded_array ))
+                |> List.map (\n -> ( toString n, \_ -> find_old (\{ lapNumber } -> lapNumber == n) Fixture.csvDecoded_array ))
             )
         ]
 
