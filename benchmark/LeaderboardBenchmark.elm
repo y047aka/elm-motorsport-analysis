@@ -20,7 +20,7 @@ suite =
     describe "Leaderboard"
         [ benchmark "init"
             (\_ ->
-                -- 35,503 runs/s (GoF: 99.99%)
+                -- 4,368 runs/s (GoF: 99.96%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
@@ -30,7 +30,7 @@ suite =
             )
         , benchmark "view"
             (\_ ->
-                -- 4,030 runs/s (GoF: 99.99%)
+                -- 730 runs/s (GoF: 99.99%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
