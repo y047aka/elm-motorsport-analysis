@@ -12,7 +12,7 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, sectorTimeColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -251,44 +251,10 @@ config analysis =
             , getter = .interval >> Gap.toString
             , sorter = List.sortBy .position
             }
-        , sectorTimeColumn
-            { label = "S1"
-            , getter =
-                .sector_1
-                    >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
-                            { time = time
-                            , personalBest = personalBest
-                            , overallBest = analysis.sector_1_fastest
-                            , inProgress = inProgress
-                            }
-                        )
-            }
-        , sectorTimeColumn
-            { label = "S2"
-            , getter =
-                .sector_2
-                    >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
-                            { time = time
-                            , personalBest = personalBest
-                            , overallBest = analysis.sector_2_fastest
-                            , inProgress = inProgress
-                            }
-                        )
-            }
-        , sectorTimeColumn
-            { label = "S3"
-            , getter =
-                .sector_3
-                    >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
-                            { time = time
-                            , personalBest = personalBest
-                            , overallBest = analysis.sector_3_fastest
-                            , inProgress = inProgress
-                            }
-                        )
+        , currentLapColumn_Wec
+            { getter = .currentLap
+            , sorter = List.sortBy (.currentLap >> .lap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
             }
         , lastLapColumn_Wec
             { getter = .lastLap

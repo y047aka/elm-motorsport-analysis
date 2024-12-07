@@ -7,6 +7,7 @@ module Motorsport.Leaderboard exposing
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
+    , currentLapColumn_Wec
     , lastLapColumn_F1, lastLapColumn_Wec
     , Config, Leaderboard, LeaderboardItem, init, view
     )
@@ -37,7 +38,8 @@ module Motorsport.Leaderboard exposing
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
-@docs lastLapColumn_F1, lastLapColumn_Wec
+@docs currentLapColumn_Wec
+@docs lastLapColumn_F1, currentLapColumn_Wec, lastLapColumn_Wec
 
 -}
 
@@ -309,6 +311,92 @@ lastLapColumn_F1 { getter, sorter, analysis } =
     }
 
 
+currentLapColumn_Wec :
+    { getter :
+        data
+        ->
+            { timing : Maybe Duration
+            , lap : Maybe Lap
+            , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+            , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+            , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+            }
+    , sorter : List data -> List data
+    , analysis : Analysis
+    }
+    -> Column data msg
+currentLapColumn_Wec { getter, sorter, analysis } =
+    let
+        lapTime { time, personalBest } =
+            div
+                [ css
+                    [ textAlign center
+                    , let
+                        status =
+                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                      in
+                      if LapStatus.isNormal status then
+                        batch []
+
+                      else
+                        LapStatus.toHexColorString status
+                            |> hex
+                            |> color
+                    ]
+                ]
+                [ text (Duration.toString time) ]
+
+        sector sector_ =
+            div
+                [ css
+                    [ height (px 3)
+                    , borderRadius (px 1)
+                    , backgroundColor <|
+                        if sector_.inProgress then
+                            hsla 0 0 1 0.9
+
+                        else
+                            lapStatus sector_
+                                |> LapStatus.toHexColorString
+                                |> hex
+                    ]
+                ]
+                []
+    in
+    { name = "Current Lap"
+    , view =
+        getter
+            >> (\currentLap ->
+                    currentLap.lap
+                        |> Maybe.map
+                            (\{ best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
+                                div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                                    [ lapTime { time = Maybe.withDefault 0 currentLap.timing, personalBest = best }
+                                    , div
+                                        [ css
+                                            [ property "display" "grid"
+                                            , property "grid-template-columns" "1fr 1fr 1fr"
+                                            , property "column-gap" "4px"
+                                            ]
+                                        ]
+                                        [ currentLap.sector_1
+                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, inProgress = inProgress })
+                                            |> Maybe.withDefault (text "")
+                                        , currentLap.sector_2
+                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, inProgress = inProgress })
+                                            |> Maybe.withDefault (text "")
+                                        , currentLap.sector_3
+                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, inProgress = inProgress })
+                                            |> Maybe.withDefault (text "")
+                                        ]
+                                    ]
+                            )
+               )
+            >> Maybe.withDefault (text "-")
+    , sorter = sorter
+    }
+
+
 lastLapColumn_Wec :
     { getter : data -> Maybe Lap
     , sorter : List data -> List data
@@ -402,6 +490,13 @@ type alias LeaderboardItem =
     , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , currentLap :
+        { timing : Maybe Duration
+        , lap : Maybe Lap
+        , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+        , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+        , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+        }
     , lastLap : Maybe Lap
     , history : List Lap
     }
@@ -467,6 +562,13 @@ init { clock, cars } =
                 , sector_1 = sector_1
                 , sector_2 = sector_2
                 , sector_3 = sector_3
+                , currentLap =
+                    { timing = Just (raceClock.elapsed - lastLap.elapsed)
+                    , lap = Just currentLap
+                    , sector_1 = sector_1
+                    , sector_2 = sector_2
+                    , sector_3 = sector_3
+                    }
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
                 }
