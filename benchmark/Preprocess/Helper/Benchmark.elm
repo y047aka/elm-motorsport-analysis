@@ -2,13 +2,13 @@ module Preprocess.Helper.Benchmark exposing (main, preprocess_deprecated)
 
 import Array exposing (Array)
 import Array.Extra2
-import AssocList
-import AssocList.Extra
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
+import Dict
+import Dict.Extra
 import Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
@@ -59,19 +59,19 @@ startPositionsSuite =
 ordersByLapSuite : List Benchmark
 ordersByLapSuite =
     [ Benchmark.scale "ordersByLap_list"
-        ([ 5 -- 1,290,015 runs/s (GoF: 99.97%)
-         , 50 -- 71,653 runs/s (GoF: 99.98%)
-         , 500 -- 625 runs/s (GoF: 99.99%)
-         , 5000 -- 46 runs/s (GoF: 99.97%)
+        ([ 5 -- 945,315 runs/s (GoF: 99.99%)
+         , 50 -- 64,006 runs/s (GoF: 99.98%)
+         , 500 -- 5,279 runs/s (GoF: 99.99%)
+         , 5000 -- 541 runs/s (GoF: 99.99%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_list target ))
         )
     , Benchmark.scale "ordersByLap_array"
-        ([ 5 -- 1,239,767 runs/s (GoF: 99.99%)
-         , 50 -- 72,129 runs/s (GoF: 99.98%)
-         , 500 -- 625 runs/s (GoF: 99.99%)
-         , 5000 -- 44 runs/s (GoF: 99.99%)
+        ([ 5 -- 894,991 runs/s (GoF: 99.99%)
+         , 50 -- 63,326 runs/s (GoF: 99.99%)
+         , 500 -- 5,273 runs/s (GoF: 99.99%)
+         , 5000 -- 541 runs/s (GoF: 99.99%)
          ]
             |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_array target ))
@@ -91,10 +91,10 @@ preprocess_Suite =
     in
     [ Benchmark.compare "preprocess_"
         "old"
-        -- 349 runs/s (GoF: 99.99%)
+        -- 368 runs/s (GoF: 99.99%)
         (\_ -> preprocess_deprecated options)
         "improved"
-        -- 2,215 runs/s (GoF: 99.95%)
+        -- 2,219 runs/s (GoF: 99.98%)
         (\_ -> Data.Wec.Preprocess.preprocess_ options)
     ]
 
@@ -110,10 +110,10 @@ preprocess_laps_Suite =
     in
     [ Benchmark.compare "laps_"
         "old"
-        -- 294 runs/s (GoF: 99.99%)
+        -- 366 runs/s (GoF: 99.99%)
         (\_ -> laps_deprecated options)
         "improved"
-        -- 2,199 runs/s (GoF: 99.96%)
+        -- 2,248 runs/s (GoF: 99.96%)
         (\_ -> Data.Wec.Preprocess.laps_ options)
     ]
 
@@ -141,8 +141,8 @@ startPositions_array laps =
 ordersByLap_list : List Wec.Lap -> List { lapNumber : Int, order : List String }
 ordersByLap_list laps =
     laps
-        |> AssocList.Extra.groupBy .lapNumber
-        |> AssocList.toList
+        |> Dict.Extra.groupBy .lapNumber
+        |> Dict.toList
         |> List.map
             (\( lapNumber, cars ) ->
                 { lapNumber = lapNumber
@@ -154,8 +154,8 @@ ordersByLap_list laps =
 ordersByLap_array : List Wec.Lap -> List { lapNumber : Int, order : List String }
 ordersByLap_array laps =
     laps
-        |> AssocList.Extra.groupBy .lapNumber
-        |> AssocList.toList
+        |> Dict.Extra.groupBy .lapNumber
+        |> Dict.toList
         |> Array.fromList
         |> Array.map
             (\( lapNumber, cars ) ->
