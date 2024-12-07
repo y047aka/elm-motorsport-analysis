@@ -1,8 +1,8 @@
 module Data.Wec.Preprocess exposing (getPositionAt, laps_, preprocess, preprocess_)
 
-import AssocList
-import AssocList.Extra
 import Data.Wec.Decoder as Wec
+import Dict
+import Dict.Extra
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
@@ -19,8 +19,8 @@ preprocess laps =
 
         ordersByLap =
             laps
-                |> AssocList.Extra.groupBy .lapNumber
-                |> AssocList.toList
+                |> Dict.Extra.groupBy .lapNumber
+                |> Dict.toList
                 |> List.map
                     (\( lapNumber, cars ) ->
                         { lapNumber = lapNumber
@@ -29,8 +29,8 @@ preprocess laps =
                     )
     in
     laps
-        |> AssocList.Extra.groupBy .carNumber
-        |> AssocList.toList
+        |> Dict.Extra.groupBy .carNumber
+        |> Dict.toList
         |> List.map
             (\( carNumber, laps__ ) ->
                 preprocess_
@@ -42,6 +42,7 @@ preprocess laps =
             )
 
 
+{-| -}
 type alias OrdersByLap =
     List { lapNumber : Int, order : List String }
 
