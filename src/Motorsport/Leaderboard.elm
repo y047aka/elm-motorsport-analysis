@@ -487,9 +487,6 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , currentLap :
         { timing : Maybe Duration
         , lap : Maybe Lap
@@ -559,9 +556,6 @@ init { clock, cars } =
                 , interval =
                     Maybe.map2 (Gap.at clock) (List.Extra.getAt (index - 1) cars) (Just car)
                         |> Maybe.withDefault Gap.None
-                , sector_1 = sector_1
-                , sector_2 = sector_2
-                , sector_3 = sector_3
                 , currentLap =
                     { timing = Just (raceClock.elapsed - lastLap.elapsed)
                     , lap = Just currentLap
