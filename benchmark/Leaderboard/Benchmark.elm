@@ -6,7 +6,8 @@ import Csv.Decode exposing (FieldNames(..))
 import Fixture
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, sectorTimeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn)
+import Motorsport.Leaderboard.ViewModel as ViewModel exposing (ViewModelItem)
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 
 
@@ -26,7 +27,7 @@ suite =
                         RaceControl.init Fixture.preprocessed
                             |> RaceControl.update (SetCount (60 * 60 * 1000))
                 in
-                Leaderboard.init rc
+                ViewModel.init rc
             )
         , benchmark "view"
             (\_ ->
@@ -48,7 +49,7 @@ type Msg
     = NoOp
 
 
-config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
     { toId = .metaData >> .carNumber
     , toMsg = \_ -> NoOp
