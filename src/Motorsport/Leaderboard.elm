@@ -9,7 +9,7 @@ module Motorsport.Leaderboard exposing
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , currentLapColumn_Wec
     , lastLapColumn_F1, lastLapColumn_Wec
-    , Config, Leaderboard, LeaderboardItem, init, view
+    , Config, Leaderboard, LeaderboardItem, init, init_metaData, view
     )
 
 {-|

@@ -244,19 +244,7 @@ raceControlToLeaderboard { lapCount, cars } =
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1
-                            , metaData =
-                                { carNumber = car.carNumber
-                                , class = car.class
-                                , team = car.team
-                                , drivers =
-                                    car.drivers
-                                        |> List.map
-                                            (\{ name } ->
-                                                { name = name
-                                                , isCurrentDriver = name == lap.driver
-                                                }
-                                            )
-                                }
+                            , metaData = Leaderboard.init_metaData car lap
                             , lap = lap.lap
                             , gap = Gap.None
                             , interval = Gap.None
