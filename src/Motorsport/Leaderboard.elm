@@ -513,34 +513,8 @@ init { clock, cars } =
                     raceClock =
                         { elapsed = Clock.getElapsed clock }
 
-                    currentLap =
-                        Maybe.withDefault Lap.empty car.currentLap
-
                     lastLap =
                         Maybe.withDefault Lap.empty car.lastLap
-
-                    currentSector =
-                        Lap.currentSector raceClock currentLap
-
-                    ( sector_1, sector_2, sector_3 ) =
-                        case currentSector of
-                            S1 ->
-                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = True }
-                                , Nothing
-                                , Nothing
-                                )
-
-                            S2 ->
-                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = True }
-                                , Nothing
-                                )
-
-                            S3 ->
-                                ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                                , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = False }
-                                , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
-                                )
                 in
                 { position = index + 1
                 , metaData = init_metaData car lastLap
@@ -551,12 +525,7 @@ init { clock, cars } =
                 , interval =
                     Maybe.map2 (Gap.at clock) (List.Extra.getAt (index - 1) cars) (Just car)
                         |> Maybe.withDefault Gap.None
-                , timing =
-                    { time = Just (raceClock.elapsed - lastLap.elapsed)
-                    , sector_1 = sector_1
-                    , sector_2 = sector_2
-                    , sector_3 = sector_3
-                    }
+                , timing = init_timing clock car
                 , currentLap = car.currentLap
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
@@ -577,6 +546,48 @@ init_metaData { carNumber, class, team, drivers } lastLap =
                 }
             )
             drivers
+    }
+
+
+init_timing : Clock.Model -> Car -> Timing
+init_timing clock car =
+    let
+        raceClock =
+            { elapsed = Clock.getElapsed clock }
+
+        currentLap =
+            Maybe.withDefault Lap.empty car.currentLap
+
+        lastLap =
+            Maybe.withDefault Lap.empty car.lastLap
+
+        currentSector =
+            Lap.currentSector raceClock currentLap
+
+        ( sector_1, sector_2, sector_3 ) =
+            case currentSector of
+                S1 ->
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = True }
+                    , Nothing
+                    , Nothing
+                    )
+
+                S2 ->
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
+                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = True }
+                    , Nothing
+                    )
+
+                S3 ->
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
+                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = False }
+                    , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
+                    )
+    in
+    { time = Just (raceClock.elapsed - lastLap.elapsed)
+    , sector_1 = sector_1
+    , sector_2 = sector_2
+    , sector_3 = sector_3
     }
 
 
