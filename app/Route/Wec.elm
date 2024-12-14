@@ -229,16 +229,16 @@ statusBar { clock, lapTotal, lapCount } =
 
 config : Analysis -> Leaderboard.Config LeaderboardItem Msg
 config analysis =
-    { toId = .carNumber
+    { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { carNumber = .carNumber, class = .class }
-        , driverAndTeamColumn_Wec
+        , carNumberColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
             { label = "-"
-            , getter = .carNumber >> carImageUrl >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
-            , sorter = List.sortBy .carNumber
+            , getter = .metaData >> .carNumber >> carImageUrl >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , sorter = List.sortBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn

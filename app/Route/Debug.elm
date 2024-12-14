@@ -158,12 +158,12 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
 
 config : Analysis -> Leaderboard.Config LeaderboardItem Msg
 config analysis =
-    { toId = .carNumber
+    { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { carNumber = .carNumber, class = .class }
-        , driverAndTeamColumn_Wec
+        , carNumberColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = .metaData }
         , intColumn { label = "Lap", getter = .lap }
         , sectorTimeColumn
             { label = "S1"
@@ -244,17 +244,19 @@ raceControlToLeaderboard { lapCount, cars } =
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1
-                            , drivers =
-                                car.drivers
-                                    |> List.map
-                                        (\{ name } ->
-                                            { name = name
-                                            , isCurrentDriver = name == lap.driver
-                                            }
-                                        )
-                            , carNumber = car.carNumber
-                            , class = car.class
-                            , team = car.team
+                            , metaData =
+                                { carNumber = car.carNumber
+                                , class = car.class
+                                , team = car.team
+                                , drivers =
+                                    car.drivers
+                                        |> List.map
+                                            (\{ name } ->
+                                                { name = name
+                                                , isCurrentDriver = name == lap.driver
+                                                }
+                                            )
+                                }
                             , lap = lap.lap
                             , gap = Gap.None
                             , interval = Gap.None

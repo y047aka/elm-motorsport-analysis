@@ -207,24 +207,26 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
-carNumberColumn_Wec : { carNumber : data -> String, class : data -> Class } -> Column data msg
-carNumberColumn_Wec { carNumber, class } =
+carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class } } -> Column data msg
+carNumberColumn_Wec { getter } =
     { name = "#"
     , view =
-        \data ->
-            div
-                [ css
-                    [ width (em 2.5)
-                    , property "padding-block" "5px"
-                    , textAlign center
-                    , fontSize (px 14)
-                    , fontWeight bold
-                    , backgroundColor (class data |> Class.toHexColor)
-                    , borderRadius (px 5)
-                    ]
-                ]
-                [ text (carNumber data) ]
-    , sorter = List.sortBy (class >> Class.toString)
+        getter
+            >> (\{ carNumber, class } ->
+                    div
+                        [ css
+                            [ width (em 2.5)
+                            , property "padding-block" "5px"
+                            , textAlign center
+                            , fontSize (px 14)
+                            , fontWeight bold
+                            , backgroundColor (Class.toHexColor class)
+                            , borderRadius (px 5)
+                            ]
+                        ]
+                        [ text carNumber ]
+               )
+    , sorter = List.sortBy (getter >> .class >> Class.toString)
     }
 
 
@@ -244,8 +246,8 @@ driverNameColumn_F1 { label, getter } =
     }
 
 
-driverAndTeamColumn_Wec : Column { a | drivers : List Driver, team : String } msg
-driverAndTeamColumn_Wec =
+driverAndTeamColumn_Wec : { getter : data -> { a | drivers : List Driver, team : String } } -> Column data msg
+driverAndTeamColumn_Wec { getter } =
     let
         formatName name =
             String.split " " name
@@ -255,25 +257,27 @@ driverAndTeamColumn_Wec =
     in
     { name = "Team / Driver"
     , view =
-        \{ drivers, team } ->
-            div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ div [] [ text team ]
-                , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
-                    List.map
-                        (\{ name, isCurrentDriver } ->
-                            div
-                                [ css
-                                    [ fontSize (px 10)
-                                    , fontStyle italic
-                                    , when (not isCurrentDriver)
-                                        (color (hsl 0 0 0.75))
-                                    ]
-                                ]
-                                [ text (formatName name) ]
-                        )
-                        drivers
-                ]
-    , sorter = List.sortBy .team
+        getter
+            >> (\{ drivers, team } ->
+                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                        [ div [] [ text team ]
+                        , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
+                            List.map
+                                (\{ name, isCurrentDriver } ->
+                                    div
+                                        [ css
+                                            [ fontSize (px 10)
+                                            , fontStyle italic
+                                            , when (not isCurrentDriver)
+                                                (color (hsl 0 0 0.75))
+                                            ]
+                                        ]
+                                        [ text (formatName name) ]
+                                )
+                                drivers
+                        ]
+               )
+    , sorter = List.sortBy (getter >> .team)
     }
 
 
@@ -480,10 +484,7 @@ type alias Leaderboard =
 
 type alias LeaderboardItem =
     { position : Int
-    , carNumber : String
-    , drivers : List Driver
-    , class : Class
-    , team : String
+    , metaData : MetaData
     , lap : Int
     , gap : Gap
     , interval : Gap
@@ -496,6 +497,14 @@ type alias LeaderboardItem =
         }
     , lastLap : Maybe Lap
     , history : List Lap
+    }
+
+
+type alias MetaData =
+    { carNumber : String
+    , class : Class
+    , team : String
+    , drivers : List Driver
     }
 
 
@@ -538,17 +547,19 @@ init { clock, cars } =
                                 )
                 in
                 { position = index + 1
-                , drivers =
-                    car.drivers
-                        |> List.map
-                            (\{ name } ->
-                                { name = name
-                                , isCurrentDriver = name == lastLap.driver
-                                }
-                            )
-                , carNumber = car.carNumber
-                , class = car.class
-                , team = car.team
+                , metaData =
+                    { carNumber = car.carNumber
+                    , class = car.class
+                    , team = car.team
+                    , drivers =
+                        car.drivers
+                            |> List.map
+                                (\{ name } ->
+                                    { name = name
+                                    , isCurrentDriver = name == lastLap.driver
+                                    }
+                                )
+                    }
                 , lap = lastLap.lap
                 , gap =
                     Maybe.map2 (Gap.at clock) (List.head cars) (Just car)
