@@ -1,4 +1,4 @@
-module LeaderboardBenchmark exposing (main)
+module Leaderboard.Benchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
@@ -20,7 +20,7 @@ suite =
     describe "Leaderboard"
         [ benchmark "init"
             (\_ ->
-                -- 4,368 runs/s (GoF: 99.96%)
+                -- 3,845 runs/s (GoF: 99.9%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
@@ -30,7 +30,7 @@ suite =
             )
         , benchmark "view"
             (\_ ->
-                -- 730 runs/s (GoF: 99.99%)
+                -- 591 runs/s (GoF: 99.97%)
                 let
                     rc =
                         RaceControl.init Fixture.preprocessed
