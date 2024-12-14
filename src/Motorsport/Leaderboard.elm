@@ -317,15 +317,7 @@ lastLapColumn_F1 { getter, sorter, analysis } =
 
 
 currentLapColumn_Wec :
-    { getter :
-        data
-        ->
-            { timing : Maybe Duration
-            , lap : Maybe Lap
-            , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-            , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-            , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-            }
+    { getter : data -> { a | timing : Timing, currentLap : Maybe Lap }
     , sorter : List data -> List data
     , analysis : Analysis
     }
@@ -371,12 +363,12 @@ currentLapColumn_Wec { getter, sorter, analysis } =
     { name = "Current Lap"
     , view =
         getter
-            >> (\currentLap ->
-                    currentLap.lap
+            >> (\{ timing, currentLap } ->
+                    currentLap
                         |> Maybe.map
                             (\{ best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                                 div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                                    [ lapTime { time = Maybe.withDefault 0 currentLap.timing, personalBest = best }
+                                    [ lapTime { time = Maybe.withDefault 0 timing.time, personalBest = best }
                                     , div
                                         [ css
                                             [ property "display" "grid"
@@ -384,13 +376,13 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                                             , property "column-gap" "4px"
                                             ]
                                         ]
-                                        [ currentLap.sector_1
+                                        [ timing.sector_1
                                             |> Maybe.map (\{ inProgress } -> sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, inProgress = inProgress })
                                             |> Maybe.withDefault (text "")
-                                        , currentLap.sector_2
+                                        , timing.sector_2
                                             |> Maybe.map (\{ inProgress } -> sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, inProgress = inProgress })
                                             |> Maybe.withDefault (text "")
-                                        , currentLap.sector_3
+                                        , timing.sector_3
                                             |> Maybe.map (\{ inProgress } -> sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, inProgress = inProgress })
                                             |> Maybe.withDefault (text "")
                                         ]
@@ -489,13 +481,8 @@ type alias LeaderboardItem =
     , lap : Int
     , gap : Gap
     , interval : Gap
-    , currentLap :
-        { timing : Maybe Duration
-        , lap : Maybe Lap
-        , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-        , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-        , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-        }
+    , timing : Timing
+    , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , history : List Lap
     }
@@ -506,6 +493,14 @@ type alias MetaData =
     , class : Class
     , team : String
     , drivers : List Driver
+    }
+
+
+type alias Timing =
+    { time : Maybe Duration
+    , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     }
 
 
@@ -556,13 +551,13 @@ init { clock, cars } =
                 , interval =
                     Maybe.map2 (Gap.at clock) (List.Extra.getAt (index - 1) cars) (Just car)
                         |> Maybe.withDefault Gap.None
-                , currentLap =
-                    { timing = Just (raceClock.elapsed - lastLap.elapsed)
-                    , lap = Just currentLap
+                , timing =
+                    { time = Just (raceClock.elapsed - lastLap.elapsed)
                     , sector_1 = sector_1
                     , sector_2 = sector_2
                     , sector_3 = sector_3
                     }
+                , currentLap = car.currentLap
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
                 }

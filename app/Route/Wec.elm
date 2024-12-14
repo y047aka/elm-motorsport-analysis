@@ -252,8 +252,8 @@ config analysis =
             , sorter = List.sortBy .position
             }
         , currentLapColumn_Wec
-            { getter = .currentLap
-            , sorter = List.sortBy (.currentLap >> .lap >> Maybe.map .time >> Maybe.withDefault 0)
+            { getter = identity
+            , sorter = List.sortBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_Wec

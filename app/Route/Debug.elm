@@ -168,7 +168,7 @@ config analysis =
         , sectorTimeColumn
             { label = "S1"
             , getter =
-                .currentLap
+                .timing
                     >> .sector_1
                     >> Maybe.map
                         (\{ time, personalBest, inProgress } ->
@@ -181,13 +181,13 @@ config analysis =
             }
         , customColumn
             { label = "S1 Best"
-            , getter = .currentLap >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.currentLap >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , getter = .timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
             }
         , sectorTimeColumn
             { label = "S2"
             , getter =
-                .currentLap
+                .timing
                     >> .sector_2
                     >> Maybe.map
                         (\{ time, personalBest, inProgress } ->
@@ -200,13 +200,13 @@ config analysis =
             }
         , customColumn
             { label = "S2 Best"
-            , getter = .currentLap >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.currentLap >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , getter = .timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
             }
         , sectorTimeColumn
             { label = "S3"
             , getter =
-                .currentLap
+                .timing
                     >> .sector_3
                     >> Maybe.map
                         (\{ time, personalBest, inProgress } ->
@@ -219,8 +219,8 @@ config analysis =
             }
         , customColumn
             { label = "S3 Best"
-            , getter = .currentLap >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.currentLap >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , getter = .timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = List.sortBy (.timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
             }
         , lastLapColumn_F1
             { getter = .lastLap
@@ -260,13 +260,13 @@ raceControlToLeaderboard { lapCount, cars } =
                             , lap = lap.lap
                             , gap = Gap.None
                             , interval = Gap.None
-                            , currentLap =
-                                { lap = Nothing
-                                , timing = Nothing
+                            , timing =
+                                { time = Nothing
                                 , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, inProgress = False }
                                 , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, inProgress = False }
                                 , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, inProgress = False }
                                 }
+                            , currentLap = Nothing
                             , lastLap = Just lap
                             , history = []
                             }
