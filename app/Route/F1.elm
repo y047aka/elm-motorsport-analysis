@@ -13,7 +13,8 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
+import Motorsport.Leaderboard.ViewModel exposing (ViewModelItem)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -162,7 +163,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg

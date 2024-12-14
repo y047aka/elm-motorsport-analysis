@@ -11,8 +11,9 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (Leaderboard, LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
 import Motorsport.Leaderboard.Internal
+import Motorsport.Leaderboard.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -156,7 +157,7 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
         }
 
 
-config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
@@ -232,7 +233,7 @@ config analysis =
     }
 
 
-raceControlToLeaderboard : RaceControl.Model -> Leaderboard
+raceControlToLeaderboard : RaceControl.Model -> ViewModel
 raceControlToLeaderboard { lapCount, cars } =
     cars
         |> List.filter (\{ carNumber } -> carNumber == "2")
@@ -244,7 +245,7 @@ raceControlToLeaderboard { lapCount, cars } =
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1
-                            , metaData = Leaderboard.init_metaData car lap
+                            , metaData = ViewModel.init_metaData car lap
                             , lap = lap.lap
                             , timing =
                                 { time = 0

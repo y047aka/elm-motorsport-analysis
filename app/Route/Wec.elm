@@ -12,7 +12,8 @@ import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (LeaderboardItem, bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.Leaderboard.ViewModel exposing (ViewModelItem)
 import Motorsport.RaceControl as RaceControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
@@ -227,7 +228,7 @@ statusBar { clock, lapTotal, lapCount } =
         ]
 
 
-config : Analysis -> Leaderboard.Config LeaderboardItem Msg
+config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg

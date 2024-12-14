@@ -9,7 +9,7 @@ module Motorsport.Leaderboard exposing
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , currentLapColumn_Wec
     , lastLapColumn_F1, lastLapColumn_Wec
-    , Config, Leaderboard, LeaderboardItem, init, init_metaData, view
+    , Config, view
     )
 
 {-|
@@ -49,15 +49,13 @@ import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
+import Motorsport.Leaderboard.ViewModel exposing (Timing, ViewModelItem, init)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -462,138 +460,9 @@ lastLapColumn_Wec { getter, sorter, analysis } =
 -- VIEW
 
 
-view : Config LeaderboardItem msg -> Model -> RaceControl.Model -> Html msg
+view : Config ViewModelItem msg -> Model -> RaceControl.Model -> Html msg
 view config state raceControl =
     Motorsport.Leaderboard.Internal.table config state (init raceControl)
-
-
-
--- PREVIOUS LEADERBOARD
-
-
-type alias Leaderboard =
-    List LeaderboardItem
-
-
-type alias LeaderboardItem =
-    { position : Int
-    , metaData : MetaData
-    , lap : Int
-    , timing : Timing
-    , currentLap : Maybe Lap
-    , lastLap : Maybe Lap
-    , history : List Lap
-    }
-
-
-type alias MetaData =
-    { carNumber : String
-    , class : Class
-    , team : String
-    , drivers : List Driver
-    }
-
-
-type alias Timing =
-    { time : Duration
-    , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , gap : Gap
-    , interval : Gap
-    }
-
-
-init : RaceControl.Model -> Leaderboard
-init { clock, cars } =
-    cars
-        |> List.indexedMap
-            (\index car ->
-                let
-                    raceClock =
-                        { elapsed = Clock.getElapsed clock }
-
-                    lastLap =
-                        Maybe.withDefault Lap.empty car.lastLap
-                in
-                { position = index + 1
-                , metaData = init_metaData car lastLap
-                , lap = lastLap.lap
-                , timing =
-                    init_timing clock
-                        { leader = List.head cars
-                        , rival = List.Extra.getAt (index - 1) cars
-                        }
-                        car
-                , currentLap = car.currentLap
-                , lastLap = car.lastLap
-                , history = completedLapsAt raceClock car.laps
-                }
-            )
-
-
-init_metaData : Car -> Lap -> MetaData
-init_metaData { carNumber, class, team, drivers } lastLap =
-    { carNumber = carNumber
-    , class = class
-    , team = team
-    , drivers =
-        List.map
-            (\{ name } ->
-                { name = name
-                , isCurrentDriver = name == lastLap.driver
-                }
-            )
-            drivers
-    }
-
-
-init_timing : Clock.Model -> { leader : Maybe Car, rival : Maybe Car } -> Car -> Timing
-init_timing clock { leader, rival } car =
-    let
-        raceClock =
-            { elapsed = Clock.getElapsed clock }
-
-        currentLap =
-            Maybe.withDefault Lap.empty car.currentLap
-
-        lastLap =
-            Maybe.withDefault Lap.empty car.lastLap
-
-        currentSector =
-            Lap.currentSector raceClock currentLap
-
-        ( sector_1, sector_2, sector_3 ) =
-            case currentSector of
-                S1 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = True }
-                    , Nothing
-                    , Nothing
-                    )
-
-                S2 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = True }
-                    , Nothing
-                    )
-
-                S3 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = False }
-                    , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
-                    )
-    in
-    { time = raceClock.elapsed - lastLap.elapsed
-    , sector_1 = sector_1
-    , sector_2 = sector_2
-    , sector_3 = sector_3
-    , gap =
-        Maybe.map2 (Gap.at clock) leader (Just car)
-            |> Maybe.withDefault Gap.None
-    , interval =
-        Maybe.map2 (Gap.at clock) rival (Just car)
-            |> Maybe.withDefault Gap.None
-    }
 
 
 
