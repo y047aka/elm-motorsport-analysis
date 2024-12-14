@@ -368,7 +368,7 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                         |> Maybe.map
                             (\{ best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                                 div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                                    [ lapTime { time = Maybe.withDefault 0 timing.time, personalBest = best }
+                                    [ lapTime { time = timing.time, personalBest = best }
                                     , div
                                         [ css
                                             [ property "display" "grid"
@@ -495,7 +495,7 @@ type alias MetaData =
 
 
 type alias Timing =
-    { time : Maybe Duration
+    { time : Duration
     , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
@@ -583,7 +583,7 @@ init_timing clock { leader, rival } car =
                     , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
                     )
     in
-    { time = Just (raceClock.elapsed - lastLap.elapsed)
+    { time = raceClock.elapsed - lastLap.elapsed
     , sector_1 = sector_1
     , sector_2 = sector_2
     , sector_3 = sector_3
