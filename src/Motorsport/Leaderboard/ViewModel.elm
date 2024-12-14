@@ -18,7 +18,7 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt)
 import Motorsport.RaceControl as RaceControl
 
