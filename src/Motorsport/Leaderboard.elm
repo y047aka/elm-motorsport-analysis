@@ -479,8 +479,6 @@ type alias LeaderboardItem =
     { position : Int
     , metaData : MetaData
     , lap : Int
-    , gap : Gap
-    , interval : Gap
     , timing : Timing
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
@@ -501,6 +499,8 @@ type alias Timing =
     , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
     , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , gap : Gap
+    , interval : Gap
     }
 
 
@@ -519,13 +519,12 @@ init { clock, cars } =
                 { position = index + 1
                 , metaData = init_metaData car lastLap
                 , lap = lastLap.lap
-                , gap =
-                    Maybe.map2 (Gap.at clock) (List.head cars) (Just car)
-                        |> Maybe.withDefault Gap.None
-                , interval =
-                    Maybe.map2 (Gap.at clock) (List.Extra.getAt (index - 1) cars) (Just car)
-                        |> Maybe.withDefault Gap.None
-                , timing = init_timing clock car
+                , timing =
+                    init_timing clock
+                        { leader = List.head cars
+                        , rival = List.Extra.getAt (index - 1) cars
+                        }
+                        car
                 , currentLap = car.currentLap
                 , lastLap = car.lastLap
                 , history = completedLapsAt raceClock car.laps
@@ -549,8 +548,8 @@ init_metaData { carNumber, class, team, drivers } lastLap =
     }
 
 
-init_timing : Clock.Model -> Car -> Timing
-init_timing clock car =
+init_timing : Clock.Model -> { leader : Maybe Car, rival : Maybe Car } -> Car -> Timing
+init_timing clock { leader, rival } car =
     let
         raceClock =
             { elapsed = Clock.getElapsed clock }
@@ -588,6 +587,12 @@ init_timing clock car =
     , sector_1 = sector_1
     , sector_2 = sector_2
     , sector_3 = sector_3
+    , gap =
+        Maybe.map2 (Gap.at clock) leader (Just car)
+            |> Maybe.withDefault Gap.None
+    , interval =
+        Maybe.map2 (Gap.at clock) rival (Just car)
+            |> Maybe.withDefault Gap.None
     }
 
 

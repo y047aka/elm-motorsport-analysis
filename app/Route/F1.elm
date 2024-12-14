@@ -177,7 +177,7 @@ config analysis =
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
-            , getter = .gap >> Gap.toString
+            , getter = .timing >> .gap >> Gap.toString
             , sorter = List.sortBy .position
             }
         , lastLapColumn_F1

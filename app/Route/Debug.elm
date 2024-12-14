@@ -246,13 +246,13 @@ raceControlToLeaderboard { lapCount, cars } =
                             { position = index + 1
                             , metaData = Leaderboard.init_metaData car lap
                             , lap = lap.lap
-                            , gap = Gap.None
-                            , interval = Gap.None
                             , timing =
                                 { time = Nothing
                                 , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, inProgress = False }
                                 , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, inProgress = False }
                                 , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, inProgress = False }
+                                , gap = Gap.None
+                                , interval = Gap.None
                                 }
                             , currentLap = Nothing
                             , lastLap = Just lap
