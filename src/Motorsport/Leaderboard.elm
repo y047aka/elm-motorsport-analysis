@@ -49,6 +49,7 @@ import Html.Styled as Html exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -547,19 +548,7 @@ init { clock, cars } =
                                 )
                 in
                 { position = index + 1
-                , metaData =
-                    { carNumber = car.carNumber
-                    , class = car.class
-                    , team = car.team
-                    , drivers =
-                        car.drivers
-                            |> List.map
-                                (\{ name } ->
-                                    { name = name
-                                    , isCurrentDriver = name == lastLap.driver
-                                    }
-                                )
-                    }
+                , metaData = init_metaData car lastLap
                 , lap = lastLap.lap
                 , gap =
                     Maybe.map2 (Gap.at clock) (List.head cars) (Just car)
@@ -578,6 +567,22 @@ init { clock, cars } =
                 , history = completedLapsAt raceClock car.laps
                 }
             )
+
+
+init_metaData : Car -> Lap -> MetaData
+init_metaData { carNumber, class, team, drivers } lastLap =
+    { carNumber = carNumber
+    , class = class
+    , team = team
+    , drivers =
+        List.map
+            (\{ name } ->
+                { name = name
+                , isCurrentDriver = name == lastLap.driver
+                }
+            )
+            drivers
+    }
 
 
 
