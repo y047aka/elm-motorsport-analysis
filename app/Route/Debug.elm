@@ -13,8 +13,8 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
 import Motorsport.Leaderboard.Internal
-import Motorsport.Leaderboard.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App)
 import Shared

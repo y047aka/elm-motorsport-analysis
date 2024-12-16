@@ -55,8 +55,8 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
-import Motorsport.Leaderboard.ViewModel exposing (Timing, ViewModelItem, init)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes
@@ -462,7 +462,7 @@ lastLapColumn_Wec { getter, sorter, analysis } =
 
 view : Config ViewModelItem msg -> Model -> RaceControl.Model -> Html msg
 view config state raceControl =
-    Motorsport.Leaderboard.Internal.table config state (init raceControl)
+    Motorsport.Leaderboard.Internal.table config state (ViewModel.init raceControl)
 
 
 

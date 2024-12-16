@@ -1,4 +1,4 @@
-module Motorsport.Leaderboard.ViewModel exposing
+module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
     , MetaData, Timing
     , init, init_metaData
