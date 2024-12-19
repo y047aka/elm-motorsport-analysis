@@ -1,6 +1,7 @@
 module Route.Wec exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
 
 import BackendTask exposing (BackendTask)
+import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
@@ -116,7 +117,7 @@ subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions _ _ shared model =
     case shared.raceControl_Wec.clock of
         Started _ _ ->
-            Time.every (1000 / 60) (RaceControl.Tick >> RaceControlMsg)
+            Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
 
         _ ->
             Sub.none
