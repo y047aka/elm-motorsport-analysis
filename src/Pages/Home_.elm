@@ -1,7 +1,8 @@
 module Pages.Home_ exposing (page)
 
-import Html.Styled exposing (a, br, text)
-import Html.Styled.Attributes exposing (href)
+import Html.Styled exposing (Attribute, a, br, text)
+import Html.Styled.Attributes
+import Route.Path as Path exposing (Path(..))
 import View exposing (View)
 
 
@@ -9,14 +10,19 @@ page : View msg
 page =
     { title = "Race Analysis"
     , body =
-        [ a [ href "/gap-chart" ] [ text "Gap Chart" ]
+        [ a [ href GapChart ] [ text "Gap Chart" ]
         , br [] []
-        , a [ href "/lap-time-chart" ] [ text "LapTime Chart" ]
+        , a [ href LapTimeChart ] [ text "LapTime Chart" ]
         , br [] []
-        , a [ href "/lap-time-charts-by-driver" ] [ text "LapTime Charts By Driver" ]
+        , a [ href LapTimeChartsByDriver ] [ text "LapTime Charts By Driver" ]
         , br [] []
-        , a [ href "/f1" ] [ text "F1" ]
+        , a [ href F1 ] [ text "F1" ]
         , br [] []
-        , a [ href "/wec" ] [ text "Wec" ]
+        , a [ href Wec ] [ text "Wec" ]
         ]
     }
+
+
+href : Path -> Attribute msg
+href path =
+    Html.Styled.Attributes.href (Path.toString path)
