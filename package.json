@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "start": "elm-land server",
-    "build": "elm-land build --base elm-motorsport-analysis && mv ./dist/elm-motorsport-analysis/* ./dist/",
+    "build": "elm-land build",
     "test": "elm-verify-examples && elm-test",
     "benchmark": "cd benchmark && elm reactor"
   },
