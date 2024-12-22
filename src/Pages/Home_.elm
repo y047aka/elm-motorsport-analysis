@@ -18,7 +18,7 @@ page =
         , br [] []
         , a [ href F1 ] [ text "F1" ]
         , br [] []
-        , a [ href Wec ] [ text "Wec" ]
+        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 24" }) ] [ text "24 Hours of Le Mans - Wec" ]
         ]
     }
 

@@ -1,4 +1,4 @@
-module Pages.Wec exposing (Model, Msg, page)
+module Pages.Wec.Id_ exposing (Model, Msg, page)
 
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
@@ -24,10 +24,10 @@ import UI.Button exposing (button, labeledButton)
 import View exposing (View)
 
 
-page : Shared.Model -> Route () -> Page Model Msg
+page : Shared.Model -> Route { id : String } -> Page Model Msg
 page shared route =
     Page.new
-        { init = init
+        { init = init route.params
         , update = update
         , view = view shared
         , subscriptions = subscriptions shared
@@ -50,13 +50,13 @@ type Mode
     | PositionHistory
 
 
-init : () -> ( Model, Effect Msg )
-init () =
+init : { id : String } -> () -> ( Model, Effect Msg )
+init params () =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
+    , Effect.fetchCsv ("/static/" ++ params.id ++ ".csv")
     )
 
 
