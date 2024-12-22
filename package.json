@@ -1,22 +1,17 @@
 {
   "type": "module",
   "scripts": {
-    "start": "elm-pages dev",
-    "build": "elm-pages build --base elm-motorsport-analysis && mv ./dist/elm-motorsport-analysis/* ./dist/",
+    "start": "elm-land server",
+    "build": "elm-land build --base elm-motorsport-analysis && mv ./dist/elm-motorsport-analysis/* ./dist/",
     "test": "elm-verify-examples && elm-test",
     "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "elm": "^0.19.1-6",
-    "elm-codegen": "^0.6.1",
     "elm-format": "^0.8.7",
-    "elm-optimize-level-2": "^0.3.5",
-    "elm-pages": "^3.0.19",
-    "elm-review": "^2.12.0",
+    "elm-land": "0.20.1",
     "elm-test": "^0.19.1-revision12",
-    "elm-verify-examples": "^6.0.3",
-    "lamdera": "^0.19.1-1.3.2",
-    "vite": "6.0.5"
+    "elm-verify-examples": "^6.0.3"
   }
 }

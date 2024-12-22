@@ -1,9 +1,10 @@
-node_modules/
-elm-stuff/
-dist/
-.elm-pages/
-functions/render/elm-pages-cli.mjs
-functions/server-render/elm-pages-cli.mjs
+/dist
+/.elm-land
+/.env
+/elm-stuff
+/node_modules
+.DS_Store
+*.pem
 
 # elm-verify-examples generated files
 tests/VerifyExamples
