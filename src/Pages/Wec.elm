@@ -1,10 +1,8 @@
-module Route.Wec exposing (ActionData, Data, Model, Msg(..), RouteParams, data, route)
+module Pages.Wec exposing (Model, Msg, page)
 
-import BackendTask exposing (BackendTask)
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Effect exposing (Effect)
-import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (div, header, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
@@ -16,29 +14,24 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
-import PagesMsg exposing (PagesMsg)
-import RouteBuilder exposing (App)
+import Page exposing (Page)
+import Route exposing (Route)
 import Shared
 import String exposing (dropRight)
 import Task
 import Time
 import UI.Button exposing (button, labeledButton)
-import UrlPath exposing (UrlPath)
 import View exposing (View)
 
 
-type alias RouteParams =
-    {}
-
-
-route =
-    RouteBuilder.single { data = data, head = \_ -> [] }
-        |> RouteBuilder.buildWithSharedState
-            { init = init
-            , update = update
-            , view = view
-            , subscriptions = subscriptions
-            }
+page : Shared.Model -> Route () -> Page Model Msg
+page shared route =
+    Page.new
+        { init = init
+        , update = update
+        , view = view shared
+        , subscriptions = subscriptions shared
+        }
 
 
 
@@ -57,16 +50,13 @@ type Mode
     | PositionHistory
 
 
-init :
-    App Data ActionData {}
-    -> Shared.Model
-    -> ( Model, Effect Msg )
-init app shared =
+init : () -> ( Model, Effect Msg )
+init () =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.none
+    , Effect.fetchCsv "/static/23_Analysis_Race_Hour 24.csv"
     )
 
 
@@ -82,30 +72,24 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
-update :
-    App Data ActionData {}
-    -> Shared.Model
-    -> Msg
-    -> Model
-    -> ( Model, Effect Msg, Maybe Shared.Msg )
-update app shared msg m =
+update : Msg -> Model -> ( Model, Effect Msg )
+update msg m =
     case msg of
         StartRace ->
-            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
+            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.sendCmd )
 
         PauseRace ->
-            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
+            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.sendCmd )
 
         ModeChange mode ->
-            ( { m | mode = mode }, Effect.none, Nothing )
+            ( { m | mode = mode }, Effect.none )
 
         RaceControlMsg raceControlMsg ->
-            ( m, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
+            ( m, Effect.updateRaceControl_Wec raceControlMsg )
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
             , Effect.none
-            , Nothing
             )
 
 
@@ -113,8 +97,8 @@ update app shared msg m =
 -- SUBSCRIPTIONS
 
 
-subscriptions : {} -> UrlPath -> Shared.Model -> Model -> Sub Msg
-subscriptions _ _ shared model =
+subscriptions : Shared.Model -> Model -> Sub Msg
+subscriptions shared model =
     case shared.raceControl_Wec.clock of
         Started _ _ ->
             Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
@@ -124,81 +108,59 @@ subscriptions _ _ shared model =
 
 
 
--- DATA
-
-
-type alias Data =
-    {}
-
-
-type alias ActionData =
-    {}
-
-
-data : BackendTask FatalError Data
-data =
-    BackendTask.succeed {}
-
-
-
 -- VIEW
 
 
-view :
-    App Data ActionData {}
-    -> Shared.Model
-    -> Model
-    -> View (PagesMsg Msg)
-view app { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
-    View.map PagesMsg.fromMsg
-        { title = "Wec"
-        , body =
-            [ header
-                [ css
-                    [ position sticky
-                    , top zero
-                    , displayFlex
-                    , justifyContent spaceBetween
-                    , backgroundColor (hsl 0 0 0.4)
-                    ]
+view : Shared.Model -> Model -> View Msg
+view { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
+    { title = "Wec"
+    , body =
+        [ header
+            [ css
+                [ position sticky
+                , top zero
+                , displayFlex
+                , justifyContent spaceBetween
+                , backgroundColor (hsl 0 0 0.4)
                 ]
-                [ nav []
-                    [ case raceControl_Wec.clock of
-                        Initial ->
-                            button [ onClick StartRace ] [ text "Start" ]
-
-                        Started _ _ ->
-                            button [ onClick PauseRace ] [ text "Pause" ]
-
-                        Paused _ ->
-                            button [ onClick StartRace ] [ text "Resume" ]
-
-                        _ ->
-                            text ""
-                    , case raceControl_Wec.clock of
-                        Started _ _ ->
-                            text ""
-
-                        _ ->
-                            labeledButton []
-                                [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                                , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
-                                ]
-                    ]
-                , statusBar raceControl_Wec
-                , nav []
-                    [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
-                    , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                    ]
-                ]
-            , case mode of
-                Leaderboard ->
-                    Leaderboard.view (config analysis_Wec) leaderboardState raceControl_Wec
-
-                PositionHistory ->
-                    PositionHistoryChart.view raceControl_Wec
             ]
-        }
+            [ nav []
+                [ case raceControl_Wec.clock of
+                    Initial ->
+                        button [ onClick StartRace ] [ text "Start" ]
+
+                    Started _ _ ->
+                        button [ onClick PauseRace ] [ text "Pause" ]
+
+                    Paused _ ->
+                        button [ onClick StartRace ] [ text "Resume" ]
+
+                    _ ->
+                        text ""
+                , case raceControl_Wec.clock of
+                    Started _ _ ->
+                        text ""
+
+                    _ ->
+                        labeledButton []
+                            [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                            ]
+                ]
+            , statusBar raceControl_Wec
+            , nav []
+                [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
+                , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
+                ]
+            ]
+        , case mode of
+            Leaderboard ->
+                Leaderboard.view (config analysis_Wec) leaderboardState raceControl_Wec
+
+            PositionHistory ->
+                PositionHistoryChart.view raceControl_Wec
+        ]
+    }
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
