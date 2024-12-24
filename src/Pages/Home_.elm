@@ -1,7 +1,8 @@
 module Pages.Home_ exposing (page)
 
-import Html.Styled exposing (Attribute, a, br, text)
-import Html.Styled.Attributes
+import Css exposing (block, color, display, em, fontSize, inherit)
+import Html.Styled exposing (Html, a, h2, section, text)
+import Html.Styled.Attributes exposing (css, href)
 import Route.Path as Path exposing (Path(..))
 import View exposing (View)
 
@@ -10,23 +11,24 @@ page : View msg
 page =
     { title = "Race Analysis"
     , body =
-        [ a [ href GapChart ] [ text "Gap Chart" ]
-        , br [] []
-        , a [ href LapTimeChart ] [ text "LapTime Chart" ]
-        , br [] []
-        , a [ href LapTimeChartsByDriver ] [ text "LapTime Charts By Driver" ]
-        , br [] []
-        , a [ href F1 ] [ text "F1" ]
-        , br [] []
-        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 24" }) ] [ text "24 Hours of Le Mans - WEC 2024" ]
-        , br [] []
-        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 6" }) ] [ text "6 Hours of Fuji - WEC 2024" ]
-        , br [] []
-        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 8" }) ] [ text "8 Hours of Bahrain - WEC 2024" ]
+        [ link { path = GapChart, label = "Gap Chart" }
+        , link { path = LapTimeChart, label = "LapTime Chart" }
+        , link { path = LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
+        , link { path = F1, label = "F1" }
+        , section []
+            [ h2 [ css [ fontSize (em 1) ] ] [ text "WEC 2024" ]
+            , link { path = Wec_Id_ { id = "23_Analysis_Race_Hour 24" }, label = "24 Hours of Le Mans" }
+            , link { path = Wec_Id_ { id = "23_Analysis_Race_Hour 6" }, label = "6 Hours of Fuji" }
+            , link { path = Wec_Id_ { id = "23_Analysis_Race_Hour 8" }, label = "8 Hours of Bahrain" }
+            ]
         ]
     }
 
 
-href : Path -> Attribute msg
-href path =
-    Html.Styled.Attributes.href (Path.toString path)
+link : { path : Path, label : String } -> Html msg
+link props =
+    a
+        [ href (Path.toString props.path)
+        , css [ display block, color inherit ]
+        ]
+        [ text props.label ]
