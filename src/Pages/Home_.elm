@@ -18,7 +18,11 @@ page =
         , br [] []
         , a [ href F1 ] [ text "F1" ]
         , br [] []
-        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 24" }) ] [ text "24 Hours of Le Mans - Wec" ]
+        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 24" }) ] [ text "24 Hours of Le Mans - WEC 2024" ]
+        , br [] []
+        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 6" }) ] [ text "6 Hours of Fuji - WEC 2024" ]
+        , br [] []
+        , a [ href (Wec_Id_ { id = "23_Analysis_Race_Hour 8" }) ] [ text "8 Hours of Bahrain - WEC 2024" ]
         ]
     }
 
