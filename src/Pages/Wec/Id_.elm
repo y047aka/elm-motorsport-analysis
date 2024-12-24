@@ -164,13 +164,13 @@ view { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
-statusBar { clock, lapTotal, lapCount } =
+statusBar { clock, lapTotal, lapCount, timeLimit } =
     let
         elapsed =
             Clock.getElapsed clock
 
         remaining =
-            24 * 60 * 60 * 1000 - elapsed
+            timeLimit - elapsed
     in
     div [ css [ displayFlex, alignItems center, property "column-gap" "10px" ] ]
         [ div []

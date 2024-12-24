@@ -16,6 +16,7 @@ type alias Model =
     { clock : Clock.Model
     , lapCount : Int
     , lapTotal : Int
+    , timeLimit : Int
     , cars : List Car
     }
 
@@ -25,6 +26,7 @@ empty =
     { clock = Initial
     , lapCount = 0
     , lapTotal = 0
+    , timeLimit = 0
     , cars = []
     }
 
@@ -34,6 +36,7 @@ init cars =
     { clock = Initial
     , lapCount = 0
     , lapTotal = calcLapTotal cars
+    , timeLimit = calcTimeLimit cars
     , cars = cars
     }
 
@@ -42,6 +45,15 @@ calcLapTotal : List Car -> Int
 calcLapTotal =
     List.map (.laps >> List.length)
         >> List.maximum
+        >> Maybe.withDefault 0
+
+
+calcTimeLimit : List Car -> Duration
+calcTimeLimit =
+    List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
+        >> List.filterMap identity
+        >> List.maximum
+        >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
         >> Maybe.withDefault 0
 
 
@@ -69,7 +81,7 @@ update msg m =
         Tick now ->
             case m.clock of
                 Started splitTime { startedAt } ->
-                    if Clock.calcElapsed startedAt now splitTime < 24 * 60 * 60 * 1000 then
+                    if Clock.calcElapsed startedAt now splitTime < m.timeLimit then
                         let
                             newElapsed =
                                 Clock.calcElapsed startedAt now splitTime
@@ -112,7 +124,7 @@ update msg m =
                     in
                     case msg of
                         Add10seconds ->
-                            if elapsed_ < 24 * 60 * 60 * 1000 then
+                            if elapsed_ < m.timeLimit then
                                 let
                                     newElapsed =
                                         elapsed_ + (10 * 1000)
