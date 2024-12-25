@@ -16,14 +16,20 @@ page =
         , link { path = LapTimeChart, label = "LapTime Chart" }
         , link { path = LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
         , link { path = F1, label = "F1" }
-        , section []
-            (h2 [ css [ fontSize (em 1) ] ] [ text "WEC 2024" ]
-                :: List.map
-                    (\event -> link { path = Series.toRoutePath event, label = Series.toString event })
-                    Series.wec_2024
+        , section_ "WEC 2024"
+            (List.map (\event -> link { path = Series.toRoutePath event, label = Series.toString event })
+                Series.wec_2024
             )
         ]
     }
+
+
+section_ : String -> List (Html msg) -> Html msg
+section_ title children =
+    section []
+        (h2 [ css [ fontSize (em 1) ] ] [ text title ]
+            :: children
+        )
 
 
 link : { path : Path, label : String } -> Html msg
