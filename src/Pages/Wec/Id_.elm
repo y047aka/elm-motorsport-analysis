@@ -4,7 +4,7 @@ import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (div, header, img, input, nav, text)
+import Html.Styled as Html exposing (Html, div, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
@@ -116,44 +116,7 @@ view : Shared.Model -> Model -> View Msg
 view { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
     { title = "Wec"
     , body =
-        [ header
-            [ css
-                [ position sticky
-                , top zero
-                , displayFlex
-                , justifyContent spaceBetween
-                , backgroundColor (hsl 0 0 0.4)
-                ]
-            ]
-            [ nav []
-                [ case raceControl_Wec.clock of
-                    Initial ->
-                        button [ onClick StartRace ] [ text "Start" ]
-
-                    Started _ _ ->
-                        button [ onClick PauseRace ] [ text "Pause" ]
-
-                    Paused _ ->
-                        button [ onClick StartRace ] [ text "Resume" ]
-
-                    _ ->
-                        text ""
-                , case raceControl_Wec.clock of
-                    Started _ _ ->
-                        text ""
-
-                    _ ->
-                        labeledButton []
-                            [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
-                            ]
-                ]
-            , statusBar raceControl_Wec
-            , nav []
-                [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
-                , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                ]
-            ]
+        [ header raceControl_Wec
         , case mode of
             Leaderboard ->
                 Leaderboard.view (config analysis_Wec) leaderboardState raceControl_Wec
@@ -162,6 +125,48 @@ view { analysis_Wec, raceControl_Wec } { mode, leaderboardState } =
                 PositionHistoryChart.view raceControl_Wec
         ]
     }
+
+
+header : RaceControl.Model -> Html Msg
+header raceControl_Wec =
+    Html.header
+        [ css
+            [ position sticky
+            , top zero
+            , displayFlex
+            , justifyContent spaceBetween
+            , backgroundColor (hsl 0 0 0.4)
+            ]
+        ]
+        [ nav []
+            [ case raceControl_Wec.clock of
+                Initial ->
+                    button [ onClick StartRace ] [ text "Start" ]
+
+                Started _ _ ->
+                    button [ onClick PauseRace ] [ text "Pause" ]
+
+                Paused _ ->
+                    button [ onClick StartRace ] [ text "Resume" ]
+
+                _ ->
+                    text ""
+            , case raceControl_Wec.clock of
+                Started _ _ ->
+                    text ""
+
+                _ ->
+                    labeledButton []
+                        [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                        ]
+            ]
+        , statusBar raceControl_Wec
+        , nav []
+            [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
+            , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
+            ]
+        ]
 
 
 statusBar : RaceControl.Model -> Html.Html Msg
