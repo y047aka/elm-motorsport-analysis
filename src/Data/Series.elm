@@ -1,7 +1,7 @@
 module Data.Series exposing
     ( wec_2024
     , fromString, toString
-    , toCsvFilePath, toRoutePath
+    , toRoutePath
     , EventSummary, toEventSummary
     , carImageUrl_2024
     )
@@ -10,7 +10,7 @@ module Data.Series exposing
 
 @docs wec_2024
 @docs fromString, toString
-@docs toCsvFilePath, toRoutePath
+@docs toRoutePath
 @docs EventSummary, toEventSummary
 @docs carImageUrl_2024
 
@@ -62,36 +62,41 @@ toString event =
             "bahrain_8h"
 
 
-toCsvFilePath : Wec -> String
-toCsvFilePath event =
-    "/static/wec_2024/" ++ toString event ++ ".csv"
-
-
 toRoutePath : { season : String, event : Wec } -> Path
 toRoutePath { season, event } =
     Wec_Season__Event_ { season = season, event = toString event }
 
 
 type alias EventSummary =
-    { name : String, date : String }
+    { name : String
+    , date : String
+    , csvPath : String
+    }
 
 
 toEventSummary : Wec -> EventSummary
 toEventSummary event =
+    let
+        csvPath =
+            "/static/wec_2024/" ++ toString event ++ ".csv"
+    in
     case event of
         LeMans_24h ->
             { name = "24 Hours of Le Mans"
             , date = "2024-06-15"
+            , csvPath = csvPath
             }
 
         Fuji_6h ->
             { name = "6 Hours of Fuji"
             , date = "2024-09-15"
+            , csvPath = csvPath
             }
 
         Bahrain_8h ->
             { name = "8 Hours of Bahrain"
             , date = "2024-11-02"
+            , csvPath = csvPath
             }
 
 

@@ -51,7 +51,7 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { eventSummary = { name = "", date = "" }
+    ( { eventSummary = { name = "", date = "", csvPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
@@ -98,15 +98,15 @@ update route msg m =
 
         FetchCsv options ->
             let
-                { eventSummary, filePath } =
+                eventSummary =
                     Series.fromString options.event
-                        |> Maybe.map (\event -> { eventSummary = Series.toEventSummary event, filePath = Series.toCsvFilePath event })
-                        |> Maybe.withDefault { eventSummary = { name = "", date = "" }, filePath = "" }
+                        |> Maybe.map Series.toEventSummary
+                        |> Maybe.withDefault { name = "", date = "", csvPath = "" }
             in
             ( { m | eventSummary = eventSummary }
             , Effect.sendCmd <|
                 Http.get
-                    { url = filePath
+                    { url = eventSummary.csvPath
                     , expect = expectCsv CsvLoaded Wec.lapDecoder
                     }
             )
