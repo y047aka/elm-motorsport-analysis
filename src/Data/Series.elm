@@ -79,9 +79,9 @@ toCsvFilePath event =
     "/static/" ++ fileName ++ ".csv"
 
 
-toRoutePath : Wec -> Path
-toRoutePath event =
-    Wec_Id_ { id = toString event }
+toRoutePath : { season : String, event : Wec } -> Path
+toRoutePath { season, event } =
+    Wec_Season__Event_ { season = season, event = toString event }
 
 
 type alias EventSummary =

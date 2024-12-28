@@ -46,7 +46,7 @@ init () =
     ( { leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchCsv { id = "24_Hours_of_Le_Mans" }
+    , Effect.fetchCsv { season = "2024", event = "24_Hours_of_Le_Mans" }
     )
 
 

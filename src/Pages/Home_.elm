@@ -17,7 +17,13 @@ page =
         , link { path = LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
         , link { path = F1, label = "F1" }
         , section_ "WEC 2024"
-            (List.map (\event -> link { path = Series.toRoutePath event, label = (Series.toEventSummary >> .name) event })
+            (List.map
+                (\event ->
+                    link
+                        { label = (Series.toEventSummary >> .name) event
+                        , path = Series.toRoutePath { season = "2024", event = event }
+                        }
+                )
                 Series.wec_2024
             )
         ]
@@ -32,7 +38,7 @@ section_ title children =
         )
 
 
-link : { path : Path, label : String } -> Html msg
+link : { label : String, path : Path } -> Html msg
 link props =
     a
         [ href (Path.toString props.path)

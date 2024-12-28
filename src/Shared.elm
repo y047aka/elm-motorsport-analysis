@@ -99,7 +99,7 @@ update route msg m =
         FetchCsv options ->
             let
                 { eventSummary, filePath } =
-                    Series.fromString options.id
+                    Series.fromString options.event
                         |> Maybe.map (\event -> { eventSummary = Series.toEventSummary event, filePath = Series.toCsvFilePath event })
                         |> Maybe.withDefault { eventSummary = { name = "", date = "" }, filePath = "" }
             in

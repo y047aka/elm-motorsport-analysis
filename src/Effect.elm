@@ -231,7 +231,7 @@ fetchJson =
     Shared.Msg.FetchJson >> SendSharedMsg
 
 
-fetchCsv : { id : String } -> Effect msg
+fetchCsv : { season : String, event : String } -> Effect msg
 fetchCsv =
     Shared.Msg.FetchCsv >> SendSharedMsg
 

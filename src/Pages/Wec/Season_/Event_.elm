@@ -1,4 +1,4 @@
-module Pages.Wec.Id_ exposing (Model, Msg, page)
+module Pages.Wec.Season_.Event_ exposing (Model, Msg, page)
 
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
@@ -25,7 +25,7 @@ import UI.Button exposing (button, labeledButton)
 import View exposing (View)
 
 
-page : Shared.Model -> Route { id : String } -> Page Model Msg
+page : Shared.Model -> Route { season : String, event : String } -> Page Model Msg
 page shared route =
     Page.new
         { init = init route.params
@@ -51,7 +51,7 @@ type Mode
     | PositionHistory
 
 
-init : { id : String } -> () -> ( Model, Effect Msg )
+init : { season : String, event : String } -> () -> ( Model, Effect Msg )
 init params () =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
