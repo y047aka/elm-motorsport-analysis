@@ -1,7 +1,7 @@
 module Data.Series exposing
     ( wec_2024
     , fromIdString, toIdString
-    , toString, toCsvFileName, toRoutePath
+    , toString, toCsvFilePath, toRoutePath
     , carImageUrl_2024
     )
 
@@ -9,7 +9,7 @@ module Data.Series exposing
 
 @docs wec_2024
 @docs fromIdString, toIdString
-@docs toString, toCsvFileName, toRoutePath
+@docs toString, toCsvFilePath, toRoutePath
 @docs carImageUrl_2024
 
 -}
@@ -73,17 +73,21 @@ toString event =
             "8 Hours of Bahrain"
 
 
-toCsvFileName : Wec -> String
-toCsvFileName event =
-    case event of
-        LeMans_24 ->
-            "23_Analysis_Race_Hour 24"
+toCsvFilePath : Wec -> String
+toCsvFilePath event =
+    let
+        fileName =
+            case event of
+                LeMans_24 ->
+                    "23_Analysis_Race_Hour 24"
 
-        Fuji_6 ->
-            "23_Analysis_Race_Hour 6"
+                Fuji_6 ->
+                    "23_Analysis_Race_Hour 6"
 
-        Bahrain_8 ->
-            "23_Analysis_Race_Hour 8"
+                Bahrain_8 ->
+                    "23_Analysis_Race_Hour 8"
+    in
+    "/static/" ++ fileName ++ ".csv"
 
 
 toRoutePath : Wec -> Path

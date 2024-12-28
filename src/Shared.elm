@@ -100,7 +100,7 @@ update route msg m =
             let
                 { eventName, filePath } =
                     Series.fromIdString options.id
-                        |> Maybe.map (\event -> { eventName = Series.toString event, filePath = "/static/" ++ Series.toCsvFileName event ++ ".csv" })
+                        |> Maybe.map (\event -> { eventName = Series.toString event, filePath = Series.toCsvFilePath event })
                         |> Maybe.withDefault { eventName = "", filePath = "" }
             in
             ( { m | eventSummary = { name = eventName } }
