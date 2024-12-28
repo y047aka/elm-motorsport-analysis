@@ -64,19 +64,7 @@ toString event =
 
 toCsvFilePath : Wec -> String
 toCsvFilePath event =
-    let
-        fileName =
-            case event of
-                LeMans_24h ->
-                    "23_Analysis_Race_Hour 24"
-
-                Fuji_6h ->
-                    "23_Analysis_Race_Hour 6"
-
-                Bahrain_8h ->
-                    "23_Analysis_Race_Hour 8"
-    in
-    "/static/" ++ fileName ++ ".csv"
+    "/static/wec_2024/" ++ toString event ++ ".csv"
 
 
 toRoutePath : { season : String, event : Wec } -> Path
