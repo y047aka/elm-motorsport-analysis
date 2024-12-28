@@ -85,7 +85,7 @@ toRoutePath event =
 
 
 type alias EventSummary =
-    { name : String }
+    { name : String, date : String }
 
 
 toEventSummary : Wec -> EventSummary
