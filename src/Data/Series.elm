@@ -1,7 +1,8 @@
 module Data.Series exposing
     ( wec_2024
     , fromIdString, toIdString
-    , toString, toCsvFilePath, toRoutePath
+    , toCsvFilePath, toRoutePath
+    , EventSummary, toEventSummary
     , carImageUrl_2024
     )
 
@@ -9,7 +10,8 @@ module Data.Series exposing
 
 @docs wec_2024
 @docs fromIdString, toIdString
-@docs toString, toCsvFilePath, toRoutePath
+@docs toCsvFilePath, toRoutePath
+@docs EventSummary, toEventSummary
 @docs carImageUrl_2024
 
 -}
@@ -60,19 +62,6 @@ toIdString event =
             "8_Hours_of_Bahrain"
 
 
-toString : Wec -> String
-toString event =
-    case event of
-        LeMans_24 ->
-            "24 Hours of Le Mans"
-
-        Fuji_6 ->
-            "6 Hours of Fuji"
-
-        Bahrain_8 ->
-            "8 Hours of Bahrain"
-
-
 toCsvFilePath : Wec -> String
 toCsvFilePath event =
     let
@@ -93,6 +82,29 @@ toCsvFilePath event =
 toRoutePath : Wec -> Path
 toRoutePath event =
     Wec_Id_ { id = toIdString event }
+
+
+type alias EventSummary =
+    { name : String }
+
+
+toEventSummary : Wec -> EventSummary
+toEventSummary event =
+    case event of
+        LeMans_24 ->
+            { name = "24 Hours of Le Mans"
+            , date = "2024-06-15"
+            }
+
+        Fuji_6 ->
+            { name = "6 Hours of Fuji"
+            , date = "2024-09-15"
+            }
+
+        Bahrain_8 ->
+            { name = "8 Hours of Bahrain"
+            , date = "2024-11-02"
+            }
 
 
 carImageUrl_2024 : String -> Maybe String

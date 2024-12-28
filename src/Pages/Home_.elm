@@ -17,7 +17,7 @@ page =
         , link { path = LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
         , link { path = F1, label = "F1" }
         , section_ "WEC 2024"
-            (List.map (\event -> link { path = Series.toRoutePath event, label = Series.toString event })
+            (List.map (\event -> link { path = Series.toRoutePath event, label = (Series.toEventSummary >> .name) event })
                 Series.wec_2024
             )
         ]
