@@ -20,30 +20,30 @@ import Route.Path exposing (Path(..))
 
 
 type Wec
-    = LeMans_24
-    | Fuji_6
-    | Bahrain_8
+    = LeMans_24h
+    | Fuji_6h
+    | Bahrain_8h
 
 
 wec_2024 : List Wec
 wec_2024 =
-    [ LeMans_24
-    , Fuji_6
-    , Bahrain_8
+    [ LeMans_24h
+    , Fuji_6h
+    , Bahrain_8h
     ]
 
 
 fromString : String -> Maybe Wec
 fromString string =
     case string of
-        "24_Hours_of_Le_Mans" ->
-            Just LeMans_24
+        "le_mans_24h" ->
+            Just LeMans_24h
 
-        "6_Hours_of_Fuji" ->
-            Just Fuji_6
+        "fuji_6h" ->
+            Just Fuji_6h
 
-        "8_Hours_of_Bahrain" ->
-            Just Bahrain_8
+        "bahrain_8h" ->
+            Just Bahrain_8h
 
         _ ->
             Nothing
@@ -52,14 +52,14 @@ fromString string =
 toString : Wec -> String
 toString event =
     case event of
-        LeMans_24 ->
-            "24_Hours_of_Le_Mans"
+        LeMans_24h ->
+            "le_mans_24h"
 
-        Fuji_6 ->
-            "6_Hours_of_Fuji"
+        Fuji_6h ->
+            "fuji_6h"
 
-        Bahrain_8 ->
-            "8_Hours_of_Bahrain"
+        Bahrain_8h ->
+            "bahrain_8h"
 
 
 toCsvFilePath : Wec -> String
@@ -67,13 +67,13 @@ toCsvFilePath event =
     let
         fileName =
             case event of
-                LeMans_24 ->
+                LeMans_24h ->
                     "23_Analysis_Race_Hour 24"
 
-                Fuji_6 ->
+                Fuji_6h ->
                     "23_Analysis_Race_Hour 6"
 
-                Bahrain_8 ->
+                Bahrain_8h ->
                     "23_Analysis_Race_Hour 8"
     in
     "/static/" ++ fileName ++ ".csv"
@@ -91,17 +91,17 @@ type alias EventSummary =
 toEventSummary : Wec -> EventSummary
 toEventSummary event =
     case event of
-        LeMans_24 ->
+        LeMans_24h ->
             { name = "24 Hours of Le Mans"
             , date = "2024-06-15"
             }
 
-        Fuji_6 ->
+        Fuji_6h ->
             { name = "6 Hours of Fuji"
             , date = "2024-09-15"
             }
 
-        Bahrain_8 ->
+        Bahrain_8h ->
             { name = "8 Hours of Bahrain"
             , date = "2024-11-02"
             }
