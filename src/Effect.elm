@@ -231,7 +231,7 @@ fetchJson =
     Shared.Msg.FetchJson >> SendSharedMsg
 
 
-fetchCsv : String -> Effect msg
+fetchCsv : { id : String } -> Effect msg
 fetchCsv =
     Shared.Msg.FetchCsv >> SendSharedMsg
 

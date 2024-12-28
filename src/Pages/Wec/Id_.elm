@@ -57,7 +57,7 @@ init params () =
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchCsv ("/static/" ++ params.id ++ ".csv")
+    , Effect.fetchCsv params
     )
 
 

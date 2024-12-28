@@ -15,6 +15,7 @@ module Shared exposing
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
+import Data.Series as Series
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Preprocess_Wec
 import Effect exposing (Effect)
@@ -94,11 +95,17 @@ update route msg m =
         JsonLoaded (Err _) ->
             ( m, Effect.none )
 
-        FetchCsv url ->
+        FetchCsv options ->
+            let
+                { filePath } =
+                    Series.fromIdString options.id
+                        |> Maybe.map (\id -> { filePath = "/static/" ++ Series.toCsvFileName id ++ ".csv" })
+                        |> Maybe.withDefault { filePath = "" }
+            in
             ( m
             , Effect.sendCmd <|
                 Http.get
-                    { url = url
+                    { url = filePath
                     , expect = expectCsv CsvLoaded Wec.lapDecoder
                     }
             )

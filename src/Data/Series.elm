@@ -1,5 +1,6 @@
 module Data.Series exposing
     ( wec_2024
+    , fromIdString, toIdString
     , toString, toCsvFileName, toRoutePath
     , carImageUrl_2024
     )
@@ -7,6 +8,7 @@ module Data.Series exposing
 {-|
 
 @docs wec_2024
+@docs fromIdString, toIdString
 @docs toString, toCsvFileName, toRoutePath
 @docs carImageUrl_2024
 
@@ -27,6 +29,35 @@ wec_2024 =
     , Fuji_6
     , Bahrain_8
     ]
+
+
+fromIdString : String -> Maybe Wec
+fromIdString string =
+    case string of
+        "24_Hours_of_Le_Mans" ->
+            Just LeMans_24
+
+        "6_Hours_of_Fuji" ->
+            Just Fuji_6
+
+        "8_Hours_of_Bahrain" ->
+            Just Bahrain_8
+
+        _ ->
+            Nothing
+
+
+toIdString : Wec -> String
+toIdString event =
+    case event of
+        LeMans_24 ->
+            "24_Hours_of_Le_Mans"
+
+        Fuji_6 ->
+            "6_Hours_of_Fuji"
+
+        Bahrain_8 ->
+            "8_Hours_of_Bahrain"
 
 
 toString : Wec -> String
@@ -57,7 +88,7 @@ toCsvFileName event =
 
 toRoutePath : Wec -> Path
 toRoutePath event =
-    Wec_Id_ { id = toCsvFileName event }
+    Wec_Id_ { id = toIdString event }
 
 
 carImageUrl_2024 : String -> Maybe String
