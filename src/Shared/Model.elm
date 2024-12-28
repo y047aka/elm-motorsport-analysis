@@ -14,7 +14,8 @@ own file, so they can be imported by `Effect.elm`
 
 -}
 type alias Model =
-    { raceControl_F1 : RaceControl.Model
+    { eventSummary : { name : String }
+    , raceControl_F1 : RaceControl.Model
     , raceControl_Wec : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis_Wec : Analysis
