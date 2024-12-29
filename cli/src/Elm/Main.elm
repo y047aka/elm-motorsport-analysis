@@ -11,9 +11,21 @@ import Prompts.AutoComplete as AutoComplete
 import Prompts.Text as Text
 
 
-type State
-    = InputUserName
-    | SelectRepository
+main : Program Flag Model Msg
+main =
+    Platform.worker
+        { init = init
+        , update = update
+        , subscriptions = subscriptions
+        }
+
+
+type alias Flag =
+    String
+
+
+
+-- MODEL
 
 
 type alias Model =
@@ -22,15 +34,9 @@ type alias Model =
     }
 
 
-type Msg
-    = GetRepositories (Result Http.Error (List GitHub.Repository))
-    | InputUser String
-    | SelectedRepository String
-    | NoOp
-
-
-type alias Flag =
-    String
+type State
+    = InputUserName
+    | SelectRepository
 
 
 init : Flag -> ( Model, Cmd Msg )
@@ -49,6 +55,17 @@ init flags =
         Nothing ->
             output <| Text.option "Input User Name : "
     )
+
+
+
+-- UPDATE
+
+
+type Msg
+    = GetRepositories (Result Http.Error (List GitHub.Repository))
+    | InputUser String
+    | SelectedRepository String
+    | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -104,6 +121,10 @@ findRepository list name =
         |> List.head
 
 
+
+-- SUBSCRIPTIONS
+
+
 subscriptions : Model -> Sub Msg
 subscriptions model =
     let
@@ -120,15 +141,6 @@ subscriptions model =
         |> input
     ]
         |> Sub.batch
-
-
-main : Program Flag Model Msg
-main =
-    Platform.worker
-        { init = init
-        , update = update
-        , subscriptions = subscriptions
-        }
 
 
 
