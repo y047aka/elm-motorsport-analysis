@@ -78,7 +78,7 @@ toEventSummary : Wec -> EventSummary
 toEventSummary event =
     let
         csvPath =
-            "/static/wec_2024/" ++ toString event ++ ".csv"
+            "/static/wec_2024/" ++ toString event ++ ".json"
     in
     case event of
         LeMans_24h ->

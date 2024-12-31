@@ -57,7 +57,7 @@ init params () =
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchCsv params
+    , Effect.fetchJson_Wec params
     )
 
 

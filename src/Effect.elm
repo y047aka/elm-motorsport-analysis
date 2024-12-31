@@ -6,7 +6,7 @@ module Effect exposing
     , pushRoutePath, replaceRoutePath
     , loadExternalUrl, back
     , map, toCmd
-    , fetchJson, fetchCsv, jsonLoaded, csvLoaded
+    , fetchJson, fetchJson_Wec
     , updateRaceControl_F1, updateRaceControl_Wec
     )
 
@@ -23,16 +23,13 @@ module Effect exposing
 
 @docs map, toCmd
 
-@docs fetchJson, fetchCsv, jsonLoaded, csvLoaded
+@docs fetchJson, fetchJson_Wec
 @docs updateRaceControl_F1, updateRaceControl_Wec
 
 -}
 
 import Browser.Navigation
-import Data.F1.Decoder as F1
-import Data.Wec.Decoder as Wec
 import Dict exposing (Dict)
-import Http
 import Motorsport.RaceControl as RaceControl
 import Route
 import Route.Path
@@ -231,19 +228,9 @@ fetchJson =
     Shared.Msg.FetchJson >> SendSharedMsg
 
 
-fetchCsv : { season : String, event : String } -> Effect msg
-fetchCsv =
-    Shared.Msg.FetchCsv >> SendSharedMsg
-
-
-jsonLoaded : Result Http.Error (List F1.Car) -> Effect msg
-jsonLoaded =
-    Shared.Msg.JsonLoaded >> SendSharedMsg
-
-
-csvLoaded : Result Http.Error (List Wec.Lap) -> Effect msg
-csvLoaded =
-    Shared.Msg.CsvLoaded >> SendSharedMsg
+fetchJson_Wec : { season : String, event : String } -> Effect msg
+fetchJson_Wec =
+    Shared.Msg.FetchJson_Wec >> SendSharedMsg
 
 
 updateRaceControl_F1 : RaceControl.Msg -> Effect msg

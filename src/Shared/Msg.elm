@@ -18,7 +18,7 @@ own file, so they can be imported by `Effect.elm`
 type Msg
     = FetchJson String
     | JsonLoaded (Result Http.Error (List F1.Car))
-    | FetchCsv { season : String, event : String }
-    | CsvLoaded (Result Http.Error (List Wec.Lap))
+    | FetchJson_Wec { season : String, event : String }
+    | JsonLoaded_Wec (Result Http.Error (List Wec.Lap))
     | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg_Wec RaceControl.Msg

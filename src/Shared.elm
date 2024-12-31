@@ -12,14 +12,13 @@ module Shared exposing
 
 -}
 
-import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
-import Data.Wec.Decoder as Wec
+import Data.Wec.Decoder.Json
 import Data.Wec.Preprocess as Preprocess_Wec
 import Effect exposing (Effect)
-import Http exposing (Error(..), Expect, Response(..))
+import Http
 import Json.Decode
 import Motorsport.Analysis as Analysis
 import Motorsport.RaceControl as RaceControl
@@ -96,7 +95,7 @@ update route msg m =
         JsonLoaded (Err _) ->
             ( m, Effect.none )
 
-        FetchCsv options ->
+        FetchJson_Wec options ->
             let
                 eventSummary =
                     Series.fromString options.event
@@ -107,11 +106,11 @@ update route msg m =
             , Effect.sendCmd <|
                 Http.get
                     { url = eventSummary.csvPath
-                    , expect = expectCsv CsvLoaded Wec.lapDecoder
+                    , expect = Http.expectJson JsonLoaded_Wec (Json.Decode.list Data.Wec.Decoder.Json.lapDecoder)
                     }
             )
 
-        CsvLoaded (Ok decoded) ->
+        JsonLoaded_Wec (Ok decoded) ->
             let
                 rcNew =
                     RaceControl.init (Preprocess_Wec.preprocess decoded)
@@ -123,7 +122,7 @@ update route msg m =
             , Effect.none
             )
 
-        CsvLoaded (Err _) ->
+        JsonLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
         RaceControlMsg_F1 raceControlMsg ->
@@ -148,34 +147,6 @@ update route msg m =
                 , analysis_Wec = Analysis.fromRaceControl rcNew
               }
             , Effect.none
-            )
-
-
-expectCsv : (Result Http.Error (List a) -> msg) -> Decoder a -> Expect msg
-expectCsv toMsg decoder_ =
-    let
-        resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
-        resolve toResult response =
-            case response of
-                BadUrl_ url ->
-                    Err (BadUrl url)
-
-                Timeout_ ->
-                    Err Timeout
-
-                NetworkError_ ->
-                    Err NetworkError
-
-                BadStatus_ metadata _ ->
-                    Err (BadStatus metadata.statusCode)
-
-                GoodStatus_ _ body ->
-                    Result.mapError BadBody (toResult body)
-    in
-    Http.expectStringResponse toMsg <|
-        resolve
-            (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder_
-                >> Result.mapError Decode.errorToString
             )
 
 
