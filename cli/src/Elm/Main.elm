@@ -4,7 +4,8 @@ import Args exposing (Args)
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
-import Prompts.Text as Text
+import Prompts
+import Prompts.Select as Select
 import Wec
 
 
@@ -41,9 +42,18 @@ init flags =
             Wec.getLaps args.eventId CsvLoaded
 
         Nothing ->
-            output <| Text.option "Imput Event ID : "
+            [ "le_mans_24h", "fuji_6h", "bahrain_8h" ]
+                |> List.map toItem
+                |> Select.option "Select Event ID : "
+                |> output
     )
 
+toItem : String -> Prompts.Item
+toItem eventId =
+    { title = eventId
+    , value = eventId
+    , description = ""
+    }
 
 
 -- UPDATE
