@@ -2,7 +2,6 @@ module Leaderboard.Benchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Csv.Decode exposing (FieldNames(..))
 import Fixture
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap

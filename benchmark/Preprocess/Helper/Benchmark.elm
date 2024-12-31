@@ -4,7 +4,6 @@ import Array exposing (Array)
 import Array.Extra2
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Csv.Decode exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Dict
