@@ -1,14 +1,13 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
-import Data.Wec.Decoder as Wec
-import Http exposing (Error(..), Expect, Response(..))
+import Http
 import Json.Decode as JD
 import Json.Encode as JE
 import Motorsport.Class as Class
 import Motorsport.Duration as Duration
 import Prompts.Text as Text
+import Wec
 
 
 main : Program Flag Model Msg
@@ -41,43 +40,12 @@ init flags =
     ( { args = maybeArgs}
     , case maybeArgs of
         Just args ->
-            Http.get
-                { url = "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024/" ++ args.eventId ++ ".csv"
-                , expect = expectCsv CsvLoaded Wec.lapDecoder
-                }
+            Wec.getLaps args.eventId CsvLoaded
 
         Nothing ->
             output <| Text.option "Imput Event ID : "
     )
 
-
-
-expectCsv : (Result Http.Error (List a) -> msg) -> Decoder a -> Expect msg
-expectCsv toMsg decoder_ =
-    let
-        resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
-        resolve toResult response =
-            case response of
-                BadUrl_ url ->
-                    Err (BadUrl url)
-
-                Timeout_ ->
-                    Err Timeout
-
-                NetworkError_ ->
-                    Err NetworkError
-
-                BadStatus_ metadata _ ->
-                    Err (BadStatus metadata.statusCode)
-
-                GoodStatus_ _ body ->
-                    Result.mapError BadBody (toResult body)
-    in
-    Http.expectStringResponse toMsg <|
-        resolve
-            (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder_
-                >> Result.mapError Decode.errorToString
-            )
 
 
 -- UPDATE
@@ -94,10 +62,7 @@ update msg model =
     case msg of
         InputEventId eventId ->
             ( model
-            , Http.get
-                { url = "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024/" ++ eventId ++ ".csv"
-                , expect = expectCsv CsvLoaded Wec.lapDecoder
-                }
+            , Wec.getLaps eventId CsvLoaded
             )
 
         CsvLoaded (Ok decoded) ->
