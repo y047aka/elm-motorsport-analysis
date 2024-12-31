@@ -1,4 +1,73 @@
-module Fixture.Json exposing (json)
+module Fixture.Json exposing
+    ( jsonDecoded, jsonDecodedOfSize
+    , json
+    )
+
+{-|
+
+@docs jsonDecoded, jsonDecodedOfSize
+@docs json
+
+-}
+
+import Data.Wec.Decoder as Wec exposing (Lap)
+import Json.Decode as Decode exposing (Decoder, float, int, string)
+import Json.Decode.Extra
+import Json.Decode.Pipeline exposing (required)
+import Motorsport.Class as Class exposing (Class)
+import Motorsport.Duration as Duration exposing (Duration)
+
+
+jsonDecoded : List Wec.Lap
+jsonDecoded =
+    case Decode.decodeString (Decode.list lapDecoder) json of
+        Ok decoded_ ->
+            decoded_
+
+        Err _ ->
+            []
+
+
+jsonDecodedOfSize : Int -> List Wec.Lap
+jsonDecodedOfSize size =
+    List.take size jsonDecoded
+
+
+lapDecoder : Decoder Lap
+lapDecoder =
+    Decode.succeed Lap
+        |> required "carNumber" string
+        |> required "driverNumber" int
+        |> required "lapNumber" int
+        |> required "lapTime" raceClockDecoder
+        |> required "lapImprovement" int
+        |> required "crossingFinishLineInPit" string
+        |> required "s1" (Decode.nullable raceClockDecoder)
+        |> required "s1Improvement" int
+        |> required "s2" (Decode.nullable raceClockDecoder)
+        |> required "s2Improvement" int
+        |> required "s3" (Decode.nullable raceClockDecoder)
+        |> required "s3Improvement" int
+        |> required "kph" float
+        |> required "elapsed" raceClockDecoder
+        |> required "hour" raceClockDecoder
+        |> required "topSpeed" (Decode.nullable Decode.float)
+        |> required "driverName" string
+        |> required "pitTime" (Decode.nullable raceClockDecoder)
+        |> required "class" classDecoder
+        |> required "group" string
+        |> required "team" string
+        |> required "manufacturer" string
+
+
+raceClockDecoder : Decoder Duration
+raceClockDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a RaceClock")
+
+
+classDecoder : Decoder Class
+classDecoder =
+    string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
 
 
 json : String
