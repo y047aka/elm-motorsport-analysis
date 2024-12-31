@@ -5,7 +5,7 @@ import AssocList.Extra
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Expect
-import Fixture
+import Fixture.Csv as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class

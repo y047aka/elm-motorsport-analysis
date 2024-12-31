@@ -1,7 +1,7 @@
 module DecoderTest exposing (suite)
 
 import Expect
-import Fixture
+import Fixture.Csv as Fixture
 import Fixture.Json
 import Test exposing (Test, describe, test)
 

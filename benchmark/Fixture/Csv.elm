@@ -1,4 +1,4 @@
-module Fixture exposing
+module Fixture.Csv exposing
     ( preprocessed
     , csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
     , csvDecoded_array

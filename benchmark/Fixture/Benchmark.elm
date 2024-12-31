@@ -2,7 +2,7 @@ module Fixture.Benchmark exposing (main)
 
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture
+import Fixture.Csv as Fixture
 import Fixture.Json as Fixture
 
 

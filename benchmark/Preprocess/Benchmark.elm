@@ -6,7 +6,7 @@ import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Preprocess_Wec
-import Fixture
+import Fixture.Csv as Fixture
 import Motorsport.Car exposing (Car)
 import Preprocess.Helper.Benchmark exposing (preprocess_deprecated)
 
