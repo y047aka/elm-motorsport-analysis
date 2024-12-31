@@ -3,6 +3,7 @@ global.XMLHttpRequest = require('xhr2');
 
 import { Elm } from './Elm/Main.elm';
 import prompts from 'prompts';
+import fs from 'fs';
 
 const args = process.argv.slice(2).join();
 
@@ -22,6 +23,7 @@ app.ports.output.subscribe(async opts => {
 });
 
 app.ports.exitWithMsg.subscribe(([code, msg]) => {
+  fs.writeFileSync('output.json', JSON.stringify(msg, null, 2));
   console.log(msg);
   process.exit(code);
 });

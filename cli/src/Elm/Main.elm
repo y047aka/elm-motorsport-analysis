@@ -1,13 +1,13 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Cli
-import GitHub
-import Http
+import Csv.Decode as Decode exposing (Decoder, FieldNames(..))
+import Data.Wec.Decoder as Wec
+import Http exposing (Error(..), Expect, Response(..))
 import Json.Decode as JD
 import Json.Encode as JE
-import Prompts
-import Prompts.AutoComplete as AutoComplete
+import Motorsport.Class as Class
+import Motorsport.Duration as Duration
 import Prompts.Text as Text
 
 
@@ -29,14 +29,7 @@ type alias Flag =
 
 
 type alias Model =
-    { args : Maybe Args
-    , state : State
-    }
-
-
-type State
-    = InputUserName
-    | SelectRepository
+    { args : Maybe Args }
 
 
 init : Flag -> ( Model, Cmd Msg )
@@ -45,81 +38,105 @@ init flags =
         maybeArgs =
             Args.fromString flags
     in
-    ( { args = maybeArgs
-      , state = InputUserName
-      }
+    ( { args = maybeArgs}
     , case maybeArgs of
         Just args ->
-            GitHub.getRepositories args.userName GetRepositories
+            Http.get
+                { url = "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024/" ++ args.eventId ++ ".csv"
+                , expect = expectCsv CsvLoaded Wec.lapDecoder
+                }
 
         Nothing ->
-            output <| Text.option "Input User Name : "
+            output <| Text.option "Imput Event ID : "
     )
 
+
+
+expectCsv : (Result Http.Error (List a) -> msg) -> Decoder a -> Expect msg
+expectCsv toMsg decoder_ =
+    let
+        resolve : (body -> Result String (List a)) -> Response body -> Result Error (List a)
+        resolve toResult response =
+            case response of
+                BadUrl_ url ->
+                    Err (BadUrl url)
+
+                Timeout_ ->
+                    Err Timeout
+
+                NetworkError_ ->
+                    Err NetworkError
+
+                BadStatus_ metadata _ ->
+                    Err (BadStatus metadata.statusCode)
+
+                GoodStatus_ _ body ->
+                    Result.mapError BadBody (toResult body)
+    in
+    Http.expectStringResponse toMsg <|
+        resolve
+            (Decode.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow decoder_
+                >> Result.mapError Decode.errorToString
+            )
 
 
 -- UPDATE
 
 
 type Msg
-    = GetRepositories (Result Http.Error (List GitHub.Repository))
-    | InputUser String
-    | SelectedRepository String
+    = InputEventId String
+    | CsvLoaded (Result Http.Error (List Wec.Lap))
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        InputUser userName ->
-            ( model, GitHub.getRepositories userName GetRepositories )
-
-        GetRepositories (Ok repos) ->
-            ( { model | state = SelectRepository }
-            , model.args
-                |> Maybe.andThen (.repoName >> findRepository repos)
-                |> Maybe.map
-                    (.htmlUrl
-                        >> Cli.text [ Cli.foreGroundColor Cli.Green ]
-                        >> Tuple.pair 0
-                        >> exitWithMsg
-                    )
-                |> Maybe.withDefault
-                    (repos
-                        |> List.map repo2Item
-                        |> AutoComplete.option "Select Repository : "
-                        |> output
-                    )
+        InputEventId eventId ->
+            ( model
+            , Http.get
+                { url = "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024/" ++ eventId ++ ".csv"
+                , expect = expectCsv CsvLoaded Wec.lapDecoder
+                }
             )
 
-        SelectedRepository url ->
+        CsvLoaded (Ok decoded) ->
             ( model
-            , exitWithMsg
-                ( 0
-                , Cli.text [ Cli.foreGroundColor Cli.Green ] url
-                )
+            , ( exitWithMsg ( 0, JE.list lapEncoder decoded ))
             )
 
         _ ->
             ( model
-            , exitWithMsg ( 1, "Error" )
+            , exitWithMsg ( 1, JE.string "Error" )
             )
 
 
-repo2Item : GitHub.Repository -> Prompts.Item
-repo2Item repo =
-    { title = repo.name
-    , value = repo.htmlUrl
-    , description = repo.description |> Maybe.withDefault ""
-    }
-
-
-findRepository : List GitHub.Repository -> String -> Maybe GitHub.Repository
-findRepository list name =
-    list
-        |> List.filter (.name >> (==) name)
-        |> List.head
-
+lapEncoder : Wec.Lap -> JE.Value
+lapEncoder lap =
+    JE.object
+        [ ( "carNumber", JE.string lap.carNumber )
+        , ( "driverNumber", JE.int lap.driverNumber )
+        , ( "lapNumber", JE.int lap.lapNumber )
+        , ( "lapTime", JE.string (Duration.toString lap.lapTime) )
+        , ( "lapImprovement", JE.int lap.lapImprovement )
+        , ( "crossingFinishLineInPit", JE.string lap.crossingFinishLineInPit )
+        , ( "s1", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString lap.s1) )
+        , ( "s1Improvement", JE.int lap.s1Improvement )
+        , ( "s2", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString lap.s2) )
+        , ( "s2Improvement", JE.int lap.s2Improvement )
+        , ( "s3", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString lap.s3) )
+        , ( "s3Improvement", JE.int lap.s3Improvement )
+        , ( "kph", JE.float lap.kph )
+        , ( "elapsed", JE.string (Duration.toString lap.elapsed) )
+        , ( "hour", JE.string (Duration.toString lap.hour) )
+        , ( "topSpeed", JE.string (Maybe.withDefault "" <| Maybe.map String.fromFloat lap.topSpeed) )
+        , ( "driverName", JE.string lap.driverName )
+        , ( "pitTime", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString lap.pitTime) )
+        , ( "class", JE.string <| Class.toString lap.class )
+        , ( "group", JE.string lap.group )
+        , ( "team", JE.string lap.team )
+        , ( "manufacturer", JE.string lap.manufacturer )
+        ]
 
 
 -- SUBSCRIPTIONS
@@ -129,12 +146,7 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         decoder =
-            case model.state of
-                InputUserName ->
-                    JD.map InputUser JD.string
-
-                SelectRepository ->
-                    JD.map SelectedRepository JD.string
+            JD.map InputEventId JD.string
     in
     [ JD.decodeValue decoder
         >> Result.withDefault NoOp
@@ -150,7 +162,7 @@ subscriptions model =
 port output : JE.Value -> Cmd msg
 
 
-port exitWithMsg : ( Int, String ) -> Cmd msg
+port exitWithMsg : ( Int, JE.Value ) -> Cmd msg
 
 
 port input : (JD.Value -> msg) -> Sub msg

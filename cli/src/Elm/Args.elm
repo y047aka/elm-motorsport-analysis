@@ -2,7 +2,7 @@ module Args exposing (Args, fromString)
 
 
 type alias Args =
-    { userName : String
+    { eventId : String
     , repoName : String
     }
 
@@ -12,7 +12,7 @@ fromString str =
     case String.split "/" str of
         fst :: scd :: [] ->
             Just
-                { userName = fst
+                { eventId = fst
                 , repoName = scd
                 }
 
