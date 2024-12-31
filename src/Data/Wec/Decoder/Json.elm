@@ -21,18 +21,18 @@ lapDecoder =
         |> required "lapTime" raceClockDecoder
         |> required "lapImprovement" int
         |> required "crossingFinishLineInPit" string
-        |> required "s1" (Decode.nullable raceClockDecoder)
+        |> required "s1" (Decode.maybe raceClockDecoder)
         |> required "s1Improvement" int
-        |> required "s2" (Decode.nullable raceClockDecoder)
+        |> required "s2" (Decode.maybe raceClockDecoder)
         |> required "s2Improvement" int
-        |> required "s3" (Decode.nullable raceClockDecoder)
+        |> required "s3" (Decode.maybe raceClockDecoder)
         |> required "s3Improvement" int
         |> required "kph" float
         |> required "elapsed" raceClockDecoder
         |> required "hour" raceClockDecoder
-        |> required "topSpeed" (Decode.nullable float)
+        |> required "topSpeed" (Decode.map String.toFloat string)
         |> required "driverName" string
-        |> required "pitTime" (Decode.nullable raceClockDecoder)
+        |> required "pitTime" (Decode.maybe raceClockDecoder)
         |> required "class" classDecoder
         |> required "group" string
         |> required "team" string
