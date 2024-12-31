@@ -22,8 +22,8 @@ app.ports.output.subscribe(async opts => {
   }
 });
 
-app.ports.exitWithMsg.subscribe(([code, msg]) => {
-  fs.writeFileSync('output.json', JSON.stringify(msg, null, 2));
-  console.log(msg);
+app.ports.exitWithMsg.subscribe(([code, msg, data]) => {
+  fs.writeFileSync(`${msg}.json`, JSON.stringify(data, null, 2));
+  console.log(`${msg}.json`);
   process.exit(code);
 });

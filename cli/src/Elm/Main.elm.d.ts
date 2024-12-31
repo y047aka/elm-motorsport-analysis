@@ -12,7 +12,7 @@ export namespace Elm {
 
     interface Ports {
       output: Subscribe<prompts.PromptObject<'value'>>;
-      exitWithMsg: Subscribe<[number, string]>;
+      exitWithMsg: Subscribe<[number, string, string]>;
       input: Send<string>;
     }
 

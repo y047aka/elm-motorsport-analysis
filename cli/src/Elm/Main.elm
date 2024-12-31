@@ -59,18 +59,23 @@ update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         InputEventId eventId ->
-            ( model
+            ( { model | args = Just { eventId = eventId, repoName = Maybe.withDefault "" <| Maybe.map .repoName model.args } }
             , Wec.getLaps eventId CsvLoaded
             )
 
         CsvLoaded (Ok decoded) ->
             ( model
-            , ( exitWithMsg ( 0, JE.list Wec.lapEncoder decoded ))
+            , ( exitWithMsg
+                ( 0
+                , Maybe.withDefault "" <| Maybe.map .eventId model.args
+                , JE.list Wec.lapEncoder decoded
+                )
+              )
             )
 
         _ ->
             ( model
-            , exitWithMsg ( 1, JE.string "Error" )
+            , exitWithMsg ( 1, "Error", JE.null )
             )
 
 
@@ -98,7 +103,7 @@ subscriptions model =
 port output : JE.Value -> Cmd msg
 
 
-port exitWithMsg : ( Int, JE.Value ) -> Cmd msg
+port exitWithMsg : ( Int, String, JE.Value ) -> Cmd msg
 
 
 port input : (JD.Value -> msg) -> Sub msg
