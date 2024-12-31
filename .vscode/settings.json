@@ -6,8 +6,5 @@
 
   "[json]": {
     "editor.defaultFormatter": "biomejs.biome"
-  },
-  "debug.javascript.defaultRuntimeExecutable": {
-    "pwa-node": "/Users/yoshitaka/.local/share/mise/shims/node"
   }
 }
