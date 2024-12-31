@@ -23,7 +23,7 @@ app.ports.output.subscribe(async opts => {
 });
 
 app.ports.exitWithMsg.subscribe(([code, msg, data]) => {
-  fs.writeFileSync(`${msg}.json`, JSON.stringify(data, null, 2));
+  fs.writeFileSync(`../static/wec_2024/${msg}.json`, JSON.stringify(data, null, 2));
   console.log(`${msg}.json`);
   process.exit(code);
 });
