@@ -1,4 +1,5 @@
 {
+  "name": "cli",
   "scripts": {
     "watch": "parcel watch -t node --bundle-node-modules src/index.ts",
     "start": "node ./dist/index.js",

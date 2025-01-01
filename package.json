@@ -1,5 +1,6 @@
 {
   "type": "module",
+  "workspaces": ["app", "cli", "tests", "benchmark"],
   "scripts": {
     "start": "elm-land server",
     "build": "elm-land build",
