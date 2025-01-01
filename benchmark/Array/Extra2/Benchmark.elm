@@ -3,7 +3,7 @@ module Array.Extra2.Benchmark exposing (main)
 import Array.Extra2
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture.Csv as Fixture
+import Fixture.Json as Fixture
 import List.Extra
 
 
@@ -21,7 +21,7 @@ suite =
              , 500 -- 53,338 runs/s (GoF: 99.98%)
              , 5000 -- 53,221 runs/s (GoF: 99.98%)
              ]
-                |> List.map (\n -> ( toString n, \_ -> List.Extra.find (\{ lapNumber } -> lapNumber == n) Fixture.csvDecoded ))
+                |> List.map (\n -> ( toString n, \_ -> List.Extra.find (\{ lapNumber } -> lapNumber == n) Fixture.jsonDecoded ))
             )
         , Benchmark.scale "Array.Extra2.find"
             ([ 5 -- 7,403,845 runs/s (GoF: 99.95%)
@@ -29,7 +29,7 @@ suite =
              , 500 -- 8,788 runs/s (GoF: 99.99%)
              , 5000 -- 8,795 runs/s (GoF: 99.99%)
              ]
-                |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (\{ lapNumber } -> lapNumber == n) Fixture.csvDecoded_array ))
+                |> List.map (\n -> ( toString n, \_ -> Array.Extra2.find (\{ lapNumber } -> lapNumber == n) Fixture.jsonDecoded_array ))
             )
         ]
 

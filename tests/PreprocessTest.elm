@@ -5,7 +5,7 @@ import AssocList.Extra
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Expect
-import Fixture.Csv as Fixture
+import Fixture.Json as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
@@ -18,8 +18,8 @@ suite =
     describe "Data.Wec.Preprocess"
         [ test "preprocess" <|
             \_ ->
-                Data.Wec.Preprocess.preprocess Fixture.csvDecoded
-                    |> Expect.equal (deprecated Fixture.csvDecoded)
+                Data.Wec.Preprocess.preprocess Fixture.jsonDecoded
+                    |> Expect.equal (deprecated Fixture.jsonDecoded)
         ]
 
 

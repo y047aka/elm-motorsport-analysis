@@ -3,7 +3,7 @@ module Array.Benchmark exposing (main)
 import Array
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture.Csv as Fixture
+import Fixture.Json as Fixture
 
 
 main : BenchmarkProgram
@@ -20,14 +20,14 @@ suite =
              , 500 -- 392,379 runs/s (GoF: 99.92%)
              , 5000 -- 38,310 runs/s (GoF: 99.79%)
              ]
-                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> List.length target ))
             )
         , Benchmark.scale "Array.length"
             ([ 5 -- 274,508,871 runs/s (GoF: 99.61%)
              , 5000 -- 274,955,086 runs/s (GoF: 99.67%)
              ]
-                |> List.map (\size -> ( size, Array.fromList (Fixture.csvDecodedOfSize size) ))
+                |> List.map (\size -> ( size, Array.fromList (Fixture.jsonDecodedOfSize size) ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> Array.length target ))
             )
         , Benchmark.scale "Array.fromList >> Array.length"
@@ -36,7 +36,7 @@ suite =
              , 500 -- 856,094 runs/s (GoF: 99.95%)
              , 5000 -- 84,065 runs/s (GoF: 99.79%)
              ]
-                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> (Array.fromList >> Array.length) target ))
             )
         ]

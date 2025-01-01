@@ -1,19 +1,18 @@
 module Fixture.Csv exposing
-    ( csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
-    , csvDecoded_array
+    ( csvDecoded, csvDecodedOfSize
     , csv
+    , lapDecoder
     )
 
 {-|
 
-@docs csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
-@docs csvDecoded_array
+@docs csvDecoded, csvDecodedOfSize
 
 @docs csv
 
 -}
 
-import Array exposing (Array)
+import Array
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..), field, float, int, pipeline, string)
 import Data.Wec.Decoder as Wec exposing (Lap)
 import Motorsport.Class as Class exposing (Class)
@@ -37,16 +36,6 @@ csvDecodedOfSize size =
 
     else
         (Array.fromList >> Array.slice 0 size >> Array.toList) csvDecoded
-
-
-csvDecodedForCarNumber : String -> List Wec.Lap
-csvDecodedForCarNumber str =
-    List.filter (\{ carNumber } -> carNumber == str) csvDecoded
-
-
-csvDecoded_array : Array Wec.Lap
-csvDecoded_array =
-    Array.fromList csvDecoded
 
 
 

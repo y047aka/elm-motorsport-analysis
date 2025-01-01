@@ -1,7 +1,7 @@
 module DecoderTest exposing (suite)
 
 import Expect
-import Fixture.Csv as Fixture
+import Fixture.Csv
 import Fixture.Json
 import Test exposing (Test, describe, test)
 
@@ -12,5 +12,5 @@ suite =
         [ test "jsonDecoded and csvDecoded" <|
             \_ ->
                 Fixture.Json.jsonDecoded
-                    |> Expect.equal Fixture.csvDecoded
+                    |> Expect.equal Fixture.Csv.csvDecoded
         ]

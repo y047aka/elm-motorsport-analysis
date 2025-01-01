@@ -1,16 +1,19 @@
 module Fixture.Json exposing
-    ( jsonDecoded, jsonDecodedOfSize
+    ( jsonDecoded, jsonDecodedOfSize, jsonDecodedForCarNumber
+    , jsonDecoded_array
     , json
     )
 
 {-|
 
-@docs jsonDecoded, jsonDecodedOfSize
+@docs jsonDecoded, jsonDecodedOfSize, jsonDecodedForCarNumber
+@docs jsonDecoded_array
+
 @docs json
 
 -}
 
-import Array
+import Array exposing (Array)
 import Data.Wec.Decoder as Wec
 import Json.Decode as Decode
 
@@ -32,6 +35,16 @@ jsonDecodedOfSize size =
 
     else
         (Array.fromList >> Array.slice 0 size >> Array.toList) jsonDecoded
+
+
+jsonDecodedForCarNumber : String -> List Wec.Lap
+jsonDecodedForCarNumber str =
+    List.filter (\{ carNumber } -> carNumber == str) jsonDecoded
+
+
+jsonDecoded_array : Array Wec.Lap
+jsonDecoded_array =
+    Array.fromList jsonDecoded
 
 
 json : String
