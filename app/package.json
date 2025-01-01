@@ -3,7 +3,8 @@
   "scripts": {
     "start": "elm-land server",
     "build": "elm-land build",
-    "test": "elm-verify-examples && elm-test"
+    "test": "elm-verify-examples && elm-test",
+    "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {
     "elm-land": "0.20.1",

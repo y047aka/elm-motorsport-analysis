@@ -5,7 +5,7 @@
     "start": "npm run -w app start",
     "build": "npm run -w app build",
     "test": "npm run -w app test",
-    "benchmark": "cd benchmark && elm reactor"
+    "benchmark": "npm run -w app benchmark"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
