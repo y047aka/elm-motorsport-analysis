@@ -6,6 +6,8 @@
     "test": "elm-verify-examples && elm-test"
   },
   "devDependencies": {
-    "elm-land": "0.20.1"
+    "elm-land": "0.20.1",
+    "elm-test": "^0.19.1-revision12",
+    "elm-verify-examples": "^6.0.3"
   }
 }
