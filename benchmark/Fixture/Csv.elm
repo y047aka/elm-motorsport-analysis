@@ -1,13 +1,10 @@
 module Fixture.Csv exposing
-    ( preprocessed
-    , csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
+    ( csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
     , csvDecoded_array
     , csv
     )
 
 {-|
-
-@docs preprocessed
 
 @docs csvDecoded, csvDecodedOfSize, csvDecodedForCarNumber
 @docs csvDecoded_array
@@ -19,15 +16,8 @@ module Fixture.Csv exposing
 import Array exposing (Array)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..), field, float, int, pipeline, string)
 import Data.Wec.Decoder as Wec exposing (Lap)
-import Data.Wec.Preprocess as Preprocess_Wec
-import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
-
-
-preprocessed : List Car
-preprocessed =
-    Preprocess_Wec.preprocess csvDecoded
 
 
 csvDecoded : List Wec.Lap

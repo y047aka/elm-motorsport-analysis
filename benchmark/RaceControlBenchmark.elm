@@ -2,7 +2,7 @@ module RaceControlBenchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture.Csv as Fixture
+import Fixture
 import Motorsport.RaceControl as RaceControl exposing (Msg(..))
 
 
