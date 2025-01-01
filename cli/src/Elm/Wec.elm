@@ -87,7 +87,7 @@ classDecoder =
 getLaps : String -> (Result Http.Error (List Lap) -> msg) -> Cmd msg
 getLaps eventId msg =
     Http.get
-        { url = 
+        { url =
             [ endpoint, eventId ++ ".csv" ]
                 |> String.join "/"
         , expect = expectCsv msg lapDecoder

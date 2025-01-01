@@ -3,7 +3,7 @@ module Array.Extra2.Benchmark exposing (main)
 import Array.Extra2
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture
+import Fixture.Csv as Fixture
 import List.Extra
 
 
