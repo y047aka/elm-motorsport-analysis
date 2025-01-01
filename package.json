@@ -1,6 +1,6 @@
 {
   "type": "module",
-  "workspaces": ["app", "cli", "benchmark"],
+  "workspaces": ["app", "cli"],
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
