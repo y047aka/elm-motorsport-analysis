@@ -15,7 +15,7 @@ module Shared exposing
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
-import Data.Wec.Decoder.Json
+import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Preprocess_Wec
 import Effect exposing (Effect)
 import Http
@@ -106,7 +106,7 @@ update route msg m =
             , Effect.sendCmd <|
                 Http.get
                     { url = eventSummary.csvPath
-                    , expect = Http.expectJson JsonLoaded_Wec (Json.Decode.list Data.Wec.Decoder.Json.lapDecoder)
+                    , expect = Http.expectJson JsonLoaded_Wec (Json.Decode.list Wec.lapDecoder)
                     }
             )
 

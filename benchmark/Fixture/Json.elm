@@ -12,13 +12,12 @@ module Fixture.Json exposing
 
 import Array
 import Data.Wec.Decoder as Wec
-import Data.Wec.Decoder.Json
 import Json.Decode as Decode
 
 
 jsonDecoded : List Wec.Lap
 jsonDecoded =
-    case Decode.decodeString (Decode.list Data.Wec.Decoder.Json.lapDecoder) json of
+    case Decode.decodeString (Decode.list Wec.lapDecoder) json of
         Ok decoded_ ->
             decoded_
 
