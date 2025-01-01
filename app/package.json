@@ -2,7 +2,8 @@
   "name": "app",
   "scripts": {
     "start": "elm-land server",
-    "build": "elm-land build"
+    "build": "elm-land build",
+    "test": "elm-verify-examples && elm-test"
   },
   "devDependencies": {
     "elm-land": "0.20.1"

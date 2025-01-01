@@ -4,7 +4,7 @@
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
-    "test": "elm-verify-examples && elm-test",
+    "test": "npm run -w app test",
     "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {

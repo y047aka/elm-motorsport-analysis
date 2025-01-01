@@ -57,7 +57,10 @@
         }
     },
     "test-dependencies": {
-        "direct": {},
+        "direct": {
+            "BrianHicks/elm-csv": "4.0.1",
+            "elm-explorations/test": "2.2.0"
+        },
         "indirect": {}
     }
 }

@@ -7,4 +7,4 @@ elm-stuff
 *.pem
 
 # elm-verify-examples generated files
-tests/VerifyExamples
+VerifyExamples
