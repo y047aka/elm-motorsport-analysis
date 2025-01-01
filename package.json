@@ -2,8 +2,8 @@
   "type": "module",
   "workspaces": ["app", "cli", "tests", "benchmark"],
   "scripts": {
-    "start": "elm-land server",
-    "build": "elm-land build",
+    "start": "npm run -w app start",
+    "build": "npm run -w app build",
     "test": "elm-verify-examples && elm-test",
     "benchmark": "cd benchmark && elm reactor"
   },
@@ -11,7 +11,6 @@
     "@biomejs/biome": "1.9.4",
     "elm": "^0.19.1-6",
     "elm-format": "^0.8.7",
-    "elm-land": "0.20.1",
     "elm-test": "^0.19.1-revision12",
     "elm-verify-examples": "^6.0.3"
   }

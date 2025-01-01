@@ -1,7 +1,10 @@
 {
   "name": "app",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "elm-land server",
+    "build": "elm-land build"
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "elm-land": "0.20.1"
+  }
 }
