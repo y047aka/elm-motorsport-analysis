@@ -114,9 +114,13 @@ update route msg m =
             let
                 rcNew =
                     RaceControl.init (Preprocess_Wec.preprocess decoded)
+
+                m_eventSummary =
+                    m.eventSummary
             in
             ( { m
-                | raceControl_Wec = rcNew
+                | eventSummary = { m_eventSummary | name = decoded.name }
+                , raceControl_Wec = rcNew
                 , analysis_Wec = Analysis.finished rcNew
               }
             , Effect.none

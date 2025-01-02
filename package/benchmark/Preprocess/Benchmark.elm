@@ -37,7 +37,7 @@ suite =
              --  , 5000 -- 71 runs/s (GoF: 100%)
              ]
                 |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
-                |> List.map (\( size, target ) -> ( toString size, \_ -> Preprocess_Wec.preprocess { laps = target } ))
+                |> List.map (\( size, target ) -> ( toString size, \_ -> Preprocess_Wec.preprocess { name = "", laps = target } ))
             )
         ]
 
