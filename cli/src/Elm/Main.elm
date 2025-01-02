@@ -80,7 +80,7 @@ update msg model =
             , exitWithMsg
                 ( 0
                 , Maybe.withDefault "" <| Maybe.map .eventId model.args
-                , JE.list Wec.lapEncoder decoded
+                , eventEncoder { laps = decoded }
                 )
             )
 
@@ -88,6 +88,12 @@ update msg model =
             ( model
             , exitWithMsg ( 1, "Error", JE.null )
             )
+
+
+eventEncoder : { laps : List Wec.Lap } -> JE.Value
+eventEncoder { laps } =
+    JE.object
+        [ ( "laps", JE.list Wec.lapEncoder laps ) ]
 
 
 
