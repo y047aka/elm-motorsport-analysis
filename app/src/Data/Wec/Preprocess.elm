@@ -1,6 +1,7 @@
 module Data.Wec.Preprocess exposing (getPositionAt, laps_, preprocess, preprocess_)
 
-import Data.Wec.Decoder as Wec
+import Data.Wec.Decoder as WecLap
+import Data.Wec.Event as Wec
 import Dict
 import Dict.Extra
 import List.Extra
@@ -9,16 +10,16 @@ import Motorsport.Class as Class
 import Motorsport.Lap exposing (Lap)
 
 
-preprocess : List Wec.Lap -> List Car
-preprocess laps =
+preprocess : Wec.Event -> List Car
+preprocess event =
     let
         startPositions =
-            List.filter (\{ lapNumber } -> lapNumber == 1) laps
+            List.filter (\{ lapNumber } -> lapNumber == 1) event.laps
                 |> List.sortBy .elapsed
                 |> List.map .carNumber
 
         ordersByLap =
-            laps
+            event.laps
                 |> Dict.Extra.groupBy .lapNumber
                 |> Dict.toList
                 |> List.map
@@ -28,7 +29,7 @@ preprocess laps =
                         }
                     )
     in
-    laps
+    event.laps
         |> Dict.Extra.groupBy .carNumber
         |> Dict.toList
         |> List.map
@@ -56,7 +57,7 @@ getPositionAt { carNumber, lapNumber } ordersByLap =
 
 preprocess_ :
     { carNumber : String
-    , laps : List Wec.Lap
+    , laps : List WecLap.Lap
     , startPositions : List String
     , ordersByLap : OrdersByLap
     }
@@ -125,13 +126,13 @@ type alias Acc =
 
 laps_ :
     { carNumber : String
-    , laps : List Wec.Lap
+    , laps : List WecLap.Lap
     , ordersByLap : OrdersByLap
     }
     -> List Lap
 laps_ { carNumber, laps, ordersByLap } =
     let
-        step : Wec.Lap -> Acc -> Acc
+        step : WecLap.Lap -> Acc -> Acc
         step { driverName, lapNumber, lapTime, s1, s2, s3, elapsed } acc =
             let
                 bestLapTime =

@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
+import Data.Wec.Event as WecEvent
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -90,7 +91,7 @@ update msg model =
             )
 
 
-eventEncoder : { laps : List Wec.Lap } -> JE.Value
+eventEncoder : WecEvent.Event -> JE.Value
 eventEncoder { laps } =
     JE.object
         [ ( "laps", JE.list Wec.lapEncoder laps ) ]

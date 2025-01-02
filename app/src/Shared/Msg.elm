@@ -3,7 +3,7 @@ module Shared.Msg exposing (Msg(..))
 {-| -}
 
 import Data.F1.Decoder as F1
-import Data.Wec.Decoder as Wec
+import Data.Wec.Event as Wec
 import Http
 import Motorsport.RaceControl as RaceControl
 
@@ -19,6 +19,6 @@ type Msg
     = FetchJson String
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
-    | JsonLoaded_Wec (Result Http.Error (List Wec.Lap))
+    | JsonLoaded_Wec (Result Http.Error Wec.Event)
     | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg_Wec RaceControl.Msg
