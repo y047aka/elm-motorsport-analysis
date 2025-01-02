@@ -70,33 +70,33 @@ toRoutePath { season, event } =
 type alias EventSummary =
     { name : String
     , date : String
-    , csvPath : String
+    , jsonPath : String
     }
 
 
 toEventSummary : Wec -> EventSummary
 toEventSummary event =
     let
-        csvPath =
+        jsonPath =
             "/static/wec_2024/" ++ toString event ++ ".json"
     in
     case event of
         LeMans_24h ->
             { name = "24 Hours of Le Mans"
             , date = "2024-06-15"
-            , csvPath = csvPath
+            , jsonPath = jsonPath
             }
 
         Fuji_6h ->
             { name = "6 Hours of Fuji"
             , date = "2024-09-15"
-            , csvPath = csvPath
+            , jsonPath = jsonPath
             }
 
         Bahrain_8h ->
             { name = "8 Hours of Bahrain"
             , date = "2024-11-02"
-            , csvPath = csvPath
+            , jsonPath = jsonPath
             }
 
 

@@ -50,7 +50,7 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { eventSummary = { name = "", date = "", csvPath = "" }
+    ( { eventSummary = { name = "", date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
@@ -100,12 +100,12 @@ update route msg m =
                 eventSummary =
                     Series.fromString options.event
                         |> Maybe.map Series.toEventSummary
-                        |> Maybe.withDefault { name = "", date = "", csvPath = "" }
+                        |> Maybe.withDefault { name = "", date = "", jsonPath = "" }
             in
             ( { m | eventSummary = eventSummary }
             , Effect.sendCmd <|
                 Http.get
-                    { url = eventSummary.csvPath
+                    { url = eventSummary.jsonPath
                     , expect = Http.expectJson JsonLoaded_Wec (Json.Decode.list Wec.lapDecoder)
                     }
             )
