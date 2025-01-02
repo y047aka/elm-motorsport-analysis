@@ -45,7 +45,7 @@ module Motorsport.Leaderboard exposing
 
 import Css exposing (..)
 import Css.Extra exposing (when)
-import Html.Styled as Html exposing (Html, div, span, text)
+import Html.Styled exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)

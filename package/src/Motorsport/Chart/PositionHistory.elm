@@ -12,11 +12,11 @@ import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.RaceControl as RaceControl
 import Scale exposing (ContinuousScale)
-import Svg.Styled as Svg exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
+import Svg.Styled exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
 import Svg.Styled.Attributes exposing (css)
 import TypedSvg.Styled.Attributes exposing (points, transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx exposing (height, width)
-import TypedSvg.Types exposing (Paint(..), Transform(..))
+import TypedSvg.Types exposing (Transform(..))
 
 
 w : Float

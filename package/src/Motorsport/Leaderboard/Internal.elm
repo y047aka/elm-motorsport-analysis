@@ -42,7 +42,7 @@ I recommend checking out the [examples] to get a feel for how it works.
 -}
 
 import Css exposing (color, fontSize, hex, px)
-import Html.Styled as Html exposing (Attribute, Html, span, text)
+import Html.Styled exposing (Attribute, Html, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
