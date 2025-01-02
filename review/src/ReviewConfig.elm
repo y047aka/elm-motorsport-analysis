@@ -11,9 +11,6 @@ when inside the directory containing this file.
 
 -}
 
--- import NoUnused.Dependencies
--- import NoUnused.Variables
-
 import NoExposingEverything
 import NoMissingSubscriptionsCall
 import NoMissingTypeAnnotation
@@ -30,9 +27,6 @@ config =
     , NoMissingTypeAnnotation.rule
     , NoPrematureLetComputation.rule
 
-    -- -- jfmengels/elm-review-unused
-    -- , NoUnused.Dependencies.rule
-    -- , NoUnused.Variables.rule
     -- jfmengels/elm-review-the-elm-architecture
     , NoMissingSubscriptionsCall.rule
     , NoRecursiveUpdate.rule
