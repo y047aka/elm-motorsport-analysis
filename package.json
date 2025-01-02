@@ -1,11 +1,11 @@
 {
   "type": "module",
-  "workspaces": ["app", "cli"],
+  "workspaces": ["app", "package", "cli"],
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
-    "test": "npm run -w app test",
-    "benchmark": "npm run -w app benchmark",
+    "test": "npm run -w package test",
+    "benchmark": "npm run -w package benchmark",
     "csv_to_json": "npm run -w cli build && npm run -w cli start"
   },
   "devDependencies": {
