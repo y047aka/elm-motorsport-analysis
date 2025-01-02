@@ -18,7 +18,7 @@ suite =
     describe "Data.Wec.Preprocess"
         [ test "preprocess" <|
             \_ ->
-                Data.Wec.Preprocess.preprocess Fixture.jsonDecoded
+                Data.Wec.Preprocess.preprocess { name = "", laps = Fixture.jsonDecoded }
                     |> Expect.equal (deprecated Fixture.jsonDecoded)
         ]
 

@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
+import Data.Wec.Event as WecEvent
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -39,7 +40,7 @@ init flags =
     ( { args = maybeArgs }
     , case maybeArgs of
         Just args ->
-            Wec.getLaps args.eventId CsvLoaded
+            Wec.getLaps args.eventId (CsvLoaded args.eventId)
 
         Nothing ->
             [ "le_mans_24h", "fuji_6h", "bahrain_8h" ]
@@ -63,7 +64,7 @@ toItem eventId =
 
 type Msg
     = InputEventId String
-    | CsvLoaded (Result Http.Error (List Wec.Lap))
+    | CsvLoaded String (Result Http.Error (List Wec.Lap))
     | NoOp
 
 
@@ -72,15 +73,18 @@ update msg model =
     case msg of
         InputEventId eventId ->
             ( { model | args = Just { eventId = eventId, repoName = Maybe.withDefault "" <| Maybe.map .repoName model.args } }
-            , Wec.getLaps eventId CsvLoaded
+            , Wec.getLaps eventId (CsvLoaded eventId)
             )
 
-        CsvLoaded (Ok decoded) ->
+        CsvLoaded fileName (Ok decoded) ->
             ( model
             , exitWithMsg
                 ( 0
                 , Maybe.withDefault "" <| Maybe.map .eventId model.args
-                , JE.list Wec.lapEncoder decoded
+                , eventEncoder
+                    { name = fileName
+                    , laps = decoded
+                    }
                 )
             )
 
@@ -88,6 +92,29 @@ update msg model =
             ( model
             , exitWithMsg ( 1, "Error", JE.null )
             )
+
+
+eventEncoder : WecEvent.Event -> JE.Value
+eventEncoder { name, laps } =
+    let
+        toEventName eventId =
+            case eventId of
+                "le_mans_24h" ->
+                    "24 Hours of Le Mans"
+
+                "fuji_6h" ->
+                    "6 Hours of Fuji"
+
+                "bahrain_8h" ->
+                    "8 Hours of Bahrain"
+
+                _ ->
+                    "Encoding Error"
+    in
+    JE.object
+        [ ( "name", JE.string (toEventName name) )
+        , ( "laps", JE.list Wec.lapEncoder laps )
+        ]
 
 
 
