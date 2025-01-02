@@ -13,7 +13,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 
 endpoint : String
 endpoint =
-    "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024"
+    "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/app/static/wec_2024"
 
 
 type alias Lap =
