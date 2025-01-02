@@ -4,8 +4,7 @@ import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap as Lap exposing (Sector(..))
-import Time exposing (Month(..))
+import Motorsport.Lap as Lap
 
 
 type Gap

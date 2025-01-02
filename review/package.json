@@ -1,0 +1,12 @@
+{
+  "name": "review",
+  "scripts": {
+    "package": "elm-review ../package/ --elmjson ../package/elm.json --config ./",
+    "app": "elm-review ../app/src --elmjson ../app/elm.json --config ./",
+    "cli": "elm-review ../cli/src --elmjson ../cli/elm.json --config ./",
+    "review": "elm-review ./src --elmjson ./elm.json --config ./"
+  },
+  "devDependencies": {
+    "elm-review": "^2.12.0"
+  }
+}

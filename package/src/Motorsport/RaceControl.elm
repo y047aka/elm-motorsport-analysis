@@ -114,13 +114,13 @@ update msg m =
                 dummyPosix =
                     millisToPosix 0
 
-                lapTimes =
-                    List.map .laps m.cars
-
                 { lapCount, elapsed } =
                     let
                         elapsed_ =
                             Clock.getElapsed m.clock
+
+                        lapTimes =
+                            List.map .laps m.cars
                     in
                     case msg of
                         Add10seconds ->

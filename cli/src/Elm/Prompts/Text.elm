@@ -1,4 +1,4 @@
-module Prompts.Text exposing (..)
+module Prompts.Text exposing (option)
 
 import Json.Encode as JE
 import Prompts

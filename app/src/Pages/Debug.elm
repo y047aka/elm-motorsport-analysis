@@ -2,7 +2,7 @@ module Pages.Debug exposing (Model, Msg, page)
 
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import Effect exposing (Effect)
-import Html.Styled as Html exposing (div, header, input, nav, text)
+import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)

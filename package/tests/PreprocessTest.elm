@@ -1,4 +1,4 @@
-module PreprocessTest exposing (..)
+module PreprocessTest exposing (suite)
 
 import AssocList
 import AssocList.Extra
