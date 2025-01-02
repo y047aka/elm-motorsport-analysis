@@ -36,7 +36,7 @@ init flags =
         maybeArgs =
             Args.fromString flags
     in
-    ( { args = maybeArgs}
+    ( { args = maybeArgs }
     , case maybeArgs of
         Just args ->
             Wec.getLaps args.eventId CsvLoaded
@@ -48,12 +48,14 @@ init flags =
                 |> output
     )
 
+
 toItem : String -> Prompts.Item
 toItem eventId =
     { title = eventId
     , value = eventId
     , description = ""
     }
+
 
 
 -- UPDATE
@@ -75,12 +77,11 @@ update msg model =
 
         CsvLoaded (Ok decoded) ->
             ( model
-            , ( exitWithMsg
+            , exitWithMsg
                 ( 0
                 , Maybe.withDefault "" <| Maybe.map .eventId model.args
                 , JE.list Wec.lapEncoder decoded
                 )
-              )
             )
 
         _ ->

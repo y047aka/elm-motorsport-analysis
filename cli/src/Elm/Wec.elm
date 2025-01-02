@@ -11,7 +11,6 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 
 
-
 endpoint : String
 endpoint =
     "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/static/wec_2024"
