@@ -1,4 +1,4 @@
-module Prompts.AutoComplete exposing (..)
+module Prompts.AutoComplete exposing (option)
 
 import Json.Encode as JE
 import Prompts
