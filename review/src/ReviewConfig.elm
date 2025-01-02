@@ -11,7 +11,6 @@ when inside the directory containing this file.
 
 -}
 
--- import NoRecursiveUpdate
 -- import NoUselessSubscriptions
 -- import NoUnused.Dependencies
 -- import NoUnused.Variables
@@ -20,6 +19,7 @@ import NoExposingEverything
 import NoMissingSubscriptionsCall
 import NoMissingTypeAnnotation
 import NoPrematureLetComputation
+import NoRecursiveUpdate
 import Review.Rule exposing (Rule)
 
 
@@ -35,7 +35,7 @@ config =
     -- , NoUnused.Variables.rule
     -- jfmengels/elm-review-the-elm-architecture
     , NoMissingSubscriptionsCall.rule
+    , NoRecursiveUpdate.rule
 
-    -- , NoRecursiveUpdate.rule
     -- , NoUselessSubscriptions.rule
     ]
