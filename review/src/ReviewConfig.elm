@@ -11,15 +11,15 @@ when inside the directory containing this file.
 
 -}
 
--- import NoMissingSubscriptionsCall
 -- import NoRecursiveUpdate
 -- import NoUselessSubscriptions
 -- import NoUnused.Dependencies
+-- import NoUnused.Variables
 
 import NoExposingEverything
+import NoMissingSubscriptionsCall
 import NoMissingTypeAnnotation
 import NoPrematureLetComputation
-import NoUnused.Variables
 import Review.Rule exposing (Rule)
 
 
@@ -32,10 +32,10 @@ config =
 
     -- -- jfmengels/elm-review-unused
     -- , NoUnused.Dependencies.rule
-    , NoUnused.Variables.rule
+    -- , NoUnused.Variables.rule
+    -- jfmengels/elm-review-the-elm-architecture
+    , NoMissingSubscriptionsCall.rule
 
-    -- -- jfmengels/elm-review-the-elm-architecture
-    -- , NoMissingSubscriptionsCall.rule
     -- , NoRecursiveUpdate.rule
     -- , NoUselessSubscriptions.rule
     ]
