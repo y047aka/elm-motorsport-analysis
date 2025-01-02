@@ -13,15 +13,14 @@ when inside the directory containing this file.
 
 -- import NoMissingSubscriptionsCall
 -- import NoRecursiveUpdate
--- import NoUnused.Exports
 -- import NoUnused.Modules
 -- import NoUnused.Variables
 -- import NoUselessSubscriptions
+-- import NoUnused.Dependencies
 
 import NoExposingEverything
 import NoMissingTypeAnnotation
 import NoPrematureLetComputation
-import NoUnused.Dependencies
 import Review.Rule exposing (Rule)
 
 
@@ -33,9 +32,7 @@ config =
     , NoPrematureLetComputation.rule
 
     -- -- jfmengels/elm-review-unused
-    , NoUnused.Dependencies.rule
-
-    -- , NoUnused.Exports.rule
+    -- , NoUnused.Dependencies.rule
     -- , NoUnused.Modules.rule
     -- , NoUnused.Variables.rule
     -- -- jfmengels/elm-review-the-elm-architecture
