@@ -13,7 +13,6 @@ when inside the directory containing this file.
 
 -- import NoMissingSubscriptionsCall
 -- import NoRecursiveUpdate
--- import NoUnused.Modules
 -- import NoUnused.Variables
 -- import NoUselessSubscriptions
 -- import NoUnused.Dependencies
@@ -33,7 +32,6 @@ config =
 
     -- -- jfmengels/elm-review-unused
     -- , NoUnused.Dependencies.rule
-    -- , NoUnused.Modules.rule
     -- , NoUnused.Variables.rule
     -- -- jfmengels/elm-review-the-elm-architecture
     -- , NoMissingSubscriptionsCall.rule
