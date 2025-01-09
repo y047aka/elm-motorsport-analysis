@@ -4,7 +4,8 @@
     "watch": "parcel watch -t node --bundle-node-modules src/index.ts",
     "start": "node ./dist/index.js",
     "build": "parcel build -t node --bundle-node-modules src/index.ts",
-    "test": "elm-test"
+    "test": "elm-test",
+    "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {
     "@types/node": "^12.20.55",
