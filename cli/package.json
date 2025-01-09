@@ -3,13 +3,15 @@
   "scripts": {
     "watch": "parcel watch -t node --bundle-node-modules src/index.ts",
     "start": "node ./dist/index.js",
-    "build": "parcel build -t node --bundle-node-modules src/index.ts"
+    "build": "parcel build -t node --bundle-node-modules src/index.ts",
+    "test": "elm-test"
   },
   "devDependencies": {
     "@types/node": "^12.20.55",
     "@types/prompts": "^2.4.9",
     "@types/readline-sync": "^1.4.8",
     "elm-hot": "^1.1.6",
+    "elm-test": "^0.19.1-revision12",
     "node-elm-compiler": "^5.0.6",
     "parcel": "^1.12.4",
     "typescript": "^5.7.2"
