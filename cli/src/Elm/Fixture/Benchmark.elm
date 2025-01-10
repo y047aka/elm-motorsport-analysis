@@ -5,7 +5,7 @@ import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode as CD exposing (FieldNames(..))
 import Data.Wec.Decoder as Wec
 import Fixture.Csv as Fixture
-import Fixture.Json as Fixture
+import Fixture.Json.Laps as Fixture
 import Json.Decode as JD
 
 

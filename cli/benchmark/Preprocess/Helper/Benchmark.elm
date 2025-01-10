@@ -8,7 +8,7 @@ import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Dict
 import Dict.Extra
-import Fixture.Json as Fixture
+import Fixture.Json.Laps as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class

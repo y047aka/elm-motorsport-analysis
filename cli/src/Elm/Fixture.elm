@@ -1,7 +1,7 @@
 module Fixture exposing (preprocessed)
 
 import Data.Wec.Preprocess as Preprocess_Wec
-import Fixture.Json exposing (jsonDecoded)
+import Fixture.Json.Laps exposing (jsonDecoded)
 import Motorsport.Car exposing (Car)
 
 

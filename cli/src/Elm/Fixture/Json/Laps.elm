@@ -1,4 +1,4 @@
-module Fixture.Json exposing
+module Fixture.Json.Laps exposing
     ( jsonDecoded, jsonDecodedOfSize, jsonDecodedForCarNumber
     , jsonDecoded_array
     , json
