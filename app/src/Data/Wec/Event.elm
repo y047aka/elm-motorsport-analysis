@@ -14,6 +14,7 @@ type alias Event =
 
 eventDecoder : Decoder Event
 eventDecoder =
-    Decode.map2 Event
+    Decode.map3 Event
         (field "name" string)
         (field "laps" (list Wec.lapDecoder))
+        (field "preprocessed" (list Car.carDecoder))
