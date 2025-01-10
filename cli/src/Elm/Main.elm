@@ -2,6 +2,7 @@ port module Main exposing (main)
 
 import Args exposing (Args)
 import Data.Wec.Event as WecEvent
+import Data.Wec.Preprocess as Preprocess_Wec
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
@@ -84,6 +85,7 @@ update msg model =
                 , eventEncoder
                     { name = fileName
                     , laps = decoded
+                    , preprocessed = Preprocess_Wec.preprocess { laps = decoded }
                     }
                 )
             )
@@ -95,7 +97,7 @@ update msg model =
 
 
 eventEncoder : WecEvent.Event -> JE.Value
-eventEncoder { name, laps } =
+eventEncoder { name, laps, preprocessed } =
     let
         toEventName eventId =
             case eventId of
@@ -114,6 +116,7 @@ eventEncoder { name, laps } =
     JE.object
         [ ( "name", JE.string (toEventName name) )
         , ( "laps", JE.list Wec.lapEncoder laps )
+        , ( "preprocessed", JE.list Wec.carEncoder preprocessed )
         ]
 
 

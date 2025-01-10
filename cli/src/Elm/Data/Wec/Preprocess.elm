@@ -1,7 +1,6 @@
 module Data.Wec.Preprocess exposing (getPositionAt, laps_, preprocess, preprocess_)
 
 import Data.Wec.Decoder as WecLap
-import Data.Wec.Event as Wec
 import Dict
 import Dict.Extra
 import List.Extra
@@ -10,7 +9,7 @@ import Motorsport.Class as Class
 import Motorsport.Lap exposing (Lap)
 
 
-preprocess : Wec.Event -> List Car
+preprocess : { a | laps : List WecLap.Lap } -> List Car
 preprocess event =
     let
         startPositions =
