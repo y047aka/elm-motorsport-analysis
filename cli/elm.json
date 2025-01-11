@@ -3,7 +3,9 @@
     "source-directories": [
         "src/Elm",
         "../package/src",
-        "../app/src"
+        "../app/src",
+        "fixture",
+        "benchmark"
     ],
     "elm-version": "0.19.1",
     "dependencies": {
