@@ -19,7 +19,7 @@ suite =
     describe "Fixture" <|
         [ Benchmark.compare "xxxDecoded"
             "csvDecoded"
-            -- 322 runs/s (GoF: 99.99%) ※426件のデータで実施
+            -- 307 runs/s (GoF: 99.99%) ※426件のデータで実施
             -- 24 runs/s (GoF: 99.99%)
             (\_ ->
                 case CD.decodeCustom { fieldSeparator = ';' } FieldNamesFromFirstRow Fixture.lapDecoder Fixture.csv of
@@ -30,7 +30,7 @@ suite =
                         []
             )
             "jsonDecoded"
-            -- 800 runs/s (GoF: 99.99%) ※426件のデータで実施
+            -- 799 runs/s (GoF: 100%) ※426件のデータで実施
             -- 62 runs/s (GoF: 99.99%)
             (\_ ->
                 case JD.decodeString (JD.list Wec.lapDecoder) Fixture.json of
