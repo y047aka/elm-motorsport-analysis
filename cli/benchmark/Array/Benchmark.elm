@@ -3,7 +3,7 @@ module Array.Benchmark exposing (main)
 import Array
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture.Json.Laps as Fixture
+import Fixture.Json as Fixture
 
 
 main : BenchmarkProgram

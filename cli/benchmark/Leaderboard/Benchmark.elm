@@ -2,7 +2,7 @@ module Leaderboard.Benchmark exposing (main)
 
 import Benchmark exposing (Benchmark, benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture
+import Fixture.Json exposing (jsonDecoded)
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn)
@@ -23,7 +23,7 @@ suite =
                 -- 3,845 runs/s (GoF: 99.9%)
                 let
                     rc =
-                        RaceControl.init Fixture.preprocessed
+                        RaceControl.init jsonDecoded.preprocessed
                             |> RaceControl.update (SetCount (60 * 60 * 1000))
                 in
                 ViewModel.init rc
@@ -33,7 +33,7 @@ suite =
                 -- 591 runs/s (GoF: 99.97%)
                 let
                     rc =
-                        RaceControl.init Fixture.preprocessed
+                        RaceControl.init jsonDecoded.preprocessed
                             |> RaceControl.update (SetCount (60 * 60 * 1000))
 
                     analysis =

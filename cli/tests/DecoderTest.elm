@@ -4,7 +4,6 @@ import Data.Wec.Preprocess
 import Expect
 import Fixture.Csv
 import Fixture.Json
-import Fixture.Json.Laps
 import Test exposing (Test, describe, test)
 
 
@@ -13,7 +12,8 @@ suite =
     describe "Decoder tests"
         [ test "jsonDecoded and csvDecoded" <|
             \_ ->
-                Fixture.Json.Laps.jsonDecoded
+                -- CSVデコードと、それを元にしたJSONデコードで同じ結果が得られることを確認
+                (Fixture.Json.jsonDecoded |> .laps)
                     |> Expect.equal Fixture.Csv.csvDecoded
         , test "jsonDecoded and preprocessed" <|
             \_ ->

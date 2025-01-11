@@ -8,7 +8,7 @@ import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Dict
 import Dict.Extra
-import Fixture.Json.Laps as Fixture
+import Fixture.Json as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
@@ -83,9 +83,9 @@ preprocess_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = Fixture.jsonDecodedForCarNumber "15"
-            , startPositions = startPositions_list Fixture.jsonDecoded
-            , ordersByLap = ordersByLap_list Fixture.jsonDecoded
+            , laps = jsonDecodedForCarNumber "15"
+            , startPositions = startPositions_list Fixture.jsonDecoded.laps
+            , ordersByLap = ordersByLap_list Fixture.jsonDecoded.laps
             }
     in
     [ Benchmark.compare "preprocess_"
@@ -98,13 +98,18 @@ preprocess_Suite =
     ]
 
 
+jsonDecodedForCarNumber : String -> List Wec.Lap
+jsonDecodedForCarNumber str =
+    List.filter (\{ carNumber } -> carNumber == str) Fixture.jsonDecoded.laps
+
+
 preprocess_laps_Suite : List Benchmark
 preprocess_laps_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = Fixture.jsonDecodedForCarNumber "15"
-            , ordersByLap = ordersByLap_list Fixture.jsonDecoded
+            , laps = jsonDecodedForCarNumber "15"
+            , ordersByLap = ordersByLap_list Fixture.jsonDecoded.laps
             }
     in
     [ Benchmark.compare "laps_"
