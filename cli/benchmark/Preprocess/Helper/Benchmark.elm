@@ -4,7 +4,7 @@ import Array exposing (Array)
 import Array.Extra2
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Data.Wec.Decoder as Wec
+import Data_Cli.Wec as Wec
 import Data_Cli.Wec.Preprocess
 import Dict
 import Dict.Extra

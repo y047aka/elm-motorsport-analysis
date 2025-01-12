@@ -16,7 +16,7 @@ module Fixture.Csv exposing
 
 import Array exposing (Array)
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..), field, float, int, pipeline, string)
-import Data.Wec.Decoder as Wec exposing (Lap)
+import Data_Cli.Wec as Wec
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 
@@ -54,9 +54,9 @@ csvDecoded_array =
 -- DECODER
 
 
-lapDecoder : Decoder Lap
+lapDecoder : Decoder Wec.Lap
 lapDecoder =
-    Decode.into Lap
+    Decode.into Wec.Lap
         |> pipeline (field "NUMBER" string)
         |> pipeline (field "DRIVER_NUMBER" int)
         |> pipeline (field "LAP_NUMBER" int)

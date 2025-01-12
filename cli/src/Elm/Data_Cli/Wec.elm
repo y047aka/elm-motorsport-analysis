@@ -6,7 +6,6 @@ module Data_Cli.Wec exposing
     )
 
 import Csv.Decode as Decode exposing (Decoder, FieldNames(..), field, float, int, pipeline, string)
-import Data.Wec.Decoder as Wec
 import Http exposing (Error(..), Expect, Response(..))
 import Json.Encode as JE
 import Json.Encode.Extra
@@ -18,7 +17,29 @@ import Motorsport.Lap
 
 
 type alias Lap =
-    Wec.Lap
+    { carNumber : String
+    , driverNumber : Int
+    , lapNumber : Int
+    , lapTime : RaceClock
+    , lapImprovement : Int
+    , crossingFinishLineInPit : String
+    , s1 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
+    , s1Improvement : Int
+    , s2 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
+    , s2Improvement : Int
+    , s3 : Maybe RaceClock -- 2024年のデータで部分的に欠落しているのでMaybeを付けている
+    , s3Improvement : Int
+    , kph : Float
+    , elapsed : RaceClock
+    , hour : RaceClock
+    , topSpeed : Maybe Float -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
+    , driverName : String
+    , pitTime : Maybe RaceClock
+    , class : Class
+    , group : String
+    , team : String
+    , manufacturer : String
+    }
 
 
 endpoint : String
@@ -32,7 +53,7 @@ type alias RaceClock =
 
 lapDecoder : Decoder Lap
 lapDecoder =
-    Decode.into Wec.Lap
+    Decode.into Lap
         |> pipeline (field "NUMBER" string)
         |> pipeline (field "DRIVER_NUMBER" int)
         |> pipeline (field "LAP_NUMBER" int)

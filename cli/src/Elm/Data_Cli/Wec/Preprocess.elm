@@ -1,6 +1,6 @@
 module Data_Cli.Wec.Preprocess exposing (getPositionAt, laps_, preprocess, preprocess_)
 
-import Data.Wec.Decoder as WecLap
+import Data_Cli.Wec as Wec
 import Dict
 import Dict.Extra
 import List.Extra
@@ -9,7 +9,7 @@ import Motorsport.Class as Class
 import Motorsport.Lap exposing (Lap)
 
 
-preprocess : { a | laps : List WecLap.Lap } -> List Car
+preprocess : { a | laps : List Wec.Lap } -> List Car
 preprocess event =
     let
         startPositions =
@@ -56,7 +56,7 @@ getPositionAt { carNumber, lapNumber } ordersByLap =
 
 preprocess_ :
     { carNumber : String
-    , laps : List WecLap.Lap
+    , laps : List Wec.Lap
     , startPositions : List String
     , ordersByLap : OrdersByLap
     }
@@ -125,13 +125,13 @@ type alias Acc =
 
 laps_ :
     { carNumber : String
-    , laps : List WecLap.Lap
+    , laps : List Wec.Lap
     , ordersByLap : OrdersByLap
     }
     -> List Lap
 laps_ { carNumber, laps, ordersByLap } =
     let
-        step : WecLap.Lap -> Acc -> Acc
+        step : Wec.Lap -> Acc -> Acc
         step { driverName, lapNumber, lapTime, s1, s2, s3, elapsed } acc =
             let
                 bestLapTime =

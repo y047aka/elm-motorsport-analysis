@@ -4,7 +4,7 @@ import AssocList
 import AssocList.Extra
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Data.Wec.Decoder as Wec
+import Data_Cli.Wec as Wec
 import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Fixture.Csv as Fixture
 import Motorsport.Car exposing (Car)
