@@ -1,21 +1,23 @@
 module Data.Wec exposing
-    ( Event, Lap
+    ( Event
     , eventDecoder, lapDecoder
     )
 
 {-|
 
-@docs Event, Lap
+@docs Event
 @docs eventDecoder, lapDecoder
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
+import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Car as Car exposing (Car)
+import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Lap
 
 
 type alias Event =
@@ -64,7 +66,7 @@ eventDecoder =
     Decode.map3 Event
         (field "name" string)
         (field "laps" (list lapDecoder))
-        (field "preprocessed" (list Car.carDecoder))
+        (field "preprocessed" (list carDecoder))
 
 
 lapDecoder : Decoder Lap
@@ -102,3 +104,48 @@ raceClockDecoder =
 classDecoder : Decoder Class
 classDecoder =
     string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
+
+
+carDecoder : Decoder Car
+carDecoder =
+    Decode.succeed Car
+        |> required "carNumber" string
+        |> required "drivers" (Decode.list driverDecoder)
+        |> required "class" classDecoder
+        |> required "group" string
+        |> required "team" string
+        |> required "manufacturer" string
+        |> required "startPosition" int
+        |> required "laps" (Decode.list lapDecoder_)
+        |> required "currentLap" (Decode.maybe lapDecoder_)
+        |> required "lastLap" (Decode.maybe lapDecoder_)
+
+
+driverDecoder : Decoder Driver
+driverDecoder =
+    Decode.map2 Driver
+        (field "name" string)
+        (field "isCurrentDriver" bool)
+
+
+lapDecoder_ : Decoder Motorsport.Lap.Lap
+lapDecoder_ =
+    Decode.succeed Motorsport.Lap.Lap
+        |> required "carNumber" string
+        |> required "driver" string
+        |> required "lap" int
+        |> required "position" (Decode.maybe int)
+        |> required "time" durationDecoder
+        |> required "best" durationDecoder
+        |> required "sector_1" durationDecoder
+        |> required "sector_2" durationDecoder
+        |> required "sector_3" durationDecoder
+        |> required "s1_best" durationDecoder
+        |> required "s2_best" durationDecoder
+        |> required "s3_best" durationDecoder
+        |> required "elapsed" durationDecoder
+
+
+durationDecoder : Decoder Duration
+durationDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
