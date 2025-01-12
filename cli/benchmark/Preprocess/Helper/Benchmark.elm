@@ -5,7 +5,7 @@ import Array.Extra2
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec.Decoder as Wec
-import Data.Wec.Preprocess
+import Data_Cli.Wec.Preprocess
 import Dict
 import Dict.Extra
 import Fixture.Csv as Fixture
@@ -94,7 +94,7 @@ preprocess_Suite =
         (\_ -> preprocess_deprecated options)
         "improved"
         -- 2,219 runs/s (GoF: 99.98%)
-        (\_ -> Data.Wec.Preprocess.preprocess_ options)
+        (\_ -> Data_Cli.Wec.Preprocess.preprocess_ options)
     ]
 
 
@@ -113,7 +113,7 @@ preprocess_laps_Suite =
         (\_ -> laps_deprecated options)
         "improved"
         -- 2,248 runs/s (GoF: 99.96%)
-        (\_ -> Data.Wec.Preprocess.laps_ options)
+        (\_ -> Data_Cli.Wec.Preprocess.laps_ options)
     ]
 
 
@@ -247,7 +247,7 @@ laps_deprecated { carNumber, laps, ordersByLap } =
                 , driver = driverName
                 , lap = lapNumber
                 , position =
-                    Data.Wec.Preprocess.getPositionAt { carNumber = carNumber, lapNumber = lapNumber } ordersByLap
+                    Data_Cli.Wec.Preprocess.getPositionAt { carNumber = carNumber, lapNumber = lapNumber } ordersByLap
                 , time = lapTime
                 , best =
                     laps

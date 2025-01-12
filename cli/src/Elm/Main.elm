@@ -1,9 +1,9 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Data.Wec as Wec
 import Data.Wec.Event as WecEvent
-import Data.Wec.Preprocess as Preprocess_Wec
+import Data_Cli.Wec as Wec
+import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
