@@ -8,7 +8,7 @@ import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess
 import Dict
 import Dict.Extra
-import Fixture.Json as Fixture
+import Fixture.Csv as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
@@ -40,7 +40,7 @@ startPositionsSuite =
          , 500 -- 206,667 runs/s (GoF: 99.84%)
          , 5000 -- 21,238 runs/s (GoF: 99.85%)
          ]
-            |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_list target ))
         )
     , Benchmark.scale "startPositions_array"
@@ -49,7 +49,7 @@ startPositionsSuite =
          , 500 -- 230,693 runs/s (GoF: 99.96%)
          , 5000 -- 22,697 runs/s (GoF: 99.96%)
          ]
-            |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> startPositions_array (Array.fromList target) ))
         )
     ]
@@ -63,7 +63,7 @@ ordersByLapSuite =
          , 500 -- 5,279 runs/s (GoF: 99.99%)
          , 5000 -- 541 runs/s (GoF: 99.99%)
          ]
-            |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_list target ))
         )
     , Benchmark.scale "ordersByLap_array"
@@ -72,7 +72,7 @@ ordersByLapSuite =
          , 500 -- 5,273 runs/s (GoF: 99.99%)
          , 5000 -- 541 runs/s (GoF: 99.99%)
          ]
-            |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+            |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
             |> List.map (\( size, target ) -> ( toString size, \_ -> ordersByLap_array target ))
         )
     ]
@@ -83,9 +83,9 @@ preprocess_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = jsonDecodedForCarNumber "15"
-            , startPositions = startPositions_list Fixture.jsonDecoded.laps
-            , ordersByLap = ordersByLap_list Fixture.jsonDecoded.laps
+            , laps = Fixture.csvDecodedForCarNumber "15"
+            , startPositions = startPositions_list Fixture.csvDecoded
+            , ordersByLap = ordersByLap_list Fixture.csvDecoded
             }
     in
     [ Benchmark.compare "preprocess_"
@@ -98,18 +98,13 @@ preprocess_Suite =
     ]
 
 
-jsonDecodedForCarNumber : String -> List Wec.Lap
-jsonDecodedForCarNumber str =
-    List.filter (\{ carNumber } -> carNumber == str) Fixture.jsonDecoded.laps
-
-
 preprocess_laps_Suite : List Benchmark
 preprocess_laps_Suite =
     let
         options =
             { carNumber = "15"
-            , laps = jsonDecodedForCarNumber "15"
-            , ordersByLap = ordersByLap_list Fixture.jsonDecoded.laps
+            , laps = Fixture.csvDecodedForCarNumber "15"
+            , ordersByLap = ordersByLap_list Fixture.csvDecoded
             }
     in
     [ Benchmark.compare "laps_"

@@ -6,7 +6,7 @@ import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Data.Wec.Decoder as Wec
 import Data.Wec.Preprocess as Preprocess_Wec
-import Fixture.Json as Fixture
+import Fixture.Csv as Fixture
 import Motorsport.Car exposing (Car)
 import Preprocess.Helper.Benchmark exposing (preprocess_deprecated)
 
@@ -26,7 +26,7 @@ suite =
              --  , 1000 -- 62 runs/s (GoF: 99.99%)
              --  , 5000 -- 11 runs/s (GoF: 100%)
              ]
-                |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> deprecated target ))
             )
         , Benchmark.scale "improved"
@@ -36,7 +36,7 @@ suite =
 
              --  , 5000 -- 71 runs/s (GoF: 100%)
              ]
-                |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
+                |> List.map (\size -> ( size, Fixture.csvDecodedOfSize size ))
                 |> List.map (\( size, target ) -> ( toString size, \_ -> Preprocess_Wec.preprocess { laps = target } ))
             )
         ]
