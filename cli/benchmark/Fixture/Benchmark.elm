@@ -3,7 +3,7 @@ module Fixture.Benchmark exposing (main)
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Csv.Decode as CD exposing (FieldNames(..))
-import Data.Wec.Decoder as Wec
+import Data.Wec as Wec
 import Fixture.Csv as Fixture
 import Json.Decode as JD
 

@@ -3,7 +3,7 @@ module Shared.Msg exposing (Msg(..))
 {-| -}
 
 import Data.F1.Decoder as F1
-import Data.Wec.Event as Wec
+import Data.Wec as Wec
 import Http
 import Motorsport.RaceControl as RaceControl
 

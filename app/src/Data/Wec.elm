@@ -1,14 +1,28 @@
-module Data.Wec.Decoder exposing (Lap, lapDecoder)
+module Data.Wec exposing
+    ( Event, Lap
+    , eventDecoder, lapDecoder
+    )
 
-import Json.Decode as Decode exposing (Decoder, float, int, string)
+{-|
+
+@docs Event, Lap
+@docs eventDecoder, lapDecoder
+
+-}
+
+import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 
 
-
--- MODEL
+type alias Event =
+    { name : String
+    , laps : List Lap
+    , preprocessed : List Car
+    }
 
 
 type alias Lap =
@@ -43,6 +57,14 @@ type alias RaceClock =
 
 
 -- DECODER
+
+
+eventDecoder : Decoder Event
+eventDecoder =
+    Decode.map3 Event
+        (field "name" string)
+        (field "laps" (list lapDecoder))
+        (field "preprocessed" (list Car.carDecoder))
 
 
 lapDecoder : Decoder Lap

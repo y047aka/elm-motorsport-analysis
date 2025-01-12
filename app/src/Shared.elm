@@ -15,7 +15,7 @@ module Shared exposing
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
-import Data.Wec.Event as Wec
+import Data.Wec as Wec
 import Effect exposing (Effect)
 import Http
 import Json.Decode

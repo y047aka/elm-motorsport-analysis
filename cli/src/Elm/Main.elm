@@ -1,7 +1,7 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Data.Wec.Event as WecEvent
+import Data.Wec exposing (Event)
 import Data_Cli.Wec as Wec
 import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Http
@@ -96,7 +96,7 @@ update msg model =
             )
 
 
-eventEncoder : WecEvent.Event -> JE.Value
+eventEncoder : Event -> JE.Value
 eventEncoder { name, laps, preprocessed } =
     let
         toEventName eventId =
