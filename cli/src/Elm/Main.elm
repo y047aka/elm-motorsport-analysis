@@ -1,6 +1,7 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
+import Data.Wec as Wec
 import Data.Wec.Event as WecEvent
 import Data.Wec.Preprocess as Preprocess_Wec
 import Http
@@ -8,7 +9,6 @@ import Json.Decode as JD
 import Json.Encode as JE
 import Prompts
 import Prompts.Select as Select
-import Wec
 
 
 main : Program Flag Model Msg

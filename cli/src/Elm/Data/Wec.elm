@@ -1,4 +1,4 @@
-module Wec exposing
+module Data.Wec exposing
     ( Lap
     , carEncoder
     , getLaps
