@@ -15,8 +15,7 @@ module Shared exposing
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
-import Data.Wec.Event as Wec
-import Data.Wec.Preprocess as Preprocess_Wec
+import Data.Wec as Wec
 import Effect exposing (Effect)
 import Http
 import Json.Decode
@@ -113,7 +112,7 @@ update route msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.init (Preprocess_Wec.preprocess decoded)
+                    RaceControl.init decoded.preprocessed
 
                 m_eventSummary =
                     m.eventSummary

@@ -1,13 +1,14 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Data.Wec.Event as WecEvent
+import Data.Wec exposing (Event)
+import Data_Cli.Wec as Wec
+import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
 import Prompts
 import Prompts.Select as Select
-import Wec
 
 
 main : Program Flag Model Msg
@@ -84,6 +85,7 @@ update msg model =
                 , eventEncoder
                     { name = fileName
                     , laps = decoded
+                    , preprocessed = Preprocess_Wec.preprocess { laps = decoded }
                     }
                 )
             )
@@ -94,8 +96,8 @@ update msg model =
             )
 
 
-eventEncoder : WecEvent.Event -> JE.Value
-eventEncoder { name, laps } =
+eventEncoder : Event -> JE.Value
+eventEncoder { name, laps, preprocessed } =
     let
         toEventName eventId =
             case eventId of
@@ -114,6 +116,7 @@ eventEncoder { name, laps } =
     JE.object
         [ ( "name", JE.string (toEventName name) )
         , ( "laps", JE.list Wec.lapEncoder laps )
+        , ( "preprocessed", JE.list Wec.carEncoder preprocessed )
         ]
 
 

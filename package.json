@@ -5,7 +5,7 @@
     "start": "npm run -w app start",
     "build": "npm run -w app build",
     "test": "npm run -w package test",
-    "benchmark": "npm run -w package benchmark",
+    "benchmark": "npm run -w cli benchmark",
     "csv_to_json": "npm run -w cli build && npm run -w cli start"
   },
   "devDependencies": {

@@ -1,8 +1,7 @@
 {
   "name": "package",
   "scripts": {
-    "test": "elm-verify-examples && elm-test",
-    "benchmark": "cd benchmark && elm reactor"
+    "test": "elm-verify-examples && elm-test"
   },
   "devDependencies": {
     "elm-test": "^0.19.1-revision12",
