@@ -74,30 +74,36 @@ type alias EventSummary =
     }
 
 
-toEventSummary : Wec -> EventSummary
-toEventSummary event =
+toEventSummary : ( Int, Wec ) -> Maybe EventSummary
+toEventSummary ( season, event ) =
     let
         jsonPath =
-            "/static/wec_2024/" ++ toString event ++ ".json"
+            "/static/wec_" ++ String.fromInt season ++ "/" ++ toString event ++ ".json"
     in
-    case event of
-        LeMans_24h ->
-            { name = "24 Hours of Le Mans"
-            , date = "2024-06-15"
-            , jsonPath = jsonPath
-            }
+    case ( season, event ) of
+        ( 2024, LeMans_24h ) ->
+            Just
+                { name = "24 Hours of Le Mans"
+                , date = "2024-06-15"
+                , jsonPath = jsonPath
+                }
 
-        Fuji_6h ->
-            { name = "6 Hours of Fuji"
-            , date = "2024-09-15"
-            , jsonPath = jsonPath
-            }
+        ( 2024, Fuji_6h ) ->
+            Just
+                { name = "6 Hours of Fuji"
+                , date = "2024-09-15"
+                , jsonPath = jsonPath
+                }
 
-        Bahrain_8h ->
-            { name = "8 Hours of Bahrain"
-            , date = "2024-11-02"
-            , jsonPath = jsonPath
-            }
+        ( 2024, Bahrain_8h ) ->
+            Just
+                { name = "8 Hours of Bahrain"
+                , date = "2024-11-02"
+                , jsonPath = jsonPath
+                }
+
+        _ ->
+            Nothing
 
 
 carImageUrl_2024 : String -> Maybe String

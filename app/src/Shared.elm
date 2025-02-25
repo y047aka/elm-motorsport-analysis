@@ -97,8 +97,8 @@ update route msg m =
         FetchJson_Wec options ->
             let
                 eventSummary =
-                    Series.fromString options.event
-                        |> Maybe.map Series.toEventSummary
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Series.fromString options.event)
+                        |> Maybe.andThen Series.toEventSummary
                         |> Maybe.withDefault { name = "", date = "", jsonPath = "" }
             in
             ( { m | eventSummary = eventSummary }

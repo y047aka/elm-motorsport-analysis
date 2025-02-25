@@ -20,7 +20,10 @@ page =
             (List.map
                 (\event ->
                     link
-                        { label = (Series.toEventSummary >> .name) event
+                        { label =
+                            Series.toEventSummary ( 2024, event )
+                                |> Maybe.map .name
+                                |> Maybe.withDefault "Unknown"
                         , path = Series.toRoutePath { season = "2024", event = event }
                         }
                 )
