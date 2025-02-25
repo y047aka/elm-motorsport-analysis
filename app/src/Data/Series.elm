@@ -3,7 +3,7 @@ module Data.Series exposing
     , fromString, toString
     , toRoutePath
     , EventSummary, toEventSummary
-    , carImageUrl_2024
+    , carImageUrl_Wec
     )
 
 {-|
@@ -12,7 +12,7 @@ module Data.Series exposing
 @docs fromString, toString
 @docs toRoutePath
 @docs EventSummary, toEventSummary
-@docs carImageUrl_2024
+@docs carImageUrl_Wec
 
 -}
 
@@ -106,8 +106,8 @@ toEventSummary ( season, event ) =
             Nothing
 
 
-carImageUrl_2024 : String -> Maybe String
-carImageUrl_2024 carNumber =
+carImageUrl_Wec : String -> String -> Maybe String
+carImageUrl_Wec season carNumber =
     let
         domain =
             "https://storage.googleapis.com"
@@ -115,9 +115,14 @@ carImageUrl_2024 carNumber =
         path =
             "/ecm-prod/media/cache/easy_thumb/assets/1/engage"
     in
-    carImageFileName_2024 carNumber
-        -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
-        |> Maybe.map (\fileName -> String.concat [ "/static/image", String.dropLeft 6 fileName ])
+    case season of
+        "2024" ->
+            carImageFileName_2024 carNumber
+                -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
+                |> Maybe.map (\fileName -> String.concat [ "/static/image", String.dropLeft 6 fileName ])
+
+        _ ->
+            Nothing
 
 
 carImageFileName_2024 : String -> Maybe String
