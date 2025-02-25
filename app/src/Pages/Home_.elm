@@ -1,7 +1,6 @@
 module Pages.Home_ exposing (page)
 
 import Css exposing (block, color, display, em, fontSize, inherit)
-import Data.Series as Series
 import Data.Series.Wec_2024 exposing (wec_2024)
 import Html.Styled exposing (Html, a, h2, section, text)
 import Html.Styled.Attributes exposing (css, href)
@@ -19,13 +18,10 @@ page =
         , link { path = F1, label = "F1" }
         , section_ "WEC 2024"
             (List.map
-                (\event ->
+                (\eventSummary ->
                     link
-                        { label =
-                            Series.toEventSummary ( 2024, event )
-                                |> Maybe.map .name
-                                |> Maybe.withDefault "Unknown"
-                        , path = Series.toRoutePath { season = "2024", event = event }
+                        { label = eventSummary.name
+                        , path = Wec_Season__Event_ { season = "2024", event = eventSummary.id }
                         }
                 )
                 wec_2024

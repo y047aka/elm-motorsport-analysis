@@ -1,26 +1,7 @@
-module Data.Series exposing
-    ( toRoutePath
-    , toEventSummary
-    , carImageUrl_Wec
-    )
-
-{-|
-
-@docs fromString
-@docs toRoutePath
-@docs toEventSummary
-@docs carImageUrl_Wec
-
--}
+module Data.Series exposing (carImageUrl_Wec, toEventSummary)
 
 import Data.Series.Wec exposing (EventSummary, Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
-import Route.Path exposing (Path(..))
-
-
-toRoutePath : { season : String, event : Wec } -> Path
-toRoutePath { season, event } =
-    Wec_Season__Event_ { season = season, event = Data.Series.Wec.toString event }
 
 
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary

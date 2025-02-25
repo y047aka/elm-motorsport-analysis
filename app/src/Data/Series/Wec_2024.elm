@@ -3,35 +3,42 @@ module Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_
 import Data.Series.Wec exposing (EventSummary, Wec(..))
 
 
-wec_2024 : List Wec
+wec_2024 : List EventSummary
 wec_2024 =
-    [ LeMans_24h
-    , Fuji_6h
-    , Bahrain_8h
-    ]
+    List.map toEventSummary_Wec_2024
+        [ LeMans_24h
+        , Fuji_6h
+        , Bahrain_8h
+        ]
 
 
 toEventSummary_Wec_2024 : Wec -> EventSummary
 toEventSummary_Wec_2024 event =
     let
+        id =
+            Data.Series.Wec.toString event
+
         jsonPath =
-            "/static/wec_2024/" ++ Data.Series.Wec.toString event ++ ".json"
+            "/static/wec_2024/" ++ id ++ ".json"
     in
     case event of
         LeMans_24h ->
-            { name = "24 Hours of Le Mans"
+            { id = id
+            , name = "24 Hours of Le Mans"
             , date = "2024-06-15"
             , jsonPath = jsonPath
             }
 
         Fuji_6h ->
-            { name = "6 Hours of Fuji"
+            { id = id
+            , name = "6 Hours of Fuji"
             , date = "2024-09-15"
             , jsonPath = jsonPath
             }
 
         Bahrain_8h ->
-            { name = "8 Hours of Bahrain"
+            { id = id
+            , name = "8 Hours of Bahrain"
             , date = "2024-11-02"
             , jsonPath = jsonPath
             }

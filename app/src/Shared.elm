@@ -50,7 +50,7 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { eventSummary = { name = "", date = "", jsonPath = "" }
+    ( { eventSummary = { id = "", name = "", date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
@@ -100,7 +100,7 @@ update route msg m =
                 eventSummary =
                     Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
                         |> Maybe.andThen Series.toEventSummary
-                        |> Maybe.withDefault { name = "", date = "", jsonPath = "" }
+                        |> Maybe.withDefault { id = "", name = "", date = "", jsonPath = "" }
             in
             ( { m | eventSummary = eventSummary }
             , Effect.sendCmd <|
