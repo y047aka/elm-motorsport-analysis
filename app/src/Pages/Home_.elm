@@ -2,6 +2,7 @@ module Pages.Home_ exposing (page)
 
 import Css exposing (block, color, display, em, fontSize, inherit)
 import Data.Series as Series
+import Data.Series.Wec_2024 exposing (wec_2024)
 import Html.Styled exposing (Html, a, h2, section, text)
 import Html.Styled.Attributes exposing (css, href)
 import Route.Path as Path exposing (Path(..))
@@ -27,7 +28,7 @@ page =
                         , path = Series.toRoutePath { season = "2024", event = event }
                         }
                 )
-                Series.wec_2024
+                wec_2024
             )
         ]
     }

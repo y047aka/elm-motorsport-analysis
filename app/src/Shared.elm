@@ -15,6 +15,7 @@ module Shared exposing
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
+import Data.Series.Wec
 import Data.Wec as Wec
 import Effect exposing (Effect)
 import Http
@@ -97,7 +98,7 @@ update route msg m =
         FetchJson_Wec options ->
             let
                 eventSummary =
-                    Maybe.map2 Tuple.pair (String.toInt options.season) (Series.fromString options.event)
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
                         |> Maybe.andThen Series.toEventSummary
                         |> Maybe.withDefault { name = "", date = "", jsonPath = "" }
             in
