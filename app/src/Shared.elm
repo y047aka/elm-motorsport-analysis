@@ -15,6 +15,7 @@ module Shared exposing
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
+import Data.Series.Wec
 import Data.Wec as Wec
 import Effect exposing (Effect)
 import Http
@@ -49,7 +50,7 @@ type alias Model =
 
 init : Result Json.Decode.Error Flags -> Route () -> ( Model, Effect Msg )
 init flagsResult route =
-    ( { eventSummary = { name = "", date = "", jsonPath = "" }
+    ( { eventSummary = { id = "", name = "", date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
@@ -97,9 +98,9 @@ update route msg m =
         FetchJson_Wec options ->
             let
                 eventSummary =
-                    Series.fromString options.event
-                        |> Maybe.map Series.toEventSummary
-                        |> Maybe.withDefault { name = "", date = "", jsonPath = "" }
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
+                        |> Maybe.andThen Series.toEventSummary
+                        |> Maybe.withDefault { id = "", name = "", date = "", jsonPath = "" }
             in
             ( { m | eventSummary = eventSummary }
             , Effect.sendCmd <|

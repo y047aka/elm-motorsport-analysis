@@ -2,7 +2,7 @@ module Shared.Model exposing (Model)
 
 {-| -}
 
-import Data.Series exposing (EventSummary)
+import Data.Series.Wec exposing (EventSummary)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
 

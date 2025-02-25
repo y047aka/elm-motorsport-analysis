@@ -113,13 +113,13 @@ subscriptions shared model =
 
 
 view : Shared.Model -> Model -> View Msg
-view ({ analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
+view ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
     { title = "Wec"
     , body =
         [ header shared
         , case mode of
             Leaderboard ->
-                Leaderboard.view (config analysis_Wec) leaderboardState raceControl_Wec
+                Leaderboard.view (config (String.left 4 eventSummary.date) analysis_Wec) leaderboardState raceControl_Wec
 
             PositionHistory ->
                 PositionHistoryChart.view raceControl_Wec
@@ -192,8 +192,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Analysis -> Leaderboard.Config ViewModelItem Msg
-config analysis =
+config : String -> Analysis -> Leaderboard.Config ViewModelItem Msg
+config season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -202,7 +202,7 @@ config analysis =
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_2024 >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
             , sorter = List.sortBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
