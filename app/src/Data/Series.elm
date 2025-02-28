@@ -27,7 +27,7 @@ carImageUrl_Wec season carNumber =
         "2024" ->
             carImageFileName_2024 carNumber
                 -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
-                |> Maybe.map (\fileName -> String.concat [ "/static/image", String.dropLeft 6 fileName ])
+                |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2024", String.dropLeft 6 fileName ])
 
         _ ->
             Nothing
