@@ -22,6 +22,13 @@ toEventSummary_Wec_2024 event =
             "/static/wec_2024/" ++ id ++ ".json"
     in
     case event of
+        Qatar_1812km ->
+            { id = id
+            , name = "Qatar 1812km"
+            , date = "2024-03-02"
+            , jsonPath = jsonPath
+            }
+
         LeMans_24h ->
             { id = id
             , name = "24 Hours of Le Mans"
