@@ -2,6 +2,7 @@ module Data.Series exposing (carImageUrl_Wec, toEventSummary)
 
 import Data.Series.Wec exposing (EventSummary, Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
+import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
 
 
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary
@@ -10,11 +11,14 @@ toEventSummary ( season, event ) =
         2024 ->
             Just (toEventSummary_Wec_2024 event)
 
+        2025 ->
+            Just (toEventSummary_Wec_2025 event)
+
         _ ->
             Nothing
 
 
-carImageUrl_Wec : String -> String -> Maybe String
+carImageUrl_Wec : Int -> String -> Maybe String
 carImageUrl_Wec season carNumber =
     let
         domain =
@@ -24,10 +28,14 @@ carImageUrl_Wec season carNumber =
             "/ecm-prod/media/cache/easy_thumb/assets/1/engage"
     in
     case season of
-        "2024" ->
+        2024 ->
             carImageFileName_2024 carNumber
                 -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
-                |> Maybe.map (\fileName -> String.concat [ "/static/image", String.dropLeft 6 fileName ])
+                |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2024", String.dropLeft 6 fileName ])
+
+        2025 ->
+            carImageFileName_2025 carNumber
+                |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2025", String.dropLeft 6 fileName ])
 
         _ ->
             Nothing

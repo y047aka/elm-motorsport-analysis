@@ -119,7 +119,7 @@ view ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderb
         [ header shared
         , case mode of
             Leaderboard ->
-                Leaderboard.view (config (String.left 4 eventSummary.date) analysis_Wec) leaderboardState raceControl_Wec
+                Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
 
             PositionHistory ->
                 PositionHistoryChart.view raceControl_Wec
@@ -192,13 +192,13 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : String -> Analysis -> Leaderboard.Config ViewModelItem Msg
+config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { getter = .metaData }
+        , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
             { label = "-"

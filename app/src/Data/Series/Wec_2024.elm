@@ -19,12 +19,21 @@ toEventSummary_Wec_2024 event =
             Data.Series.Wec.toString event
 
         jsonPath =
-            "/static/wec_2024/" ++ id ++ ".json"
+            "/static/wec/2024/" ++ id ++ ".json"
     in
     case event of
+        Qatar_1812km ->
+            { id = id
+            , name = "Qatar 1812km"
+            , season = 2024
+            , date = "2024-03-02"
+            , jsonPath = jsonPath
+            }
+
         LeMans_24h ->
             { id = id
             , name = "24 Hours of Le Mans"
+            , season = 2024
             , date = "2024-06-15"
             , jsonPath = jsonPath
             }
@@ -32,6 +41,7 @@ toEventSummary_Wec_2024 event =
         Fuji_6h ->
             { id = id
             , name = "6 Hours of Fuji"
+            , season = 2024
             , date = "2024-09-15"
             , jsonPath = jsonPath
             }
@@ -39,6 +49,7 @@ toEventSummary_Wec_2024 event =
         Bahrain_8h ->
             { id = id
             , name = "8 Hours of Bahrain"
+            , season = 2024
             , date = "2024-11-02"
             , jsonPath = jsonPath
             }

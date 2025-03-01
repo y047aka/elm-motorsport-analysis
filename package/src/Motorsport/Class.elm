@@ -79,11 +79,11 @@ fromString class =
 
 toStrokePalette : Class -> SvgPalette
 toStrokePalette class =
-    { empty | stroke = ColorValue (toHexColor class) }
+    { empty | stroke = ColorValue (toHexColor 2024 class) }
 
 
-toHexColor : Class -> Css.Color
-toHexColor class =
+toHexColor : Int -> Class -> Css.Color
+toHexColor season class =
     case class of
         None ->
             Css.hex "#000"
@@ -104,7 +104,11 @@ toHexColor class =
             Css.hex "#f60"
 
         LMGT3 ->
-            Css.hex "#f60"
+            if season > 2024 then
+                Css.hex "#060"
+
+            else
+                Css.hex "#f60"
 
         InnovativeCar ->
             Css.hex "#00f"
