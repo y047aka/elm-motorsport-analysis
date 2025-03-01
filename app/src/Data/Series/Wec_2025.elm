@@ -96,7 +96,7 @@ carImageFileName_2025 carNumber =
             Just "/91630/2_9d9324.png"
 
         "51" ->
-            Just "/91631/2_b99d9d.png"
+            Just "/91631/2_b99d9d-1.png"
 
         "54" ->
             Just "/91642/2_99d9dd.png"
