@@ -22,6 +22,7 @@ toEventSummary_Wec_2025 event =
         Qatar_1812km ->
             { id = id
             , name = "Qatar 1812km"
+            , season = 2025
             , date = "2025-03-01"
             , jsonPath = jsonPath
             }
@@ -30,6 +31,7 @@ toEventSummary_Wec_2025 event =
         _ ->
             { id = id
             , name = "Qatar 1812km"
+            , season = 2025
             , date = "2025-03-01"
             , jsonPath = jsonPath
             }

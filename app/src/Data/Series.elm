@@ -18,7 +18,7 @@ toEventSummary ( season, event ) =
             Nothing
 
 
-carImageUrl_Wec : String -> String -> Maybe String
+carImageUrl_Wec : Int -> String -> Maybe String
 carImageUrl_Wec season carNumber =
     let
         domain =
@@ -28,12 +28,12 @@ carImageUrl_Wec season carNumber =
             "/ecm-prod/media/cache/easy_thumb/assets/1/engage"
     in
     case season of
-        "2024" ->
+        2024 ->
             carImageFileName_2024 carNumber
                 -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
                 |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2024", String.dropLeft 6 fileName ])
 
-        "2025" ->
+        2025 ->
             carImageFileName_2025 carNumber
                 |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2025", String.dropLeft 6 fileName ])
 

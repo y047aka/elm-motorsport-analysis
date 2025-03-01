@@ -56,6 +56,7 @@ toString event =
 type alias EventSummary =
     { id : String
     , name : String
+    , season : Int
     , date : String
     , jsonPath : String
     }
