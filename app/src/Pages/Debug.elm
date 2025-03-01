@@ -126,7 +126,7 @@ config analysis =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { getter = .metaData }
+        , carNumberColumn_Wec 2025 { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , intColumn { label = "Lap", getter = .lap }
         , sectorTimeColumn

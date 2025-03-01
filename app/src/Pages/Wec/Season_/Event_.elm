@@ -198,7 +198,7 @@ config season analysis =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { getter = .metaData }
+        , carNumberColumn_Wec (String.toInt season |> Maybe.withDefault 2025) { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
             { label = "-"

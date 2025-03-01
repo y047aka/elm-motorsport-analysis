@@ -206,8 +206,8 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
-carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class } } -> Column data msg
-carNumberColumn_Wec { getter } =
+carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class } } -> Column data msg
+carNumberColumn_Wec season { getter } =
     { name = "#"
     , view =
         getter
@@ -219,7 +219,7 @@ carNumberColumn_Wec { getter } =
                             , textAlign center
                             , fontSize (px 14)
                             , fontWeight bold
-                            , backgroundColor (Class.toHexColor class)
+                            , backgroundColor (Class.toHexColor season class)
                             , borderRadius (px 5)
                             ]
                         ]
