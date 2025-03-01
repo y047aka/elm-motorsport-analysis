@@ -2,6 +2,7 @@ module Pages.Home_ exposing (page)
 
 import Css exposing (block, color, display, em, fontSize, inherit)
 import Data.Series.Wec_2024 exposing (wec_2024)
+import Data.Series.Wec_2025 exposing (wec_2025)
 import Html.Styled exposing (Html, a, h2, section, text)
 import Html.Styled.Attributes exposing (css, href)
 import Route.Path as Path exposing (Path(..))
@@ -16,6 +17,16 @@ page =
         , link { path = LapTimeChart, label = "LapTime Chart" }
         , link { path = LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
         , link { path = F1, label = "F1" }
+        , section_ "WEC 2025"
+            (List.map
+                (\eventSummary ->
+                    link
+                        { label = eventSummary.name
+                        , path = Wec_Season__Event_ { season = "2025", event = eventSummary.id }
+                        }
+                )
+                wec_2025
+            )
         , section_ "WEC 2024"
             (List.map
                 (\eventSummary ->

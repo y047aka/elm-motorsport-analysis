@@ -16,7 +16,7 @@ toEventSummary_Wec_2025 event =
             Data.Series.Wec.toString event
 
         jsonPath =
-            "/static/wec_2025/" ++ id ++ ".json"
+            "/static/wec/2025/" ++ id ++ ".json"
     in
     case event of
         Qatar_1812km ->

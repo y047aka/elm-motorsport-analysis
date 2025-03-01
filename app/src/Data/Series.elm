@@ -2,6 +2,7 @@ module Data.Series exposing (carImageUrl_Wec, toEventSummary)
 
 import Data.Series.Wec exposing (EventSummary, Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
+import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
 
 
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary
@@ -9,6 +10,9 @@ toEventSummary ( season, event ) =
     case season of
         2024 ->
             Just (toEventSummary_Wec_2024 event)
+
+        2025 ->
+            Just (toEventSummary_Wec_2025 event)
 
         _ ->
             Nothing
@@ -28,6 +32,10 @@ carImageUrl_Wec season carNumber =
             carImageFileName_2024 carNumber
                 -- |> Maybe.map (\fileName -> String.concat [ domain, path, fileName ])
                 |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2024", String.dropLeft 6 fileName ])
+
+        "2025" ->
+            carImageFileName_2025 carNumber
+                |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2025", String.dropLeft 6 fileName ])
 
         _ ->
             Nothing
