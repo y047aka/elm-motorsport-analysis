@@ -40,8 +40,8 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 import Array exposing (Array)
 import DataView.Options exposing (..)
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table, tbody, td, text, th, thead, tr)
-import Html.Styled.Attributes exposing (checked, class, draggable, placeholder, style, type_)
-import Html.Styled.Events exposing (on, onClick, onInput)
+import Html.Styled.Attributes exposing (checked, class, draggable, style, type_)
+import Html.Styled.Events exposing (on, onClick)
 import Json.Decode as D
 import Tuple exposing (first, second)
 
@@ -380,22 +380,11 @@ view model toMsg =
                 )
                 filteredIndexes
                 model.sorting
-
-        headerRows =
-            case filtering model.options of
-                Filtering ->
-                    [ tr [] <| viewHeaderCells model toMsg
-                    , tr [] <| viewFilterCells model toMsg
-                    ]
-
-                NoFiltering ->
-                    [ tr [] <| viewHeaderCells model toMsg ]
     in
     div []
         [ table
             [ class <| "autotable autotable-" ++ model.key ]
-            [ thead []
-                headerRows
+            [ thead [] [ tr [] <| viewHeaderCells model toMsg ]
             , tbody [] <| viewBodyRows model sortedIndexes toMsg
             ]
         , viewPagination model filteredIndexes toMsg
@@ -482,33 +471,6 @@ viewHeaderCells model toMsg =
             NoSelecting ->
                 []
         , headerCells
-        ]
-
-
-viewFilterCells : Model a -> (Msg -> msg) -> List (Html msg)
-viewFilterCells model toMsg =
-    let
-        filterCells =
-            List.map
-                (\c ->
-                    let
-                        inputHandler s =
-                            toMsg <| Filter c.key s
-                    in
-                    th
-                        [ class <| "autotable__column-filter autotable__column-filter-" ++ c.key ]
-                        [ input [ type_ "text", placeholder "Filter", onInput inputHandler ] [] ]
-                )
-                model.columns
-    in
-    List.concat
-        [ case selecting model.options of
-            Selecting ->
-                [ th [ style "width" "1%", class "autotable__header-checkbox" ] [] ]
-
-            NoSelecting ->
-                []
-        , filterCells
         ]
 
 
