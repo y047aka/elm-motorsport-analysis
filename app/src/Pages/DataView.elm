@@ -1,12 +1,11 @@
 module Pages.DataView exposing (Model, Msg, page)
 
 import DataView
-import DataView.Options exposing (DraggingOption(..), EditingOption(..), FillOption(..), FilteringOption(..), Options(..), PaginationOption(..), SelectingOption(..), SortingOption(..))
+import DataView.Options exposing (DraggingOption(..), FillOption(..), FilteringOption(..), Options(..), PaginationOption(..), SelectingOption(..), SortingOption(..))
 import DemoCss exposing (pageCss, tableDefaultCss, tableOldDefaultCss)
 import Effect exposing (Effect)
-import Html.Styled exposing (div, input)
-import Html.Styled.Attributes exposing (class, type_, value)
-import Html.Styled.Events exposing (onInput)
+import Html.Styled exposing (div)
+import Html.Styled.Attributes exposing (class)
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared
@@ -28,7 +27,7 @@ page shared route =
 
 
 type alias Model =
-    { tableState : DataView.Model Msg Person }
+    { tableState : DataView.Model Person }
 
 
 type alias Person =
@@ -43,46 +42,26 @@ init () =
     ( { tableState = DataView.init "demo" columns data options }, Effect.none )
 
 
-columns : List (DataView.Column Msg Person)
+columns : List (DataView.Column Person)
 columns =
     [ DataView.Column
         "Name"
         "name"
         .name
-        (\p i -> input [ type_ "text", value p.name, onInput <| Edit "name" i ] [])
         .name
         (String.startsWith << .name)
-        (\r v -> { r | name = v })
     , DataView.Column
         "Age"
         "age"
         (String.fromInt << .age)
-        (\p i -> input [ type_ "text", value <| String.fromInt p.age, onInput <| Edit "age" i ] [])
         (String.fromInt << .age)
         (String.startsWith << String.fromInt << .age)
-        (\r v ->
-            case String.toInt v of
-                Just age ->
-                    { r | age = age }
-
-                Nothing ->
-                    r
-        )
     , DataView.Column
         "Cats"
         "cats"
         (String.fromInt << .cats)
-        (\p i -> input [ type_ "text", value <| String.fromInt p.cats, onInput <| Edit "cats" i ] [])
         (String.fromInt << .cats)
         (String.startsWith << String.fromInt << .cats)
-        (\r v ->
-            case String.toInt v of
-                Just cats ->
-                    { r | cats = cats }
-
-                Nothing ->
-                    r
-        )
     ]
 
 
@@ -109,7 +88,7 @@ data =
 
 options : Options
 options =
-    Options Sorting Filtering Selecting Dragging Editing (Pagination 10) (Fill 10)
+    Options Sorting Filtering Selecting Dragging (Pagination 10) (Fill 10)
 
 
 
@@ -118,7 +97,6 @@ options =
 
 type Msg
     = NoOp
-    | Edit String Int String
     | TableMsg DataView.Msg
 
 
@@ -130,9 +108,6 @@ update msg model =
 
         TableMsg tableMsg ->
             ( { model | tableState = DataView.update tableMsg model.tableState }, Effect.none )
-
-        Edit key index value ->
-            ( { model | tableState = DataView.update (DataView.Edit key index value) model.tableState }, Effect.none )
 
 
 

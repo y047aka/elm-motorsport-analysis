@@ -66,26 +66,23 @@ type alias Filter =
 
 {-| Define a table column.
 -}
-type alias Column msg a =
+type alias Column a =
     { label : String
     , key : String
     , render : a -> String
-    , editRender : a -> Int -> Html msg
     , sort : a -> String
     , filter : a -> String -> Bool
-    , update : a -> String -> a
     }
 
 
 {-| Table state.
 -}
-type alias Model msg a =
-    { columns : List (Column msg a)
+type alias Model a =
+    { columns : List (Column a)
     , data : Array a
     , sorting : List Sorting
     , filters : List Filter
     , dragging : Maybe String
-    , editing : List Int
     , selections : List Int
     , page : Int
     , options : Options
@@ -102,9 +99,6 @@ type Msg
     | DragEnd
     | DragOver String
     | Drop
-    | StartEdit Int
-    | FinishEdit Int
-    | Edit String Int String
     | NextPage
     | PrevPage
     | SetPage Int
@@ -160,7 +154,7 @@ stepDirection direction =
             Asc
 
 
-findColumn : List (Column msg a) -> String -> Maybe (Column msg a)
+findColumn : List (Column a) -> String -> Maybe (Column a)
 findColumn columns key =
     List.head <| List.filter (\c -> c.key == key) columns
 
@@ -175,7 +169,7 @@ findSorting sorting key =
             None
 
 
-indexForColumn : String -> List (Column msg a) -> Maybe Int
+indexForColumn : String -> List (Column a) -> Maybe Int
 indexForColumn key columns =
     case List.head <| List.filter (\( i, c ) -> c.key == key) <| List.indexedMap (\i c -> ( i, c )) columns of
         Just ( i, _ ) ->
@@ -197,14 +191,13 @@ setOrder direction data =
 
 {-| Create table state.
 -}
-init : String -> List (Column msg a) -> List a -> Options -> Model msg a
+init : String -> List (Column a) -> List a -> Options -> Model a
 init key columns data options =
     { dragging = Nothing
     , columns = columns
     , data = Array.fromList data
     , sorting = []
     , filters = []
-    , editing = []
     , selections = []
     , page = 1
     , options = options
@@ -214,7 +207,7 @@ init key columns data options =
 
 {-| Update table state.
 -}
-update : Msg -> Model msg a -> Model msg a
+update : Msg -> Model a -> Model a
 update msg model =
     case msg of
         Sort key ->
@@ -291,29 +284,6 @@ update msg model =
         Drop ->
             { model | dragging = Nothing }
 
-        StartEdit index ->
-            { model | editing = index :: model.editing }
-
-        FinishEdit index ->
-            { model | editing = List.filter (\i -> i /= index) model.editing }
-
-        Edit key index value ->
-            case findColumn model.columns key of
-                Just column ->
-                    case Array.get index model.data of
-                        Just r ->
-                            let
-                                row =
-                                    column.update r value
-                            in
-                            { model | data = Array.set index row model.data }
-
-                        Nothing ->
-                            model
-
-                Nothing ->
-                    model
-
         NextPage ->
             { model | page = model.page + 1 }
 
@@ -366,7 +336,7 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : Model msg a -> (Msg -> msg) -> Html msg
+view : Model a -> (Msg -> msg) -> Html msg
 view model toMsg =
     let
         indexes =
@@ -445,7 +415,7 @@ viewDirection direction =
             ""
 
 
-headerCellAttrs : Model msg a -> (Msg -> msg) -> Column msg a -> List (Attribute msg)
+headerCellAttrs : Model a -> (Msg -> msg) -> Column a -> List (Attribute msg)
 headerCellAttrs model toMsg c =
     List.concat
         [ case sorting model.options of
@@ -477,7 +447,7 @@ headerCellAttrs model toMsg c =
         ]
 
 
-viewHeaderCells : Model msg a -> (Msg -> msg) -> List (Html msg)
+viewHeaderCells : Model a -> (Msg -> msg) -> List (Html msg)
 viewHeaderCells model toMsg =
     let
         makeAttrs =
@@ -512,16 +482,10 @@ viewHeaderCells model toMsg =
             NoSelecting ->
                 []
         , headerCells
-        , case editing model.options of
-            Editing ->
-                [ th [ style "width" "5%", class "autotable__actions-header" ] [] ]
-
-            NoEditing ->
-                []
         ]
 
 
-viewFilterCells : Model msg a -> (Msg -> msg) -> List (Html msg)
+viewFilterCells : Model a -> (Msg -> msg) -> List (Html msg)
 viewFilterCells model toMsg =
     let
         filterCells =
@@ -545,16 +509,10 @@ viewFilterCells model toMsg =
             NoSelecting ->
                 []
         , filterCells
-        , case editing model.options of
-            Editing ->
-                [ th [ style "width" "5%", class "autotable__header-actions" ] [] ]
-
-            NoEditing ->
-                []
         ]
 
 
-viewBodyRows : Model msg a -> List Int -> (Msg -> msg) -> List (Html msg)
+viewBodyRows : Model a -> List Int -> (Msg -> msg) -> List (Html msg)
 viewBodyRows model indexes toMsg =
     let
         window =
@@ -569,14 +527,6 @@ viewBodyRows model indexes toMsg =
             List.filterMap (\i -> Array.get i model.data) window
 
         buildRow index row =
-            let
-                editSignal =
-                    if listContains index model.editing then
-                        FinishEdit
-
-                    else
-                        StartEdit
-            in
             tr [] <|
                 List.concat
                     [ case selecting model.options of
@@ -594,24 +544,7 @@ viewBodyRows model indexes toMsg =
 
                         NoSelecting ->
                             []
-                    , List.map
-                        (\c ->
-                            if listContains index model.editing then
-                                viewEditRow c row index
-
-                            else
-                                viewDisplayRow c row
-                        )
-                        model.columns
-                    , case editing model.options of
-                        Editing ->
-                            [ td
-                                [ class "autotable__actions" ]
-                                [ button [ onClick <| toMsg <| editSignal index ] [ text "Edit" ] ]
-                            ]
-
-                        NoEditing ->
-                            []
+                    , List.map (\c -> viewDisplayRow c row) model.columns
                     ]
 
         fillRows =
@@ -626,17 +559,11 @@ viewBodyRows model indexes toMsg =
                                 List.length model.columns
 
                             colCount =
-                                case ( editing model.options, selecting model.options ) of
-                                    ( Editing, Selecting ) ->
-                                        baseColCount + 2
-
-                                    ( Editing, NoSelecting ) ->
+                                case selecting model.options of
+                                    Selecting ->
                                         baseColCount + 1
 
-                                    ( NoEditing, Selecting ) ->
-                                        baseColCount + 1
-
-                                    ( NoEditing, NoSelecting ) ->
+                                    NoSelecting ->
                                         baseColCount
 
                             emptyRow =
@@ -658,14 +585,9 @@ viewBodyRows model indexes toMsg =
         ]
 
 
-viewDisplayRow : Column msg a -> a -> Html msg
+viewDisplayRow : Column a -> a -> Html msg
 viewDisplayRow column row =
     td [ class "text-left" ] [ text <| column.render row ]
-
-
-viewEditRow : Column msg a -> a -> Int -> Html msg
-viewEditRow column row index =
-    td [ class "text-left editing" ] [ column.editRender row index ]
 
 
 viewPaginationButton : Int -> (Msg -> msg) -> Int -> Html msg
@@ -686,7 +608,7 @@ viewPaginationButton activePage toMsg n =
         [ text <| String.fromInt page ]
 
 
-viewPagination : Model msg a -> List Int -> (Msg -> msg) -> Html msg
+viewPagination : Model a -> List Int -> (Msg -> msg) -> Html msg
 viewPagination model filteredIndexes toMsg =
     let
         length =
