@@ -40,7 +40,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 import Array exposing (Array)
 import DataView.Options exposing (..)
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table, tbody, td, text, th, thead, tr)
-import Html.Styled.Attributes exposing (checked, class, draggable, style, type_)
+import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Json.Decode as D
 import Tuple exposing (first, second)
@@ -82,7 +82,6 @@ type alias Model a =
     , data : Array a
     , sorting : List Sorting
     , filters : List Filter
-    , dragging : Maybe String
     , selections : List Int
     , page : Int
     , options : Options
@@ -95,10 +94,6 @@ type alias Model a =
 type Msg
     = Sort String
     | Filter String String
-    | DragStart String
-    | DragEnd
-    | DragOver String
-    | Drop
     | NextPage
     | PrevPage
     | SetPage Int
@@ -114,26 +109,6 @@ listContains item list =
 
         Nothing ->
             False
-
-
-onDragStart : msg -> Attribute msg
-onDragStart msg =
-    on "dragstart" <| D.succeed msg
-
-
-onDragEnd : msg -> Attribute msg
-onDragEnd msg =
-    on "dragend" <| D.succeed msg
-
-
-onDragOver : msg -> Attribute msg
-onDragOver msg =
-    on "dragover" <| D.succeed msg
-
-
-onDrop : msg -> Attribute msg
-onDrop msg =
-    on "drop" <| D.succeed msg
 
 
 onToggleCheck : msg -> Attribute msg
@@ -169,16 +144,6 @@ findSorting sorting key =
             None
 
 
-indexForColumn : String -> List (Column a) -> Maybe Int
-indexForColumn key columns =
-    case List.head <| List.filter (\( i, c ) -> c.key == key) <| List.indexedMap (\i c -> ( i, c )) columns of
-        Just ( i, _ ) ->
-            Just i
-
-        Nothing ->
-            Nothing
-
-
 setOrder : Direction -> List a -> List a
 setOrder direction data =
     case direction of
@@ -193,8 +158,7 @@ setOrder direction data =
 -}
 init : String -> List (Column a) -> List a -> Options -> Model a
 init key columns data options =
-    { dragging = Nothing
-    , columns = columns
+    { columns = columns
     , data = Array.fromList data
     , sorting = []
     , filters = []
@@ -244,45 +208,6 @@ update msg model =
                             List.append newFilters [ ( key, s ) ]
             in
             { model | filters = filters }
-
-        DragStart target ->
-            { model | dragging = Just target }
-
-        DragEnd ->
-            { model | dragging = Nothing }
-
-        DragOver target ->
-            -- TODO: This is better than what was here before but still not
-            -- great, in my option. Surely there's a cleaner way.
-            case ( indexForColumn target model.columns, model.dragging ) of
-                ( Just targetPosition, Just key ) ->
-                    if key /= target then
-                        case List.head <| List.filter (\c -> c.key == key) model.columns of
-                            Just column ->
-                                let
-                                    cleaned =
-                                        List.filter (\c -> c.key /= key) model.columns
-
-                                    columns =
-                                        List.concat
-                                            [ List.take targetPosition cleaned
-                                            , [ column ]
-                                            , List.drop targetPosition cleaned
-                                            ]
-                                in
-                                { model | columns = columns }
-
-                            Nothing ->
-                                model
-
-                    else
-                        model
-
-                _ ->
-                    model
-
-        Drop ->
-            { model | dragging = Nothing }
 
         NextPage ->
             { model | page = model.page + 1 }
@@ -413,24 +338,11 @@ headerCellAttrs model toMsg c =
 
             NoSorting ->
                 []
-        , case dragging model.options of
-            Dragging ->
-                [ onDragStart <| toMsg <| DragStart c.key
-                , onDragEnd <| toMsg DragEnd
-                , onDragOver <| toMsg <| DragOver c.key
-                , draggable "true"
-                ]
-
-            NoDragging ->
-                []
-        , case ( dragging model.options, sorting model.options ) of
-            ( Dragging, _ ) ->
+        , case sorting model.options of
+            Sorting ->
                 [ style "user-select" "none" ]
 
-            ( _, Sorting ) ->
-                [ style "user-select" "none" ]
-
-            ( _, _ ) ->
+            _ ->
                 []
         , [ class <| "autotable__column autotable__column-" ++ c.key ]
         ]
