@@ -2,7 +2,7 @@ module Pages.DataView exposing (Model, Msg, page)
 
 import DataView
 import DataView.Options exposing (FillOption(..), FilteringOption(..), Options(..), PaginationOption(..), SelectingOption(..), SortingOption(..))
-import DemoCss exposing (pageCss, tableDefaultCss, tableOldDefaultCss)
+import DemoCss exposing (tableDefaultCss)
 import Effect exposing (Effect)
 import Html.Styled exposing (div)
 import Html.Styled.Attributes exposing (class)
@@ -119,8 +119,7 @@ view _ model =
     { title = "DataView"
     , body =
         [ div []
-            [ pageCss
-            , tableOldDefaultCss
+            [ tableDefaultCss
             , div [ class "container" ] [ DataView.view model.tableState TableMsg ]
             ]
         ]
