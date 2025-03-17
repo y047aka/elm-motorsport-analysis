@@ -1,7 +1,7 @@
 module DataView.Options exposing
-    ( SortingOption(..), FilteringOption(..), SelectingOption(..), PaginationOption(..), FillOption(..), Options(..)
+    ( SortingOption(..), FilteringOption(..), SelectingOption(..), PaginationOption(..), Options(..)
     , defaultOptions
-    , sorting, filtering, selecting, pagination, fill
+    , sorting, filtering, selecting, pagination
     )
 
 {-| Autotable options, allows configuration and toggling of features.
@@ -9,7 +9,7 @@ module DataView.Options exposing
 
 # Types
 
-@docs SortingOption, FilteringOption, SelectingOption, PaginationOption, FillOption, Options
+@docs SortingOption, FilteringOption, SelectingOption, PaginationOption, Options
 
 
 # Defaults
@@ -19,7 +19,7 @@ module DataView.Options exposing
 
 # Accessors
 
-@docs sorting, filtering, selecting, pagination, fill
+@docs sorting, filtering, selecting, pagination
 
 -}
 
@@ -52,56 +52,42 @@ type PaginationOption
     | Pagination Int
 
 
-{-| Configure empty row fill.
--}
-type FillOption
-    = NoFill
-    | Fill Int
-
-
 {-| Options to be passed to the table.
 -}
 type Options
-    = Options SortingOption FilteringOption SelectingOption PaginationOption FillOption
+    = Options SortingOption FilteringOption SelectingOption PaginationOption
 
 
 {-| Some nice defaults.
 -}
 defaultOptions : Options
 defaultOptions =
-    Options Sorting Filtering Selecting (Pagination 10) (Fill 10)
+    Options Sorting Filtering Selecting (Pagination 10)
 
 
 {-| Access sorting option.
 -}
 sorting : Options -> SortingOption
-sorting (Options s _ _ _ _) =
+sorting (Options s _ _ _) =
     s
 
 
 {-| Access filtering option.
 -}
 filtering : Options -> FilteringOption
-filtering (Options _ f _ _ _) =
+filtering (Options _ f _ _) =
     f
 
 
 {-| Access selecting option.
 -}
 selecting : Options -> SelectingOption
-selecting (Options _ _ s _ _) =
+selecting (Options _ _ s _) =
     s
 
 
 {-| Access pagination option.
 -}
 pagination : Options -> PaginationOption
-pagination (Options _ _ _ p _) =
+pagination (Options _ _ _ p) =
     p
-
-
-{-| Access fill option.
--}
-fill : Options -> FillOption
-fill (Options _ _ _ _ f) =
-    f
