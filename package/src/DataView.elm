@@ -38,7 +38,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 -}
 
 import Array exposing (Array)
-import DataView.Options exposing (..)
+import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table, tbody, td, text, th, thead, tr)
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
@@ -330,15 +330,15 @@ viewDirection direction =
 
 
 headerCellAttrs : Model a -> (Msg -> msg) -> Column a -> List (Attribute msg)
-headerCellAttrs model toMsg c =
+headerCellAttrs { options } toMsg c =
     List.concat
-        [ case sorting model.options of
+        [ case options.sorting of
             Sorting ->
                 [ onClick <| toMsg <| Sort c.key ]
 
             NoSorting ->
                 []
-        , case sorting model.options of
+        , case options.sorting of
             Sorting ->
                 [ style "user-select" "none" ]
 
@@ -373,7 +373,7 @@ viewHeaderCells model toMsg =
             Array.length model.data == List.length model.selections
     in
     List.concat
-        [ case selecting model.options of
+        [ case model.options.selecting of
             Selecting ->
                 [ th
                     [ style "width" "1%", class "autotable__checkbox-header" ]
@@ -390,7 +390,7 @@ viewBodyRows : Model a -> List Int -> (Msg -> msg) -> List (Html msg)
 viewBodyRows model indexes toMsg =
     let
         window =
-            case pagination model.options of
+            case model.options.pagination of
                 Pagination pageSize ->
                     List.take pageSize <| List.drop (pageSize * (model.page - 1)) indexes
 
@@ -403,7 +403,7 @@ viewBodyRows model indexes toMsg =
         buildRow index row =
             tr [] <|
                 List.concat
-                    [ case selecting model.options of
+                    [ case model.options.selecting of
                         Selecting ->
                             [ td
                                 [ class "autotable__checkbox" ]
@@ -454,7 +454,7 @@ viewPagination model filteredIndexes toMsg =
             List.length filteredIndexes
 
         numPages =
-            case pagination model.options of
+            case model.options.pagination of
                 Pagination pageSize ->
                     if modBy pageSize length == 0 then
                         length // pageSize

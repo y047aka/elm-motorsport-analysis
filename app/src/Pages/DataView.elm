@@ -1,7 +1,7 @@
 module Pages.DataView exposing (Model, Msg, page)
 
 import DataView
-import DataView.Options exposing (FilteringOption(..), Options(..), PaginationOption(..), SelectingOption(..), SortingOption(..))
+import DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import DemoCss exposing (tableDefaultCss)
 import Effect exposing (Effect)
 import Html.Styled exposing (div)
@@ -88,7 +88,11 @@ data =
 
 options : Options
 options =
-    Options Sorting Filtering Selecting (Pagination 10)
+    { sorting = Sorting
+    , filtering = Filtering
+    , selecting = Selecting
+    , pagination = Pagination 10
+    }
 
 
 
