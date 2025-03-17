@@ -1,5 +1,6 @@
 module DataView exposing
-    ( Column, Filter, Model, Msg(..), Sorting
+    ( Filter, Model, Msg(..), Sorting
+    , Column, stringColumn, intColumn
     , noFiltering, noSorting
     , init
     , update
@@ -13,7 +14,9 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 
 # Types
 
-@docs Column, Filter, Model, Msg, Sorting
+@docs Filter, Model, Msg, Sorting
+
+@docs Column, stringColumn, intColumn
 
 
 # Defaults
@@ -62,17 +65,6 @@ type alias Sorting =
 -}
 type alias Filter =
     ( String, String )
-
-
-{-| Define a table column.
--}
-type alias Column a =
-    { label : String
-    , key : String
-    , render : a -> String
-    , sort : a -> String
-    , filter : a -> String -> Bool
-    }
 
 
 {-| Table state.
@@ -235,6 +227,43 @@ update msg model =
 
             else
                 { model | selections = List.range 0 <| Array.length model.data - 1 }
+
+
+
+-- COLUMNS
+
+
+{-| Define a table column.
+-}
+type alias Column a =
+    { label : String
+    , key : String
+    , render : a -> String
+    , sort : a -> String
+    , filter : a -> String -> Bool
+    }
+
+
+{-| -}
+stringColumn : { label : String, key : String, getter : a -> String } -> Column a
+stringColumn { label, key, getter } =
+    { label = label
+    , key = key
+    , render = getter
+    , sort = getter
+    , filter = getter >> String.startsWith
+    }
+
+
+{-| -}
+intColumn : { label : String, key : String, getter : a -> Int } -> Column a
+intColumn { label, key, getter } =
+    { label = label
+    , key = key
+    , render = getter >> String.fromInt
+    , sort = getter >> String.fromInt
+    , filter = getter >> String.fromInt >> String.startsWith
+    }
 
 
 sorter : (a -> String) -> Array a -> Int -> Int -> Order

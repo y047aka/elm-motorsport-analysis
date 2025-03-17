@@ -1,6 +1,6 @@
 module Pages.DataView exposing (Model, Msg, page)
 
-import DataView
+import DataView exposing (Column, intColumn, stringColumn)
 import DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import DemoCss exposing (tableDefaultCss)
 import Effect exposing (Effect)
@@ -42,26 +42,23 @@ init () =
     ( { tableState = DataView.init "demo" columns data options }, Effect.none )
 
 
-columns : List (DataView.Column Person)
+columns : List (Column Person)
 columns =
-    [ DataView.Column
-        "Name"
-        "name"
-        .name
-        .name
-        (String.startsWith << .name)
-    , DataView.Column
-        "Age"
-        "age"
-        (String.fromInt << .age)
-        (String.fromInt << .age)
-        (String.startsWith << String.fromInt << .age)
-    , DataView.Column
-        "Cats"
-        "cats"
-        (String.fromInt << .cats)
-        (String.fromInt << .cats)
-        (String.startsWith << String.fromInt << .cats)
+    [ stringColumn
+        { label = "Name"
+        , key = "name"
+        , getter = .name
+        }
+    , intColumn
+        { label = "Age"
+        , key = "age"
+        , getter = .age
+        }
+    , intColumn
+        { label = "Cats"
+        , key = "cats"
+        , getter = .cats
+        }
     ]
 
 
