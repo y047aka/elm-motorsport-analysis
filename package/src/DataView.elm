@@ -69,8 +69,8 @@ type alias Filter =
 
 {-| Table state.
 -}
-type alias Model a =
-    { columns : List (Column a)
+type alias Model a msg =
+    { columns : List (Column a msg)
     , data : Array a
     , sorting : List Sorting
     , filters : List Filter
@@ -121,7 +121,7 @@ stepDirection direction =
             Asc
 
 
-findColumn : List (Column a) -> String -> Maybe (Column a)
+findColumn : List (Column a msg) -> String -> Maybe (Column a msg)
 findColumn columns key =
     List.head <| List.filter (\c -> c.key == key) columns
 
@@ -148,7 +148,7 @@ setOrder direction data =
 
 {-| Create table state.
 -}
-init : String -> List (Column a) -> List a -> Options -> Model a
+init : String -> List (Column a msg) -> List a -> Options -> Model a msg
 init key columns data options =
     { columns = columns
     , data = Array.fromList data
@@ -163,7 +163,7 @@ init key columns data options =
 
 {-| Update table state.
 -}
-update : Msg -> Model a -> Model a
+update : Msg -> Model a msg -> Model a msg
 update msg model =
     case msg of
         Sort key ->
@@ -235,32 +235,32 @@ update msg model =
 
 {-| Define a table column.
 -}
-type alias Column a =
+type alias Column a msg =
     { label : String
     , key : String
-    , render : a -> String
+    , render : a -> Html msg
     , sort : a -> String
     , filter : a -> String -> Bool
     }
 
 
 {-| -}
-stringColumn : { label : String, key : String, getter : a -> String } -> Column a
+stringColumn : { label : String, key : String, getter : a -> String } -> Column a msg
 stringColumn { label, key, getter } =
     { label = label
     , key = key
-    , render = getter
+    , render = getter >> text
     , sort = getter
     , filter = getter >> String.startsWith
     }
 
 
 {-| -}
-intColumn : { label : String, key : String, getter : a -> Int } -> Column a
+intColumn : { label : String, key : String, getter : a -> Int } -> Column a msg
 intColumn { label, key, getter } =
     { label = label
     , key = key
-    , render = getter >> String.fromInt
+    , render = getter >> String.fromInt >> text
     , sort = getter >> String.fromInt
     , filter = getter >> String.fromInt >> String.startsWith
     }
@@ -290,7 +290,7 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : Model a -> (Msg -> msg) -> Html msg
+view : Model a msg -> (Msg -> msg) -> Html msg
 view model toMsg =
     let
         indexes =
@@ -358,7 +358,7 @@ viewDirection direction =
             ""
 
 
-headerCellAttrs : Model a -> (Msg -> msg) -> Column a -> List (Attribute msg)
+headerCellAttrs : Model a msg -> (Msg -> msg) -> Column a msg -> List (Attribute msg)
 headerCellAttrs { options } toMsg c =
     List.concat
         [ case options.sorting of
@@ -373,11 +373,11 @@ headerCellAttrs { options } toMsg c =
 
             _ ->
                 []
-        , [ class <| "autotable__column autotable__column-" ++ c.key ]
+        , [ class <| "autotable__Column a msgutotable__column-" ++ c.key ]
         ]
 
 
-viewHeaderCells : Model a -> (Msg -> msg) -> List (Html msg)
+viewHeaderCells : Model a msg -> (Msg -> msg) -> List (Html msg)
 viewHeaderCells model toMsg =
     let
         makeAttrs =
@@ -415,7 +415,7 @@ viewHeaderCells model toMsg =
         ]
 
 
-viewBodyRows : Model a -> List Int -> (Msg -> msg) -> List (Html msg)
+viewBodyRows : Model a msg -> List Int -> (Msg -> msg) -> List (Html msg)
 viewBodyRows model indexes toMsg =
     let
         window =
@@ -453,9 +453,9 @@ viewBodyRows model indexes toMsg =
     List.map2 buildRow window rows
 
 
-viewDisplayRow : Column a -> a -> Html msg
+viewDisplayRow : Column a msg -> a -> Html msg
 viewDisplayRow column row =
-    td [ class "text-left" ] [ text <| column.render row ]
+    td [ class "text-left" ] [ column.render row ]
 
 
 viewPaginationButton : Int -> (Msg -> msg) -> Int -> Html msg
@@ -476,7 +476,7 @@ viewPaginationButton activePage toMsg n =
         [ text <| String.fromInt page ]
 
 
-viewPagination : Model a -> List Int -> (Msg -> msg) -> Html msg
+viewPagination : Model a msg -> List Int -> (Msg -> msg) -> Html msg
 viewPagination model filteredIndexes toMsg =
     let
         length =

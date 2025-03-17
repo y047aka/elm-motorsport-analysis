@@ -27,7 +27,7 @@ page shared route =
 
 
 type alias Model =
-    { tableState : DataView.Model Person }
+    { tableState : DataView.Model Person Msg }
 
 
 type alias Person =
@@ -42,7 +42,7 @@ init () =
     ( { tableState = DataView.init "demo" columns data options }, Effect.none )
 
 
-columns : List (Column Person)
+columns : List (Column Person Msg)
 columns =
     [ stringColumn
         { label = "Name"
