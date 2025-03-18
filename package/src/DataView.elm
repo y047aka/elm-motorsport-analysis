@@ -106,61 +106,6 @@ type Msg
     | ToggleSelectAll
 
 
-listContains : a -> List a -> Bool
-listContains item list =
-    case List.head <| List.filter (\i -> i == item) list of
-        Just found ->
-            True
-
-        Nothing ->
-            False
-
-
-onToggleCheck : msg -> Attribute msg
-onToggleCheck msg =
-    on "input" <| D.succeed msg
-
-
-stepDirection : Direction -> Direction
-stepDirection direction =
-    case direction of
-        Ascending ->
-            Descending
-
-        Descending ->
-            None
-
-        None ->
-            Ascending
-
-
-findColumn : List (Column a msg) -> String -> Maybe (Column a msg)
-findColumn columns key =
-    List.head <| List.filter (\c -> c.key == key) columns
-
-
-findSorting : List Sorting -> String -> Direction
-findSorting sorting key =
-    case List.head <| List.filter (\s -> first s == key) sorting of
-        Just s ->
-            second s
-
-        Nothing ->
-            None
-
-
-setOrder : Direction -> List a -> List a
-setOrder direction data =
-    case direction of
-        Descending ->
-            List.reverse data
-
-        _ ->
-            data
-
-
-{-| Update table state.
--}
 update : Msg -> Model a msg -> Model a msg
 update msg model =
     case msg of
@@ -225,6 +170,59 @@ update msg model =
 
             else
                 { model | selections = List.range 0 <| Array.length model.data - 1 }
+
+
+stepDirection : Direction -> Direction
+stepDirection direction =
+    case direction of
+        Ascending ->
+            Descending
+
+        Descending ->
+            None
+
+        None ->
+            Ascending
+
+
+findSorting : List Sorting -> String -> Direction
+findSorting sorting key =
+    case List.head <| List.filter (\s -> first s == key) sorting of
+        Just s ->
+            second s
+
+        Nothing ->
+            None
+
+
+listContains : a -> List a -> Bool
+listContains item list =
+    case List.head <| List.filter (\i -> i == item) list of
+        Just found ->
+            True
+
+        Nothing ->
+            False
+
+
+onToggleCheck : msg -> Attribute msg
+onToggleCheck msg =
+    on "input" <| D.succeed msg
+
+
+findColumn : List (Column a msg) -> String -> Maybe (Column a msg)
+findColumn columns key =
+    List.head <| List.filter (\c -> c.key == key) columns
+
+
+setOrder : Direction -> List a -> List a
+setOrder direction data =
+    case direction of
+        Descending ->
+            List.reverse data
+
+        _ ->
+            data
 
 
 
