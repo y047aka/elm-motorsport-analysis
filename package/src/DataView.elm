@@ -46,7 +46,7 @@ import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Json.Decode as D
-import Tuple exposing (first, second)
+import List.Extra
 
 
 
@@ -111,20 +111,20 @@ update msg model =
     case msg of
         Sort key ->
             let
-                dir =
+                direction =
                     findSorting model.sorting key |> stepDirection
 
                 sorting =
-                    case dir of
+                    case direction of
                         None ->
-                            List.filter (\s -> first s /= key) model.sorting
+                            List.filter (\s -> Tuple.first s /= key) model.sorting
 
                         _ ->
                             let
                                 newSorting =
-                                    List.filter (\s -> first s /= key) model.sorting
+                                    List.filter (\s -> Tuple.first s /= key) model.sorting
                             in
-                            List.append newSorting [ ( key, dir ) ]
+                            List.append newSorting [ ( key, direction ) ]
             in
             { model | sorting = sorting }
 
@@ -133,12 +133,12 @@ update msg model =
                 filters =
                     case s of
                         "" ->
-                            List.filter (\f -> first f /= key) model.filters
+                            List.filter (\f -> Tuple.first f /= key) model.filters
 
                         _ ->
                             let
                                 newFilters =
-                                    List.filter (\f -> first f /= key) model.filters
+                                    List.filter (\f -> Tuple.first f /= key) model.filters
                             in
                             List.append newFilters [ ( key, s ) ]
             in
@@ -148,11 +148,7 @@ update msg model =
             { model | page = model.page + 1 }
 
         PrevPage ->
-            let
-                page =
-                    max 1 <| model.page - 1
-            in
-            { model | page = page }
+            { model | page = max 1 (model.page - 1) }
 
         SetPage page ->
             { model | page = page }
@@ -187,9 +183,9 @@ stepDirection direction =
 
 findSorting : List Sorting -> String -> Direction
 findSorting sorting key =
-    case List.head <| List.filter (\s -> first s == key) sorting of
+    case List.Extra.find (\s -> Tuple.first s == key) sorting of
         Just s ->
-            second s
+            Tuple.second s
 
         Nothing ->
             None
@@ -299,13 +295,13 @@ view model toMsg =
         filteredIndexes =
             List.foldl
                 (\f data ->
-                    case findColumn model.columns (first f) of
+                    case findColumn model.columns (Tuple.first f) of
                         Just c ->
                             List.filter
                                 (\d ->
                                     case Array.get d model.data of
                                         Just r ->
-                                            c.filter r <| second f
+                                            c.filter r <| Tuple.second f
 
                                         Nothing ->
                                             False
@@ -323,9 +319,9 @@ view model toMsg =
                 (\s data ->
                     let
                         dir =
-                            second s
+                            Tuple.second s
                     in
-                    case findColumn model.columns (first s) of
+                    case findColumn model.columns (Tuple.first s) of
                         Just c ->
                             setOrder dir <| List.sortWith (sorter c.sort model.data) data
 
