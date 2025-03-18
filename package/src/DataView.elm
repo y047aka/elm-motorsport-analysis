@@ -49,26 +49,10 @@ import Json.Decode as D
 import Tuple exposing (first, second)
 
 
-type Direction
-    = Asc
-    | Desc
-    | None
+
+-- MODEL
 
 
-{-| Represents a sorting direction.
--}
-type alias Sorting =
-    ( String, Direction )
-
-
-{-| Represents a filter.
--}
-type alias Filter =
-    ( String, String )
-
-
-{-| Table state.
--}
 type alias Model a msg =
     { columns : List (Column a msg)
     , data : Array a
@@ -81,8 +65,37 @@ type alias Model a msg =
     }
 
 
-{-| Table signals.
--}
+type alias Sorting =
+    ( String, Direction )
+
+
+type alias Filter =
+    ( String, String )
+
+
+type Direction
+    = Asc
+    | Desc
+    | None
+
+
+init : String -> List (Column a msg) -> List a -> Options -> Model a msg
+init key columns data options =
+    { columns = columns
+    , data = Array.fromList data
+    , sorting = []
+    , filters = []
+    , selections = []
+    , page = 1
+    , options = options
+    , key = key
+    }
+
+
+
+-- UPDATE
+
+
 type Msg
     = Sort String
     | Filter String String
@@ -144,21 +157,6 @@ setOrder direction data =
 
         _ ->
             data
-
-
-{-| Create table state.
--}
-init : String -> List (Column a msg) -> List a -> Options -> Model a msg
-init key columns data options =
-    { columns = columns
-    , data = Array.fromList data
-    , sorting = []
-    , filters = []
-    , selections = []
-    , page = 1
-    , options = options
-    , key = key
-    }
 
 
 {-| Update table state.
@@ -286,6 +284,10 @@ sorter sortFn data a b =
                     ""
     in
     compare ca cb
+
+
+
+-- VIEW
 
 
 {-| Render table.
