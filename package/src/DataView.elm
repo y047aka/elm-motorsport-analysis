@@ -74,8 +74,8 @@ type alias Filter =
 
 
 type Direction
-    = Asc
-    | Desc
+    = Ascending
+    | Descending
     | None
 
 
@@ -124,14 +124,14 @@ onToggleCheck msg =
 stepDirection : Direction -> Direction
 stepDirection direction =
     case direction of
-        Asc ->
-            Desc
+        Ascending ->
+            Descending
 
-        Desc ->
+        Descending ->
             None
 
         None ->
-            Asc
+            Ascending
 
 
 findColumn : List (Column a msg) -> String -> Maybe (Column a msg)
@@ -152,7 +152,7 @@ findSorting sorting key =
 setOrder : Direction -> List a -> List a
 setOrder direction data =
     case direction of
-        Desc ->
+        Descending ->
             List.reverse data
 
         _ ->
@@ -350,10 +350,10 @@ view model toMsg =
 viewDirection : Direction -> String
 viewDirection direction =
     case direction of
-        Asc ->
+        Ascending ->
             "▲"
 
-        Desc ->
+        Descending ->
             "▼"
 
         None ->
