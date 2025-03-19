@@ -27,7 +27,9 @@ page shared route =
 
 
 type alias Model =
-    { tableState : DataView.Model Person Msg }
+    { data : List Person
+    , tableState : DataView.Model Person Msg
+    }
 
 
 type alias Person =
@@ -39,7 +41,11 @@ type alias Person =
 
 init : () -> ( Model, Effect Msg )
 init () =
-    ( { tableState = DataView.init "demo" columns data options }, Effect.none )
+    ( { data = data
+      , tableState = DataView.init "demo" columns options
+      }
+    , Effect.none
+    )
 
 
 columns : List (Column Person Msg)
@@ -121,7 +127,7 @@ view _ model =
     , body =
         [ div []
             [ tableDefaultCss
-            , div [ class "container" ] [ DataView.view model.tableState TableMsg ]
+            , div [ class "container" ] [ DataView.view model.tableState TableMsg model.data ]
             ]
         ]
     }

@@ -55,7 +55,6 @@ import List.Extra
 
 type alias Model a msg =
     { columns : List (Column a msg)
-    , data : Array a
     , sorting : List Sorting
     , filters : List Filter
     , selections : List Int
@@ -79,10 +78,9 @@ type Direction
     | None
 
 
-init : String -> List (Column a msg) -> List a -> Options -> Model a msg
-init key columns data options =
+init : String -> List (Column a msg) -> Options -> Model a msg
+init key columns options =
     { columns = columns
-    , data = Array.fromList data
     , sorting = []
     , filters = []
     , selections = []
@@ -103,7 +101,7 @@ type Msg
     | PrevPage
     | SetPage Int
     | ToggleSelection Int
-    | ToggleSelectAll
+    | ToggleSelectAll Int
 
 
 update : Msg -> Model a msg -> Model a msg
@@ -160,12 +158,12 @@ update msg model =
             else
                 { model | selections = index :: model.selections }
 
-        ToggleSelectAll ->
-            if Array.length model.data == List.length model.selections then
+        ToggleSelectAll dataLength ->
+            if dataLength == List.length model.selections then
                 { model | selections = [] }
 
             else
-                { model | selections = List.range 0 <| Array.length model.data - 1 }
+                { model | selections = List.range 0 <| dataLength - 1 }
 
 
 stepDirection : Direction -> Direction
@@ -286,11 +284,14 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : Model a msg -> (Msg -> msg) -> Html msg
-view model toMsg =
+view : Model a msg -> (Msg -> msg) -> List a -> Html msg
+view model toMsg dataList =
     let
+        dataArray =
+            Array.fromList dataList
+
         indexes =
-            List.range 0 <| Array.length model.data - 1
+            List.range 0 <| Array.length dataArray - 1
 
         filteredIndexes =
             List.foldl
@@ -299,7 +300,7 @@ view model toMsg =
                         Just c ->
                             List.filter
                                 (\d ->
-                                    case Array.get d model.data of
+                                    case Array.get d dataArray of
                                         Just r ->
                                             c.filter r <| Tuple.second f
 
@@ -323,7 +324,7 @@ view model toMsg =
                     in
                     case findColumn model.columns (Tuple.first s) of
                         Just c ->
-                            setOrder dir <| List.sortWith (sorter c.sort model.data) data
+                            setOrder dir <| List.sortWith (sorter c.sort dataArray) data
 
                         Nothing ->
                             data
@@ -334,8 +335,8 @@ view model toMsg =
     div []
         [ table
             [ class <| "autotable autotable-" ++ model.key ]
-            [ thead [] [ tr [] <| viewHeaderCells model toMsg ]
-            , tbody [] <| viewBodyRows model sortedIndexes toMsg
+            [ thead [] [ tr [] <| viewHeaderCells model toMsg dataArray ]
+            , tbody [] <| viewBodyRows model sortedIndexes toMsg dataArray
             ]
         , viewPagination model filteredIndexes toMsg
         ]
@@ -373,8 +374,8 @@ headerCellAttrs { options } toMsg c =
         ]
 
 
-viewHeaderCells : Model a msg -> (Msg -> msg) -> List (Html msg)
-viewHeaderCells model toMsg =
+viewHeaderCells : Model a msg -> (Msg -> msg) -> Array a -> List (Html msg)
+viewHeaderCells model toMsg data =
     let
         makeAttrs =
             headerCellAttrs model toMsg
@@ -395,14 +396,14 @@ viewHeaderCells model toMsg =
                 model.columns
 
         allSelected =
-            Array.length model.data == List.length model.selections
+            Array.length data == List.length model.selections
     in
     List.concat
         [ case model.options.selecting of
             Selecting ->
                 [ th
                     [ style "width" "1%", class "autotable__checkbox-header" ]
-                    [ input [ type_ "checkbox", onToggleCheck <| toMsg <| ToggleSelectAll, checked allSelected ] [] ]
+                    [ input [ type_ "checkbox", onToggleCheck <| toMsg <| ToggleSelectAll (Array.length data), checked allSelected ] [] ]
                 ]
 
             NoSelecting ->
@@ -411,8 +412,8 @@ viewHeaderCells model toMsg =
         ]
 
 
-viewBodyRows : Model a msg -> List Int -> (Msg -> msg) -> List (Html msg)
-viewBodyRows model indexes toMsg =
+viewBodyRows : Model a msg -> List Int -> (Msg -> msg) -> Array a -> List (Html msg)
+viewBodyRows model indexes toMsg data =
     let
         window =
             case model.options.pagination of
@@ -423,7 +424,7 @@ viewBodyRows model indexes toMsg =
                     indexes
 
         rows =
-            List.filterMap (\i -> Array.get i model.data) window
+            List.filterMap (\i -> Array.get i data) window
 
         buildRow index row =
             tr [] <|
