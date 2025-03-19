@@ -284,8 +284,8 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : Model a msg -> (Msg -> msg) -> List a -> Html msg
-view model toMsg dataList =
+view : (Msg -> msg) -> Model a msg -> List a -> Html msg
+view toMsg model dataList =
     let
         dataArray =
             Array.fromList dataList

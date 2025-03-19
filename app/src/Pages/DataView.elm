@@ -127,7 +127,7 @@ view _ model =
     , body =
         [ div []
             [ tableDefaultCss
-            , div [ class "container" ] [ DataView.view model.tableState TableMsg model.data ]
+            , div [ class "container" ] [ DataView.view TableMsg model.tableState model.data ]
             ]
         ]
     }
