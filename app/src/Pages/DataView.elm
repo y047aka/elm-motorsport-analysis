@@ -119,18 +119,15 @@ config =
     , columns =
         [ stringColumn
             { label = "Name"
-            , key = "name"
-            , getter = .name
+            , toStr = .name
             }
         , intColumn
             { label = "Age"
-            , key = "age"
-            , getter = .age
+            , toInt = .age
             }
         , intColumn
             { label = "Cats"
-            , key = "cats"
-            , getter = .cats
+            , toInt = .cats
             }
         ]
     }

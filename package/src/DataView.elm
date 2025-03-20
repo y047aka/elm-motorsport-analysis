@@ -204,7 +204,7 @@ onToggleCheck msg =
 
 findColumn : List (Column data msg) -> String -> Maybe (Column data msg)
 findColumn columns key =
-    List.head <| List.filter (\c -> c.key == key) columns
+    List.head <| List.filter (\c -> c.name == key) columns
 
 
 setOrder : Direction -> List a -> List a
@@ -240,8 +240,7 @@ type alias Config data msg =
 {-| Define a table column.
 -}
 type alias Column data msg =
-    { label : String
-    , key : String
+    { name : String
     , view : data -> Html msg
     , sort : data -> String
     , filter : data -> String -> Bool
@@ -249,10 +248,9 @@ type alias Column data msg =
 
 
 {-| -}
-stringColumn : { label : String, key : String, toStr : data -> String } -> Column data msg
-stringColumn { label, key, toStr } =
-    { label = label
-    , key = key
+stringColumn : { label : String, toStr : data -> String } -> Column data msg
+stringColumn { label, toStr } =
+    { name = label
     , view = toStr >> text
     , sort = toStr
     , filter = toStr >> String.startsWith
@@ -260,10 +258,9 @@ stringColumn { label, key, toStr } =
 
 
 {-| -}
-intColumn : { label : String, key : String, toInt : data -> Int } -> Column data msg
-intColumn { label, key, toInt } =
-    { label = label
-    , key = key
+intColumn : { label : String, toInt : data -> Int } -> Column data msg
+intColumn { label, toInt } =
+    { name = label
     , view = toInt >> String.fromInt >> text
     , sort = toInt >> String.fromInt
     , filter = toInt >> String.fromInt >> String.startsWith
@@ -367,11 +364,11 @@ viewHeaderCells { toMsg, columns } model data =
                 (\c ->
                     let
                         sorting =
-                            findSorting model.sorting c.key |> viewDirection
+                            findSorting model.sorting c.name |> viewDirection
                     in
                     th
                         (makeAttrs c)
-                        [ text <| c.label
+                        [ text <| c.name
                         , span [ class "autotable__sort-indicator" ] [ text sorting ]
                         ]
                 )
@@ -399,7 +396,7 @@ headerCellAttrs toMsg { options } c =
     List.concat
         [ case options.sorting of
             Sorting ->
-                [ onClick <| toMsg <| Sort c.key ]
+                [ onClick <| toMsg <| Sort c.name ]
 
             NoSorting ->
                 []
@@ -409,7 +406,7 @@ headerCellAttrs toMsg { options } c =
 
             _ ->
                 []
-        , [ class <| "autotable__Column a msgutotable__column-" ++ c.key ]
+        , [ class <| "autotable__Column a msgutotable__column-" ++ c.name ]
         ]
 
 
