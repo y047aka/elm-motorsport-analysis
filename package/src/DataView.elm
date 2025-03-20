@@ -54,12 +54,12 @@ import List.Extra
 
 
 type alias Model =
-    { sorting : List Sorting
+    { key : String
+    , options : Options
+    , sorting : List Sorting
     , filters : List Filter
     , selections : List Int
     , page : Int
-    , options : Options
-    , key : String
     }
 
 
@@ -79,12 +79,12 @@ type Direction
 
 init : String -> Options -> Model
 init key options =
-    { sorting = []
+    { key = key
+    , options = options
+    , sorting = []
     , filters = []
     , selections = []
     , page = 1
-    , options = options
-    , key = key
     }
 
 
