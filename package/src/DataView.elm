@@ -202,7 +202,7 @@ onToggleCheck msg =
     on "input" <| D.succeed msg
 
 
-findColumn : List (Column a msg) -> String -> Maybe (Column a msg)
+findColumn : List (Column data msg) -> String -> Maybe (Column data msg)
 findColumn columns key =
     List.head <| List.filter (\c -> c.key == key) columns
 
@@ -227,9 +227,9 @@ setOrder direction data =
 It should only appear in `view` code.
 
 -}
-type alias Config a msg =
+type alias Config data msg =
     { toMsg : Msg -> msg
-    , columns : List (Column a msg)
+    , columns : List (Column data msg)
     }
 
 
@@ -239,17 +239,17 @@ type alias Config a msg =
 
 {-| Define a table column.
 -}
-type alias Column a msg =
+type alias Column data msg =
     { label : String
     , key : String
-    , render : a -> Html msg
-    , sort : a -> String
-    , filter : a -> String -> Bool
+    , render : data -> Html msg
+    , sort : data -> String
+    , filter : data -> String -> Bool
     }
 
 
 {-| -}
-stringColumn : { label : String, key : String, getter : a -> String } -> Column a msg
+stringColumn : { label : String, key : String, getter : data -> String } -> Column data msg
 stringColumn { label, key, getter } =
     { label = label
     , key = key
@@ -260,7 +260,7 @@ stringColumn { label, key, getter } =
 
 
 {-| -}
-intColumn : { label : String, key : String, getter : a -> Int } -> Column a msg
+intColumn : { label : String, key : String, getter : data -> Int } -> Column data msg
 intColumn { label, key, getter } =
     { label = label
     , key = key
@@ -270,7 +270,7 @@ intColumn { label, key, getter } =
     }
 
 
-sorter : (a -> String) -> Array a -> Int -> Int -> Order
+sorter : (data -> String) -> Array data -> Int -> Int -> Order
 sorter sortFn data a b =
     let
         ca =
@@ -298,7 +298,7 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : Config a msg -> Model -> List a -> Html msg
+view : Config data msg -> Model -> List data -> Html msg
 view ({ columns } as config) model dataList =
     let
         dataArray =
@@ -356,7 +356,7 @@ view ({ columns } as config) model dataList =
         ]
 
 
-viewHeaderCells : Config a msg -> Model -> Array a -> List (Html msg)
+viewHeaderCells : Config data msg -> Model -> Array data -> List (Html msg)
 viewHeaderCells { toMsg, columns } model data =
     let
         makeAttrs =
@@ -394,7 +394,7 @@ viewHeaderCells { toMsg, columns } model data =
         ]
 
 
-headerCellAttrs : (Msg -> msg) -> Model -> Column a msg -> List (Attribute msg)
+headerCellAttrs : (Msg -> msg) -> Model -> Column data msg -> List (Attribute msg)
 headerCellAttrs toMsg { options } c =
     List.concat
         [ case options.sorting of
@@ -426,7 +426,7 @@ viewDirection direction =
             ""
 
 
-viewBodyRows : Config a msg -> Model -> List Int -> Array a -> List (Html msg)
+viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List (Html msg)
 viewBodyRows { toMsg, columns } model indexes data =
     let
         window =
@@ -464,7 +464,7 @@ viewBodyRows { toMsg, columns } model indexes data =
     List.map2 buildRow window rows
 
 
-viewDisplayRow : Column a msg -> a -> Html msg
+viewDisplayRow : Column data msg -> data -> Html msg
 viewDisplayRow column row =
     td [ class "text-left" ] [ column.render row ]
 
