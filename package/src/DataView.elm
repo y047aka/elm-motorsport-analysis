@@ -352,7 +352,7 @@ view ({ columns } as config) model dataList =
             [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
             , tbody [] <| viewBodyRows config model sortedIndexes dataArray
             ]
-        , viewPagination model filteredIndexes config.toMsg
+        , viewPagination config.toMsg model filteredIndexes
         ]
 
 
@@ -369,8 +369,8 @@ viewDirection direction =
             ""
 
 
-headerCellAttrs : Model -> (Msg -> msg) -> Column a msg -> List (Attribute msg)
-headerCellAttrs { options } toMsg c =
+headerCellAttrs : (Msg -> msg) -> Model -> Column a msg -> List (Attribute msg)
+headerCellAttrs toMsg { options } c =
     List.concat
         [ case options.sorting of
             Sorting ->
@@ -392,7 +392,7 @@ viewHeaderCells : Config a msg -> Model -> Array a -> List (Html msg)
 viewHeaderCells { toMsg, columns } model data =
     let
         makeAttrs =
-            headerCellAttrs model toMsg
+            headerCellAttrs toMsg model
 
         headerCells =
             List.map
@@ -469,8 +469,8 @@ viewDisplayRow column row =
     td [ class "text-left" ] [ column.render row ]
 
 
-viewPaginationButton : Int -> (Msg -> msg) -> Int -> Html msg
-viewPaginationButton activePage toMsg n =
+viewPaginationButton : (Msg -> msg) -> Int -> Int -> Html msg
+viewPaginationButton toMsg activePage n =
     let
         page =
             n + 1
@@ -487,8 +487,8 @@ viewPaginationButton activePage toMsg n =
         [ text <| String.fromInt page ]
 
 
-viewPagination : Model -> List Int -> (Msg -> msg) -> Html msg
-viewPagination model filteredIndexes toMsg =
+viewPagination : (Msg -> msg) -> Model -> List Int -> Html msg
+viewPagination toMsg model filteredIndexes =
     let
         length =
             List.length filteredIndexes
@@ -508,7 +508,7 @@ viewPagination model filteredIndexes toMsg =
         pageButtons =
             Array.toList <|
                 Array.initialize numPages <|
-                    viewPaginationButton model.page toMsg
+                    viewPaginationButton toMsg model.page
     in
     div [ class "autotable__pagination" ] pageButtons
 
