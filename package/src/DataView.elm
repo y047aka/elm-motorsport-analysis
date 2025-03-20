@@ -248,12 +248,12 @@ type alias Column data msg =
 
 
 {-| -}
-stringColumn : { label : String, toStr : data -> String } -> Column data msg
-stringColumn { label, toStr } =
+stringColumn : { label : String, toString : data -> String } -> Column data msg
+stringColumn { label, toString } =
     { name = label
-    , view = toStr >> text
-    , sort = toStr
-    , filter = toStr >> String.startsWith
+    , view = toString >> text
+    , sort = toString
+    , filter = toString >> String.startsWith
     }
 
 

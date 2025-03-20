@@ -119,7 +119,7 @@ config =
     , columns =
         [ stringColumn
             { label = "Name"
-            , toStr = .name
+            , toString = .name
             }
         , intColumn
             { label = "Age"
