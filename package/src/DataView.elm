@@ -356,38 +356,6 @@ view ({ columns } as config) model dataList =
         ]
 
 
-viewDirection : Direction -> String
-viewDirection direction =
-    case direction of
-        Ascending ->
-            "▲"
-
-        Descending ->
-            "▼"
-
-        None ->
-            ""
-
-
-headerCellAttrs : (Msg -> msg) -> Model -> Column a msg -> List (Attribute msg)
-headerCellAttrs toMsg { options } c =
-    List.concat
-        [ case options.sorting of
-            Sorting ->
-                [ onClick <| toMsg <| Sort c.key ]
-
-            NoSorting ->
-                []
-        , case options.sorting of
-            Sorting ->
-                [ style "user-select" "none" ]
-
-            _ ->
-                []
-        , [ class <| "autotable__Column a msgutotable__column-" ++ c.key ]
-        ]
-
-
 viewHeaderCells : Config a msg -> Model -> Array a -> List (Html msg)
 viewHeaderCells { toMsg, columns } model data =
     let
@@ -424,6 +392,38 @@ viewHeaderCells { toMsg, columns } model data =
                 []
         , headerCells
         ]
+
+
+headerCellAttrs : (Msg -> msg) -> Model -> Column a msg -> List (Attribute msg)
+headerCellAttrs toMsg { options } c =
+    List.concat
+        [ case options.sorting of
+            Sorting ->
+                [ onClick <| toMsg <| Sort c.key ]
+
+            NoSorting ->
+                []
+        , case options.sorting of
+            Sorting ->
+                [ style "user-select" "none" ]
+
+            _ ->
+                []
+        , [ class <| "autotable__Column a msgutotable__column-" ++ c.key ]
+        ]
+
+
+viewDirection : Direction -> String
+viewDirection direction =
+    case direction of
+        Ascending ->
+            "▲"
+
+        Descending ->
+            "▼"
+
+        None ->
+            ""
 
 
 viewBodyRows : Config a msg -> Model -> List Int -> Array a -> List (Html msg)
@@ -469,24 +469,6 @@ viewDisplayRow column row =
     td [ class "text-left" ] [ column.render row ]
 
 
-viewPaginationButton : (Msg -> msg) -> Int -> Int -> Html msg
-viewPaginationButton toMsg activePage n =
-    let
-        page =
-            n + 1
-
-        classes =
-            if page == activePage then
-                "autotable__pagination-page autotable__pagination-active"
-
-            else
-                "autotable__pagination-page"
-    in
-    button
-        [ class classes, onClick <| toMsg <| SetPage page ]
-        [ text <| String.fromInt page ]
-
-
 viewPagination : (Msg -> msg) -> Model -> List Int -> Html msg
 viewPagination toMsg model filteredIndexes =
     let
@@ -511,6 +493,24 @@ viewPagination toMsg model filteredIndexes =
                     viewPaginationButton toMsg model.page
     in
     div [ class "autotable__pagination" ] pageButtons
+
+
+viewPaginationButton : (Msg -> msg) -> Int -> Int -> Html msg
+viewPaginationButton toMsg activePage n =
+    let
+        page =
+            n + 1
+
+        classes =
+            if page == activePage then
+                "autotable__pagination-page autotable__pagination-active"
+
+            else
+                "autotable__pagination-page"
+    in
+    button
+        [ class classes, onClick <| toMsg <| SetPage page ]
+        [ text <| String.fromInt page ]
 
 
 {-| No-op function for disabled sorting. This will go away one day.
