@@ -1,5 +1,5 @@
 module DataView exposing
-    ( Filter, Model, Msg(..), Sorting
+    ( Filter, Model, Msg(..), Sorting, Config
     , Column, stringColumn, intColumn
     , noFiltering, noSorting
     , init
@@ -14,7 +14,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 
 # Types
 
-@docs Filter, Model, Msg, Sorting
+@docs Filter, Model, Msg, Sorting, Config
 
 @docs Column, stringColumn, intColumn
 
@@ -53,9 +53,8 @@ import List.Extra
 -- MODEL
 
 
-type alias Model a msg =
-    { columns : List (Column a msg)
-    , sorting : List Sorting
+type alias Model =
+    { sorting : List Sorting
     , filters : List Filter
     , selections : List Int
     , page : Int
@@ -78,10 +77,9 @@ type Direction
     | None
 
 
-init : String -> List (Column a msg) -> Options -> Model a msg
-init key columns options =
-    { columns = columns
-    , sorting = []
+init : String -> Options -> Model
+init key options =
+    { sorting = []
     , filters = []
     , selections = []
     , page = 1
@@ -104,7 +102,7 @@ type Msg
     | ToggleSelectAll Int
 
 
-update : Msg -> Model a msg -> Model a msg
+update : Msg -> Model -> Model
 update msg model =
     case msg of
         Sort key ->
@@ -220,6 +218,22 @@ setOrder direction data =
 
 
 
+-- CONFIG
+
+
+{-| Configuration for your table, describing your columns.
+
+**Note:** Your `Config` should _never_ be held in your model.
+It should only appear in `view` code.
+
+-}
+type alias Config a msg =
+    { toMsg : Msg -> msg
+    , columns : List (Column a msg)
+    }
+
+
+
 -- COLUMNS
 
 
@@ -284,8 +298,8 @@ sorter sortFn data a b =
 
 {-| Render table.
 -}
-view : (Msg -> msg) -> Model a msg -> List a -> Html msg
-view toMsg model dataList =
+view : Config a msg -> Model -> List a -> Html msg
+view ({ columns } as config) model dataList =
     let
         dataArray =
             Array.fromList dataList
@@ -296,7 +310,7 @@ view toMsg model dataList =
         filteredIndexes =
             List.foldl
                 (\f data ->
-                    case findColumn model.columns (Tuple.first f) of
+                    case findColumn columns (Tuple.first f) of
                         Just c ->
                             List.filter
                                 (\d ->
@@ -322,7 +336,7 @@ view toMsg model dataList =
                         dir =
                             Tuple.second s
                     in
-                    case findColumn model.columns (Tuple.first s) of
+                    case findColumn columns (Tuple.first s) of
                         Just c ->
                             setOrder dir <| List.sortWith (sorter c.sort dataArray) data
 
@@ -335,10 +349,10 @@ view toMsg model dataList =
     div []
         [ table
             [ class <| "autotable autotable-" ++ model.key ]
-            [ thead [] [ tr [] <| viewHeaderCells model toMsg dataArray ]
-            , tbody [] <| viewBodyRows model sortedIndexes toMsg dataArray
+            [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
+            , tbody [] <| viewBodyRows config model sortedIndexes dataArray
             ]
-        , viewPagination model filteredIndexes toMsg
+        , viewPagination model filteredIndexes config.toMsg
         ]
 
 
@@ -355,7 +369,7 @@ viewDirection direction =
             ""
 
 
-headerCellAttrs : Model a msg -> (Msg -> msg) -> Column a msg -> List (Attribute msg)
+headerCellAttrs : Model -> (Msg -> msg) -> Column a msg -> List (Attribute msg)
 headerCellAttrs { options } toMsg c =
     List.concat
         [ case options.sorting of
@@ -374,8 +388,8 @@ headerCellAttrs { options } toMsg c =
         ]
 
 
-viewHeaderCells : Model a msg -> (Msg -> msg) -> Array a -> List (Html msg)
-viewHeaderCells model toMsg data =
+viewHeaderCells : Config a msg -> Model -> Array a -> List (Html msg)
+viewHeaderCells { toMsg, columns } model data =
     let
         makeAttrs =
             headerCellAttrs model toMsg
@@ -393,7 +407,7 @@ viewHeaderCells model toMsg data =
                         , span [ class "autotable__sort-indicator" ] [ text sorting ]
                         ]
                 )
-                model.columns
+                columns
 
         allSelected =
             Array.length data == List.length model.selections
@@ -412,8 +426,8 @@ viewHeaderCells model toMsg data =
         ]
 
 
-viewBodyRows : Model a msg -> List Int -> (Msg -> msg) -> Array a -> List (Html msg)
-viewBodyRows model indexes toMsg data =
+viewBodyRows : Config a msg -> Model -> List Int -> Array a -> List (Html msg)
+viewBodyRows { toMsg, columns } model indexes data =
     let
         window =
             case model.options.pagination of
@@ -444,7 +458,7 @@ viewBodyRows model indexes toMsg data =
 
                         NoSelecting ->
                             []
-                    , List.map (\c -> viewDisplayRow c row) model.columns
+                    , List.map (\c -> viewDisplayRow c row) columns
                     ]
     in
     List.map2 buildRow window rows
@@ -473,7 +487,7 @@ viewPaginationButton activePage toMsg n =
         [ text <| String.fromInt page ]
 
 
-viewPagination : Model a msg -> List Int -> (Msg -> msg) -> Html msg
+viewPagination : Model -> List Int -> (Msg -> msg) -> Html msg
 viewPagination model filteredIndexes toMsg =
     let
         length =

@@ -1,6 +1,6 @@
 module Pages.DataView exposing (Model, Msg, page)
 
-import DataView exposing (Column, intColumn, stringColumn)
+import DataView exposing (Config, intColumn, stringColumn)
 import DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import DemoCss exposing (tableDefaultCss)
 import Effect exposing (Effect)
@@ -28,7 +28,7 @@ page shared route =
 
 type alias Model =
     { data : List Person
-    , tableState : DataView.Model Person Msg
+    , tableState : DataView.Model
     }
 
 
@@ -42,30 +42,10 @@ type alias Person =
 init : () -> ( Model, Effect Msg )
 init () =
     ( { data = data
-      , tableState = DataView.init "demo" columns options
+      , tableState = DataView.init "demo" options
       }
     , Effect.none
     )
-
-
-columns : List (Column Person Msg)
-columns =
-    [ stringColumn
-        { label = "Name"
-        , key = "name"
-        , getter = .name
-        }
-    , intColumn
-        { label = "Age"
-        , key = "age"
-        , getter = .age
-        }
-    , intColumn
-        { label = "Cats"
-        , key = "cats"
-        , getter = .cats
-        }
-    ]
 
 
 data : List Person
@@ -127,7 +107,30 @@ view _ model =
     , body =
         [ div []
             [ tableDefaultCss
-            , div [ class "container" ] [ DataView.view TableMsg model.tableState model.data ]
+            , div [ class "container" ] [ DataView.view config model.tableState model.data ]
             ]
+        ]
+    }
+
+
+config : Config Person Msg
+config =
+    { toMsg = TableMsg
+    , columns =
+        [ stringColumn
+            { label = "Name"
+            , key = "name"
+            , getter = .name
+            }
+        , intColumn
+            { label = "Age"
+            , key = "age"
+            , getter = .age
+            }
+        , intColumn
+            { label = "Cats"
+            , key = "cats"
+            , getter = .cats
+            }
         ]
     }
