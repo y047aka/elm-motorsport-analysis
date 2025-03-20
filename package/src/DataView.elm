@@ -242,31 +242,31 @@ type alias Config data msg =
 type alias Column data msg =
     { label : String
     , key : String
-    , render : data -> Html msg
+    , view : data -> Html msg
     , sort : data -> String
     , filter : data -> String -> Bool
     }
 
 
 {-| -}
-stringColumn : { label : String, key : String, getter : data -> String } -> Column data msg
-stringColumn { label, key, getter } =
+stringColumn : { label : String, key : String, toStr : data -> String } -> Column data msg
+stringColumn { label, key, toStr } =
     { label = label
     , key = key
-    , render = getter >> text
-    , sort = getter
-    , filter = getter >> String.startsWith
+    , view = toStr >> text
+    , sort = toStr
+    , filter = toStr >> String.startsWith
     }
 
 
 {-| -}
-intColumn : { label : String, key : String, getter : data -> Int } -> Column data msg
-intColumn { label, key, getter } =
+intColumn : { label : String, key : String, toInt : data -> Int } -> Column data msg
+intColumn { label, key, toInt } =
     { label = label
     , key = key
-    , render = getter >> String.fromInt >> text
-    , sort = getter >> String.fromInt
-    , filter = getter >> String.fromInt >> String.startsWith
+    , view = toInt >> String.fromInt >> text
+    , sort = toInt >> String.fromInt
+    , filter = toInt >> String.fromInt >> String.startsWith
     }
 
 
@@ -466,7 +466,7 @@ viewBodyRows { toMsg, columns } model indexes data =
 
 viewDisplayRow : Column data msg -> data -> Html msg
 viewDisplayRow column row =
-    td [ class "text-left" ] [ column.render row ]
+    td [ class "text-left" ] [ column.view row ]
 
 
 viewPagination : (Msg -> msg) -> Model -> List Int -> Html msg
