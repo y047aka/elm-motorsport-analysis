@@ -1,6 +1,6 @@
 module DataView exposing
     ( Filter, Model, Msg(..), Sorting, Config
-    , Column, stringColumn, intColumn
+    , Column, stringColumn, intColumn, floatColumn
     , noFiltering, noSorting
     , init
     , update
@@ -16,7 +16,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 
 @docs Filter, Model, Msg, Sorting, Config
 
-@docs Column, stringColumn, intColumn
+@docs Column, stringColumn, intColumn, floatColumn
 
 
 # Defaults
@@ -264,6 +264,16 @@ intColumn { label, toInt } =
     , view = toInt >> String.fromInt >> text
     , sort = toInt >> String.fromInt
     , filter = toInt >> String.fromInt >> String.startsWith
+    }
+
+
+{-| -}
+floatColumn : { label : String, toFloat : data -> Float } -> Column data msg
+floatColumn { label, toFloat } =
+    { name = label
+    , view = toFloat >> String.fromFloat >> text
+    , sort = toFloat >> String.fromFloat
+    , filter = toFloat >> String.fromFloat >> String.startsWith
     }
 
 
