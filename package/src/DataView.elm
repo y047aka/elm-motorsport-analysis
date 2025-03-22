@@ -49,6 +49,7 @@ import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy2)
 import Json.Decode as D
 import List.Extra
+import Motorsport.Utils exposing (compareBy)
 
 
 
@@ -245,7 +246,7 @@ type alias Config data msg =
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sort : data -> String
+    , sort : data -> data -> Order
     , filter : data -> String -> Bool
     }
 
@@ -255,7 +256,7 @@ stringColumn : { label : String, toString : data -> String } -> Column data msg
 stringColumn { label, toString } =
     { name = label
     , view = toString >> text
-    , sort = toString
+    , sort = compareBy toString
     , filter = toString >> String.startsWith
     }
 
@@ -265,7 +266,7 @@ intColumn : { label : String, toInt : data -> Int } -> Column data msg
 intColumn { label, toInt } =
     { name = label
     , view = toInt >> String.fromInt >> text
-    , sort = toInt >> String.fromInt
+    , sort = compareBy toInt
     , filter = toInt >> String.fromInt >> String.startsWith
     }
 
@@ -275,31 +276,25 @@ floatColumn : { label : String, toFloat : data -> Float } -> Column data msg
 floatColumn { label, toFloat } =
     { name = label
     , view = toFloat >> String.fromFloat >> text
-    , sort = toFloat >> String.fromFloat
+    , sort = compareBy toFloat
     , filter = toFloat >> String.fromFloat >> String.startsWith
     }
 
 
-sorter : (data -> String) -> Array data -> Int -> Int -> Order
+sorter : (data -> data -> Order) -> Array data -> Int -> Int -> Order
 sorter sortFn data a b =
-    let
-        ca =
-            case Array.get a data of
-                Just r ->
-                    sortFn r
+    case ( Array.get a data, Array.get b data ) of
+        ( Just ra, Just rb ) ->
+            sortFn ra rb
 
-                Nothing ->
-                    ""
+        ( Just _, Nothing ) ->
+            GT
 
-        cb =
-            case Array.get b data of
-                Just r ->
-                    sortFn r
+        ( Nothing, Just _ ) ->
+            LT
 
-                Nothing ->
-                    ""
-    in
-    compare ca cb
+        ( Nothing, Nothing ) ->
+            EQ
 
 
 
