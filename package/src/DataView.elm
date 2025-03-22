@@ -246,38 +246,38 @@ type alias Config data msg =
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sort : data -> data -> Order
+    , sorter : data -> data -> Order
     , filter : data -> String -> Bool
     }
 
 
 {-| -}
-stringColumn : { label : String, toString : data -> String } -> Column data msg
-stringColumn { label, toString } =
+stringColumn : { label : String, getter : data -> String } -> Column data msg
+stringColumn { label, getter } =
     { name = label
-    , view = toString >> text
-    , sort = compareBy toString
-    , filter = toString >> String.startsWith
+    , view = getter >> text
+    , sorter = compareBy getter
+    , filter = getter >> String.startsWith
     }
 
 
 {-| -}
-intColumn : { label : String, toInt : data -> Int } -> Column data msg
-intColumn { label, toInt } =
+intColumn : { label : String, getter : data -> Int } -> Column data msg
+intColumn { label, getter } =
     { name = label
-    , view = toInt >> String.fromInt >> text
-    , sort = compareBy toInt
-    , filter = toInt >> String.fromInt >> String.startsWith
+    , view = getter >> String.fromInt >> text
+    , sorter = compareBy getter
+    , filter = getter >> String.fromInt >> String.startsWith
     }
 
 
 {-| -}
-floatColumn : { label : String, toFloat : data -> Float } -> Column data msg
-floatColumn { label, toFloat } =
+floatColumn : { label : String, getter : data -> Float } -> Column data msg
+floatColumn { label, getter } =
     { name = label
-    , view = toFloat >> String.fromFloat >> text
-    , sort = compareBy toFloat
-    , filter = toFloat >> String.fromFloat >> String.startsWith
+    , view = getter >> String.fromFloat >> text
+    , sorter = compareBy getter
+    , filter = getter >> String.fromFloat >> String.startsWith
     }
 
 
@@ -343,7 +343,7 @@ view ({ columns } as config) model dataList =
                     in
                     case findColumn columns (Tuple.first s) of
                         Just c ->
-                            setOrder dir <| List.sortWith (sorter c.sort dataArray) data
+                            setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
 
                         Nothing ->
                             data

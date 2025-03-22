@@ -120,15 +120,15 @@ config =
     , columns =
         [ stringColumn
             { label = "Name"
-            , toString = .name
+            , getter = .name
             }
         , intColumn
             { label = "Age"
-            , toInt = .age
+            , getter = .age
             }
         , intColumn
             { label = "Cats"
-            , toInt = .cats
+            , getter = .cats
             }
         ]
     }
