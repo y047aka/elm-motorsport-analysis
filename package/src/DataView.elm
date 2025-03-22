@@ -313,43 +313,12 @@ view ({ columns } as config) model dataList =
             List.range 0 <| Array.length dataArray - 1
 
         filteredIndexes =
-            List.foldl
-                (\f data ->
-                    case findColumn columns (Tuple.first f) of
-                        Just c ->
-                            List.filter
-                                (\d ->
-                                    case Array.get d dataArray of
-                                        Just r ->
-                                            c.filter r <| Tuple.second f
-
-                                        Nothing ->
-                                            False
-                                )
-                                data
-
-                        Nothing ->
-                            data
-                )
-                indexes
-                model.filters
+            indexes
+                |> applyFilters model.filters columns dataArray
 
         sortedIndexes =
-            List.foldl
-                (\s data ->
-                    let
-                        dir =
-                            Tuple.second s
-                    in
-                    case findColumn columns (Tuple.first s) of
-                        Just c ->
-                            setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
-
-                        Nothing ->
-                            data
-                )
-                filteredIndexes
-                model.sorting
+            filteredIndexes
+                |> applySorting model.sorting columns dataArray
     in
     div []
         [ table
@@ -435,15 +404,12 @@ viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( Stri
 viewBodyRows { toId, toMsg, columns } model indexes data =
     let
         window =
-            case model.options.pagination of
-                Pagination pageSize ->
-                    List.take pageSize <| List.drop (pageSize * (model.page - 1)) indexes
-
-                NoPagination ->
-                    indexes
+            indexes
+                |> applyPagination model.options.pagination model.page
 
         rows =
-            List.filterMap (\i -> Array.get i data) window
+            window
+                |> List.filterMap (\i -> Array.get i data)
 
         buildRow index row =
             ( toId row
@@ -532,3 +498,61 @@ noSorting _ =
 noFiltering : a -> String -> Bool
 noFiltering _ _ =
     True
+
+
+{-| フィルタリング処理を関数として分離
+-}
+applyFilters : List Filter -> List (Column data msg) -> Array data -> List Int -> List Int
+applyFilters filters columns dataArray indexes =
+    List.foldl
+        (\f data ->
+            case findColumn columns (Tuple.first f) of
+                Just c ->
+                    List.filter
+                        (\d ->
+                            case Array.get d dataArray of
+                                Just r ->
+                                    c.filter r <| Tuple.second f
+
+                                Nothing ->
+                                    False
+                        )
+                        data
+
+                Nothing ->
+                    data
+        )
+        indexes
+        filters
+
+
+{-| ソート処理を関数として分離
+-}
+applySorting : List Sorting -> List (Column data msg) -> Array data -> List Int -> List Int
+applySorting sortings columns dataArray indexes =
+    List.foldl
+        (\s data ->
+            let
+                dir =
+                    Tuple.second s
+            in
+            case findColumn columns (Tuple.first s) of
+                Just c ->
+                    setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
+
+                Nothing ->
+                    data
+        )
+        indexes
+        sortings
+
+
+applyPagination : PaginationOption -> Int -> List Int -> List Int
+applyPagination option page indexes =
+    case option of
+        Pagination pageSize ->
+            List.drop (pageSize * (page - 1)) indexes
+                |> List.take pageSize
+
+        NoPagination ->
+            indexes
