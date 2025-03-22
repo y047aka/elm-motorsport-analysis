@@ -57,6 +57,7 @@ import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes
@@ -166,11 +167,7 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter =
-        \a b ->
-            compare
-                (getter a |> Maybe.map .time |> Maybe.withDefault 0)
-                (getter b |> Maybe.map .time |> Maybe.withDefault 0)
+    , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
     }
 
 
@@ -179,11 +176,7 @@ bestTimeColumn { getter } =
     Motorsport.Leaderboard.Internal.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map Duration.toString >> Maybe.withDefault "-"
-        , sorter =
-            \a b ->
-                compare
-                    (getter a |> Maybe.withDefault 0)
-                    (getter b |> Maybe.withDefault 0)
+        , sorter = compareBy (getter >> Maybe.withDefault 0)
         }
 
 
@@ -233,7 +226,7 @@ carNumberColumn_Wec season { getter } =
                         ]
                         [ text carNumber ]
                )
-    , sorter = \a b -> compare (getter a |> .class |> Class.toString) (getter b |> .class |> Class.toString)
+    , sorter = compareBy (getter >> .class >> Class.toString)
     }
 
 
@@ -249,7 +242,7 @@ driverNameColumn_F1 { label, getter } =
     in
     { name = label
     , view = getter >> formatName >> text
-    , sorter = \a b -> compare (getter a) (getter b)
+    , sorter = compareBy getter
     }
 
 
@@ -284,7 +277,7 @@ driverAndTeamColumn_Wec { getter } =
                                 drivers
                         ]
                )
-    , sorter = \a b -> compare (getter a).team (getter b).team
+    , sorter = compareBy (getter >> .team)
     }
 
 

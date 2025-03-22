@@ -172,7 +172,7 @@ stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
     , view = getter >> text
-    , sorter = \a b -> compareBy getter a b
+    , sorter = compareBy getter
     }
 
 
@@ -181,7 +181,7 @@ intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
     , view = getter >> String.fromInt >> text
-    , sorter = \a b -> compareBy getter a b
+    , sorter = compareBy getter
     }
 
 
@@ -190,7 +190,7 @@ floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> text
-    , sorter = \a b -> compareBy getter a b
+    , sorter = compareBy getter
     }
 
 
