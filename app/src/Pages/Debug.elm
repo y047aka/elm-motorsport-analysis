@@ -13,6 +13,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Leaderboard.Internal
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared
@@ -146,7 +147,7 @@ config analysis =
         , customColumn
             { label = "S1 Best"
             , getter = .timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_1 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S2"
@@ -165,7 +166,7 @@ config analysis =
         , customColumn
             { label = "S2 Best"
             , getter = .timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_2 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S3"
@@ -184,11 +185,11 @@ config analysis =
         , customColumn
             { label = "S3 Best"
             , getter = .timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_3 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , lastLapColumn_F1
             { getter = .lastLap
-            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , bestTimeColumn { getter = .lastLap >> Maybe.map .best }

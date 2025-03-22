@@ -120,7 +120,7 @@ floatColumn =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 customColumn =
@@ -131,7 +131,7 @@ customColumn =
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 veryCustomColumn =
@@ -166,7 +166,11 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter = List.sortBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , sorter =
+        \a b ->
+            compare
+                (getter a |> Maybe.map .time |> Maybe.withDefault 0)
+                (getter b |> Maybe.map .time |> Maybe.withDefault 0)
     }
 
 
@@ -175,13 +179,17 @@ bestTimeColumn { getter } =
     Motorsport.Leaderboard.Internal.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map Duration.toString >> Maybe.withDefault "-"
-        , sorter = List.sortBy (getter >> Maybe.withDefault 0)
+        , sorter =
+            \a b ->
+                compare
+                    (getter a |> Maybe.withDefault 0)
+                    (getter b |> Maybe.withDefault 0)
         }
 
 
 histogramColumn :
     { getter : data -> List Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     , coefficient : Float
     }
@@ -195,7 +203,7 @@ histogramColumn { getter, sorter, analysis, coefficient } =
 
 performanceColumn :
     { getter : data -> List Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -225,7 +233,7 @@ carNumberColumn_Wec season { getter } =
                         ]
                         [ text carNumber ]
                )
-    , sorter = List.sortBy (getter >> .class >> Class.toString)
+    , sorter = \a b -> compare (getter a |> .class |> Class.toString) (getter b |> .class |> Class.toString)
     }
 
 
@@ -241,7 +249,7 @@ driverNameColumn_F1 { label, getter } =
     in
     { name = label
     , view = getter >> formatName >> text
-    , sorter = List.sortBy getter
+    , sorter = \a b -> compare (getter a) (getter b)
     }
 
 
@@ -276,13 +284,13 @@ driverAndTeamColumn_Wec { getter } =
                                 drivers
                         ]
                )
-    , sorter = List.sortBy (getter >> .team)
+    , sorter = \a b -> compare (getter a).team (getter b).team
     }
 
 
 lastLapColumn_F1 :
     { getter : data -> Maybe Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -316,7 +324,7 @@ lastLapColumn_F1 { getter, sorter, analysis } =
 
 currentLapColumn_Wec :
     { getter : data -> { a | timing : Timing, currentLap : Maybe Lap }
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -394,7 +402,7 @@ currentLapColumn_Wec { getter, sorter, analysis } =
 
 lastLapColumn_Wec :
     { getter : data -> Maybe Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg

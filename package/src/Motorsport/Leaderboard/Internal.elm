@@ -48,6 +48,7 @@ import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy2)
 import List.Extra
+import Motorsport.Utils exposing (compareBy)
 import UI.Table as Table exposing (td, th, thead, tr)
 
 
@@ -162,7 +163,7 @@ type alias Config data msg =
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
 
 
@@ -171,7 +172,7 @@ stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
     , view = getter >> text
-    , sorter = List.sortBy getter
+    , sorter = \a b -> compareBy getter a b
     }
 
 
@@ -180,7 +181,7 @@ intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
     , view = getter >> String.fromInt >> text
-    , sorter = List.sortBy getter
+    , sorter = \a b -> compareBy getter a b
     }
 
 
@@ -189,7 +190,7 @@ floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> text
-    , sorter = List.sortBy getter
+    , sorter = \a b -> compareBy getter a b
     }
 
 
@@ -197,7 +198,7 @@ floatColumn { label, getter } =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 customColumn { label, getter, sorter } =
@@ -211,7 +212,7 @@ customColumn { label, getter, sorter } =
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 veryCustomColumn { label, getter, sorter } =
@@ -237,22 +238,22 @@ sort { sorting } columns prevData =
         sorting
 
 
-findSorter : String -> List (Column data msg) -> Maybe (List data -> List data)
+findSorter : String -> List (Column data msg) -> Maybe (data -> data -> Order)
 findSorter key columns =
     columns
         |> List.Extra.find (\c -> c.name == key)
         |> Maybe.map .sorter
 
 
-applySorter : Direction -> (List data -> List data) -> List data -> List data
+applySorter : Direction -> (data -> data -> Order) -> List data -> List data
 applySorter direction sorter data =
     case direction of
         Descending ->
-            sorter data
+            List.sortWith sorter data
                 |> List.reverse
 
         _ ->
-            sorter data
+            List.sortWith sorter data
 
 
 
