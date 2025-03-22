@@ -115,7 +115,8 @@ view _ model =
 
 config : Config Person Msg
 config =
-    { toMsg = TableMsg
+    { toId = .name
+    , toMsg = TableMsg
     , columns =
         [ stringColumn
             { label = "Name"

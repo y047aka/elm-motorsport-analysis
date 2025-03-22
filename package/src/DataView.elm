@@ -45,6 +45,8 @@ import DataView.Options exposing (Options, PaginationOption(..), SelectingOption
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table, tbody, td, text, th, thead, tr)
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
+import Html.Styled.Keyed as Keyed
+import Html.Styled.Lazy exposing (lazy2)
 import Json.Decode as D
 import List.Extra
 
@@ -228,7 +230,8 @@ It should only appear in `view` code.
 
 -}
 type alias Config data msg =
-    { toMsg : Msg -> msg
+    { toId : data -> String
+    , toMsg : Msg -> msg
     , columns : List (Column data msg)
     }
 
@@ -357,7 +360,7 @@ view ({ columns } as config) model dataList =
         [ table
             [ class <| "autotable autotable-" ++ model.key ]
             [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
-            , tbody [] <| viewBodyRows config model sortedIndexes dataArray
+            , Keyed.node "tbody" [] <| viewBodyRows config model sortedIndexes dataArray
             ]
         , viewPagination config.toMsg model filteredIndexes
         ]
@@ -433,8 +436,8 @@ viewDirection direction =
             ""
 
 
-viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List (Html msg)
-viewBodyRows { toMsg, columns } model indexes data =
+viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )
+viewBodyRows { toId, toMsg, columns } model indexes data =
     let
         window =
             case model.options.pagination of
@@ -448,7 +451,8 @@ viewBodyRows { toMsg, columns } model indexes data =
             List.filterMap (\i -> Array.get i data) window
 
         buildRow index row =
-            tr [] <|
+            ( toId row
+            , tr [] <|
                 List.concat
                     [ case model.options.selecting of
                         Selecting ->
@@ -465,8 +469,9 @@ viewBodyRows { toMsg, columns } model indexes data =
 
                         NoSelecting ->
                             []
-                    , List.map (\c -> viewDisplayRow c row) columns
+                    , List.map (\c -> lazy2 viewDisplayRow c row) columns
                     ]
+            )
     in
     List.map2 buildRow window rows
 
