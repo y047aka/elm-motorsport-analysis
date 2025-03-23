@@ -309,24 +309,18 @@ view ({ columns } as config) model dataList =
         dataArray =
             Array.fromList dataList
 
-        indexes =
-            List.range 0 <| Array.length dataArray - 1
-
-        filteredIndexes =
-            indexes
+        displayIndexes =
+            List.range 0 (Array.length dataArray - 1)
                 |> applyFilters model.filters columns dataArray
-
-        sortedIndexes =
-            filteredIndexes
                 |> applySorting model.sorting columns dataArray
     in
     div []
         [ table
             [ class <| "autotable autotable-" ++ model.key ]
             [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
-            , Keyed.node "tbody" [] <| viewBodyRows config model sortedIndexes dataArray
+            , Keyed.node "tbody" [] <| viewBodyRows config model displayIndexes dataArray
             ]
-        , viewPagination config.toMsg model filteredIndexes
+        , viewPagination config.toMsg model displayIndexes
         ]
 
 
@@ -443,10 +437,10 @@ viewDisplayRow column row =
 
 
 viewPagination : (Msg -> msg) -> Model -> List Int -> Html msg
-viewPagination toMsg model filteredIndexes =
+viewPagination toMsg model displayIndexes =
     let
         length =
-            List.length filteredIndexes
+            List.length displayIndexes
 
         numPages =
             case model.options.pagination of
