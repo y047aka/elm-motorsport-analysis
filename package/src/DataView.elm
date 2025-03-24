@@ -41,9 +41,10 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 -}
 
 import Array exposing (Array)
+import Css exposing (..)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, td, text, th, tr)
-import Html.Styled.Attributes exposing (checked, class, style, type_)
+import Html.Styled.Attributes as Attributes exposing (css, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy exposing (lazy4)
@@ -388,7 +389,7 @@ view ({ columns } as config) model dataList =
 table : Config data msg -> Model -> Array data -> List Int -> Html msg
 table config model dataArray displayIndexes =
     Html.Styled.table
-        [ class <| "autotable autotable-" ++ model.key ]
+        [ css [ fontSize (px 14) ] ]
         [ thead config model dataArray
         , Keyed.node "tbody" [] <|
             viewBodyRows config model displayIndexes dataArray
@@ -404,11 +405,11 @@ thead { toMsg, columns } model data =
         selectionCell =
             case model.options.selecting of
                 Selecting ->
-                    [ th [ style "width" "1%", class "autotable__checkbox-header" ]
+                    [ th []
                         [ input
                             [ type_ "checkbox"
                             , onToggleCheck <| toMsg <| ToggleSelectAll (Array.length data)
-                            , checked allSelected
+                            , Attributes.checked allSelected
                             ]
                             []
                         ]
@@ -429,17 +430,14 @@ thead { toMsg, columns } model data =
 theadCell : (Msg -> msg) -> Model -> Column data msg -> Html msg
 theadCell toMsg model c =
     th
-        (List.concat
-            [ case model.options.sorting of
-                Sorting ->
-                    [ onClick <| toMsg <| Sort c.name
-                    , style "user-select" "none"
-                    ]
+        (case model.options.sorting of
+            Sorting ->
+                [ onClick <| toMsg <| Sort c.name
+                , css [ property "user-select" "none" ]
+                ]
 
-                NoSorting ->
-                    []
-            , [ class <| "autotable__Column a msgutotable__column-" ++ c.name ]
-            ]
+            NoSorting ->
+                []
         )
         [ text <| c.name
         , sortIndicator (findSorting c.name model.sorting)
@@ -448,18 +446,25 @@ theadCell toMsg model c =
 
 sortIndicator : Direction -> Html msg
 sortIndicator direction =
-    span [ class "autotable__sort-indicator" ]
-        [ text <|
-            case direction of
-                Ascending ->
-                    "▲"
+    case direction of
+        Ascending ->
+            darkGrey "↑"
 
-                Descending ->
-                    "▼"
+        Descending ->
+            darkGrey "↓"
 
-                None ->
-                    ""
-        ]
+        None ->
+            lightGrey "↕"
+
+
+darkGrey : String -> Html msg
+darkGrey symbol =
+    span [ css [ color (hex "#555") ] ] [ text symbol ]
+
+
+lightGrey : String -> Html msg
+lightGrey symbol =
+    span [ css [ color (hex "#ccc") ] ] [ text symbol ]
 
 
 viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )
@@ -489,12 +494,11 @@ tableRowHelp { toMsg, columns } model index data =
         selectionCell =
             case model.options.selecting of
                 Selecting ->
-                    [ td
-                        [ class "autotable__checkbox" ]
+                    [ td []
                         [ input
                             [ type_ "checkbox"
                             , onToggleCheck <| toMsg <| ToggleSelection index
-                            , checked <| listContains index model.selections
+                            , Attributes.checked <| listContains index model.selections
                             ]
                             []
                         ]
@@ -506,7 +510,7 @@ tableRowHelp { toMsg, columns } model index data =
     tr [] <|
         List.concat
             [ selectionCell
-            , List.map (\c -> td [ class "text-left" ] [ c.view data ]) columns
+            , List.map (\c -> td [] [ c.view data ]) columns
             ]
 
 
@@ -526,8 +530,14 @@ calculatePageCount option totalItems =
 
 pagination : (Msg -> msg) -> Int -> Int -> Html msg
 pagination toMsg currentPage totalPages =
-    div [ class "autotable__pagination" ] <|
-        List.map (paginationButton toMsg currentPage) (List.range 0 (totalPages - 1))
+    div
+        [ css
+            [ displayFlex
+            , justifyContent flexEnd
+            , paddingTop (rem 0.5)
+            ]
+        ]
+        (List.map (paginationButton toMsg currentPage) (List.range 0 (totalPages - 1)))
 
 
 paginationButton : (Msg -> msg) -> Int -> Int -> Html msg
@@ -535,15 +545,28 @@ paginationButton toMsg activePage n =
     let
         page =
             n + 1
-
-        classes =
-            if page == activePage then
-                "autotable__pagination-page autotable__pagination-active"
-
-            else
-                "autotable__pagination-page"
     in
-    button [ class classes, onClick <| toMsg <| SetPage page ]
+    button
+        [ css
+            [ border3 (px 1) solid <| hex "63B3ED"
+            , backgroundColor <| rgb 255 255 255
+            , color <| rgb 0 0 0
+            , borderRadius (px 2)
+            , display inline
+            , margin (rem 0.1)
+            , padding2 (rem 0.25) (rem 0.5)
+            , hover [ cursor pointer ]
+            , batch <|
+                if page == activePage then
+                    [ backgroundColor <| hex "63B3ED"
+                    , color <| hex "FFFFFF"
+                    ]
+
+                else
+                    []
+            ]
+        , onClick <| toMsg <| SetPage page
+        ]
         [ text <| String.fromInt page ]
 
 

@@ -2,7 +2,6 @@ module Pages.DataView exposing (Model, Msg, page)
 
 import DataView exposing (Config, intColumn, stringColumn)
 import DataView.Options exposing (FilteringOption(..), Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import DemoCss exposing (tableDefaultCss)
 import Effect exposing (Effect)
 import Html.Styled exposing (div)
 import Html.Styled.Attributes exposing (class)
@@ -104,12 +103,7 @@ update msg model =
 view : Shared.Model -> Model -> View Msg
 view _ model =
     { title = "DataView"
-    , body =
-        [ div []
-            [ tableDefaultCss
-            , div [ class "container" ] [ DataView.view config model.tableState model.data ]
-            ]
-        ]
+    , body = [ DataView.view config model.tableState model.data ]
     }
 
 
