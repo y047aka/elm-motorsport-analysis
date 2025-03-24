@@ -42,7 +42,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 
 import Array exposing (Array)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html.Styled exposing (Attribute, Html, a, button, div, input, span, tbody, td, text, th, thead, tr)
+import Html.Styled exposing (Attribute, Html, a, button, div, input, span, td, text, th, tr)
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
@@ -111,7 +111,7 @@ update msg model =
         Sort key ->
             let
                 direction =
-                    findSorting model.sorting key |> stepDirection
+                    findSorting key model.sorting |> stepDirection
 
                 sorting =
                     case direction of
@@ -180,8 +180,8 @@ stepDirection direction =
             Ascending
 
 
-findSorting : List Sorting -> String -> Direction
-findSorting sorting key =
+findSorting : String -> List Sorting -> Direction
+findSorting key sorting =
     case List.Extra.find (\s -> Tuple.first s == key) sorting of
         Just s ->
             Tuple.second s
@@ -327,70 +327,77 @@ table : Config data msg -> Model -> Array data -> List Int -> Html msg
 table config model dataArray displayIndexes =
     Html.Styled.table
         [ class <| "autotable autotable-" ++ model.key ]
-        [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
+        [ thead config model dataArray
         , Keyed.node "tbody" [] <|
             viewBodyRows config model displayIndexes dataArray
         ]
 
 
-viewHeaderCells : Config data msg -> Model -> Array data -> List (Html msg)
-viewHeaderCells { toMsg, columns } model data =
+thead : Config data msg -> Model -> Array data -> Html msg
+thead { toMsg, columns } model data =
     let
         allSelected =
             Array.length data == List.length model.selections
-    in
-    List.concat
-        [ case model.options.selecting of
-            Selecting ->
-                [ th
-                    [ style "width" "1%", class "autotable__checkbox-header" ]
-                    [ input [ type_ "checkbox", onToggleCheck <| toMsg <| ToggleSelectAll (Array.length data), checked allSelected ] [] ]
-                ]
 
-            NoSelecting ->
-                []
-        , List.map (headerCell toMsg model) columns
+        selectionCell =
+            case model.options.selecting of
+                Selecting ->
+                    [ th [ style "width" "1%", class "autotable__checkbox-header" ]
+                        [ input
+                            [ type_ "checkbox"
+                            , onToggleCheck <| toMsg <| ToggleSelectAll (Array.length data)
+                            , checked allSelected
+                            ]
+                            []
+                        ]
+                    ]
+
+                NoSelecting ->
+                    []
+    in
+    Html.Styled.thead []
+        [ tr [] <|
+            List.concat
+                [ selectionCell
+                , List.map (theadCell toMsg model) columns
+                ]
         ]
 
 
-headerCell : (Msg -> msg) -> Model -> Column data msg -> Html msg
-headerCell toMsg model c =
-    let
-        sorting =
-            findSorting model.sorting c.name |> viewDirection
-    in
-    th (headerCellAttrs toMsg model c)
+theadCell : (Msg -> msg) -> Model -> Column data msg -> Html msg
+theadCell toMsg model c =
+    th
+        (List.concat
+            [ case model.options.sorting of
+                Sorting ->
+                    [ onClick <| toMsg <| Sort c.name
+                    , style "user-select" "none"
+                    ]
+
+                NoSorting ->
+                    []
+            , [ class <| "autotable__Column a msgutotable__column-" ++ c.name ]
+            ]
+        )
         [ text <| c.name
-        , span [ class "autotable__sort-indicator" ] [ text sorting ]
+        , sortIndicator (findSorting c.name model.sorting)
         ]
 
 
-headerCellAttrs : (Msg -> msg) -> Model -> Column data msg -> List (Attribute msg)
-headerCellAttrs toMsg { options } c =
-    List.concat
-        [ case options.sorting of
-            Sorting ->
-                [ onClick <| toMsg <| Sort c.name
-                , style "user-select" "none"
-                ]
+sortIndicator : Direction -> Html msg
+sortIndicator direction =
+    span [ class "autotable__sort-indicator" ]
+        [ text <|
+            case direction of
+                Ascending ->
+                    "▲"
 
-            NoSorting ->
-                []
-        , [ class <| "autotable__Column a msgutotable__column-" ++ c.name ]
+                Descending ->
+                    "▼"
+
+                None ->
+                    ""
         ]
-
-
-viewDirection : Direction -> String
-viewDirection direction =
-    case direction of
-        Ascending ->
-            "▲"
-
-        Descending ->
-            "▼"
-
-        None ->
-            ""
 
 
 viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )
