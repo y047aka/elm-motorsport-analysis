@@ -313,10 +313,13 @@ view ({ columns } as config) model dataList =
             List.range 0 (Array.length dataArray - 1)
                 |> applyFilters model.filters columns dataArray
                 |> applySorting model.sorting columns dataArray
+
+        totalPages =
+            calculatePageCount model.options.pagination (List.length displayIndexes)
     in
     div []
         [ table config model dataArray displayIndexes
-        , pagination config.toMsg model displayIndexes
+        , pagination config.toMsg model.page totalPages
         ]
 
 
@@ -438,29 +441,24 @@ tableRowHelp { toMsg, columns } model index data =
             ]
 
 
-pagination : (Msg -> msg) -> Model -> List Int -> Html msg
-pagination toMsg model displayIndexes =
-    let
-        length =
-            List.length displayIndexes
+calculatePageCount : PaginationOption -> Int -> Int
+calculatePageCount option totalItems =
+    case option of
+        Pagination pageSize ->
+            if modBy pageSize totalItems == 0 then
+                totalItems // pageSize
 
-        numPages =
-            case model.options.pagination of
-                Pagination pageSize ->
-                    if modBy pageSize length == 0 then
-                        length // pageSize
+            else
+                (totalItems // pageSize) + 1
 
-                    else
-                        (length // pageSize) + 1
+        NoPagination ->
+            0
 
-                NoPagination ->
-                    0
-    in
-    div [ class "autotable__pagination" ]
-        (paginationButton toMsg model.page
-            |> Array.initialize numPages
-            |> Array.toList
-        )
+
+pagination : (Msg -> msg) -> Int -> Int -> Html msg
+pagination toMsg currentPage totalPages =
+    div [ class "autotable__pagination" ] <|
+        List.map (paginationButton toMsg currentPage) (List.range 0 (totalPages - 1))
 
 
 paginationButton : (Msg -> msg) -> Int -> Int -> Html msg
@@ -476,8 +474,7 @@ paginationButton toMsg activePage n =
             else
                 "autotable__pagination-page"
     in
-    button
-        [ class classes, onClick <| toMsg <| SetPage page ]
+    button [ class classes, onClick <| toMsg <| SetPage page ]
         [ text <| String.fromInt page ]
 
 
