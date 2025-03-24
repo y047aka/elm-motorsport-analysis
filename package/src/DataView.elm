@@ -42,7 +42,7 @@ See an example of this library in action [here](https://gitlab.com/docmenthol/au
 
 import Array exposing (Array)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html.Styled exposing (Attribute, Html, a, button, div, input, span, table, tbody, td, text, th, thead, tr)
+import Html.Styled exposing (Attribute, Html, a, button, div, input, span, tbody, td, text, th, thead, tr)
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
@@ -315,36 +315,24 @@ view ({ columns } as config) model dataList =
                 |> applySorting model.sorting columns dataArray
     in
     div []
-        [ table
-            [ class <| "autotable autotable-" ++ model.key ]
-            [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
-            , Keyed.node "tbody" [] <| viewBodyRows config model displayIndexes dataArray
-            ]
-        , viewPagination config.toMsg model displayIndexes
+        [ table config model dataArray displayIndexes
+        , pagination config.toMsg model displayIndexes
+        ]
+
+
+table : Config data msg -> Model -> Array data -> List Int -> Html msg
+table config model dataArray displayIndexes =
+    Html.Styled.table
+        [ class <| "autotable autotable-" ++ model.key ]
+        [ thead [] [ tr [] <| viewHeaderCells config model dataArray ]
+        , Keyed.node "tbody" [] <|
+            viewBodyRows config model displayIndexes dataArray
         ]
 
 
 viewHeaderCells : Config data msg -> Model -> Array data -> List (Html msg)
 viewHeaderCells { toMsg, columns } model data =
     let
-        makeAttrs =
-            headerCellAttrs toMsg model
-
-        headerCells =
-            List.map
-                (\c ->
-                    let
-                        sorting =
-                            findSorting model.sorting c.name |> viewDirection
-                    in
-                    th
-                        (makeAttrs c)
-                        [ text <| c.name
-                        , span [ class "autotable__sort-indicator" ] [ text sorting ]
-                        ]
-                )
-                columns
-
         allSelected =
             Array.length data == List.length model.selections
     in
@@ -358,7 +346,19 @@ viewHeaderCells { toMsg, columns } model data =
 
             NoSelecting ->
                 []
-        , headerCells
+        , List.map (headerCell toMsg model) columns
+        ]
+
+
+headerCell : (Msg -> msg) -> Model -> Column data msg -> Html msg
+headerCell toMsg model c =
+    let
+        sorting =
+            findSorting model.sorting c.name |> viewDirection
+    in
+    th (headerCellAttrs toMsg model c)
+        [ text <| c.name
+        , span [ class "autotable__sort-indicator" ] [ text sorting ]
         ]
 
 
@@ -367,15 +367,11 @@ headerCellAttrs toMsg { options } c =
     List.concat
         [ case options.sorting of
             Sorting ->
-                [ onClick <| toMsg <| Sort c.name ]
+                [ onClick <| toMsg <| Sort c.name
+                , style "user-select" "none"
+                ]
 
             NoSorting ->
-                []
-        , case options.sorting of
-            Sorting ->
-                [ style "user-select" "none" ]
-
-            _ ->
                 []
         , [ class <| "autotable__Column a msgutotable__column-" ++ c.name ]
         ]
@@ -395,7 +391,7 @@ viewDirection direction =
 
 
 viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )
-viewBodyRows { toId, toMsg, columns } model indexes data =
+viewBodyRows config model indexes data =
     let
         window =
             indexes
@@ -404,40 +400,42 @@ viewBodyRows { toId, toMsg, columns } model indexes data =
         rows =
             window
                 |> List.filterMap (\i -> Array.get i data)
-
-        buildRow index row =
-            ( toId row
-            , tr [] <|
-                List.concat
-                    [ case model.options.selecting of
-                        Selecting ->
-                            [ td
-                                [ class "autotable__checkbox" ]
-                                [ input
-                                    [ type_ "checkbox"
-                                    , onToggleCheck <| toMsg <| ToggleSelection index
-                                    , checked <| listContains index model.selections
-                                    ]
-                                    []
-                                ]
-                            ]
-
-                        NoSelecting ->
-                            []
-                    , List.map (\c -> lazy2 viewDisplayRow c row) columns
-                    ]
-            )
     in
-    List.map2 buildRow window rows
+    List.map2 (tableRow config model) window rows
 
 
-viewDisplayRow : Column data msg -> data -> Html msg
-viewDisplayRow column row =
+tableRow : Config data msg -> Model -> Int -> data -> ( String, Html msg )
+tableRow { toId, toMsg, columns } model index row =
+    ( toId row
+    , tr [] <|
+        List.concat
+            [ case model.options.selecting of
+                Selecting ->
+                    [ td
+                        [ class "autotable__checkbox" ]
+                        [ input
+                            [ type_ "checkbox"
+                            , onToggleCheck <| toMsg <| ToggleSelection index
+                            , checked <| listContains index model.selections
+                            ]
+                            []
+                        ]
+                    ]
+
+                NoSelecting ->
+                    []
+            , List.map (\c -> lazy2 tableData c row) columns
+            ]
+    )
+
+
+tableData : Column data msg -> data -> Html msg
+tableData column row =
     td [ class "text-left" ] [ column.view row ]
 
 
-viewPagination : (Msg -> msg) -> Model -> List Int -> Html msg
-viewPagination toMsg model displayIndexes =
+pagination : (Msg -> msg) -> Model -> List Int -> Html msg
+pagination toMsg model displayIndexes =
     let
         length =
             List.length displayIndexes
@@ -453,17 +451,16 @@ viewPagination toMsg model displayIndexes =
 
                 NoPagination ->
                     0
-
-        pageButtons =
-            Array.toList <|
-                Array.initialize numPages <|
-                    viewPaginationButton toMsg model.page
     in
-    div [ class "autotable__pagination" ] pageButtons
+    div [ class "autotable__pagination" ]
+        (paginationButton toMsg model.page
+            |> Array.initialize numPages
+            |> Array.toList
+        )
 
 
-viewPaginationButton : (Msg -> msg) -> Int -> Int -> Html msg
-viewPaginationButton toMsg activePage n =
+paginationButton : (Msg -> msg) -> Int -> Int -> Html msg
+paginationButton toMsg activePage n =
     let
         page =
             n + 1
