@@ -205,19 +205,9 @@ onToggleCheck msg =
     on "input" <| D.succeed msg
 
 
-findColumn : List (Column data msg) -> String -> Maybe (Column data msg)
-findColumn columns key =
+findColumn : String -> List (Column data msg) -> Maybe (Column data msg)
+findColumn key columns =
     List.head <| List.filter (\c -> c.name == key) columns
-
-
-setOrder : Direction -> List a -> List a
-setOrder direction data =
-    case direction of
-        Descending ->
-            List.reverse data
-
-        _ ->
-            data
 
 
 
@@ -281,6 +271,67 @@ floatColumn { label, getter } =
     }
 
 
+
+-- FILTER, SORTING, PAGINATION
+
+
+{-| フィルタリング処理を関数として分離
+-}
+applyFilters : List Filter -> List (Column data msg) -> Array data -> List Int -> List Int
+applyFilters filters columns dataArray indexes =
+    List.foldl
+        (\f data ->
+            case findColumn (Tuple.first f) columns of
+                Just c ->
+                    List.filter
+                        (\d ->
+                            case Array.get d dataArray of
+                                Just r ->
+                                    c.filter r <| Tuple.second f
+
+                                Nothing ->
+                                    False
+                        )
+                        data
+
+                Nothing ->
+                    data
+        )
+        indexes
+        filters
+
+
+{-| ソート処理を関数として分離
+-}
+applySorting : List Sorting -> List (Column data msg) -> Array data -> List Int -> List Int
+applySorting sortings columns dataArray indexes =
+    List.foldl
+        (\s data ->
+            let
+                dir =
+                    Tuple.second s
+            in
+            case findColumn (Tuple.first s) columns of
+                Just c ->
+                    setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
+
+                Nothing ->
+                    data
+        )
+        indexes
+        sortings
+
+
+setOrder : Direction -> List a -> List a
+setOrder direction data =
+    case direction of
+        Descending ->
+            List.reverse data
+
+        _ ->
+            data
+
+
 sorter : (data -> data -> Order) -> Array data -> Int -> Int -> Order
 sorter sortFn data a b =
     case ( Array.get a data, Array.get b data ) of
@@ -295,6 +346,17 @@ sorter sortFn data a b =
 
         ( Nothing, Nothing ) ->
             EQ
+
+
+applyPagination : PaginationOption -> Int -> List Int -> List Int
+applyPagination option page indexes =
+    case option of
+        Pagination pageSize ->
+            List.drop (pageSize * (page - 1)) indexes
+                |> List.take pageSize
+
+        NoPagination ->
+            indexes
 
 
 
@@ -497,61 +559,3 @@ noSorting _ =
 noFiltering : a -> String -> Bool
 noFiltering _ _ =
     True
-
-
-{-| フィルタリング処理を関数として分離
--}
-applyFilters : List Filter -> List (Column data msg) -> Array data -> List Int -> List Int
-applyFilters filters columns dataArray indexes =
-    List.foldl
-        (\f data ->
-            case findColumn columns (Tuple.first f) of
-                Just c ->
-                    List.filter
-                        (\d ->
-                            case Array.get d dataArray of
-                                Just r ->
-                                    c.filter r <| Tuple.second f
-
-                                Nothing ->
-                                    False
-                        )
-                        data
-
-                Nothing ->
-                    data
-        )
-        indexes
-        filters
-
-
-{-| ソート処理を関数として分離
--}
-applySorting : List Sorting -> List (Column data msg) -> Array data -> List Int -> List Int
-applySorting sortings columns dataArray indexes =
-    List.foldl
-        (\s data ->
-            let
-                dir =
-                    Tuple.second s
-            in
-            case findColumn columns (Tuple.first s) of
-                Just c ->
-                    setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
-
-                Nothing ->
-                    data
-        )
-        indexes
-        sortings
-
-
-applyPagination : PaginationOption -> Int -> List Int -> List Int
-applyPagination option page indexes =
-    case option of
-        Pagination pageSize ->
-            List.drop (pageSize * (page - 1)) indexes
-                |> List.take pageSize
-
-        NoPagination ->
-            indexes
