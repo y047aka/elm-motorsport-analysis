@@ -46,7 +46,7 @@ import Html.Styled exposing (Attribute, Html, a, button, div, input, span, tbody
 import Html.Styled.Attributes exposing (checked, class, style, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy exposing (lazy2)
+import Html.Styled.Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
 import Motorsport.Utils exposing (compareBy)
@@ -405,11 +405,17 @@ viewBodyRows config model indexes data =
 
 
 tableRow : Config data msg -> Model -> Int -> data -> ( String, Html msg )
-tableRow { toId, toMsg, columns } model index row =
-    ( toId row
-    , tr [] <|
-        List.concat
-            [ case model.options.selecting of
+tableRow config model index data =
+    ( config.toId data
+    , lazy4 tableRowHelp config model index data
+    )
+
+
+tableRowHelp : Config data msg -> Model -> Int -> data -> Html msg
+tableRowHelp { toMsg, columns } model index data =
+    let
+        selectionCell =
+            case model.options.selecting of
                 Selecting ->
                     [ td
                         [ class "autotable__checkbox" ]
@@ -424,14 +430,12 @@ tableRow { toId, toMsg, columns } model index row =
 
                 NoSelecting ->
                     []
-            , List.map (\c -> lazy2 tableData c row) columns
+    in
+    tr [] <|
+        List.concat
+            [ selectionCell
+            , List.map (\c -> td [ class "text-left" ] [ c.view data ]) columns
             ]
-    )
-
-
-tableData : Column data msg -> data -> Html msg
-tableData column row =
-    td [ class "text-left" ] [ column.view row ]
 
 
 pagination : (Msg -> msg) -> Model -> List Int -> Html msg
