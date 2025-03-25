@@ -1,37 +1,40 @@
 module DataView exposing
-    ( Filter, Model, Msg(..), Sorting, Config
-    , Column, stringColumn, intColumn, floatColumn
+    ( Model, Filter, Sorting, init
+    , Msg(..), update
+    , Config, Column
+    , stringColumn, intColumn, floatColumn
+    , customColumn, veryCustomColumn
     , noFiltering, noSorting
-    , init
-    , update
     , view
     )
 
-{-| A datatable.
+{-| This library helps you create sortable tables. The crucial feature is that it
+lets you own your data separately and keep it in whatever format is best for
+you. This way you are free to change your data without worrying about the table
+&ldquo;getting out of sync&rdquo; with the data. Having a single source of
+truth is pretty great!
 
-See an example of this library in action [here](https://gitlab.com/docmenthol/autotable/-/blob/master/examples/basic/src/Main.elm).
+
+# Model
+
+@docs Model, Filter, Sorting, init
 
 
-# Types
+# Update
 
-@docs Filter, Model, Msg, Sorting, Config
+@docs Msg, update
 
-@docs Column, stringColumn, intColumn, floatColumn
+
+# Configuration
+
+@docs Config, Column
+@docs stringColumn, intColumn, floatColumn
+@docs customColumn, veryCustomColumn
 
 
 # Defaults
 
 @docs noFiltering, noSorting
-
-
-# Init
-
-@docs init
-
-
-# Update
-
-@docs update
 
 
 # View
@@ -57,6 +60,8 @@ import Motorsport.Utils exposing (compareBy)
 -- MODEL
 
 
+{-| Tracks which column to sort by.
+-}
 type alias Model =
     { key : String
     , options : Options
@@ -81,6 +86,15 @@ type Direction
     | None
 
 
+{-| Create a table state. By providing a column name, you determine which
+column should be used for sorting by default. So if you want your table of
+yachts to be sorted by length by default, you might say:
+
+    import Table
+
+    Table.init "Length"
+
+-}
 init : String -> Options -> Model
 init key options =
     { key = key
@@ -232,7 +246,7 @@ type alias Config data msg =
 -- COLUMNS
 
 
-{-| Define a table column.
+{-| Describes how to turn `data` into a column in your table.
 -}
 type alias Column data msg =
     { name : String
@@ -269,6 +283,36 @@ floatColumn { label, getter } =
     , view = getter >> String.fromFloat >> text
     , sorter = compareBy getter
     , filter = getter >> String.fromFloat >> String.startsWith
+    }
+
+
+{-| -}
+customColumn :
+    { label : String
+    , getter : data -> String
+    , sorter : data -> data -> Order
+    }
+    -> Column data msg
+customColumn { label, getter, sorter } =
+    { name = label
+    , view = getter >> text
+    , sorter = sorter
+    , filter = getter >> String.startsWith
+    }
+
+
+{-| -}
+veryCustomColumn :
+    { label : String
+    , getter : data -> Html msg
+    , sorter : data -> data -> Order
+    }
+    -> Column data msg
+veryCustomColumn { label, getter, sorter } =
+    { name = label
+    , view = getter
+    , sorter = sorter
+    , filter = \_ _ -> True -- Custom views may not support text-based filtering
     }
 
 
@@ -314,7 +358,7 @@ applySorting sortings columns dataArray indexes =
             in
             case findColumn (Tuple.first s) columns of
                 Just c ->
-                    setOrder dir <| List.sortWith (sorter c.sorter dataArray) data
+                    setOrder dir <| List.sortWith (sorter_ c.sorter dataArray) data
 
                 Nothing ->
                     data
@@ -333,8 +377,8 @@ setOrder direction data =
             data
 
 
-sorter : (data -> data -> Order) -> Array data -> Int -> Int -> Order
-sorter sortFn data a b =
+sorter_ : (data -> data -> Order) -> Array data -> Int -> Int -> Order
+sorter_ sortFn data a b =
     case ( Array.get a data, Array.get b data ) of
         ( Just ra, Just rb ) ->
             sortFn ra rb

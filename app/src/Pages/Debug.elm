@@ -1,6 +1,7 @@
 module Pages.Debug exposing (Model, Msg, page)
 
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
+import DataView
 import Effect exposing (Effect)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
@@ -10,7 +11,6 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
-import Motorsport.Leaderboard.Internal
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
@@ -116,7 +116,7 @@ view { analysis_Wec, raceControl_Wec } { leaderboardState } =
                 , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
                 ]
             ]
-        , Motorsport.Leaderboard.Internal.table (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
+        , DataView.view (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
         ]
     }
 
