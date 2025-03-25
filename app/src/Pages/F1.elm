@@ -14,6 +14,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared
@@ -142,22 +143,22 @@ config analysis =
         , customColumn
             { label = "Gap"
             , getter = .timing >> .gap >> Gap.toString
-            , sorter = List.sortBy .position
+            , sorter = compareBy .position
             }
         , lastLapColumn_F1
             { getter = .lastLap
-            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
         , performanceColumn
             { getter = .history
-            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
             { getter = .history
-            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2
             }

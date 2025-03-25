@@ -45,6 +45,8 @@ module Motorsport.Leaderboard exposing
 
 import Css exposing (..)
 import Css.Extra exposing (when)
+import DataView
+import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
 import Html.Styled exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
@@ -54,9 +56,9 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
-import Motorsport.Leaderboard.Internal exposing (Column, Config, Msg)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes
@@ -69,12 +71,23 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 type alias Model =
-    Motorsport.Leaderboard.Internal.Model
+    DataView.Model
 
 
 initialSort : String -> Model
-initialSort =
-    Motorsport.Leaderboard.Internal.init
+initialSort key =
+    DataView.init key options
+
+
+options : Options
+options =
+    DataView.Options.defaultOptions
+        |> (\options_ ->
+                { options_
+                    | selecting = NoSelecting
+                    , pagination = NoPagination
+                }
+           )
 
 
 
@@ -82,60 +95,64 @@ initialSort =
 
 
 type alias Msg =
-    Motorsport.Leaderboard.Internal.Msg
+    DataView.Msg
 
 
 update : Msg -> Model -> Model
 update =
-    Motorsport.Leaderboard.Internal.update
+    DataView.update
 
 
 type alias Config data msg =
-    Motorsport.Leaderboard.Internal.Config data msg
+    DataView.Config data msg
 
 
 
 -- COLUMNS
 
 
+type alias Column data msg =
+    DataView.Column data msg
+
+
 {-| -}
 stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn =
-    Motorsport.Leaderboard.Internal.stringColumn
+    DataView.stringColumn
 
 
 {-| -}
 intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn =
-    Motorsport.Leaderboard.Internal.intColumn
+    DataView.intColumn
 
 
 {-| -}
 floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn =
-    Motorsport.Leaderboard.Internal.floatColumn
+    DataView.floatColumn
 
 
 {-| -}
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 customColumn =
-    Motorsport.Leaderboard.Internal.customColumn
+    DataView.customColumn
 
 
 {-| -}
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     }
     -> Column data msg
 veryCustomColumn =
-    Motorsport.Leaderboard.Internal.veryCustomColumn
+    DataView.veryCustomColumn
 
 
 sectorTimeColumn :
@@ -166,22 +183,23 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter = List.sortBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , filter = \_ _ -> True
     }
 
 
 bestTimeColumn : { getter : data -> Maybe Duration } -> Column data msg
 bestTimeColumn { getter } =
-    Motorsport.Leaderboard.Internal.customColumn
+    DataView.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map Duration.toString >> Maybe.withDefault "-"
-        , sorter = List.sortBy (getter >> Maybe.withDefault 0)
+        , sorter = compareBy (getter >> Maybe.withDefault 0)
         }
 
 
 histogramColumn :
     { getter : data -> List Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     , coefficient : Float
     }
@@ -190,12 +208,13 @@ histogramColumn { getter, sorter, analysis, coefficient } =
     { name = "Histogram"
     , view = getter >> histogram analysis coefficient
     , sorter = sorter
+    , filter = \_ _ -> True
     }
 
 
 performanceColumn :
     { getter : data -> List Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -203,6 +222,7 @@ performanceColumn { getter, sorter, analysis } =
     { name = "Performance"
     , view = getter >> performanceHistory analysis
     , sorter = sorter
+    , filter = \_ _ -> True
     }
 
 
@@ -225,7 +245,8 @@ carNumberColumn_Wec season { getter } =
                         ]
                         [ text carNumber ]
                )
-    , sorter = List.sortBy (getter >> .class >> Class.toString)
+    , sorter = compareBy (getter >> .class >> Class.toString)
+    , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 
 
@@ -241,7 +262,8 @@ driverNameColumn_F1 { label, getter } =
     in
     { name = label
     , view = getter >> formatName >> text
-    , sorter = List.sortBy getter
+    , sorter = compareBy getter
+    , filter = \data query -> getter data |> String.startsWith query
     }
 
 
@@ -276,13 +298,14 @@ driverAndTeamColumn_Wec { getter } =
                                 drivers
                         ]
                )
-    , sorter = List.sortBy (getter >> .team)
+    , sorter = compareBy (getter >> .team)
+    , filter = \data query -> getter data |> .team |> String.startsWith query
     }
 
 
 lastLapColumn_F1 :
     { getter : data -> Maybe Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -311,12 +334,13 @@ lastLapColumn_F1 { getter, sorter, analysis } =
                 )
             >> Maybe.withDefault (text "-")
     , sorter = sorter
+    , filter = \_ _ -> True
     }
 
 
 currentLapColumn_Wec :
     { getter : data -> { a | timing : Timing, currentLap : Maybe Lap }
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -389,12 +413,13 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                )
             >> Maybe.withDefault (text "-")
     , sorter = sorter
+    , filter = \_ _ -> True
     }
 
 
 lastLapColumn_Wec :
     { getter : data -> Maybe Lap
-    , sorter : List data -> List data
+    , sorter : data -> data -> Order
     , analysis : Analysis
     }
     -> Column data msg
@@ -453,6 +478,7 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                 )
             >> Maybe.withDefault (text "-")
     , sorter = sorter
+    , filter = \_ _ -> True
     }
 
 
@@ -462,7 +488,7 @@ lastLapColumn_Wec { getter, sorter, analysis } =
 
 view : Config ViewModelItem msg -> Model -> RaceControl.Model -> Html msg
 view config state raceControl =
-    Motorsport.Leaderboard.Internal.table config state (ViewModel.init raceControl)
+    DataView.view config state (ViewModel.init raceControl)
 
 
 

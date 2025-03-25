@@ -1,6 +1,7 @@
 module Pages.Debug exposing (Model, Msg, page)
 
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
+import DataView
 import Effect exposing (Effect)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
@@ -10,9 +11,9 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
-import Motorsport.Leaderboard.Internal
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Page exposing (Page)
 import Route exposing (Route)
 import Shared
@@ -115,7 +116,7 @@ view { analysis_Wec, raceControl_Wec } { leaderboardState } =
                 , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
                 ]
             ]
-        , Motorsport.Leaderboard.Internal.table (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
+        , DataView.view (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
         ]
     }
 
@@ -146,7 +147,7 @@ config analysis =
         , customColumn
             { label = "S1 Best"
             , getter = .timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_1 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S2"
@@ -165,7 +166,7 @@ config analysis =
         , customColumn
             { label = "S2 Best"
             , getter = .timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_2 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S3"
@@ -184,11 +185,11 @@ config analysis =
         , customColumn
             { label = "S3 Best"
             , getter = .timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = List.sortBy (.timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault "0")
+            , sorter = compareBy (.timing >> .sector_3 >> Maybe.map .personalBest >> Maybe.withDefault 0)
             }
         , lastLapColumn_F1
             { getter = .lastLap
-            , sorter = List.sortBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
