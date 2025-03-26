@@ -4,7 +4,6 @@ dist
 elm-stuff
 /node_modules
 .DS_Store
-.parcel-cache/
 *.pem
 
 # elm-verify-examples generated files
