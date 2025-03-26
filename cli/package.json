@@ -1,21 +1,23 @@
 {
   "name": "cli",
+  "type": "module",
   "scripts": {
-    "watch": "parcel watch -t node --bundle-node-modules src/index.ts",
-    "start": "node ./dist/index.js",
-    "build": "parcel build -t node --bundle-node-modules src/index.ts",
+    "watch": "vite build --watch",
+    "start": "node ./dist/index.cjs",
+    "build": "vite build",
     "test": "elm-test",
     "benchmark": "cd benchmark && elm reactor"
   },
   "devDependencies": {
-    "@types/node": "^12.20.55",
+    "@types/node": "^20.11.0",
     "@types/prompts": "^2.4.9",
     "@types/readline-sync": "^1.4.8",
     "elm-hot": "^1.1.6",
     "elm-test": "^0.19.1-revision12",
     "node-elm-compiler": "^5.0.6",
-    "parcel": "^1.12.4",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vite": "^6.2.3",
+    "vite-plugin-elm": "^3.0.1"
   },
   "dependencies": {
     "prompts": "^2.4.2",
