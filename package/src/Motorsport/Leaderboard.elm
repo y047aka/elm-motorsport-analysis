@@ -157,7 +157,7 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration, inProgress : Bool }
+    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration, progress : Float }
     }
     -> Column data msg
 sectorTimeColumn { label, getter } =
@@ -171,7 +171,7 @@ sectorTimeColumn { label, getter } =
                             [ height (px 18)
                             , borderRadius (px 1)
                             , backgroundColor <|
-                                if sector.inProgress then
+                                if sector.progress < 100 then
                                     hsla 0 0 1 0.9
 
                                 else
@@ -399,13 +399,13 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                                             ]
                                         ]
                                         [ timing.sector_1
-                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, inProgress = inProgress })
+                                            |> Maybe.map (\{ progress } -> sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, progress = progress })
                                             |> Maybe.withDefault (text "")
                                         , timing.sector_2
-                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, inProgress = inProgress })
+                                            |> Maybe.map (\{ progress } -> sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, progress = progress })
                                             |> Maybe.withDefault (text "")
                                         , timing.sector_3
-                                            |> Maybe.map (\{ inProgress } -> sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, inProgress = inProgress })
+                                            |> Maybe.map (\{ progress } -> sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, progress = progress })
                                             |> Maybe.withDefault (text "")
                                         ]
                                     ]

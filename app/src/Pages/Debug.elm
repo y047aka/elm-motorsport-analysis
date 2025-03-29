@@ -136,11 +136,11 @@ config analysis =
                 .timing
                     >> .sector_1
                     >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
+                        (\{ time, personalBest, progress } ->
                             { time = time
                             , personalBest = personalBest
                             , overallBest = analysis.sector_1_fastest
-                            , inProgress = inProgress
+                            , progress = progress
                             }
                         )
             }
@@ -155,11 +155,11 @@ config analysis =
                 .timing
                     >> .sector_2
                     >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
+                        (\{ time, personalBest, progress } ->
                             { time = time
                             , personalBest = personalBest
                             , overallBest = analysis.sector_2_fastest
-                            , inProgress = inProgress
+                            , progress = progress
                             }
                         )
             }
@@ -174,11 +174,11 @@ config analysis =
                 .timing
                     >> .sector_3
                     >> Maybe.map
-                        (\{ time, personalBest, inProgress } ->
+                        (\{ time, personalBest, progress } ->
                             { time = time
                             , personalBest = personalBest
                             , overallBest = analysis.sector_3_fastest
-                            , inProgress = inProgress
+                            , progress = progress
                             }
                         )
             }
@@ -213,9 +213,9 @@ raceControlToLeaderboard { lapCount, cars } =
                             , lap = lap.lap
                             , timing =
                                 { time = 0
-                                , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, inProgress = False }
-                                , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, inProgress = False }
-                                , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, inProgress = False }
+                                , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, progress = 100 }
+                                , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, progress = 100 }
+                                , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, progress = 100 }
                                 , gap = Gap.None
                                 , interval = Gap.None
                                 }
