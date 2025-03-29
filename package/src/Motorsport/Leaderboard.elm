@@ -370,14 +370,20 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , backgroundColor <|
-                        if sector_.inProgress then
-                            hsla 0 0 1 0.9
+                    , batch <|
+                        if sector_.progress < 100 then
+                            [ width (pct sector_.progress)
+                            , backgroundColor (hsla 0 0 1 0.9)
+                            ]
 
                         else
-                            lapStatus sector_
-                                |> LapStatus.toHexColorString
-                                |> hex
+                            [ width (pct 100)
+                            , backgroundColor
+                                (lapStatus sector_
+                                    |> LapStatus.toHexColorString
+                                    |> hex
+                                )
+                            ]
                     ]
                 ]
                 []
