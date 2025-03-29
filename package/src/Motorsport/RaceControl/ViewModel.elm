@@ -48,9 +48,9 @@ type alias MetaData =
 
 type alias Timing =
     { time : Duration
-    , sector_1 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_2 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
-    , sector_3 : Maybe { time : Duration, personalBest : Duration, inProgress : Bool }
+    , sector_1 : Maybe { time : Duration, personalBest : Duration, progress : Float }
+    , sector_2 : Maybe { time : Duration, personalBest : Duration, progress : Float }
+    , sector_3 : Maybe { time : Duration, personalBest : Duration, progress : Float }
     , gap : Gap
     , interval : Gap
     }
@@ -118,21 +118,33 @@ init_timing clock { leader, rival } car =
         ( sector_1, sector_2, sector_3 ) =
             case currentSector of
                 S1 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = True }
+                    let
+                        s1_progress =
+                            (toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100
+                    in
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = s1_progress }
                     , Nothing
                     , Nothing
                     )
 
                 S2 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = True }
+                    let
+                        s2_progress =
+                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100
+                    in
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
+                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = s2_progress }
                     , Nothing
                     )
 
                 S3 ->
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, inProgress = False }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, inProgress = False }
-                    , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, inProgress = True }
+                    let
+                        s3_progress =
+                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100
+                    in
+                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
+                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = 100 }
+                    , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, progress = s3_progress }
                     )
     in
     { time = raceClock.elapsed - lastLap.elapsed
