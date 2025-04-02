@@ -1,15 +1,24 @@
 module Shared exposing (Data, Model, Msg(..), SharedMsg(..), template)
 
 import BackendTask exposing (BackendTask)
+import Data.F1.Decoder as F1
+import Data.F1.Preprocess as Preprocess_F1
+import Data.Series as Series
+import Data.Series.Wec exposing (EventSummary)
+import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Events
+import Http
+import Json.Decode
+import Motorsport.Analysis as Analysis exposing (Analysis)
+import Motorsport.RaceControl as RaceControl
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
-import UrlPath exposing (UrlPath)
 import Route exposing (Route)
 import SharedTemplate exposing (SharedTemplate)
+import UrlPath exposing (UrlPath)
 import View exposing (View)
 
 
@@ -27,6 +36,12 @@ template =
 type Msg
     = SharedMsg SharedMsg
     | MenuClicked
+    | FetchJson String
+    | JsonLoaded (Result Http.Error (List F1.Car))
+    | FetchJson_Wec { season : String, event : String }
+    | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | RaceControlMsg_F1 RaceControl.Msg
+    | RaceControlMsg_Wec RaceControl.Msg
 
 
 type alias Data =
@@ -39,6 +54,11 @@ type SharedMsg
 
 type alias Model =
     { showMenu : Bool
+    , eventSummary : EventSummary
+    , raceControl_F1 : RaceControl.Model
+    , raceControl_Wec : RaceControl.Model
+    , analysis_F1 : Analysis
+    , analysis_Wec : Analysis
     }
 
 
@@ -56,19 +76,107 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
-    ( { showMenu = False }
+    ( { showMenu = False
+      , eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
+      , raceControl_F1 = RaceControl.empty
+      , raceControl_Wec = RaceControl.empty
+      , analysis_F1 = Analysis.finished RaceControl.empty
+      , analysis_Wec = Analysis.finished RaceControl.empty
+      }
     , Effect.none
     )
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
-update msg model =
+update msg m =
     case msg of
         SharedMsg globalMsg ->
-            ( model, Effect.none )
+            ( m, Effect.none )
 
         MenuClicked ->
-            ( { model | showMenu = not model.showMenu }, Effect.none )
+            ( { m | showMenu = not m.showMenu }, Effect.none )
+
+        FetchJson url ->
+            ( m
+            , Effect.fromCmd <|
+                Http.get
+                    { url = url
+                    , expect = Http.expectJson JsonLoaded F1.decoder
+                    }
+            )
+
+        JsonLoaded (Ok decoded) ->
+            let
+                rcNew =
+                    RaceControl.init (Preprocess_F1.preprocess decoded)
+            in
+            ( { m
+                | raceControl_F1 = rcNew
+                , analysis_F1 = Analysis.finished rcNew
+              }
+            , Effect.none
+            )
+
+        JsonLoaded (Err _) ->
+            ( m, Effect.none )
+
+        FetchJson_Wec options ->
+            let
+                eventSummary =
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
+                        |> Maybe.andThen Series.toEventSummary
+                        |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
+            in
+            ( { m | eventSummary = eventSummary }
+            , Effect.fromCmd <|
+                Http.get
+                    { url = eventSummary.jsonPath
+                    , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
+                    }
+            )
+
+        JsonLoaded_Wec (Ok decoded) ->
+            let
+                rcNew =
+                    RaceControl.init decoded.preprocessed
+
+                modelEventSummary =
+                    m.eventSummary
+            in
+            ( { m
+                | eventSummary = { modelEventSummary | name = decoded.name }
+                , raceControl_Wec = rcNew
+                , analysis_Wec = Analysis.finished rcNew
+              }
+            , Effect.none
+            )
+
+        JsonLoaded_Wec (Err _) ->
+            ( m, Effect.none )
+
+        RaceControlMsg_F1 raceControlMsg ->
+            let
+                rcNew =
+                    RaceControl.update raceControlMsg m.raceControl_F1
+            in
+            ( { m
+                | raceControl_F1 = rcNew
+                , analysis_F1 = Analysis.fromRaceControl rcNew
+              }
+            , Effect.none
+            )
+
+        RaceControlMsg_Wec raceControlMsg ->
+            let
+                rcNew =
+                    RaceControl.update raceControlMsg m.raceControl_Wec
+            in
+            ( { m
+                | raceControl_Wec = rcNew
+                , analysis_Wec = Analysis.fromRaceControl rcNew
+              }
+            , Effect.none
+            )
 
 
 subscriptions : UrlPath -> Model -> Sub Msg
