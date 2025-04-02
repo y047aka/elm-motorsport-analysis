@@ -1,6 +1,8 @@
 module Shared exposing (Data, Model, Msg(..), SharedMsg(..), template)
 
 import BackendTask exposing (BackendTask)
+import Css exposing (..)
+import Css.Global exposing (global)
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.Series as Series
@@ -10,6 +12,7 @@ import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Events
+import Html.Styled exposing (main_)
 import Http
 import Json.Decode
 import Motorsport.Analysis as Analysis exposing (Analysis)
@@ -201,28 +204,14 @@ view :
     -> { body : List (Html msg), title : String }
 view sharedData page model toMsg pageView =
     { body =
-        [ Html.nav []
-            [ Html.button
-                [ Html.Events.onClick MenuClicked ]
-                [ Html.text
-                    (if model.showMenu then
-                        "Close Menu"
-
-                     else
-                        "Open Menu"
-                    )
-                ]
-            , if model.showMenu then
-                Html.ul []
-                    [ Html.li [] [ Html.text "Menu item 1" ]
-                    , Html.li [] [ Html.text "Menu item 2" ]
+        List.map Html.Styled.toUnstyled
+            [ global
+                [ Css.Global.body
+                    [ backgroundColor (hsl 0 0 0.4)
+                    , color (hsla 0 0 1 0.9)
                     ]
-
-              else
-                Html.text ""
+                ]
+            , main_ [] pageView.body
             ]
-            |> Html.map toMsg
-        , Html.main_ [] pageView.body
-        ]
     , title = pageView.title
     }
