@@ -34,17 +34,12 @@ template =
     }
 
 
-type Msg
-    = FetchJson String
-    | JsonLoaded (Result Http.Error (List F1.Car))
-    | FetchJson_Wec { season : String, event : String }
-    | JsonLoaded_Wec (Result Http.Error Wec.Event)
-    | RaceControlMsg_F1 RaceControl.Msg
-    | RaceControlMsg_Wec RaceControl.Msg
-
-
 type alias Data =
     ()
+
+
+
+-- INIT
 
 
 type alias Model =
@@ -78,6 +73,19 @@ init flags maybePagePath =
       }
     , Effect.none
     )
+
+
+
+-- UPDATE
+
+
+type Msg
+    = FetchJson String
+    | JsonLoaded (Result Http.Error (List F1.Car))
+    | FetchJson_Wec { season : String, event : String }
+    | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | RaceControlMsg_F1 RaceControl.Msg
+    | RaceControlMsg_Wec RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -166,6 +174,10 @@ update msg m =
             )
 
 
+
+-- SUBSCRIPTIONS
+
+
 subscriptions : UrlPath -> Model -> Sub Msg
 subscriptions _ _ =
     Sub.none
@@ -174,6 +186,10 @@ subscriptions _ _ =
 data : BackendTask FatalError Data
 data =
     BackendTask.succeed ()
+
+
+
+-- VIEW
 
 
 view :
@@ -187,7 +203,8 @@ view :
     -> View msg
     -> { body : List (Html msg), title : String }
 view sharedData page model toMsg pageView =
-    { body =
+    { title = pageView.title
+    , body =
         List.map Html.Styled.toUnstyled
             [ global
                 [ Css.Global.body
@@ -197,5 +214,4 @@ view sharedData page model toMsg pageView =
                 ]
             , main_ [] pageView.body
             ]
-    , title = pageView.title
     }
