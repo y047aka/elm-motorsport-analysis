@@ -1,4 +1,4 @@
-module Shared exposing (Data, Model, Msg(..), SharedMsg(..), template)
+module Shared exposing (Data, Model, Msg(..), template)
 
 import BackendTask exposing (BackendTask)
 import Css exposing (..)
@@ -11,10 +11,8 @@ import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
-import Html.Events
 import Html.Styled exposing (main_)
 import Http
-import Json.Decode
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
@@ -37,8 +35,7 @@ template =
 
 
 type Msg
-    = SharedMsg SharedMsg
-    | MenuClicked
+    = MenuClicked
     | FetchJson String
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
@@ -49,10 +46,6 @@ type Msg
 
 type alias Data =
     ()
-
-
-type SharedMsg
-    = NoOp
 
 
 type alias Model =
@@ -93,9 +86,6 @@ init flags maybePagePath =
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        SharedMsg globalMsg ->
-            ( m, Effect.none )
-
         MenuClicked ->
             ( { m | showMenu = not m.showMenu }, Effect.none )
 
