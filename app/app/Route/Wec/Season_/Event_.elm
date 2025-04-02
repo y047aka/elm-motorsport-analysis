@@ -1,12 +1,17 @@
-module Pages.Wec.Season_.Event_ exposing (Model, Msg, page)
+module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
+import BackendTask exposing (BackendTask)
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
+import Data.Series.Wec
+import Data.Wec as Wec
 import Effect exposing (Effect)
+import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Http
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock exposing (Model(..))
@@ -16,24 +21,44 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
-import Page exposing (Page)
-import Route exposing (Route)
+import PagesMsg exposing (PagesMsg)
+import RouteBuilder exposing (App, StatefulRoute)
 import Shared
 import String exposing (dropRight)
 import Task
 import Time
 import UI.Button exposing (button, labeledButton)
+import UrlPath exposing (UrlPath)
 import View exposing (View)
 
 
-page : Shared.Model -> Route { season : String, event : String } -> Page Model Msg
-page shared route =
-    Page.new
-        { init = init route.params
-        , update = update
-        , view = view shared
-        , subscriptions = subscriptions shared
+type alias RouteParams =
+    { season : String, event : String }
+
+
+route : StatefulRoute RouteParams Data ActionData Model Msg
+route =
+    RouteBuilder.preRender
+        { head = \_ -> []
+        , pages = pages
+        , data = data
         }
+        |> RouteBuilder.buildWithSharedState
+            { init = init
+            , update = update
+            , subscriptions = subscriptions
+            , view = view
+            }
+
+
+pages : BackendTask FatalError (List RouteParams)
+pages =
+    BackendTask.succeed
+        [ { season = "2024", event = "le_mans_24h" }
+        , { season = "2024", event = "fuji_6h" }
+        , { season = "2024", event = "bahrain_8h" }
+        , { season = "2025", event = "qatar_1812km" }
+        ]
 
 
 
@@ -52,13 +77,27 @@ type Mode
     | PositionHistory
 
 
-init : { season : String, event : String } -> () -> ( Model, Effect Msg )
-init params () =
+init :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> ( Model, Effect Msg )
+init app shared =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchJson_Wec params
+    , let
+        eventSummary =
+            Maybe.map2 Tuple.pair (String.toInt app.routeParams.season) (Data.Series.Wec.fromString app.routeParams.event)
+                |> Maybe.andThen Series.toEventSummary
+                |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
+      in
+      Effect.fromCmd
+        (Http.get
+            { url = eventSummary.jsonPath
+            , expect = Http.expectJson (Shared.JsonLoaded_Wec >> SharedMsg) Wec.eventDecoder
+            }
+        )
     )
 
 
@@ -67,31 +106,41 @@ init params () =
 
 
 type Msg
-    = StartRace
+    = SharedMsg Shared.Msg
+    | StartRace
     | PauseRace
     | ModeChange Mode
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg m =
+update :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> Msg
+    -> Model
+    -> ( Model, Effect Msg, Maybe Shared.Msg )
+update app shared msg m =
     case msg of
+        SharedMsg sharedMsg ->
+            ( m, Effect.none, Just sharedMsg )
+
         StartRace ->
-            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.sendCmd )
+            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
 
         PauseRace ->
-            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.sendCmd )
+            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.fromCmd, Nothing )
 
         ModeChange mode ->
-            ( { m | mode = mode }, Effect.none )
+            ( { m | mode = mode }, Effect.none, Nothing )
 
         RaceControlMsg raceControlMsg ->
-            ( m, Effect.updateRaceControl_Wec raceControlMsg )
+            ( m, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
             , Effect.none
+            , Nothing
             )
 
 
@@ -99,8 +148,8 @@ update msg m =
 -- SUBSCRIPTIONS
 
 
-subscriptions : Shared.Model -> Model -> Sub Msg
-subscriptions shared model =
+subscriptions : RouteParams -> UrlPath -> Shared.Model -> Model -> Sub Msg
+subscriptions routeParams path shared model =
     case shared.raceControl_Wec.clock of
         Started _ _ ->
             Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
@@ -110,22 +159,44 @@ subscriptions shared model =
 
 
 
+-- DATA
+
+
+type alias Data =
+    {}
+
+
+type alias ActionData =
+    {}
+
+
+data : RouteParams -> BackendTask FatalError Data
+data routeParams =
+    BackendTask.succeed {}
+
+
+
 -- VIEW
 
 
-view : Shared.Model -> Model -> View Msg
-view ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
-    { title = "Wec"
-    , body =
-        [ header shared
-        , case mode of
-            Leaderboard ->
-                Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+view :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> Model
+    -> View (PagesMsg Msg)
+view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
+    View.map PagesMsg.fromMsg
+        { title = "Wec"
+        , body =
+            [ header shared
+            , case mode of
+                Leaderboard ->
+                    Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
 
-            PositionHistory ->
-                PositionHistoryChart.view raceControl_Wec
-        ]
-    }
+                PositionHistory ->
+                    PositionHistoryChart.view raceControl_Wec
+            ]
+        }
 
 
 header : Shared.Model -> Html Msg
