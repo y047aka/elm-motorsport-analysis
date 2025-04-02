@@ -35,8 +35,7 @@ template =
 
 
 type Msg
-    = MenuClicked
-    | FetchJson String
+    = FetchJson String
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
@@ -49,8 +48,7 @@ type alias Data =
 
 
 type alias Model =
-    { showMenu : Bool
-    , eventSummary : EventSummary
+    { eventSummary : EventSummary
     , raceControl_F1 : RaceControl.Model
     , raceControl_Wec : RaceControl.Model
     , analysis_F1 : Analysis
@@ -72,8 +70,7 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
-    ( { showMenu = False
-      , eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
+    ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
@@ -86,9 +83,6 @@ init flags maybePagePath =
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        MenuClicked ->
-            ( { m | showMenu = not m.showMenu }, Effect.none )
-
         FetchJson url ->
             ( m
             , Effect.fromCmd <|
