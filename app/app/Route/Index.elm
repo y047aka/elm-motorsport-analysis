@@ -20,8 +20,7 @@ type alias RouteParams =
 
 route : StatelessRoute RouteParams Data ActionData
 route =
-    RouteBuilder.single
-        { head = \_ -> [], data = data }
+    RouteBuilder.single { head = \_ -> [], data = data }
         |> RouteBuilder.buildNoState { view = view }
 
 
