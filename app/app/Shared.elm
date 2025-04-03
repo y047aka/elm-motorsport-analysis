@@ -208,7 +208,8 @@ view sharedData page model toMsg pageView =
         List.map Html.Styled.toUnstyled
             [ global
                 [ Css.Global.body
-                    [ backgroundColor (hsl 0 0 0.4)
+                    [ fontFamilies [ "-apple-system", "BlinkMacSystemFont", qt "Segoe UI", "Helvetica", "Arial", "sans-serif", qt "Apple Color Emoji", qt "Segoe UI Emoji" ]
+                    , backgroundColor (hsl 0 0 0.4)
                     , color (hsla 0 0 1 0.9)
                     ]
                 ]

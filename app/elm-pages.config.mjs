@@ -3,10 +3,7 @@ import { defineConfig } from "vite";
 export default {
   vite: defineConfig({}),
   headTagsTemplate(context) {
-    return `
-<link rel="stylesheet" href="/style.css" />
-<meta name="generator" content="elm-pages v${context.cliVersion}" />
-`;
+    return `<meta name="generator" content="elm-pages v${context.cliVersion}" />`;
   },
   preloadTagForFile(file) {
     // add preload directives for JS assets and font assets, etc., skip for CSS files
