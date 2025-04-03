@@ -1,8 +1,10 @@
-module Pages.Debug exposing (Model, Msg, page)
+module Route.Debug exposing (ActionData, Data, Model, Msg, route)
 
+import BackendTask exposing (BackendTask)
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
+import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
@@ -14,22 +16,28 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
-import Page exposing (Page)
-import Route exposing (Route)
+import PagesMsg exposing (PagesMsg)
+import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import View exposing (View)
 
 
-page : Shared.Model -> Route () -> Page Model Msg
-page shared route =
-    Page.new
-        { init = init
-        , update = update
-        , view = view shared
-        , subscriptions = \_ -> Sub.none
-        }
+type alias RouteParams =
+    {}
+
+
+route : StatefulRoute RouteParams Data ActionData Model Msg
+route =
+    RouteBuilder.single { head = \_ -> [], data = data }
+        |> RouteBuilder.buildWithSharedState
+            { init = init
+            , update = update
+            , subscriptions = \_ _ _ _ -> Sub.none
+            , view = view
+            }
 
 
 
@@ -42,12 +50,18 @@ type alias Model =
     }
 
 
-init : () -> ( Model, Effect Msg )
-init () =
+init :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> ( Model, Effect Msg )
+init app shared =
     ( { leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fetchJson_Wec { season = "2024", event = "le_mans_24h" }
+    , Effect.fromCmd
+        (Task.succeed (Shared.FetchJson_Wec { season = "2024", event = "le_mans_24h" })
+            |> Task.perform SharedMsg
+        )
     )
 
 
@@ -56,69 +70,101 @@ init () =
 
 
 type Msg
-    = RaceControlMsg RaceControl.Msg
+    = SharedMsg Shared.Msg
+    | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
-update : Msg -> Model -> ( Model, Effect Msg )
-update msg m =
+update :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> Msg
+    -> Model
+    -> ( Model, Effect Msg, Maybe Shared.Msg )
+update app shared msg model =
     case msg of
+        SharedMsg sharedMsg ->
+            ( model, Effect.none, Just sharedMsg )
+
         RaceControlMsg raceControlMsg ->
-            ( m, Effect.updateRaceControl_Wec raceControlMsg )
+            ( model, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
-            ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
+            ( { model | leaderboardState = Leaderboard.update leaderboardMsg model.leaderboardState }
             , Effect.none
+            , Nothing
             )
+
+
+
+-- DATA
+
+
+type alias Data =
+    {}
+
+
+type alias ActionData =
+    {}
+
+
+data : BackendTask FatalError Data
+data =
+    BackendTask.succeed {}
 
 
 
 -- VIEW
 
 
-view : Shared.Model -> Model -> View Msg
-view { analysis_Wec, raceControl_Wec } { leaderboardState } =
-    { title = "Wec"
-    , body =
-        let
-            { clock, lapTotal, lapCount } =
-                raceControl_Wec
-        in
-        [ header
-            [ css
-                [ position sticky
-                , top zero
-                , displayFlex
-                , justifyContent spaceBetween
-                , backgroundColor (hsl 0 0 0.4)
-                ]
-            ]
-            [ nav []
-                [ input
-                    [ type_ "range"
-                    , Attributes.max <| String.fromInt lapTotal
-                    , value (String.fromInt lapCount)
-                    , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+view :
+    App Data ActionData RouteParams
+    -> Shared.Model
+    -> Model
+    -> View (PagesMsg Msg)
+view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
+    View.map PagesMsg.fromMsg
+        { title = "Wec"
+        , body =
+            let
+                { clock, lapTotal, lapCount } =
+                    raceControl_Wec
+            in
+            [ header
+                [ css
+                    [ position sticky
+                    , top zero
+                    , displayFlex
+                    , justifyContent spaceBetween
+                    , backgroundColor (hsl 0 0 0.4)
                     ]
-                    []
-                , labeledButton []
-                    [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                    , basicLabel [] [ text (String.fromInt lapCount) ]
-                    , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                ]
+                [ nav []
+                    [ input
+                        [ type_ "range"
+                        , Attributes.max <| String.fromInt lapTotal
+                        , value (String.fromInt lapCount)
+                        , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+                        ]
+                        []
+                    , labeledButton []
+                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                        , basicLabel [] [ text (String.fromInt lapCount) ]
+                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                        ]
+                    , text (Clock.getElapsed clock |> Duration.toString)
                     ]
-                , text (Clock.getElapsed clock |> Duration.toString)
+                , div []
+                    [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis_Wec.fastestLapTime) ]
+                    , div [] [ text "slowestLapTime: ", text (Duration.toString analysis_Wec.slowestLapTime) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString analysis_Wec.sector_1_fastest) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString analysis_Wec.sector_2_fastest) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
+                    ]
                 ]
-            , div []
-                [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis_Wec.fastestLapTime) ]
-                , div [] [ text "slowestLapTime: ", text (Duration.toString analysis_Wec.slowestLapTime) ]
-                , div [] [ text "s1_fastest: ", text (Duration.toString analysis_Wec.sector_1_fastest) ]
-                , div [] [ text "s2_fastest: ", text (Duration.toString analysis_Wec.sector_2_fastest) ]
-                , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
-                ]
+            , DataView.view (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
             ]
-        , DataView.view (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
-        ]
-    }
+        }
 
 
 config : Analysis -> Leaderboard.Config ViewModelItem Msg
