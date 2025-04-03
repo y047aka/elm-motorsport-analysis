@@ -2,16 +2,12 @@ module Route.Debug exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
-import Data.Series as Series
-import Data.Series.Wec
-import Data.Wec as Wec
 import DataView
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -23,6 +19,7 @@ import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import View exposing (View)
@@ -61,17 +58,9 @@ init app shared =
     ( { leaderboardState = initialSort "Position"
       , query = ""
       }
-    , let
-        eventSummary =
-            Maybe.map2 Tuple.pair (Just 2024) (Data.Series.Wec.fromString "le_mans_24h")
-                |> Maybe.andThen Series.toEventSummary
-                |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      in
-      Effect.fromCmd
-        (Http.get
-            { url = eventSummary.jsonPath
-            , expect = Http.expectJson (Shared.JsonLoaded_Wec >> SharedMsg) Wec.eventDecoder
-            }
+    , Effect.fromCmd
+        (Task.succeed (Shared.FetchJson_Wec { season = "2024", event = "le_mans_24h" })
+            |> Task.perform SharedMsg
         )
     )
 

@@ -1,14 +1,13 @@
 module Route.GapChart exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
-import Data.F1.Decoder as F1
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Http
 import Motorsport.Chart.GapChart as GapChart
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import Task
 import View exposing (View)
 
 
@@ -42,10 +41,8 @@ init :
 init app shared =
     ( {}
     , Effect.fromCmd
-        (Http.get
-            { url = "/static/lapTimes.json"
-            , expect = Http.expectJson (Shared.JsonLoaded >> SharedMsg) F1.decoder
-            }
+        (Task.succeed (Shared.FetchJson "/static/lapTimes.json")
+            |> Task.perform SharedMsg
         )
     )
 

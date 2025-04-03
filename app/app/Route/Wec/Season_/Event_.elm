@@ -4,14 +4,11 @@ import BackendTask exposing (BackendTask)
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
-import Data.Series.Wec
-import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock exposing (Model(..))
@@ -86,17 +83,9 @@ init app shared =
       , leaderboardState = initialSort "Position"
       , query = ""
       }
-    , let
-        eventSummary =
-            Maybe.map2 Tuple.pair (String.toInt app.routeParams.season) (Data.Series.Wec.fromString app.routeParams.event)
-                |> Maybe.andThen Series.toEventSummary
-                |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      in
-      Effect.fromCmd
-        (Http.get
-            { url = eventSummary.jsonPath
-            , expect = Http.expectJson (Shared.JsonLoaded_Wec >> SharedMsg) Wec.eventDecoder
-            }
+    , Effect.fromCmd
+        (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
+            |> Task.perform SharedMsg
         )
     )
 

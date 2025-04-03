@@ -2,13 +2,11 @@ module Route.F1 exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Css exposing (displayFlex, justifyContent, spaceBetween)
-import Data.F1.Decoder as F1
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled exposing (header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Http
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
@@ -22,6 +20,7 @@ import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import View exposing (View)
@@ -68,10 +67,8 @@ init app shared =
       , query = ""
       }
     , Effect.fromCmd
-        (Http.get
-            { url = "/static/lapTimes.json"
-            , expect = Http.expectJson (Shared.JsonLoaded >> SharedMsg) F1.decoder
-            }
+        (Task.succeed (Shared.FetchJson "/static/lapTimes.json")
+            |> Task.perform SharedMsg
         )
     )
 
