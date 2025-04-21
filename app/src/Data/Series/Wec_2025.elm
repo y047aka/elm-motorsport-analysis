@@ -6,7 +6,9 @@ import Data.Series.Wec exposing (EventSummary, Wec(..))
 wec_2025 : List EventSummary
 wec_2025 =
     List.map toEventSummary_Wec_2025
-        [ Qatar_1812km ]
+        [ Qatar_1812km
+        , Imola_6h
+        ]
 
 
 toEventSummary_Wec_2025 : Wec -> EventSummary
@@ -24,6 +26,14 @@ toEventSummary_Wec_2025 event =
             , name = "Qatar 1812km"
             , season = 2025
             , date = "2025-03-01"
+            , jsonPath = jsonPath
+            }
+
+        Imola_6h ->
+            { id = id
+            , name = "6 Hours of Imola"
+            , season = 2025
+            , date = "2025-04-20"
             , jsonPath = jsonPath
             }
 

@@ -13,6 +13,7 @@ module Data.Series.Wec exposing
 
 type Wec
     = Qatar_1812km
+    | Imola_6h
     | LeMans_24h
     | Fuji_6h
     | Bahrain_8h
@@ -23,6 +24,9 @@ fromString string =
     case string of
         "qatar_1812km" ->
             Just Qatar_1812km
+
+        "imola_6h" ->
+            Just Imola_6h
 
         "le_mans_24h" ->
             Just LeMans_24h
@@ -42,6 +46,9 @@ toString event =
     case event of
         Qatar_1812km ->
             "qatar_1812km"
+
+        Imola_6h ->
+            "imola_6h"
 
         LeMans_24h ->
             "le_mans_24h"

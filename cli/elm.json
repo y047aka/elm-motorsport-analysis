@@ -3,7 +3,7 @@
     "source-directories": [
         "src/Elm",
         "../package/src",
-        "../app/app/src",
+        "../app/src",
         "fixture",
         "benchmark"
     ],

@@ -55,6 +55,7 @@ pages =
         , { season = "2024", event = "fuji_6h" }
         , { season = "2024", event = "bahrain_8h" }
         , { season = "2025", event = "qatar_1812km" }
+        , { season = "2025", event = "imola_6h" }
         ]
 
 

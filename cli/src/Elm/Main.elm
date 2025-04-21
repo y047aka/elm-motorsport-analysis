@@ -44,7 +44,7 @@ init flags =
             Wec.getLaps args.eventId (CsvLoaded args.eventId)
 
         Nothing ->
-            [ "qatar_1812km", "le_mans_24h", "fuji_6h", "bahrain_8h" ]
+            [ "qatar_1812km", "imola_6h", "le_mans_24h", "fuji_6h", "bahrain_8h" ]
                 |> List.map toItem
                 |> Select.option "Select Event ID : "
                 |> output
@@ -103,6 +103,9 @@ eventEncoder { name, laps, preprocessed } =
             case eventId of
                 "qatar_1812km" ->
                     "Qatar 1812km"
+
+                "imola_6h" ->
+                    "6 Hours of Imola"
 
                 "le_mans_24h" ->
                     "24 Hours of Le Mans"
