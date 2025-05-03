@@ -22,7 +22,8 @@
 	// "forwardPorts": [8000],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "elm make",
+	// We don't need to install elm because it's already installed in the base image.
+	"postCreateCommand": "npm install --ignore-scripts",
 
 	// Comment out to connect as root instead. In that case you may need to change the mounts
 	// configuration too. More info: https://aka.ms/vscode-remote/containers/non-root.
