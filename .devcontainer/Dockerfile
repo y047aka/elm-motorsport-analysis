@@ -6,6 +6,9 @@ ARG USERNAME=node
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+# Install nushell using npm
+RUN npm install -g nushell
+
 # Install Elm and its tools
 # https://github.com/elm/compiler/blob/master/installers/linux/README.md
 RUN apt-get update && apt-get install -y curl \
