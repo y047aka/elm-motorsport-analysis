@@ -6,6 +6,9 @@ ARG USERNAME=node
 ARG USER_UID=1000
 ARG USER_GID=$USER_UID
 
+# Install npm@latest
+RUN npm install -g npm@latest
+
 # Install nushell using npm
 RUN npm install -g nushell
 
