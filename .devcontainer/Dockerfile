@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y curl \
     && gunzip elm.gz \
     && chmod +x elm \
     && mv elm /usr/local/bin/ \
-    && npm install --global elm-test@latest elm-format@latest \
+    && npm install --global elm-test@latest elm-format@latest elm-pages@latest elm-codegen@latest elm-optimize-level-2@latest elm-review@latest elm-verify-examples@latest lamdera@latest vite@latest \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /home/$USERNAME/.elm \
     && chown $USERNAME:$USERNAME /home/$USERNAME/.elm
