@@ -38,6 +38,14 @@ toEventSummary_Wec_2024 event =
             , jsonPath = jsonPath
             }
 
+        Spa_6h ->
+            { id = id
+            , name = "6 Hours of Spa"
+            , season = 2024
+            , date = "2024-05-11"
+            , jsonPath = jsonPath
+            }
+
         LeMans_24h ->
             { id = id
             , name = "24 Hours of Le Mans"
