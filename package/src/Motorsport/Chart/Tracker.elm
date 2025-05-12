@@ -87,46 +87,8 @@ renderCar centerX centerY radius car =
         r =
             toFloat radius
 
-        -- Calculate sector-based progress
         progress =
-            case car.currentLap of
-                Nothing ->
-                    0
-
-                Just currentLap ->
-                    -- Calculate progress based on which sector the car is in and sector times
-                    let
-                        sector1Weight =
-                            0.33
-
-                        -- Each sector represents about 1/3 of the lap
-                        sector2Weight =
-                            0.33
-
-                        sector3Weight =
-                            0.34
-
-                        -- Small adjustment to ensure total = 1.0
-                        -- Calculate progress based on sector data
-                        sectorProgress =
-                            case ( car.timing.sector_1, car.timing.sector_2, car.timing.sector_3 ) of
-                                -- In sector 1
-                                ( Just s1, Nothing, Nothing ) ->
-                                    (s1.progress / 100) * sector1Weight
-
-                                -- In sector 2
-                                ( Just _, Just s2, Nothing ) ->
-                                    sector1Weight + (s2.progress / 100) * sector2Weight
-
-                                -- In sector 3
-                                ( Just _, Just _, Just s3 ) ->
-                                    sector1Weight + sector2Weight + (s3.progress / 100) * sector3Weight
-
-                                -- Fallback to the original calculation if sector data is incomplete
-                                _ ->
-                                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
-                    in
-                    sectorProgress
+            calcProgress car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
@@ -161,3 +123,29 @@ renderCar centerX centerY radius car =
             ]
             [ Svg.text car.metaData.carNumber ]
         ]
+
+
+calcProgress : ViewModelItem -> Float
+calcProgress car =
+    let
+        ( sector1Weight, sector2Weight, sector3Weight ) =
+            ( 0.33, 0.33, 0.34 )
+    in
+    case ( car.timing.sector_1, car.timing.sector_2, car.timing.sector_3 ) of
+        ( Just s1, Nothing, Nothing ) ->
+            (s1.progress / 100) * sector1Weight
+
+        ( Just _, Just s2, Nothing ) ->
+            sector1Weight + (s2.progress / 100) * sector2Weight
+
+        ( Just _, Just _, Just s3 ) ->
+            sector1Weight + sector2Weight + (s3.progress / 100) * sector3Weight
+
+        -- Fallback to the original calculation if sector data is incomplete
+        _ ->
+            case car.currentLap of
+                Nothing ->
+                    0
+
+                Just currentLap ->
+                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
