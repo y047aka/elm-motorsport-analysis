@@ -120,7 +120,7 @@ init_timing clock { leader, rival } car =
                 S1 ->
                     let
                         s1_progress =
-                            (toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100
+                            min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100)
                     in
                     ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = s1_progress }
                     , Nothing
@@ -130,7 +130,7 @@ init_timing clock { leader, rival } car =
                 S2 ->
                     let
                         s2_progress =
-                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100
+                            min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100)
                     in
                     ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
                     , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = s2_progress }
@@ -140,7 +140,7 @@ init_timing clock { leader, rival } car =
                 S3 ->
                     let
                         s3_progress =
-                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100
+                            min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100)
                     in
                     ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
                     , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = 100 }
