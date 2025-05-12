@@ -68,7 +68,11 @@ startFinishLine centerX centerY radius =
 
 renderCars : Int -> Int -> Int -> RaceControl.Model -> Svg.Svg msg
 renderCars centerX centerY radius raceControl =
-    Svg.g [] (List.map (renderCar centerX centerY radius) (ViewModel.init raceControl))
+    Svg.g []
+        (ViewModel.init raceControl
+            |> List.map (renderCar centerX centerY radius)
+            |> List.reverse
+        )
 
 
 renderCar : Int -> Int -> Int -> ViewModelItem -> Svg.Svg msg
