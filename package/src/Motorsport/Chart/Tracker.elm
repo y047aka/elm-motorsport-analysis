@@ -4,6 +4,7 @@ import Css exposing (center, displayFlex, justifyContent, position, px, sticky, 
 import Html.Styled exposing (Html, div, h2, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Lap exposing (Sector(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Svg.Styled as Svg
@@ -131,18 +132,18 @@ calcProgress car =
         ( sector1Weight, sector2Weight, sector3Weight ) =
             ( 0.33, 0.33, 0.34 )
     in
-    case ( car.timing.sector_1, car.timing.sector_2, car.timing.sector_3 ) of
-        ( Just s1, Nothing, Nothing ) ->
-            (s1.progress / 100) * sector1Weight
+    case car.timing.sector of
+        Just ( S1, progress ) ->
+            (progress / 100) * sector1Weight
 
-        ( Just _, Just s2, Nothing ) ->
-            sector1Weight + (s2.progress / 100) * sector2Weight
+        Just ( S2, progress ) ->
+            sector1Weight + (progress / 100) * sector2Weight
 
-        ( Just _, Just _, Just s3 ) ->
-            sector1Weight + sector2Weight + (s3.progress / 100) * sector3Weight
+        Just ( S3, progress ) ->
+            sector1Weight + sector2Weight + (progress / 100) * sector3Weight
 
         -- Fallback to the original calculation if sector data is incomplete
-        _ ->
+        Nothing ->
             case car.currentLap of
                 Nothing ->
                     0
