@@ -87,16 +87,46 @@ renderCar centerX centerY radius car =
         r =
             toFloat radius
 
-        -- Calculate current lap progress (using currentLap data)
+        -- Calculate sector-based progress
         progress =
             case car.currentLap of
                 Nothing ->
                     0
 
                 Just currentLap ->
-                    -- Calculate progress (0-1) by dividing elapsed time by lap time
-                    -- Clamp the value to ensure it doesn't exceed 1
-                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+                    -- Calculate progress based on which sector the car is in and sector times
+                    let
+                        sector1Weight =
+                            0.33
+
+                        -- Each sector represents about 1/3 of the lap
+                        sector2Weight =
+                            0.33
+
+                        sector3Weight =
+                            0.34
+
+                        -- Small adjustment to ensure total = 1.0
+                        -- Calculate progress based on sector data
+                        sectorProgress =
+                            case ( car.timing.sector_1, car.timing.sector_2, car.timing.sector_3 ) of
+                                -- In sector 1
+                                ( Just s1, Nothing, Nothing ) ->
+                                    (s1.progress / 100) * sector1Weight
+
+                                -- In sector 2
+                                ( Just _, Just s2, Nothing ) ->
+                                    sector1Weight + (s2.progress / 100) * sector2Weight
+
+                                -- In sector 3
+                                ( Just _, Just _, Just s3 ) ->
+                                    sector1Weight + sector2Weight + (s3.progress / 100) * sector3Weight
+
+                                -- Fallback to the original calculation if sector data is incomplete
+                                _ ->
+                                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+                    in
+                    sectorProgress
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
