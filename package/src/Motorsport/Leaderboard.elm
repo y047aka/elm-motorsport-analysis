@@ -54,7 +54,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap exposing (Lap, Sector(..))
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
@@ -397,22 +397,31 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                             (\{ best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                                 div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                                     [ lapTime { time = timing.time, personalBest = best }
-                                    , div
+                                    , let
+                                        ( s1_progress, s2_progress, s3_progress ) =
+                                            case timing.sector of
+                                                Just ( S1, progress ) ->
+                                                    ( progress, 0, 0 )
+
+                                                Just ( S2, progress ) ->
+                                                    ( 100, progress, 0 )
+
+                                                Just ( S3, progress ) ->
+                                                    ( 100, 100, progress )
+
+                                                _ ->
+                                                    ( 100, 100, 100 )
+                                      in
+                                      div
                                         [ css
                                             [ property "display" "grid"
                                             , property "grid-template-columns" "1fr 1fr 1fr"
                                             , property "column-gap" "4px"
                                             ]
                                         ]
-                                        [ timing.sector_1
-                                            |> Maybe.map (\{ progress } -> sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, progress = progress })
-                                            |> Maybe.withDefault (text "")
-                                        , timing.sector_2
-                                            |> Maybe.map (\{ progress } -> sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, progress = progress })
-                                            |> Maybe.withDefault (text "")
-                                        , timing.sector_3
-                                            |> Maybe.map (\{ progress } -> sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, progress = progress })
-                                            |> Maybe.withDefault (text "")
+                                        [ sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, progress = s1_progress }
+                                        , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, progress = s2_progress }
+                                        , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, progress = s3_progress }
                                         ]
                                     ]
                             )

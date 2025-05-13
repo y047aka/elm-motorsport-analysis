@@ -48,9 +48,7 @@ type alias MetaData =
 
 type alias Timing =
     { time : Duration
-    , sector_1 : Maybe { time : Duration, personalBest : Duration, progress : Float }
-    , sector_2 : Maybe { time : Duration, personalBest : Duration, progress : Float }
-    , sector_3 : Maybe { time : Duration, personalBest : Duration, progress : Float }
+    , sector : Maybe ( Sector, Float )
     , gap : Gap
     , interval : Gap
     }
@@ -113,44 +111,18 @@ init_timing clock { leader, rival } car =
             Maybe.withDefault Lap.empty car.lastLap
 
         currentSector =
-            Lap.currentSector raceClock currentLap
-
-        ( sector_1, sector_2, sector_3 ) =
-            case currentSector of
+            case Lap.currentSector raceClock currentLap of
                 S1 ->
-                    let
-                        s1_progress =
-                            (toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100
-                    in
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = s1_progress }
-                    , Nothing
-                    , Nothing
-                    )
+                    Just ( S1, min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100) )
 
                 S2 ->
-                    let
-                        s2_progress =
-                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100
-                    in
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = s2_progress }
-                    , Nothing
-                    )
+                    Just ( S2, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100) )
 
                 S3 ->
-                    let
-                        s3_progress =
-                            (toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100
-                    in
-                    ( Just { time = currentLap.sector_1, personalBest = currentLap.s1_best, progress = 100 }
-                    , Just { time = currentLap.sector_2, personalBest = currentLap.s2_best, progress = 100 }
-                    , Just { time = currentLap.sector_3, personalBest = currentLap.s3_best, progress = s3_progress }
-                    )
+                    Just ( S3, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100) )
     in
     { time = raceClock.elapsed - lastLap.elapsed
-    , sector_1 = sector_1
-    , sector_2 = sector_2
-    , sector_3 = sector_3
+    , sector = currentSector
     , gap =
         Maybe.map2 (Gap.at clock) leader (Just car)
             |> Maybe.withDefault Gap.None

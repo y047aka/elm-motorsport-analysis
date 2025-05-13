@@ -11,6 +11,7 @@ import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
+import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -74,6 +75,7 @@ type alias Model =
 type Mode
     = Leaderboard
     | PositionHistory
+    | Tracker
 
 
 init :
@@ -186,6 +188,9 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_Wec
+
+                Tracker ->
+                    TrackerChart.view raceControl_Wec
             ]
         }
 
@@ -222,6 +227,7 @@ header { eventSummary, raceControl_Wec } =
             , nav []
                 [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
                 , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
+                , button [ onClick (ModeChange Tracker) ] [ text "Tracker" ]
                 ]
             ]
         ]

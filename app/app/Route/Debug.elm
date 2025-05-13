@@ -179,59 +179,56 @@ config analysis =
         , sectorTimeColumn
             { label = "S1"
             , getter =
-                .timing
-                    >> .sector_1
+                .currentLap
                     >> Maybe.map
-                        (\{ time, personalBest, progress } ->
-                            { time = time
-                            , personalBest = personalBest
+                        (\{ sector_1, s1_best } ->
+                            { time = sector_1
+                            , personalBest = s1_best
                             , overallBest = analysis.sector_1_fastest
-                            , progress = progress
+                            , progress = 100
                             }
                         )
             }
         , customColumn
             { label = "S1 Best"
-            , getter = .timing >> .sector_1 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.timing >> .sector_1 >> Maybe.map .personalBest >> Maybe.withDefault 0)
+            , getter = .currentLap >> Maybe.map (.s1_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLap >> Maybe.map .s1_best >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S2"
             , getter =
-                .timing
-                    >> .sector_2
+                .currentLap
                     >> Maybe.map
-                        (\{ time, personalBest, progress } ->
-                            { time = time
-                            , personalBest = personalBest
+                        (\{ sector_2, s2_best } ->
+                            { time = sector_2
+                            , personalBest = s2_best
                             , overallBest = analysis.sector_2_fastest
-                            , progress = progress
+                            , progress = 100
                             }
                         )
             }
         , customColumn
             { label = "S2 Best"
-            , getter = .timing >> .sector_2 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.timing >> .sector_2 >> Maybe.map .personalBest >> Maybe.withDefault 0)
+            , getter = .currentLap >> Maybe.map (.s2_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLap >> Maybe.map .s2_best >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S3"
             , getter =
-                .timing
-                    >> .sector_3
+                .currentLap
                     >> Maybe.map
-                        (\{ time, personalBest, progress } ->
-                            { time = time
-                            , personalBest = personalBest
+                        (\{ sector_3, s3_best } ->
+                            { time = sector_3
+                            , personalBest = s3_best
                             , overallBest = analysis.sector_3_fastest
-                            , progress = progress
+                            , progress = 100
                             }
                         )
             }
         , customColumn
             { label = "S3 Best"
-            , getter = .timing >> .sector_3 >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.timing >> .sector_3 >> Maybe.map .personalBest >> Maybe.withDefault 0)
+            , getter = .currentLap >> Maybe.map (.s3_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLap >> Maybe.map .s3_best >> Maybe.withDefault 0)
             }
         , lastLapColumn_F1
             { getter = .lastLap
@@ -259,13 +256,11 @@ raceControlToLeaderboard { lapCount, cars } =
                             , lap = lap.lap
                             , timing =
                                 { time = 0
-                                , sector_1 = Just { time = lap.sector_1, personalBest = lap.s1_best, progress = 100 }
-                                , sector_2 = Just { time = lap.sector_2, personalBest = lap.s2_best, progress = 100 }
-                                , sector_3 = Just { time = lap.sector_3, personalBest = lap.s3_best, progress = 100 }
+                                , sector = Nothing
                                 , gap = Gap.None
                                 , interval = Gap.None
                                 }
-                            , currentLap = Nothing
+                            , currentLap = Just lap
                             , lastLap = Just lap
                             , history = []
                             }
