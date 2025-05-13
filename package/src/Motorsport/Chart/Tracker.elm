@@ -1,8 +1,5 @@
 module Motorsport.Chart.Tracker exposing (view)
 
-import Css exposing (center, displayFlex, justifyContent, position, sticky, top)
-import Html.Styled exposing (Html, div, h2)
-import Html.Styled.Attributes exposing (css)
 import Motorsport.Class as Class
 import Motorsport.Lap exposing (Sector(..))
 import Motorsport.RaceControl as RaceControl
@@ -19,24 +16,19 @@ type alias TrackConfig =
     { cx : Float, cy : Float, r : Float }
 
 
-view : RaceControl.Model -> Html msg
+view : RaceControl.Model -> Svg msg
 view raceControl =
     let
         config =
             { cx = 600, cy = 600, r = 450 }
     in
-    div [ css [ displayFlex, justifyContent center ] ]
-        [ div [ css [ position sticky, top (Css.px 64) ] ]
-            [ h2 [] [ Html.Styled.text "Track Position Tracker" ]
-            , svg
-                [ width (px 1200)
-                , height (px 1200)
-                , viewBox 0 0 1200 1200
-                ]
-                [ Lazy.lazy track config
-                , renderCars config raceControl
-                ]
-            ]
+    svg
+        [ width (px 1200)
+        , height (px 1200)
+        , viewBox 0 0 1200 1200
+        ]
+        [ Lazy.lazy track config
+        , renderCars config raceControl
         ]
 
 
