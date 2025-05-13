@@ -1,129 +1,128 @@
 module Motorsport.Chart.Tracker exposing (view)
 
-import Css exposing (center, displayFlex, justifyContent, position, px, sticky, top)
-import Html.Styled exposing (Html, div, h2, text)
+import Css exposing (center, displayFlex, justifyContent, position, sticky, top)
+import Html.Styled exposing (Html, div, h2)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class as Class
 import Motorsport.Lap exposing (Sector(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
-import Svg.Styled as Svg
-import Svg.Styled.Attributes as SvgAttrs
+import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
+import Svg.Styled.Attributes exposing (dominantBaseline, fill, stroke, textAnchor)
+import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
+import TypedSvg.Types exposing (px)
+
+
+type alias TrackConfig =
+    { cx : Float, cy : Float, r : Float }
 
 
 view : RaceControl.Model -> Html msg
 view raceControl =
     let
-        radius =
-            450
-
-        centerX =
-            600
-
-        centerY =
-            600
+        config =
+            { cx = 600, cy = 600, r = 450 }
     in
     div [ css [ displayFlex, justifyContent center ] ]
-        [ div [ css [ position sticky, top (px 64) ] ]
-            [ h2 [] [ text "Track Position Tracker" ]
-            , div []
-                [ Svg.svg
-                    [ SvgAttrs.width "1200"
-                    , SvgAttrs.height "1200"
-                    , SvgAttrs.viewBox "0 0 1200 1200"
-                    ]
-                    [ trackCircle centerX centerY radius
-                    , startFinishLine centerX centerY radius
-                    , renderCars centerX centerY radius raceControl
-                    ]
+        [ div [ css [ position sticky, top (Css.px 64) ] ]
+            [ h2 [] [ Html.Styled.text "Track Position Tracker" ]
+            , svg
+                [ width (px 1200)
+                , height (px 1200)
+                , viewBox 0 0 1200 1200
+                ]
+                [ track config
+                , renderCars config raceControl
                 ]
             ]
         ]
 
 
-trackCircle : Int -> Int -> Int -> Svg.Svg msg
-trackCircle centerX centerY radius =
-    Svg.circle
-        [ SvgAttrs.cx (String.fromInt centerX)
-        , SvgAttrs.cy (String.fromInt centerY)
-        , SvgAttrs.r (String.fromInt radius)
-        , SvgAttrs.fill "none"
-        , SvgAttrs.stroke "#333"
-        , SvgAttrs.strokeWidth "4"
-        ]
-        []
+track : TrackConfig -> Svg msg
+track { cx, cy, r } =
+    let
+        trackCircle =
+            circle
+                [ Attributes.cx (px cx)
+                , Attributes.cy (px cy)
+                , Attributes.r (px r)
+                , fill "none"
+                , stroke "#333"
+                , strokeWidth (px 4)
+                ]
+                []
+
+        startFinishLine =
+            line
+                [ x1 (px cx)
+                , y1 (px (cy - r - 15))
+                , x2 (px cx)
+                , y2 (px (cy - r + 15))
+                , stroke "#fff"
+                , strokeWidth (px 4)
+                ]
+                []
+    in
+    g [] [ trackCircle, startFinishLine ]
 
 
-startFinishLine : Int -> Int -> Int -> Svg.Svg msg
-startFinishLine centerX centerY radius =
-    Svg.line
-        [ SvgAttrs.x1 (String.fromInt centerX)
-        , SvgAttrs.y1 (String.fromInt (centerY - radius - 15))
-        , SvgAttrs.x2 (String.fromInt centerX)
-        , SvgAttrs.y2 (String.fromInt (centerY - radius + 15))
-        , SvgAttrs.stroke "#fff"
-        , SvgAttrs.strokeWidth "4"
-        ]
-        []
-
-
-renderCars : Int -> Int -> Int -> RaceControl.Model -> Svg.Svg msg
-renderCars centerX centerY radius raceControl =
-    Svg.g []
+renderCars : TrackConfig -> RaceControl.Model -> Svg msg
+renderCars config raceControl =
+    g []
         (ViewModel.init raceControl
-            |> List.map (renderCar centerX centerY radius)
             |> List.reverse
+            |> List.map (renderCarOnTrack config)
         )
 
 
-renderCar : Int -> Int -> Int -> ViewModelItem -> Svg.Svg msg
-renderCar centerX centerY radius car =
+renderCarOnTrack : TrackConfig -> ViewModelItem -> Svg msg
+renderCarOnTrack config car =
+    coordinatesOnTrack config car
+        |> renderCar car
+
+
+coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
+coordinatesOnTrack { cx, cy, r } car =
     let
-        cx =
-            toFloat centerX
-
-        cy =
-            toFloat centerY
-
-        r =
-            toFloat radius
-
         progress =
             calcProgress car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
             2 * pi * progress - (pi / 2)
+    in
+    { x = cx + r * cos angle
+    , y = cy + r * sin angle
+    }
 
-        -- Calculate coordinates on the circle
-        x =
-            cx + r * cos angle
 
-        y =
-            cy + r * sin angle
-
-        -- Get color based on car class
+renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
+renderCar car { x, y } =
+    let
         carColor =
             Class.toHexColor 2025 car.metaData.class |> .value
+
+        carCircle =
+            circle
+                [ Attributes.cx (px x)
+                , Attributes.cy (px y)
+                , Attributes.r (px 15)
+                , fill carColor
+                ]
+                []
+
+        carNumber =
+            text_
+                [ Attributes.x (px x)
+                , Attributes.y (px y)
+                , fontSize (px 15)
+                , textAnchor "middle"
+                , dominantBaseline "central"
+                , fill "#fff"
+                ]
+                [ text car.metaData.carNumber ]
     in
-    Svg.g []
-        [ Svg.circle
-            [ SvgAttrs.cx (String.fromFloat x)
-            , SvgAttrs.cy (String.fromFloat y)
-            , SvgAttrs.r "15"
-            , SvgAttrs.fill carColor
-            ]
-            []
-        , Svg.text_
-            [ SvgAttrs.x (String.fromFloat x)
-            , SvgAttrs.y (String.fromFloat y)
-            , SvgAttrs.fontSize "15"
-            , SvgAttrs.textAnchor "middle"
-            , SvgAttrs.dominantBaseline "central"
-            , SvgAttrs.fill "#fff"
-            ]
-            [ Svg.text car.metaData.carNumber ]
-        ]
+    g [] [ carCircle, carNumber ]
 
 
 calcProgress : ViewModelItem -> Float
