@@ -9,6 +9,8 @@ import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (dominantBaseline, fill, stroke, textAnchor)
+import Svg.Styled.Keyed as Keyed
+import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
 import TypedSvg.Types exposing (px)
 
@@ -31,7 +33,7 @@ view raceControl =
                 , height (px 1200)
                 , viewBox 0 0 1200 1200
                 ]
-                [ track config
+                [ Lazy.lazy track config
                 , renderCars config raceControl
                 ]
             ]
@@ -68,10 +70,11 @@ track { cx, cy, r } =
 
 renderCars : TrackConfig -> RaceControl.Model -> Svg msg
 renderCars config raceControl =
-    g []
+    Keyed.node "g"
+        []
         (ViewModel.init raceControl
             |> List.reverse
-            |> List.map (renderCarOnTrack config)
+            |> List.map (\car -> ( car.metaData.carNumber, Lazy.lazy2 renderCarOnTrack config car ))
         )
 
 
