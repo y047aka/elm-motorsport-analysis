@@ -190,7 +190,7 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
                     PositionHistoryChart.view raceControl_Wec
 
                 Tracker ->
-                    TrackerChart.view raceControl_Wec
+                    TrackerChart.view analysis_Wec raceControl_Wec
             ]
         }
 

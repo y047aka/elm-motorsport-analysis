@@ -1,5 +1,6 @@
 module Motorsport.Chart.Tracker exposing (view)
 
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class
 import Motorsport.Lap exposing (Sector(..))
 import Motorsport.RaceControl as RaceControl
@@ -13,14 +14,38 @@ import TypedSvg.Types exposing (px)
 
 
 type alias TrackConfig =
-    { cx : Float, cy : Float, r : Float }
+    { cx : Float
+    , cy : Float
+    , r : Float
+    , sectorRatio : { s1 : Float, s2 : Float, s3 : Float }
+    }
 
 
-view : RaceControl.Model -> Svg msg
-view raceControl =
+calcSectorRatio : Analysis -> { s1 : Float, s2 : Float, s3 : Float }
+calcSectorRatio analysis =
+    let
+        totalFastestTime =
+            analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest
+    in
+    if totalFastestTime == 0 then
+        { s1 = 1 / 3, s2 = 1 / 3, s3 = 1 / 3 }
+
+    else
+        { s1 = toFloat analysis.sector_1_fastest / toFloat totalFastestTime
+        , s2 = toFloat analysis.sector_2_fastest / toFloat totalFastestTime
+        , s3 = toFloat analysis.sector_3_fastest / toFloat totalFastestTime
+        }
+
+
+view : Analysis -> RaceControl.Model -> Svg msg
+view analysis raceControl =
     let
         config =
-            { cx = 600, cy = 600, r = 450 }
+            { cx = 600
+            , cy = 600
+            , r = 450
+            , sectorRatio = calcSectorRatio analysis
+            }
     in
     svg
         [ width (px 1200)
@@ -33,7 +58,7 @@ view raceControl =
 
 
 track : TrackConfig -> Svg msg
-track { cx, cy, r } =
+track { cx, cy, r, sectorRatio } =
     let
         trackCircle =
             circle
@@ -56,8 +81,29 @@ track { cx, cy, r } =
                 , strokeWidth (px 4)
                 ]
                 []
+
+        makeSectorBoundary angle =
+            line
+                [ x1 (px (cx + (r - 10) * cos angle))
+                , y1 (px (cy + (r - 10) * sin angle))
+                , x2 (px (cx + (r + 10) * cos angle))
+                , y2 (px (cy + (r + 10) * sin angle))
+                , stroke "#aaa"
+                , strokeWidth (px 3)
+                ]
+                []
+
+        ( s1Angle, s2Angle ) =
+            ( (2 * pi * sectorRatio.s1) - (pi / 2)
+            , (2 * pi * (sectorRatio.s1 + sectorRatio.s2)) - (pi / 2)
+            )
+
+        ( sector1Boundary, sector2Boundary ) =
+            ( makeSectorBoundary s1Angle
+            , makeSectorBoundary s2Angle
+            )
     in
-    g [] [ trackCircle, startFinishLine ]
+    g [] [ trackCircle, startFinishLine, sector1Boundary, sector2Boundary ]
 
 
 renderCars : TrackConfig -> RaceControl.Model -> Svg msg
@@ -77,10 +123,10 @@ renderCarOnTrack config car =
 
 
 coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
-coordinatesOnTrack { cx, cy, r } car =
+coordinatesOnTrack { cx, cy, r, sectorRatio } car =
     let
         progress =
-            calcProgress car
+            calcProgress sectorRatio car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
@@ -120,21 +166,17 @@ renderCar car { x, y } =
     g [] [ carCircle, carNumber ]
 
 
-calcProgress : ViewModelItem -> Float
-calcProgress car =
-    let
-        ( sector1Weight, sector2Weight, sector3Weight ) =
-            ( 0.33, 0.33, 0.34 )
-    in
+calcProgress : { s1 : Float, s2 : Float, s3 : Float } -> ViewModelItem -> Float
+calcProgress ratio car =
     case car.timing.sector of
         Just ( S1, progress ) ->
-            (progress / 100) * sector1Weight
+            (progress / 100) * ratio.s1
 
         Just ( S2, progress ) ->
-            sector1Weight + (progress / 100) * sector2Weight
+            ratio.s1 + (progress / 100) * ratio.s2
 
         Just ( S3, progress ) ->
-            sector1Weight + sector2Weight + (progress / 100) * sector3Weight
+            ratio.s1 + ratio.s2 + (progress / 100) * ratio.s3
 
         -- Fallback to the original calculation if sector data is incomplete
         Nothing ->
