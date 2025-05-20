@@ -1,7 +1,10 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
+import Data.FormulaE
 import Data.Wec exposing (Event)
+import Data_Cli.FormulaE as FormulaE
+import Data_Cli.FormulaE.Preprocess as Preprocess_FormulaE
 import Data_Cli.Wec as Wec
 import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Http
@@ -41,14 +44,47 @@ init flags =
     ( { args = maybeArgs }
     , case maybeArgs of
         Just args ->
-            Wec.getLaps args.eventId (CsvLoaded args.eventId)
+            case args.mode of
+                "wec" ->
+                    Wec.getLaps args.eventId (CsvLoaded_Wec args.eventId)
+
+                "fe" ->
+                    FormulaE.getLaps args.eventId (CsvLoaded_FormulaE args.eventId)
+
+                _ ->
+                    selectMode
 
         Nothing ->
+            selectMode
+    )
+
+
+selectMode : Cmd Msg
+selectMode =
+    [ { title = "WEC", value = "wec", description = "World Endurance Championship" }
+    , { title = "Formula E", value = "fe", description = "Formula E Championship" }
+    ]
+    |> Select.option "Select Mode : "
+    |> output
+
+
+selectEvent : String -> Cmd Msg
+selectEvent mode =
+    case mode of
+        "wec" ->
             [ "qatar_1812km", "imola_6h", "spa_6h", "le_mans_24h", "fuji_6h", "bahrain_8h" ]
                 |> List.map toItem
                 |> Select.option "Select Event ID : "
                 |> output
-    )
+
+        "fe" ->
+            [ "R08_tokyo" ]
+                |> List.map toItem
+                |> Select.option "Select Event ID : "
+                |> output
+
+        _ ->
+            selectMode
 
 
 toItem : String -> Prompts.Item
@@ -64,28 +100,56 @@ toItem eventId =
 
 
 type Msg
-    = InputEventId String
-    | CsvLoaded String (Result Http.Error (List Wec.Lap))
+    = InputMode String
+    | InputEventId String String
+    | CsvLoaded_Wec String (Result Http.Error (List Wec.Lap))
+    | CsvLoaded_FormulaE String (Result Http.Error (List FormulaE.Lap))
     | NoOp
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        InputEventId eventId ->
-            ( { model | args = Just { eventId = eventId, repoName = Maybe.withDefault "" <| Maybe.map .repoName model.args } }
-            , Wec.getLaps eventId (CsvLoaded eventId)
+        InputMode mode ->
+            ( { model | args = Just { eventId = "", mode = mode } }
+            , selectEvent mode
             )
 
-        CsvLoaded fileName (Ok decoded) ->
+        InputEventId mode eventId ->
+            ( { model | args = Just { eventId = eventId, mode = mode } }
+            , case mode of
+                "wec" ->
+                    Wec.getLaps eventId (CsvLoaded_Wec eventId)
+
+                "fe" ->
+                    FormulaE.getLaps eventId (CsvLoaded_FormulaE eventId)
+
+                _ ->
+                    Cmd.none
+            )
+
+        CsvLoaded_Wec fileName (Ok decoded) ->
             ( model
             , exitWithMsg
                 ( 0
                 , Maybe.withDefault "" <| Maybe.map .eventId model.args
-                , eventEncoder
+                , wecEventEncoder
                     { name = fileName
                     , laps = decoded
                     , preprocessed = Preprocess_Wec.preprocess { laps = decoded }
+                    }
+                )
+            )
+
+        CsvLoaded_FormulaE fileName (Ok decoded) ->
+            ( model
+            , exitWithMsg
+                ( 0
+                , Maybe.withDefault "" <| Maybe.map .eventId model.args
+                , formulaEEventEncoder
+                    { name = fileName
+                    , laps = decoded
+                    , preprocessed = Preprocess_FormulaE.preprocess { laps = decoded }
                     }
                 )
             )
@@ -96,8 +160,8 @@ update msg model =
             )
 
 
-eventEncoder : Event -> JE.Value
-eventEncoder { name, laps, preprocessed } =
+wecEventEncoder : Event -> JE.Value
+wecEventEncoder { name, laps, preprocessed } =
     let
         toEventName eventId =
             case eventId of
@@ -129,6 +193,24 @@ eventEncoder { name, laps, preprocessed } =
         ]
 
 
+formulaEEventEncoder : Data.FormulaE.Event -> JE.Value
+formulaEEventEncoder { name, laps, preprocessed } =
+    let
+        toEventName eventId =
+            case eventId of
+                "R08_tokyo" ->
+                    "Tokyo E-Prix"
+
+                _ ->
+                    "Encoding Error"
+    in
+    JE.object
+        [ ( "name", JE.string (toEventName name) )
+        , ( "laps", JE.list FormulaE.lapEncoder laps )
+        , ( "preprocessed", JE.list FormulaE.carEncoder preprocessed )
+        ]
+
+
 
 -- SUBSCRIPTIONS
 
@@ -137,7 +219,17 @@ subscriptions : Model -> Sub Msg
 subscriptions model =
     let
         decoder =
-            JD.map InputEventId JD.string
+            JD.oneOf
+                [ JD.map InputMode (JD.string |> JD.andThen (\mode ->
+                    if mode == "wec" || mode == "fe" then
+                        JD.succeed mode
+                    else
+                        JD.fail "not a valid mode"
+                  ))
+                , JD.map2 InputEventId
+                    (JD.field "mode" JD.string)
+                    (JD.field "eventId" JD.string)
+                ]
     in
     [ JD.decodeValue decoder
         >> Result.withDefault NoOp
