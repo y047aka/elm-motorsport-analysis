@@ -23,7 +23,19 @@ app.ports.output.subscribe(async opts => {
 });
 
 app.ports.exitWithMsg.subscribe(([code, msg, data]) => {
-  fs.writeFileSync(`../app/static/wec/2025/${msg}.json`, JSON.stringify(data, null, 2));
+  // Get the mode from the command line arguments
+  const mode = args.split('/')[0];
+
+  // Determine the output path based on the mode
+  let outputPath = '';
+  if (mode === 'fe') {
+    outputPath = `../app/static/formurla_e/2025/${msg}.json`;
+  } else {
+    // Default to WEC path
+    outputPath = `../app/static/wec/2025/${msg}.json`;
+  }
+
+  fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
   console.log(`${msg}.json`);
   process.exit(code);
 });
