@@ -145,7 +145,7 @@ update app shared msg m =
             ( { m | mode = mode }, Effect.none, Nothing )
 
         RaceControlMsg raceControlMsg ->
-            ( m, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
+            ( m, Effect.none, Just (Shared.RaceControlMsg raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
