@@ -177,20 +177,20 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, analysis, raceControl_Wec } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+                    Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl_Wec
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_Wec
 
                 Tracker ->
-                    TrackerChart.view analysis_Wec raceControl_Wec
+                    TrackerChart.view analysis raceControl_Wec
             ]
         }
 
