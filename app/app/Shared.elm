@@ -51,8 +51,7 @@ type alias Model =
     , raceControl_Wec : RaceControl.Model
     , raceControl_FormulaE : RaceControl.Model
     , analysis_F1 : Analysis
-    , analysis_Wec : Analysis
-    , analysis_FormulaE : Analysis
+    , analysis : Analysis
     }
 
 
@@ -75,8 +74,7 @@ init flags maybePagePath =
       , raceControl_Wec = RaceControl.empty
       , raceControl_FormulaE = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
-      , analysis_Wec = Analysis.finished RaceControl.empty
-      , analysis_FormulaE = Analysis.finished RaceControl.empty
+      , analysis = Analysis.finished RaceControl.empty
       }
     , Effect.none
     )
@@ -151,7 +149,7 @@ update msg m =
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl_Wec = rcNew
-                , analysis_Wec = Analysis.finished rcNew
+                , analysis = Analysis.finished rcNew
               }
             , Effect.none
             )
@@ -185,7 +183,7 @@ update msg m =
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl_FormulaE = rcNew
-                , analysis_FormulaE = Analysis.finished rcNew
+                , analysis = Analysis.finished rcNew
               }
             , Effect.none
             )
@@ -212,7 +210,7 @@ update msg m =
             in
             ( { m
                 | raceControl_Wec = rcNew
-                , analysis_Wec = Analysis.fromRaceControl rcNew
+                , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )
@@ -224,7 +222,7 @@ update msg m =
             in
             ( { m
                 | raceControl_FormulaE = rcNew
-                , analysis_FormulaE = Analysis.fromRaceControl rcNew
+                , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )

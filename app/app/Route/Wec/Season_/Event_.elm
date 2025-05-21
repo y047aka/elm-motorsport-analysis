@@ -200,7 +200,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState, eventsState } =
+view app ({ eventSummary, analysis, raceControl_Wec } as shared) { mode, leaderboardState, eventsState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -209,10 +209,10 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
                 Leaderboard ->
                     case ( eventSummary.season, eventSummary.name ) of
                         ( 2025, "24 Hours of Le Mans" ) ->
-                            Leaderboard.view (config_LeMans24h eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl_Wec
 
                         _ ->
-                            Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+                            Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl_Wec
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_Wec
@@ -220,10 +220,10 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
                 Tracker ->
                     case ( eventSummary.season, eventSummary.name ) of
                         ( 2025, "24 Hours of Le Mans" ) ->
-                            Tracker_LeMans24h.view analysis_Wec raceControl_Wec
+                            Tracker_LeMans24h.view analysis raceControl_Wec
 
                         _ ->
-                            TrackerChart.view analysis_Wec raceControl_Wec
+                            TrackerChart.view analysis raceControl_Wec
 
                 Events ->
                     eventsView eventsState raceControl_Wec

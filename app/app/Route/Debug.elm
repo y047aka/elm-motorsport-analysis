@@ -122,7 +122,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
+view app { analysis, raceControl_Wec } { leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -155,14 +155,14 @@ view app { analysis_Wec, raceControl_Wec } { leaderboardState } =
                     , text (Clock.getElapsed clock |> Duration.toString)
                     ]
                 , div []
-                    [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis_Wec.fastestLapTime) ]
-                    , div [] [ text "slowestLapTime: ", text (Duration.toString analysis_Wec.slowestLapTime) ]
-                    , div [] [ text "s1_fastest: ", text (Duration.toString analysis_Wec.sector_1_fastest) ]
-                    , div [] [ text "s2_fastest: ", text (Duration.toString analysis_Wec.sector_2_fastest) ]
-                    , div [] [ text "s3_fastest: ", text (Duration.toString analysis_Wec.sector_3_fastest) ]
+                    [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis.fastestLapTime) ]
+                    , div [] [ text "slowestLapTime: ", text (Duration.toString analysis.slowestLapTime) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString analysis.sector_1_fastest) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString analysis.sector_2_fastest) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis_Wec) leaderboardState (raceControlToLeaderboard raceControl_Wec)
+            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl_Wec)
             ]
         }
 
