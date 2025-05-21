@@ -2,6 +2,7 @@ module Route.Index exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Css exposing (block, color, display, em, fontSize, inherit)
+import Data.Series.FormulaE_2025 exposing (formulaE_2025)
 import Data.Series.Wec_2024 exposing (wec_2024)
 import Data.Series.Wec_2025 exposing (wec_2025)
 import FatalError exposing (FatalError)
@@ -75,6 +76,16 @@ view app shared =
                         }
                 )
                 wec_2024
+            )
+        , section_ "Formula E 2025"
+            (List.map
+                (\eventSummary ->
+                    link
+                        { label = eventSummary.name
+                        , path = Route.FormulaE__Season___Event_ { season = "2025", event = eventSummary.id }
+                        }
+                )
+                formulaE_2025
             )
         ]
     }

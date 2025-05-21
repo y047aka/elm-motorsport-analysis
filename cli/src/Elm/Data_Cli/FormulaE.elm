@@ -59,7 +59,7 @@ type alias RaceClock =
 
 endpoint : String
 endpoint =
-    "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/app/static/formurla_e/2025"
+    "https://raw.githubusercontent.com/y047aka/elm-motorsport-analysis/refs/heads/main/app/static/formula-e/2025"
 
 
 getLaps : String -> (Result Http.Error (List Lap) -> msg) -> Cmd msg

@@ -5,7 +5,9 @@ import Css exposing (..)
 import Css.Global exposing (global)
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
+import Data.FormulaE as FormulaE
 import Data.Series as Series
+import Data.Series.FormulaE
 import Data.Series.Wec exposing (EventSummary)
 import Data.Wec as Wec
 import Effect exposing (Effect)
@@ -44,10 +46,13 @@ type alias Data =
 
 type alias Model =
     { eventSummary : EventSummary
+    , eventSummary_FormulaE : Data.Series.FormulaE.EventSummary
     , raceControl_F1 : RaceControl.Model
     , raceControl_Wec : RaceControl.Model
+    , raceControl_FormulaE : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis_Wec : Analysis
+    , analysis_FormulaE : Analysis
     }
 
 
@@ -66,10 +71,13 @@ init :
     -> ( Model, Effect Msg )
 init flags maybePagePath =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
+      , eventSummary_FormulaE = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
+      , raceControl_FormulaE = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
       , analysis_Wec = Analysis.finished RaceControl.empty
+      , analysis_FormulaE = Analysis.finished RaceControl.empty
       }
     , Effect.none
     )
@@ -84,8 +92,11 @@ type Msg
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | FetchJson_FormulaE { season : String, event : String }
+    | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg_Wec RaceControl.Msg
+    | RaceControlMsg_FormulaE RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -149,6 +160,40 @@ update msg m =
         JsonLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
+        FetchJson_FormulaE options ->
+            let
+                eventSummary =
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.FormulaE.fromString options.event)
+                        |> Maybe.andThen Series.toEventSummary_FormulaE
+                        |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
+            in
+            ( { m | eventSummary_FormulaE = eventSummary }
+            , Effect.fromCmd <|
+                Http.get
+                    { url = eventSummary.jsonPath
+                    , expect = Http.expectJson JsonLoaded_FormulaE FormulaE.eventDecoder
+                    }
+            )
+
+        JsonLoaded_FormulaE (Ok decoded) ->
+            let
+                rcNew =
+                    RaceControl.init decoded.preprocessed
+
+                modelEventSummary =
+                    m.eventSummary_FormulaE
+            in
+            ( { m
+                | eventSummary_FormulaE = { modelEventSummary | name = decoded.name }
+                , raceControl_FormulaE = rcNew
+                , analysis_FormulaE = Analysis.finished rcNew
+              }
+            , Effect.none
+            )
+
+        JsonLoaded_FormulaE (Err _) ->
+            ( m, Effect.none )
+
         RaceControlMsg_F1 raceControlMsg ->
             let
                 rcNew =
@@ -169,6 +214,18 @@ update msg m =
             ( { m
                 | raceControl_Wec = rcNew
                 , analysis_Wec = Analysis.fromRaceControl rcNew
+              }
+            , Effect.none
+            )
+
+        RaceControlMsg_FormulaE raceControlMsg ->
+            let
+                rcNew =
+                    RaceControl.update raceControlMsg m.raceControl_FormulaE
+            in
+            ( { m
+                | raceControl_FormulaE = rcNew
+                , analysis_FormulaE = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )
