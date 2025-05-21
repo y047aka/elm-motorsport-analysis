@@ -7,8 +7,9 @@ import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
 import Data.FormulaE as FormulaE
 import Data.Series as Series
+import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.FormulaE
-import Data.Series.Wec exposing (EventSummary)
+import Data.Series.Wec
 import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
@@ -46,7 +47,6 @@ type alias Data =
 
 type alias Model =
     { eventSummary : EventSummary
-    , eventSummary_FormulaE : Data.Series.FormulaE.EventSummary
     , raceControl_F1 : RaceControl.Model
     , raceControl_Wec : RaceControl.Model
     , raceControl_FormulaE : RaceControl.Model
@@ -71,7 +71,6 @@ init :
     -> ( Model, Effect Msg )
 init flags maybePagePath =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , eventSummary_FormulaE = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
       , raceControl_Wec = RaceControl.empty
       , raceControl_FormulaE = RaceControl.empty
@@ -167,7 +166,7 @@ update msg m =
                         |> Maybe.andThen Series.toEventSummary_FormulaE
                         |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
             in
-            ( { m | eventSummary_FormulaE = eventSummary }
+            ( { m | eventSummary = eventSummary }
             , Effect.fromCmd <|
                 Http.get
                     { url = eventSummary.jsonPath
@@ -181,10 +180,10 @@ update msg m =
                     RaceControl.init decoded.preprocessed
 
                 modelEventSummary =
-                    m.eventSummary_FormulaE
+                    m.eventSummary
             in
             ( { m
-                | eventSummary_FormulaE = { modelEventSummary | name = decoded.name }
+                | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl_FormulaE = rcNew
                 , analysis_FormulaE = Analysis.finished rcNew
               }

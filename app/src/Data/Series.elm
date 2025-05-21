@@ -1,8 +1,9 @@
 module Data.Series exposing (carImageUrl_Wec, toEventSummary, toEventSummary_FormulaE)
 
+import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.FormulaE as FormulaE exposing (FormulaE)
 import Data.Series.FormulaE_2025 exposing (toEventSummary_FormulaE_2025)
-import Data.Series.Wec exposing (EventSummary, Wec)
+import Data.Series.Wec exposing (Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
 import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
 
@@ -20,7 +21,7 @@ toEventSummary ( season, event ) =
             Nothing
 
 
-toEventSummary_FormulaE : ( Int, FormulaE ) -> Maybe FormulaE.EventSummary
+toEventSummary_FormulaE : ( Int, FormulaE ) -> Maybe EventSummary
 toEventSummary_FormulaE ( season, event ) =
     case season of
         2025 ->

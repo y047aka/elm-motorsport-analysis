@@ -1,12 +1,8 @@
-module Data.Series.FormulaE exposing
-    ( FormulaE(..), fromString
-    , EventSummary
-    )
+module Data.Series.FormulaE exposing (FormulaE(..), fromString)
 
 {-| FormulaE series
 
 @docs FormulaE, fromString
-@docs EventSummary
 
 -}
 
@@ -23,12 +19,3 @@ fromString string =
 
         _ ->
             Nothing
-
-
-type alias EventSummary =
-    { id : String
-    , name : String
-    , season : Int
-    , date : String
-    , jsonPath : String
-    }

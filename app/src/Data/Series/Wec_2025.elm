@@ -1,6 +1,7 @@
 module Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025, wec_2025)
 
-import Data.Series.Wec exposing (EventSummary, Wec(..))
+import Data.Series.EventSummary exposing (EventSummary)
+import Data.Series.Wec exposing (Wec(..))
 
 
 wec_2025 : List EventSummary

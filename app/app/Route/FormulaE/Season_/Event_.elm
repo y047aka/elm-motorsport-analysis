@@ -172,14 +172,14 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary_FormulaE, analysis_FormulaE, raceControl_FormulaE } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, analysis_FormulaE, raceControl_FormulaE } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Formula E"
         , body =
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary_FormulaE.season analysis_FormulaE) leaderboardState raceControl_FormulaE
+                    Leaderboard.view (config eventSummary.season analysis_FormulaE) leaderboardState raceControl_FormulaE
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_FormulaE
@@ -191,9 +191,9 @@ view app ({ eventSummary_FormulaE, analysis_FormulaE, raceControl_FormulaE } as 
 
 
 header : Shared.Model -> Html Msg
-header { eventSummary_FormulaE, raceControl_FormulaE } =
+header { eventSummary, raceControl_FormulaE } =
     Html.header [ css [ position sticky, top zero, backgroundColor (hsl 0 0 0.4) ] ]
-        [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary_FormulaE.name ]
+        [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
         , div [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []
                 [ case raceControl_FormulaE.clock of
