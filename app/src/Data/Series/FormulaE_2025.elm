@@ -1,6 +1,7 @@
 module Data.Series.FormulaE_2025 exposing (formulaE_2025, toEventSummary_FormulaE_2025)
 
-import Data.Series.FormulaE exposing (EventSummary, FormulaE(..))
+import Data.Series.EventSummary exposing (EventSummary)
+import Data.Series.FormulaE exposing (FormulaE(..))
 
 
 formulaE_2025 : List EventSummary

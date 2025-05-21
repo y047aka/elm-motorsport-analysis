@@ -1,12 +1,8 @@
-module Data.Series.Wec exposing
-    ( Wec(..), fromString, toString
-    , EventSummary
-    )
+module Data.Series.Wec exposing (Wec(..), fromString, toString)
 
 {-|
 
 @docs Wec, fromString, toString
-@docs EventSummary
 
 -}
 
@@ -65,12 +61,3 @@ toString event =
 
         Bahrain_8h ->
             "bahrain_8h"
-
-
-type alias EventSummary =
-    { id : String
-    , name : String
-    , season : Int
-    , date : String
-    , jsonPath : String
-    }
