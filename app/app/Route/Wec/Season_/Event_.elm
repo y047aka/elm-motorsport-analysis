@@ -166,7 +166,7 @@ update app shared msg m =
 
 subscriptions : RouteParams -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions routeParams path shared model =
-    case shared.raceControl_Wec.clock of
+    case shared.raceControl.clock of
         Started _ _ ->
             Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
 
@@ -200,7 +200,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl_Wec } as shared) { mode, leaderboardState, eventsState } =
+view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -209,35 +209,35 @@ view app ({ eventSummary, analysis, raceControl_Wec } as shared) { mode, leaderb
                 Leaderboard ->
                     case ( eventSummary.season, eventSummary.name ) of
                         ( 2025, "24 Hours of Le Mans" ) ->
-                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl_Wec
+                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
 
                         _ ->
-                            Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl_Wec
+                            Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
 
                 PositionHistory ->
-                    PositionHistoryChart.view raceControl_Wec
+                    PositionHistoryChart.view raceControl
 
                 Tracker ->
                     case ( eventSummary.season, eventSummary.name ) of
                         ( 2025, "24 Hours of Le Mans" ) ->
-                            Tracker_LeMans24h.view analysis raceControl_Wec
+                            Tracker_LeMans24h.view analysis raceControl
 
                         _ ->
-                            TrackerChart.view analysis raceControl_Wec
+                            TrackerChart.view analysis raceControl
 
                 Events ->
-                    eventsView eventsState raceControl_Wec
+                    eventsView eventsState raceControl
             ]
         }
 
 
 header : Shared.Model -> Html Msg
-header { eventSummary, raceControl_Wec } =
+header { eventSummary, raceControl } =
     Html.header [ css [ position sticky, top zero, backgroundColor (hsl 0 0 0.4) ] ]
         [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
         , div [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []
-                [ case raceControl_Wec.clock of
+                [ case raceControl.clock of
                     Initial ->
                         button [ onClick StartRace ] [ text "Start" ]
 
@@ -249,7 +249,7 @@ header { eventSummary, raceControl_Wec } =
 
                     _ ->
                         text ""
-                , case raceControl_Wec.clock of
+                , case raceControl.clock of
                     Started _ _ ->
                         text ""
 
@@ -259,7 +259,7 @@ header { eventSummary, raceControl_Wec } =
                             , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                             ]
                 ]
-            , statusBar raceControl_Wec
+            , statusBar raceControl
             , nav []
                 [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
                 , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]

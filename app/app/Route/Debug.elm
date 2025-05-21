@@ -122,13 +122,13 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis, raceControl_Wec } { leaderboardState } =
+view app { analysis, raceControl } { leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
             let
                 { clock, lapTotal, lapCount } =
-                    raceControl_Wec
+                    raceControl
             in
             [ header
                 [ css
@@ -162,7 +162,7 @@ view app { analysis, raceControl_Wec } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl_Wec)
+            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl)
             ]
         }
 

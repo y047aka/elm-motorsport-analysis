@@ -48,8 +48,7 @@ type alias Data =
 type alias Model =
     { eventSummary : EventSummary
     , raceControl_F1 : RaceControl.Model
-    , raceControl_Wec : RaceControl.Model
-    , raceControl_FormulaE : RaceControl.Model
+    , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
     }
@@ -71,8 +70,7 @@ init :
 init flags maybePagePath =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
-      , raceControl_Wec = RaceControl.empty
-      , raceControl_FormulaE = RaceControl.empty
+      , raceControl = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
       , analysis = Analysis.finished RaceControl.empty
       }
@@ -148,7 +146,7 @@ update msg m =
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl_Wec = rcNew
+                , raceControl = rcNew
                 , analysis = Analysis.finished rcNew
               }
             , Effect.none
@@ -182,7 +180,7 @@ update msg m =
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl_FormulaE = rcNew
+                , raceControl = rcNew
                 , analysis = Analysis.finished rcNew
               }
             , Effect.none
@@ -206,10 +204,10 @@ update msg m =
         RaceControlMsg_Wec raceControlMsg ->
             let
                 rcNew =
-                    RaceControl.update raceControlMsg m.raceControl_Wec
+                    RaceControl.update raceControlMsg m.raceControl
             in
             ( { m
-                | raceControl_Wec = rcNew
+                | raceControl = rcNew
                 , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
@@ -218,10 +216,10 @@ update msg m =
         RaceControlMsg_FormulaE raceControlMsg ->
             let
                 rcNew =
-                    RaceControl.update raceControlMsg m.raceControl_FormulaE
+                    RaceControl.update raceControlMsg m.raceControl
             in
             ( { m
-                | raceControl_FormulaE = rcNew
+                | raceControl = rcNew
                 , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
