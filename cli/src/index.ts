@@ -29,7 +29,7 @@ app.ports.exitWithMsg.subscribe(([code, msg, data]) => {
   // Determine the output path based on the mode
   let outputPath = '';
   if (mode === 'fe') {
-    outputPath = `../app/static/formurla_e/2025/${msg}.json`;
+    outputPath = `../app/static/formula-e/2025/${msg}.json`;
   } else {
     // Default to WEC path
     outputPath = `../app/static/wec/2025/${msg}.json`;
