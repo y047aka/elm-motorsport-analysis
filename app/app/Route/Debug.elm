@@ -87,7 +87,7 @@ update app shared msg model =
             ( model, Effect.none, Just sharedMsg )
 
         RaceControlMsg raceControlMsg ->
-            ( model, Effect.none, Just (Shared.RaceControlMsg_Wec raceControlMsg) )
+            ( model, Effect.none, Just (Shared.RaceControlMsg raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { model | leaderboardState = Leaderboard.update leaderboardMsg model.leaderboardState }

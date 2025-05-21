@@ -90,8 +90,7 @@ type Msg
     | FetchJson_FormulaE { season : String, event : String }
     | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
-    | RaceControlMsg_Wec RaceControl.Msg
-    | RaceControlMsg_FormulaE RaceControl.Msg
+    | RaceControlMsg RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -201,19 +200,7 @@ update msg m =
             , Effect.none
             )
 
-        RaceControlMsg_Wec raceControlMsg ->
-            let
-                rcNew =
-                    RaceControl.update raceControlMsg m.raceControl
-            in
-            ( { m
-                | raceControl = rcNew
-                , analysis = Analysis.fromRaceControl rcNew
-              }
-            , Effect.none
-            )
-
-        RaceControlMsg_FormulaE raceControlMsg ->
+        RaceControlMsg raceControlMsg ->
             let
                 rcNew =
                     RaceControl.update raceControlMsg m.raceControl
