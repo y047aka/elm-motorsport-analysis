@@ -64,8 +64,8 @@ selectMode =
     [ { title = "WEC", value = "wec", description = "World Endurance Championship" }
     , { title = "Formula E", value = "fe", description = "Formula E Championship" }
     ]
-    |> Select.option "Select Mode : "
-    |> output
+        |> Select.option "Select Mode : "
+        |> output
 
 
 selectEvent : String -> Cmd Msg
@@ -220,12 +220,17 @@ subscriptions model =
     let
         decoder =
             JD.oneOf
-                [ JD.map InputMode (JD.string |> JD.andThen (\mode ->
-                    if mode == "wec" || mode == "fe" then
-                        JD.succeed mode
-                    else
-                        JD.fail "not a valid mode"
-                  ))
+                [ JD.map InputMode
+                    (JD.string
+                        |> JD.andThen
+                            (\mode ->
+                                if mode == "wec" || mode == "fe" then
+                                    JD.succeed mode
+
+                                else
+                                    JD.fail "not a valid mode"
+                            )
+                    )
                 , JD.map2 InputEventId
                     (JD.field "mode" JD.string)
                     (JD.field "eventId" JD.string)

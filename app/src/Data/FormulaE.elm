@@ -12,7 +12,7 @@ module Data.FormulaE exposing
 
 import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -91,9 +91,10 @@ lapDecoder =
         |> required "kph" float
         |> required "elapsed" raceClockDecoder
         |> required "hour" raceClockDecoder
-        |> required "s1Large" string
-        |> required "s2Large" string
-        |> required "s3Large" string
+        -- TODO: 不要であれば削除
+        |> hardcoded "s1Large"
+        |> hardcoded "s2Large"
+        |> hardcoded "s3Large"
         |> required "topSpeed" (Decode.map String.toFloat string)
         |> required "driverName" string
         |> required "pitTime" (Decode.maybe raceClockDecoder)
@@ -111,7 +112,8 @@ raceClockDecoder =
 
 classDecoder : Decoder Class
 classDecoder =
-    string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
+    -- Formula Eではクラスがないので常にNoneにしておく
+    Decode.succeed Class.none
 
 
 carDecoder : Decoder Car
