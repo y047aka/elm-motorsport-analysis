@@ -1,9 +1,9 @@
 module LapBenchmark exposing (main)
 
-import Benchmark exposing (Benchmark, benchmark, describe)
-import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Motorsport.Duration exposing (fromStringWithDefault)
 import Motorsport.Lap as Lap exposing (Lap)
+import MyBenchmark exposing (Benchmark, benchmark, describe)
+import MyBenchmark.Runner exposing (BenchmarkProgram, program)
 
 
 main : BenchmarkProgram
