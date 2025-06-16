@@ -16,6 +16,7 @@ import NoMissingSubscriptionsCall
 import NoMissingTypeAnnotation
 import NoPrematureLetComputation
 import NoRecursiveUpdate
+import NoUnused.Exports
 import NoUselessSubscriptions
 import Review.Rule exposing (Rule)
 
@@ -31,4 +32,7 @@ config =
     , NoMissingSubscriptionsCall.rule
     , NoRecursiveUpdate.rule
     , NoUselessSubscriptions.rule
+
+    -- jfmengels/elm-review-unused
+    -- , NoUnused.Exports.rule
     ]

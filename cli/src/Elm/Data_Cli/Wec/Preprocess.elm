@@ -1,4 +1,4 @@
-module Data_Cli.Wec.Preprocess exposing (getPositionAt, laps_, preprocess, preprocess_)
+module Data_Cli.Wec.Preprocess exposing (preprocess)
 
 import Data_Cli.Wec as Wec
 import Dict
