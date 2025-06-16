@@ -58,6 +58,7 @@ pages =
         , { season = "2025", event = "qatar_1812km" }
         , { season = "2025", event = "imola_6h" }
         , { season = "2025", event = "spa_6h" }
+        , { season = "2025", event = "le_mans_24h" }
         ]
 
 

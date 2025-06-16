@@ -9,6 +9,7 @@ wec_2025 =
         [ Qatar_1812km
         , Imola_6h
         , Spa_6h
+        , LeMans_24h
         ]
 
 
@@ -43,6 +44,14 @@ toEventSummary_Wec_2025 event =
             , name = "6 Hours of Spa"
             , season = 2025
             , date = "2025-05-10"
+            , jsonPath = jsonPath
+            }
+
+        LeMans_24h ->
+            { id = id
+            , name = "24 Hours of Le Mans"
+            , season = 2025
+            , date = "2025-06-14"
             , jsonPath = jsonPath
             }
 
