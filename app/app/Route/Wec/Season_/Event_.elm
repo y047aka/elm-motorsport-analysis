@@ -15,7 +15,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
@@ -185,7 +185,12 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+                    case ( eventSummary.season, eventSummary.name ) of
+                        ( 2025, "24 Hours of Le Mans" ) ->
+                            Leaderboard.view (config_LeMans24h eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
+
+                        _ ->
+                            Leaderboard.view (config eventSummary.season analysis_Wec) leaderboardState raceControl_Wec
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_Wec
@@ -287,6 +292,61 @@ config season analysis =
             , sorter = compareBy .position
             }
         , currentLapColumn_Wec
+            { getter = identity
+            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
+            }
+        , lastLapColumn_Wec
+            { getter = .lastLap
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
+            }
+        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
+        , performanceColumn
+            { getter = .history
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
+            }
+        , histogramColumn
+            { getter = .history
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
+            , coefficient = 1.2
+            }
+        ]
+    }
+
+
+config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
+config_LeMans24h season analysis =
+    { toId = .metaData >> .carNumber
+    , toMsg = LeaderboardMsg
+    , columns =
+        [ intColumn { label = "", getter = .position }
+        , carNumberColumn_Wec season { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = .metaData }
+        , veryCustomColumn
+            { label = "-"
+            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , sorter = compareBy (.metaData >> .carNumber)
+            }
+        , intColumn { label = "Lap", getter = .lap }
+        , customColumn
+            { label = "Gap"
+            , getter = .timing >> .gap >> Gap.toString
+            , sorter = compareBy .position
+            }
+        , customColumn
+            { label = "Interval"
+            , getter = .timing >> .interval >> Gap.toString
+            , sorter = compareBy .position
+            }
+        , currentLapColumn_Wec
+            { getter = identity
+            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , analysis = analysis
+            }
+        , currentLapColumn_LeMans24h
             { getter = identity
             , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis

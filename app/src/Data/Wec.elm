@@ -12,7 +12,7 @@ module Data.Wec exposing
 
 import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -50,11 +50,37 @@ type alias Lap =
     , group : String
     , team : String
     , manufacturer : String
+    , miniSectors : Maybe MiniSectors
+    }
+
+
+type alias MiniSectors =
+    { scl2 : MiniSector
+    , z4 : MiniSector
+    , ip1 : MiniSector
+    , z12 : MiniSector
+    , sclc : MiniSector
+    , a7_1 : MiniSector
+    , ip2 : MiniSector
+    , a8_1 : MiniSector
+    , sclb : MiniSector
+    , porin : MiniSector
+    , porout : MiniSector
+    , pitref : MiniSector
+    , scl1 : MiniSector
+    , fordout : MiniSector
+    , fl : MiniSector
     }
 
 
 type alias RaceClock =
     Duration
+
+
+type alias MiniSector =
+    { time : Maybe Duration
+    , elapsed : Maybe Duration
+    }
 
 
 
@@ -94,6 +120,7 @@ lapDecoder =
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" string
+        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
 
 
 raceClockDecoder : Decoder Duration
@@ -104,6 +131,33 @@ raceClockDecoder =
 classDecoder : Decoder Class
 classDecoder =
     string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
+
+
+miniSectorsDecoder : Decoder MiniSectors
+miniSectorsDecoder =
+    Decode.succeed MiniSectors
+        |> required "scl2" miniSectorDecoder
+        |> required "z4" miniSectorDecoder
+        |> required "ip1" miniSectorDecoder
+        |> required "z12" miniSectorDecoder
+        |> required "sclc" miniSectorDecoder
+        |> required "a7_1" miniSectorDecoder
+        |> required "ip2" miniSectorDecoder
+        |> required "a8_1" miniSectorDecoder
+        |> required "sclb" miniSectorDecoder
+        |> required "porin" miniSectorDecoder
+        |> required "porout" miniSectorDecoder
+        |> required "pitref" miniSectorDecoder
+        |> required "scl1" miniSectorDecoder
+        |> required "fordout" miniSectorDecoder
+        |> required "fl" miniSectorDecoder
+
+
+miniSectorDecoder : Decoder MiniSector
+miniSectorDecoder =
+    Decode.succeed MiniSector
+        |> required "time" (Decode.maybe raceClockDecoder)
+        |> required "elapsed" (Decode.maybe raceClockDecoder)
 
 
 carDecoder : Decoder Car
@@ -144,6 +198,7 @@ lapDecoder_ =
         |> required "s2_best" durationDecoder
         |> required "s3_best" durationDecoder
         |> required "elapsed" durationDecoder
+        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
 
 
 durationDecoder : Decoder Duration

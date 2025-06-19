@@ -7,7 +7,7 @@ module Motorsport.Leaderboard exposing
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
-    , currentLapColumn_Wec
+    , currentLapColumn_Wec, currentLapColumn_LeMans24h
     , lastLapColumn_F1, lastLapColumn_Wec
     , Config, view
     )
@@ -38,7 +38,7 @@ module Motorsport.Leaderboard exposing
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
-@docs currentLapColumn_Wec
+@docs currentLapColumn_Wec, currentLapColumn_LeMans24h
 @docs lastLapColumn_F1, currentLapColumn_Wec, lastLapColumn_Wec
 
 -}
@@ -54,7 +54,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, Sector(..))
+import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
 import Motorsport.LapStatus as LapStatus exposing (lapStatus)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
@@ -422,6 +422,144 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                                         [ sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, progress = s1_progress }
                                         , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, progress = s2_progress }
                                         , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, progress = s3_progress }
+                                        ]
+                                    ]
+                            )
+               )
+            >> Maybe.withDefault (text "-")
+    , sorter = sorter
+    , filter = \_ _ -> True
+    }
+
+
+currentLapColumn_LeMans24h :
+    { getter : data -> { a | timing : Timing, currentLap : Maybe Lap }
+    , sorter : data -> data -> Order
+    , analysis : Analysis
+    }
+    -> Column data msg
+currentLapColumn_LeMans24h { getter, sorter, analysis } =
+    let
+        lapTime { time, personalBest } =
+            div
+                [ css
+                    [ textAlign center
+                    , let
+                        status =
+                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                      in
+                      if LapStatus.isNormal status then
+                        batch []
+
+                      else
+                        LapStatus.toHexColorString status
+                            |> hex
+                            |> color
+                    ]
+                ]
+                [ text (Duration.toString time) ]
+
+        sector sector_ =
+            div
+                [ css
+                    [ height (px 3)
+                    , borderRadius (px 1)
+                    , batch <|
+                        if sector_.progress < 1 then
+                            [ width (pct (sector_.progress * 100))
+                            , backgroundColor (hsla 0 0 1 0.9)
+                            ]
+
+                        else
+                            [ width (pct 100)
+                            , backgroundColor (hsla 0 0 1 0.9)
+                            ]
+                    ]
+                ]
+                []
+    in
+    { name = "Current Lap"
+    , view =
+        getter
+            >> (\{ timing, currentLap } ->
+                    currentLap
+                        |> Maybe.map
+                            (\{ best } ->
+                                div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                                    [ lapTime { time = timing.time, personalBest = best }
+                                    , let
+                                        { scl_progress, z4_progress, ip1_progress, z12_progress, sclc_progress, a7_1_progress, ip2_progress, a8_1_progress, sclb_progress, porin_progress, porout_progress, pitref_progress, scl1_progress, fordout_progress, fl_progress } =
+                                            case timing.miniSector of
+                                                Just ( SCL2, progress ) ->
+                                                    { scl_progress = progress, z4_progress = 0, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( Z4, progress ) ->
+                                                    { scl_progress = 1, z4_progress = progress, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( IP1, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = progress, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( Z12, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = progress, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( SCLC, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = progress, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( A7_1, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = progress, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( IP2, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = progress, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( A8_1, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = progress, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( SCLB, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = progress, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( PORIN, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = progress, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( POROUT, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = progress, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( PITREF, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = progress, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( SCL1, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = progress, fordout_progress = 0, fl_progress = 0 }
+
+                                                Just ( FORDOUT, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = 1, fordout_progress = progress, fl_progress = 0 }
+
+                                                Just ( FL, progress ) ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = 1, fordout_progress = 1, fl_progress = progress }
+
+                                                _ ->
+                                                    { scl_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = 1, fordout_progress = 1, fl_progress = 1 }
+                                      in
+                                      div [ css [ property "display" "grid", property "grid-template-columns" "3fr 4fr 8fr", property "column-gap" "4px" ] ]
+                                        [ div [ css [ property "display" "grid", property "grid-template-columns" "repeat(3, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { progress = scl_progress }
+                                            , sector { progress = z4_progress }
+                                            , sector { progress = ip1_progress }
+                                            ]
+                                        , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(4, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { progress = z12_progress }
+                                            , sector { progress = sclc_progress }
+                                            , sector { progress = a7_1_progress }
+                                            , sector { progress = ip2_progress }
+                                            ]
+                                        , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(8, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { progress = a8_1_progress }
+                                            , sector { progress = sclb_progress }
+                                            , sector { progress = porin_progress }
+                                            , sector { progress = porout_progress }
+                                            , sector { progress = pitref_progress }
+                                            , sector { progress = scl1_progress }
+                                            , sector { progress = fordout_progress }
+                                            , sector { progress = fl_progress }
+                                            ]
                                         ]
                                     ]
                             )
