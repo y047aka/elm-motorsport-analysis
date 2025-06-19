@@ -157,6 +157,7 @@ laps_ { carNumber, laps, ordersByLap } =
                     , s2_best = Maybe.withDefault 0 bestS2
                     , s3_best = Maybe.withDefault 0 bestS3
                     , elapsed = elapsed
+                    , miniSectors = Nothing
                     }
             in
             { bestLapTime = bestLapTime

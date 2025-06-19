@@ -257,6 +257,7 @@ raceControlToLeaderboard { lapCount, cars } =
                             , timing =
                                 { time = 0
                                 , sector = Nothing
+                                , miniSector = Nothing
                                 , gap = Gap.None
                                 , interval = Gap.None
                                 }
