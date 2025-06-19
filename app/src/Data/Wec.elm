@@ -54,6 +54,10 @@ type alias Lap =
     }
 
 
+type alias RaceClock =
+    Duration
+
+
 type alias MiniSectors =
     { scl2 : MiniSector
     , z4 : MiniSector
@@ -73,13 +77,10 @@ type alias MiniSectors =
     }
 
 
-type alias RaceClock =
-    Duration
-
-
 type alias MiniSector =
-    { time : Maybe Duration
-    , elapsed : Maybe Duration
+    { time : Maybe RaceClock
+    , elapsed : Maybe RaceClock
+    , best : Maybe RaceClock
     }
 
 
@@ -158,6 +159,7 @@ miniSectorDecoder =
     Decode.succeed MiniSector
         |> required "time" (Decode.maybe raceClockDecoder)
         |> required "elapsed" (Decode.maybe raceClockDecoder)
+        |> required "best" (Decode.maybe raceClockDecoder)
 
 
 carDecoder : Decoder Car

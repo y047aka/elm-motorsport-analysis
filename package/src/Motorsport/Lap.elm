@@ -64,6 +64,7 @@ type alias MiniSectors =
 type alias MiniSectorData =
     { time : Maybe Duration
     , elapsed : Maybe Duration
+    , best : Maybe Duration
     }
 
 

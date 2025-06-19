@@ -311,37 +311,46 @@ miniSectorsEncoderForPreprocessed l =
         { scl2, z4, ip1, z12, sclc, a7_1, ip2, a8_1, sclb, porin, porout, pitref, scl1, fordout, fl } =
             l.miniSectors
                 |> Maybe.withDefault
-                    { scl2 = { time = Nothing, elapsed = Nothing }
-                    , z4 = { time = Nothing, elapsed = Nothing }
-                    , ip1 = { time = Nothing, elapsed = Nothing }
-                    , z12 = { time = Nothing, elapsed = Nothing }
-                    , sclc = { time = Nothing, elapsed = Nothing }
-                    , a7_1 = { time = Nothing, elapsed = Nothing }
-                    , ip2 = { time = Nothing, elapsed = Nothing }
-                    , a8_1 = { time = Nothing, elapsed = Nothing }
-                    , sclb = { time = Nothing, elapsed = Nothing }
-                    , porin = { time = Nothing, elapsed = Nothing }
-                    , porout = { time = Nothing, elapsed = Nothing }
-                    , pitref = { time = Nothing, elapsed = Nothing }
-                    , scl1 = { time = Nothing, elapsed = Nothing }
-                    , fordout = { time = Nothing, elapsed = Nothing }
-                    , fl = { time = Nothing, elapsed = Nothing }
+                    { scl2 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , z4 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , ip1 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , z12 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , sclc = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , a7_1 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , ip2 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , a8_1 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , sclb = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , porin = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , porout = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , pitref = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , scl1 = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , fordout = { time = Nothing, elapsed = Nothing, best = Nothing }
+                    , fl = { time = Nothing, elapsed = Nothing, best = Nothing }
                     }
     in
     JE.object
-        [ ( "scl2", miniSectorEncoder scl2.time scl2.elapsed )
-        , ( "z4", miniSectorEncoder z4.time z4.elapsed )
-        , ( "ip1", miniSectorEncoder ip1.time ip1.elapsed )
-        , ( "z12", miniSectorEncoder z12.time z12.elapsed )
-        , ( "sclc", miniSectorEncoder sclc.time sclc.elapsed )
-        , ( "a7_1", miniSectorEncoder a7_1.time a7_1.elapsed )
-        , ( "ip2", miniSectorEncoder ip2.time ip2.elapsed )
-        , ( "a8_1", miniSectorEncoder a8_1.time a8_1.elapsed )
-        , ( "sclb", miniSectorEncoder sclb.time sclb.elapsed )
-        , ( "porin", miniSectorEncoder porin.time porin.elapsed )
-        , ( "porout", miniSectorEncoder porout.time porout.elapsed )
-        , ( "pitref", miniSectorEncoder pitref.time pitref.elapsed )
-        , ( "scl1", miniSectorEncoder scl1.time scl1.elapsed )
-        , ( "fordout", miniSectorEncoder fordout.time fordout.elapsed )
-        , ( "fl", miniSectorEncoder fl.time fl.elapsed )
+        [ ( "scl2", miniSectorEncoderForPreprocessed scl2.time scl2.elapsed scl2.best )
+        , ( "z4", miniSectorEncoderForPreprocessed z4.time z4.elapsed z4.best )
+        , ( "ip1", miniSectorEncoderForPreprocessed ip1.time ip1.elapsed ip1.best )
+        , ( "z12", miniSectorEncoderForPreprocessed z12.time z12.elapsed z12.best )
+        , ( "sclc", miniSectorEncoderForPreprocessed sclc.time sclc.elapsed sclc.best )
+        , ( "a7_1", miniSectorEncoderForPreprocessed a7_1.time a7_1.elapsed a7_1.best )
+        , ( "ip2", miniSectorEncoderForPreprocessed ip2.time ip2.elapsed ip2.best )
+        , ( "a8_1", miniSectorEncoderForPreprocessed a8_1.time a8_1.elapsed a8_1.best )
+        , ( "sclb", miniSectorEncoderForPreprocessed sclb.time sclb.elapsed sclb.best )
+        , ( "porin", miniSectorEncoderForPreprocessed porin.time porin.elapsed porin.best )
+        , ( "porout", miniSectorEncoderForPreprocessed porout.time porout.elapsed porout.best )
+        , ( "pitref", miniSectorEncoderForPreprocessed pitref.time pitref.elapsed pitref.best )
+        , ( "scl1", miniSectorEncoderForPreprocessed scl1.time scl1.elapsed scl1.best )
+        , ( "fordout", miniSectorEncoderForPreprocessed fordout.time fordout.elapsed fordout.best )
+        , ( "fl", miniSectorEncoderForPreprocessed fl.time fl.elapsed fl.best )
+        ]
+
+
+miniSectorEncoderForPreprocessed : Maybe RaceClock -> Maybe RaceClock -> Maybe RaceClock -> JE.Value
+miniSectorEncoderForPreprocessed time elapsed best =
+    JE.object
+        [ ( "time", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString time) )
+        , ( "elapsed", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString elapsed) )
+        , ( "best", JE.string (Maybe.withDefault "" <| Maybe.map Duration.toString best) )
         ]

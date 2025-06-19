@@ -119,6 +119,21 @@ type alias Acc =
     , bestS1 : Maybe Int
     , bestS2 : Maybe Int
     , bestS3 : Maybe Int
+    , bestSCL2 : Maybe Int
+    , bestZ4 : Maybe Int
+    , bestIP1 : Maybe Int
+    , bestZ12 : Maybe Int
+    , bestSCLC : Maybe Int
+    , bestA7_1 : Maybe Int
+    , bestIP2 : Maybe Int
+    , bestA8_1 : Maybe Int
+    , bestSCLB : Maybe Int
+    , bestPORIN : Maybe Int
+    , bestPOROUT : Maybe Int
+    , bestPITREF : Maybe Int
+    , bestSCL1 : Maybe Int
+    , bestFORDOUT : Maybe Int
+    , bestFL : Maybe Int
     , laps : List Lap
     }
 
@@ -137,11 +152,35 @@ laps_ { carNumber, laps, ordersByLap } =
                 bestLapTime =
                     List.minimum (l.lapTime :: List.filterMap identity [ acc.bestLapTime ])
 
-                ( bestS1, bestS2, bestS3 ) =
-                    ( List.minimum (List.filterMap identity [ l.s1, acc.bestS1 ])
-                    , List.minimum (List.filterMap identity [ l.s2, acc.bestS2 ])
-                    , List.minimum (List.filterMap identity [ l.s3, acc.bestS3 ])
+                { bestS1, bestS2, bestS3 } =
+                    { bestS1 = List.minimum (List.filterMap identity [ l.s1, acc.bestS1 ])
+                    , bestS2 = List.minimum (List.filterMap identity [ l.s2, acc.bestS2 ])
+                    , bestS3 = List.minimum (List.filterMap identity [ l.s3, acc.bestS3 ])
+                    }
+
+                ( bestSCL2, bestZ4, bestIP1 ) =
+                    ( List.minimum (List.filterMap identity [ l.scl2_time, acc.bestSCL2 ])
+                    , List.minimum (List.filterMap identity [ l.z4_time, acc.bestZ4 ])
+                    , List.minimum (List.filterMap identity [ l.ip1_time, acc.bestIP1 ])
                     )
+
+                { bestZ12, bestSCLC, bestA7_1, bestIP2 } =
+                    { bestZ12 = List.minimum (List.filterMap identity [ l.z12_time, acc.bestZ12 ])
+                    , bestSCLC = List.minimum (List.filterMap identity [ l.sclc_time, acc.bestSCLC ])
+                    , bestA7_1 = List.minimum (List.filterMap identity [ l.a7_1_time, acc.bestA7_1 ])
+                    , bestIP2 = List.minimum (List.filterMap identity [ l.ip2_time, acc.bestIP2 ])
+                    }
+
+                { bestA8_1, bestSCLB, bestPORIN, bestPOROUT, bestPITREF, bestSCL1, bestFORDOUT, bestFL } =
+                    { bestA8_1 = List.minimum (List.filterMap identity [ l.a8_1_time, acc.bestA8_1 ])
+                    , bestSCLB = List.minimum (List.filterMap identity [ l.sclb_time, acc.bestSCLB ])
+                    , bestPORIN = List.minimum (List.filterMap identity [ l.porin_time, acc.bestPORIN ])
+                    , bestPOROUT = List.minimum (List.filterMap identity [ l.porout_time, acc.bestPOROUT ])
+                    , bestPITREF = List.minimum (List.filterMap identity [ l.pitref_time, acc.bestPITREF ])
+                    , bestSCL1 = List.minimum (List.filterMap identity [ l.scl1_time, acc.bestSCL1 ])
+                    , bestFORDOUT = List.minimum (List.filterMap identity [ l.fordout_time, acc.bestFORDOUT ])
+                    , bestFL = List.minimum (List.filterMap identity [ l.fl_time, acc.bestFL ])
+                    }
 
                 currentLap =
                     { carNumber = carNumber
@@ -161,27 +200,42 @@ laps_ { carNumber, laps, ordersByLap } =
                     }
 
                 miniSectors =
-                    { scl2 = { time = l.scl2_time, elapsed = l.scl2_elapsed }
-                    , z4 = { time = l.z4_time, elapsed = l.z4_elapsed }
-                    , ip1 = { time = l.ip1_time, elapsed = l.ip1_elapsed }
-                    , z12 = { time = l.z12_time, elapsed = l.z12_elapsed }
-                    , sclc = { time = l.sclc_time, elapsed = l.sclc_elapsed }
-                    , a7_1 = { time = l.a7_1_time, elapsed = l.a7_1_elapsed }
-                    , ip2 = { time = l.ip2_time, elapsed = l.ip2_elapsed }
-                    , a8_1 = { time = l.a8_1_time, elapsed = l.a8_1_elapsed }
-                    , sclb = { time = l.sclb_time, elapsed = l.sclb_elapsed }
-                    , porin = { time = l.porin_time, elapsed = l.porin_elapsed }
-                    , porout = { time = l.porout_time, elapsed = l.porout_elapsed }
-                    , pitref = { time = l.pitref_time, elapsed = l.pitref_elapsed }
-                    , scl1 = { time = l.scl1_time, elapsed = l.scl1_elapsed }
-                    , fordout = { time = l.fordout_time, elapsed = l.fordout_elapsed }
-                    , fl = { time = l.fl_time, elapsed = l.fl_elapsed }
+                    { scl2 = { time = l.scl2_time, elapsed = l.scl2_elapsed, best = bestSCL2 }
+                    , z4 = { time = l.z4_time, elapsed = l.z4_elapsed, best = bestZ4 }
+                    , ip1 = { time = l.ip1_time, elapsed = l.ip1_elapsed, best = bestIP1 }
+                    , z12 = { time = l.z12_time, elapsed = l.z12_elapsed, best = bestZ12 }
+                    , sclc = { time = l.sclc_time, elapsed = l.sclc_elapsed, best = bestSCLC }
+                    , a7_1 = { time = l.a7_1_time, elapsed = l.a7_1_elapsed, best = bestA7_1 }
+                    , ip2 = { time = l.ip2_time, elapsed = l.ip2_elapsed, best = bestIP2 }
+                    , a8_1 = { time = l.a8_1_time, elapsed = l.a8_1_elapsed, best = bestA8_1 }
+                    , sclb = { time = l.sclb_time, elapsed = l.sclb_elapsed, best = bestSCLB }
+                    , porin = { time = l.porin_time, elapsed = l.porin_elapsed, best = bestPORIN }
+                    , porout = { time = l.porout_time, elapsed = l.porout_elapsed, best = bestPOROUT }
+                    , pitref = { time = l.pitref_time, elapsed = l.pitref_elapsed, best = bestPITREF }
+                    , scl1 = { time = l.scl1_time, elapsed = l.scl1_elapsed, best = bestSCL1 }
+                    , fordout = { time = l.fordout_time, elapsed = l.fordout_elapsed, best = bestFORDOUT }
+                    , fl = { time = l.fl_time, elapsed = l.fl_elapsed, best = bestFL }
                     }
             in
             { bestLapTime = bestLapTime
             , bestS1 = bestS1
             , bestS2 = bestS2
             , bestS3 = bestS3
+            , bestSCL2 = bestSCL2
+            , bestZ4 = bestZ4
+            , bestIP1 = bestIP1
+            , bestZ12 = bestZ12
+            , bestSCLC = bestSCLC
+            , bestA7_1 = bestA7_1
+            , bestIP2 = bestIP2
+            , bestA8_1 = bestA8_1
+            , bestSCLB = bestSCLB
+            , bestPORIN = bestPORIN
+            , bestPOROUT = bestPOROUT
+            , bestPITREF = bestPITREF
+            , bestSCL1 = bestSCL1
+            , bestFORDOUT = bestFORDOUT
+            , bestFL = bestFL
             , laps = currentLap :: acc.laps
             }
 
@@ -190,6 +244,21 @@ laps_ { carNumber, laps, ordersByLap } =
             , bestS1 = Nothing
             , bestS2 = Nothing
             , bestS3 = Nothing
+            , bestSCL2 = Nothing
+            , bestZ4 = Nothing
+            , bestIP1 = Nothing
+            , bestZ12 = Nothing
+            , bestSCLC = Nothing
+            , bestA7_1 = Nothing
+            , bestIP2 = Nothing
+            , bestA8_1 = Nothing
+            , bestSCLB = Nothing
+            , bestPORIN = Nothing
+            , bestPOROUT = Nothing
+            , bestPITREF = Nothing
+            , bestSCL1 = Nothing
+            , bestFORDOUT = Nothing
+            , bestFL = Nothing
             , laps = []
             }
     in
