@@ -245,16 +245,19 @@ currentMiniSector clock lap =
         |> Maybe.andThen
             (\ms ->
                 let
+                    elapsed_lastLap =
+                        lap.elapsed - lap.time
+
                     inRange start end =
                         case ( start, end ) of
                             ( Just start_, Just end_ ) ->
-                                clock.elapsed >= start_ && clock.elapsed < end_
+                                clock.elapsed >= (start_ + elapsed_lastLap) && clock.elapsed < (end_ + elapsed_lastLap)
 
                             _ ->
                                 False
 
                     miniSectorRanges =
-                        [ ( SCL2, Just (lap.elapsed - lap.time), ms.scl2.elapsed )
+                        [ ( SCL2, Just elapsed_lastLap, ms.scl2.elapsed )
                         , ( Z4, ms.scl2.elapsed, ms.z4.elapsed )
                         , ( IP1, ms.z4.elapsed, ms.ip1.elapsed )
                         , ( Z12, ms.ip1.elapsed, ms.z12.elapsed )
