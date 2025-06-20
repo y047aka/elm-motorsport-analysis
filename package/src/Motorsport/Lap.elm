@@ -98,25 +98,64 @@ compareAt clock a b =
             GT
 
         EQ ->
-            let
-                currentSector_a =
-                    currentSector clock a
-
-                currentSector_b =
-                    currentSector clock b
-            in
-            case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
-                LT ->
-                    GT
-
-                EQ ->
-                    Basics.compare (sectorToElapsed a currentSector_a) (sectorToElapsed b currentSector_b)
-
-                GT ->
-                    LT
+            compareLapsInSameLap clock a b
 
         GT ->
             LT
+
+
+compareLapsInSameLap : Clock -> Lap -> Lap -> Order
+compareLapsInSameLap clock a b =
+    let
+        currentSector_a =
+            currentSector clock a
+
+        currentSector_b =
+            currentSector clock b
+    in
+    case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
+        LT ->
+            GT
+
+        EQ ->
+            compareLapsInSameSector clock a b currentSector_a
+
+        GT ->
+            LT
+
+
+compareLapsInSameSector : Clock -> Lap -> Lap -> Sector -> Order
+compareLapsInSameSector clock a b currentSector_ =
+    case ( a.miniSectors, b.miniSectors ) of
+        ( Just _, Just _ ) ->
+            case ( currentMiniSector clock a, currentMiniSector clock b ) of
+                ( Just ms_a, Just ms_b ) ->
+                    case Basics.compare (miniSectorToIndex ms_a) (miniSectorToIndex ms_b) of
+                        LT ->
+                            GT
+
+                        GT ->
+                            LT
+
+                        EQ ->
+                            Basics.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
+
+                ( Just _, Nothing ) ->
+                    LT
+
+                ( Nothing, Just _ ) ->
+                    GT
+
+                ( Nothing, Nothing ) ->
+                    compareLapsWithSectorElapsed a b currentSector_
+
+        _ ->
+            compareLapsWithSectorElapsed a b currentSector_
+
+
+compareLapsWithSectorElapsed : Lap -> Lap -> Sector -> Order
+compareLapsWithSectorElapsed a b currentSector_ =
+    Basics.compare (sectorToElapsed a currentSector_) (sectorToElapsed b currentSector_)
 
 
 personalBestLap : List { a | time : Duration } -> Maybe { a | time : Duration }
@@ -333,53 +372,53 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
             Nothing
 
 
-miniSectorToString : MiniSector -> String
-miniSectorToString miniSector =
+miniSectorToIndex : MiniSector -> Int
+miniSectorToIndex miniSector =
     case miniSector of
         SCL2 ->
-            "SCL2"
+            0
 
         Z4 ->
-            "Z4"
+            1
 
         IP1 ->
-            "IP1"
+            2
 
         Z12 ->
-            "Z12"
+            3
 
         SCLC ->
-            "SCLC"
+            4
 
         A7_1 ->
-            "A7-1"
+            5
 
         IP2 ->
-            "IP2"
+            6
 
         A8_1 ->
-            "A8-1"
+            7
 
         SCLB ->
-            "SCLB"
+            8
 
         PORIN ->
-            "PORIN"
+            9
 
         POROUT ->
-            "POROUT"
+            10
 
         PITREF ->
-            "PITREF"
+            11
 
         SCL1 ->
-            "SCL1"
+            12
 
         FORDOUT ->
-            "FORDOUT"
+            13
 
         FL ->
-            "FL"
+            14
 
 
 miniSectorToElapsed : Lap -> MiniSector -> Duration
@@ -393,43 +432,43 @@ miniSectorToElapsed lap miniSector =
             elapsed_lastLap
 
         Z4 ->
-            lap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0)
 
         IP1 ->
-            lap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0)
 
         Z12 ->
-            lap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0)
 
         SCLC ->
-            lap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0)
 
         A7_1 ->
-            lap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0)
 
         IP2 ->
-            lap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0)
 
         A8_1 ->
-            lap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0)
 
         SCLB ->
-            lap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0)
 
         PORIN ->
-            lap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0)
 
         POROUT ->
-            lap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0)
 
         PITREF ->
-            lap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0)
 
         SCL1 ->
-            lap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0)
 
         FORDOUT ->
-            lap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0)
 
         FL ->
-            lap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0
+            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0)
