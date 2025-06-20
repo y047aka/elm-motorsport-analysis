@@ -8,7 +8,7 @@ module Motorsport.Leaderboard exposing
     , carNumberColumn_Wec
     , driverNameColumn_F1, driverAndTeamColumn_Wec
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
-    , lastLapColumn_F1, lastLapColumn_Wec
+    , lastLapColumn_F1, lastLapColumn_Wec, lastLapColumn_LeMans24h
     , Config, view
     )
 
@@ -39,7 +39,7 @@ module Motorsport.Leaderboard exposing
 @docs carNumberColumn_Wec
 @docs driverNameColumn_F1, driverAndTeamColumn_Wec
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
-@docs lastLapColumn_F1, currentLapColumn_Wec, lastLapColumn_Wec
+@docs lastLapColumn_F1, lastLapColumn_Wec, lastLapColumn_LeMans24h
 
 -}
 
@@ -631,6 +631,90 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                             , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest }
                             , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest }
                             ]
+                        ]
+                )
+            >> Maybe.withDefault (text "-")
+    , sorter = sorter
+    , filter = \_ _ -> True
+    }
+
+
+lastLapColumn_LeMans24h :
+    { getter : data -> Maybe Lap
+    , sorter : data -> data -> Order
+    , analysis : Analysis
+    }
+    -> Column data msg
+lastLapColumn_LeMans24h { getter, sorter, analysis } =
+    let
+        lapTime { time, personalBest } =
+            div
+                [ css
+                    [ textAlign center
+                    , let
+                        status =
+                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                      in
+                      if LapStatus.isNormal status then
+                        batch []
+
+                      else
+                        LapStatus.toHexColorString status
+                            |> hex
+                            |> color
+                    ]
+                ]
+                [ text (Duration.toString time) ]
+
+        sector sector_ =
+            div
+                [ css
+                    [ height (px 3)
+                    , borderRadius (px 1)
+                    , backgroundColor
+                        (lapStatus { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
+                            |> LapStatus.toHexColorString
+                            |> hex
+                        )
+                    ]
+                ]
+                []
+    in
+    { name = "Last Lap"
+    , view =
+        getter
+            >> Maybe.map
+                (\{ time, best, miniSectors } ->
+                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                        [ lapTime { time = time, personalBest = best }
+                        , miniSectors
+                            |> Maybe.map
+                                (\miniSectors_ ->
+                                    div [ css [ property "display" "grid", property "grid-template-columns" "3fr 4fr 8fr", property "column-gap" "4px" ] ]
+                                        [ div [ css [ property "display" "grid", property "grid-template-columns" "repeat(3, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { time = miniSectors_.scl2.time, personalBest = miniSectors_.scl2.best, overallBest = analysis.miniSectorFastest.scl2 }
+                                            , sector { time = miniSectors_.z4.time, personalBest = miniSectors_.z4.best, overallBest = analysis.miniSectorFastest.z4 }
+                                            , sector { time = miniSectors_.ip1.time, personalBest = miniSectors_.ip1.best, overallBest = analysis.miniSectorFastest.ip1 }
+                                            ]
+                                        , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(4, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { time = miniSectors_.z12.time, personalBest = miniSectors_.z12.best, overallBest = analysis.miniSectorFastest.z12 }
+                                            , sector { time = miniSectors_.sclc.time, personalBest = miniSectors_.sclc.best, overallBest = analysis.miniSectorFastest.sclc }
+                                            , sector { time = miniSectors_.a7_1.time, personalBest = miniSectors_.a7_1.best, overallBest = analysis.miniSectorFastest.a7_1 }
+                                            , sector { time = miniSectors_.ip2.time, personalBest = miniSectors_.ip2.best, overallBest = analysis.miniSectorFastest.ip2 }
+                                            ]
+                                        , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(8, 1fr)", property "column-gap" "1px" ] ]
+                                            [ sector { time = miniSectors_.a8_1.time, personalBest = miniSectors_.a8_1.best, overallBest = analysis.miniSectorFastest.a8_1 }
+                                            , sector { time = miniSectors_.sclb.time, personalBest = miniSectors_.sclb.best, overallBest = analysis.miniSectorFastest.sclb }
+                                            , sector { time = miniSectors_.porin.time, personalBest = miniSectors_.porin.best, overallBest = analysis.miniSectorFastest.porin }
+                                            , sector { time = miniSectors_.porout.time, personalBest = miniSectors_.porout.best, overallBest = analysis.miniSectorFastest.porout }
+                                            , sector { time = miniSectors_.pitref.time, personalBest = miniSectors_.pitref.best, overallBest = analysis.miniSectorFastest.pitref }
+                                            , sector { time = miniSectors_.scl1.time, personalBest = miniSectors_.scl1.best, overallBest = analysis.miniSectorFastest.scl1 }
+                                            , sector { time = miniSectors_.fordout.time, personalBest = miniSectors_.fordout.best, overallBest = analysis.miniSectorFastest.fordout }
+                                            , sector { time = miniSectors_.fl.time, personalBest = miniSectors_.fl.best, overallBest = analysis.miniSectorFastest.fl }
+                                            ]
+                                        ]
+                                )
+                            |> Maybe.withDefault (text "-")
                         ]
                 )
             >> Maybe.withDefault (text "-")
