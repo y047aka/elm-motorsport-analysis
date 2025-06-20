@@ -341,19 +341,9 @@ config_LeMans24h season analysis =
             , getter = .timing >> .interval >> Gap.toString
             , sorter = compareBy .position
             }
-        , currentLapColumn_Wec
-            { getter = identity
-            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
         , currentLapColumn_LeMans24h
             { getter = identity
             , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , lastLapColumn_Wec
-            { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_LeMans24h
