@@ -12,6 +12,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
+import Motorsport.Chart.Tracker_LeMans24h as Tracker_LeMans24h
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -196,7 +197,12 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
                     PositionHistoryChart.view raceControl_Wec
 
                 Tracker ->
-                    TrackerChart.view analysis_Wec raceControl_Wec
+                    case ( eventSummary.season, eventSummary.name ) of
+                        ( 2025, "24 Hours of Le Mans" ) ->
+                            Tracker_LeMans24h.view analysis_Wec raceControl_Wec
+
+                        _ ->
+                            TrackerChart.view analysis_Wec raceControl_Wec
             ]
         }
 
