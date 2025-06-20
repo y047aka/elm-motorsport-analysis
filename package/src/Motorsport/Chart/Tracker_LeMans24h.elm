@@ -61,21 +61,22 @@ calcMiniSectorRatio analysis =
                 + analysis.miniSectorFastest.fl
     in
     if totalFastestTime == 0 then
-        { scl2 = 1 / 15
-        , z4 = 1 / 15
-        , ip1 = 1 / 15
-        , z12 = 1 / 15
-        , sclc = 1 / 15
-        , a7_1 = 1 / 15
-        , ip2 = 1 / 15
-        , a8_1 = 1 / 15
-        , sclb = 1 / 15
-        , porin = 1 / 15
-        , porout = 1 / 15
-        , pitref = 1 / 15
-        , scl1 = 1 / 15
-        , fordout = 1 / 15
-        , fl = 1 / 15
+        -- Le Mans circuit layout-based ratios (total: 149)
+        { scl2 = 7.5 / 150 -- Short corner section
+        , z4 = 7.5 / 150 -- Short corner section
+        , ip1 = 12 / 150 -- Medium section
+        , z12 = 24 / 150 -- Medium section
+        , sclc = 3 / 150 -- Medium section
+        , a7_1 = 15 / 150 -- Medium section
+        , ip2 = 13 / 150 -- Short section
+        , a8_1 = 5.5 / 150 -- Short section
+        , sclb = 26 / 150 -- Medium section
+        , porin = 12.5 / 150 -- Very short pit section
+        , porout = 11 / 150 -- Very short pit section
+        , pitref = 6 / 150 -- Short pit section
+        , scl1 = 2 / 150 -- Long Mulsanne straight section
+        , fordout = 3 / 150 -- Long straight section
+        , fl = 2 / 150 -- Final section to start/finish
         }
 
     else
