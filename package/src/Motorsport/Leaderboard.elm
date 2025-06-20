@@ -473,7 +473,7 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                         else
                             [ width (pct 100)
                             , backgroundColor
-                                (lapStatus { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = 1000000 }
+                                (lapStatus { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
                                     |> LapStatus.toHexColorString
                                     |> hex
                                 )
@@ -544,25 +544,25 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                                       in
                                       div [ css [ property "display" "grid", property "grid-template-columns" "3fr 4fr 8fr", property "column-gap" "4px" ] ]
                                         [ div [ css [ property "display" "grid", property "grid-template-columns" "repeat(3, 1fr)", property "column-gap" "1px" ] ]
-                                            [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, progress = scl2_progress }
-                                            , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, progress = z4_progress }
-                                            , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, progress = ip1_progress }
+                                            [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.scl2, progress = scl2_progress }
+                                            , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.z4, progress = z4_progress }
+                                            , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.ip1, progress = ip1_progress }
                                             ]
                                         , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(4, 1fr)", property "column-gap" "1px" ] ]
-                                            [ sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, progress = z12_progress }
-                                            , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, progress = sclc_progress }
-                                            , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, progress = a7_1_progress }
-                                            , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, progress = ip2_progress }
+                                            [ sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.z12, progress = z12_progress }
+                                            , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, overallBest = analysis.miniSectorFastest.sclc, progress = sclc_progress }
+                                            , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.a7_1, progress = a7_1_progress }
+                                            , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.ip2, progress = ip2_progress }
                                             ]
                                         , div [ css [ property "display" "grid", property "grid-template-columns" "repeat(8, 1fr)", property "column-gap" "1px" ] ]
-                                            [ sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, progress = a8_1_progress }
-                                            , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, progress = sclb_progress }
-                                            , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, progress = porin_progress }
-                                            , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, progress = porout_progress }
-                                            , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, progress = pitref_progress }
-                                            , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, progress = scl1_progress }
-                                            , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, progress = fordout_progress }
-                                            , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, progress = fl_progress }
+                                            [ sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.a8_1, progress = a8_1_progress }
+                                            , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, overallBest = analysis.miniSectorFastest.sclb, progress = sclb_progress }
+                                            , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, overallBest = analysis.miniSectorFastest.porin, progress = porin_progress }
+                                            , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, overallBest = analysis.miniSectorFastest.porout, progress = porout_progress }
+                                            , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, overallBest = analysis.miniSectorFastest.pitref, progress = pitref_progress }
+                                            , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.scl1, progress = scl1_progress }
+                                            , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, overallBest = analysis.miniSectorFastest.fordout, progress = fordout_progress }
+                                            , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, overallBest = analysis.miniSectorFastest.fl, progress = fl_progress }
                                             ]
                                         ]
                                     ]
