@@ -1,12 +1,14 @@
 port module Main exposing (main)
 
 import Args exposing (Args)
-import Data.Wec exposing (Event)
+import Data_Cli.LeMans24h as LeMans24h
+import Data_Cli.LeMans24h.Preprocess as Preprocess_LeMans24h
 import Data_Cli.Wec as Wec
 import Data_Cli.Wec.Preprocess as Preprocess_Wec
 import Http
 import Json.Decode as JD
 import Json.Encode as JE
+import Motorsport.Car exposing (Car)
 import Prompts
 import Prompts.Select as Select
 
@@ -66,6 +68,7 @@ toItem eventId =
 type Msg
     = InputEventId String
     | CsvLoaded String (Result Http.Error (List Wec.Lap))
+    | CsvLoaded_LeMans24h String (Result Http.Error (List LeMans24h.Lap))
     | NoOp
 
 
@@ -74,7 +77,12 @@ update msg model =
     case msg of
         InputEventId eventId ->
             ( { model | args = Just { eventId = eventId, repoName = Maybe.withDefault "" <| Maybe.map .repoName model.args } }
-            , Wec.getLaps eventId (CsvLoaded eventId)
+            , case eventId of
+                "le_mans_24h" ->
+                    LeMans24h.getLaps eventId (CsvLoaded_LeMans24h eventId)
+
+                _ ->
+                    Wec.getLaps eventId (CsvLoaded eventId)
             )
 
         CsvLoaded fileName (Ok decoded) ->
@@ -90,13 +98,31 @@ update msg model =
                 )
             )
 
+        CsvLoaded_LeMans24h fileName (Ok decoded) ->
+            ( model
+            , exitWithMsg
+                ( 0
+                , Maybe.withDefault "" <| Maybe.map .eventId model.args
+                , eventEncoder_LeMans24h
+                    { name = fileName
+                    , laps = decoded
+                    , preprocessed = Preprocess_LeMans24h.preprocess { laps = decoded }
+                    }
+                )
+            )
+
         _ ->
             ( model
             , exitWithMsg ( 1, "Error", JE.null )
             )
 
 
-eventEncoder : Event -> JE.Value
+eventEncoder :
+    { name : String
+    , laps : List Wec.Lap
+    , preprocessed : List Car
+    }
+    -> JE.Value
 eventEncoder { name, laps, preprocessed } =
     let
         toEventName eventId =
@@ -126,6 +152,29 @@ eventEncoder { name, laps, preprocessed } =
         [ ( "name", JE.string (toEventName name) )
         , ( "laps", JE.list Wec.lapEncoder laps )
         , ( "preprocessed", JE.list Wec.carEncoder preprocessed )
+        ]
+
+
+eventEncoder_LeMans24h :
+    { name : String
+    , laps : List LeMans24h.Lap
+    , preprocessed : List Car
+    }
+    -> JE.Value
+eventEncoder_LeMans24h { name, laps, preprocessed } =
+    let
+        toEventName eventId =
+            case eventId of
+                "le_mans_24h" ->
+                    "24 Hours of Le Mans"
+
+                _ ->
+                    "Encoding Error"
+    in
+    JE.object
+        [ ( "name", JE.string (toEventName name) )
+        , ( "laps", JE.list LeMans24h.lapEncoder laps )
+        , ( "preprocessed", JE.list LeMans24h.carEncoder preprocessed )
         ]
 
 

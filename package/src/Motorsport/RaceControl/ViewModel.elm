@@ -19,7 +19,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, Sector(..), completedLapsAt)
+import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
 import Motorsport.RaceControl as RaceControl
 
 
@@ -49,6 +49,7 @@ type alias MetaData =
 type alias Timing =
     { time : Duration
     , sector : Maybe ( Sector, Float )
+    , miniSector : Maybe ( MiniSector, Float )
     , gap : Gap
     , interval : Gap
     }
@@ -120,9 +121,13 @@ init_timing clock { leader, rival } car =
 
                 S3 ->
                     Just ( S3, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100) )
+
+        currentMiniSector =
+            Lap.miniSectorProgressAt raceClock ( currentLap, lastLap )
     in
     { time = raceClock.elapsed - lastLap.elapsed
     , sector = currentSector
+    , miniSector = currentMiniSector
     , gap =
         Maybe.map2 (Gap.at clock) leader (Just car)
             |> Maybe.withDefault Gap.None
