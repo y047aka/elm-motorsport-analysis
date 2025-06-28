@@ -104,6 +104,9 @@ view { clock, lapTotal, cars } =
                 |> List.map
                     (\car ->
                         let
+                            { carNumber, team, class } =
+                                car.metaData
+
                             positions =
                                 car.laps
                                     |> List.map (.position >> Maybe.withDefault 0)
@@ -112,8 +115,8 @@ view { clock, lapTotal, cars } =
                         history
                             { x = toFloat >> Scale.convert (xScale lapTotal)
                             , y = toFloat >> Scale.convert (yScale cars)
-                            , svgPalette = Class.toStrokePalette car.class
-                            , label = String.join " " [ car.carNumber, car.team ]
+                            , svgPalette = Class.toStrokePalette class
+                            , label = String.join " " [ carNumber, team ]
                             }
                             ( car, positions )
                     )
@@ -129,22 +132,22 @@ history :
     }
     -> ( Car, List Int )
     -> Svg msg
-history { x, y, svgPalette, label } ( { carNumber, startPosition }, positions ) =
+history { x, y, svgPalette, label } ( car, positions ) =
     history_
         { heading =
             heading
                 { x = x <| -50
-                , y = y startPosition + 5
+                , y = y car.startPosition + 5
                 }
                 [ text label ]
         , polyline =
-            (startPosition :: positions)
+            (car.startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
                 |> polyline_ { svgPalette = svgPalette }
         , positionLabels =
-            (startPosition :: positions)
+            (car.startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
-                |> positionLabels { label = text carNumber }
+                |> positionLabels { label = text car.metaData.carNumber }
         }
 
 

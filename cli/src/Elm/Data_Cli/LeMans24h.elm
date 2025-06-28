@@ -263,13 +263,17 @@ miniSectorEncoder time elapsed =
 
 carEncoder : Car -> JE.Value
 carEncoder car =
+    let
+        { carNumber, drivers, class, group, team, manufacturer } =
+            car.metaData
+    in
     JE.object
-        [ ( "carNumber", JE.string car.carNumber )
-        , ( "drivers", JE.list driverEncoder car.drivers )
-        , ( "class", JE.string <| Class.toString car.class )
-        , ( "group", JE.string car.group )
-        , ( "team", JE.string car.team )
-        , ( "manufacturer", JE.string car.manufacturer )
+        [ ( "carNumber", JE.string carNumber )
+        , ( "drivers", JE.list driverEncoder drivers )
+        , ( "class", JE.string <| Class.toString class )
+        , ( "group", JE.string group )
+        , ( "team", JE.string team )
+        , ( "manufacturer", JE.string manufacturer )
         , ( "startPosition", JE.int car.startPosition )
         , ( "laps", JE.list lapEncoderForPreprocessed car.laps )
         , ( "currentLap", Json.Encode.Extra.maybe lapEncoderForPreprocessed car.currentLap )

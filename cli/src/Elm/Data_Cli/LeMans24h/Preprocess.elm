@@ -91,17 +91,21 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                         }
                     )
 
+        metaData =
+            { carNumber = carNumber
+            , drivers = drivers
+            , class = class_
+            , group = group_
+            , team = team_
+            , manufacturer = manufacturer_
+            }
+
         startPosition =
             startPositions
                 |> List.Extra.findIndex ((==) carNumber)
                 |> Maybe.withDefault 0
     in
-    { carNumber = carNumber
-    , drivers = drivers
-    , class = class_
-    , group = group_
-    , team = team_
-    , manufacturer = manufacturer_
+    { metaData = metaData
     , startPosition = startPosition
     , laps =
         laps_

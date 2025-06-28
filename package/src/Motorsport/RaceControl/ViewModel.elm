@@ -84,10 +84,10 @@ init { clock, cars } =
 
 
 init_metaData : Car -> Lap -> MetaData
-init_metaData { carNumber, class, team, drivers } lastLap =
-    { carNumber = carNumber
-    , class = class
-    , team = team
+init_metaData { metaData } lastLap =
+    { carNumber = metaData.carNumber
+    , class = metaData.class
+    , team = metaData.team
     , drivers =
         List.map
             (\{ name } ->
@@ -95,7 +95,7 @@ init_metaData { carNumber, class, team, drivers } lastLap =
                 , isCurrentDriver = name == lastLap.driver
                 }
             )
-            drivers
+            metaData.drivers
     }
 
 

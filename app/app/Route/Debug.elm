@@ -243,7 +243,7 @@ config analysis =
 raceControlToLeaderboard : RaceControl.Model -> ViewModel
 raceControlToLeaderboard { lapCount, cars } =
     cars
-        |> List.filter (\{ carNumber } -> carNumber == "2")
+        |> List.filter (\car -> car.metaData.carNumber == "2")
         |> List.head
         |> Maybe.map
             (\car ->

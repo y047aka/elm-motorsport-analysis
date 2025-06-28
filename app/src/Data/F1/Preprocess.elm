@@ -85,6 +85,15 @@ preprocess_ :
     -> Car
 preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
+        metaData =
+            { carNumber = carNumber
+            , drivers = [ { name = driver.name, isCurrentDriver = True } ]
+            , class = Class.none
+            , group = "TODO"
+            , team = driverToTeamName_2022 driver.name
+            , manufacturer = "TODO"
+            }
+
         startPosition =
             startPositions
                 |> List.findIndex ((==) carNumber)
@@ -120,12 +129,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         }
                     )
     in
-    { carNumber = carNumber
-    , drivers = [ { name = driver.name, isCurrentDriver = True } ]
-    , class = Class.none
-    , group = "TODO"
-    , team = driverToTeamName_2022 driver.name
-    , manufacturer = "TODO"
+    { metaData = metaData
     , startPosition = startPosition
     , laps = laps_
     , currentLap = Nothing
