@@ -184,7 +184,7 @@ config analysis =
                         (\{ sector_1, s1_best } ->
                             { time = sector_1
                             , personalBest = s1_best
-                            , overallBest = analysis.sector_1_fastest
+                            , fastest = analysis.sector_1_fastest
                             , progress = 100
                             }
                         )
@@ -202,7 +202,7 @@ config analysis =
                         (\{ sector_2, s2_best } ->
                             { time = sector_2
                             , personalBest = s2_best
-                            , overallBest = analysis.sector_2_fastest
+                            , fastest = analysis.sector_2_fastest
                             , progress = 100
                             }
                         )
@@ -220,7 +220,7 @@ config analysis =
                         (\{ sector_3, s3_best } ->
                             { time = sector_3
                             , personalBest = s3_best
-                            , overallBest = analysis.sector_3_fastest
+                            , fastest = analysis.sector_3_fastest
                             , progress = 100
                             }
                         )

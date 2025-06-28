@@ -319,7 +319,7 @@ lastLapColumn_F1 { getter, sorter, analysis } =
                         [ css
                             [ let
                                 status =
-                                    performanceLevel { time = time, personalBest = best, overallBest = analysis.fastestLapTime }
+                                    performanceLevel { time = time, personalBest = best, fastest = analysis.fastestLapTime }
                               in
                               if Performance.isStandard status then
                                 batch []
@@ -352,7 +352,7 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
                       in
                       if Performance.isStandard status then
                         batch []
@@ -419,9 +419,9 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                                             , property "column-gap" "4px"
                                             ]
                                         ]
-                                        [ sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest, progress = s1_progress }
-                                        , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest, progress = s2_progress }
-                                        , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest, progress = s3_progress }
+                                        [ sector { time = sector_1, personalBest = s1_best, fastest = analysis.sector_1_fastest, progress = s1_progress }
+                                        , sector { time = sector_2, personalBest = s2_best, fastest = analysis.sector_2_fastest, progress = s2_progress }
+                                        , sector { time = sector_3, personalBest = s3_best, fastest = analysis.sector_3_fastest, progress = s3_progress }
                                         ]
                                     ]
                             )
@@ -446,7 +446,7 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
                       in
                       if Performance.isStandard status then
                         batch []
@@ -473,7 +473,7 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                         else
                             [ width (pct 100)
                             , backgroundColor
-                                (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
+                                (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
                                     |> Performance.toHexColorString
                                     |> hex
                                 )
@@ -543,23 +543,23 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                                                     { scl2_progress = 0, z4_progress = 0, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
                                       in
                                       div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                                        [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.scl2, progress = scl2_progress }
-                                        , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.z4, progress = z4_progress }
-                                        , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.ip1, progress = ip1_progress }
+                                        [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl2, progress = scl2_progress }
+                                        , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z4, progress = z4_progress }
+                                        , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip1, progress = ip1_progress }
                                         , div [] [] -- spacer
-                                        , sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.z12, progress = z12_progress }
-                                        , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, overallBest = analysis.miniSectorFastest.sclc, progress = sclc_progress }
-                                        , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.a7_1, progress = a7_1_progress }
-                                        , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.ip2, progress = ip2_progress }
+                                        , sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z12, progress = z12_progress }
+                                        , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclc, progress = sclc_progress }
+                                        , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a7_1, progress = a7_1_progress }
+                                        , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip2, progress = ip2_progress }
                                         , div [] [] -- spacer
-                                        , sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.a8_1, progress = a8_1_progress }
-                                        , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, overallBest = analysis.miniSectorFastest.sclb, progress = sclb_progress }
-                                        , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, overallBest = analysis.miniSectorFastest.porin, progress = porin_progress }
-                                        , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, overallBest = analysis.miniSectorFastest.porout, progress = porout_progress }
-                                        , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, overallBest = analysis.miniSectorFastest.pitref, progress = pitref_progress }
-                                        , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, overallBest = analysis.miniSectorFastest.scl1, progress = scl1_progress }
-                                        , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, overallBest = analysis.miniSectorFastest.fordout, progress = fordout_progress }
-                                        , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, overallBest = analysis.miniSectorFastest.fl, progress = fl_progress }
+                                        , sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a8_1, progress = a8_1_progress }
+                                        , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclb, progress = sclb_progress }
+                                        , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, fastest = analysis.miniSectorFastest.porin, progress = porin_progress }
+                                        , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, fastest = analysis.miniSectorFastest.porout, progress = porout_progress }
+                                        , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, fastest = analysis.miniSectorFastest.pitref, progress = pitref_progress }
+                                        , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl1, progress = scl1_progress }
+                                        , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, fastest = analysis.miniSectorFastest.fordout, progress = fordout_progress }
+                                        , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, fastest = analysis.miniSectorFastest.fl, progress = fl_progress }
                                         ]
                                     ]
                             )
@@ -584,7 +584,7 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
                       in
                       if Performance.isStandard status then
                         batch []
@@ -625,9 +625,9 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                                 , property "column-gap" "4px"
                                 ]
                             ]
-                            [ sector { time = sector_1, personalBest = s1_best, overallBest = analysis.sector_1_fastest }
-                            , sector { time = sector_2, personalBest = s2_best, overallBest = analysis.sector_2_fastest }
-                            , sector { time = sector_3, personalBest = s3_best, overallBest = analysis.sector_3_fastest }
+                            [ sector { time = sector_1, personalBest = s1_best, fastest = analysis.sector_1_fastest }
+                            , sector { time = sector_2, personalBest = s2_best, fastest = analysis.sector_2_fastest }
+                            , sector { time = sector_3, personalBest = s3_best, fastest = analysis.sector_3_fastest }
                             ]
                         ]
                 )
@@ -651,7 +651,7 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
                       in
                       if Performance.isStandard status then
                         batch []
@@ -670,7 +670,7 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ height (px 3)
                     , borderRadius (px 1)
                     , backgroundColor
-                        (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
+                        (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
                             |> Performance.toHexColorString
                             |> hex
                         )
@@ -689,23 +689,23 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                             |> Maybe.map
                                 (\miniSectors_ ->
                                     div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                                        [ sector { time = miniSectors_.scl2.time, personalBest = miniSectors_.scl2.best, overallBest = analysis.miniSectorFastest.scl2 }
-                                        , sector { time = miniSectors_.z4.time, personalBest = miniSectors_.z4.best, overallBest = analysis.miniSectorFastest.z4 }
-                                        , sector { time = miniSectors_.ip1.time, personalBest = miniSectors_.ip1.best, overallBest = analysis.miniSectorFastest.ip1 }
+                                        [ sector { time = miniSectors_.scl2.time, personalBest = miniSectors_.scl2.best, fastest = analysis.miniSectorFastest.scl2 }
+                                        , sector { time = miniSectors_.z4.time, personalBest = miniSectors_.z4.best, fastest = analysis.miniSectorFastest.z4 }
+                                        , sector { time = miniSectors_.ip1.time, personalBest = miniSectors_.ip1.best, fastest = analysis.miniSectorFastest.ip1 }
                                         , div [] [] -- spacer
-                                        , sector { time = miniSectors_.z12.time, personalBest = miniSectors_.z12.best, overallBest = analysis.miniSectorFastest.z12 }
-                                        , sector { time = miniSectors_.sclc.time, personalBest = miniSectors_.sclc.best, overallBest = analysis.miniSectorFastest.sclc }
-                                        , sector { time = miniSectors_.a7_1.time, personalBest = miniSectors_.a7_1.best, overallBest = analysis.miniSectorFastest.a7_1 }
-                                        , sector { time = miniSectors_.ip2.time, personalBest = miniSectors_.ip2.best, overallBest = analysis.miniSectorFastest.ip2 }
+                                        , sector { time = miniSectors_.z12.time, personalBest = miniSectors_.z12.best, fastest = analysis.miniSectorFastest.z12 }
+                                        , sector { time = miniSectors_.sclc.time, personalBest = miniSectors_.sclc.best, fastest = analysis.miniSectorFastest.sclc }
+                                        , sector { time = miniSectors_.a7_1.time, personalBest = miniSectors_.a7_1.best, fastest = analysis.miniSectorFastest.a7_1 }
+                                        , sector { time = miniSectors_.ip2.time, personalBest = miniSectors_.ip2.best, fastest = analysis.miniSectorFastest.ip2 }
                                         , div [] [] -- spacer
-                                        , sector { time = miniSectors_.a8_1.time, personalBest = miniSectors_.a8_1.best, overallBest = analysis.miniSectorFastest.a8_1 }
-                                        , sector { time = miniSectors_.sclb.time, personalBest = miniSectors_.sclb.best, overallBest = analysis.miniSectorFastest.sclb }
-                                        , sector { time = miniSectors_.porin.time, personalBest = miniSectors_.porin.best, overallBest = analysis.miniSectorFastest.porin }
-                                        , sector { time = miniSectors_.porout.time, personalBest = miniSectors_.porout.best, overallBest = analysis.miniSectorFastest.porout }
-                                        , sector { time = miniSectors_.pitref.time, personalBest = miniSectors_.pitref.best, overallBest = analysis.miniSectorFastest.pitref }
-                                        , sector { time = miniSectors_.scl1.time, personalBest = miniSectors_.scl1.best, overallBest = analysis.miniSectorFastest.scl1 }
-                                        , sector { time = miniSectors_.fordout.time, personalBest = miniSectors_.fordout.best, overallBest = analysis.miniSectorFastest.fordout }
-                                        , sector { time = miniSectors_.fl.time, personalBest = miniSectors_.fl.best, overallBest = analysis.miniSectorFastest.fl }
+                                        , sector { time = miniSectors_.a8_1.time, personalBest = miniSectors_.a8_1.best, fastest = analysis.miniSectorFastest.a8_1 }
+                                        , sector { time = miniSectors_.sclb.time, personalBest = miniSectors_.sclb.best, fastest = analysis.miniSectorFastest.sclb }
+                                        , sector { time = miniSectors_.porin.time, personalBest = miniSectors_.porin.best, fastest = analysis.miniSectorFastest.porin }
+                                        , sector { time = miniSectors_.porout.time, personalBest = miniSectors_.porout.best, fastest = analysis.miniSectorFastest.porout }
+                                        , sector { time = miniSectors_.pitref.time, personalBest = miniSectors_.pitref.best, fastest = analysis.miniSectorFastest.pitref }
+                                        , sector { time = miniSectors_.scl1.time, personalBest = miniSectors_.scl1.best, fastest = analysis.miniSectorFastest.scl1 }
+                                        , sector { time = miniSectors_.fordout.time, personalBest = miniSectors_.fordout.best, fastest = analysis.miniSectorFastest.fordout }
+                                        , sector { time = miniSectors_.fl.time, personalBest = miniSectors_.fl.best, fastest = analysis.miniSectorFastest.fl }
                                         ]
                                 )
                             |> Maybe.withDefault (text "-")
@@ -770,7 +770,7 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                performanceLevel { time = lap.time, personalBest = lap.best, overallBest = fastestLapTime }
+                performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
                     |> Performance.toHexColorString
 
             else
@@ -825,7 +825,7 @@ performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg
 performanceHistory_ { fastestLapTime } laps =
     let
         toCssColor { time, best } =
-            performanceLevel { time = time, personalBest = best, overallBest = fastestLapTime }
+            performanceLevel { time = time, personalBest = best, fastest = fastestLapTime }
                 |> Performance.toHexColorString
                 |> hex
     in

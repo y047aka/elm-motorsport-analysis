@@ -1,7 +1,6 @@
 module Motorsport.Lap exposing
     ( Lap, empty
     , compareAt
-    , personalBestLap, fastestLap, slowestLap
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Sector(..), currentSector
     , MiniSector(..), currentMiniSector, miniSectorProgressAt
@@ -12,7 +11,6 @@ module Motorsport.Lap exposing
 
 @docs Lap, empty
 @docs compareAt
-@docs personalBestLap, fastestLap, slowestLap
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
 @docs Sector, currentSector
@@ -156,24 +154,6 @@ compareLapsInSameSector clock a b currentSector_ =
 compareLapsWithSectorElapsed : Lap -> Lap -> Sector -> Order
 compareLapsWithSectorElapsed a b currentSector_ =
     Basics.compare (sectorToElapsed a currentSector_) (sectorToElapsed b currentSector_)
-
-
-personalBestLap : List { a | time : Duration } -> Maybe { a | time : Duration }
-personalBestLap =
-    List.filter (.time >> (/=) 0)
-        >> List.Extra.minimumBy .time
-
-
-fastestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
-fastestLap =
-    List.filterMap personalBestLap
-        >> List.Extra.minimumBy .time
-
-
-slowestLap : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
-slowestLap =
-    List.filterMap (List.Extra.maximumBy .time)
-        >> List.Extra.maximumBy .time
 
 
 completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }

@@ -5,7 +5,8 @@ import List.Extra
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSector(..), completedLapsAt, fastestLap, slowestLap)
+import Motorsport.Lap exposing (Lap, MiniSector(..), completedLapsAt)
+import Motorsport.Lap.Performance exposing (findFastest, findSlowest)
 
 
 type alias MiniSectorFastest =
@@ -46,8 +47,8 @@ fromRaceControl { clock, cars } =
         completedLaps =
             List.map (.laps >> completedLapsAt raceClock) cars
     in
-    { fastestLapTime = completedLaps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
-    , slowestLapTime = completedLaps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
+    { fastestLapTime = completedLaps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
+    , slowestLapTime = completedLaps |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
     , sector_1_fastest =
         completedLaps
             |> List.filterMap (List.filter (.time >> (/=) 0) >> List.Extra.minimumBy .sector_1)
@@ -76,8 +77,8 @@ finished { cars } =
         laps =
             List.map .laps cars
     in
-    { fastestLapTime = laps |> fastestLap |> Maybe.map .time |> Maybe.withDefault 0
-    , slowestLapTime = laps |> slowestLap |> Maybe.map .time |> Maybe.withDefault 0
+    { fastestLapTime = laps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
+    , slowestLapTime = laps |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
     , sector_1_fastest =
         laps
             |> List.filterMap (List.filter (.time >> (/=) 0) >> List.Extra.minimumBy .sector_1)
