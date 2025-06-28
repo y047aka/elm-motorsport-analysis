@@ -1,12 +1,12 @@
-module Motorsport.LapStatus exposing
-    ( LapStatus, lapStatus
+module Motorsport.Lap.Performance exposing
+    ( PerformanceLevel, lapStatus
     , isNormal
     , toHexColorString
     )
 
 {-|
 
-@docs LapStatus, lapStatus
+@docs PerformanceLevel, lapStatus
 @docs isNormal
 @docs toHexColorString
 
@@ -15,13 +15,13 @@ module Motorsport.LapStatus exposing
 import Motorsport.Duration exposing (Duration)
 
 
-type LapStatus
+type PerformanceLevel
     = Fastest
     | PersonalBest
     | Normal
 
 
-lapStatus : { a | time : Duration, personalBest : Duration, overallBest : Duration } -> LapStatus
+lapStatus : { a | time : Duration, personalBest : Duration, overallBest : Duration } -> PerformanceLevel
 lapStatus { time, personalBest, overallBest } =
     if time == overallBest then
         Fastest
@@ -33,12 +33,12 @@ lapStatus { time, personalBest, overallBest } =
         Normal
 
 
-isNormal : LapStatus -> Bool
+isNormal : PerformanceLevel -> Bool
 isNormal status =
     status == Normal
 
 
-toHexColorString : LapStatus -> String
+toHexColorString : PerformanceLevel -> String
 toHexColorString status =
     case status of
         Fastest ->
