@@ -7,6 +7,7 @@ import List.Extra as List
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Lap as Lap
+import Motorsport.Lap.Performance exposing (findPersonalBest)
 
 
 preprocess : F1.Data -> List Car
@@ -102,7 +103,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         , best =
                             laps
                                 |> List.take (count + 1)
-                                |> Lap.personalBestLap
+                                |> findPersonalBest
                                 |> Maybe.map .time
                                 |> Maybe.withDefault 0
                         , sector_1 = 0
