@@ -55,7 +55,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
-import Motorsport.Lap.Performance as Performance exposing (lapStatus)
+import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
@@ -175,7 +175,7 @@ sectorTimeColumn { label, getter } =
                                     hsla 0 0 1 0.9
 
                                 else
-                                    lapStatus sector
+                                    performanceLevel sector
                                         |> Performance.toHexColorString
                                         |> hex
                             ]
@@ -319,9 +319,9 @@ lastLapColumn_F1 { getter, sorter, analysis } =
                         [ css
                             [ let
                                 status =
-                                    lapStatus { time = time, personalBest = best, overallBest = analysis.fastestLapTime }
+                                    performanceLevel { time = time, personalBest = best, overallBest = analysis.fastestLapTime }
                               in
-                              if Performance.isNormal status then
+                              if Performance.isStandard status then
                                 batch []
 
                               else
@@ -352,9 +352,9 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
                       in
-                      if Performance.isNormal status then
+                      if Performance.isStandard status then
                         batch []
 
                       else
@@ -379,7 +379,7 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                         else
                             [ width (pct 100)
                             , backgroundColor
-                                (lapStatus sector_
+                                (performanceLevel sector_
                                     |> Performance.toHexColorString
                                     |> hex
                                 )
@@ -446,9 +446,9 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
                       in
-                      if Performance.isNormal status then
+                      if Performance.isStandard status then
                         batch []
 
                       else
@@ -473,7 +473,7 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                         else
                             [ width (pct 100)
                             , backgroundColor
-                                (lapStatus { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
+                                (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
                                     |> Performance.toHexColorString
                                     |> hex
                                 )
@@ -584,9 +584,9 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
                       in
-                      if Performance.isNormal status then
+                      if Performance.isStandard status then
                         batch []
 
                       else
@@ -602,9 +602,11 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , lapStatus sector_
-                        |> Performance.toHexColorString
-                        |> (\c -> backgroundColor (hex c))
+                    , backgroundColor
+                        (performanceLevel sector_
+                            |> Performance.toHexColorString
+                            |> hex
+                        )
                     ]
                 ]
                 []
@@ -649,9 +651,9 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ textAlign center
                     , let
                         status =
-                            lapStatus { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, overallBest = analysis.fastestLapTime }
                       in
-                      if Performance.isNormal status then
+                      if Performance.isStandard status then
                         batch []
 
                       else
@@ -668,7 +670,7 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                     [ height (px 3)
                     , borderRadius (px 1)
                     , backgroundColor
-                        (lapStatus { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
+                        (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, overallBest = sector_.overallBest }
                             |> Performance.toHexColorString
                             |> hex
                         )
@@ -768,7 +770,7 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                lapStatus { time = lap.time, personalBest = lap.best, overallBest = fastestLapTime }
+                performanceLevel { time = lap.time, personalBest = lap.best, overallBest = fastestLapTime }
                     |> Performance.toHexColorString
 
             else
@@ -823,7 +825,7 @@ performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg
 performanceHistory_ { fastestLapTime } laps =
     let
         toCssColor { time, best } =
-            lapStatus { time = time, personalBest = best, overallBest = fastestLapTime }
+            performanceLevel { time = time, personalBest = best, overallBest = fastestLapTime }
                 |> Performance.toHexColorString
                 |> hex
     in

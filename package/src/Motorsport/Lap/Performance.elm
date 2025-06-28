@@ -1,13 +1,13 @@
 module Motorsport.Lap.Performance exposing
-    ( PerformanceLevel, lapStatus
-    , isNormal
+    ( PerformanceLevel, performanceLevel
+    , isStandard
     , toHexColorString
     )
 
 {-|
 
-@docs PerformanceLevel, lapStatus
-@docs isNormal
+@docs PerformanceLevel, performanceLevel
+@docs isStandard
 @docs toHexColorString
 
 -}
@@ -16,36 +16,36 @@ import Motorsport.Duration exposing (Duration)
 
 
 type PerformanceLevel
-    = Fastest
+    = OverallBest
     | PersonalBest
-    | Normal
+    | Standard
 
 
-lapStatus : { a | time : Duration, personalBest : Duration, overallBest : Duration } -> PerformanceLevel
-lapStatus { time, personalBest, overallBest } =
+performanceLevel : { a | time : Duration, personalBest : Duration, overallBest : Duration } -> PerformanceLevel
+performanceLevel { time, personalBest, overallBest } =
     if time == overallBest then
-        Fastest
+        OverallBest
 
     else if time == personalBest then
         PersonalBest
 
     else
-        Normal
+        Standard
 
 
-isNormal : PerformanceLevel -> Bool
-isNormal status =
-    status == Normal
+isStandard : PerformanceLevel -> Bool
+isStandard level =
+    level == Standard
 
 
 toHexColorString : PerformanceLevel -> String
-toHexColorString status =
-    case status of
-        Fastest ->
+toHexColorString level =
+    case level of
+        OverallBest ->
             "#F0F"
 
         PersonalBest ->
             "#0C0"
 
-        Normal ->
+        Standard ->
             "#FC0"
