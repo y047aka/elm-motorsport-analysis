@@ -40,10 +40,10 @@ findSlowest =
         >> List.Extra.maximumBy .time
 
 
-findFastestBy : (a -> Duration) -> List (List { a | time : Duration }) -> Maybe Duration
+findFastestBy : (a -> Duration) -> List (List a) -> Maybe Duration
 findFastestBy getter laps =
     laps
-        |> List.filterMap (List.filter (.time >> getter >> (/=) 0) >> List.Extra.minimumBy getter)
+        |> List.filterMap (List.filter ( getter >> (/=) 0) >> List.Extra.minimumBy getter)
         |> List.Extra.minimumBy getter
         |> Maybe.map getter
 

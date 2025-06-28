@@ -157,7 +157,7 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, personalBest : Duration, overallBest : Duration, progress : Float }
+    , getter : data -> Maybe { time : Duration, personalBest : Duration, fastest : Duration, progress : Float }
     }
     -> Column data msg
 sectorTimeColumn { label, getter } =

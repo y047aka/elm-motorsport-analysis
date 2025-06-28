@@ -7,7 +7,7 @@ import List.Extra as List
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Lap as Lap
-import Motorsport.Lap.Performance (findPersonalBest)
+import Motorsport.Lap.Performance exposing (findPersonalBest)
 
 
 preprocess : F1.Data -> List Car
