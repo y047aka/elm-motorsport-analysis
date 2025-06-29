@@ -4,7 +4,7 @@ import AssocList
 import AssocList.Extra
 import Data.F1.Decoder as F1
 import List.Extra as List
-import Motorsport.Car exposing (Car)
+import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Lap as Lap
 import Motorsport.Lap.Performance exposing (findPersonalBest)
@@ -134,6 +134,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     , laps = laps_
     , currentLap = Nothing
     , lastLap = Nothing
+    , status = PreRace
     }
 
 

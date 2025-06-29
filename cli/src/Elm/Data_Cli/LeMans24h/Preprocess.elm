@@ -4,7 +4,7 @@ import Data_Cli.LeMans24h as LeMans24h
 import Dict
 import Dict.Extra
 import List.Extra
-import Motorsport.Car exposing (Car)
+import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Lap exposing (Lap)
 
@@ -115,6 +115,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
             }
     , currentLap = Nothing
     , lastLap = Nothing
+    , status = PreRace
     }
 
 

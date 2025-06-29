@@ -1,4 +1,10 @@
-module Motorsport.Car exposing (Car, MetaData)
+module Motorsport.Car exposing (Car, MetaData, Status(..))
+
+{-|
+
+@docs Car, MetaData, Status
+
+-}
 
 import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -11,6 +17,7 @@ type alias Car =
     , laps : List Lap
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
+    , status : Status
     }
 
 
@@ -22,3 +29,10 @@ type alias MetaData =
     , team : String
     , manufacturer : String
     }
+
+
+type Status
+    = PreRace
+    | Racing
+    | Checkered
+    | Retired
