@@ -60,7 +60,7 @@ statusToString status =
             "Racing"
 
         Checkered ->
-            "Finished"
+            "Checkered"
 
         Retired ->
             "Retired"
