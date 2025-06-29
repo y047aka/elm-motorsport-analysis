@@ -1,12 +1,14 @@
 module Motorsport.Car exposing
-    ( Car, MetaData, Status(..)
+    ( Car, MetaData
     , updateWithClock
+    , Status(..), statusToString
     )
 
 {-|
 
-@docs Car, MetaData, Status
+@docs Car, MetaData
 @docs updateWithClock
+@docs Status, statusToString
 
 -}
 
@@ -46,6 +48,22 @@ type Status
     | Racing
     | Checkered
     | Retired
+
+
+statusToString : Status -> String
+statusToString status =
+    case status of
+        PreRace ->
+            "Pre-Race"
+
+        Racing ->
+            "Racing"
+
+        Checkered ->
+            "Finished"
+
+        Retired ->
+            "Retired"
 
 
 updateWithClock : { elapsed : Duration } -> Car -> Car

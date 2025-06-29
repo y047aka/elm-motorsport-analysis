@@ -10,6 +10,7 @@ import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car as Car
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Chart.Tracker_LeMans24h as Tracker_LeMans24h
@@ -278,7 +279,12 @@ config season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ intColumn { label = "", getter = .position }
+        [ customColumn
+            { label = "Status"
+            , getter = .status >> Car.statusToString
+            , sorter = compareBy .position
+            }
+        , intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
@@ -328,7 +334,12 @@ config_LeMans24h season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ intColumn { label = "", getter = .position }
+        [ customColumn
+            { label = "Status"
+            , getter = .status >> Car.statusToString
+            , sorter = compareBy .position
+            }
+        , intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
