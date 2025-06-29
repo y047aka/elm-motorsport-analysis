@@ -1,7 +1,7 @@
 module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import List.Extra
-import Motorsport.Car exposing (Car)
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
@@ -196,13 +196,7 @@ type alias Clock =
 updateCars : Clock -> List Car -> List Car
 updateCars raceClock cars =
     cars
-        |> List.map
-            (\car ->
-                { car
-                    | currentLap = Lap.findCurrentLap raceClock car.laps
-                    , lastLap = Lap.findLastLapAt raceClock car.laps
-                }
-            )
+        |> List.map (Car.updateWithClock raceClock)
         |> List.sortWith
             (\a b ->
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
