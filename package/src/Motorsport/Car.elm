@@ -66,26 +66,26 @@ statusToString status =
             "Retired"
 
 
-updateWithClock : { elapsed : Duration } -> Car -> Car
+updateWithClock : { elapsed : Duration, timeLimit : Duration } -> Car -> Car
 updateWithClock raceClock car =
     { car
-        | currentLap = Lap.findCurrentLap raceClock car.laps
-        , lastLap = Lap.findLastLapAt raceClock car.laps
+        | currentLap = Lap.findCurrentLap { elapsed = raceClock.elapsed } car.laps
+        , lastLap = Lap.findLastLapAt { elapsed = raceClock.elapsed } car.laps
     }
         |> (\updatedCar ->
                 { updatedCar
                     | status =
-                        case ( updatedCar.status, isFinalLap updatedCar, isAllLapsCompleted raceClock updatedCar ) of
+                        case ( updatedCar.status, hasCompletedAllLaps raceClock updatedCar, isOnFinalLap raceClock updatedCar ) of
                             ( PreRace, _, _ ) ->
                                 Racing
 
                             ( Racing, True, True ) ->
                                 Checkered
 
-                            ( Racing, False, True ) ->
+                            ( Racing, True, False ) ->
                                 Retired
 
-                            ( Racing, _, False ) ->
+                            ( Racing, False, _ ) ->
                                 Racing
 
                             ( Checkered, _, _ ) ->
@@ -97,14 +97,21 @@ updateWithClock raceClock car =
            )
 
 
-isFinalLap : Car -> Bool
-isFinalLap car =
-    Maybe.map2 (==) car.currentLap (List.Extra.last car.laps)
-        |> Maybe.withDefault False
+isOnFinalLap : { elapsed : Duration, timeLimit : Duration } -> Car -> Bool
+isOnFinalLap raceClock car =
+    let
+        finishedAfterTimeLimit =
+            raceClock.timeLimit <= raceClock.elapsed
+
+        hasReachedFinalLap =
+            Maybe.map2 (==) car.currentLap (List.Extra.last car.laps)
+                |> Maybe.withDefault False
+    in
+    hasReachedFinalLap && finishedAfterTimeLimit
 
 
-isAllLapsCompleted : { elapsed : Duration } -> Car -> Bool
-isAllLapsCompleted raceClock car =
+hasCompletedAllLaps : { a | elapsed : Duration } -> Car -> Bool
+hasCompletedAllLaps raceClock car =
     List.Extra.last car.laps
         |> Maybe.map (\finalLap -> finalLap.elapsed <= raceClock.elapsed)
         |> Maybe.withDefault False
