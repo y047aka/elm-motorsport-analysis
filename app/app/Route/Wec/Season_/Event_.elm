@@ -279,12 +279,7 @@ config season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ customColumn
-            { label = "Status"
-            , getter = .status >> Car.statusToString
-            , sorter = compareBy .position
-            }
-        , intColumn { label = "", getter = .position }
+        [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn
@@ -334,12 +329,7 @@ config_LeMans24h season analysis =
     { toId = .metaData >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
-        [ customColumn
-            { label = "Status"
-            , getter = .status >> Car.statusToString
-            , sorter = compareBy .position
-            }
-        , intColumn { label = "", getter = .position }
+        [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
         , veryCustomColumn

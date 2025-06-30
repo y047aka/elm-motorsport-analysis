@@ -1,14 +1,14 @@
 module Motorsport.Car exposing
     ( Car, MetaData
     , updateWithClock
-    , Status(..), statusToString
+    , Status(..), hasRetired, statusToString
     )
 
 {-|
 
 @docs Car, MetaData
 @docs updateWithClock
-@docs Status, statusToString
+@docs Status, hasRetired, statusToString
 
 -}
 
@@ -48,6 +48,11 @@ type Status
     | Racing
     | Checkered
     | Retired
+
+
+hasRetired : Status -> Bool
+hasRetired status =
+    status == Retired
 
 
 statusToString : Status -> String
