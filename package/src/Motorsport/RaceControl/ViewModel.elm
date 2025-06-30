@@ -13,7 +13,7 @@ module Motorsport.RaceControl.ViewModel exposing
 -}
 
 import List.Extra
-import Motorsport.Car exposing (Car)
+import Motorsport.Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -29,6 +29,7 @@ type alias ViewModel =
 
 type alias ViewModelItem =
     { position : Int
+    , status : Status
     , metaData : MetaData
     , lap : Int
     , timing : Timing
@@ -68,6 +69,7 @@ init { clock, cars } =
                         Maybe.withDefault Lap.empty car.lastLap
                 in
                 { position = index + 1
+                , status = car.status
                 , metaData = init_metaData car lastLap
                 , lap = lastLap.lap
                 , timing =
@@ -84,10 +86,10 @@ init { clock, cars } =
 
 
 init_metaData : Car -> Lap -> MetaData
-init_metaData { carNumber, class, team, drivers } lastLap =
-    { carNumber = carNumber
-    , class = class
-    , team = team
+init_metaData { metaData } lastLap =
+    { carNumber = metaData.carNumber
+    , class = metaData.class
+    , team = metaData.team
     , drivers =
         List.map
             (\{ name } ->
@@ -95,7 +97,7 @@ init_metaData { carNumber, class, team, drivers } lastLap =
                 , isCurrentDriver = name == lastLap.driver
                 }
             )
-            drivers
+            metaData.drivers
     }
 
 

@@ -4,7 +4,7 @@ import AssocList
 import AssocList.Extra
 import Data.F1.Decoder as F1
 import List.Extra as List
-import Motorsport.Car exposing (Car)
+import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Lap as Lap
 import Motorsport.Lap.Performance exposing (findPersonalBest)
@@ -85,6 +85,15 @@ preprocess_ :
     -> Car
 preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
+        metaData =
+            { carNumber = carNumber
+            , drivers = [ { name = driver.name, isCurrentDriver = True } ]
+            , class = Class.none
+            , group = "TODO"
+            , team = driverToTeamName_2022 driver.name
+            , manufacturer = "TODO"
+            }
+
         startPosition =
             startPositions
                 |> List.findIndex ((==) carNumber)
@@ -120,16 +129,12 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         }
                     )
     in
-    { carNumber = carNumber
-    , drivers = [ { name = driver.name, isCurrentDriver = True } ]
-    , class = Class.none
-    , group = "TODO"
-    , team = driverToTeamName_2022 driver.name
-    , manufacturer = "TODO"
+    { metaData = metaData
     , startPosition = startPosition
     , laps = laps_
     , currentLap = Nothing
     , lastLap = Nothing
+    , status = PreRace
     }
 
 

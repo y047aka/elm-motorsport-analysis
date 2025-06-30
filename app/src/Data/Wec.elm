@@ -13,7 +13,7 @@ module Data.Wec exposing
 import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Car exposing (Car)
+import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -164,17 +164,24 @@ miniSectorDecoder =
 
 carDecoder : Decoder Car
 carDecoder =
-    Decode.succeed Car
+    Decode.map6 Car
+        metaDataDecoder
+        (field "startPosition" int)
+        (field "laps" (Decode.list lapDecoder_))
+        (field "currentLap" (Decode.maybe lapDecoder_))
+        (field "lastLap" (Decode.maybe lapDecoder_))
+        (Decode.succeed PreRace)
+
+
+metaDataDecoder : Decoder Car.MetaData
+metaDataDecoder =
+    Decode.succeed Car.MetaData
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" classDecoder
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" string
-        |> required "startPosition" int
-        |> required "laps" (Decode.list lapDecoder_)
-        |> required "currentLap" (Decode.maybe lapDecoder_)
-        |> required "lastLap" (Decode.maybe lapDecoder_)
 
 
 driverDecoder : Decoder Driver

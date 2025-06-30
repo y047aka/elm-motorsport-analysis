@@ -1,7 +1,7 @@
 module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update)
 
 import List.Extra
-import Motorsport.Car exposing (Car)
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
@@ -94,7 +94,7 @@ update msg m =
                         { m
                             | clock = Clock.update now Clock.Tick m.clock
                             , lapCount = newClock.lapCount
-                            , cars = updateCars { elapsed = newClock.elapsed } m.cars
+                            , cars = updateCars m.timeLimit { elapsed = newClock.elapsed } m.cars
                         }
 
                     else
@@ -185,7 +185,7 @@ update msg m =
             { m
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
-                , cars = updateCars { elapsed = elapsed } m.cars
+                , cars = updateCars m.timeLimit { elapsed = elapsed } m.cars
             }
 
 
@@ -193,16 +193,10 @@ type alias Clock =
     { elapsed : Duration }
 
 
-updateCars : Clock -> List Car -> List Car
-updateCars raceClock cars =
+updateCars : Duration -> Clock -> List Car -> List Car
+updateCars timeLimit raceClock cars =
     cars
-        |> List.map
-            (\car ->
-                { car
-                    | currentLap = Lap.findCurrentLap raceClock car.laps
-                    , lastLap = Lap.findLastLapAt raceClock car.laps
-                }
-            )
+        |> List.map (Car.updateWithClock { elapsed = raceClock.elapsed, timeLimit = timeLimit } )
         |> List.sortWith
             (\a b ->
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap

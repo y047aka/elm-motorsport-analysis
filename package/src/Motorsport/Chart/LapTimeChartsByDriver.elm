@@ -89,9 +89,9 @@ view analysis { lapTotal, cars } =
             ]
         ]
         (List.map
-            (\{ carNumber, laps } ->
+            (\car ->
                 li [ css [ listStyle none ] ]
-                    [ p [] [ text carNumber ]
+                    [ p [] [ text car.metaData.carNumber ]
                     , svg [ viewBox 0 0 w h ]
                         [ xAxis lapTotal
                         , yAxis fastestLapTime
@@ -100,7 +100,7 @@ view analysis { lapTotal, cars } =
                             , y = .time >> toFloat >> Scale.convert (yScale fastestLapTime)
                             , color = "#000"
                             }
-                            laps
+                            car.laps
                         ]
                     ]
             )
