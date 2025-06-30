@@ -196,7 +196,7 @@ type alias Clock =
 updateCars : Duration -> Clock -> List Car -> List Car
 updateCars timeLimit raceClock cars =
     cars
-        |> List.map (Car.updateWithClock { elapsed = raceClock.elapsed, timeLimit = timeLimit } )
+        |> List.map (Car.updateWithClock { elapsed = raceClock.elapsed, timeLimit = timeLimit })
         |> List.sortWith
             (\a b ->
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap

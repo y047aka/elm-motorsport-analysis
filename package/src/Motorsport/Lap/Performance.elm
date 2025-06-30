@@ -43,7 +43,7 @@ findSlowest =
 findFastestBy : (a -> Duration) -> List (List a) -> Maybe Duration
 findFastestBy getter laps =
     laps
-        |> List.filterMap (List.filter ( getter >> (/=) 0) >> List.Extra.minimumBy getter)
+        |> List.filterMap (List.filter (getter >> (/=) 0) >> List.Extra.minimumBy getter)
         |> List.Extra.minimumBy getter
         |> Maybe.map getter
 
