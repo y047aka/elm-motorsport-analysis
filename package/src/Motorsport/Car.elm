@@ -51,8 +51,8 @@ type Status
 
 
 hasRetired : Status -> Bool
-hasRetired status =
-    status == Retired
+hasRetired =
+    (==) Retired
 
 
 statusToString : Status -> String

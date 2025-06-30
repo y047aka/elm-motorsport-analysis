@@ -10,7 +10,6 @@ import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car as Car
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Chart.Tracker_LeMans24h as Tracker_LeMans24h
