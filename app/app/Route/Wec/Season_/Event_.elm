@@ -19,7 +19,7 @@ import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -365,9 +365,9 @@ eventsView eventsState raceControl =
         ]
 
 
-eventsConfig : DataView.Config RaceControl.EventInfo Msg
+eventsConfig : DataView.Config Event Msg
 eventsConfig =
-    { toId = .carNumber
+    { toId = .eventTime >> Duration.toString
     , toMsg = EventsMsg
     , columns =
         [ DataView.customColumn
@@ -377,7 +377,14 @@ eventsConfig =
             }
         , DataView.stringColumn
             { label = "Car"
-            , getter = .carNumber
+            , getter =
+                \event ->
+                    case event.eventType of
+                        CarEvent carNumber _ ->
+                            carNumber
+
+                        _ ->
+                            ""
             }
         , DataView.stringColumn
             { label = "Event"
@@ -387,13 +394,16 @@ eventsConfig =
     }
 
 
-eventTypeToString : RaceControl.EventType -> String
+eventTypeToString : EventType -> String
 eventTypeToString eventType =
     case eventType of
-        RaceControl.Retirement ->
+        RaceStart ->
+            "Race Started"
+
+        CarEvent _ Retirement ->
             "Retirement"
 
-        RaceControl.Checkered ->
+        CarEvent _ Checkered ->
             "Checkered Flag"
 
 

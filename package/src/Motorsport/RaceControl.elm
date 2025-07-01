@@ -1,7 +1,7 @@
-module Motorsport.RaceControl exposing (EventInfo, EventType(..), Model, Msg(..), empty, init, update, updateCars)
+module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), empty, init, update, updateCars)
 
 import List.Extra
-import Motorsport.Car as Car exposing (Car, Status(..))
+import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
@@ -18,20 +18,22 @@ type alias Model =
     , lapTotal : Int
     , timeLimit : Int
     , cars : List Car
-    , events : List EventInfo
+    , events : List Event
     }
+
+
+type alias Event =
+    { eventTime : Duration, eventType : EventType }
 
 
 type EventType
+    = RaceStart
+    | CarEvent CarNumber CarEventType
+
+
+type CarEventType
     = Retirement
     | Checkered
-
-
-type alias EventInfo =
-    { carNumber : String
-    , eventTime : Duration
-    , eventType : EventType
-    }
 
 
 empty : Model
@@ -78,28 +80,31 @@ calcTimeLimit =
 
 {-| 車両から各種イベント時刻を事前計算する関数
 -}
-calcEvents : Duration -> List Car -> List EventInfo
+calcEvents : Duration -> List Car -> List Event
 calcEvents timeLimit cars =
-    cars
-        |> List.filterMap
-            (\car ->
-                List.Extra.last car.laps
-                    |> Maybe.map
-                        (\finalLap ->
-                            -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
-                            if finalLap.elapsed < timeLimit then
-                                { carNumber = car.metaData.carNumber
-                                , eventTime = finalLap.elapsed
-                                , eventType = Retirement
-                                }
+    let
+        -- レーススタートイベント（1つのみ、全車両に適用）
+        raceStartEvent =
+            { eventTime = 0, eventType = RaceStart }
 
-                            else
-                                { carNumber = car.metaData.carNumber
-                                , eventTime = finalLap.elapsed
-                                , eventType = Checkered
-                                }
-                        )
-            )
+        -- 既存のリタイア・チェッカーイベント
+        carEvents =
+            cars
+                |> List.filterMap
+                    (\car ->
+                        List.Extra.last car.laps
+                            |> Maybe.map
+                                (\finalLap ->
+                                    -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
+                                    if finalLap.elapsed < timeLimit then
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Retirement }
+
+                                    else
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Checkered }
+                                )
+                    )
+    in
+    (raceStartEvent :: carEvents)
         |> List.sortBy .eventTime
 
 
@@ -141,7 +146,7 @@ update msg m =
                             | clock = Clock.update now Clock.Tick m.clock
                             , lapCount = newClock.lapCount
                             , cars =
-                                updateCars m.timeLimit { elapsed = newClock.elapsed } m.cars
+                                updateCars { elapsed = newClock.elapsed } m.cars
                                     |> applyEvents newElapsed m.events
                         }
 
@@ -234,7 +239,7 @@ update msg m =
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
                 , cars =
-                    updateCars m.timeLimit { elapsed = elapsed } m.cars
+                    updateCars { elapsed = elapsed } m.cars
                         |> applyEvents elapsed m.events
             }
 
@@ -243,10 +248,16 @@ type alias Clock =
     { elapsed : Duration }
 
 
-updateCars : Duration -> Clock -> List Car -> List Car
-updateCars timeLimit raceClock cars =
+updateCars : Clock -> List Car -> List Car
+updateCars raceClock cars =
     cars
-        |> List.map (Car.updateWithClock { elapsed = raceClock.elapsed, timeLimit = timeLimit })
+        |> List.map
+            (\car ->
+                { car
+                    | currentLap = Lap.findCurrentLap raceClock car.laps
+                    , lastLap = Lap.findLastLapAt raceClock car.laps
+                }
+            )
         |> List.sortWith
             (\a b ->
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
@@ -254,36 +265,65 @@ updateCars timeLimit raceClock cars =
             )
 
 
+{-| イベントが車両固有のイベントかどうかを判定する
+-}
+isCarEvent : Event -> Bool
+isCarEvent { eventType } =
+    case eventType of
+        CarEvent _ _ ->
+            True
+
+        _ ->
+            False
+
+
 {-| イベント情報に基づいて車両のステータスを更新する
 -}
-applyEvents : Duration -> List EventInfo -> List Car -> List Car
+applyEvents : Duration -> List Event -> List Car -> List Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
             List.filter (\{ eventTime } -> currentElapsed >= eventTime) events
+
+        ( carSpecificEvents, globalEvents ) =
+            List.partition isCarEvent activeEvents
     in
     cars
         |> List.map
             (\car ->
                 let
                     carEvents =
-                        activeEvents
-                            |> List.filter (\event -> event.carNumber == car.metaData.carNumber)
+                        carSpecificEvents
+                            |> List.filter
+                                (\event ->
+                                    case event.eventType of
+                                        CarEvent carNumber _ ->
+                                            carNumber == car.metaData.carNumber
+
+                                        _ ->
+                                            False
+                                )
                             |> List.sortBy .eventTime
+
+                    allEvents =
+                        globalEvents ++ carEvents
                 in
-                List.foldl applyEventToCar car carEvents
+                List.foldl applyEventToCar car allEvents
             )
 
 
 {-| 単一のイベントを車両に適用する
 -}
-applyEventToCar : EventInfo -> Car -> Car
+applyEventToCar : Event -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
-        Retirement ->
+        RaceStart ->
+            Car.setStatus Racing car
+
+        CarEvent _ Retirement ->
             Car.setStatus Retired car
 
-        Checkered ->
+        CarEvent _ Checkered ->
             Car.setStatus Car.Checkered car
 
 
