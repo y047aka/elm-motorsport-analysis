@@ -1,7 +1,7 @@
-module Motorsport.RaceControl exposing (CheckeredInfo, Model, Msg(..), RetirementInfo, empty, init, update, updateCars)
+module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update, updateCars)
 
 import List.Extra
-import Motorsport.Car as Car exposing (Car)
+import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
@@ -18,20 +18,19 @@ type alias Model =
     , lapTotal : Int
     , timeLimit : Int
     , cars : List Car
-    , retirements : List RetirementInfo
-    , checkered : List CheckeredInfo
+    , events : List EventInfo
     }
 
 
-type alias RetirementInfo =
-    { carNumber : String
-    , retirementTime : Duration
-    }
+type EventType
+    = Retirement
+    | Checkered
 
 
-type alias CheckeredInfo =
+type alias EventInfo =
     { carNumber : String
-    , checkeredTime : Duration
+    , eventTime : Duration
+    , eventType : EventType
     }
 
 
@@ -42,8 +41,7 @@ empty =
     , lapTotal = 0
     , timeLimit = 0
     , cars = []
-    , retirements = []
-    , checkered = []
+    , events = []
     }
 
 
@@ -58,8 +56,7 @@ init cars =
     , lapTotal = calcLapTotal cars
     , timeLimit = timeLimit
     , cars = cars
-    , retirements = calcRetirements timeLimit cars
-    , checkered = calcCheckered timeLimit cars
+    , events = calcEvents timeLimit cars
     }
 
 
@@ -79,42 +76,28 @@ calcTimeLimit =
         >> Maybe.withDefault 0
 
 
-{-| 車両からリタイア時刻を事前計算する関数
+{-| 車両から各種イベント時刻を事前計算する関数
 -}
-calcRetirements : Duration -> List Car -> List RetirementInfo
-calcRetirements timeLimit cars =
+calcEvents : Duration -> List Car -> List EventInfo
+calcEvents timeLimit cars =
     cars
         |> List.filterMap
             (\car ->
                 List.Extra.last car.laps
-                    |> Maybe.andThen
+                    |> Maybe.map
                         (\finalLap ->
-                            -- 時間制限より前に最終ラップが終わった車両はリタイア
+                            -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
                             if finalLap.elapsed < timeLimit then
-                                Just { carNumber = car.metaData.carNumber, retirementTime = finalLap.elapsed }
+                                { carNumber = car.metaData.carNumber
+                                , eventTime = finalLap.elapsed
+                                , eventType = Retirement
+                                }
 
                             else
-                                Nothing
-                        )
-            )
-
-
-{-| 車両からチェッカー時刻を事前計算する関数
--}
-calcCheckered : Duration -> List Car -> List CheckeredInfo
-calcCheckered timeLimit cars =
-    cars
-        |> List.filterMap
-            (\car ->
-                List.Extra.last car.laps
-                    |> Maybe.andThen
-                        (\finalLap ->
-                            -- 時間制限以降に最終ラップが終わった車両はチェッカー
-                            if finalLap.elapsed >= timeLimit then
-                                Just { carNumber = car.metaData.carNumber, checkeredTime = finalLap.elapsed }
-
-                            else
-                                Nothing
+                                { carNumber = car.metaData.carNumber
+                                , eventTime = finalLap.elapsed
+                                , eventType = Checkered
+                                }
                         )
             )
 
@@ -158,8 +141,7 @@ update msg m =
                             , lapCount = newClock.lapCount
                             , cars =
                                 updateCars m.timeLimit { elapsed = newClock.elapsed } m.cars
-                                    |> applyRetirements newElapsed m.retirements
-                                    |> applyCheckered newElapsed m.checkered
+                                    |> applyEvents newElapsed m.events
                         }
 
                     else
@@ -252,8 +234,7 @@ update msg m =
                 , lapCount = lapCount
                 , cars =
                     updateCars m.timeLimit { elapsed = elapsed } m.cars
-                        |> applyRetirements elapsed m.retirements
-                        |> applyCheckered elapsed m.checkered
+                        |> applyEvents elapsed m.events
             }
 
 
@@ -272,60 +253,37 @@ updateCars timeLimit raceClock cars =
             )
 
 
-{-| リタイア情報に基づいて車両のステータスをリタイアに設定する
+{-| イベント情報に基づいて車両のステータスを更新する
 -}
-applyRetirements : Duration -> List RetirementInfo -> List Car -> List Car
-applyRetirements currentElapsed retirements cars =
+applyEvents : Duration -> List EventInfo -> List Car -> List Car
+applyEvents currentElapsed events cars =
+    let
+        activeEvents =
+            List.filter (\{ eventTime } -> currentElapsed >= eventTime) events
+    in
     cars
         |> List.map
             (\car ->
-                case findRetirementByCarNumber car.metaData.carNumber retirements of
-                    Just retirement ->
-                        -- リタイア時刻に達した場合、ステータスをRetiredに変更
-                        if currentElapsed >= retirement.retirementTime && car.status /= Car.Retired then
-                            { car | status = Car.Retired }
-
-                        else
-                            car
-
-                    Nothing ->
-                        car
+                let
+                    carEvents =
+                        activeEvents
+                            |> List.filter (\event -> event.carNumber == car.metaData.carNumber)
+                            |> List.sortBy .eventTime
+                in
+                List.foldl applyEventToCar car carEvents
             )
 
 
-{-| チェッカー情報に基づいて車両のステータスをチェッカーに設定する
+{-| 単一のイベントを車両に適用する
 -}
-applyCheckered : Duration -> List CheckeredInfo -> List Car -> List Car
-applyCheckered currentElapsed checkered cars =
-    cars
-        |> List.map
-            (\car ->
-                case findCheckeredByCarNumber car.metaData.carNumber checkered of
-                    Just checkeredInfo ->
-                        -- チェッカー時刻に達した場合、ステータスをCheckeredに変更
-                        if currentElapsed >= checkeredInfo.checkeredTime && car.status /= Car.Checkered && car.status /= Car.Retired then
-                            { car | status = Car.Checkered }
+applyEventToCar : EventInfo -> Car -> Car
+applyEventToCar event car =
+    case event.eventType of
+        Retirement ->
+            Car.setStatus Retired car
 
-                        else
-                            car
-
-                    Nothing ->
-                        car
-            )
-
-
-{-| 車両番号からリタイア情報を検索する
--}
-findRetirementByCarNumber : String -> List RetirementInfo -> Maybe RetirementInfo
-findRetirementByCarNumber carNumber retirements =
-    List.Extra.find (\retirement -> retirement.carNumber == carNumber) retirements
-
-
-{-| 車両番号からチェッカー情報を検索する
--}
-findCheckeredByCarNumber : String -> List CheckeredInfo -> Maybe CheckeredInfo
-findCheckeredByCarNumber carNumber checkered =
-    List.Extra.find (\info -> info.carNumber == carNumber) checkered
+        Checkered ->
+            Car.setStatus Car.Checkered car
 
 
 lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int

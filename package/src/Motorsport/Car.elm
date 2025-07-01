@@ -2,6 +2,7 @@ module Motorsport.Car exposing
     ( Car, MetaData
     , updateWithClock
     , Status(..), hasRetired, statusToString
+    , setStatus
     )
 
 {-|
@@ -9,6 +10,7 @@ module Motorsport.Car exposing
 @docs Car, MetaData
 @docs updateWithClock
 @docs Status, hasRetired, statusToString
+@docs setStatus
 
 -}
 
@@ -69,6 +71,11 @@ statusToString status =
 
         Retired ->
             "Retired"
+
+
+setStatus : Status -> Car -> Car
+setStatus status car =
+    { car | status = status }
 
 
 updateWithClock : { elapsed : Duration, timeLimit : Duration } -> Car -> Car
