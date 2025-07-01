@@ -7,6 +7,7 @@ import List.Extra
 import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
+import Motorsport.RaceControl as RaceControl
 
 
 main : BenchmarkProgram
@@ -17,7 +18,7 @@ main =
 suite : Benchmark
 suite =
     describe "RaceControl.updateCars" <|
-        [ Benchmark.scale "Car count scaling"
+        [ Benchmark.scale "old"
             ([ 10
              , 50
              ]
@@ -34,6 +35,34 @@ suite =
                                     { elapsed = 90000 * 10 }
                             in
                             updateCars timeLimit clock cars
+                        )
+                    )
+            )
+        , Benchmark.scale "new"
+            ([ 10
+             , 50
+             ]
+                |> List.map
+                    (\size ->
+                        let
+                            cars =
+                                Fixture.jsonDecodedOfSize size
+
+                            timeLimit =
+                                90000 * 100
+                        in
+                        ( size, cars, RaceControl.calcEvents timeLimit cars )
+                    )
+                |> List.map
+                    (\( size, cars, events ) ->
+                        ( "cars = " ++ String.fromInt size
+                        , \_ ->
+                            let
+                                clock =
+                                    { elapsed = 90000 * 10 }
+                            in
+                            RaceControl.updateCars clock cars
+                                |> RaceControl.applyEvents clock.elapsed events
                         )
                     )
             )
