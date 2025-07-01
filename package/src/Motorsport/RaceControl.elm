@@ -34,6 +34,7 @@ type EventType
 type CarEventType
     = Retirement
     | Checkered
+    | LapCompleted Int
 
 
 empty : Model
@@ -87,8 +88,22 @@ calcEvents timeLimit cars =
         raceStartEvent =
             { eventTime = 0, eventType = RaceStart }
 
+        -- 各車のラップ完了イベント
+        lapCompletionEvents =
+            cars
+                |> List.concatMap
+                    (\car ->
+                        car.laps
+                            |> List.map
+                                (\lap ->
+                                    { eventTime = lap.elapsed
+                                    , eventType = CarEvent car.metaData.carNumber (LapCompleted lap.lap)
+                                    }
+                                )
+                    )
+
         -- 既存のリタイア・チェッカーイベント
-        carEvents =
+        finalEvents =
             cars
                 |> List.filterMap
                     (\car ->
@@ -104,7 +119,7 @@ calcEvents timeLimit cars =
                                 )
                     )
     in
-    (raceStartEvent :: carEvents)
+    (raceStartEvent :: (lapCompletionEvents ++ finalEvents))
         |> List.sortBy .eventTime
 
 
@@ -146,8 +161,13 @@ update msg m =
                             | clock = Clock.update now Clock.Tick m.clock
                             , lapCount = newClock.lapCount
                             , cars =
-                                updateCars { elapsed = newClock.elapsed } m.cars
+                                m.cars
                                     |> applyEvents newElapsed m.events
+                                    |> List.sortWith
+                                        (\a b ->
+                                            Maybe.map2 (Lap.compareAt { elapsed = newClock.elapsed }) a.currentLap b.currentLap
+                                                |> Maybe.withDefault EQ
+                                        )
                         }
 
                     else
@@ -318,13 +338,22 @@ applyEventToCar : Event -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
-            Car.setStatus Racing car
+            { car
+                | currentLap = List.head car.laps
+                , status = Racing
+            }
 
         CarEvent _ Retirement ->
             Car.setStatus Retired car
 
         CarEvent _ Checkered ->
             Car.setStatus Car.Checkered car
+
+        CarEvent _ (LapCompleted lapNumber) ->
+            { car
+                | currentLap = List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+                , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
+            }
 
 
 lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int

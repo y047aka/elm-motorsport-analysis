@@ -61,8 +61,13 @@ suite =
                                 clock =
                                     { elapsed = 90000 * 10 }
                             in
-                            RaceControl.updateCars clock cars
+                            cars
                                 |> RaceControl.applyEvents clock.elapsed events
+                                |> List.sortWith
+                                    (\a b ->
+                                        Maybe.map2 (Lap.compareAt clock) a.currentLap b.currentLap
+                                            |> Maybe.withDefault EQ
+                                    )
                         )
                     )
             )

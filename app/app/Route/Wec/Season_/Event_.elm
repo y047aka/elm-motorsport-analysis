@@ -406,6 +406,9 @@ eventTypeToString eventType =
         CarEvent _ Checkered ->
             "Checkered Flag"
 
+        CarEvent _ (LapCompleted lap) ->
+            "Lap " ++ String.fromInt lap ++ " Completed"
+
 
 config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config_LeMans24h season analysis =
