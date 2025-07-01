@@ -1,4 +1,4 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), empty, init, update, updateCars)
+module Motorsport.RaceControl exposing (EventInfo, EventType(..), Model, Msg(..), empty, init, update, updateCars)
 
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status(..))
@@ -100,6 +100,7 @@ calcEvents timeLimit cars =
                                 }
                         )
             )
+        |> List.sortBy .eventTime
 
 
 
