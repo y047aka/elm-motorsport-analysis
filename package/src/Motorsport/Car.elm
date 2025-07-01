@@ -80,39 +80,23 @@ updateWithClock raceClock car =
         |> (\updatedCar ->
                 { updatedCar
                     | status =
-                        case ( updatedCar.status, hasCompletedAllLaps raceClock updatedCar, isOnFinalLap raceClock updatedCar ) of
-                            ( PreRace, _, _ ) ->
+                        case ( updatedCar.status, hasCompletedAllLaps raceClock updatedCar ) of
+                            ( PreRace, _ ) ->
                                 Racing
 
-                            ( Racing, True, True ) ->
+                            ( Racing, True ) ->
                                 Checkered
 
-                            ( Racing, True, False ) ->
-                                Retired
-
-                            ( Racing, False, _ ) ->
+                            ( Racing, False ) ->
                                 Racing
 
-                            ( Checkered, _, _ ) ->
+                            ( Checkered, _ ) ->
                                 Checkered
 
-                            ( Retired, _, _ ) ->
+                            ( Retired, _ ) ->
                                 Retired
                 }
            )
-
-
-isOnFinalLap : { elapsed : Duration, timeLimit : Duration } -> Car -> Bool
-isOnFinalLap raceClock car =
-    let
-        finishedAfterTimeLimit =
-            raceClock.timeLimit <= raceClock.elapsed
-
-        hasReachedFinalLap =
-            Maybe.map2 (==) car.currentLap (List.Extra.last car.laps)
-                |> Maybe.withDefault False
-    in
-    hasReachedFinalLap && finishedAfterTimeLimit
 
 
 hasCompletedAllLaps : { a | elapsed : Duration } -> Car -> Bool

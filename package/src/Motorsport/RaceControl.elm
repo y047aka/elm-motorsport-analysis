@@ -18,6 +18,13 @@ type alias Model =
     , lapTotal : Int
     , timeLimit : Int
     , cars : List Car
+    , retirements : List RetirementInfo
+    }
+
+
+type alias RetirementInfo =
+    { carNumber : String
+    , retirementTime : Duration
     }
 
 
@@ -28,16 +35,22 @@ empty =
     , lapTotal = 0
     , timeLimit = 0
     , cars = []
+    , retirements = []
     }
 
 
 init : List Car -> Model
 init cars =
+    let
+        timeLimit =
+            calcTimeLimit cars
+    in
     { clock = Initial
     , lapCount = 0
     , lapTotal = calcLapTotal cars
-    , timeLimit = calcTimeLimit cars
+    , timeLimit = timeLimit
     , cars = cars
+    , retirements = calcRetirements timeLimit cars
     }
 
 
@@ -55,6 +68,26 @@ calcTimeLimit =
         >> List.maximum
         >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
         >> Maybe.withDefault 0
+
+
+{-| 車両からリタイア時刻を事前計算する関数
+-}
+calcRetirements : Duration -> List Car -> List RetirementInfo
+calcRetirements timeLimit cars =
+    cars
+        |> List.filterMap
+            (\car ->
+                List.Extra.last car.laps
+                    |> Maybe.andThen
+                        (\finalLap ->
+                            -- 時間制限より前に最終ラップが終わった車両はリタイア
+                            if finalLap.elapsed < timeLimit then
+                                Just { carNumber = car.metaData.carNumber, retirementTime = finalLap.elapsed }
+
+                            else
+                                Nothing
+                        )
+            )
 
 
 
@@ -94,7 +127,9 @@ update msg m =
                         { m
                             | clock = Clock.update now Clock.Tick m.clock
                             , lapCount = newClock.lapCount
-                            , cars = updateCars m.timeLimit { elapsed = newClock.elapsed } m.cars
+                            , cars =
+                                updateCars m.timeLimit { elapsed = newClock.elapsed } m.cars
+                                    |> applyRetirements newElapsed m.retirements
                         }
 
                     else
@@ -185,7 +220,9 @@ update msg m =
             { m
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
-                , cars = updateCars m.timeLimit { elapsed = elapsed } m.cars
+                , cars =
+                    updateCars m.timeLimit { elapsed = elapsed } m.cars
+                        |> applyRetirements elapsed m.retirements
             }
 
 
@@ -202,6 +239,34 @@ updateCars timeLimit raceClock cars =
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
                     |> Maybe.withDefault EQ
             )
+
+
+{-| リタイア情報に基づいて車両のステータスをリタイアに設定する
+-}
+applyRetirements : Duration -> List RetirementInfo -> List Car -> List Car
+applyRetirements currentElapsed retirements cars =
+    cars
+        |> List.map
+            (\car ->
+                case findRetirementByCarNumber car.metaData.carNumber retirements of
+                    Just retirement ->
+                        -- リタイア時刻に達した場合、ステータスをRetiredに変更
+                        if currentElapsed >= retirement.retirementTime && car.status /= Car.Retired then
+                            { car | status = Car.Retired }
+
+                        else
+                            car
+
+                    Nothing ->
+                        car
+            )
+
+
+{-| 車両番号からリタイア情報を検索する
+-}
+findRetirementByCarNumber : String -> List RetirementInfo -> Maybe RetirementInfo
+findRetirementByCarNumber carNumber retirements =
+    List.Extra.find (\retirement -> retirement.carNumber == carNumber) retirements
 
 
 lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int
