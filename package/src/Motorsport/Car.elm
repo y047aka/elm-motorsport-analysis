@@ -84,17 +84,8 @@ updateWithClock raceClock car =
                             ( PreRace, _ ) ->
                                 Racing
 
-                            ( Racing, True ) ->
-                                Checkered
-
-                            ( Racing, False ) ->
-                                Racing
-
-                            ( Checkered, _ ) ->
-                                Checkered
-
-                            ( Retired, _ ) ->
-                                Retired
+                            _ ->
+                                updatedCar.status
                 }
            )
 
