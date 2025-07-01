@@ -4,6 +4,8 @@ import BackendTask exposing (BackendTask)
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
+import DataView
+import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
@@ -17,7 +19,7 @@ import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -70,6 +72,7 @@ pages =
 type alias Model =
     { mode : Mode
     , leaderboardState : Leaderboard.Model
+    , eventsState : DataView.Model
     , query : String
     }
 
@@ -78,6 +81,7 @@ type Mode
     = Leaderboard
     | PositionHistory
     | Tracker
+    | Events
 
 
 init :
@@ -87,6 +91,16 @@ init :
 init app shared =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
+      , eventsState =
+            DataView.init "Time"
+                (DataView.Options.defaultOptions
+                    |> (\options_ ->
+                            { options_
+                                | selecting = NoSelecting
+                                , pagination = NoPagination
+                            }
+                       )
+                )
       , query = ""
       }
     , Effect.fromCmd
@@ -107,6 +121,7 @@ type Msg
     | ModeChange Mode
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
+    | EventsMsg DataView.Msg
 
 
 update :
@@ -134,6 +149,12 @@ update app shared msg m =
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
+            , Effect.none
+            , Nothing
+            )
+
+        EventsMsg eventsMsg ->
+            ( { m | eventsState = DataView.update eventsMsg m.eventsState }
             , Effect.none
             , Nothing
             )
@@ -179,7 +200,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, leaderboardState, eventsState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -203,6 +224,9 @@ view app ({ eventSummary, analysis_Wec, raceControl_Wec } as shared) { mode, lea
 
                         _ ->
                             TrackerChart.view analysis_Wec raceControl_Wec
+
+                Events ->
+                    eventsView eventsState raceControl_Wec
             ]
         }
 
@@ -240,6 +264,7 @@ header { eventSummary, raceControl_Wec } =
                 [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
                 , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
                 , button [ onClick (ModeChange Tracker) ] [ text "Tracker" ]
+                , button [ onClick (ModeChange Events) ] [ text "Events" ]
                 ]
             ]
         ]
@@ -321,6 +346,65 @@ config season analysis =
             }
         ]
     }
+
+
+eventsView : DataView.Model -> RaceControl.Model -> Html Msg
+eventsView eventsState raceControl =
+    let
+        currentElapsed =
+            Clock.getElapsed raceControl.clock
+
+        occurredEvents =
+            raceControl.events
+                |> List.filter (\event -> currentElapsed >= event.eventTime)
+                |> List.sortBy .eventTime
+    in
+    div []
+        [ Html.h2 [] [ text "Race Events" ]
+        , DataView.view eventsConfig eventsState occurredEvents
+        ]
+
+
+eventsConfig : DataView.Config Event Msg
+eventsConfig =
+    { toId = .eventTime >> Duration.toString
+    , toMsg = EventsMsg
+    , columns =
+        [ DataView.customColumn
+            { label = "Time"
+            , getter = .eventTime >> Duration.toString
+            , sorter = compareBy .eventTime
+            }
+        , DataView.stringColumn
+            { label = "Car"
+            , getter =
+                \event ->
+                    case event.eventType of
+                        CarEvent carNumber _ ->
+                            carNumber
+
+                        _ ->
+                            ""
+            }
+        , DataView.stringColumn
+            { label = "Event"
+            , getter = .eventType >> eventTypeToString
+            }
+        ]
+    }
+
+
+eventTypeToString : EventType -> String
+eventTypeToString eventType =
+    case eventType of
+        RaceStart ->
+            "Race Started"
+
+        CarEvent _ Retirement ->
+            "Retirement"
+
+        CarEvent _ Checkered ->
+            "Checkered Flag"
 
 
 config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
