@@ -43,9 +43,9 @@ suite =
                     )
             )
         , Benchmark.scale "new"
-            ([ 25 -- 949
-             , 50 -- 413
-             , 75 -- 263
+            ([ 25 -- 10,812
+             , 50 -- 10,994
+             , 75 -- 12,744
              ]
                 |> List.map (\size -> ( size, RaceControl.calcEvents timeLimit cars ))
                 |> List.map
