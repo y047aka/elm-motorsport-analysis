@@ -303,7 +303,7 @@ applyEvents : Duration -> List Event -> List Car -> List Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
-            List.filter (\{ eventTime } -> currentElapsed >= eventTime) events
+            List.filter (\{ eventTime } -> (currentElapsed - 10000) < eventTime && eventTime <= currentElapsed) events
 
         ( carSpecificEvents, globalEvents ) =
             List.partition isCarEvent activeEvents
