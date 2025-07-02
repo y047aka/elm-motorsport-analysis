@@ -1,4 +1,4 @@
-module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, empty, init, update, updateCars)
+module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, empty, init, update)
 
 import List.Extra
 import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
