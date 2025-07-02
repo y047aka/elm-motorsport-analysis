@@ -17,52 +17,52 @@ main =
 
 suite : Benchmark
 suite =
+    let
+        cars =
+            Fixture.jsonDecoded
+
+        timeLimit =
+            calcTimeLimit cars
+    in
     describe "RaceControl.updateCars" <|
         [ Benchmark.scale "old"
-            ([ 10
-             , 50
+            ([ 25 -- 5,338
+             , 50 -- 5,282
+             , 75 -- 5,186
              ]
-                |> List.map (\size -> ( size, Fixture.jsonDecodedOfSize size ))
                 |> List.map
-                    (\( size, cars ) ->
-                        ( "cars = " ++ String.fromInt size
+                    (\size ->
+                        ( String.fromInt size ++ "%"
                         , \_ ->
                             let
-                                timeLimit =
-                                    90000 * 100
-
                                 clock =
-                                    { elapsed = 90000 * 10 }
+                                    { elapsed = floor (toFloat timeLimit * toFloat size / 100) }
                             in
                             updateCars timeLimit clock cars
                         )
                     )
             )
         , Benchmark.scale "new"
-            ([ 10
-             , 50
+            ([ 25 -- 10,812
+             , 50 -- 10,994
+             , 75 -- 12,744
              ]
+                |> List.map (\size -> ( size, RaceControl.calcEvents timeLimit cars ))
                 |> List.map
-                    (\size ->
-                        let
-                            cars =
-                                Fixture.jsonDecodedOfSize size
-
-                            timeLimit =
-                                90000 * 100
-                        in
-                        ( size, cars, RaceControl.calcEvents timeLimit cars )
-                    )
-                |> List.map
-                    (\( size, cars, events ) ->
-                        ( "cars = " ++ String.fromInt size
+                    (\( size, events ) ->
+                        ( String.fromInt size ++ "%"
                         , \_ ->
                             let
                                 clock =
-                                    { elapsed = 90000 * 10 }
+                                    { elapsed = floor (toFloat timeLimit * toFloat size / 100) }
                             in
-                            RaceControl.updateCars clock cars
+                            cars
                                 |> RaceControl.applyEvents clock.elapsed events
+                                |> List.sortWith
+                                    (\a b ->
+                                        Maybe.map2 (Lap.compareAt clock) a.currentLap b.currentLap
+                                            |> Maybe.withDefault EQ
+                                    )
                         )
                     )
             )
@@ -133,3 +133,16 @@ hasCompletedAllLaps raceClock car =
     List.Extra.last car.laps
         |> Maybe.map (\finalLap -> finalLap.elapsed <= raceClock.elapsed)
         |> Maybe.withDefault False
+
+
+
+-- HELPERS
+
+
+calcTimeLimit : List Car -> Duration
+calcTimeLimit =
+    List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
+        >> List.filterMap identity
+        >> List.maximum
+        >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
+        >> Maybe.withDefault 0
