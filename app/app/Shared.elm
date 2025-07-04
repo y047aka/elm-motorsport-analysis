@@ -5,8 +5,11 @@ import Css exposing (..)
 import Css.Global exposing (global)
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
+import Data.FormulaE as FormulaE
 import Data.Series as Series
-import Data.Series.Wec exposing (EventSummary)
+import Data.Series.EventSummary exposing (EventSummary)
+import Data.Series.FormulaE
+import Data.Series.Wec
 import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
@@ -45,9 +48,9 @@ type alias Data =
 type alias Model =
     { eventSummary : EventSummary
     , raceControl_F1 : RaceControl.Model
-    , raceControl_Wec : RaceControl.Model
+    , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
-    , analysis_Wec : Analysis
+    , analysis : Analysis
     }
 
 
@@ -67,9 +70,9 @@ init :
 init flags maybePagePath =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.empty
-      , raceControl_Wec = RaceControl.empty
+      , raceControl = RaceControl.empty
       , analysis_F1 = Analysis.finished RaceControl.empty
-      , analysis_Wec = Analysis.finished RaceControl.empty
+      , analysis = Analysis.finished RaceControl.empty
       }
     , Effect.none
     )
@@ -84,8 +87,10 @@ type Msg
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | FetchJson_FormulaE { season : String, event : String }
+    | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
-    | RaceControlMsg_Wec RaceControl.Msg
+    | RaceControlMsg RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -140,13 +145,47 @@ update msg m =
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl_Wec = rcNew
-                , analysis_Wec = Analysis.finished rcNew
+                , raceControl = rcNew
+                , analysis = Analysis.finished rcNew
               }
             , Effect.none
             )
 
         JsonLoaded_Wec (Err _) ->
+            ( m, Effect.none )
+
+        FetchJson_FormulaE options ->
+            let
+                eventSummary =
+                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.FormulaE.fromString options.event)
+                        |> Maybe.andThen Series.toEventSummary_FormulaE
+                        |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
+            in
+            ( { m | eventSummary = eventSummary }
+            , Effect.fromCmd <|
+                Http.get
+                    { url = eventSummary.jsonPath
+                    , expect = Http.expectJson JsonLoaded_FormulaE FormulaE.eventDecoder
+                    }
+            )
+
+        JsonLoaded_FormulaE (Ok decoded) ->
+            let
+                rcNew =
+                    RaceControl.init decoded.preprocessed
+
+                modelEventSummary =
+                    m.eventSummary
+            in
+            ( { m
+                | eventSummary = { modelEventSummary | name = decoded.name }
+                , raceControl = rcNew
+                , analysis = Analysis.finished rcNew
+              }
+            , Effect.none
+            )
+
+        JsonLoaded_FormulaE (Err _) ->
             ( m, Effect.none )
 
         RaceControlMsg_F1 raceControlMsg ->
@@ -161,14 +200,14 @@ update msg m =
             , Effect.none
             )
 
-        RaceControlMsg_Wec raceControlMsg ->
+        RaceControlMsg raceControlMsg ->
             let
                 rcNew =
-                    RaceControl.update raceControlMsg m.raceControl_Wec
+                    RaceControl.update raceControlMsg m.raceControl
             in
             ( { m
-                | raceControl_Wec = rcNew
-                , analysis_Wec = Analysis.fromRaceControl rcNew
+                | raceControl = rcNew
+                , analysis = Analysis.fromRaceControl rcNew
               }
             , Effect.none
             )

@@ -43,7 +43,7 @@ init flags =
     ( { args = maybeArgs }
     , case maybeArgs of
         Just args ->
-            Wec.getLaps args.eventId (CsvLoaded args.eventId)
+            Wec.getLaps args.eventId (CsvLoaded_Wec args.eventId)
 
         Nothing ->
             [ "qatar_1812km", "imola_6h", "spa_6h", "le_mans_24h", "fuji_6h", "bahrain_8h" ]
@@ -67,7 +67,7 @@ toItem eventId =
 
 type Msg
     = InputEventId String
-    | CsvLoaded String (Result Http.Error (List Wec.Lap))
+    | CsvLoaded_Wec String (Result Http.Error (List Wec.Lap))
     | CsvLoaded_LeMans24h String (Result Http.Error (List LeMans24h.Lap))
     | NoOp
 
@@ -82,10 +82,10 @@ update msg model =
                     LeMans24h.getLaps eventId (CsvLoaded_LeMans24h eventId)
 
                 _ ->
-                    Wec.getLaps eventId (CsvLoaded eventId)
+                    Wec.getLaps eventId (CsvLoaded_Wec eventId)
             )
 
-        CsvLoaded fileName (Ok decoded) ->
+        CsvLoaded_Wec fileName (Ok decoded) ->
             ( model
             , exitWithMsg
                 ( 0

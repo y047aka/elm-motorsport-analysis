@@ -1,11 +1,9 @@
-module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
+module Route.FormulaE.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
 import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
-import DataView
-import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
@@ -14,12 +12,11 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Chart.Tracker_LeMans24h as Tracker_LeMans24h
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
-import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -55,13 +52,7 @@ route =
 pages : BackendTask FatalError (List RouteParams)
 pages =
     BackendTask.succeed
-        [ { season = "2024", event = "le_mans_24h" }
-        , { season = "2024", event = "fuji_6h" }
-        , { season = "2024", event = "bahrain_8h" }
-        , { season = "2025", event = "qatar_1812km" }
-        , { season = "2025", event = "imola_6h" }
-        , { season = "2025", event = "spa_6h" }
-        , { season = "2025", event = "le_mans_24h" }
+        [ { season = "2025", event = "R08_tokyo" }
         ]
 
 
@@ -72,7 +63,6 @@ pages =
 type alias Model =
     { mode : Mode
     , leaderboardState : Leaderboard.Model
-    , eventsState : DataView.Model
     , query : String
     }
 
@@ -81,7 +71,6 @@ type Mode
     = Leaderboard
     | PositionHistory
     | Tracker
-    | Events
 
 
 init :
@@ -91,20 +80,10 @@ init :
 init app shared =
     ( { mode = Leaderboard
       , leaderboardState = initialSort "Position"
-      , eventsState =
-            DataView.init "Time"
-                (DataView.Options.defaultOptions
-                    |> (\options_ ->
-                            { options_
-                                | selecting = NoSelecting
-                                , pagination = NoPagination
-                            }
-                       )
-                )
       , query = ""
       }
     , Effect.fromCmd
-        (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
+        (Task.succeed (Shared.FetchJson_FormulaE { season = app.routeParams.season, event = app.routeParams.event })
             |> Task.perform SharedMsg
         )
     )
@@ -121,7 +100,6 @@ type Msg
     | ModeChange Mode
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
-    | EventsMsg DataView.Msg
 
 
 update :
@@ -149,12 +127,6 @@ update app shared msg m =
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
-            , Effect.none
-            , Nothing
-            )
-
-        EventsMsg eventsMsg ->
-            ( { m | eventsState = DataView.update eventsMsg m.eventsState }
             , Effect.none
             , Nothing
             )
@@ -200,33 +172,20 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState } =
+view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
-        { title = "Wec"
+        { title = "Formula E"
         , body =
             [ header shared
             , case mode of
                 Leaderboard ->
-                    case ( eventSummary.season, eventSummary.name ) of
-                        ( 2025, "24 Hours of Le Mans" ) ->
-                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
-
-                        _ ->
-                            Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                    Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    case ( eventSummary.season, eventSummary.name ) of
-                        ( 2025, "24 Hours of Le Mans" ) ->
-                            Tracker_LeMans24h.view analysis raceControl
-
-                        _ ->
-                            TrackerChart.view analysis raceControl
-
-                Events ->
-                    eventsView eventsState raceControl
+                    TrackerChart.view analysis raceControl
             ]
         }
 
@@ -264,7 +223,6 @@ header { eventSummary, raceControl } =
                 [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
                 , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
                 , button [ onClick (ModeChange Tracker) ] [ text "Tracker" ]
-                , button [ onClick (ModeChange Events) ] [ text "Events" ]
                 ]
             ]
         ]
@@ -306,11 +264,6 @@ config season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
-            { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
-            , sorter = compareBy (.metaData >> .carNumber)
-            }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
@@ -328,118 +281,6 @@ config season analysis =
             , analysis = analysis
             }
         , lastLapColumn_Wec
-            { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
-        , performanceColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , histogramColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            , coefficient = 1.2
-            }
-        ]
-    }
-
-
-eventsView : DataView.Model -> RaceControl.Model -> Html Msg
-eventsView eventsState raceControl =
-    let
-        currentElapsed =
-            Clock.getElapsed raceControl.clock
-
-        occurredEvents =
-            raceControl.events
-                |> List.filter (\event -> currentElapsed >= event.eventTime)
-                |> List.sortBy .eventTime
-    in
-    div []
-        [ Html.h2 [] [ text "Race Events" ]
-        , DataView.view eventsConfig eventsState occurredEvents
-        ]
-
-
-eventsConfig : DataView.Config Event Msg
-eventsConfig =
-    { toId = .eventTime >> Duration.toString
-    , toMsg = EventsMsg
-    , columns =
-        [ DataView.customColumn
-            { label = "Time"
-            , getter = .eventTime >> Duration.toString
-            , sorter = compareBy .eventTime
-            }
-        , DataView.stringColumn
-            { label = "Car"
-            , getter =
-                \event ->
-                    case event.eventType of
-                        CarEvent carNumber _ ->
-                            carNumber
-
-                        _ ->
-                            ""
-            }
-        , DataView.stringColumn
-            { label = "Event"
-            , getter = .eventType >> eventTypeToString
-            }
-        ]
-    }
-
-
-eventTypeToString : EventType -> String
-eventTypeToString eventType =
-    case eventType of
-        RaceStart ->
-            "Race Started"
-
-        CarEvent _ Retirement ->
-            "Retirement"
-
-        CarEvent _ Checkered ->
-            "Checkered Flag"
-
-        CarEvent _ (LapCompleted lap) ->
-            "Lap " ++ String.fromInt lap ++ " Completed"
-
-
-config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
-config_LeMans24h season analysis =
-    { toId = .metaData >> .carNumber
-    , toMsg = LeaderboardMsg
-    , columns =
-        [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
-            { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
-            , sorter = compareBy (.metaData >> .carNumber)
-            }
-        , intColumn { label = "Lap", getter = .lap }
-        , customColumn
-            { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , customColumn
-            { label = "Interval"
-            , getter = .timing >> .interval >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , currentLapColumn_LeMans24h
-            { getter = identity
-            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , lastLapColumn_LeMans24h
             { getter = .lastLap
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
