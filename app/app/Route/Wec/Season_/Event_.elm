@@ -2,13 +2,13 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, hsl, justifyContent, position, property, px, right, spaceBetween, sticky, textAlign, top, width, zero)
+import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, height, hidden, hsl, justifyContent, overflowY, padding, pct, position, property, px, right, scroll, spaceBetween, sticky, textAlign, top, width, zero)
 import Data.Series as Series
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
+import Html.Styled as Html exposing (Html, div, h1, img, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
@@ -89,7 +89,7 @@ init :
     -> Shared.Model
     -> ( Model, Effect Msg )
 init app shared =
-    ( { mode = Leaderboard
+    ( { mode = Tracker
       , leaderboardState = initialSort "Position"
       , eventsState =
             DataView.init "Time"
@@ -204,36 +204,70 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
-            [ header shared
-            , case mode of
-                Leaderboard ->
-                    case ( eventSummary.season, eventSummary.name ) of
-                        ( 2025, "24 Hours of Le Mans" ) ->
-                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
+            [ main_
+                [ css
+                    [ height (pct 100)
+                    , property "display" "grid"
+                    , property "grid-template-rows" "auto 1fr"
+                    ]
+                ]
+                [ header shared
+                , case mode of
+                    Leaderboard ->
+                        case ( eventSummary.season, eventSummary.name ) of
+                            ( 2025, "24 Hours of Le Mans" ) ->
+                                Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
 
-                        _ ->
-                            Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                            _ ->
+                                Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
 
-                PositionHistory ->
-                    PositionHistoryChart.view raceControl
+                    PositionHistory ->
+                        PositionHistoryChart.view raceControl
 
-                Tracker ->
-                    case ( eventSummary.season, eventSummary.name ) of
-                        ( 2025, "24 Hours of Le Mans" ) ->
-                            Tracker_LeMans24h.view analysis raceControl
+                    Tracker ->
+                        div
+                            [ css
+                                [ height (pct 100)
+                                , overflowY hidden
+                                , property "display" "grid"
+                                , property "grid-template-columns" "1fr 1fr"
+                                ]
+                            ]
+                            [ div [ css [ height (pct 100), overflowY scroll ] ]
+                                [ case ( eventSummary.season, eventSummary.name ) of
+                                    ( 2025, "24 Hours of Le Mans" ) ->
+                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
 
-                        _ ->
-                            TrackerChart.view analysis raceControl
+                                    _ ->
+                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                                ]
+                            , div [ css [ property "display" "grid", property "place-items" "center" ] ]
+                                [ case ( eventSummary.season, eventSummary.name ) of
+                                    ( 2025, "24 Hours of Le Mans" ) ->
+                                        Tracker_LeMans24h.view analysis raceControl
 
-                Events ->
-                    eventsView eventsState raceControl
+                                    _ ->
+                                        TrackerChart.view analysis raceControl
+                                ]
+                            ]
+
+                    Events ->
+                        eventsView eventsState raceControl
+                ]
             ]
         }
 
 
 header : Shared.Model -> Html Msg
 header { eventSummary, raceControl } =
-    Html.header [ css [ position sticky, top zero, backgroundColor (hsl 0 0 0.4) ] ]
+    Html.header
+        [ css
+            [ position sticky
+            , top zero
+            , padding (px 10)
+            , backgroundColor (hsl 0 0 0.4)
+            ]
+        ]
         [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
         , div [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []

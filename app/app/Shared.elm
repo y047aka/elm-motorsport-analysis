@@ -14,7 +14,7 @@ import Data.Wec as Wec
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
-import Html.Styled exposing (main_)
+import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
@@ -244,14 +244,20 @@ view :
 view sharedData page model toMsg pageView =
     { title = pageView.title
     , body =
-        List.map Html.Styled.toUnstyled
-            [ global
-                [ Css.Global.body
-                    [ fontFamilies [ "-apple-system", "BlinkMacSystemFont", qt "Segoe UI", "Helvetica", "Arial", "sans-serif", qt "Apple Color Emoji", qt "Segoe UI Emoji" ]
-                    , backgroundColor (hsl 0 0 0.4)
-                    , color (hsla 0 0 1 0.9)
+        let
+            globalReset =
+                global
+                    [ Css.Global.html
+                        [ height (vh 100) ]
+                    , Css.Global.body
+                        [ height (vh 100)
+                        , margin zero
+                        , fontFamilies [ "-apple-system", "BlinkMacSystemFont", qt "Segoe UI", "Helvetica", "Arial", "sans-serif", qt "Apple Color Emoji", qt "Segoe UI Emoji" ]
+                        , backgroundColor (hsl 0 0 0.4)
+                        , color (hsla 0 0 1 0.9)
+                        ]
                     ]
-                ]
-            , main_ [] pageView.body
-            ]
+        in
+        List.map Html.Styled.toUnstyled
+            (globalReset :: pageView.body)
     }

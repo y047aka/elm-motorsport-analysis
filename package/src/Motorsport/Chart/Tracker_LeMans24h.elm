@@ -102,16 +102,16 @@ view : Analysis -> RaceControl.Model -> Svg msg
 view analysis raceControl =
     let
         config =
-            { cx = 600
-            , cy = 600
+            { cx = 500
+            , cy = 500
             , r = 450
             , miniSectorRatio = calcMiniSectorRatio analysis
             }
     in
     svg
-        [ width (px 1200)
-        , height (px 1200)
-        , viewBox 0 0 1200 1200
+        [ width (px 1000)
+        , height (px 1000)
+        , viewBox 0 0 1000 1000
         ]
         [ Lazy.lazy track config
         , renderCars config raceControl
