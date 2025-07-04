@@ -66,7 +66,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
         { currentDriver_, team_, manufacturer_ } =
             List.head laps
                 |> Maybe.map
-                    (\{ driverName,  team, manufacturer } ->
+                    (\{ driverName, team, manufacturer } ->
                         { currentDriver_ = driverName
                         , team_ = team
                         , manufacturer_ = manufacturer

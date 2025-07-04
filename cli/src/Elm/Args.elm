@@ -3,17 +3,17 @@ module Args exposing (Args, fromString)
 
 type alias Args =
     { eventId : String
-    , mode : String
+    , repoName : String
     }
 
 
 fromString : String -> Maybe Args
 fromString str =
     case String.split "/" str of
-        mode :: eventId :: [] ->
+        fst :: scd :: [] ->
             Just
-                { eventId = eventId
-                , mode = mode
+                { eventId = fst
+                , repoName = scd
                 }
 
         _ ->
