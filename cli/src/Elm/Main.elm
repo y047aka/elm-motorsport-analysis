@@ -104,7 +104,7 @@ toItem eventId =
 type Msg
     = InputMode String
     | InputEventId String String
-    | CsvLoaded String (Result Http.Error (List Wec.Lap))
+    | CsvLoaded_Wec String (Result Http.Error (List Wec.Lap))
     | CsvLoaded_LeMans24h String (Result Http.Error (List LeMans24h.Lap))
     | CsvLoaded_FormulaE String (Result Http.Error (List FormulaE.Lap))
     | NoOp
