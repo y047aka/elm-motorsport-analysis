@@ -4,7 +4,7 @@ import Data_Cli.FormulaE as FormulaE
 import Dict
 import Dict.Extra
 import List.Extra
-import Motorsport.Car exposing (Car)
+import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Lap exposing (Lap)
 
@@ -66,7 +66,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
         { currentDriver_, team_, manufacturer_ } =
             List.head laps
                 |> Maybe.map
-                    (\{ driverName, team, manufacturer } ->
+                    (\{ driverName,  team, manufacturer } ->
                         { currentDriver_ = driverName
                         , team_ = team
                         , manufacturer_ = manufacturer
@@ -87,17 +87,21 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
                         }
                     )
 
+        metaData =
+            { carNumber = carNumber
+            , drivers = drivers
+            , class = Class.none
+            , group = ""
+            , team = team_
+            , manufacturer = manufacturer_
+            }
+
         startPosition =
             startPositions
                 |> List.Extra.findIndex ((==) carNumber)
                 |> Maybe.withDefault 0
     in
-    { carNumber = carNumber
-    , drivers = drivers
-    , class = Class.none
-    , group = ""
-    , team = team_
-    , manufacturer = manufacturer_
+    { metaData = metaData
     , startPosition = startPosition
     , laps =
         laps_
@@ -107,6 +111,7 @@ preprocess_ { carNumber, laps, startPositions, ordersByLap } =
             }
     , currentLap = Nothing
     , lastLap = Nothing
+    , status = PreRace
     }
 
 
@@ -153,6 +158,7 @@ laps_ { carNumber, laps, ordersByLap } =
                     , s2_best = Maybe.withDefault 0 bestS2
                     , s3_best = Maybe.withDefault 0 bestS3
                     , elapsed = elapsed
+                    , miniSectors = Nothing
                     }
             in
             { bestLapTime = bestLapTime
