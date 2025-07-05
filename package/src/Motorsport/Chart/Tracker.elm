@@ -14,15 +14,42 @@ import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, heig
 import TypedSvg.Types exposing (px)
 
 
-type alias RenderConfig =
-    { cx : Float, cy : Float, r : Float }
+type alias Constants =
+    { svg : { w : Float, h : Float }
+    , track :
+        { cx : Float
+        , cy : Float
+        , r : Float
+        , strokeWidth : Float
+        , startFinishLineExtension : Float
+        , startFinishLineStrokeWidth : Float
+        , sectorBoundaryOffset : Float
+        , sectorBoundaryStrokeWidth : Float
+        }
+    , car : { radius : Float, numberFontSize : Float }
+    , angle : { quarterTurn : Float }
+    }
 
 
-renderConfig : RenderConfig
-renderConfig =
-    { cx = 500
-    , cy = 500
-    , r = 450
+constants : Constants
+constants =
+    let
+        size =
+            1000
+    in
+    { svg = { w = size, h = size }
+    , track =
+        { cx = size / 2
+        , cy = size / 2
+        , r = 450
+        , strokeWidth = 4
+        , startFinishLineExtension = 15
+        , startFinishLineStrokeWidth = 4
+        , sectorBoundaryOffset = 10
+        , sectorBoundaryStrokeWidth = 3
+        }
+    , car = { radius = 15, numberFontSize = 15 }
+    , angle = { quarterTurn = pi / 2 }
     }
 
 
@@ -46,10 +73,14 @@ viewWithMiniSectors analysis raceControl =
 
 viewWithConfig : TrackConfig -> RaceControl.Model -> Svg msg
 viewWithConfig config raceControl =
+    let
+        { w, h } =
+            constants.svg
+    in
     svg
-        [ width (px 1000)
-        , height (px 1000)
-        , viewBox 0 0 1000 1000
+        [ width (px w)
+        , height (px h)
+        , viewBox 0 0 w h
         , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy track config
@@ -61,7 +92,7 @@ track : TrackConfig -> Svg msg
 track config =
     let
         { cx, cy, r } =
-            renderConfig
+            constants.track
 
         trackCircle =
             circle
@@ -70,29 +101,29 @@ track config =
                 , Attributes.r (px r)
                 , fill "none"
                 , stroke "#333"
-                , strokeWidth (px 4)
+                , strokeWidth (px constants.track.strokeWidth)
                 ]
                 []
 
         startFinishLine =
             line
                 [ x1 (px cx)
-                , y1 (px (cy - r - 15))
+                , y1 (px (cy - r - constants.track.startFinishLineExtension))
                 , x2 (px cx)
-                , y2 (px (cy - r + 15))
+                , y2 (px (cy - r + constants.track.startFinishLineExtension))
                 , stroke "#fff"
-                , strokeWidth (px 4)
+                , strokeWidth (px constants.track.startFinishLineStrokeWidth)
                 ]
                 []
 
         makeBoundary angle =
             line
-                [ x1 (px (cx + (r - 10) * cos angle))
-                , y1 (px (cy + (r - 10) * sin angle))
-                , x2 (px (cx + (r + 10) * cos angle))
-                , y2 (px (cy + (r + 10) * sin angle))
+                [ x1 (px (cx + (r - constants.track.sectorBoundaryOffset) * cos angle))
+                , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
+                , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
+                , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
                 , stroke "#aaa"
-                , strokeWidth (px 3)
+                , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []
 
@@ -123,14 +154,14 @@ coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
 coordinatesOnTrack config car =
     let
         { cx, cy, r } =
-            renderConfig
+            constants.track
 
         progress =
             Config.calcSectorProgress config car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
-            2 * pi * progress - (pi / 2)
+            2 * pi * progress - constants.angle.quarterTurn
     in
     { x = cx + r * cos angle
     , y = cy + r * sin angle
@@ -147,7 +178,7 @@ renderCar car { x, y } =
             circle
                 [ Attributes.cx (px x)
                 , Attributes.cy (px y)
-                , Attributes.r (px 15)
+                , Attributes.r (px constants.car.radius)
                 , fill carColor
                 ]
                 []
@@ -156,7 +187,7 @@ renderCar car { x, y } =
             text_
                 [ Attributes.x (px x)
                 , Attributes.y (px y)
-                , fontSize (px 15)
+                , fontSize (px constants.car.numberFontSize)
                 , textAnchor "middle"
                 , dominantBaseline "central"
                 , fill "#fff"
