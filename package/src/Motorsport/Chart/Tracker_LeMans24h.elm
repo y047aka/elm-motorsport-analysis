@@ -1,12 +1,13 @@
 module Motorsport.Chart.Tracker_LeMans24h exposing (view)
 
+import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class
 import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
-import Svg.Styled.Attributes exposing (dominantBaseline, fill, stroke, textAnchor)
+import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
@@ -112,6 +113,7 @@ view analysis raceControl =
         [ width (px 1000)
         , height (px 1000)
         , viewBox 0 0 1000 1000
+        , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy track config
         , renderCars config raceControl
