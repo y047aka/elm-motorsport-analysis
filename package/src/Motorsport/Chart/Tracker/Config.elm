@@ -1,12 +1,12 @@
 module Motorsport.Chart.Tracker.Config exposing
-    ( TrackConfig, SectorConfig
+    ( TrackConfig
     , standard, leMans24h
     , calcSectorProgress, calcSectorBoundaries
     )
 
 {-|
 
-@docs TrackConfig, SectorConfig
+@docs TrackConfig
 @docs standard, leMans24h
 @docs calcSectorProgress, calcSectorBoundaries
 
@@ -17,15 +17,7 @@ import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 
 
-type alias TrackConfig =
-    { cx : Float
-    , cy : Float
-    , r : Float
-    , sectorConfig : SectorConfig
-    }
-
-
-type SectorConfig
+type TrackConfig
     = Sectors
         { s1 : Float
         , s2 : Float
@@ -66,11 +58,7 @@ standard analysis =
                 , s3 = toFloat analysis.sector_3_fastest / toFloat totalFastestTime
                 }
     in
-    { cx = 500
-    , cy = 500
-    , r = 450
-    , sectorConfig = Sectors sectorRatio
-    }
+    Sectors sectorRatio
 
 
 leMans24h : Analysis -> TrackConfig
@@ -131,16 +119,12 @@ leMans24h analysis =
                 , fl = toFloat analysis.miniSectorFastest.fl / toFloat totalFastestTime
                 }
     in
-    { cx = 500
-    , cy = 500
-    , r = 450
-    , sectorConfig = MiniSectors miniSectorRatio
-    }
+    MiniSectors miniSectorRatio
 
 
-calcSectorProgress : SectorConfig -> ViewModelItem -> Float
-calcSectorProgress sectorConfig car =
-    case sectorConfig of
+calcSectorProgress : TrackConfig -> ViewModelItem -> Float
+calcSectorProgress config car =
+    case config of
         Sectors ratio ->
             calcBasicSectorProgress ratio car
 
@@ -238,9 +222,9 @@ calcMiniSectorProgress ratio car =
                             min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
 
 
-calcSectorBoundaries : SectorConfig -> List Float
-calcSectorBoundaries sectorConfig =
-    case sectorConfig of
+calcSectorBoundaries : TrackConfig -> List Float
+calcSectorBoundaries config =
+    case config of
         Sectors { s1, s2 } ->
             [ (2 * pi * s1) - (pi / 2)
             , (2 * pi * (s1 + s2)) - (pi / 2)

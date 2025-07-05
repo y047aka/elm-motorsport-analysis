@@ -14,6 +14,18 @@ import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, heig
 import TypedSvg.Types exposing (px)
 
 
+type alias RenderConfig =
+    { cx : Float, cy : Float, r : Float }
+
+
+renderConfig : RenderConfig
+renderConfig =
+    { cx = 500
+    , cy = 500
+    , r = 450
+    }
+
+
 view : Analysis -> RaceControl.Model -> Svg msg
 view analysis raceControl =
     let
@@ -49,7 +61,7 @@ track : TrackConfig -> Svg msg
 track config =
     let
         { cx, cy, r } =
-            config
+            renderConfig
 
         trackCircle =
             circle
@@ -85,7 +97,7 @@ track config =
                 []
 
         boundaries =
-            Config.calcSectorBoundaries config.sectorConfig
+            Config.calcSectorBoundaries config
                 |> List.map (\angle -> makeBoundary angle)
     in
     g [] (trackCircle :: startFinishLine :: boundaries)
@@ -111,10 +123,10 @@ coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
 coordinatesOnTrack config car =
     let
         { cx, cy, r } =
-            config
+            renderConfig
 
         progress =
-            Config.calcSectorProgress config.sectorConfig car
+            Config.calcSectorProgress config car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
