@@ -14,7 +14,6 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Chart.Tracker_LeMans24h as Tracker_LeMans24h
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -244,7 +243,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                             , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                 [ case ( eventSummary.season, eventSummary.name ) of
                                     ( 2025, "24 Hours of Le Mans" ) ->
-                                        Tracker_LeMans24h.view analysis raceControl
+                                        TrackerChart.viewWithMiniSectors analysis raceControl
 
                                     _ ->
                                         TrackerChart.view analysis raceControl

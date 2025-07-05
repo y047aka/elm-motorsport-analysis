@@ -1,9 +1,9 @@
-module Motorsport.Chart.Tracker exposing (view)
+module Motorsport.Chart.Tracker exposing (view, viewWithMiniSectors)
 
 import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class
-import Motorsport.Lap exposing (Sector(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
@@ -14,40 +14,26 @@ import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, heig
 import TypedSvg.Types exposing (px)
 
 
-type alias TrackConfig =
-    { cx : Float
-    , cy : Float
-    , r : Float
-    , sectorRatio : { s1 : Float, s2 : Float, s3 : Float }
-    }
-
-
-calcSectorRatio : Analysis -> { s1 : Float, s2 : Float, s3 : Float }
-calcSectorRatio analysis =
-    let
-        totalFastestTime =
-            analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest
-    in
-    if totalFastestTime == 0 then
-        { s1 = 1 / 3, s2 = 1 / 3, s3 = 1 / 3 }
-
-    else
-        { s1 = toFloat analysis.sector_1_fastest / toFloat totalFastestTime
-        , s2 = toFloat analysis.sector_2_fastest / toFloat totalFastestTime
-        , s3 = toFloat analysis.sector_3_fastest / toFloat totalFastestTime
-        }
-
-
 view : Analysis -> RaceControl.Model -> Svg msg
 view analysis raceControl =
     let
         config =
-            { cx = 500
-            , cy = 500
-            , r = 450
-            , sectorRatio = calcSectorRatio analysis
-            }
+            Config.standard analysis
     in
+    viewWithConfig config raceControl
+
+
+viewWithMiniSectors : Analysis -> RaceControl.Model -> Svg msg
+viewWithMiniSectors analysis raceControl =
+    let
+        config =
+            Config.leMans24h analysis
+    in
+    viewWithConfig config raceControl
+
+
+viewWithConfig : TrackConfig -> RaceControl.Model -> Svg msg
+viewWithConfig config raceControl =
     svg
         [ width (px 1000)
         , height (px 1000)
@@ -60,8 +46,11 @@ view analysis raceControl =
 
 
 track : TrackConfig -> Svg msg
-track { cx, cy, r, sectorRatio } =
+track config =
     let
+        { cx, cy, r } =
+            config
+
         trackCircle =
             circle
                 [ Attributes.cx (px cx)
@@ -84,7 +73,7 @@ track { cx, cy, r, sectorRatio } =
                 ]
                 []
 
-        makeSectorBoundary angle =
+        makeBoundary angle =
             line
                 [ x1 (px (cx + (r - 10) * cos angle))
                 , y1 (px (cy + (r - 10) * sin angle))
@@ -95,17 +84,11 @@ track { cx, cy, r, sectorRatio } =
                 ]
                 []
 
-        ( s1Angle, s2Angle ) =
-            ( (2 * pi * sectorRatio.s1) - (pi / 2)
-            , (2 * pi * (sectorRatio.s1 + sectorRatio.s2)) - (pi / 2)
-            )
-
-        ( sector1Boundary, sector2Boundary ) =
-            ( makeSectorBoundary s1Angle
-            , makeSectorBoundary s2Angle
-            )
+        boundaries =
+            Config.calcSectorBoundaries config.sectorConfig
+                |> List.map (\angle -> makeBoundary angle)
     in
-    g [] [ trackCircle, startFinishLine, sector1Boundary, sector2Boundary ]
+    g [] (trackCircle :: startFinishLine :: boundaries)
 
 
 renderCars : TrackConfig -> RaceControl.Model -> Svg msg
@@ -125,10 +108,13 @@ renderCarOnTrack config car =
 
 
 coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
-coordinatesOnTrack { cx, cy, r, sectorRatio } car =
+coordinatesOnTrack config car =
     let
+        { cx, cy, r } =
+            config
+
         progress =
-            calcProgress sectorRatio car
+            Config.calcSectorProgress config.sectorConfig car
 
         -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
@@ -166,25 +152,3 @@ renderCar car { x, y } =
                 [ text car.metaData.carNumber ]
     in
     g [] [ carCircle, carNumber ]
-
-
-calcProgress : { s1 : Float, s2 : Float, s3 : Float } -> ViewModelItem -> Float
-calcProgress ratio car =
-    case car.timing.sector of
-        Just ( S1, progress ) ->
-            (progress / 100) * ratio.s1
-
-        Just ( S2, progress ) ->
-            ratio.s1 + (progress / 100) * ratio.s2
-
-        Just ( S3, progress ) ->
-            ratio.s1 + ratio.s2 + (progress / 100) * ratio.s3
-
-        -- Fallback to the original calculation if sector data is incomplete
-        Nothing ->
-            case car.currentLap of
-                Nothing ->
-                    0
-
-                Just currentLap ->
-                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
