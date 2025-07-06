@@ -226,15 +226,12 @@ calcSectorBoundaries : TrackConfig -> List Float
 calcSectorBoundaries config =
     case config of
         Sectors { s1, s2 } ->
-            [ (2 * pi * s1) - (pi / 2)
-            , (2 * pi * (s1 + s2)) - (pi / 2)
+            [ s1
+            , s1 + s2
             ]
 
         MiniSectors ratio ->
             let
-                angleStep =
-                    2 * pi
-
                 ratios =
                     [ ratio.scl2
                     , ratio.z4
@@ -256,12 +253,14 @@ calcSectorBoundaries config =
             in
             List.foldl
                 (\ratioValue acc ->
-                    case acc of
-                        [] ->
-                            [ ratioValue * angleStep - (pi / 2) ]
+                    let
+                        previousProgress =
+                            Maybe.withDefault 0 (List.head acc)
 
-                        lastAngle :: _ ->
-                            (lastAngle + ratioValue * angleStep) :: acc
+                        newProgress =
+                            previousProgress + ratioValue
+                    in
+                    newProgress :: acc
                 )
                 []
                 ratios

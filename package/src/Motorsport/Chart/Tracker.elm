@@ -6,6 +6,7 @@ import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
@@ -27,7 +28,6 @@ type alias Constants =
         , sectorBoundaryStrokeWidth : Float
         }
     , car : { radius : Float, numberFontSize : Float }
-    , angle : { quarterTurn : Float }
     }
 
 
@@ -49,8 +49,19 @@ constants =
         , sectorBoundaryStrokeWidth = 3
         }
     , car = { radius = 15, numberFontSize = 15 }
-    , angle = { quarterTurn = pi / 2 }
     }
+
+
+{-| トラック上の進捗値（0-1）を角度（ラジアン）に変換するスケール関数
+12時の位置から時計回りに0-2πの範囲で変換
+-}
+progressToAngleScale : ContinuousScale Float
+progressToAngleScale =
+    let
+        quarterTurn =
+            pi / 2
+    in
+    Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
 
 view : Analysis -> RaceControl.Model -> Svg msg
@@ -129,6 +140,7 @@ track config =
 
         boundaries =
             Config.calcSectorBoundaries config
+                |> List.map (Scale.convert progressToAngleScale)
                 |> List.map (\angle -> makeBoundary angle)
     in
     g [] (trackCircle :: startFinishLine :: boundaries)
@@ -159,9 +171,8 @@ coordinatesOnTrack config car =
         progress =
             Config.calcSectorProgress config car
 
-        -- Convert progress to angle (0 at 12 o'clock position, clockwise)
         angle =
-            2 * pi * progress - constants.angle.quarterTurn
+            Scale.convert progressToAngleScale progress
     in
     { x = cx + r * cos angle
     , y = cy + r * sin angle
