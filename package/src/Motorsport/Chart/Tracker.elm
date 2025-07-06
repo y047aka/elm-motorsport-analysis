@@ -3,7 +3,7 @@ module Motorsport.Chart.Tracker exposing (view, viewWithMiniSectors)
 import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
-import Motorsport.Class as Class
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Scale exposing (ContinuousScale)
@@ -12,7 +12,7 @@ import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, text
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
-import TypedSvg.Types exposing (px)
+import TypedSvg.Types exposing (Transform(..), px)
 
 
 type alias Constants =
@@ -182,27 +182,34 @@ coordinatesOnTrack config car =
 renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
 renderCar car { x, y } =
     let
-        carColor =
-            Class.toHexColor 2025 car.metaData.class |> .value
+        { carNumber, class } =
+            car.metaData
+    in
+    g [ Attributes.transform [ Translate x y ] ]
+        [ Lazy.lazy carWithMetaData { carNumber = carNumber, class = class } ]
 
+
+carWithMetaData : { carNumber : String, class : Class } -> Svg msg
+carWithMetaData d =
+    let
         carCircle =
             circle
-                [ Attributes.cx (px x)
-                , Attributes.cy (px y)
+                [ Attributes.cx (px 0)
+                , Attributes.cy (px 0)
                 , Attributes.r (px constants.car.radius)
-                , fill carColor
+                , fill (Class.toHexColor 2025 d.class |> .value)
                 ]
                 []
 
         carNumber =
             text_
-                [ Attributes.x (px x)
-                , Attributes.y (px y)
+                [ Attributes.x (px 0)
+                , Attributes.y (px 0)
                 , fontSize (px constants.car.numberFontSize)
                 , textAnchor "middle"
                 , dominantBaseline "central"
                 , fill "#fff"
                 ]
-                [ text car.metaData.carNumber ]
+                [ text d.carNumber ]
     in
     g [] [ carCircle, carNumber ]
