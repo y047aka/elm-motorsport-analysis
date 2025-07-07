@@ -252,6 +252,7 @@ raceControlToLeaderboard { lapCount, cars } =
                     |> List.indexedMap
                         (\index lap ->
                             { position = index + 1
+                            , positionInClass = index + 1
                             , status = car.status
                             , metaData = ViewModel.init_metaData car lap
                             , lap = lap.lap
