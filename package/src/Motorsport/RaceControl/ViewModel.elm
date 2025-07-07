@@ -12,6 +12,7 @@ module Motorsport.RaceControl.ViewModel exposing
 
 -}
 
+import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
@@ -29,6 +30,7 @@ type alias ViewModel =
 
 type alias ViewModelItem =
     { position : Int
+    , positionInClass : Int
     , status : Status
     , metaData : MetaData
     , lap : Int
@@ -58,6 +60,10 @@ type alias Timing =
 
 init : RaceControl.Model -> ViewModel
 init { clock, cars } =
+    let
+        positionsInClass =
+            positionsInClassByCarNumber cars
+    in
     cars
         |> List.indexedMap
             (\index car ->
@@ -65,10 +71,15 @@ init { clock, cars } =
                     raceClock =
                         { elapsed = Clock.getElapsed clock }
 
+                    positionInClass =
+                        Dict.get car.metaData.carNumber positionsInClass
+                            |> Maybe.withDefault 1
+
                     lastLap =
                         Maybe.withDefault Lap.empty car.lastLap
                 in
                 { position = index + 1
+                , positionInClass = positionInClass
                 , status = car.status
                 , metaData = init_metaData car lastLap
                 , lap = lastLap.lap
@@ -137,3 +148,15 @@ init_timing clock { leader, rival } car =
         Maybe.map2 (Gap.at clock) rival (Just car)
             |> Maybe.withDefault Gap.None
     }
+
+
+positionsInClassByCarNumber : List Car -> Dict String Int
+positionsInClassByCarNumber cars =
+    cars
+        |> List.Extra.gatherEqualsBy (.metaData >> .class)
+        |> List.concatMap
+            (\( firstCar, restCars ) ->
+                (firstCar :: restCars)
+                    |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
+            )
+        |> Dict.fromList

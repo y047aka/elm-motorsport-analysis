@@ -1,118 +1,169 @@
-module Motorsport.Chart.Tracker exposing (view)
+module Motorsport.Chart.Tracker exposing (view, viewWithMiniSectors)
 
+import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Class as Class
-import Motorsport.Lap exposing (Sector(..))
+import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
-import Svg.Styled.Attributes exposing (dominantBaseline, fill, stroke, textAnchor)
+import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
-import TypedSvg.Types exposing (px)
+import TypedSvg.Types exposing (Transform(..), px)
 
 
-type alias TrackConfig =
-    { cx : Float
-    , cy : Float
-    , r : Float
-    , sectorRatio : { s1 : Float, s2 : Float, s3 : Float }
+type alias Constants =
+    { svg : { w : Float, h : Float }
+    , track :
+        { cx : Float
+        , cy : Float
+        , r : Float
+        , trackWidth : Float
+        , startFinishLineExtension : Float
+        , startFinishLineStrokeWidth : Float
+        , sectorBoundaryOffset : Float
+        , sectorBoundaryStrokeWidth : Float
+        }
+    , car : { size : Float }
     }
 
 
-calcSectorRatio : Analysis -> { s1 : Float, s2 : Float, s3 : Float }
-calcSectorRatio analysis =
+constants : Constants
+constants =
     let
-        totalFastestTime =
-            analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest
+        size =
+            1000
     in
-    if totalFastestTime == 0 then
-        { s1 = 1 / 3, s2 = 1 / 3, s3 = 1 / 3 }
-
-    else
-        { s1 = toFloat analysis.sector_1_fastest / toFloat totalFastestTime
-        , s2 = toFloat analysis.sector_2_fastest / toFloat totalFastestTime
-        , s3 = toFloat analysis.sector_3_fastest / toFloat totalFastestTime
+    { svg = { w = size, h = size }
+    , track =
+        { cx = size / 2
+        , cy = size / 2
+        , r = 450
+        , trackWidth = 8
+        , startFinishLineExtension = 20
+        , startFinishLineStrokeWidth = 4
+        , sectorBoundaryOffset = 10
+        , sectorBoundaryStrokeWidth = 4
         }
+    , car = { size = 15 }
+    }
+
+
+{-| トラック上の進捗値（0-1）を角度（ラジアン）に変換するスケール関数
+12時の位置から時計回りに0-2πの範囲で変換
+-}
+progressToAngleScale : ContinuousScale Float
+progressToAngleScale =
+    let
+        quarterTurn =
+            pi / 2
+    in
+    Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
 
 view : Analysis -> RaceControl.Model -> Svg msg
 view analysis raceControl =
     let
         config =
-            { cx = 500
-            , cy = 500
-            , r = 450
-            , sectorRatio = calcSectorRatio analysis
-            }
+            Config.standard analysis
+    in
+    viewWithConfig config raceControl
+
+
+viewWithMiniSectors : Analysis -> RaceControl.Model -> Svg msg
+viewWithMiniSectors analysis raceControl =
+    let
+        config =
+            Config.leMans24h analysis
+    in
+    viewWithConfig config raceControl
+
+
+viewWithConfig : TrackConfig -> RaceControl.Model -> Svg msg
+viewWithConfig config raceControl =
+    let
+        { w, h } =
+            constants.svg
     in
     svg
-        [ width (px 1000)
-        , height (px 1000)
-        , viewBox 0 0 1000 1000
+        [ width (px w)
+        , height (px h)
+        , viewBox 0 0 w h
+        , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy track config
-        , renderCars config raceControl
+        , renderCars config (ViewModel.init raceControl)
         ]
 
 
 track : TrackConfig -> Svg msg
-track { cx, cy, r, sectorRatio } =
+track config =
     let
-        trackCircle =
+        { cx, cy, r, trackWidth } =
+            constants.track
+
+        trackCircle color width =
             circle
                 [ Attributes.cx (px cx)
                 , Attributes.cy (px cy)
                 , Attributes.r (px r)
                 , fill "none"
-                , stroke "#333"
-                , strokeWidth (px 4)
+                , stroke color
+                , strokeWidth (px width)
                 ]
                 []
+
+        outerTrackCircle =
+            trackCircle "#eee" (trackWidth + 8)
+
+        innerTrackCircle =
+            trackCircle "#666" trackWidth
 
         startFinishLine =
             line
                 [ x1 (px cx)
-                , y1 (px (cy - r - 15))
+                , y1 (px (cy - r - constants.track.startFinishLineExtension))
                 , x2 (px cx)
-                , y2 (px (cy - r + 15))
+                , y2 (px (cy - r + constants.track.startFinishLineExtension))
                 , stroke "#fff"
-                , strokeWidth (px 4)
+                , strokeWidth (px constants.track.startFinishLineStrokeWidth)
                 ]
                 []
 
-        makeSectorBoundary angle =
+        makeBoundary angle =
             line
-                [ x1 (px (cx + (r - 10) * cos angle))
-                , y1 (px (cy + (r - 10) * sin angle))
-                , x2 (px (cx + (r + 10) * cos angle))
-                , y2 (px (cy + (r + 10) * sin angle))
-                , stroke "#aaa"
-                , strokeWidth (px 3)
+                [ x1 (px (cx + (r - constants.track.sectorBoundaryOffset) * cos angle))
+                , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
+                , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
+                , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
+                , stroke "#666"
+                , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []
 
-        ( s1Angle, s2Angle ) =
-            ( (2 * pi * sectorRatio.s1) - (pi / 2)
-            , (2 * pi * (sectorRatio.s1 + sectorRatio.s2)) - (pi / 2)
-            )
-
-        ( sector1Boundary, sector2Boundary ) =
-            ( makeSectorBoundary s1Angle
-            , makeSectorBoundary s2Angle
-            )
+        boundaries =
+            Config.calcSectorBoundaries config
+                |> List.map (Scale.convert progressToAngleScale)
+                |> List.map (\angle -> makeBoundary angle)
     in
-    g [] [ trackCircle, startFinishLine, sector1Boundary, sector2Boundary ]
+    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries)
 
 
-renderCars : TrackConfig -> RaceControl.Model -> Svg msg
-renderCars config raceControl =
+renderCars : TrackConfig -> ViewModel -> Svg msg
+renderCars config viewModel =
     Keyed.node "g"
         []
-        (ViewModel.init raceControl
+        (viewModel
             |> List.reverse
-            |> List.map (\car -> ( car.metaData.carNumber, Lazy.lazy2 renderCarOnTrack config car ))
+            |> List.map
+                (\car ->
+                    ( car.metaData.carNumber
+                    , Lazy.lazy2 renderCarOnTrack config car
+                    )
+                )
         )
 
 
@@ -123,14 +174,16 @@ renderCarOnTrack config car =
 
 
 coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
-coordinatesOnTrack { cx, cy, r, sectorRatio } car =
+coordinatesOnTrack config car =
     let
-        progress =
-            calcProgress sectorRatio car
+        { cx, cy, r } =
+            constants.track
 
-        -- Convert progress to angle (0 at 12 o'clock position, clockwise)
+        progress =
+            Config.calcSectorProgress config car
+
         angle =
-            2 * pi * progress - (pi / 2)
+            Scale.convert progressToAngleScale progress
     in
     { x = cx + r * cos angle
     , y = cy + r * sin angle
@@ -140,49 +193,48 @@ coordinatesOnTrack { cx, cy, r, sectorRatio } car =
 renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
 renderCar car { x, y } =
     let
-        carColor =
-            Class.toHexColor 2025 car.metaData.class |> .value
+        { carNumber, class } =
+            car.metaData
+    in
+    g [ Attributes.transform [ Translate x y ] ]
+        [ Lazy.lazy2 carWithPositionInClass car.positionInClass { carNumber = carNumber, class = class } ]
+
+
+carWithPositionInClass : Int -> { carNumber : String, class : Class } -> Svg msg
+carWithPositionInClass positionInClass d =
+    let
+        ( carSize, saturation ) =
+            let
+                scaleFactor =
+                    max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
+            in
+            ( constants.car.size * scaleFactor
+            , if positionInClass <= 3 then
+                "100%"
+
+              else
+                "60%"
+            )
 
         carCircle =
             circle
-                [ Attributes.cx (px x)
-                , Attributes.cy (px y)
-                , Attributes.r (px 15)
-                , fill carColor
+                [ Attributes.cx (px 0)
+                , Attributes.cy (px 0)
+                , Attributes.r (px carSize)
+                , fill (Class.toHexColor 2025 d.class |> .value)
+                , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
                 ]
                 []
 
         carNumber =
             text_
-                [ Attributes.x (px x)
-                , Attributes.y (px y)
-                , fontSize (px 15)
+                [ Attributes.x (px 0)
+                , Attributes.y (px 0)
+                , fontSize (px carSize)
                 , textAnchor "middle"
                 , dominantBaseline "central"
                 , fill "#fff"
                 ]
-                [ text car.metaData.carNumber ]
+                [ text d.carNumber ]
     in
     g [] [ carCircle, carNumber ]
-
-
-calcProgress : { s1 : Float, s2 : Float, s3 : Float } -> ViewModelItem -> Float
-calcProgress ratio car =
-    case car.timing.sector of
-        Just ( S1, progress ) ->
-            (progress / 100) * ratio.s1
-
-        Just ( S2, progress ) ->
-            ratio.s1 + (progress / 100) * ratio.s2
-
-        Just ( S3, progress ) ->
-            ratio.s1 + ratio.s2 + (progress / 100) * ratio.s3
-
-        -- Fallback to the original calculation if sector data is incomplete
-        Nothing ->
-            case car.currentLap of
-                Nothing ->
-                    0
-
-                Just currentLap ->
-                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
