@@ -57,8 +57,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
-import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -730,9 +729,9 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
 -- VIEW
 
 
-view : Config ViewModelItem msg -> Model -> RaceControl.Model -> Html msg
-view config state raceControl =
-    DataView.view config state (ViewModel.init raceControl)
+view : Config ViewModelItem msg -> Model -> ViewModel -> Html msg
+view config state vm =
+    DataView.view config state vm
 
 
 

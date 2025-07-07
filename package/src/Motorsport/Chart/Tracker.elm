@@ -4,8 +4,7 @@ import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -64,26 +63,26 @@ progressToAngleScale =
     Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
 
-view : Analysis -> RaceControl.Model -> Svg msg
-view analysis raceControl =
+view : Analysis -> ViewModel -> Svg msg
+view analysis vm =
     let
         config =
             Config.standard analysis
     in
-    viewWithConfig config raceControl
+    viewWithConfig config vm
 
 
-viewWithMiniSectors : Analysis -> RaceControl.Model -> Svg msg
-viewWithMiniSectors analysis raceControl =
+viewWithMiniSectors : Analysis -> ViewModel -> Svg msg
+viewWithMiniSectors analysis vm =
     let
         config =
             Config.leMans24h analysis
     in
-    viewWithConfig config raceControl
+    viewWithConfig config vm
 
 
-viewWithConfig : TrackConfig -> RaceControl.Model -> Svg msg
-viewWithConfig config raceControl =
+viewWithConfig : TrackConfig -> ViewModel -> Svg msg
+viewWithConfig config vm =
     let
         { w, h } =
             constants.svg
@@ -95,7 +94,7 @@ viewWithConfig config raceControl =
         , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy track config
-        , renderCars config (ViewModel.init raceControl)
+        , renderCars config vm
         ]
 
 

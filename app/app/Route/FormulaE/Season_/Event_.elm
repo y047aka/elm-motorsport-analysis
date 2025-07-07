@@ -17,7 +17,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -177,15 +177,19 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
         { title = "Formula E"
         , body =
             [ header shared
-            , case mode of
+            , let
+                viewModel =
+                    ViewModel.init raceControl
+              in
+              case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                    Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view analysis raceControl
+                    TrackerChart.view analysis viewModel
             ]
         }
 
