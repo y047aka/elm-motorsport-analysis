@@ -11,6 +11,7 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Html.Styled.Lazy as Lazy
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
@@ -19,7 +20,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -211,14 +212,18 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                     ]
                 ]
                 [ header shared
-                , case mode of
+                , let
+                    viewModel =
+                        ViewModel.init raceControl
+                  in
+                  case mode of
                     Leaderboard ->
                         case ( eventSummary.season, eventSummary.name ) of
                             ( 2025, "24 Hours of Le Mans" ) ->
-                                Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
+                                Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
 
                             _ ->
-                                Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                                Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
 
                     PositionHistory ->
                         PositionHistoryChart.view raceControl
@@ -235,18 +240,18 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                             [ div [ css [ height (pct 100), overflowY scroll ] ]
                                 [ case ( eventSummary.season, eventSummary.name ) of
                                     ( 2025, "24 Hours of Le Mans" ) ->
-                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState raceControl
+                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
 
                                     _ ->
-                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState raceControl
+                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
                                 ]
                             , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                 [ case ( eventSummary.season, eventSummary.name ) of
                                     ( 2025, "24 Hours of Le Mans" ) ->
-                                        TrackerChart.viewWithMiniSectors analysis raceControl
+                                        TrackerChart.viewWithMiniSectors analysis viewModel
 
                                     _ ->
-                                        TrackerChart.view analysis raceControl
+                                        TrackerChart.view analysis viewModel
                                 ]
                             ]
 
@@ -339,9 +344,18 @@ config season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
+        , let
+            view_ carNumber =
+                case Series.carImageUrl_Wec season carNumber of
+                    Just url ->
+                        img [ src url, css [ width (px 100) ] ] []
+
+                    Nothing ->
+                        text ""
+          in
+          veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , getter = .metaData >> .carNumber >> Lazy.lazy view_
             , sorter = compareBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
@@ -451,9 +465,18 @@ config_LeMans24h season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
+        , let
+            view_ carNumber =
+                case Series.carImageUrl_Wec season carNumber of
+                    Just url ->
+                        img [ src url, css [ width (px 100) ] ] []
+
+                    Nothing ->
+                        text ""
+          in
+          veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , getter = .metaData >> .carNumber >> Lazy.lazy view_
             , sorter = compareBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }

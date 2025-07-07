@@ -50,7 +50,7 @@ import Html.Styled exposing (Attribute, Html, a, button, div, input, span, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy exposing (lazy4)
+import Html.Styled.Lazy as Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
 import Motorsport.Utils exposing (compareBy)
@@ -261,7 +261,7 @@ type alias Column data msg =
 stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
-    , view = getter >> text
+    , view = getter >> Lazy.lazy text
     , sorter = compareBy getter
     , filter = getter >> String.startsWith
     }
@@ -271,7 +271,7 @@ stringColumn { label, getter } =
 intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
-    , view = getter >> String.fromInt >> text
+    , view = getter >> String.fromInt >> Lazy.lazy text
     , sorter = compareBy getter
     , filter = getter >> String.fromInt >> String.startsWith
     }
@@ -281,7 +281,7 @@ intColumn { label, getter } =
 floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
-    , view = getter >> String.fromFloat >> text
+    , view = getter >> String.fromFloat >> Lazy.lazy text
     , sorter = compareBy getter
     , filter = getter >> String.fromFloat >> String.startsWith
     }
@@ -296,7 +296,7 @@ customColumn :
     -> Column data msg
 customColumn { label, getter, sorter } =
     { name = label
-    , view = getter >> text
+    , view = getter >> Lazy.lazy text
     , sorter = sorter
     , filter = getter >> String.startsWith
     }
