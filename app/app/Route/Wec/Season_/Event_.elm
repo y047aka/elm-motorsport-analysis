@@ -11,6 +11,7 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Html.Styled.Lazy as Lazy
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
@@ -343,9 +344,18 @@ config season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
+        , let
+            view_ carNumber =
+                case Series.carImageUrl_Wec season carNumber of
+                    Just url ->
+                        img [ src url, css [ width (px 100) ] ] []
+
+                    Nothing ->
+                        text ""
+          in
+          veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , getter = .metaData >> .carNumber >> Lazy.lazy view_
             , sorter = compareBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
@@ -455,9 +465,18 @@ config_LeMans24h season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
         , driverAndTeamColumn_Wec { getter = .metaData }
-        , veryCustomColumn
+        , let
+            view_ carNumber =
+                case Series.carImageUrl_Wec season carNumber of
+                    Just url ->
+                        img [ src url, css [ width (px 100) ] ] []
+
+                    Nothing ->
+                        text ""
+          in
+          veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Series.carImageUrl_Wec season >> Maybe.map (\url -> img [ src url, css [ width (px 100) ] ] []) >> Maybe.withDefault (text "")
+            , getter = .metaData >> .carNumber >> Lazy.lazy view_
             , sorter = compareBy (.metaData >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
