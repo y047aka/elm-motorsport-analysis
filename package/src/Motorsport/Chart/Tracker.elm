@@ -21,7 +21,7 @@ type alias Constants =
         { cx : Float
         , cy : Float
         , r : Float
-        , strokeWidth : Float
+        , trackWidth : Float
         , startFinishLineExtension : Float
         , startFinishLineStrokeWidth : Float
         , sectorBoundaryOffset : Float
@@ -42,11 +42,11 @@ constants =
         { cx = size / 2
         , cy = size / 2
         , r = 450
-        , strokeWidth = 4
-        , startFinishLineExtension = 15
+        , trackWidth = 8
+        , startFinishLineExtension = 20
         , startFinishLineStrokeWidth = 4
         , sectorBoundaryOffset = 10
-        , sectorBoundaryStrokeWidth = 3
+        , sectorBoundaryStrokeWidth = 4
         }
     , car = { radius = 15, numberFontSize = 15 }
     }
@@ -102,19 +102,25 @@ viewWithConfig config raceControl =
 track : TrackConfig -> Svg msg
 track config =
     let
-        { cx, cy, r } =
+        { cx, cy, r, trackWidth } =
             constants.track
 
-        trackCircle =
+        trackCircle color width =
             circle
                 [ Attributes.cx (px cx)
                 , Attributes.cy (px cy)
                 , Attributes.r (px r)
                 , fill "none"
-                , stroke "#333"
-                , strokeWidth (px constants.track.strokeWidth)
+                , stroke color
+                , strokeWidth (px width)
                 ]
                 []
+
+        outerTrackCircle =
+            trackCircle "#eee" (trackWidth + 8)
+
+        innerTrackCircle =
+            trackCircle "#666" trackWidth
 
         startFinishLine =
             line
@@ -133,7 +139,7 @@ track config =
                 , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
                 , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
                 , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
-                , stroke "#aaa"
+                , stroke "#666"
                 , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []
@@ -143,7 +149,7 @@ track config =
                 |> List.map (Scale.convert progressToAngleScale)
                 |> List.map (\angle -> makeBoundary angle)
     in
-    g [] (trackCircle :: startFinishLine :: boundaries)
+    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries)
 
 
 renderCars : TrackConfig -> RaceControl.Model -> Svg msg
