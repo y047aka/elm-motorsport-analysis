@@ -5,7 +5,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -27,7 +27,7 @@ type alias Constants =
         , sectorBoundaryOffset : Float
         , sectorBoundaryStrokeWidth : Float
         }
-    , car : { radius : Float, numberFontSize : Float }
+    , car : { size : Float }
     }
 
 
@@ -48,7 +48,7 @@ constants =
         , sectorBoundaryOffset = 10
         , sectorBoundaryStrokeWidth = 4
         }
-    , car = { radius = 15, numberFontSize = 15 }
+    , car = { size = 15 }
     }
 
 
@@ -95,7 +95,7 @@ viewWithConfig config raceControl =
         , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy track config
-        , renderCars config raceControl
+        , renderCars config (ViewModel.init raceControl)
         ]
 
 
@@ -152,13 +152,18 @@ track config =
     g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries)
 
 
-renderCars : TrackConfig -> RaceControl.Model -> Svg msg
-renderCars config raceControl =
+renderCars : TrackConfig -> ViewModel -> Svg msg
+renderCars config viewModel =
     Keyed.node "g"
         []
-        (ViewModel.init raceControl
+        (viewModel
             |> List.reverse
-            |> List.map (\car -> ( car.metaData.carNumber, Lazy.lazy2 renderCarOnTrack config car ))
+            |> List.map
+                (\car ->
+                    ( car.metaData.carNumber
+                    , Lazy.lazy2 renderCarOnTrack config car
+                    )
+                )
         )
 
 
@@ -192,18 +197,32 @@ renderCar car { x, y } =
             car.metaData
     in
     g [ Attributes.transform [ Translate x y ] ]
-        [ Lazy.lazy carWithMetaData { carNumber = carNumber, class = class } ]
+        [ Lazy.lazy2 carWithPositionInClass car.positionInClass { carNumber = carNumber, class = class } ]
 
 
-carWithMetaData : { carNumber : String, class : Class } -> Svg msg
-carWithMetaData d =
+carWithPositionInClass : Int -> { carNumber : String, class : Class } -> Svg msg
+carWithPositionInClass positionInClass d =
     let
+        ( carSize, saturation ) =
+            let
+                scaleFactor =
+                    max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
+            in
+            ( constants.car.size * scaleFactor
+            , if positionInClass <= 3 then
+                "100%"
+
+              else
+                "60%"
+            )
+
         carCircle =
             circle
                 [ Attributes.cx (px 0)
                 , Attributes.cy (px 0)
-                , Attributes.r (px constants.car.radius)
+                , Attributes.r (px carSize)
                 , fill (Class.toHexColor 2025 d.class |> .value)
+                , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
                 ]
                 []
 
@@ -211,7 +230,7 @@ carWithMetaData d =
             text_
                 [ Attributes.x (px 0)
                 , Attributes.y (px 0)
-                , fontSize (px constants.car.numberFontSize)
+                , fontSize (px carSize)
                 , textAnchor "middle"
                 , dominantBaseline "central"
                 , fill "#fff"
