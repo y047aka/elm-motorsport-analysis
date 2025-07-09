@@ -24,6 +24,7 @@ import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewMo
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
+import Motorsport.Widget.LapTimeDistribution as LapTimeDistributionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -358,11 +359,12 @@ analysisWidgets analysis viewModel =
         [ css
             [ height (pct 100)
             , property "display" "grid"
-            , property "grid-template-rows" "auto 1fr"
+            , property "grid-template-rows" "auto auto 1fr"
             , property "row-gap" "10px"
             ]
         ]
         [ BestLapTimesWidget.view analysis viewModel
+        , LapTimeDistributionWidget.view analysis viewModel
         , CloseBattlesWidget.view viewModel
         ]
 
