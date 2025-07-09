@@ -20,8 +20,10 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
+import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
+import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -235,7 +237,8 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 [ height (pct 100)
                                 , overflowY hidden
                                 , property "display" "grid"
-                                , property "grid-template-columns" "1fr 1fr"
+                                , property "grid-template-columns" "1fr 1fr 350px"
+                                , property "grid-gap" "10px"
                                 ]
                             ]
                             [ div [ css [ height (pct 100), overflowY scroll ] ]
@@ -254,6 +257,18 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     _ ->
                                         TrackerChart.view analysis viewModel
                                 ]
+                            , div
+                                [ css
+                                    [ height (pct 100)
+                                    , overflowY hidden
+                                    , backgroundColor (hsl 0 0 0.15)
+                                    , padding (px 10)
+                                    , property "display" "flex"
+                                    , property "flex-direction" "column"
+                                    , property "gap" "24px"
+                                    ]
+                                ]
+                                [ analysisWidgets analysis viewModel ]
                             ]
 
                     Events ->
@@ -334,6 +349,21 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
             [ div [] [ text "Remaining" ]
             , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
+        ]
+
+
+analysisWidgets : Analysis -> ViewModel -> Html Msg
+analysisWidgets analysis viewModel =
+    div
+        [ css
+            [ height (pct 100)
+            , property "display" "grid"
+            , property "grid-template-rows" "auto 1fr"
+            , property "row-gap" "10px"
+            ]
+        ]
+        [ BestLapTimesWidget.view analysis viewModel
+        , CloseBattlesWidget.view viewModel
         ]
 
 
