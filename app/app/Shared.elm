@@ -247,7 +247,9 @@ view sharedData page model toMsg pageView =
         let
             globalReset =
                 global
-                    [ Css.Global.html
+                    [ Css.Global.everything
+                        [ boxSizing borderBox ]
+                    , Css.Global.html
                         [ height (vh 100) ]
                     , Css.Global.body
                         [ height (vh 100)
