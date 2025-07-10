@@ -12,7 +12,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
@@ -58,7 +58,6 @@ type alias CarProgressionData =
     , laps : List Lap
     , color : Color.Color
     , averageLapTime : Duration
-    , totalLaps : Int
     }
 
 
@@ -66,7 +65,6 @@ type alias ClassProgressionData =
     { class : Class
     , cars : List CarProgressionData
     , averageLapTime : Duration
-    , totalCars : Int
     }
 
 
@@ -106,32 +104,26 @@ processClassProgressionData clock viewModel =
                                 (\car ->
                                     let
                                         allLaps =
-                                            extractLapDataForCar clock car
+                                            extractLapDataForCar clock car.history
 
-                                        normalLaps =
-                                            filterOutlierLaps allLaps
-
-                                        lapTimes =
-                                            List.map .time normalLaps
+                                        normalLapTimes =
+                                            allLaps |> filterOutlierLaps |> List.map .time
 
                                         averageLapTime =
-                                            if List.isEmpty lapTimes then
-                                                999999
+                                            case normalLapTimes of
+                                                [] ->
+                                                    999999
 
-                                            else
-                                                List.sum lapTimes // List.length lapTimes
-
-                                        carColor =
-                                            generateCarColor car.metaData.carNumber
+                                                lapTimes ->
+                                                    List.sum lapTimes // List.length lapTimes
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , laps = allLaps
-                                    , color = carColor
+                                    , color = generateCarColor car.metaData.carNumber
                                     , averageLapTime = averageLapTime
-                                    , totalLaps = List.length allLaps
                                     }
                                 )
-                            |> List.filter (\car -> car.totalLaps >= 2)
+                            |> List.filter (\car -> List.length car.laps >= 2)
                             |> List.sortBy .averageLapTime
 
                     classAverageLapTime =
@@ -148,15 +140,14 @@ processClassProgressionData clock viewModel =
                 { class = class
                 , cars = cars
                 , averageLapTime = classAverageLapTime
-                , totalCars = List.length cars
                 }
             )
-        |> List.filter (\classData -> classData.totalCars > 0)
+        |> List.filter (\classData -> List.length classData.cars > 0)
         |> List.sortBy .averageLapTime
 
 
-extractLapDataForCar : Clock.Model -> ViewModelItem -> List Lap
-extractLapDataForCar clock car =
+extractLapDataForCar : Clock.Model -> List Lap -> List Lap
+extractLapDataForCar clock laps =
     let
         currentRaceTime =
             Clock.getElapsed clock
@@ -164,7 +155,7 @@ extractLapDataForCar clock car =
         timeThreshold =
             currentRaceTime - (60 * 60 * 1000)
     in
-    car.history
+    laps
         |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
 
 
@@ -246,7 +237,7 @@ separateClassChartsView classDataList =
 
 
 singleClassProgressionChartView : ClassProgressionData -> Html msg
-singleClassProgressionChartView { class, cars, averageLapTime, totalCars } =
+singleClassProgressionChartView { class, cars, averageLapTime } =
     if List.isEmpty cars then
         div [] []
 
@@ -288,7 +279,7 @@ singleClassProgressionChartView { class, cars, averageLapTime, totalCars } =
                     [ text
                         (String.join " | "
                             [ "Avg: " ++ Duration.toString averageLapTime
-                            , String.fromInt totalCars ++ " cars"
+                            , String.fromInt (List.length cars) ++ " cars"
                             ]
                         )
                     ]
