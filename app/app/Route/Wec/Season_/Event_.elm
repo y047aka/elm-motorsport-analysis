@@ -362,7 +362,7 @@ analysisWidgets analysis viewModel =
             ]
         ]
         [ BestLapTimesWidget.view analysis viewModel
-        , LapTimeProgressionWidget.view analysis viewModel
+        , LapTimeProgressionWidget.view viewModel
         , CloseBattlesWidget.view viewModel
         ]
 
