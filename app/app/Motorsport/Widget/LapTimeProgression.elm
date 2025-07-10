@@ -57,14 +57,12 @@ type alias LapData =
     { carNumber : String
     , class : Class
     , lapTime : Duration
-    , lapNumber : Int
     , timestamp : Time.Posix
     }
 
 
 type alias CarProgressionData =
     { carNumber : String
-    , class : Class
     , laps : List LapData
     , color : Color.Color
     , averageLapTime : Duration
@@ -127,7 +125,6 @@ extractLapProgressionData viewModel =
                             { carNumber = car.metaData.carNumber
                             , class = car.metaData.class
                             , lapTime = lap.time
-                            , lapNumber = lap.lap
                             , timestamp = Time.millisToPosix lap.elapsed
                             }
                         )
@@ -176,10 +173,9 @@ processClassProgressionData viewModel =
                                                 List.sum lapTimes // List.length lapTimes
 
                                         carColor =
-                                            generateCarColor carNumber class
+                                            generateCarColor carNumber
                                     in
                                     { carNumber = carNumber
-                                    , class = class
                                     , laps = allLaps
                                     , color = carColor
                                     , averageLapTime = averageLapTime
@@ -237,20 +233,13 @@ filterOutlierLaps laps =
                 |> List.filter (\lap -> lap.lapTime <= threshold)
 
 
-generateCarColor : String -> Class -> Color.Color
-generateCarColor carNumber class =
+generateCarColor : String -> Color.Color
+generateCarColor carNumber =
     let
-        -- Generate a color based on car number and class
+        -- Generate a color based on car number
         carHash =
             String.toInt carNumber |> Maybe.withDefault 0
 
-        classColor =
-            getClassColor class
-
-        classRgba =
-            Color.toRgba classColor
-
-        -- Create variations of the class color
         hue =
             carHash * 37 |> modBy 360 |> toFloat
 
