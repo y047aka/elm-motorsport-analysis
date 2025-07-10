@@ -18,7 +18,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
@@ -411,11 +411,6 @@ config season analysis =
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
-        , performanceColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
         , histogramColumn
             { getter = .history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
@@ -528,11 +523,6 @@ config_LeMans24h season analysis =
             }
         , lastLapColumn_LeMans24h
             { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , performanceColumn
-            { getter = .history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
