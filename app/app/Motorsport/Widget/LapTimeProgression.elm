@@ -57,7 +57,6 @@ type alias CarProgressionData =
     { carNumber : String
     , laps : List Lap
     , color : Color.Color
-    , averageLapTime : Duration
     }
 
 
@@ -105,41 +104,32 @@ processClassProgressionData clock viewModel =
                                     let
                                         allLaps =
                                             extractLapDataForCar clock car.history
-
-                                        normalLapTimes =
-                                            allLaps |> filterOutlierLaps |> List.map .time
-
-                                        averageLapTime =
-                                            case normalLapTimes of
-                                                [] ->
-                                                    999999
-
-                                                lapTimes ->
-                                                    List.sum lapTimes // List.length lapTimes
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , laps = allLaps
                                     , color = generateCarColor car.metaData.carNumber
-                                    , averageLapTime = averageLapTime
                                     }
                                 )
                             |> List.filter (\car -> List.length car.laps >= 2)
-                            |> List.sortBy .averageLapTime
 
-                    classAverageLapTime =
+                    averageLapTime =
                         let
-                            allAverages =
-                                cars |> List.map .averageLapTime
+                            allLapTimes =
+                                cars
+                                    |> List.concatMap .laps
+                                    |> filterOutlierLaps
+                                    |> List.map .time
                         in
-                        if List.isEmpty allAverages then
-                            999999
+                        case allLapTimes of
+                            [] ->
+                                999999
 
-                        else
-                            List.sum allAverages // List.length allAverages
+                            lapTimes ->
+                                List.sum lapTimes // List.length lapTimes
                 in
                 { class = class
                 , cars = cars
-                , averageLapTime = classAverageLapTime
+                , averageLapTime = averageLapTime
                 }
             )
         |> List.filter (\classData -> List.length classData.cars > 0)
