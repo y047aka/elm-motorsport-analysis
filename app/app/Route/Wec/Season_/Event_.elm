@@ -24,7 +24,7 @@ import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewMo
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
-import Motorsport.Widget.LapTimeDistribution as LapTimeDistributionWidget
+import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -364,7 +364,7 @@ analysisWidgets analysis viewModel =
             ]
         ]
         [ BestLapTimesWidget.view analysis viewModel
-        , LapTimeDistributionWidget.view analysis viewModel
+        , LapTimeProgressionWidget.view analysis viewModel
         , CloseBattlesWidget.view viewModel
         ]
 
