@@ -9,6 +9,7 @@ import Html.Styled as Html exposing (Html, div, h3, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Path
@@ -77,11 +78,11 @@ type alias ClassProgressionData =
     }
 
 
-view : ViewModel -> Html msg
-view viewModel =
+view : Clock.Model -> ViewModel -> Html msg
+view clock viewModel =
     let
         classDataList =
-            processClassProgressionData viewModel
+            processClassProgressionData clock viewModel
     in
     div
         [ css
@@ -99,11 +100,11 @@ view viewModel =
         ]
 
 
-processClassProgressionData : ViewModel -> List ClassProgressionData
-processClassProgressionData viewModel =
+processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData
+processClassProgressionData clock viewModel =
     let
         allLapData =
-            extractLapProgressionData viewModel
+            extractLapProgressionData clock viewModel
     in
     allLapData
         |> List.Extra.gatherEqualsBy .class
@@ -171,17 +172,11 @@ processClassProgressionData viewModel =
         |> List.sortBy .averageLapTime
 
 
-extractLapProgressionData : ViewModel -> List LapData
-extractLapProgressionData viewModel =
+extractLapProgressionData : Clock.Model -> ViewModel -> List LapData
+extractLapProgressionData clock viewModel =
     let
-        currentRaceTime =
-            viewModel
-                |> List.filterMap (\car -> car.history |> List.map .elapsed |> List.maximum)
-                |> List.maximum
-                |> Maybe.withDefault 0
-
         timeThreshold =
-            currentRaceTime - (60 * 60 * 1000)
+            Clock.getElapsed clock - (60 * 60 * 1000)
     in
     viewModel
         |> List.concatMap
