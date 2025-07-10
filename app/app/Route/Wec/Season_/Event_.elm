@@ -238,7 +238,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 [ height (pct 100)
                                 , overflowY hidden
                                 , property "display" "grid"
-                                , property "grid-template-columns" "1fr 1fr 350px"
+                                , property "grid-template-columns" "1fr 1fr 370px"
                                 , property "grid-gap" "10px"
                                 ]
                             ]
@@ -261,7 +261,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                             , div
                                 [ css
                                     [ height (pct 100)
-                                    , overflowY hidden
+                                    , overflowY scroll
                                     , backgroundColor (hsl 0 0 0.15)
                                     , padding (px 10)
                                     , property "display" "flex"
@@ -357,9 +357,8 @@ analysisWidgets : Analysis -> ViewModel -> Html Msg
 analysisWidgets analysis viewModel =
     div
         [ css
-            [ height (pct 100)
-            , property "display" "grid"
-            , property "grid-template-rows" "auto auto 1fr"
+            [ property "display" "grid"
+            , property "grid-template-rows" "auto auto auto"
             , property "row-gap" "10px"
             ]
         ]
