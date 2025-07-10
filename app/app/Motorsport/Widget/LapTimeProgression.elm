@@ -176,7 +176,7 @@ processClassProgressionData viewModel =
                                     , totalLaps = List.length allLaps
                                     }
                                 )
-                            |> List.filter (\car -> car.totalLaps >= 3)
+                            |> List.filter (\car -> car.totalLaps >= 2)
                             |> List.sortBy .averageLapTime
 
                     classAverageLapTime =
