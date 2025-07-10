@@ -11,13 +11,13 @@ import List.Extra
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.RaceControl.ViewModel exposing (ViewModel)
+import Motorsport.Lap exposing (Lap)
+import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as SvgAttr
-import Time
 import TypedSvg.Attributes as TA
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -53,17 +53,9 @@ paddingBottom =
     padding + 15
 
 
-type alias LapData =
-    { carNumber : String
-    , class : Class
-    , lapTime : Duration
-    , timestamp : Time.Posix
-    }
-
-
 type alias CarProgressionData =
     { carNumber : String
-    , laps : List LapData
+    , laps : List Lap
     , color : Color.Color
     , averageLapTime : Duration
     , totalLaps : Int
@@ -102,34 +94,25 @@ view clock viewModel =
 
 processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData
 processClassProgressionData clock viewModel =
-    let
-        allLapData =
-            extractLapProgressionData clock viewModel
-    in
-    allLapData
-        |> List.Extra.gatherEqualsBy .class
-        |> List.map (\( first, rest ) -> ( first.class, first :: rest ))
+    viewModel
+        |> List.Extra.gatherEqualsBy (.metaData >> .class)
+        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map
-            (\( class, classLaps ) ->
+            (\( class, carsInClass ) ->
                 let
-                    carGroups =
-                        classLaps
-                            |> List.Extra.gatherEqualsBy .carNumber
-                            |> List.map (\( first, rest ) -> ( first.carNumber, first :: rest ))
-
                     cars =
-                        carGroups
+                        carsInClass
                             |> List.map
-                                (\( carNumber, laps ) ->
+                                (\car ->
                                     let
                                         allLaps =
-                                            laps
+                                            extractLapDataForCar clock car
 
                                         normalLaps =
-                                            filterOutlierLaps laps
+                                            filterOutlierLaps allLaps
 
                                         lapTimes =
-                                            List.map .lapTime normalLaps
+                                            List.map .time normalLaps
 
                                         averageLapTime =
                                             if List.isEmpty lapTimes then
@@ -139,9 +122,9 @@ processClassProgressionData clock viewModel =
                                                 List.sum lapTimes // List.length lapTimes
 
                                         carColor =
-                                            generateCarColor carNumber
+                                            generateCarColor car.metaData.carNumber
                                     in
-                                    { carNumber = carNumber
+                                    { carNumber = car.metaData.carNumber
                                     , laps = allLaps
                                     , color = carColor
                                     , averageLapTime = averageLapTime
@@ -172,8 +155,8 @@ processClassProgressionData clock viewModel =
         |> List.sortBy .averageLapTime
 
 
-extractLapProgressionData : Clock.Model -> ViewModel -> List LapData
-extractLapProgressionData clock viewModel =
+extractLapDataForCar : Clock.Model -> ViewModelItem -> List Lap
+extractLapDataForCar clock car =
     let
         currentRaceTime =
             Clock.getElapsed clock
@@ -181,28 +164,16 @@ extractLapProgressionData clock viewModel =
         timeThreshold =
             currentRaceTime - (60 * 60 * 1000)
     in
-    viewModel
-        |> List.concatMap
-            (\car ->
-                car.history
-                    |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
-                    |> List.map
-                        (\lap ->
-                            { carNumber = car.metaData.carNumber
-                            , class = car.metaData.class
-                            , lapTime = lap.time
-                            , timestamp = Time.millisToPosix lap.elapsed
-                            }
-                        )
-            )
+    car.history
+        |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
 
 
-filterOutlierLaps : List LapData -> List LapData
+filterOutlierLaps : List Lap -> List Lap
 filterOutlierLaps laps =
     let
         fastestTime =
             laps
-                |> List.map .lapTime
+                |> List.map .time
                 |> List.minimum
                 |> Maybe.withDefault 999999
 
@@ -210,7 +181,7 @@ filterOutlierLaps laps =
             toFloat fastestTime * 1.1 |> round
     in
     laps
-        |> List.filter (\{ lapTime } -> lapTime <= threshold)
+        |> List.filter (\lap -> lap.time <= threshold)
 
 
 generateCarColor : String -> Color.Color
@@ -339,12 +310,12 @@ singleClassProgressionChartView { class, cars, averageLapTime, totalCars } =
 -- Scales
 
 
-xScale : List LapData -> ContinuousScale Float
+xScale : List Lap -> ContinuousScale Float
 xScale laps =
     let
         ( minTime, maxTime ) =
             laps
-                |> List.map (.timestamp >> Time.posixToMillis)
+                |> List.map .elapsed
                 |> (\ts ->
                         ( List.minimum ts |> Maybe.withDefault 0
                         , List.maximum ts |> Maybe.withDefault 0
@@ -354,13 +325,13 @@ xScale laps =
     Scale.linear ( paddingLeft, w - padding ) ( toFloat minTime, toFloat maxTime )
 
 
-yScale : List LapData -> ContinuousScale Float
+yScale : List Lap -> ContinuousScale Float
 yScale laps =
     let
         ( minTime, maxTime ) =
             laps
                 |> filterOutlierLaps
-                |> List.map .lapTime
+                |> List.map .time
                 |> (\ts ->
                         ( List.minimum ts |> Maybe.withDefault 0 |> toFloat
                         , List.maximum ts |> Maybe.withDefault 0 |> toFloat
@@ -382,7 +353,7 @@ yScale laps =
 -- Axes
 
 
-xAxis : List LapData -> Svg msg
+xAxis : List Lap -> Svg msg
 xAxis laps =
     let
         axis =
@@ -416,7 +387,7 @@ xAxis laps =
         [ axis ]
 
 
-yAxis : List LapData -> Svg msg
+yAxis : List Lap -> Svg msg
 yAxis laps =
     let
         axis =
@@ -460,18 +431,17 @@ renderClassProgressionLines cars =
         |> List.concatMap (renderCarProgressionLine (List.concatMap .laps cars))
 
 
-renderCarProgressionLine : List LapData -> CarProgressionData -> List (Svg msg)
+renderCarProgressionLine : List Lap -> CarProgressionData -> List (Svg msg)
 renderCarProgressionLine laps carData =
     let
         dataPoints =
             carData.laps
                 |> List.map
-                    (\{ lapTime, timestamp } ->
-                        ( timestamp
-                            |> Time.posixToMillis
+                    (\{ time, elapsed } ->
+                        ( elapsed
                             |> toFloat
                             |> Scale.convert (xScale laps)
-                        , lapTime
+                        , time
                             |> toFloat
                             |> Scale.convert (yScale laps)
                         )
