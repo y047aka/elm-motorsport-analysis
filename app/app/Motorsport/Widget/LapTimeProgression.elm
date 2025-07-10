@@ -15,7 +15,7 @@ import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
+import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as SvgAttr
 import Time
 import TypedSvg.Attributes as TA
@@ -294,15 +294,6 @@ getClassColor class =
             Color.rgb255 128 128 128
 
 
-colorToCss : Color.Color -> Css.Color
-colorToCss color =
-    let
-        rgba =
-            Color.toRgba color
-    in
-    Css.rgba (round (rgba.red * 255)) (round (rgba.green * 255)) (round (rgba.blue * 255)) rgba.alpha
-
-
 titleView : Html msg
 titleView =
     h3
@@ -561,23 +552,6 @@ renderCarProgressionLine classData carData =
                             )
                     )
                 |> Shape.line Shape.linearCurve
-
-        points =
-            dataPoints
-                |> List.map
-                    (\( x, y ) ->
-                        circle
-                            [ InPx.cx (Scale.convert (xScaleSingle classData) x)
-                            , InPx.cy (Scale.convert (yScaleSingle classData) y)
-                            , InPx.r 2
-                            , SvgAttr.css
-                                [ Css.fill (colorToCss carData.color)
-                                , Css.property "stroke" "none"
-                                , Css.opacity (Css.num 0.7)
-                                ]
-                            ]
-                            []
-                    )
     in
     [ -- Car progression line
       fromUnstyled <|
@@ -588,4 +562,3 @@ renderCarProgressionLine classData carData =
             , TA.strokeOpacity (Opacity 0.8)
             ]
     ]
-        ++ points
