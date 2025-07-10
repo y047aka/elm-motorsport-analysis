@@ -83,7 +83,7 @@ detectBattleForCar viewModel index car =
 
 contentView : List CloseBattle -> Html msg
 contentView closeBattlePairs =
-    div [ css [ height (pct 100), overflowY scroll ] ]
+    div [ css [ height (pct 100) ] ]
         (if List.isEmpty closeBattlePairs then
             [ div
                 [ css
