@@ -68,7 +68,6 @@ type alias CarProgressionData =
     , laps : List LapData
     , color : Color.Color
     , averageLapTime : Duration
-    , fastestLap : Duration
     , totalLaps : Int
     }
 
@@ -77,7 +76,6 @@ type alias ClassProgressionData =
     { class : Class
     , cars : List CarProgressionData
     , classColor : Color.Color
-    , fastestLap : Duration
     , averageLapTime : Duration
     , totalCars : Int
     }
@@ -177,9 +175,6 @@ processClassProgressionData viewModel =
                                             else
                                                 List.sum lapTimes // List.length lapTimes
 
-                                        fastestLap =
-                                            List.minimum lapTimes |> Maybe.withDefault 999999
-
                                         carColor =
                                             generateCarColor carNumber class
                                     in
@@ -188,7 +183,6 @@ processClassProgressionData viewModel =
                                     , laps = allLaps
                                     , color = carColor
                                     , averageLapTime = averageLapTime
-                                    , fastestLap = fastestLap
                                     , totalLaps = List.length allLaps
                                     }
                                 )
@@ -198,12 +192,6 @@ processClassProgressionData viewModel =
 
                     classColor =
                         getClassColor class
-
-                    classFastestLap =
-                        cars
-                            |> List.map .fastestLap
-                            |> List.minimum
-                            |> Maybe.withDefault 999999
 
                     classAverageLapTime =
                         let
@@ -219,7 +207,6 @@ processClassProgressionData viewModel =
                 { class = class
                 , cars = cars
                 , classColor = classColor
-                , fastestLap = classFastestLap
                 , averageLapTime = classAverageLapTime
                 , totalCars = List.length cars
                 }
@@ -411,8 +398,8 @@ singleClassProgressionChartView classData =
                         ]
                     ]
                     [ text
-                        ("Fastest: "
-                            ++ Duration.toString classData.fastestLap
+                        ("Avg: "
+                            ++ Duration.toString classData.averageLapTime
                             ++ " | "
                             ++ String.fromInt classData.totalCars
                             ++ " cars"
