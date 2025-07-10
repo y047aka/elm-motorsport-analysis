@@ -25,6 +25,7 @@ import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
+import Motorsport.Widget.PositionProgression as PositionProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -358,12 +359,13 @@ analysisWidgets { clock } analysis viewModel =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-rows" "auto auto auto"
+            , property "grid-template-rows" "auto auto auto auto"
             , property "row-gap" "10px"
             ]
         ]
         [ BestLapTimesWidget.view analysis viewModel
         , LapTimeProgressionWidget.view clock viewModel
+        , PositionProgressionWidget.view clock viewModel
         , CloseBattlesWidget.view viewModel
         ]
 
