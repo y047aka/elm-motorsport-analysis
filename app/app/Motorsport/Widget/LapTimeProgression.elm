@@ -175,14 +175,17 @@ processClassProgressionData clock viewModel =
 extractLapProgressionData : Clock.Model -> ViewModel -> List LapData
 extractLapProgressionData clock viewModel =
     let
+        currentRaceTime =
+            Clock.getElapsed clock
+
         timeThreshold =
-            Clock.getElapsed clock - (60 * 60 * 1000)
+            currentRaceTime - (60 * 60 * 1000)
     in
     viewModel
         |> List.concatMap
             (\car ->
                 car.history
-                    |> List.filter (\lap -> lap.elapsed >= timeThreshold)
+                    |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
                     |> List.map
                         (\lap ->
                             { carNumber = car.metaData.carNumber
@@ -192,7 +195,6 @@ extractLapProgressionData clock viewModel =
                             }
                         )
             )
-        |> List.filter (\lap -> lap.lapTime > 0 && lap.lapTime < 999999)
 
 
 filterOutlierLaps : List LapData -> List LapData
