@@ -227,7 +227,7 @@ filterOutlierLaps laps =
 
                 -- Allow laps within 115% of fastest lap (more lenient for progression analysis)
                 threshold =
-                    toFloat fastestTime * 1.15 |> round
+                    toFloat fastestTime * 1.1 |> round
             in
             laps
                 |> List.filter (\lap -> lap.lapTime <= threshold)
