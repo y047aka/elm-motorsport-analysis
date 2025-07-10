@@ -269,7 +269,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     , property "gap" "24px"
                                     ]
                                 ]
-                                [ analysisWidgets analysis viewModel ]
+                                [ analysisWidgets raceControl analysis viewModel ]
                             ]
 
                     Events ->
@@ -353,8 +353,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-analysisWidgets : Analysis -> ViewModel -> Html Msg
-analysisWidgets analysis viewModel =
+analysisWidgets : RaceControl.Model -> Analysis -> ViewModel -> Html Msg
+analysisWidgets { clock } analysis viewModel =
     div
         [ css
             [ property "display" "grid"
@@ -363,7 +363,7 @@ analysisWidgets analysis viewModel =
             ]
         ]
         [ BestLapTimesWidget.view analysis viewModel
-        , LapTimeProgressionWidget.view viewModel
+        , LapTimeProgressionWidget.view clock viewModel
         , CloseBattlesWidget.view viewModel
         ]
 
