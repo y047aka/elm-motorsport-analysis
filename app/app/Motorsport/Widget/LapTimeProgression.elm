@@ -107,10 +107,23 @@ view analysis viewModel =
 
 extractLapProgressionData : ViewModel -> List LapData
 extractLapProgressionData viewModel =
+    let
+        -- Find the latest elapsed time across all cars to determine current race time
+        currentRaceTime =
+            viewModel
+                |> List.filterMap (\car -> car.history |> List.map .elapsed |> List.maximum)
+                |> List.maximum
+                |> Maybe.withDefault 0
+
+        -- Only show data from the last hour
+        timeThreshold =
+            currentRaceTime - (60 * 60 * 1000)
+    in
     viewModel
         |> List.concatMap
             (\car ->
                 car.history
+                    |> List.filter (\lap -> lap.elapsed >= timeThreshold)
                     |> List.map
                         (\lap ->
                             { carNumber = car.metaData.carNumber
@@ -474,7 +487,7 @@ xAxisSingle classData =
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 5
+                    [ tickCount 4
                     , tickSizeOuter 0
                     , tickSizeInner 3
                     , tickFormat (\f -> Duration.toString (round f))
@@ -506,7 +519,7 @@ yAxisSingle classData =
         axis =
             fromUnstyled <|
                 Axis.left
-                    [ tickCount 5
+                    [ tickCount 4
                     , tickSizeOuter 0
                     , tickSizeInner 5
                     , tickFormat (\f -> Duration.toString (round f))
