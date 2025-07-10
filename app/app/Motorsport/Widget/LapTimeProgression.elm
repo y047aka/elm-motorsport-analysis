@@ -605,7 +605,7 @@ renderCarProgressionLine classData carData =
             [ TA.stroke (Paint carData.color)
             , TA.strokeWidth (Px 1.5)
             , TA.fill PaintNone
-            , TA.strokeOpacity (Opacity 0.8)
+            , TA.strokeOpacity (Opacity 0.5)
             ]
     ]
         ++ points
