@@ -465,7 +465,7 @@ xAxisSingle classData =
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 8
+                    [ tickCount 5
                     , tickSizeOuter 0
                     , tickSizeInner 3
                     , tickFormat (\f -> Duration.toString (round f))
@@ -497,7 +497,7 @@ yAxisSingle classData =
         axis =
             fromUnstyled <|
                 Axis.left
-                    [ tickCount 6
+                    [ tickCount 5
                     , tickSizeOuter 0
                     , tickSizeInner 5
                     , tickFormat (\f -> Duration.toString (round f))
