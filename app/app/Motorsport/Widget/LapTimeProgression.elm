@@ -8,7 +8,6 @@ import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, h3, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
@@ -79,8 +78,8 @@ type alias ClassProgressionData =
     }
 
 
-view : Analysis -> ViewModel -> Html msg
-view analysis viewModel =
+view : ViewModel -> Html msg
+view viewModel =
     let
         classDataList =
             processClassProgressionData viewModel
