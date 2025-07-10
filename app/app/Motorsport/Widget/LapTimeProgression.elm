@@ -159,12 +159,16 @@ processClassProgressionData viewModel =
                             |> List.map
                                 (\( carNumber, laps ) ->
                                     let
-                                        -- Filter out outliers (pit stops, etc.)
-                                        filteredLaps =
+                                        -- Keep all laps (including pit stops) for display
+                                        allLaps =
+                                            laps
+
+                                        -- For statistics, still filter outliers
+                                        normalLaps =
                                             filterOutlierLaps laps
 
                                         lapTimes =
-                                            List.map .lapTime filteredLaps
+                                            List.map .lapTime normalLaps
 
                                         averageLapTime =
                                             if List.isEmpty lapTimes then
@@ -181,11 +185,11 @@ processClassProgressionData viewModel =
                                     in
                                     { carNumber = carNumber
                                     , class = class
-                                    , laps = filteredLaps
+                                    , laps = allLaps
                                     , color = carColor
                                     , averageLapTime = averageLapTime
                                     , fastestLap = fastestLap
-                                    , totalLaps = List.length filteredLaps
+                                    , totalLaps = List.length allLaps
                                     }
                                 )
                             |> List.filter (\car -> car.totalLaps >= 3)
@@ -454,15 +458,18 @@ xScaleSingle classData =
 yScaleSingle : ClassProgressionData -> ContinuousScale Float
 yScaleSingle classData =
     let
-        allLapTimes =
+        -- For y-scale calculation, filter out extreme outliers to keep chart readable
+        normalLapTimes =
             classData.cars
-                |> List.concatMap (.laps >> List.map (.lapTime >> toFloat))
+                |> List.concatMap .laps
+                |> filterOutlierLaps
+                |> List.map (.lapTime >> toFloat)
 
         minTime =
-            List.minimum allLapTimes |> Maybe.withDefault 0
+            List.minimum normalLapTimes |> Maybe.withDefault 0
 
         maxTime =
-            List.maximum allLapTimes |> Maybe.withDefault 0
+            List.maximum normalLapTimes |> Maybe.withDefault 0
 
         -- Add some padding to the y-axis
         padding_y =
