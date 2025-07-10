@@ -114,13 +114,13 @@ processClassProgressionData clock viewModel =
 
                     averageLapTime =
                         let
-                            allLapTimes =
+                            latestLapTimes =
                                 cars
-                                    |> List.concatMap .laps
+                                    |> List.filterMap (\car -> List.Extra.last car.laps)
                                     |> filterOutlierLaps
                                     |> List.map .time
                         in
-                        case allLapTimes of
+                        case latestLapTimes of
                             [] ->
                                 999999
 
