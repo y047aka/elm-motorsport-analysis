@@ -24,7 +24,7 @@ import TypedSvg.Types exposing (Length(..), Opacity(..), Paint(..), Transform(..
 
 
 
--- Chart dimensions
+-- Chart configuration
 
 
 w : Float
@@ -72,7 +72,6 @@ type alias CarProgressionData =
 type alias ClassProgressionData =
     { class : Class
     , cars : List CarProgressionData
-    , classColor : Color.Color
     , averageLapTime : Duration
     , totalCars : Int
     }
@@ -103,14 +102,12 @@ view viewModel =
 extractLapProgressionData : ViewModel -> List LapData
 extractLapProgressionData viewModel =
     let
-        -- Find the latest elapsed time across all cars to determine current race time
         currentRaceTime =
             viewModel
                 |> List.filterMap (\car -> car.history |> List.map .elapsed |> List.maximum)
                 |> List.maximum
                 |> Maybe.withDefault 0
 
-        -- Only show data from the last hour
         timeThreshold =
             currentRaceTime - (60 * 60 * 1000)
     in
@@ -153,11 +150,9 @@ processClassProgressionData viewModel =
                             |> List.map
                                 (\( carNumber, laps ) ->
                                     let
-                                        -- Keep all laps (including pit stops) for display
                                         allLaps =
                                             laps
 
-                                        -- For statistics, still filter outliers
                                         normalLaps =
                                             filterOutlierLaps laps
 
@@ -182,11 +177,7 @@ processClassProgressionData viewModel =
                                     }
                                 )
                             |> List.filter (\car -> car.totalLaps >= 3)
-                            -- Only show cars with at least 3 laps
                             |> List.sortBy .averageLapTime
-
-                    classColor =
-                        getClassColor class
 
                     classAverageLapTime =
                         let
@@ -201,7 +192,6 @@ processClassProgressionData viewModel =
                 in
                 { class = class
                 , cars = cars
-                , classColor = classColor
                 , averageLapTime = classAverageLapTime
                 , totalCars = List.length cars
                 }
@@ -224,7 +214,6 @@ filterOutlierLaps laps =
                 fastestTime =
                     List.minimum lapTimes |> Maybe.withDefault 999999
 
-                -- Allow laps within 115% of fastest lap (more lenient for progression analysis)
                 threshold =
                     toFloat fastestTime * 1.1 |> round
             in
@@ -235,7 +224,6 @@ filterOutlierLaps laps =
 generateCarColor : String -> Color.Color
 generateCarColor carNumber =
     let
-        -- Generate a color based on car number
         carHash =
             String.toInt carNumber |> Maybe.withDefault 0
 
@@ -249,41 +237,6 @@ generateCarColor carNumber =
             0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
     in
     Color.hsl (hue / 360) saturation lightness
-
-
-getClassColor : Class -> Color.Color
-getClassColor class =
-    let
-        classString =
-            Class.toString class
-    in
-    case classString of
-        "None" ->
-            Color.rgb255 128 128 128
-
-        "HYPERCAR" ->
-            Color.rgb255 255 0 0
-
-        "LMP1" ->
-            Color.rgb255 255 0 0
-
-        "LMP2" ->
-            Color.rgb255 0 0 255
-
-        "LMGTE Pro" ->
-            Color.rgb255 0 102 0
-
-        "LMGTE Am" ->
-            Color.rgb255 255 102 0
-
-        "LMGT3" ->
-            Color.rgb255 255 102 0
-
-        "INNOVATIVE CAR" ->
-            Color.rgb255 0 0 255
-
-        _ ->
-            Color.rgb255 128 128 128
 
 
 colorToCss : Color.Color -> Css.Color
@@ -346,8 +299,7 @@ singleClassProgressionChartView classData =
                 , Css.property "gap" "8px"
                 ]
             ]
-            [ -- Class header
-              div
+            [ div
                 [ css
                     [ Css.property "display" "flex"
                     , Css.property "justify-content" "space-between"
@@ -394,8 +346,7 @@ singleClassProgressionChartView classData =
                         )
                     ]
                 ]
-            , -- Chart
-              svg
+            , svg
                 [ InPx.width w
                 , InPx.height h
                 , viewBox 0 0 w h
@@ -410,7 +361,7 @@ singleClassProgressionChartView classData =
 
 
 
--- Scales for individual class charts
+-- Scales
 
 
 xScaleSingle : ClassProgressionData -> ContinuousScale Float
@@ -433,7 +384,6 @@ xScaleSingle classData =
 yScaleSingle : ClassProgressionData -> ContinuousScale Float
 yScaleSingle classData =
     let
-        -- For y-scale calculation, filter out extreme outliers to keep chart readable
         normalLapTimes =
             classData.cars
                 |> List.concatMap .laps
@@ -446,7 +396,6 @@ yScaleSingle classData =
         maxTime =
             List.maximum normalLapTimes |> Maybe.withDefault 0
 
-        -- Add some padding to the y-axis
         padding_y =
             (maxTime - minTime) * 0.1
 
@@ -530,7 +479,7 @@ yAxisSingle classData =
 
 
 
--- Line rendering
+-- Rendering
 
 
 renderClassProgressionLines : ClassProgressionData -> List (Svg msg)
@@ -574,8 +523,7 @@ renderCarProgressionLine classData carData =
                             []
                     )
     in
-    [ -- Car progression line
-      fromUnstyled <|
+    [ fromUnstyled <|
         Path.element linePath
             [ TA.stroke (Paint carData.color)
             , TA.strokeWidth (Px 1.5)
