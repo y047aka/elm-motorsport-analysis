@@ -43,23 +43,23 @@ pub mod duration {
     pub fn from_string(s: &str) -> Option<Duration> {
         let parts: Vec<&str> = s.split(':').collect();
 
-        match parts.len() {
+        match parts.as_slice() {
             // "hh:mm:ss.ms" 形式
-            3 => {
-                let hours = parts[0].parse::<u32>().ok()?;
-                let minutes = parts[1].parse::<u32>().ok()?;
-                let seconds = parts[2].parse::<f64>().ok()?;
+            [h, m, s] => {
+                let hours = h.parse::<u32>().ok()?;
+                let minutes = m.parse::<u32>().ok()?;
+                let seconds = s.parse::<f64>().ok()?;
                 Some(hours * 3600000 + minutes * 60000 + (seconds * 1000.0) as u32)
             }
             // "mm:ss.ms" 形式
-            2 => {
-                let minutes = parts[0].parse::<u32>().ok()?;
-                let seconds = parts[1].parse::<f64>().ok()?;
+            [m, s] => {
+                let minutes = m.parse::<u32>().ok()?;
+                let seconds = s.parse::<f64>().ok()?;
                 Some(minutes * 60000 + (seconds * 1000.0) as u32)
             }
             // "ss.ms" 形式
-            1 => {
-                let seconds = parts[0].parse::<f64>().ok()?;
+            [s] => {
+                let seconds = s.parse::<f64>().ok()?;
                 Some((seconds * 1000.0) as u32)
             }
             _ => None,
@@ -141,8 +141,10 @@ fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    duration::from_string(&s).ok_or_else(|| serde::de::Error::custom("Invalid duration format"))
+    String::deserialize(deserializer)
+        .and_then(|s| {
+            duration::from_string(&s).ok_or_else(|| serde::de::Error::custom("Invalid duration format"))
+        })
 }
 
 /// カスタムデシリアライザー：オプショナルDuration文字列をミリ秒に変換
@@ -150,12 +152,13 @@ fn deserialize_optional_duration<'de, D>(deserializer: D) -> Result<Option<Durat
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    if s.is_empty() {
-        Ok(None)
-    } else {
-        Ok(duration::from_string(&s))
-    }
+    String::deserialize(deserializer).map(|s| {
+        if s.is_empty() {
+            None
+        } else {
+            duration::from_string(&s)
+        }
+    })
 }
 
 /// カスタムデシリアライザー：オプショナルf64
@@ -163,41 +166,44 @@ fn deserialize_optional_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::E
 where
     D: serde::Deserializer<'de>,
 {
-    let s = String::deserialize(deserializer)?;
-    if s.is_empty() {
-        Ok(None)
-    } else {
-        s.parse::<f64>().map(Some).map_err(serde::de::Error::custom)
-    }
+    String::deserialize(deserializer)
+        .map(|s| {
+            if s.is_empty() {
+                None
+            } else {
+                s.parse::<f64>().ok()
+            }
+        })
 }
 
 /// CSV読み込み関数
 pub fn read_csv<P: AsRef<Path>>(path: P) -> Result<Vec<WecLap>> {
-    let file = fs::File::open(path)?;
-    let mut reader = csv::ReaderBuilder::new()
-        .delimiter(b';')
-        .from_reader(file);
-
-    let mut laps = Vec::new();
-    for result in reader.deserialize() {
-        let lap: WecLap = result?;
-        laps.push(lap);
-    }
-    Ok(laps)
+    fs::File::open(path)
+        .map_err(Into::into)
+        .and_then(|file| {
+            csv::ReaderBuilder::new()
+                .delimiter(b';')
+                .from_reader(file)
+                .deserialize()
+                .collect::<Result<Vec<WecLap>, _>>()
+                .map_err(Into::into)
+        })
 }
 
 /// メイン実行関数
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let laps = read_csv(&config.input_file)?;
-    println!("Read {} laps", laps.len());
 
-    for lap in laps.iter().take(3) {
-        println!("車両 {}: ラップ {} - {}",
-            lap.car_number,
-            lap.lap_number,
-            duration::to_string(lap.lap_time)
-        );
-    }
+    println!("Read {} laps", laps.len());
+    laps.iter()
+        .take(3)
+        .for_each(|lap| {
+            println!("車両 {}: ラップ {} - {}",
+                lap.car_number,
+                lap.lap_number,
+                duration::to_string(lap.lap_time)
+            );
+        });
 
     Ok(())
 }
