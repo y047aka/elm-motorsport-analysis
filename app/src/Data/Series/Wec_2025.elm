@@ -11,6 +11,7 @@ wec_2025 =
         , Imola_6h
         , Spa_6h
         , LeMans_24h
+        , SãoPaulo_6h
         ]
 
 
@@ -56,7 +57,14 @@ toEventSummary_Wec_2025 event =
             , jsonPath = jsonPath
             }
 
-        -- TODO: Add more events
+        SãoPaulo_6h ->
+            { id = id
+            , name = "6 Hours of São Paulo"
+            , season = 2025
+            , date = "2025-07-13"
+            , jsonPath = jsonPath
+            }
+
         _ ->
             { id = id
             , name = "Qatar 1812km"
