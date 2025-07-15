@@ -22,8 +22,15 @@ type alias CloseBattle =
 view : ViewModel -> Html msg
 view viewModel =
     let
+        currentLapNumber =
+            viewModel |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
+
         closeBattlePairs =
-            detectCloseBattles viewModel
+            if currentLapNumber > 2 then
+                detectCloseBattles viewModel
+
+            else
+                []
     in
     div
         [ css
@@ -117,8 +124,7 @@ closeBattleItem { leader, follower, interval } =
             ]
         ]
         [ battleHeaderView leader follower interval
-        , Maybe.map2 sectorComparison leader.currentLap follower.currentLap
-            |> Maybe.withDefault (text "")
+        , lapTimeComparison leader follower
         ]
 
 
@@ -138,8 +144,19 @@ battleHeaderView a b interval =
         ]
 
 
-sectorComparison : Lap -> Lap -> Html msg
-sectorComparison a b =
+lapTimeComparison : ViewModelItem -> ViewModelItem -> Html msg
+lapTimeComparison carA carB =
+    let
+        recentLapsPair =
+            List.Extra.zip carA.history carB.history
+                |> List.reverse
+                |> List.take 4
+                |> List.reverse
+                |> List.unzip
+
+        ( lapsA, lapsB ) =
+            recentLapsPair
+    in
     Html.table
         [ css
             [ width (pct 100)
@@ -158,36 +175,30 @@ sectorComparison a b =
         ]
         [ Html.thead []
             [ Html.tr []
-                [ Html.th [] []
-                , Html.th [] [ text "S1" ]
-                , Html.th [] [ text "S2" ]
-                , Html.th [] [ text "S3" ]
-                , Html.th [] [ text "Lap" ]
-                ]
+                (Html.th [] []
+                    :: List.map (\lap -> Html.th [] [ text ("Lap " ++ String.fromInt lap.lap) ]) lapsA
+                )
             ]
         , Html.tbody []
-            [ carTimeRow a b False
-            , carTimeRow b a True
+            [ carTimeRow carA.metaData.carNumber lapsA lapsB False
+            , carTimeRow carB.metaData.carNumber lapsB lapsA True
             ]
         ]
 
 
-carTimeRow : Lap -> Lap -> Bool -> Html msg
-carTimeRow a b showDifference =
+carTimeRow : String -> List Lap -> List Lap -> Bool -> Html msg
+carTimeRow carNumber carA carB showDifference =
     Html.tr [ css [ children [ Css.Global.td [ padding zero ] ] ] ]
-        [ Html.th [ css [ width (px 30) ] ] [ text ("#" ++ a.carNumber) ]
-        , Html.td [] [ timeCell a.sector_1 b.sector_1 showDifference ]
-        , Html.td [] [ timeCell a.sector_2 b.sector_2 showDifference ]
-        , Html.td [] [ timeCell a.sector_3 b.sector_3 showDifference ]
-        , Html.td [] [ timeCell a.time b.time showDifference ]
-        ]
+        (Html.th [ css [ width (px 40) ] ] [ text ("#" ++ carNumber) ]
+            :: List.map2 (\lapA lapB -> Html.td [] [ lapTimeCell showDifference lapA lapB ]) carA carB
+        )
 
 
-timeCell : Duration -> Duration -> Bool -> Html msg
-timeCell currentTime otherTime showDifference =
+lapTimeCell : Bool -> Lap -> Lap -> Html msg
+lapTimeCell showDifference lapA lapB =
     let
         cellBackgroundColor =
-            if currentTime <= otherTime then
+            if lapA.time < lapB.time then
                 hsl 120 0.7 0.4
 
             else
@@ -197,16 +208,16 @@ timeCell currentTime otherTime showDifference =
             if showDifference then
                 let
                     difference =
-                        currentTime - otherTime
+                        lapA.time - lapB.time
                 in
-                if difference > 0 then
+                if difference >= 0 then
                     "+" ++ Duration.toString difference
 
                 else
                     "-" ++ Duration.toString (abs difference)
 
             else
-                Duration.toString currentTime
+                Duration.toString lapA.time
     in
     div
         [ css
