@@ -46,7 +46,7 @@ init flags =
             Wec.getLaps args.eventId (CsvLoaded_Wec args.eventId)
 
         Nothing ->
-            [ "qatar_1812km", "imola_6h", "spa_6h", "le_mans_24h", "fuji_6h", "bahrain_8h" ]
+            [ "qatar_1812km", "imola_6h", "spa_6h", "le_mans_24h", "sao_paulo_6h", "fuji_6h", "bahrain_8h" ]
                 |> List.map toItem
                 |> Select.option "Select Event ID : "
                 |> output
@@ -144,6 +144,9 @@ eventEncoder { name, laps, preprocessed } =
 
                 "bahrain_8h" ->
                     "8 Hours of Bahrain"
+
+                "sao_paulo_6h" ->
+                    "6 Hours of São Paulo"
 
                 _ ->
                     "Encoding Error"
