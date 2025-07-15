@@ -5,13 +5,14 @@ import Color
 import Css
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html, div, h3, text)
+import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
+import Motorsport.Widget as Widget
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
@@ -78,20 +79,8 @@ view clock viewModel =
         classDataList =
             processClassPositionData clock viewModel
     in
-    div
-        [ css
-            [ Css.padding (Css.px 10)
-            , Css.backgroundColor (Css.hsl 0 0 0.2)
-            , Css.borderRadius (Css.px 12)
-            , Css.height (Css.pct 100)
-            , Css.property "display" "grid"
-            , Css.property "grid-template-rows" "auto 1fr"
-            , Css.property "row-gap" "10px"
-            ]
-        ]
-        [ titleView
-        , separateClassChartsView classDataList
-        ]
+    Widget.container "Position Progression"
+        (separateClassChartsView classDataList)
 
 
 processClassPositionData : Clock.Model -> ViewModel -> List ClassPositionData
@@ -179,32 +168,10 @@ colorToCss color =
     Css.rgba (round (rgba.red * 255)) (round (rgba.green * 255)) (round (rgba.blue * 255)) rgba.alpha
 
 
-titleView : Html msg
-titleView =
-    h3
-        [ css
-            [ Css.fontSize (Css.rem 1.1)
-            , Css.margin3 Css.zero Css.zero (Css.px 10)
-            , Css.fontWeight Css.bold
-            , Css.color (Css.hsl 0 0 0.9)
-            , Css.letterSpacing (Css.px 0.5)
-            ]
-        ]
-        [ text "Position Progression" ]
-
-
 separateClassChartsView : List ClassPositionData -> Html msg
 separateClassChartsView classDataList =
     if List.isEmpty classDataList then
-        div
-            [ css
-                [ Css.fontStyle Css.italic
-                , Css.color (Css.hsl 0 0 0.7)
-                , Css.textAlign Css.center
-                , Css.padding (Css.px 20)
-                ]
-            ]
-            [ text "No position progression data available" ]
+        Widget.emptyState "No position progression data available"
 
     else
         div
@@ -228,41 +195,13 @@ singleClassPositionChartView { class, cars, carCount } =
                 , Css.property "row-gap" "8px"
                 ]
             ]
-            [ div
-                [ css
-                    [ Css.displayFlex
-                    , Css.justifyContent Css.spaceBetween
-                    , Css.alignItems Css.center
-                    ]
-                ]
-                [ div
-                    [ css
-                        [ Css.property "display" "grid"
-                        , Css.property "grid-template-columns" "auto 1fr"
-                        , Css.alignItems Css.center
-                        , Css.property "column-gap" "5px"
-                        , Css.fontSize (Css.px 14)
-                        , Css.property "font-weight" "600"
-                        , Css.color (Css.hsl 0 0 0.9)
-                        , Css.before
-                            [ Css.property "content" (Css.qt "")
-                            , Css.display Css.block
-                            , Css.width (Css.px 15)
-                            , Css.height (Css.px 15)
-                            , Css.backgroundColor (Class.toHexColor 2025 class)
-                            , Css.borderRadius (Css.px 4)
-                            ]
+            [ Widget.classHeader class
+                [ text
+                    (String.join " | "
+                        [ String.fromInt (List.length cars) ++ " cars showing"
+                        , String.fromInt carCount ++ " total"
                         ]
-                    ]
-                    [ text (Class.toString class) ]
-                , div [ css [ Css.fontSize (Css.rem 0.75), Css.color (Css.hsl 0 0 0.6) ] ]
-                    [ text
-                        (String.join " | "
-                            [ String.fromInt (List.length cars) ++ " cars showing"
-                            , String.fromInt carCount ++ " total"
-                            ]
-                        )
-                    ]
+                    )
                 ]
             , svg
                 [ InPx.width w

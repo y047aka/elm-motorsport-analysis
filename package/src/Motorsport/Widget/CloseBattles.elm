@@ -2,13 +2,14 @@ module Motorsport.Widget.CloseBattles exposing (view)
 
 import Css exposing (..)
 import Css.Global exposing (children, descendants)
-import Html.Styled as Html exposing (Html, div, h3, text)
+import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Widget as Widget
 
 
 type alias CloseBattle =
@@ -32,30 +33,7 @@ view viewModel =
             else
                 []
     in
-    div
-        [ css
-            [ height (pct 100)
-            , overflowY hidden
-            , padding (px 10)
-            , borderRadius (px 12)
-            , property "display" "grid"
-            , property "grid-template-rows" "auto 1fr"
-            , property "row-gap" "10px"
-            , backgroundColor (hsl 0 0 0.2)
-            ]
-        ]
-        [ h3
-            [ css
-                [ margin zero
-                , fontSize (rem 1.1)
-                , fontWeight bold
-                , letterSpacing (px 0.5)
-                , color (hsl 0 0 0.9)
-                ]
-            ]
-            [ text "Battles" ]
-        , contentView closeBattlePairs
-        ]
+    Widget.container "Battles" (contentView closeBattlePairs)
 
 
 detectCloseBattles : ViewModel -> List CloseBattle
@@ -92,19 +70,7 @@ contentView : List CloseBattle -> Html msg
 contentView closeBattlePairs =
     div [ css [ height (pct 100) ] ]
         (if List.isEmpty closeBattlePairs then
-            [ div
-                [ css
-                    [ fontStyle italic
-                    , color (hsl 0 0 0.7)
-                    , textAlign center
-                    , padding (px 20)
-                    , backgroundColor (hsl 0 0 0.1)
-                    , borderRadius (px 8)
-                    , border3 (px 1) solid (hsl 0 0 0.25)
-                    ]
-                ]
-                [ text "No close battles detected" ]
-            ]
+            [ Widget.emptyState "No close battles detected" ]
 
          else
             List.map closeBattleItem closeBattlePairs

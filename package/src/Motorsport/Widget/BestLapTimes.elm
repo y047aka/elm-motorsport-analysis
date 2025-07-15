@@ -1,13 +1,14 @@
 module Motorsport.Widget.BestLapTimes exposing (view)
 
-import Css exposing (alignItems, backgroundColor, bold, borderRadius, borderTop3, center, color, displayFlex, fontSize, fontWeight, height, hsl, letterSpacing, margin3, nthChild, padding, padding2, property, px, rem, solid, textAlign, width, zero)
-import Html.Styled as Html exposing (Html, div, h3, text)
+import Css exposing (alignItems, backgroundColor, bold, borderRadius, borderTop3, center, color, displayFlex, fontSize, fontWeight, height, hsl, nthChild, padding, padding2, property, px, solid, textAlign, width, zero)
+import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
+import Motorsport.Widget as Widget
 
 
 type alias CarLapData =
@@ -35,10 +36,8 @@ view analysis viewModel =
         classBestTimes =
             processClassBestTimes viewModel
     in
-    div [ css [ padding (px 10), backgroundColor (hsl 0 0 0.2), borderRadius (px 12) ] ]
-        [ titleView
-        , classListView analysis classBestTimes
-        ]
+    Widget.container "Best Lap Times"
+        (classListView analysis classBestTimes)
 
 
 processClassBestTimes : ViewModel -> List ClassData
@@ -75,20 +74,6 @@ processClassBestTimes viewModel =
             )
 
 
-titleView : Html msg
-titleView =
-    h3
-        [ css
-            [ fontSize (rem 1.1)
-            , margin3 zero zero (px 10)
-            , fontWeight bold
-            , color (hsl 0 0 0.9)
-            , letterSpacing (px 0.5)
-            ]
-        ]
-        [ text "Best Lap Times" ]
-
-
 classListView : Analysis -> List ClassData -> Html msg
 classListView analysis classBestTimes =
     div
@@ -112,37 +97,8 @@ classItemView analysis { class, cars } =
                 [ borderTop3 (px 1) solid (hsl 0 0 0.4) ]
             ]
         ]
-        [ classHeaderView class
+        [ Widget.classHeader class []
         , carListView analysis cars
-        ]
-
-
-classHeaderView : Class -> Html msg
-classHeaderView class =
-    div
-        [ css
-            [ property "display" "flex"
-            , property "align-items" "center"
-            , property "column-gap" "5px"
-            ]
-        ]
-        [ div
-            [ css
-                [ width (px 15)
-                , height (px 15)
-                , backgroundColor (Class.toHexColor 2025 class)
-                , borderRadius (px 4)
-                ]
-            ]
-            []
-        , div
-            [ css
-                [ fontSize (px 14)
-                , property "font-weight" "600"
-                , color (hsl 0 0 0.9)
-                ]
-            ]
-            [ text (Class.toString class) ]
         ]
 
 
