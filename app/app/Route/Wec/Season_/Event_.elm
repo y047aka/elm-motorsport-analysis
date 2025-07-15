@@ -18,10 +18,14 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
+import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
+import Motorsport.Widget.CloseBattles as CloseBattlesWidget
+import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
+import Motorsport.Widget.PositionProgression as PositionProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -235,7 +239,8 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 [ height (pct 100)
                                 , overflowY hidden
                                 , property "display" "grid"
-                                , property "grid-template-columns" "1fr 1fr"
+                                , property "grid-template-columns" "1fr 1fr 370px"
+                                , property "grid-gap" "10px"
                                 ]
                             ]
                             [ div [ css [ height (pct 100), overflowY scroll ] ]
@@ -254,6 +259,18 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     _ ->
                                         TrackerChart.view analysis viewModel
                                 ]
+                            , div
+                                [ css
+                                    [ height (pct 100)
+                                    , overflowY scroll
+                                    , backgroundColor (hsl 0 0 0.15)
+                                    , padding (px 10)
+                                    , property "display" "flex"
+                                    , property "flex-direction" "column"
+                                    , property "gap" "24px"
+                                    ]
+                                ]
+                                [ analysisWidgets raceControl analysis viewModel ]
                             ]
 
                     Events ->
@@ -337,6 +354,22 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
+analysisWidgets : RaceControl.Model -> Analysis -> ViewModel -> Html Msg
+analysisWidgets { clock } analysis viewModel =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-rows" "auto auto auto auto"
+            , property "row-gap" "10px"
+            ]
+        ]
+        [ BestLapTimesWidget.view analysis viewModel
+        , LapTimeProgressionWidget.view clock viewModel
+        , PositionProgressionWidget.view clock viewModel
+        , CloseBattlesWidget.view viewModel
+        ]
+
+
 config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config season analysis =
     { toId = .metaData >> .carNumber
@@ -377,12 +410,6 @@ config season analysis =
             }
         , lastLapColumn_Wec
             { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
-        , performanceColumn
-            { getter = .history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
@@ -498,12 +525,6 @@ config_LeMans24h season analysis =
             }
         , lastLapColumn_LeMans24h
             { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
-        , performanceColumn
-            { getter = .history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
