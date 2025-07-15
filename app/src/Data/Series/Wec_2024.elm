@@ -55,7 +55,7 @@ toEventSummary_Wec_2024 event =
             , jsonPath = jsonPath
             }
 
-        SãoPaulo_6h ->
+        SaoPaulo_6h ->
             { id = id
             , name = "6 Hours of São Paulo"
             , season = 2024

@@ -11,7 +11,7 @@ wec_2025 =
         , Imola_6h
         , Spa_6h
         , LeMans_24h
-        , SãoPaulo_6h
+        , SaoPaulo_6h
         ]
 
 
@@ -57,7 +57,7 @@ toEventSummary_Wec_2025 event =
             , jsonPath = jsonPath
             }
 
-        SãoPaulo_6h ->
+        SaoPaulo_6h ->
             { id = id
             , name = "6 Hours of São Paulo"
             , season = 2025
