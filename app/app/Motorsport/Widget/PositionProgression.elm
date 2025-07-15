@@ -96,6 +96,20 @@ view clock viewModel =
 
 processClassPositionData : Clock.Model -> ViewModel -> List ClassPositionData
 processClassPositionData clock viewModel =
+    let
+        currentRaceTime =
+            Clock.getElapsed clock
+
+        timeThreshold =
+            currentRaceTime - (60 * 60 * 1000)
+
+        lapThreshold =
+            List.head viewModel
+                |> Maybe.map .history
+                |> Maybe.andThen (List.Extra.find (\{ elapsed } -> elapsed >= timeThreshold))
+                |> Maybe.map .lap
+                |> Maybe.withDefault 1
+    in
     viewModel
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
@@ -108,7 +122,7 @@ processClassPositionData clock viewModel =
                                 (\car ->
                                     let
                                         positionHistory =
-                                            extractPositionDataForCar clock car.history
+                                            extractPositionDataForCar lapThreshold car.history
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , positions = positionHistory
@@ -126,17 +140,10 @@ processClassPositionData clock viewModel =
         |> List.sortBy (.class >> Class.toString)
 
 
-extractPositionDataForCar : Clock.Model -> List Lap -> List PositionPoint
-extractPositionDataForCar clock laps =
-    let
-        currentRaceTime =
-            Clock.getElapsed clock
-
-        timeThreshold =
-            currentRaceTime - (60 * 60 * 1000)
-    in
+extractPositionDataForCar : Int -> List Lap -> List PositionPoint
+extractPositionDataForCar lapThreshold laps =
     laps
-        |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
+        |> List.filter (\lap -> lap.lap >= lapThreshold)
         |> List.filterMap
             (\lap ->
                 case lap.position of
