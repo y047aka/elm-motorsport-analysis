@@ -58,5 +58,8 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && mkdir -p /home/$USERNAME/.elm /home/$USERNAME/.cargo /home/$USERNAME/.rustup \
     && chown -R $USER_UID:$USER_GID /home/$USERNAME /usr/local/cargo /usr/local/rustup
 
+# Setup Claude Code
+RUN npm install -g @anthropic-ai/claude-code
+
 USER $USERNAME
 WORKDIR /workspace
