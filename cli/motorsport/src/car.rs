@@ -1,13 +1,14 @@
 use serde::{Deserialize, Serialize};
 
 use crate::{Class, Driver};
+use crate::lap::Lap;
 
 /// 車両情報（ElmのCar型と互換）
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Car {
     pub meta_data: MetaData,
     pub start_position: i32,
-    pub laps: Vec<Lap>,  // Lap型は後で実装
+    pub laps: Vec<Lap>,
     pub current_lap: Option<Lap>,
     pub last_lap: Option<Lap>,
     pub status: Status,
@@ -97,24 +98,6 @@ impl Status {
     }
 }
 
-/// 仮のLap型（後で実装）
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
-pub struct Lap {
-    pub car_number: String,
-    pub lap_number: u32,
-    pub time: u32, // Duration型を使用予定
-}
-
-impl Lap {
-    pub fn new(car_number: String, lap_number: u32, time: u32) -> Self {
-        Lap {
-            car_number,
-            lap_number,
-            time,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -176,8 +159,36 @@ mod tests {
         );
 
         let laps = vec![
-            Lap::new("12".to_string(), 1, 95365),
-            Lap::new("12".to_string(), 2, 113610),
+            Lap::new(
+                "12".to_string(),
+                "Will STEVENS".to_string(),
+                1,
+                Some(3),
+                95365,
+                95365,
+                23155,
+                29928,
+                42282,
+                23155,
+                29928,
+                42282,
+                95365,
+            ),
+            Lap::new(
+                "12".to_string(),
+                "Kamui KOBAYASHI".to_string(),
+                2,
+                Some(2),
+                113610,
+                95365,
+                23155,
+                29928,
+                42282,
+                23155,
+                29928,
+                42282,
+                113610,
+            ),
         ];
 
         let car = Car::new(metadata, 3, laps);
