@@ -69,7 +69,7 @@ mod tests {
     use super::Class;
 
     #[test]
-    fn test_class_to_string() {
+    fn class_to_string() {
         // Elmの実装と互換性を確認
         assert_eq!(Class::None.to_string(), "None");
         assert_eq!(Class::LMH.to_string(), "HYPERCAR");
@@ -82,7 +82,7 @@ mod tests {
     }
 
     #[test]
-    fn test_class_from_string() {
+    fn class_from_string() {
         // 正常なケース
         assert_eq!(Class::from_string("None"), Some(Class::None));
         assert_eq!(Class::from_string("HYPERCAR"), Some(Class::LMH));
@@ -100,7 +100,7 @@ mod tests {
     }
 
     #[test]
-    fn test_class_round_trip() {
+    fn class_round_trip() {
         // 文字列変換の往復テスト
         let classes = vec![
             Class::None,
@@ -121,7 +121,7 @@ mod tests {
     }
 
     #[test]
-    fn test_class_hex_colors() {
+    fn class_hex_colors() {
         // 2024年シーズンのカラー
         assert_eq!(Class::None.to_hex_color(2024), "#000");
         assert_eq!(Class::LMH.to_hex_color(2024), "#f00");

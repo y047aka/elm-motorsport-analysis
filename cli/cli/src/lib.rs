@@ -163,7 +163,7 @@ mod tests {
     use std::io::Write;
 
     #[test]
-    fn test_config_build() {
+    fn config_build() {
         let args = vec![
             "program".to_string(),
             "input.csv".to_string(),
@@ -178,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn test_config_build_minimal() {
+    fn config_build_minimal() {
         let args = vec![
             "program".to_string(),
             "input.csv".to_string(),
@@ -191,7 +191,7 @@ mod tests {
     }
 
     #[test]
-    fn test_config_build_no_input() {
+    fn config_build_no_input() {
         let args = vec!["program".to_string()];
 
         let result = Config::build(args.into_iter());
@@ -199,7 +199,7 @@ mod tests {
     }
 
     #[test]
-    fn test_csv_parsing() {
+    fn csv_parsing() {
         let csv_content = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
 12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;0:23.155;0:29.928;0:42.282;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;23.155;29.928;42.282;
 7;1;1;1:33.291;0;;23.119;0;29.188;0;40.984;0;175.0;1:33.291;11:02:00.782;0:23.119;0:29.188;0:40.984;298.6;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.119;29.188;40.984;"#;
