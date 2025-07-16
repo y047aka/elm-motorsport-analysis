@@ -2,7 +2,7 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use motorsport::{Duration, duration};
+use motorsport::duration::{self, Duration};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
