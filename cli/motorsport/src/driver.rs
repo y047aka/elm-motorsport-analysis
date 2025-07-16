@@ -27,7 +27,7 @@ mod tests {
     use super::{Driver, find_current_driver};
 
     #[test]
-    fn test_find_current_driver() {
+    fn find_current_driver_() {
         let drivers = vec![
             Driver::new("Will STEVENS".to_string(), false),
             Driver::new("Kamui KOBAYASHI".to_string(), true),
@@ -40,7 +40,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_current_driver_none() {
+    fn find_current_driver_none() {
         let drivers = vec![
             Driver::new("Will STEVENS".to_string(), false),
             Driver::new("Mike CONWAY".to_string(), false),
@@ -51,7 +51,7 @@ mod tests {
     }
 
     #[test]
-    fn test_find_current_driver_empty() {
+    fn find_current_driver_empty() {
         let drivers: Vec<Driver> = vec![];
         let current = find_current_driver(&drivers);
         assert!(current.is_none());
