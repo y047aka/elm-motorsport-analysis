@@ -13,8 +13,7 @@ import Motorsport.Widget as Widget
 
 
 type alias CloseBattle =
-    { leader : ViewModelItem
-    , follower : ViewModelItem
+    { cars : List ViewModelItem
     , interval : Duration
     , position : Int
     }
@@ -38,32 +37,78 @@ view viewModel =
 
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
-    viewModel
-        |> List.indexedMap (detectBattleForCar viewModel)
-        |> List.filterMap identity
-        |> List.sortBy .position
+    groupConsecutiveCloseCars viewModel
+        |> List.filter (\group -> List.length group >= 2)
+        |> List.map createCloseBattle
 
 
-detectBattleForCar : ViewModel -> Int -> ViewModelItem -> Maybe CloseBattle
-detectBattleForCar viewModel index car =
-    case car.timing.interval of
-        Gap.Seconds duration ->
-            if duration <= 1500 then
-                List.Extra.getAt (index - 1) viewModel
-                    |> Maybe.map
-                        (\leader ->
-                            { leader = leader
-                            , follower = car
-                            , interval = duration
-                            , position = car.position
-                            }
-                        )
+groupConsecutiveCloseCars : ViewModel -> List (List ViewModelItem)
+groupConsecutiveCloseCars viewModel =
+    let
+        isCloseToNext current =
+            case current.timing.interval of
+                Gap.Seconds duration ->
+                    duration <= 1500
 
-            else
-                Nothing
+                _ ->
+                    False
 
-        _ ->
-            Nothing
+        groupCars cars =
+            case cars of
+                [] ->
+                    []
+
+                first :: rest ->
+                    let
+                        ( group, remaining ) =
+                            takeWhileClose first rest []
+                    in
+                    (first :: group) :: groupCars remaining
+
+        takeWhileClose _ remaining acc =
+            case remaining of
+                [] ->
+                    ( List.reverse acc, [] )
+
+                next :: rest ->
+                    if isCloseToNext next then
+                        takeWhileClose next rest (next :: acc)
+
+                    else
+                        ( List.reverse acc, remaining )
+    in
+    groupCars viewModel
+
+
+createCloseBattle : List ViewModelItem -> CloseBattle
+createCloseBattle cars =
+    let
+        firstCar =
+            List.head cars
+
+        lastCar =
+            List.Extra.last cars
+
+        interval =
+            case ( firstCar, lastCar ) of
+                ( Just _, Just last ) ->
+                    case last.timing.interval of
+                        Gap.Seconds duration ->
+                            duration
+
+                        _ ->
+                            0
+
+                _ ->
+                    0
+
+        position =
+            firstCar |> Maybe.map .position |> Maybe.withDefault 1
+    in
+    { cars = cars
+    , interval = interval
+    , position = position
+    }
 
 
 contentView : List CloseBattle -> Html msg
@@ -78,7 +123,7 @@ contentView closeBattlePairs =
 
 
 closeBattleItem : CloseBattle -> Html msg
-closeBattleItem { leader, follower, interval } =
+closeBattleItem { cars, interval } =
     div
         [ css
             [ property "display" "grid"
@@ -89,13 +134,19 @@ closeBattleItem { leader, follower, interval } =
                 [ borderTop3 (px 1) solid (hsl 0 0 0.4) ]
             ]
         ]
-        [ battleHeaderView leader follower interval
-        , lapTimeComparison leader follower
+        [ battleHeaderView cars interval
+        , lapTimeComparison cars
         ]
 
 
-battleHeaderView : ViewModelItem -> ViewModelItem -> Duration -> Html msg
-battleHeaderView a b interval =
+battleHeaderView : List ViewModelItem -> Duration -> Html msg
+battleHeaderView cars interval =
+    let
+        carNumbers =
+            cars
+                |> List.map (.metaData >> .carNumber)
+                |> String.join " - "
+    in
     div
         [ css
             [ displayFlex
@@ -104,24 +155,39 @@ battleHeaderView a b interval =
             ]
         ]
         [ div [ css [ fontSize (px 14), fontWeight bold, color (hsl 0 0 0.9) ] ]
-            [ text ("#" ++ a.metaData.carNumber ++ " vs #" ++ b.metaData.carNumber) ]
+            [ text carNumbers ]
         , div [ css [ fontSize (px 12), fontWeight bold ] ]
             [ text ("+" ++ Duration.toString interval) ]
         ]
 
 
-lapTimeComparison : ViewModelItem -> ViewModelItem -> Html msg
-lapTimeComparison carA carB =
+lapTimeComparison : List ViewModelItem -> Html msg
+lapTimeComparison cars =
     let
-        recentLapsPair =
-            List.Extra.zip carA.history carB.history
-                |> List.reverse
-                |> List.take 4
-                |> List.reverse
-                |> List.unzip
+        allRecentLaps =
+            let
+                leaderLapNumbers =
+                    cars
+                        |> List.head
+                        |> Maybe.map (.history >> List.reverse >> List.take 4 >> List.reverse >> List.map .lap)
+                        |> Maybe.withDefault []
+            in
+            cars
+                |> List.map
+                    (\car ->
+                        car.history
+                            |> List.filterMap
+                                (\lap ->
+                                    if List.member lap.lap leaderLapNumbers then
+                                        Just lap
 
-        ( lapsA, lapsB ) =
-            recentLapsPair
+                                    else
+                                        Nothing
+                                )
+                    )
+
+        headerLaps =
+            List.head allRecentLaps |> Maybe.withDefault []
     in
     Html.table
         [ css
@@ -142,48 +208,74 @@ lapTimeComparison carA carB =
         [ Html.thead []
             [ Html.tr []
                 (Html.th [] []
-                    :: List.map (\lap -> Html.th [] [ text ("Lap " ++ String.fromInt lap.lap) ]) lapsA
+                    :: List.map (\lap -> Html.th [] [ text ("Lap " ++ String.fromInt lap.lap) ]) headerLaps
                 )
             ]
         , Html.tbody []
-            [ carTimeRow carA.metaData.carNumber lapsA lapsB False
-            , carTimeRow carB.metaData.carNumber lapsB lapsA True
-            ]
+            (List.map2 (\car recentLaps -> carTimeRow car.metaData.carNumber recentLaps allRecentLaps) cars allRecentLaps)
         ]
 
 
-carTimeRow : String -> List Lap -> List Lap -> Bool -> Html msg
-carTimeRow carNumber carA carB showDifference =
+carTimeRow : String -> List Lap -> List (List Lap) -> Html msg
+carTimeRow carNumber carLaps allCarsLaps =
+    let
+        lapCells =
+            List.indexedMap
+                (\lapIndex lap ->
+                    let
+                        allTimesForThisLap =
+                            allCarsLaps
+                                |> List.filterMap (List.Extra.getAt lapIndex)
+                                |> List.map .time
+
+                        groupLeaderTime =
+                            allCarsLaps
+                                |> List.head
+                                |> Maybe.andThen (List.Extra.getAt lapIndex)
+                                |> Maybe.map .time
+
+                        isFastest =
+                            allTimesForThisLap
+                                |> List.minimum
+                                |> Maybe.map (\fastest -> lap.time == fastest)
+                                |> Maybe.withDefault False
+                    in
+                    Html.td [] [ lapTimeCell lap isFastest groupLeaderTime ]
+                )
+                carLaps
+    in
     Html.tr [ css [ children [ Css.Global.td [ padding zero ] ] ] ]
-        (Html.th [ css [ width (px 40) ] ] [ text ("#" ++ carNumber) ]
-            :: List.map2 (\lapA lapB -> Html.td [] [ lapTimeCell showDifference lapA lapB ]) carA carB
-        )
+        (Html.th [ css [ width (px 40) ] ] [ text ("#" ++ carNumber) ] :: lapCells)
 
 
-lapTimeCell : Bool -> Lap -> Lap -> Html msg
-lapTimeCell showDifference lapA lapB =
+lapTimeCell : Lap -> Bool -> Maybe Duration -> Html msg
+lapTimeCell lap isFastest groupLeaderTime =
     let
         cellBackgroundColor =
-            if lapA.time < lapB.time then
+            if isFastest then
                 hsl 120 0.7 0.4
 
             else
                 hsl 0 0 0.4
 
         displayText =
-            if showDifference then
-                let
-                    difference =
-                        lapA.time - lapB.time
-                in
-                if difference >= 0 then
-                    "+" ++ Duration.toString difference
+            case groupLeaderTime of
+                Just leaderTime ->
+                    let
+                        difference =
+                            lap.time - leaderTime
+                    in
+                    if difference == 0 then
+                        Duration.toString lap.time
 
-                else
-                    "-" ++ Duration.toString (abs difference)
+                    else if difference > 0 then
+                        "+" ++ Duration.toString difference
 
-            else
-                Duration.toString lapA.time
+                    else
+                        "-" ++ Duration.toString (abs difference)
+
+                Nothing ->
+                    Duration.toString lap.time
     in
     div
         [ css
