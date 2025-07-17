@@ -1,4 +1,14 @@
-module Motorsport.Widget.CloseBattles exposing (view)
+module Motorsport.Widget.CloseBattles exposing
+    ( view
+    , detectCloseBattles, groupConsecutiveCloseCars
+    )
+
+{-|
+
+@docs view
+@docs detectCloseBattles, groupConsecutiveCloseCars
+
+-}
 
 import Css exposing (..)
 import Css.Global exposing (children, descendants)
