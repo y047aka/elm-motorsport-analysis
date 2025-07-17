@@ -61,17 +61,17 @@ w =
 
 h : Float
 h =
-    180
+    140
 
 
 padding : Float
 padding =
-    15
+    5
 
 
 paddingLeft : Float
 paddingLeft =
-    padding + 35
+    padding + 45
 
 
 paddingBottom : Float
@@ -378,7 +378,6 @@ battleChart clock cars =
             [ InPx.width w
             , InPx.height h
             , TSA.viewBox 0 0 w h
-            , css [ Css.marginBottom (px 10) ]
             ]
             ([ xAxis allGapPoints
              , yAxis allGapPoints
