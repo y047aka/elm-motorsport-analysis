@@ -366,7 +366,7 @@ analysisWidgets { clock } analysis viewModel =
         [ BestLapTimesWidget.view analysis viewModel
         , LapTimeProgressionWidget.view clock viewModel
         , PositionProgressionWidget.view clock viewModel
-        , CloseBattlesWidget.view viewModel
+        , CloseBattlesWidget.view clock viewModel
         ]
 
 
