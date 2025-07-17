@@ -1,12 +1,12 @@
 module Motorsport.Widget.CloseBattles exposing
     ( view
-    , detectCloseBattles, groupConsecutiveCloseCars
+    , groupConsecutiveCloseCars
     )
 
 {-|
 
 @docs view
-@docs detectCloseBattles, groupConsecutiveCloseCars
+@docs groupConsecutiveCloseCars
 
 -}
 
@@ -47,7 +47,6 @@ view viewModel =
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
     groupConsecutiveCloseCars viewModel
-        |> List.filter (\group -> List.length group >= 2)
         |> List.map createCloseBattle
 
 
@@ -70,36 +69,22 @@ groupConsecutiveCloseCars viewModel =
                 first :: rest ->
                     let
                         ( group, remaining ) =
-                            takeWhileClose first rest []
+                            List.Extra.span isCloseToNext rest
                     in
                     (first :: group) :: groupCars remaining
-
-        takeWhileClose _ remaining acc =
-            case remaining of
-                [] ->
-                    ( List.reverse acc, [] )
-
-                next :: rest ->
-                    if isCloseToNext next then
-                        takeWhileClose next rest (next :: acc)
-
-                    else
-                        ( List.reverse acc, remaining )
     in
-    groupCars viewModel
+    viewModel
+        |> groupCars
+        |> List.filter (\group -> List.length group >= 2)
 
 
 createCloseBattle : List ViewModelItem -> CloseBattle
 createCloseBattle cars =
-    let
-        firstCar =
-            List.head cars
-
-        position =
-            firstCar |> Maybe.map .position |> Maybe.withDefault 1
-    in
     { cars = cars
-    , position = position
+    , position =
+        List.head cars
+            |> Maybe.map .position
+            |> Maybe.withDefault 1
     }
 
 
