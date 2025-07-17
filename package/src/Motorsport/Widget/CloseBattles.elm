@@ -14,7 +14,6 @@ import Motorsport.Widget as Widget
 
 type alias CloseBattle =
     { cars : List ViewModelItem
-    , interval : Duration
     , position : Int
     }
 
@@ -86,27 +85,10 @@ createCloseBattle cars =
         firstCar =
             List.head cars
 
-        lastCar =
-            List.Extra.last cars
-
-        interval =
-            case ( firstCar, lastCar ) of
-                ( Just _, Just last ) ->
-                    case last.timing.interval of
-                        Gap.Seconds duration ->
-                            duration
-
-                        _ ->
-                            0
-
-                _ ->
-                    0
-
         position =
             firstCar |> Maybe.map .position |> Maybe.withDefault 1
     in
     { cars = cars
-    , interval = interval
     , position = position
     }
 
@@ -123,7 +105,7 @@ contentView closeBattlePairs =
 
 
 closeBattleItem : CloseBattle -> Html msg
-closeBattleItem { cars, interval } =
+closeBattleItem { cars } =
     div
         [ css
             [ property "display" "grid"
@@ -134,13 +116,13 @@ closeBattleItem { cars, interval } =
                 [ borderTop3 (px 1) solid (hsl 0 0 0.4) ]
             ]
         ]
-        [ battleHeaderView cars interval
+        [ battleHeaderView cars
         , lapTimeComparison cars
         ]
 
 
-battleHeaderView : List ViewModelItem -> Duration -> Html msg
-battleHeaderView cars interval =
+battleHeaderView : List ViewModelItem -> Html msg
+battleHeaderView cars =
     let
         carNumbers =
             cars
@@ -156,8 +138,6 @@ battleHeaderView cars interval =
         ]
         [ div [ css [ fontSize (px 14), fontWeight bold, color (hsl 0 0 0.9) ] ]
             [ text carNumbers ]
-        , div [ css [ fontSize (px 12), fontWeight bold ] ]
-            [ text ("+" ++ Duration.toString interval) ]
         ]
 
 
@@ -169,7 +149,7 @@ lapTimeComparison cars =
                 leaderLapNumbers =
                     cars
                         |> List.head
-                        |> Maybe.map (.history >> List.reverse >> List.take 4 >> List.reverse >> List.map .lap)
+                        |> Maybe.map (.history >> List.reverse >> List.take 3 >> List.reverse >> List.map .lap)
                         |> Maybe.withDefault []
             in
             cars
@@ -208,16 +188,17 @@ lapTimeComparison cars =
         [ Html.thead []
             [ Html.tr []
                 (Html.th [] []
+                    :: Html.th [] [ text "Interval" ]
                     :: List.map (\lap -> Html.th [] [ text ("Lap " ++ String.fromInt lap.lap) ]) headerLaps
                 )
             ]
         , Html.tbody []
-            (List.map2 (\car recentLaps -> carTimeRow car.metaData.carNumber recentLaps allRecentLaps) cars allRecentLaps)
+            (List.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps)
         ]
 
 
-carTimeRow : String -> List Lap -> List (List Lap) -> Html msg
-carTimeRow carNumber carLaps allCarsLaps =
+carTimeRow : ViewModelItem -> List Lap -> List (List Lap) -> Html msg
+carTimeRow car carLaps allCarsLaps =
     let
         lapCells =
             List.indexedMap
@@ -243,9 +224,29 @@ carTimeRow carNumber carLaps allCarsLaps =
                     Html.td [] [ lapTimeCell lap isFastest groupLeaderTime ]
                 )
                 carLaps
+
+        intervalCell =
+            Html.td []
+                [ div
+                    [ css
+                        [ padding (px 4)
+                        , borderRadius (px 4)
+                        , textAlign center
+                        , fontSize (px 10)
+                        , fontWeight bold
+                        , letterSpacing (px 0.3)
+                        , backgroundColor (hsl 0 0 0.25)
+                        , color (hsl 0 0 1)
+                        ]
+                    ]
+                    [ text (Gap.toString car.timing.interval) ]
+                ]
     in
     Html.tr [ css [ children [ Css.Global.td [ padding zero ] ] ] ]
-        (Html.th [ css [ width (px 40) ] ] [ text ("#" ++ carNumber) ] :: lapCells)
+        (Html.th [ css [ width (px 25) ] ] [ text car.metaData.carNumber ]
+            :: intervalCell
+            :: lapCells
+        )
 
 
 lapTimeCell : Lap -> Bool -> Maybe Duration -> Html msg
