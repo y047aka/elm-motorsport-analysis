@@ -47,6 +47,13 @@ type alias CarProgressionData =
     }
 
 
+type alias CarGapData =
+    { carNumber : String
+    , gapData : List { elapsed : Int, gap : Int }
+    , color : Color.Color
+    }
+
+
 w : Float
 w =
     320
@@ -357,10 +364,13 @@ battleChart clock cars =
                     )
                 |> List.filter (\car -> List.length car.laps >= 2)
 
-        allLaps =
-            List.concatMap .laps carProgressionData
+        carGapData =
+            calculateGapData carProgressionData
+
+        allGapPoints =
+            List.concatMap .gapData carGapData
     in
-    if List.isEmpty carProgressionData then
+    if List.isEmpty carGapData then
         div [] []
 
     else
@@ -370,71 +380,55 @@ battleChart clock cars =
             , TSA.viewBox 0 0 w h
             , css [ Css.marginBottom (px 10) ]
             ]
-            ([ xAxis allLaps
-             , yAxis allLaps
+            ([ xAxis allGapPoints
+             , yAxis allGapPoints
              ]
-                ++ renderBattleProgressionLines carProgressionData
+                ++ renderBattleGapLines carGapData
             )
 
 
-extractLapDataForCar : Clock.Model -> List Lap -> List Lap
-extractLapDataForCar clock laps =
+calculateGapData : List CarProgressionData -> List CarGapData
+calculateGapData carProgressionData =
     let
-        currentRaceTime =
-            Clock.getElapsed clock
+        leaderData =
+            carProgressionData
+                |> List.head
+                |> Maybe.map .laps
+                |> Maybe.withDefault []
 
-        timeThreshold =
-            currentRaceTime - (60 * 60 * 1000)
+        calculateGapForCar car =
+            let
+                gapData =
+                    car.laps
+                        |> List.map
+                            (\lap ->
+                                let
+                                    leaderLapAtSameTime =
+                                        leaderData
+                                            |> List.Extra.find (\leaderLap -> leaderLap.lap == lap.lap)
+                                            |> Maybe.map .elapsed
+                                            |> Maybe.withDefault lap.elapsed
+
+                                    gap =
+                                        lap.elapsed - leaderLapAtSameTime
+                                in
+                                { elapsed = lap.elapsed, gap = gap }
+                            )
+            in
+            { carNumber = car.carNumber
+            , gapData = gapData
+            , color = car.color
+            }
     in
-    laps
-        |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
+    carProgressionData
+        |> List.map calculateGapForCar
 
 
-filterOutlierLaps : List Lap -> List Lap
-filterOutlierLaps laps =
-    let
-        fastestTime =
-            laps
-                |> List.map .time
-                |> List.minimum
-                |> Maybe.withDefault 999999
-
-        threshold =
-            toFloat fastestTime * 1.1 |> Basics.round
-    in
-    laps
-        |> List.filter (\lap -> lap.time <= threshold)
-
-
-generateCarColor : String -> Color.Color
-generateCarColor carNumber =
-    let
-        carHash =
-            String.toInt carNumber |> Maybe.withDefault 0
-
-        ( hue, saturation, lightness ) =
-            ( carHash * 37 |> modBy 360 |> toFloat
-            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
-            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
-            )
-    in
-    Color.hsl (hue / 360) saturation lightness
-
-
-colorToCss : Color.Color -> Css.Color
-colorToCss color =
-    let
-        rgba =
-            Color.toRgba color
-    in
-    Css.rgba (Basics.round (rgba.red * 255)) (Basics.round (rgba.green * 255)) (Basics.round (rgba.blue * 255)) rgba.alpha
-
-
-xScale : List Lap -> ContinuousScale Float
-xScale laps =
+xScale : List { elapsed : Int, gap : Int } -> ContinuousScale Float
+xScale gapPoints =
     let
         ( minTime, maxTime ) =
-            laps
+            gapPoints
                 |> List.map .elapsed
                 |> (\ts ->
                         ( List.minimum ts |> Maybe.withDefault 0
@@ -445,32 +439,31 @@ xScale laps =
     Scale.linear ( paddingLeft, w - padding ) ( toFloat minTime, toFloat maxTime )
 
 
-yScale : List Lap -> ContinuousScale Float
-yScale laps =
+yScale : List { elapsed : Int, gap : Int } -> ContinuousScale Float
+yScale gapPoints =
     let
-        ( minTime, maxTime ) =
-            laps
-                |> filterOutlierLaps
-                |> List.map .time
-                |> (\ts ->
-                        ( List.minimum ts |> Maybe.withDefault 0 |> toFloat
-                        , List.maximum ts |> Maybe.withDefault 0 |> toFloat
+        ( minGap, maxGap ) =
+            gapPoints
+                |> List.map .gap
+                |> (\gaps ->
+                        ( List.minimum gaps |> Maybe.withDefault 0 |> toFloat
+                        , List.maximum gaps |> Maybe.withDefault 0 |> toFloat
                         )
                    )
 
         padding_y =
-            (maxTime - minTime) * 0.1
+            max 1000.0 ((maxGap - minGap) * 0.1)
 
         ( adjustedMin, adjustedMax ) =
-            ( minTime - padding_y
-            , maxTime + padding_y
+            ( minGap - padding_y
+            , maxGap + padding_y
             )
     in
-    Scale.linear ( h - paddingBottom, padding ) ( adjustedMin, adjustedMax )
+    Scale.linear ( h - paddingBottom, padding ) ( adjustedMax, adjustedMin )
 
 
-xAxis : List Lap -> Svg msg
-xAxis laps =
+xAxis : List { elapsed : Int, gap : Int } -> Svg msg
+xAxis gapPoints =
     let
         axis =
             fromUnstyled <|
@@ -480,7 +473,7 @@ xAxis laps =
                     , tickSizeInner 3
                     , tickFormat (Basics.round >> Duration.toString)
                     ]
-                    (xScale laps)
+                    (xScale gapPoints)
     in
     g
         [ SvgAttr.css
@@ -503,8 +496,8 @@ xAxis laps =
         [ axis ]
 
 
-yAxis : List Lap -> Svg msg
-yAxis laps =
+yAxis : List { elapsed : Int, gap : Int } -> Svg msg
+yAxis gapPoints =
     let
         axis =
             fromUnstyled <|
@@ -514,7 +507,7 @@ yAxis laps =
                     , tickSizeInner 5
                     , tickFormat (Basics.round >> Duration.toString)
                     ]
-                    (yScale laps)
+                    (yScale gapPoints)
     in
     g
         [ SvgAttr.css
@@ -537,25 +530,29 @@ yAxis laps =
         [ axis ]
 
 
-renderBattleProgressionLines : List CarProgressionData -> List (Svg msg)
-renderBattleProgressionLines cars =
-    cars
-        |> List.concatMap (renderCarProgressionLine (List.concatMap .laps cars))
+renderBattleGapLines : List CarGapData -> List (Svg msg)
+renderBattleGapLines carGapData =
+    let
+        allGapPoints =
+            List.concatMap .gapData carGapData
+    in
+    carGapData
+        |> List.concatMap (renderCarGapLine allGapPoints)
 
 
-renderCarProgressionLine : List Lap -> CarProgressionData -> List (Svg msg)
-renderCarProgressionLine laps carData =
+renderCarGapLine : List { elapsed : Int, gap : Int } -> CarGapData -> List (Svg msg)
+renderCarGapLine allGapPoints carData =
     let
         dataPoints =
-            carData.laps
+            carData.gapData
                 |> List.map
-                    (\{ time, elapsed } ->
+                    (\{ elapsed, gap } ->
                         ( elapsed
                             |> toFloat
-                            |> Scale.convert (xScale laps)
-                        , time
+                            |> Scale.convert (xScale allGapPoints)
+                        , gap
                             |> toFloat
-                            |> Scale.convert (yScale laps)
+                            |> Scale.convert (yScale allGapPoints)
                         )
                     )
 
@@ -587,3 +584,40 @@ renderCarProgressionLine laps carData =
         , SvgAttr.strokeOpacity "0.5"
         ]
         :: points
+
+
+extractLapDataForCar : Clock.Model -> List Lap -> List Lap
+extractLapDataForCar clock laps =
+    let
+        currentRaceTime =
+            Clock.getElapsed clock
+
+        timeThreshold =
+            currentRaceTime - (60 * 60 * 1000)
+    in
+    laps
+        |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
+
+
+generateCarColor : String -> Color.Color
+generateCarColor carNumber =
+    let
+        carHash =
+            String.toInt carNumber |> Maybe.withDefault 0
+
+        ( hue, saturation, lightness ) =
+            ( carHash * 37 |> modBy 360 |> toFloat
+            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
+            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
+            )
+    in
+    Color.hsl (hue / 360) saturation lightness
+
+
+colorToCss : Color.Color -> Css.Color
+colorToCss color =
+    let
+        rgba =
+            Color.toRgba color
+    in
+    Css.rgba (Basics.round (rgba.red * 255)) (Basics.round (rgba.green * 255)) (Basics.round (rgba.blue * 255)) rgba.alpha
