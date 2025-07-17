@@ -49,7 +49,7 @@ type alias CarProgressionData =
 
 type alias CarGapData =
     { carNumber : String
-    , gapData : List { elapsed : Int, gap : Int }
+    , gapData : List { lap : Int, gap : Int }
     , color : Color.Color
     }
 
@@ -412,7 +412,7 @@ calculateGapData carProgressionData =
                                     gap =
                                         lap.elapsed - leaderLapAtSameTime
                                 in
-                                { elapsed = lap.elapsed, gap = gap }
+                                { lap = lap.lap, gap = gap }
                             )
             in
             { carNumber = car.carNumber
@@ -424,22 +424,22 @@ calculateGapData carProgressionData =
         |> List.map calculateGapForCar
 
 
-xScale : List { elapsed : Int, gap : Int } -> ContinuousScale Float
+xScale : List { lap : Int, gap : Int } -> ContinuousScale Float
 xScale gapPoints =
     let
-        ( minTime, maxTime ) =
+        ( minLap, maxLap ) =
             gapPoints
-                |> List.map .elapsed
-                |> (\ts ->
-                        ( List.minimum ts |> Maybe.withDefault 0
-                        , List.maximum ts |> Maybe.withDefault 0
+                |> List.map .lap
+                |> (\laps ->
+                        ( List.minimum laps |> Maybe.withDefault 1
+                        , List.maximum laps |> Maybe.withDefault 1
                         )
                    )
     in
-    Scale.linear ( paddingLeft, w - padding ) ( toFloat minTime, toFloat maxTime )
+    Scale.linear ( paddingLeft, w - padding ) ( toFloat minLap, toFloat maxLap )
 
 
-yScale : List { elapsed : Int, gap : Int } -> ContinuousScale Float
+yScale : List { lap : Int, gap : Int } -> ContinuousScale Float
 yScale gapPoints =
     let
         ( minGap, maxGap ) =
@@ -462,7 +462,7 @@ yScale gapPoints =
     Scale.linear ( h - paddingBottom, padding ) ( adjustedMax, adjustedMin )
 
 
-xAxis : List { elapsed : Int, gap : Int } -> Svg msg
+xAxis : List { lap : Int, gap : Int } -> Svg msg
 xAxis gapPoints =
     let
         axis =
@@ -471,7 +471,7 @@ xAxis gapPoints =
                     [ tickCount 4
                     , tickSizeOuter 0
                     , tickSizeInner 3
-                    , tickFormat (Basics.round >> Duration.toString)
+                    , tickFormat (Basics.round >> String.fromInt)
                     ]
                     (xScale gapPoints)
     in
@@ -496,7 +496,7 @@ xAxis gapPoints =
         [ axis ]
 
 
-yAxis : List { elapsed : Int, gap : Int } -> Svg msg
+yAxis : List { lap : Int, gap : Int } -> Svg msg
 yAxis gapPoints =
     let
         axis =
@@ -540,14 +540,14 @@ renderBattleGapLines carGapData =
         |> List.concatMap (renderCarGapLine allGapPoints)
 
 
-renderCarGapLine : List { elapsed : Int, gap : Int } -> CarGapData -> List (Svg msg)
+renderCarGapLine : List { lap : Int, gap : Int } -> CarGapData -> List (Svg msg)
 renderCarGapLine allGapPoints carData =
     let
         dataPoints =
             carData.gapData
                 |> List.map
-                    (\{ elapsed, gap } ->
-                        ( elapsed
+                    (\{ lap, gap } ->
+                        ( lap
                             |> toFloat
                             |> Scale.convert (xScale allGapPoints)
                         , gap
