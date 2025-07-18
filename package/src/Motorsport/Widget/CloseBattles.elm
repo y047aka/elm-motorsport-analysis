@@ -412,19 +412,21 @@ calculateGapData carProgressionData =
 
         calculateAverageElapsedForLap lapNumber =
             let
-                minLapNumber =
+                maxLapNumber =
                     allLaps
-                        |> List.Extra.minimumBy .lap
+                        |> List.Extra.maximumBy .lap
                         |> Maybe.map .lap
                         |> Maybe.withDefault 1
 
-                baseElapsed =
-                    allLaps
-                        |> List.Extra.minimumBy .elapsed
+                latestLeaderElapsed =
+                    carProgressionData
+                        |> List.head
+                        |> Maybe.map .laps
+                        |> Maybe.andThen (List.Extra.maximumBy .lap)
                         |> Maybe.map .elapsed
                         |> Maybe.withDefault 0
             in
-            baseElapsed + (averageLapTime * (lapNumber - minLapNumber))
+            latestLeaderElapsed - (averageLapTime * (maxLapNumber - lapNumber))
 
         calculateGapForCar car =
             let
