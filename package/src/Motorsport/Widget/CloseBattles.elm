@@ -389,11 +389,42 @@ battleChart clock cars =
 calculateGapData : List CarProgressionData -> List CarGapData
 calculateGapData carProgressionData =
     let
-        leaderData =
+        allLaps =
             carProgressionData
-                |> List.head
-                |> Maybe.map .laps
-                |> Maybe.withDefault []
+                |> List.concatMap .laps
+
+        fastestLapTime =
+            allLaps
+                |> List.Extra.minimumBy .time
+                |> Maybe.map .time
+                |> Maybe.withDefault 0
+
+        fastestPlusSevenPercent =
+            (toFloat fastestLapTime * 1.07) |> round
+
+        averageLapTime =
+            allLaps
+                |> List.filter (\lap -> lap.time < fastestPlusSevenPercent)
+                |> List.map (.time >> toFloat)
+                |> average
+                |> Maybe.withDefault 0
+                |> round
+
+        calculateAverageElapsedForLap lapNumber =
+            let
+                minLapNumber =
+                    allLaps
+                        |> List.Extra.minimumBy .lap
+                        |> Maybe.map .lap
+                        |> Maybe.withDefault 1
+
+                baseElapsed =
+                    allLaps
+                        |> List.Extra.minimumBy .elapsed
+                        |> Maybe.map .elapsed
+                        |> Maybe.withDefault 0
+            in
+            baseElapsed + (averageLapTime * (lapNumber - minLapNumber))
 
         calculateGapForCar car =
             let
@@ -402,14 +433,11 @@ calculateGapData carProgressionData =
                         |> List.map
                             (\lap ->
                                 let
-                                    leaderLapAtSameTime =
-                                        leaderData
-                                            |> List.Extra.find (\leaderLap -> leaderLap.lap == lap.lap)
-                                            |> Maybe.map .elapsed
-                                            |> Maybe.withDefault lap.elapsed
+                                    averageElapsedAtThisLap =
+                                        calculateAverageElapsedForLap lap.lap
 
                                     gap =
-                                        lap.elapsed - leaderLapAtSameTime
+                                        lap.elapsed - averageElapsedAtThisLap
                                 in
                                 { lap = lap.lap, gap = gap }
                             )
@@ -421,6 +449,16 @@ calculateGapData carProgressionData =
     in
     carProgressionData
         |> List.map calculateGapForCar
+
+
+average : List Float -> Maybe Float
+average values =
+    case values of
+        [] ->
+            Nothing
+
+        _ ->
+            Just (List.sum values / toFloat (List.length values))
 
 
 xScale : List { lap : Int, gap : Int } -> ContinuousScale Float
