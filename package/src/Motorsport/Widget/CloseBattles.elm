@@ -633,7 +633,7 @@ extractLapDataForCar clock laps =
             Clock.getElapsed clock
 
         timeThreshold =
-            currentRaceTime - (60 * 60 * 1000)
+            currentRaceTime - (30 * 60 * 1000)
     in
     laps
         |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
