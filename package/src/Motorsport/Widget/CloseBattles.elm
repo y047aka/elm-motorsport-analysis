@@ -443,6 +443,7 @@ yScale gapPoints =
     let
         ( minGap, maxGap ) =
             gapPoints
+                |> List.filter (\{ gap } -> -50000 <= gap && gap <= 50000)
                 |> List.map .gap
                 |> (\gaps ->
                         ( List.minimum gaps |> Maybe.withDefault 0 |> toFloat
