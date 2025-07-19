@@ -1,14 +1,4 @@
-module Motorsport.Widget.CloseBattles exposing
-    ( view
-    , groupConsecutiveCloseCars
-    )
-
-{-|
-
-@docs view
-@docs groupConsecutiveCloseCars
-
--}
+module Motorsport.Widget.CloseBattles exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Color
@@ -21,7 +11,7 @@ import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -101,36 +91,8 @@ view viewModel =
 
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
-    groupConsecutiveCloseCars viewModel
+    ViewModel.groupConsecutiveCloseCars viewModel
         |> List.map createCloseBattle
-
-
-groupConsecutiveCloseCars : ViewModel -> List (List ViewModelItem)
-groupConsecutiveCloseCars viewModel =
-    let
-        isCloseToNext current =
-            case current.timing.interval of
-                Gap.Seconds duration ->
-                    duration <= 1500
-
-                _ ->
-                    False
-
-        groupCars cars =
-            case cars of
-                [] ->
-                    []
-
-                first :: rest ->
-                    let
-                        ( group, remaining ) =
-                            List.Extra.span isCloseToNext rest
-                    in
-                    (first :: group) :: groupCars remaining
-    in
-    viewModel
-        |> groupCars
-        |> List.filter (\group -> List.length group >= 2)
 
 
 createCloseBattle : List ViewModelItem -> CloseBattle
@@ -183,7 +145,7 @@ lapTimeComparison : List ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
-            List.map (\car -> getRecentLapsMatchingLeader 3 cars car.history) cars
+            List.map (\car -> ViewModel.getRecentLapsMatchingLeader 3 cars car.history) cars
 
         headerLaps =
             List.head allRecentLaps |> Maybe.withDefault []
@@ -214,30 +176,6 @@ lapTimeComparison cars =
         , Html.tbody []
             (List.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps)
         ]
-
-
-getRecentLapsMatchingLeader : Int -> List ViewModelItem -> List Lap -> List Lap
-getRecentLapsMatchingLeader n cars targetLaps =
-    let
-        leaderHistory =
-            List.head cars
-                |> Maybe.map .history
-                |> Maybe.withDefault []
-
-        ( leaderMaxLap, targetMaxLap ) =
-            ( getMaximumLapNumber leaderHistory, getMaximumLapNumber targetLaps )
-
-        getMaximumLapNumber =
-            List.Extra.maximumBy .lap >> Maybe.map .lap >> Maybe.withDefault 0
-    in
-    targetLaps
-        |> List.sortBy .lap
-        |> takeRight (n - (leaderMaxLap - targetMaxLap))
-
-
-takeRight : Int -> List a -> List a
-takeRight n list =
-    List.drop (List.length list - n) list
 
 
 carTimeRow : ViewModelItem -> List Lap -> List (List Lap) -> Html msg
@@ -344,7 +282,7 @@ battleChart cars =
                 |> List.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
-                        , laps = getRecentLapsMatchingLeader 10 cars car.history
+                        , laps = ViewModel.getRecentLapsMatchingLeader 10 cars car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )

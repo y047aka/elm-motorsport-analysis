@@ -1,4 +1,4 @@
-module Motorsport.Widget.CloseBattlesTest exposing (suite)
+module Motorsport.ViewModel.RaceControl.CloseBattlesTest exposing (suite)
 
 import Expect
 import Motorsport.Car exposing (Status(..))
@@ -6,8 +6,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
-import Motorsport.RaceControl.ViewModel exposing (MetaData, Timing, ViewModelItem)
-import Motorsport.Widget.CloseBattles as CloseBattles
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (MetaData, Timing, ViewModelItem)
 import Test exposing (Test, describe, test)
 
 
@@ -24,13 +23,12 @@ suite =
                             , createViewModelItem 3 "3" 1501 -- 1.501s - not close
                             ]
                     in
-                    CloseBattles.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupConsecutiveCloseCars viewModel
                         |> Expect.equal
                             [ [ createViewModelItem 1 "1" 1000
                               , createViewModelItem 2 "2" 1500
                               ]
                             ]
-
             , test "creates separate groups when gap is too large" <|
                 \_ ->
                     let
@@ -40,13 +38,12 @@ suite =
                             , createViewModelItem 3 "3" 1200 -- Continues Group 2
                             ]
                     in
-                    CloseBattles.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupConsecutiveCloseCars viewModel
                         |> Expect.equal
                             [ [ createViewModelItem 2 "2" 2000
                               , createViewModelItem 3 "3" 1200
                               ]
                             ]
-
             , test "handles non-Seconds gap types" <|
                 \_ ->
                     let
@@ -56,14 +53,15 @@ suite =
                             , createViewModelItemWithGap 3 "3" (Gap.Laps 1)
                             ]
                     in
-                    CloseBattles.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupConsecutiveCloseCars viewModel
                         |> Expect.equal []
-
             ]
         ]
 
 
+
 -- Helper functions for creating test data
+
 
 createViewModelItem : Int -> String -> Duration -> ViewModelItem
 createViewModelItem position carNumber interval =

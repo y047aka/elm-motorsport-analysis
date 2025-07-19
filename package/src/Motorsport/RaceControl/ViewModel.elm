@@ -2,6 +2,8 @@ module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
     , MetaData, Timing
     , init, init_metaData
+    , groupConsecutiveCloseCars
+    , getRecentLapsMatchingLeader
     )
 
 {-|
@@ -9,6 +11,9 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs ViewModel, ViewModelItem
 @docs MetaData, Timing
 @docs init, init_metaData
+
+@docs groupConsecutiveCloseCars
+@docs getRecentLapsMatchingLeader
 
 -}
 
@@ -160,3 +165,55 @@ positionsInClassByCarNumber cars =
                     |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
             )
         |> Dict.fromList
+
+
+groupConsecutiveCloseCars : ViewModel -> List (List ViewModelItem)
+groupConsecutiveCloseCars viewModel =
+    let
+        isCloseToNext current =
+            case current.timing.interval of
+                Gap.Seconds duration ->
+                    duration <= 1500
+
+                _ ->
+                    False
+
+        groupCars cars =
+            case cars of
+                [] ->
+                    []
+
+                first :: rest ->
+                    let
+                        ( group, remaining ) =
+                            List.Extra.span isCloseToNext rest
+                    in
+                    (first :: group) :: groupCars remaining
+    in
+    viewModel
+        |> groupCars
+        |> List.filter (\group -> List.length group >= 2)
+
+
+getRecentLapsMatchingLeader : Int -> ViewModel -> List Lap -> List Lap
+getRecentLapsMatchingLeader n viewModel targetLaps =
+    let
+        leaderHistory =
+            List.head viewModel
+                |> Maybe.map .history
+                |> Maybe.withDefault []
+
+        ( leaderMaxLap, targetMaxLap ) =
+            ( getMaximumLapNumber leaderHistory, getMaximumLapNumber targetLaps )
+
+        getMaximumLapNumber =
+            List.Extra.maximumBy .lap >> Maybe.map .lap >> Maybe.withDefault 0
+    in
+    targetLaps
+        |> List.sortBy .lap
+        |> takeRight (n - (leaderMaxLap - targetMaxLap))
+
+
+takeRight : Int -> List a -> List a
+takeRight n list =
+    List.drop (List.length list - n) list
