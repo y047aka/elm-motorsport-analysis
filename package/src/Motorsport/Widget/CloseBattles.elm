@@ -198,26 +198,7 @@ lapTimeComparison : List ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
-            let
-                leaderLapNumbers =
-                    cars
-                        |> List.head
-                        |> Maybe.map (.history >> List.reverse >> List.take 3 >> List.reverse >> List.map .lap)
-                        |> Maybe.withDefault []
-            in
-            cars
-                |> List.map
-                    (\car ->
-                        car.history
-                            |> List.filterMap
-                                (\lap ->
-                                    if List.member lap.lap leaderLapNumbers then
-                                        Just lap
-
-                                    else
-                                        Nothing
-                                )
-                    )
+            List.map (\car -> getRecentLapsMatchingLeader 3 cars car.history) cars
 
         headerLaps =
             List.head allRecentLaps |> Maybe.withDefault []
@@ -248,6 +229,30 @@ lapTimeComparison cars =
         , Html.tbody []
             (List.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps)
         ]
+
+
+getRecentLapsMatchingLeader : Int -> List ViewModelItem -> List Lap -> List Lap
+getRecentLapsMatchingLeader n cars targetLaps =
+    let
+        leaderHistory =
+            List.head cars
+                |> Maybe.map .history
+                |> Maybe.withDefault []
+
+        ( leaderMaxLap, targetMaxLap ) =
+            ( getMaximumLapNumber leaderHistory, getMaximumLapNumber targetLaps )
+
+        getMaximumLapNumber =
+            List.Extra.maximumBy .lap >> Maybe.map .lap >> Maybe.withDefault 0
+    in
+    targetLaps
+        |> List.sortBy .lap
+        |> takeRight (n - (leaderMaxLap - targetMaxLap))
+
+
+takeRight : Int -> List a -> List a
+takeRight n list =
+    List.drop (List.length list - n) list
 
 
 carTimeRow : ViewModelItem -> List Lap -> List (List Lap) -> Html msg
@@ -353,12 +358,8 @@ battleChart clock cars =
             cars
                 |> List.map
                     (\car ->
-                        let
-                            allLaps_ =
-                                extractLapDataForCar clock car.history
-                        in
                         { carNumber = car.metaData.carNumber
-                        , laps = allLaps_
+                        , laps = getRecentLapsMatchingLeader 10 cars car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )
@@ -624,19 +625,6 @@ renderCarGapLine allGapPoints carData =
         , SvgAttr.strokeOpacity "0.5"
         ]
         :: points
-
-
-extractLapDataForCar : Clock.Model -> List Lap -> List Lap
-extractLapDataForCar clock laps =
-    let
-        currentRaceTime =
-            Clock.getElapsed clock
-
-        timeThreshold =
-            currentRaceTime - (30 * 60 * 1000)
-    in
-    laps
-        |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
 
 
 generateCarColor : String -> Color.Color
