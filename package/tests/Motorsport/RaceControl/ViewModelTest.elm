@@ -1,4 +1,4 @@
-module Motorsport.ViewModel.RaceControl.CloseBattlesTest exposing (suite)
+module Motorsport.RaceControl.ViewModelTest exposing (suite)
 
 import Expect
 import Motorsport.Car exposing (Status(..))
@@ -13,7 +13,7 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "CloseBattles"
-        [ describe "groupConsecutiveCloseCars"
+        [ describe "groupCarsByCloseIntervals"
             [ test "groups cars with gaps <= 1.5 seconds" <|
                 \_ ->
                     let
@@ -23,7 +23,7 @@ suite =
                             , createViewModelItem 3 "3" 1501 -- 1.501s - not close
                             ]
                     in
-                    ViewModel.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal
                             [ [ createViewModelItem 1 "1" 1000
                               , createViewModelItem 2 "2" 1500
@@ -38,7 +38,7 @@ suite =
                             , createViewModelItem 3 "3" 1200 -- Continues Group 2
                             ]
                     in
-                    ViewModel.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal
                             [ [ createViewModelItem 2 "2" 2000
                               , createViewModelItem 3 "3" 1200
@@ -53,7 +53,7 @@ suite =
                             , createViewModelItemWithGap 3 "3" (Gap.Laps 1)
                             ]
                     in
-                    ViewModel.groupConsecutiveCloseCars viewModel
+                    ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal []
             ]
         ]
