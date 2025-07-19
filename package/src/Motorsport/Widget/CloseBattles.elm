@@ -91,7 +91,7 @@ view viewModel =
 
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
-    ViewModel.groupConsecutiveCloseCars viewModel
+    ViewModel.groupCarsByCloseIntervals viewModel
         |> List.map createCloseBattle
 
 

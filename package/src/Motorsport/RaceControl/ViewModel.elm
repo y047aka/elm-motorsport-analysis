@@ -3,7 +3,7 @@ module Motorsport.RaceControl.ViewModel exposing
     , MetaData, Timing
     , init, init_metaData
     , getLeadLapNumber
-    , groupConsecutiveCloseCars
+    , groupCarsByCloseIntervals
     , getRecentLaps
     )
 
@@ -14,7 +14,7 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs init, init_metaData
 
 @docs getLeadLapNumber
-@docs groupConsecutiveCloseCars
+@docs groupCarsByCloseIntervals
 @docs getRecentLaps
 
 -}
@@ -174,8 +174,8 @@ getLeadLapNumber vm =
     vm |> List.head |> Maybe.map .lap
 
 
-groupConsecutiveCloseCars : ViewModel -> List (List ViewModelItem)
-groupConsecutiveCloseCars viewModel =
+groupCarsByCloseIntervals : ViewModel -> List (List ViewModelItem)
+groupCarsByCloseIntervals vm =
     let
         isCloseToNext current =
             case current.timing.interval of
@@ -197,7 +197,7 @@ groupConsecutiveCloseCars viewModel =
                     in
                     (first :: group) :: groupCars remaining
     in
-    viewModel
+    vm
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 
