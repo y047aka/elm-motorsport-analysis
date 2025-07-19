@@ -80,7 +80,7 @@ view clock viewModel =
 
 processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData
 processClassProgressionData clock viewModel =
-    viewModel
+    viewModel.items
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map

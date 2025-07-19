@@ -17,11 +17,16 @@ suite =
             [ test "groups cars with gaps <= 1.5 seconds" <|
                 \_ ->
                     let
-                        viewModel =
+                        items =
                             [ createViewModelItem 1 "1" 1000 -- 1.0s - close
                             , createViewModelItem 2 "2" 1500 -- 1.5s - close (boundary)
                             , createViewModelItem 3 "3" 1501 -- 1.501s - not close
                             ]
+
+                        viewModel =
+                            { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
+                            , items = items
+                            }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal
@@ -32,11 +37,16 @@ suite =
             , test "creates separate groups when gap is too large" <|
                 \_ ->
                     let
-                        viewModel =
+                        items =
                             [ createViewModelItem 1 "1" 1000 -- Group 1
                             , createViewModelItem 2 "2" 2000 -- Gap too large, starts Group 2
                             , createViewModelItem 3 "3" 1200 -- Continues Group 2
                             ]
+
+                        viewModel =
+                            { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
+                            , items = items
+                            }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal
@@ -47,11 +57,16 @@ suite =
             , test "handles non-Seconds gap types" <|
                 \_ ->
                     let
-                        viewModel =
+                        items =
                             [ createViewModelItem 1 "1" 1000
                             , createViewModelItemWithGap 2 "2" Gap.None
                             , createViewModelItemWithGap 3 "3" (Gap.Laps 1)
                             ]
+
+                        viewModel =
+                            { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
+                            , items = items
+                            }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
                         |> Expect.equal []

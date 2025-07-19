@@ -32,7 +32,9 @@ import Motorsport.RaceControl as RaceControl
 
 
 type alias ViewModel =
-    List ViewModelItem
+    { leadLapNumber : Int
+    , items : List ViewModelItem
+    }
 
 
 type alias ViewModelItem =
@@ -66,41 +68,46 @@ type alias Timing =
 
 
 init : RaceControl.Model -> ViewModel
-init { clock, cars } =
+init { clock, lapCount, cars } =
     let
         positionsInClass =
             positionsInClassByCarNumber cars
-    in
-    cars
-        |> List.indexedMap
-            (\index car ->
-                let
-                    raceClock =
-                        { elapsed = Clock.getElapsed clock }
 
-                    positionInClass =
-                        Dict.get car.metaData.carNumber positionsInClass
-                            |> Maybe.withDefault 1
+        items =
+            cars
+                |> List.indexedMap
+                    (\index car ->
+                        let
+                            raceClock =
+                                { elapsed = Clock.getElapsed clock }
 
-                    lastLap =
-                        Maybe.withDefault Lap.empty car.lastLap
-                in
-                { position = index + 1
-                , positionInClass = positionInClass
-                , status = car.status
-                , metaData = init_metaData car lastLap
-                , lap = lastLap.lap
-                , timing =
-                    init_timing clock
-                        { leader = List.head cars
-                        , rival = List.Extra.getAt (index - 1) cars
+                            positionInClass =
+                                Dict.get car.metaData.carNumber positionsInClass
+                                    |> Maybe.withDefault 1
+
+                            lastLap =
+                                Maybe.withDefault Lap.empty car.lastLap
+                        in
+                        { position = index + 1
+                        , positionInClass = positionInClass
+                        , status = car.status
+                        , metaData = init_metaData car lastLap
+                        , lap = lastLap.lap
+                        , timing =
+                            init_timing clock
+                                { leader = List.head cars
+                                , rival = List.Extra.getAt (index - 1) cars
+                                }
+                                car
+                        , currentLap = car.currentLap
+                        , lastLap = car.lastLap
+                        , history = completedLapsAt raceClock car.laps
                         }
-                        car
-                , currentLap = car.currentLap
-                , lastLap = car.lastLap
-                , history = completedLapsAt raceClock car.laps
-                }
-            )
+                    )
+    in
+    { leadLapNumber = lapCount
+    , items = items
+    }
 
 
 init_metaData : Car -> Lap -> MetaData
@@ -169,9 +176,9 @@ positionsInClassByCarNumber cars =
         |> Dict.fromList
 
 
-getLeadLapNumber : ViewModel -> Maybe Int
-getLeadLapNumber vm =
-    vm |> List.head |> Maybe.map .lap
+getLeadLapNumber : List ViewModelItem -> Maybe Int
+getLeadLapNumber items =
+    items |> List.head |> Maybe.map .lap
 
 
 groupCarsByCloseIntervals : ViewModel -> List (List ViewModelItem)
@@ -197,19 +204,16 @@ groupCarsByCloseIntervals vm =
                     in
                     (first :: group) :: groupCars remaining
     in
-    vm
+    vm.items
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 
 
-getRecentLaps : Int -> ViewModel -> List Lap -> List Lap
-getRecentLaps n viewModel laps =
+getRecentLaps : Int -> { leadLapNumber : Int } -> List Lap -> List Lap
+getRecentLaps n { leadLapNumber } laps =
     let
-        leadLap =
-            getLeadLapNumber viewModel |> Maybe.withDefault 0
-
         targetRange =
-            List.range (leadLap - n) leadLap
+            List.range (leadLapNumber - n) leadLapNumber
     in
     laps
         |> List.filter (\lap -> List.member lap.lap targetRange)

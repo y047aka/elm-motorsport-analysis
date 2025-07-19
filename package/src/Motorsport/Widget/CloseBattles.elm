@@ -71,11 +71,8 @@ paddingBottom =
 view : ViewModel -> Html msg
 view viewModel =
     let
-        leadLapNumber =
-            ViewModel.getLeadLapNumber viewModel |> Maybe.withDefault 0
-
         closeBattles =
-            if leadLapNumber > 1 then
+            if viewModel.leadLapNumber > 1 then
                 detectCloseBattles viewModel
 
             else
@@ -145,7 +142,11 @@ lapTimeComparison : List ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
-            List.map (\car -> ViewModel.getRecentLaps 3 cars car.history) cars
+            let
+                options =
+                    { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+            in
+            List.map (\car -> ViewModel.getRecentLaps 3 options car.history) cars
 
         headerLaps =
             List.head allRecentLaps |> Maybe.withDefault []
@@ -277,12 +278,15 @@ lapTimeCell lap isFastest groupLeaderTime =
 battleChart : List ViewModelItem -> Html msg
 battleChart cars =
     let
+        options =
+            { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+
         carProgressionData =
             cars
                 |> List.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
-                        , laps = ViewModel.getRecentLaps 10 cars car.history
+                        , laps = ViewModel.getRecentLaps 10 options car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )

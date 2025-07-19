@@ -732,8 +732,8 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
 
 
 view : Config ViewModelItem msg -> Model -> ViewModel -> Html msg
-view config state vm =
-    DataView.view config state vm
+view config state viewModel =
+    DataView.view config state viewModel.items
 
 
 

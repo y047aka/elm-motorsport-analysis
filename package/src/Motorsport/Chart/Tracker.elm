@@ -155,7 +155,7 @@ renderCars : TrackConfig -> ViewModel -> Svg msg
 renderCars config viewModel =
     Keyed.node "g"
         []
-        (viewModel
+        (viewModel.items
             |> List.reverse
             |> List.map
                 (\car ->
