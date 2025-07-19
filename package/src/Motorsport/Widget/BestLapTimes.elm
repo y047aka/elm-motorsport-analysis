@@ -42,7 +42,7 @@ view analysis viewModel =
 
 processClassBestTimes : ViewModel -> List ClassData
 processClassBestTimes viewModel =
-    viewModel
+    viewModel.items
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map

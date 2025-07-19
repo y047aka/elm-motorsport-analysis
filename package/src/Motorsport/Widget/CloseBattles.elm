@@ -8,7 +8,7 @@ import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
@@ -71,11 +71,8 @@ paddingBottom =
 view : ViewModel -> Html msg
 view viewModel =
     let
-        leadLapNumber =
-            ViewModel.getLeadLapNumber viewModel |> Maybe.withDefault 0
-
         closeBattles =
-            if leadLapNumber > 1 then
+            if viewModel.leadLapNumber > 1 then
                 detectCloseBattles viewModel
 
             else
@@ -145,7 +142,11 @@ lapTimeComparison : List ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
-            List.map (\car -> ViewModel.getRecentLaps 3 cars car.history) cars
+            let
+                options =
+                    { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+            in
+            List.map (\car -> ViewModel.getRecentLaps 3 options car.history) cars
 
         headerLaps =
             List.head allRecentLaps |> Maybe.withDefault []
@@ -181,20 +182,20 @@ lapTimeComparison cars =
 carTimeRow : ViewModelItem -> List Lap -> List (List Lap) -> Html msg
 carTimeRow car carLaps allCarsLaps =
     let
+        leaderLaps =
+            List.head allCarsLaps |> Maybe.withDefault []
+
         lapCells =
-            List.indexedMap
-                (\index lap ->
+            List.map2
+                (\leaderLap lap ->
                     let
+                        index =
+                            lap.lap - 1
+
                         allTimesForThisLap =
                             allCarsLaps
                                 |> List.filterMap (List.Extra.getAt index)
                                 |> List.map .time
-
-                        groupLeaderTime =
-                            allCarsLaps
-                                |> List.head
-                                |> Maybe.andThen (List.Extra.getAt index)
-                                |> Maybe.map .time
 
                         isFastest =
                             allTimesForThisLap
@@ -202,8 +203,9 @@ carTimeRow car carLaps allCarsLaps =
                                 |> Maybe.map (\fastest -> lap.time == fastest)
                                 |> Maybe.withDefault False
                     in
-                    Html.td [] [ lapTimeCell lap isFastest groupLeaderTime ]
+                    Html.td [] [ lapTimeCell { isFastest = isFastest, groupLeader = leaderLap } lap ]
                 )
+                leaderLaps
                 carLaps
 
         intervalCell =
@@ -230,8 +232,8 @@ carTimeRow car carLaps allCarsLaps =
         )
 
 
-lapTimeCell : Lap -> Bool -> Maybe Duration -> Html msg
-lapTimeCell lap isFastest groupLeaderTime =
+lapTimeCell : { isFastest : Bool, groupLeader : Lap } -> Lap -> Html msg
+lapTimeCell { isFastest, groupLeader } lap =
     let
         cellBackgroundColor =
             if isFastest then
@@ -240,24 +242,18 @@ lapTimeCell lap isFastest groupLeaderTime =
             else
                 Css.hsl 0 0 0.4
 
+        difference =
+            lap.time - groupLeader.time
+
         displayText =
-            case groupLeaderTime of
-                Just leaderTime ->
-                    let
-                        difference =
-                            lap.time - leaderTime
-                    in
-                    if difference == 0 then
-                        Duration.toString lap.time
+            if difference == 0 then
+                Duration.toString lap.time
 
-                    else if difference > 0 then
-                        "+" ++ Duration.toString difference
+            else if difference > 0 then
+                "+" ++ Duration.toString difference
 
-                    else
-                        "-" ++ Duration.toString (abs difference)
-
-                Nothing ->
-                    Duration.toString lap.time
+            else
+                "-" ++ Duration.toString (abs difference)
     in
     div
         [ css
@@ -277,12 +273,15 @@ lapTimeCell lap isFastest groupLeaderTime =
 battleChart : List ViewModelItem -> Html msg
 battleChart cars =
     let
+        options =
+            { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+
         carProgressionData =
             cars
                 |> List.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
-                        , laps = ViewModel.getRecentLaps 10 cars car.history
+                        , laps = ViewModel.getRecentLaps 10 options car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )

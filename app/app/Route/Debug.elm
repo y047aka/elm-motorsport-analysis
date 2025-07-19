@@ -162,7 +162,7 @@ view app { analysis, raceControl } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl)
+            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl).items
             ]
         }
 
@@ -242,31 +242,40 @@ config analysis =
 
 raceControlToLeaderboard : RaceControl.Model -> ViewModel
 raceControlToLeaderboard { lapCount, cars } =
-    cars
-        |> List.filter (\car -> car.metaData.carNumber == "2")
-        |> List.head
-        |> Maybe.map
-            (\car ->
-                car.laps
-                    |> List.take lapCount
-                    |> List.indexedMap
-                        (\index lap ->
-                            { position = index + 1
-                            , positionInClass = index + 1
-                            , status = car.status
-                            , metaData = ViewModel.init_metaData car lap
-                            , lap = lap.lap
-                            , timing =
-                                { time = 0
-                                , sector = Nothing
-                                , miniSector = Nothing
-                                , gap = Gap.None
-                                , interval = Gap.None
-                                }
-                            , currentLap = Just lap
-                            , lastLap = Just lap
-                            , history = []
-                            }
-                        )
-            )
-        |> Maybe.withDefault []
+    let
+        items =
+            cars
+                |> List.filter (\car -> car.metaData.carNumber == "2")
+                |> List.head
+                |> Maybe.map
+                    (\car ->
+                        car.laps
+                            |> List.take lapCount
+                            |> List.indexedMap
+                                (\index lap ->
+                                    { position = index + 1
+                                    , positionInClass = index + 1
+                                    , status = car.status
+                                    , metaData = ViewModel.init_metaData car lap
+                                    , lap = lap.lap
+                                    , timing =
+                                        { time = 0
+                                        , sector = Nothing
+                                        , miniSector = Nothing
+                                        , gap = Gap.None
+                                        , interval = Gap.None
+                                        }
+                                    , currentLap = Just lap
+                                    , lastLap = Just lap
+                                    , history = []
+                                    }
+                                )
+                    )
+                |> Maybe.withDefault []
+
+        leadLapNumber =
+            items |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
+    in
+    { leadLapNumber = leadLapNumber
+    , items = items
+    }
