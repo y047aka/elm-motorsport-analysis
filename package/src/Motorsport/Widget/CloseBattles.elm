@@ -18,7 +18,6 @@ import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
@@ -79,8 +78,8 @@ paddingBottom =
     padding + 15
 
 
-view : Clock.Model -> ViewModel -> Html msg
-view clock viewModel =
+view : ViewModel -> Html msg
+view viewModel =
     let
         currentLapNumber =
             viewModel |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
@@ -92,7 +91,7 @@ view clock viewModel =
             else
                 []
     in
-    Widget.container "Battles" (contentView clock closeBattles)
+    Widget.container "Battles" (contentView closeBattles)
 
 
 detectCloseBattles : ViewModel -> List CloseBattle
@@ -139,19 +138,19 @@ createCloseBattle cars =
     }
 
 
-contentView : Clock.Model -> List CloseBattle -> Html msg
-contentView clock closeBattles =
+contentView : List CloseBattle -> Html msg
+contentView closeBattles =
     div [ css [ Css.height (pct 100) ] ]
         (if List.isEmpty closeBattles then
             [ Widget.emptyState "No close battles detected" ]
 
          else
-            List.map (closeBattleItem clock) closeBattles
+            List.map closeBattleItem closeBattles
         )
 
 
-closeBattleItem : Clock.Model -> CloseBattle -> Html msg
-closeBattleItem clock { cars } =
+closeBattleItem : CloseBattle -> Html msg
+closeBattleItem { cars } =
     div
         [ css
             [ Css.property "display" "grid"
@@ -163,7 +162,7 @@ closeBattleItem clock { cars } =
             ]
         ]
         [ battleHeaderView cars
-        , battleChart clock cars
+        , battleChart cars
         , lapTimeComparison cars
         ]
 
@@ -351,8 +350,8 @@ lapTimeCell lap isFastest groupLeaderTime =
         [ text displayText ]
 
 
-battleChart : Clock.Model -> List ViewModelItem -> Html msg
-battleChart clock cars =
+battleChart : List ViewModelItem -> Html msg
+battleChart cars =
     let
         carProgressionData =
             cars
