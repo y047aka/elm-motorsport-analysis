@@ -18,6 +18,7 @@
             "elm-community/list-extra": "8.7.0",
             "elm-community/typed-svg": "7.0.0",
             "elm-explorations/benchmark": "1.0.2",
+            "folkertdev/one-true-path-experiment": "6.0.1",
             "gampleman/elm-visualization": "2.4.2",
             "rtfeldman/elm-css": "18.0.0"
         },
@@ -33,7 +34,6 @@
             "elm/virtual-dom": "1.0.3",
             "elmcraft/core-extra": "2.1.0",
             "folkertdev/elm-deque": "3.0.1",
-            "folkertdev/one-true-path-experiment": "6.0.1",
             "folkertdev/svg-path-lowlevel": "4.0.1",
             "gampleman/elm-rosetree": "1.1.0",
             "ianmackenzie/elm-1d-parameter": "1.0.1",
