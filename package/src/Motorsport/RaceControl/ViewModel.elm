@@ -2,6 +2,9 @@ module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
     , MetaData, Timing
     , init, init_metaData
+    , getLeadLapNumber
+    , groupCarsByCloseIntervals
+    , getRecentLaps
     )
 
 {-|
@@ -9,6 +12,10 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs ViewModel, ViewModelItem
 @docs MetaData, Timing
 @docs init, init_metaData
+
+@docs getLeadLapNumber
+@docs groupCarsByCloseIntervals
+@docs getRecentLaps
 
 -}
 
@@ -160,3 +167,50 @@ positionsInClassByCarNumber cars =
                     |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
             )
         |> Dict.fromList
+
+
+getLeadLapNumber : ViewModel -> Maybe Int
+getLeadLapNumber vm =
+    vm |> List.head |> Maybe.map .lap
+
+
+groupCarsByCloseIntervals : ViewModel -> List (List ViewModelItem)
+groupCarsByCloseIntervals vm =
+    let
+        isCloseToNext current =
+            case current.timing.interval of
+                Gap.Seconds duration ->
+                    duration <= 1500
+
+                _ ->
+                    False
+
+        groupCars cars =
+            case cars of
+                [] ->
+                    []
+
+                first :: rest ->
+                    let
+                        ( group, remaining ) =
+                            List.Extra.span isCloseToNext rest
+                    in
+                    (first :: group) :: groupCars remaining
+    in
+    vm
+        |> groupCars
+        |> List.filter (\group -> List.length group >= 2)
+
+
+getRecentLaps : Int -> ViewModel -> List Lap -> List Lap
+getRecentLaps n viewModel laps =
+    let
+        leadLap =
+            getLeadLapNumber viewModel |> Maybe.withDefault 0
+
+        targetRange =
+            List.range (leadLap - n) leadLap
+    in
+    laps
+        |> List.filter (\lap -> List.member lap.lap targetRange)
+        |> List.sortBy .lap
