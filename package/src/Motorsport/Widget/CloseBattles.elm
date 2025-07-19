@@ -91,7 +91,12 @@ view viewModel =
             else
                 []
     in
-    Widget.container "Battles" (contentView closeBattles)
+    Widget.container "Battles" <|
+        if List.isEmpty closeBattles then
+            Widget.emptyState "No close battles detected"
+
+        else
+            div [] (List.map closeBattleItem closeBattles)
 
 
 detectCloseBattles : ViewModel -> List CloseBattle
@@ -138,17 +143,6 @@ createCloseBattle cars =
     }
 
 
-contentView : List CloseBattle -> Html msg
-contentView closeBattles =
-    div [ css [ Css.height (pct 100) ] ]
-        (if List.isEmpty closeBattles then
-            [ Widget.emptyState "No close battles detected" ]
-
-         else
-            List.map closeBattleItem closeBattles
-        )
-
-
 closeBattleItem : CloseBattle -> Html msg
 closeBattleItem { cars } =
     div
@@ -177,20 +171,12 @@ battleHeaderView cars =
     in
     div
         [ css
-            [ Css.displayFlex
-            , Css.justifyContent Css.spaceBetween
-            , Css.alignItems Css.center
+            [ Css.fontSize (px 14)
+            , Css.fontWeight Css.bold
+            , Css.color (Css.hsl 0 0 0.9)
             ]
         ]
-        [ div
-            [ css
-                [ Css.fontSize (px 14)
-                , Css.fontWeight Css.bold
-                , Css.color (Css.hsl 0 0 0.9)
-                ]
-            ]
-            [ text carNumbers ]
-        ]
+        [ text carNumbers ]
 
 
 lapTimeComparison : List ViewModelItem -> Html msg
@@ -259,17 +245,17 @@ carTimeRow car carLaps allCarsLaps =
     let
         lapCells =
             List.indexedMap
-                (\lapIndex lap ->
+                (\index lap ->
                     let
                         allTimesForThisLap =
                             allCarsLaps
-                                |> List.filterMap (List.Extra.getAt lapIndex)
+                                |> List.filterMap (List.Extra.getAt index)
                                 |> List.map .time
 
                         groupLeaderTime =
                             allCarsLaps
                                 |> List.head
-                                |> Maybe.andThen (List.Extra.getAt lapIndex)
+                                |> Maybe.andThen (List.Extra.getAt index)
                                 |> Maybe.map .time
 
                         isFastest =
