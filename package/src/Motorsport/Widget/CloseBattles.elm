@@ -71,11 +71,11 @@ paddingBottom =
 view : ViewModel -> Html msg
 view viewModel =
     let
-        currentLapNumber =
-            viewModel |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
+        leadLapNumber =
+            ViewModel.getLeadLapNumber viewModel |> Maybe.withDefault 0
 
         closeBattles =
-            if currentLapNumber > 1 then
+            if leadLapNumber > 1 then
                 detectCloseBattles viewModel
 
             else
@@ -145,7 +145,7 @@ lapTimeComparison : List ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
-            List.map (\car -> ViewModel.getRecentLapsMatchingLeader 3 cars car.history) cars
+            List.map (\car -> ViewModel.getRecentLaps 3 cars car.history) cars
 
         headerLaps =
             List.head allRecentLaps |> Maybe.withDefault []
@@ -282,7 +282,7 @@ battleChart cars =
                 |> List.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
-                        , laps = ViewModel.getRecentLapsMatchingLeader 10 cars car.history
+                        , laps = ViewModel.getRecentLaps 10 cars car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )

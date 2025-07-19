@@ -2,8 +2,9 @@ module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
     , MetaData, Timing
     , init, init_metaData
+    , getLeadLapNumber
     , groupConsecutiveCloseCars
-    , getRecentLapsMatchingLeader
+    , getRecentLaps
     )
 
 {-|
@@ -12,8 +13,9 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs MetaData, Timing
 @docs init, init_metaData
 
+@docs getLeadLapNumber
 @docs groupConsecutiveCloseCars
-@docs getRecentLapsMatchingLeader
+@docs getRecentLaps
 
 -}
 
@@ -167,6 +169,11 @@ positionsInClassByCarNumber cars =
         |> Dict.fromList
 
 
+getLeadLapNumber : ViewModel -> Maybe Int
+getLeadLapNumber vm =
+    vm |> List.head |> Maybe.map .lap
+
+
 groupConsecutiveCloseCars : ViewModel -> List (List ViewModelItem)
 groupConsecutiveCloseCars viewModel =
     let
@@ -195,25 +202,15 @@ groupConsecutiveCloseCars viewModel =
         |> List.filter (\group -> List.length group >= 2)
 
 
-getRecentLapsMatchingLeader : Int -> ViewModel -> List Lap -> List Lap
-getRecentLapsMatchingLeader n viewModel targetLaps =
+getRecentLaps : Int -> ViewModel -> List Lap -> List Lap
+getRecentLaps n viewModel laps =
     let
-        leaderHistory =
-            List.head viewModel
-                |> Maybe.map .history
-                |> Maybe.withDefault []
+        leadLap =
+            getLeadLapNumber viewModel |> Maybe.withDefault 0
 
-        ( leaderMaxLap, targetMaxLap ) =
-            ( getMaximumLapNumber leaderHistory, getMaximumLapNumber targetLaps )
-
-        getMaximumLapNumber =
-            List.Extra.maximumBy .lap >> Maybe.map .lap >> Maybe.withDefault 0
+        targetRange =
+            List.range (leadLap - n) leadLap
     in
-    targetLaps
+    laps
+        |> List.filter (\lap -> List.member lap.lap targetRange)
         |> List.sortBy .lap
-        |> takeRight (n - (leaderMaxLap - targetMaxLap))
-
-
-takeRight : Int -> List a -> List a
-takeRight n list =
-    List.drop (List.length list - n) list
