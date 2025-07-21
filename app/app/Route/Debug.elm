@@ -8,7 +8,10 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import List.NonEmpty
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car exposing (Status(..))
+import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
@@ -162,7 +165,7 @@ view app { analysis, raceControl } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl).items
+            , DataView.view (config analysis) leaderboardState (List.NonEmpty.toList (raceControlToLeaderboard raceControl).items)
             ]
         }
 
@@ -240,6 +243,31 @@ config analysis =
     }
 
 
+createDefaultViewModelItem : Int -> ViewModelItem
+createDefaultViewModelItem lapNumber =
+    { position = 1
+    , positionInClass = 1
+    , status = Racing
+    , metaData =
+        { carNumber = "0"
+        , class = Class.none
+        , team = ""
+        , drivers = []
+        }
+    , lap = lapNumber
+    , timing =
+        { time = 0
+        , sector = Nothing
+        , miniSector = Nothing
+        , gap = Gap.None
+        , interval = Gap.None
+        }
+    , currentLap = Nothing
+    , lastLap = Nothing
+    , history = []
+    }
+
+
 raceControlToLeaderboard : RaceControl.Model -> ViewModel
 raceControlToLeaderboard { lapCount, cars } =
     let
@@ -274,8 +302,13 @@ raceControlToLeaderboard { lapCount, cars } =
                 |> Maybe.withDefault []
 
         leadLapNumber =
-            items |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
+            items |> List.head |> Maybe.map .lap |> Maybe.withDefault lapCount
+
+        nonemptyItems =
+            items
+                |> List.NonEmpty.fromList
+                |> Maybe.withDefault (List.NonEmpty.singleton (createDefaultViewModelItem leadLapNumber))
     in
     { leadLapNumber = leadLapNumber
-    , items = items
+    , items = nonemptyItems
     }

@@ -21,8 +21,9 @@ module Motorsport.RaceControl.ViewModel exposing
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.Car exposing (Car, Status)
-import Motorsport.Class exposing (Class)
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
+import Motorsport.Car exposing (Car, Status(..))
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
@@ -33,7 +34,7 @@ import Motorsport.RaceControl as RaceControl
 
 type alias ViewModel =
     { leadLapNumber : Int
-    , items : List ViewModelItem
+    , items : NonEmpty ViewModelItem
     }
 
 
@@ -104,9 +105,36 @@ init { clock, lapCount, cars } =
                         , history = completedLapsAt raceClock car.laps
                         }
                     )
+                |> NonEmpty.fromList
+                |> Maybe.withDefault (NonEmpty.singleton (defaultViewModelItem clock))
     in
     { leadLapNumber = lapCount
     , items = items
+    }
+
+
+defaultViewModelItem : Clock.Model -> ViewModelItem
+defaultViewModelItem clock =
+    { position = 1
+    , positionInClass = 1
+    , status = Racing
+    , metaData =
+        { carNumber = "0"
+        , class = Class.none
+        , team = ""
+        , drivers = []
+        }
+    , lap = 0
+    , timing =
+        { time = 0
+        , sector = Nothing
+        , miniSector = Nothing
+        , gap = Gap.None
+        , interval = Gap.None
+        }
+    , currentLap = Nothing
+    , lastLap = Nothing
+    , history = []
     }
 
 
@@ -176,9 +204,9 @@ positionsInClassByCarNumber cars =
         |> Dict.fromList
 
 
-getLeadLapNumber : List ViewModelItem -> Maybe Int
+getLeadLapNumber : NonEmpty ViewModelItem -> Int
 getLeadLapNumber items =
-    items |> List.head |> Maybe.map .lap
+    NonEmpty.head items |> .lap
 
 
 groupCarsByCloseIntervals : ViewModel -> List (List ViewModelItem)
@@ -205,6 +233,7 @@ groupCarsByCloseIntervals vm =
                     (first :: group) :: groupCars remaining
     in
     vm.items
+        |> NonEmpty.toList
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 

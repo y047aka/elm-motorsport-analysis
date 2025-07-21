@@ -8,6 +8,7 @@ import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
+import List.NonEmpty
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
@@ -144,7 +145,12 @@ lapTimeComparison cars =
         allRecentLaps =
             let
                 options =
-                    { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+                    { leadLapNumber =
+                        cars
+                            |> List.NonEmpty.fromList
+                            |> Maybe.map ViewModel.getLeadLapNumber
+                            |> Maybe.withDefault 1
+                    }
             in
             List.map (\car -> ViewModel.getRecentLaps 3 options car.history) cars
 
@@ -271,7 +277,12 @@ battleChart : List ViewModelItem -> Html msg
 battleChart cars =
     let
         options =
-            { leadLapNumber = ViewModel.getLeadLapNumber cars |> Maybe.withDefault 1 }
+            { leadLapNumber =
+                cars
+                    |> List.NonEmpty.fromList
+                    |> Maybe.map ViewModel.getLeadLapNumber
+                    |> Maybe.withDefault 1
+            }
 
         carProgressionData =
             cars

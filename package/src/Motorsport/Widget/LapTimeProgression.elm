@@ -8,6 +8,7 @@ import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
+import List.NonEmpty as NonEmpty
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
@@ -81,6 +82,7 @@ view clock viewModel =
 processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData
 processClassProgressionData clock viewModel =
     viewModel.items
+        |> NonEmpty.toList
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map

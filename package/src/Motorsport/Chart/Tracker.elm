@@ -1,6 +1,7 @@
 module Motorsport.Chart.Tracker exposing (view, viewWithMiniSectors)
 
 import Css exposing (maxWidth, pct)
+import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class exposing (Class)
@@ -156,6 +157,7 @@ renderCars config viewModel =
     Keyed.node "g"
         []
         (viewModel.items
+            |> NonEmpty.toList
             |> List.reverse
             |> List.map
                 (\car ->
