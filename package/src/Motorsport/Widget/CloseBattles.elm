@@ -8,7 +8,7 @@ import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import List.NonEmpty
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
@@ -25,7 +25,7 @@ import TypedSvg.Types exposing (Length(..), Opacity(..), Paint(..), Transform(..
 
 
 type alias CloseBattle =
-    { cars : List ViewModelItem
+    { cars : NonEmpty ViewModelItem
     , position : Int
     }
 
@@ -90,17 +90,18 @@ view viewModel =
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
     ViewModel.groupCarsByCloseIntervals viewModel
-        |> List.map createCloseBattle
+        |> List.filterMap createCloseBattle
 
 
-createCloseBattle : List ViewModelItem -> CloseBattle
+createCloseBattle : List ViewModelItem -> Maybe CloseBattle
 createCloseBattle cars =
-    { cars = cars
-    , position =
-        List.head cars
-            |> Maybe.map .position
-            |> Maybe.withDefault 1
-    }
+    NonEmpty.fromList cars
+        |> Maybe.map
+            (\nonEmptyCars ->
+                { cars = nonEmptyCars
+                , position = NonEmpty.head nonEmptyCars |> .position
+                }
+            )
 
 
 closeBattleItem : CloseBattle -> Html msg
@@ -121,11 +122,12 @@ closeBattleItem { cars } =
         ]
 
 
-battleHeaderView : List ViewModelItem -> Html msg
+battleHeaderView : NonEmpty ViewModelItem -> Html msg
 battleHeaderView cars =
     let
         carNumbers =
             cars
+                |> NonEmpty.toList
                 |> List.map (.metaData >> .carNumber)
                 |> String.join " - "
     in
@@ -139,23 +141,22 @@ battleHeaderView cars =
         [ text carNumbers ]
 
 
-lapTimeComparison : List ViewModelItem -> Html msg
+lapTimeComparison : NonEmpty ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
-        allRecentLaps =
+        allRecentLapsNonEmpty =
             let
                 options =
-                    { leadLapNumber =
-                        cars
-                            |> List.NonEmpty.fromList
-                            |> Maybe.map ViewModel.getLeadLapNumber
-                            |> Maybe.withDefault 1
-                    }
+                    { leadLapNumber = ViewModel.getLeadLapNumber cars }
             in
-            List.map (\car -> ViewModel.getRecentLaps 3 options car.history) cars
+            cars
+                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
+
+        allRecentLaps =
+            NonEmpty.toList allRecentLapsNonEmpty
 
         headerLaps =
-            List.head allRecentLaps |> Maybe.withDefault []
+            NonEmpty.head allRecentLapsNonEmpty
     in
     Html.table
         [ css
@@ -181,7 +182,9 @@ lapTimeComparison cars =
                 )
             ]
         , Html.tbody []
-            (List.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps)
+            (NonEmpty.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLapsNonEmpty
+                |> NonEmpty.toList
+            )
         ]
 
 
@@ -273,26 +276,22 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : List ViewModelItem -> Html msg
+battleChart : NonEmpty ViewModelItem -> Html msg
 battleChart cars =
     let
         options =
-            { leadLapNumber =
-                cars
-                    |> List.NonEmpty.fromList
-                    |> Maybe.map ViewModel.getLeadLapNumber
-                    |> Maybe.withDefault 1
-            }
+            { leadLapNumber = ViewModel.getLeadLapNumber cars }
 
         carProgressionData =
             cars
-                |> List.map
+                |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
                         , laps = ViewModel.getRecentLaps 10 options car.history
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )
+                |> NonEmpty.toList
                 |> List.filter (\car -> List.length car.laps >= 2)
 
         carGapData =
