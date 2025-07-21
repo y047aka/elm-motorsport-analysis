@@ -292,7 +292,6 @@ battleChart cars =
                         }
                     )
                 |> NonEmpty.toList
-                |> List.filter (\car -> List.length car.laps >= 2)
 
         carGapData =
             calculateGapData carProgressionData
