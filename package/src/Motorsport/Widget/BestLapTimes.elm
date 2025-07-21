@@ -4,7 +4,6 @@ import Css exposing (alignItems, backgroundColor, bold, borderRadius, borderTop3
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -44,7 +43,6 @@ view analysis viewModel =
 processClassBestTimes : ViewModel -> List ClassData
 processClassBestTimes viewModel =
     viewModel.items
-        |> NonEmpty.toList
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map

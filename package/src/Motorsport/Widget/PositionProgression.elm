@@ -8,7 +8,6 @@ import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import List.NonEmpty as NonEmpty
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -94,14 +93,13 @@ processClassPositionData clock viewModel =
             currentRaceTime - (60 * 60 * 1000)
 
         lapThreshold =
-            NonEmpty.head viewModel.items
-                |> .history
-                |> List.Extra.find (\{ elapsed } -> elapsed >= timeThreshold)
+            List.head viewModel.items
+                |> Maybe.map .history
+                |> Maybe.andThen (List.Extra.find (\{ elapsed } -> elapsed >= timeThreshold))
                 |> Maybe.map .lap
                 |> Maybe.withDefault 1
     in
     viewModel.items
-        |> NonEmpty.toList
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
         |> List.map

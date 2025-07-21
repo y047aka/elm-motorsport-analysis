@@ -51,7 +51,6 @@ import Html.Styled exposing (Html, div, span, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Lazy as Lazy
 import List.Extra
-import List.NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
@@ -734,7 +733,7 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
 
 view : Config ViewModelItem msg -> Model -> ViewModel -> Html msg
 view config state viewModel =
-    DataView.view config state (List.NonEmpty.toList viewModel.items)
+    DataView.view config state viewModel.items
 
 
 
