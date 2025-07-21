@@ -144,7 +144,7 @@ battleHeaderView cars =
 lapTimeComparison : NonEmpty ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
-        allRecentLapsNonEmpty =
+        allRecentLaps =
             let
                 options =
                     { leadLapNumber = ViewModel.getLeadLapNumber cars }
@@ -152,11 +152,8 @@ lapTimeComparison cars =
             cars
                 |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
 
-        allRecentLaps =
-            NonEmpty.toList allRecentLapsNonEmpty
-
         headerLaps =
-            NonEmpty.head allRecentLapsNonEmpty
+            NonEmpty.head allRecentLaps
     in
     Html.table
         [ css
@@ -182,17 +179,17 @@ lapTimeComparison cars =
                 )
             ]
         , Html.tbody []
-            (NonEmpty.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLapsNonEmpty
+            (NonEmpty.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps
                 |> NonEmpty.toList
             )
         ]
 
 
-carTimeRow : ViewModelItem -> List Lap -> List (List Lap) -> Html msg
+carTimeRow : ViewModelItem -> List Lap -> NonEmpty (List Lap) -> Html msg
 carTimeRow car carLaps allCarsLaps =
     let
         leaderLaps =
-            List.head allCarsLaps |> Maybe.withDefault []
+            NonEmpty.head allCarsLaps
 
         lapCells =
             List.map2
@@ -200,6 +197,7 @@ carTimeRow car carLaps allCarsLaps =
                     let
                         allTimesForThisLap =
                             allCarsLaps
+                                |> NonEmpty.toList
                                 |> List.filterMap (List.Extra.find (\otherLap -> otherLap.lap == lap.lap))
                                 |> List.map .time
 
@@ -291,35 +289,33 @@ battleChart cars =
                         , color = generateCarColor car.metaData.carNumber
                         }
                     )
-                |> NonEmpty.toList
 
         carGapData =
             calculateGapData carProgressionData
 
         allGapPoints =
-            List.concatMap .gapData carGapData
+            carGapData
+                |> NonEmpty.toList
+                |> List.concatMap .gapData
     in
-    if List.isEmpty carGapData then
-        div [] []
-
-    else
-        svg
-            [ InPx.width w
-            , InPx.height h
-            , TSA.viewBox 0 0 w h
-            ]
-            ([ xAxis allGapPoints
-             , yAxis allGapPoints
-             ]
-                ++ renderBattleGapLines carGapData
-            )
+    svg
+        [ InPx.width w
+        , InPx.height h
+        , TSA.viewBox 0 0 w h
+        ]
+        ([ xAxis allGapPoints
+         , yAxis allGapPoints
+         ]
+            ++ (carGapData |> NonEmpty.toList |> renderBattleGapLines)
+        )
 
 
-calculateGapData : List CarProgressionData -> List CarGapData
+calculateGapData : NonEmpty CarProgressionData -> NonEmpty CarGapData
 calculateGapData carProgressionData =
     let
         allLaps =
             carProgressionData
+                |> NonEmpty.toList
                 |> List.concatMap .laps
 
         fastestLapTime =
@@ -349,9 +345,9 @@ calculateGapData carProgressionData =
 
                 latestLeaderElapsed =
                     carProgressionData
-                        |> List.head
-                        |> Maybe.map .laps
-                        |> Maybe.andThen (List.Extra.maximumBy .lap)
+                        |> NonEmpty.head
+                        |> .laps
+                        |> List.Extra.maximumBy .lap
                         |> Maybe.map .elapsed
                         |> Maybe.withDefault 0
             in
@@ -379,7 +375,7 @@ calculateGapData carProgressionData =
             }
     in
     carProgressionData
-        |> List.map calculateGapForCar
+        |> NonEmpty.map calculateGapForCar
 
 
 average : List Float -> Maybe Float
