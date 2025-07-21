@@ -189,12 +189,9 @@ carTimeRow car carLaps allCarsLaps =
             List.map2
                 (\leaderLap lap ->
                     let
-                        index =
-                            lap.lap - 1
-
                         allTimesForThisLap =
                             allCarsLaps
-                                |> List.filterMap (List.Extra.getAt index)
+                                |> List.filterMap (List.Extra.find (\otherLap -> otherLap.lap == lap.lap))
                                 |> List.map .time
 
                         isFastest =
