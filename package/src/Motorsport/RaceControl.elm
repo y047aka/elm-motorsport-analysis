@@ -1,7 +1,9 @@
-module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, empty, init, update)
+module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, init, placeholder, update)
 
 import List.Extra
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
+import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
@@ -17,7 +19,7 @@ type alias Model =
     , lapCount : Int
     , lapTotal : Int
     , timeLimit : Int
-    , cars : List Car
+    , cars : NonEmpty Car
     , events : List Event
     }
 
@@ -37,37 +39,43 @@ type CarEventType
     | LapCompleted Int
 
 
-empty : Model
-empty =
-    { clock = Initial
-    , lapCount = 0
-    , lapTotal = 0
-    , timeLimit = 0
-    , cars = []
-    , events = []
-    }
+placeholder : Model
+placeholder =
+    let
+        dummyCar =
+            { metaData = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = "" }
+            , startPosition = 0
+            , laps = []
+            , currentLap = Nothing
+            , lastLap = Nothing
+            , status = PreRace
+            }
+    in
+    init (NonEmpty.singleton dummyCar)
 
 
-init : List Car -> Model
+init : NonEmpty Car -> Model
 init cars =
     let
+        carsList =
+            NonEmpty.toList cars
+
         timeLimit =
-            calcTimeLimit cars
+            calcTimeLimit carsList
     in
     { clock = Initial
     , lapCount = 0
     , lapTotal = calcLapTotal cars
     , timeLimit = timeLimit
     , cars = cars
-    , events = calcEvents timeLimit cars
+    , events = calcEvents timeLimit carsList
     }
 
 
-calcLapTotal : List Car -> Int
+calcLapTotal : NonEmpty Car -> Int
 calcLapTotal =
-    List.map (.laps >> List.length)
-        >> List.maximum
-        >> Maybe.withDefault 0
+    NonEmpty.map (.laps >> List.length)
+        >> NonEmpty.maximum
 
 
 calcTimeLimit : List Car -> Duration
@@ -153,7 +161,7 @@ update msg m =
                                 Clock.calcElapsed startedAt now splitTime
 
                             newClock =
-                                { lapCount = lapAt newElapsed (List.map .laps m.cars)
+                                { lapCount = lapAt newElapsed (NonEmpty.toList m.cars |> List.map .laps)
                                 , elapsed = newElapsed
                                 }
                         in
@@ -162,12 +170,15 @@ update msg m =
                             , lapCount = newClock.lapCount
                             , cars =
                                 m.cars
+                                    |> NonEmpty.toList
                                     |> applyEvents newElapsed m.events
                                     |> List.sortWith
                                         (\a b ->
                                             Maybe.map2 (Lap.compareAt { elapsed = newClock.elapsed }) a.currentLap b.currentLap
                                                 |> Maybe.withDefault EQ
                                         )
+                                    |> NonEmpty.fromList
+                                    |> Maybe.withDefault m.cars
                         }
 
                     else
@@ -193,7 +204,7 @@ update msg m =
                             Clock.getElapsed m.clock
 
                         lapTimes =
-                            List.map .laps m.cars
+                            NonEmpty.toList m.cars |> List.map .laps
                     in
                     case msg of
                         Add10seconds ->
@@ -259,8 +270,12 @@ update msg m =
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
                 , cars =
-                    updateCars { elapsed = elapsed } m.cars
+                    m.cars
+                        |> NonEmpty.toList
+                        |> updateCars { elapsed = elapsed }
                         |> applyEvents elapsed m.events
+                        |> NonEmpty.fromList
+                        |> Maybe.withDefault m.cars
             }
 
 

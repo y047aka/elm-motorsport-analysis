@@ -19,6 +19,7 @@ module Motorsport.RaceControl.ViewModel exposing
 
 import Dict exposing (Dict)
 import List.Extra
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
@@ -73,6 +74,7 @@ init { clock, lapCount, cars } =
 
         items =
             cars
+                |> NonEmpty.toList
                 |> List.indexedMap
                     (\index car ->
                         let
@@ -93,8 +95,8 @@ init { clock, lapCount, cars } =
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
-                                { leader = List.head cars
-                                , rival = List.Extra.getAt (index - 1) cars
+                                { leader = Just (NonEmpty.head cars)
+                                , rival = List.Extra.getAt (index - 1) (NonEmpty.toList cars)
                                 }
                                 car
                         , currentLap = car.currentLap
@@ -162,9 +164,10 @@ init_timing clock { leader, rival } car =
     }
 
 
-positionsInClassByCarNumber : List Car -> Dict String Int
+positionsInClassByCarNumber : NonEmpty Car -> Dict String Int
 positionsInClassByCarNumber cars =
     cars
+        |> NonEmpty.toList
         |> List.Extra.gatherEqualsBy (.metaData >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->

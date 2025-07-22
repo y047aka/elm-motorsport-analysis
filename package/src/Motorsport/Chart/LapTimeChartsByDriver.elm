@@ -5,6 +5,7 @@ import Css exposing (Style, fill, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
+import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Fragments exposing (dot, path)
 import Motorsport.Duration exposing (Duration)
@@ -88,23 +89,24 @@ view analysis { lapTotal, cars } =
             , Css.padding zero
             ]
         ]
-        (List.map
-            (\car ->
-                li [ css [ listStyle none ] ]
-                    [ p [] [ text car.metaData.carNumber ]
-                    , svg [ viewBox 0 0 w h ]
-                        [ xAxis lapTotal
-                        , yAxis fastestLapTime
-                        , dotHistory
-                            { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
-                            , y = .time >> toFloat >> Scale.convert (yScale fastestLapTime)
-                            , color = "#000"
-                            }
-                            car.laps
+        (cars
+            |> NonEmpty.toList
+            |> List.map
+                (\car ->
+                    li [ css [ listStyle none ] ]
+                        [ p [] [ text car.metaData.carNumber ]
+                        , svg [ viewBox 0 0 w h ]
+                            [ xAxis lapTotal
+                            , yAxis fastestLapTime
+                            , dotHistory
+                                { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
+                                , y = .time >> toFloat >> Scale.convert (yScale fastestLapTime)
+                                , color = "#000"
+                                }
+                                car.laps
+                            ]
                         ]
-                    ]
-            )
-            cars
+                )
         )
 
 

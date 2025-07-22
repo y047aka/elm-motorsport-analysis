@@ -16,6 +16,7 @@ import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
+import List.NonEmpty
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
@@ -69,10 +70,10 @@ init :
     -> ( Model, Effect Msg )
 init flags maybePagePath =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , raceControl_F1 = RaceControl.empty
-      , raceControl = RaceControl.empty
-      , analysis_F1 = Analysis.finished RaceControl.empty
-      , analysis = Analysis.finished RaceControl.empty
+      , raceControl_F1 = RaceControl.placeholder
+      , raceControl = RaceControl.placeholder
+      , analysis_F1 = Analysis.finished RaceControl.placeholder
+      , analysis = Analysis.finished RaceControl.placeholder
       }
     , Effect.none
     )
@@ -108,7 +109,10 @@ update msg m =
         JsonLoaded (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.init (Preprocess_F1.preprocess decoded)
+                    Preprocess_F1.preprocess decoded
+                        |> List.NonEmpty.fromList
+                        |> Maybe.map RaceControl.init
+                        |> Maybe.withDefault RaceControl.placeholder
             in
             ( { m
                 | raceControl_F1 = rcNew
@@ -138,7 +142,10 @@ update msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.init decoded.preprocessed
+                    decoded.preprocessed
+                        |> List.NonEmpty.fromList
+                        |> Maybe.map RaceControl.init
+                        |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
                     m.eventSummary
@@ -172,7 +179,10 @@ update msg m =
         JsonLoaded_FormulaE (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.init decoded.preprocessed
+                    decoded.preprocessed
+                        |> List.NonEmpty.fromList
+                        |> Maybe.map RaceControl.init
+                        |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
                     m.eventSummary

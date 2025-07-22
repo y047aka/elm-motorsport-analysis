@@ -4,6 +4,7 @@ import Axis
 import Css exposing (Style, fill, hex, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, text)
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Fragments exposing (dotWithLabel, path)
 import Motorsport.Duration exposing (Duration)
@@ -83,17 +84,19 @@ view analysis { lapTotal, cars } =
         [ xAxis lapTotal
         , yAxis fastestLapTime
         , g [] <|
-            List.map
-                (\{ laps } ->
-                    dotHistory
-                        { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
-                        , y = (\{ lap, elapsed } -> toFloat elapsed - (toFloat (lap * fastestLapTime) * 1.02)) >> Scale.convert (yScale fastestLapTime)
-                        , color = "#000"
-                        , dotLabel = .lap >> String.fromInt
-                        }
-                        laps
-                )
-                cars
+            (cars
+                |> NonEmpty.toList
+                |> List.map
+                    (\{ laps } ->
+                        dotHistory
+                            { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
+                            , y = (\{ lap, elapsed } -> toFloat elapsed - (toFloat (lap * fastestLapTime) * 1.02)) >> Scale.convert (yScale fastestLapTime)
+                            , color = "#000"
+                            , dotLabel = .lap >> String.fromInt
+                            }
+                            laps
+                    )
+            )
         ]
 
 
