@@ -166,7 +166,7 @@ update msg m =
                                 Clock.calcElapsed startedAt now splitTime
 
                             newClock =
-                                { lapCount = lapAt newElapsed (NonEmpty.toList m.cars |> List.map .laps)
+                                { lapCount = lapAt newElapsed (NonEmpty.map .laps m.cars)
                                 , elapsed = newElapsed
                                 }
                         in
@@ -215,7 +215,7 @@ update msg m =
                                     newElapsed =
                                         elapsed_ + (10 * 1000)
                                 in
-                                { lapCount = lapAt newElapsed lapTimes
+                                { lapCount = lapAt newElapsed (NonEmpty.map .laps m.cars)
                                 , elapsed = newElapsed
                                 }
 
@@ -370,9 +370,11 @@ applyEventToCar event car =
             }
 
 
-lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int
+lapAt : Int -> NonEmpty (List { a | lap : Int, elapsed : Duration }) -> Int
 lapAt elapsed lapTimes =
+    -- TODO: leaderのみを対象にする
     lapTimes
+        |> NonEmpty.toList
         |> List.filterMap
             (List.Extra.findMap
                 (\lap ->
