@@ -8,7 +8,7 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import List.NonEmpty
+import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -246,9 +246,7 @@ raceControlToLeaderboard { lapCount, cars } =
     let
         items =
             cars
-                |> List.NonEmpty.toList
-                |> List.filter (\car -> car.metaData.carNumber == "2")
-                |> List.head
+                |> NonEmpty.find (\car -> car.metaData.carNumber == "2")
                 |> Maybe.map
                     (\car ->
                         car.laps
