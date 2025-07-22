@@ -20,7 +20,8 @@
             "elm-explorations/benchmark": "1.0.2",
             "folkertdev/one-true-path-experiment": "6.0.1",
             "gampleman/elm-visualization": "2.4.2",
-            "rtfeldman/elm-css": "18.0.0"
+            "rtfeldman/elm-css": "18.0.0",
+            "turboMaCk/non-empty-list-alias": "1.4.0"
         },
         "indirect": {
             "BrianHicks/elm-trend": "2.1.3",

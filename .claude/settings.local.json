@@ -2,10 +2,12 @@
   "permissions": {
     "allow": [
       "mcp__ide__getDiagnostics",
+      "Bash(find:*)",
       "Bash(rg:*)",
       "Bash(npm run:*)",
       "Bash(elm:*)",
       "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:github.com)",
       "WebFetch(domain:package.elm-lang.org)"
     ],
     "deny": []

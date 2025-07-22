@@ -2,7 +2,6 @@ module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
     , MetaData, Timing
     , init, init_metaData
-    , getLeadLapNumber
     , groupCarsByCloseIntervals
     , getRecentLaps
     )
@@ -13,7 +12,6 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs MetaData, Timing
 @docs init, init_metaData
 
-@docs getLeadLapNumber
 @docs groupCarsByCloseIntervals
 @docs getRecentLaps
 
@@ -174,11 +172,6 @@ positionsInClassByCarNumber cars =
                     |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
             )
         |> Dict.fromList
-
-
-getLeadLapNumber : List ViewModelItem -> Maybe Int
-getLeadLapNumber items =
-    items |> List.head |> Maybe.map .lap
 
 
 groupCarsByCloseIntervals : ViewModel -> List (List ViewModelItem)
