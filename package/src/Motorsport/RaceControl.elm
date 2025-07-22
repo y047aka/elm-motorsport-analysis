@@ -175,15 +175,12 @@ update msg m =
                             , lapCount = newClock.lapCount
                             , cars =
                                 m.cars
-                                    |> NonEmpty.toList
                                     |> applyEvents newElapsed m.events
-                                    |> List.sortWith
+                                    |> NonEmpty.sortWith
                                         (\a b ->
                                             Maybe.map2 (Lap.compareAt { elapsed = newClock.elapsed }) a.currentLap b.currentLap
                                                 |> Maybe.withDefault EQ
                                         )
-                                    |> NonEmpty.fromList
-                                    |> Maybe.withDefault m.cars
                         }
 
                     else
@@ -276,11 +273,8 @@ update msg m =
                 , lapCount = lapCount
                 , cars =
                     m.cars
-                        |> NonEmpty.toList
                         |> updateCars { elapsed = elapsed }
                         |> applyEvents elapsed m.events
-                        |> NonEmpty.fromList
-                        |> Maybe.withDefault m.cars
             }
 
 
@@ -288,17 +282,17 @@ type alias Clock =
     { elapsed : Duration }
 
 
-updateCars : Clock -> List Car -> List Car
+updateCars : Clock -> NonEmpty Car -> NonEmpty Car
 updateCars raceClock cars =
     cars
-        |> List.map
+        |> NonEmpty.map
             (\car ->
                 { car
                     | currentLap = Lap.findCurrentLap raceClock car.laps
                     , lastLap = Lap.findLastLapAt raceClock car.laps
                 }
             )
-        |> List.sortWith
+        |> NonEmpty.sortWith
             (\a b ->
                 Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
                     |> Maybe.withDefault EQ
@@ -319,7 +313,7 @@ isCarEvent { eventType } =
 
 {-| イベント情報に基づいて車両のステータスを更新する
 -}
-applyEvents : Duration -> List Event -> List Car -> List Car
+applyEvents : Duration -> List Event -> NonEmpty Car -> NonEmpty Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
@@ -329,7 +323,7 @@ applyEvents currentElapsed events cars =
             List.partition isCarEvent activeEvents
     in
     cars
-        |> List.map
+        |> NonEmpty.map
             (\car ->
                 let
                     carEvents =
