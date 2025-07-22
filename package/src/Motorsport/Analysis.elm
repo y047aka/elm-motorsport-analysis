@@ -1,11 +1,10 @@
 module Motorsport.Analysis exposing (Analysis, finished, fromRaceControl)
 
-import Dict exposing (Dict)
-import List.Extra
+import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSector(..), completedLapsAt)
+import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.Lap.Performance exposing (MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
 
 
@@ -19,14 +18,15 @@ type alias Analysis =
     }
 
 
-fromRaceControl : { a | clock : Clock.Model, cars : List Car } -> Analysis
+fromRaceControl : { a | clock : Clock.Model, cars : NonEmpty Car } -> Analysis
 fromRaceControl { clock, cars } =
     let
         raceClock =
             { elapsed = Clock.getElapsed clock }
 
         completedLaps =
-            List.map (.laps >> completedLapsAt raceClock) cars
+            NonEmpty.toList cars
+                |> List.map (.laps >> completedLapsAt raceClock)
     in
     { fastestLapTime = completedLaps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = completedLaps |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
@@ -37,11 +37,12 @@ fromRaceControl { clock, cars } =
     }
 
 
-finished : { a | cars : List Car } -> Analysis
+finished : { a | cars : NonEmpty Car } -> Analysis
 finished { cars } =
     let
         laps =
-            List.map .laps cars
+            NonEmpty.toList cars
+                |> List.map .laps
     in
     { fastestLapTime = laps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = laps |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
