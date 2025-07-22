@@ -20,6 +20,7 @@ pub struct Lap {
 }
 
 impl Lap {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         car_number: String,
         driver: String,
@@ -79,6 +80,7 @@ mod tests {
         assert!(json.is_ok());
         let json_str = json.unwrap();
         let deserialized: Lap = serde_json::from_str(&json_str).unwrap();
+        assert_eq!(deserialized.position, None);
         assert_eq!(deserialized, lap);
     }
 }
