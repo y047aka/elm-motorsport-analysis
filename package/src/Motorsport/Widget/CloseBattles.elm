@@ -147,7 +147,7 @@ lapTimeComparison cars =
         allRecentLaps =
             let
                 options =
-                    { leadLapNumber = ViewModel.getLeadLapNumber cars }
+                    { leadLapNumber = NonEmpty.head cars |> .lap }
             in
             cars
                 |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
@@ -278,7 +278,7 @@ battleChart : NonEmpty ViewModelItem -> Html msg
 battleChart cars =
     let
         options =
-            { leadLapNumber = ViewModel.getLeadLapNumber cars }
+            { leadLapNumber = NonEmpty.head cars |> .lap }
 
         carProgressionData =
             cars
