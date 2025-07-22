@@ -16,7 +16,6 @@ import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
-import List.NonEmpty
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
@@ -110,8 +109,7 @@ update msg m =
             let
                 rcNew =
                     Preprocess_F1.preprocess decoded
-                        |> List.NonEmpty.fromList
-                        |> Maybe.map RaceControl.init
+                        |> RaceControl.fromCars
                         |> Maybe.withDefault RaceControl.placeholder
             in
             ( { m
@@ -143,8 +141,7 @@ update msg m =
             let
                 rcNew =
                     decoded.preprocessed
-                        |> List.NonEmpty.fromList
-                        |> Maybe.map RaceControl.init
+                        |> RaceControl.fromCars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -180,8 +177,7 @@ update msg m =
             let
                 rcNew =
                     decoded.preprocessed
-                        |> List.NonEmpty.fromList
-                        |> Maybe.map RaceControl.init
+                        |> RaceControl.fromCars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =

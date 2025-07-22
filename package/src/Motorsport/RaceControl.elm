@@ -1,4 +1,4 @@
-module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, init, placeholder, update)
+module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, fromCars, init, placeholder, update)
 
 import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
@@ -52,6 +52,11 @@ placeholder =
             }
     in
     init (NonEmpty.singleton dummyCar)
+
+
+fromCars : List Car -> Maybe Model
+fromCars =
+    NonEmpty.fromList >> Maybe.map init
 
 
 init : NonEmpty Car -> Model
