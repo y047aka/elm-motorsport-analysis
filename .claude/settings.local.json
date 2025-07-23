@@ -2,14 +2,21 @@
   "permissions": {
     "allow": [
       "mcp__ide__getDiagnostics",
+      "Bash(cd:*)",
       "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(mkdir:*)",
       "Bash(rg:*)",
       "Bash(npm run:*)",
       "Bash(elm:*)",
+      "Bash(cargo test:*)",
+      "Bash(cargo run:*)",
       "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:package.elm-lang.org)"
     ],
     "deny": []
-  }
+  },
+  "includeCoAuthoredBy": false
 }
