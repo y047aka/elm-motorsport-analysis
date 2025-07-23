@@ -38,16 +38,18 @@ impl Config {
 /// メイン実行関数
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let csv_content = fs::read_to_string(&config.input_file)?;
-    let laps = parse_laps_from_csv(&csv_content);
-    println!("Read {} laps", laps.len());
 
+    let laps = parse_laps_from_csv(&csv_content);
     let cars = group_laps_by_car(laps);
+    println!("Read {} cars from CSV", cars.len());
+
     let json = serde_json::to_string_pretty(&cars)?;
 
-    // 出力ファイル名（指定がなければ test.json）
     let output_path = config.output_file.as_deref().unwrap_or("test.json");
-    let mut file = fs::File::create(output_path)?;
-    file.write_all(json.as_bytes())?;
+    fs::File::create(output_path)
+        .unwrap()
+        .write_all(json.as_bytes())?;
+
     println!("Wrote JSON to {}", output_path);
     Ok(())
 }
