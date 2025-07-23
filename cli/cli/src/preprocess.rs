@@ -8,6 +8,7 @@ struct LapCsvRow {
     #[serde(rename = "NUMBER", alias = " NUMBER")]
     car_number: String,
     #[serde(rename = "DRIVER_NUMBER", alias = " DRIVER_NUMBER")]
+    #[allow(dead_code)]
     driver_number: u32,
     #[serde(rename = "DRIVER_NAME", alias = " DRIVER_NAME")]
     driver: String,
@@ -16,30 +17,39 @@ struct LapCsvRow {
     #[serde(rename = "LAP_TIME", alias = " LAP_TIME")]
     lap_time: String,
     #[serde(rename = "LAP_IMPROVEMENT", alias = " LAP_IMPROVEMENT")]
+    #[allow(dead_code)]
     lap_improvement: i32,
     #[serde(rename = "CROSSING_FINISH_LINE_IN_PIT", alias = " CROSSING_FINISH_LINE_IN_PIT")]
+    #[allow(dead_code)]
     crossing_finish_line_in_pit: String,
     #[serde(rename = "S1", alias = " S1")]
     s1: String,
     #[serde(rename = "S1_IMPROVEMENT", alias = " S1_IMPROVEMENT")]
+    #[allow(dead_code)]
     s1_improvement: i32,
     #[serde(rename = "S2", alias = " S2")]
     s2: String,
     #[serde(rename = "S2_IMPROVEMENT", alias = " S2_IMPROVEMENT")]
+    #[allow(dead_code)]
     s2_improvement: i32,
     #[serde(rename = "S3", alias = " S3")]
     s3: String,
     #[serde(rename = "S3_IMPROVEMENT", alias = " S3_IMPROVEMENT")]
+    #[allow(dead_code)]
     s3_improvement: i32,
     #[serde(rename = "KPH", alias = " KPH")]
+    #[allow(dead_code)]
     kph: f32,
     #[serde(rename = "ELAPSED", alias = " ELAPSED")]
     elapsed: String,
     #[serde(rename = "HOUR", alias = " HOUR")]
+    #[allow(dead_code)]
     hour: String,
     #[serde(rename = "TOP_SPEED", alias = " TOP_SPEED")]
+    #[allow(dead_code)]
     top_speed: Option<String>,
     #[serde(rename = "PIT_TIME", alias = " PIT_TIME")]
+    #[allow(dead_code)]
     pit_time: Option<String>,
     #[serde(rename = "CLASS", alias = " CLASS")]
     class: String,
@@ -76,8 +86,8 @@ fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
     let elapsed = duration::from_string(&row.elapsed).unwrap_or(0);
 
     let lap = Lap::new(
-        row.car_number.clone(),
-        row.driver.clone(),
+        row.car_number,
+        row.driver,
         row.lap,
         None,
         time,
@@ -198,12 +208,12 @@ fn create_car_from_grouped_data(
         None
     };
 
+    // レース状況に応じてステータスを設定
+    use motorsport::car::Status;
+    
     let mut car = Car::new(meta, 1, laps);
     car.current_lap = current_lap;
     car.last_lap = last_lap;
-    
-    // レース状況に応じてステータスを設定
-    use motorsport::car::Status;
     car.status = Status::Racing; // デフォルトはRacing
     
     car
@@ -233,7 +243,7 @@ fn calculate_positions(cars: &mut Vec<Car>) {
 
 /// スタートポジションを計算（1週目の経過時間順）
 fn calculate_start_positions(cars: &mut Vec<Car>) {
-    // 1週目のラップを収集
+    // 1週目のラップを収集してソート
     let mut lap1_times: Vec<(String, u32)> = cars.iter()
         .filter_map(|car| {
             car.laps.iter()
@@ -241,8 +251,6 @@ fn calculate_start_positions(cars: &mut Vec<Car>) {
                 .map(|lap| (car.meta_data.car_number.clone(), lap.elapsed))
         })
         .collect();
-
-    // 経過時間でソート
     lap1_times.sort_by_key(|(_, elapsed)| *elapsed);
 
     // スタートポジションを設定
@@ -256,16 +264,15 @@ fn calculate_start_positions(cars: &mut Vec<Car>) {
 
 /// 特定のラップでの各車両の位置を計算
 fn calculate_position_for_lap(cars: &mut Vec<Car>, lap_num: u32) {
-    // 指定されたラップでの各車両の経過時間を収集
-    let mut lap_times: Vec<(String, u32, usize)> = Vec::new();
-    
-    for (car_idx, car) in cars.iter().enumerate() {
-        if let Some(lap) = car.laps.iter().find(|l| l.lap == lap_num) {
-            lap_times.push((car.meta_data.car_number.clone(), lap.elapsed, car_idx));
-        }
-    }
-
-    // 経過時間でソート
+    // 指定されたラップでの各車両の経過時間を収集してソート
+    let mut lap_times: Vec<(String, u32, usize)> = cars.iter()
+        .enumerate()
+        .filter_map(|(car_idx, car)| {
+            car.laps.iter()
+                .find(|l| l.lap == lap_num)
+                .map(|lap| (car.meta_data.car_number.clone(), lap.elapsed, car_idx))
+        })
+        .collect();
     lap_times.sort_by_key(|(_, elapsed, _)| *elapsed);
 
     // 各車両のラップに位置を設定
