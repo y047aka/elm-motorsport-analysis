@@ -1,7 +1,8 @@
-use crate::{Lap, Car, MetaData, Class, Driver};
 use std::collections::HashMap;
 use serde::Deserialize;
+use motorsport::{Lap, Car, MetaData, Class, Driver, duration};
 
+/// CSV解析用の中間構造体
 #[derive(Debug, Deserialize)]
 struct LapCsvRow {
     #[serde(rename = "NUMBER")]
@@ -32,11 +33,11 @@ pub fn parse_laps_from_csv(csv: &str) -> Vec<Lap> {
         match result {
             Ok(row) => {
                 let row: LapCsvRow = row;
-                let time = crate::duration::from_string(&row.lap_time).unwrap_or(0);
-                let s1 = crate::duration::from_string(&row.s1).unwrap_or(0);
-                let s2 = crate::duration::from_string(&row.s2).unwrap_or(0);
-                let s3 = crate::duration::from_string(&row.s3).unwrap_or(0);
-                let elapsed = crate::duration::from_string(&row.elapsed).unwrap_or(0);
+                let time = duration::from_string(&row.lap_time).unwrap_or(0);
+                let s1 = duration::from_string(&row.s1).unwrap_or(0);
+                let s2 = duration::from_string(&row.s2).unwrap_or(0);
+                let s3 = duration::from_string(&row.s3).unwrap_or(0);
+                let elapsed = duration::from_string(&row.elapsed).unwrap_or(0);
                 laps.push(Lap::new(
                     row.car_number,
                     row.driver,
@@ -70,14 +71,14 @@ pub fn group_laps_by_car(laps: Vec<Lap>) -> Vec<Car> {
     // 仮のMetaData/DriverでCarを生成
     map.into_iter()
         .map(|(car_number, laps)| {
-            let meta = MetaData {
-                car_number: car_number.clone(),
-                drivers: vec![Driver { name: "Dummy".to_string(), is_current_driver: true }],
-                class: Class::LMH,
-                group: "H".to_string(),
-                team: "Dummy Team".to_string(),
-                manufacturer: "Dummy".to_string(),
-            };
+            let meta = MetaData::new(
+                car_number.clone(),
+                vec![Driver::new("Dummy".to_string(), true)],
+                Class::LMH,
+                "H".to_string(),
+                "Dummy Team".to_string(),
+                "Dummy".to_string(),
+            );
             Car::new(meta, 0, laps)
         })
         .collect()

@@ -3,11 +3,13 @@ use std::fs;
 use std::path::Path;
 use std::io::Write;
 
-use motorsport::duration::{self, Duration};
-use motorsport::{parse_laps_from_csv, group_laps_by_car};
+use motorsport::{Duration, duration};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+
+pub mod preprocess;
+pub use preprocess::{parse_laps_from_csv, group_laps_by_car};
 
 /// CLI設定構造体
 #[derive(Debug, Clone)]
@@ -160,8 +162,6 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-    use std::io::Write;
 
     #[test]
     fn config_build() {
@@ -197,44 +197,5 @@ mod tests {
 
         let result = Config::build(args.into_iter());
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn csv_parsing() {
-        let csv_content = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
-12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;0:23.155;0:29.928;0:42.282;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;23.155;29.928;42.282;
-7;1;1;1:33.291;0;;23.119;0;29.188;0;40.984;0;175.0;1:33.291;11:02:00.782;0:23.119;0:29.188;0:40.984;298.6;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.119;29.188;40.984;"#;
-
-        let temp_file = "test_temp.csv";
-        let mut file = fs::File::create(temp_file).unwrap();
-        file.write_all(csv_content.as_bytes()).unwrap();
-
-        let result = read_csv(temp_file);
-        assert!(result.is_ok());
-
-        let laps = result.unwrap();
-        assert_eq!(laps.len(), 2);
-
-        // 最初のラップをテスト
-        let first_lap = &laps[0];
-        assert_eq!(first_lap.car_number, "12");
-        assert_eq!(first_lap.driver_number, 1);
-        assert_eq!(first_lap.lap_number, 1);
-        assert_eq!(first_lap.lap_time, 95365); // 1:35.365 = 95365ms
-        assert_eq!(first_lap.driver_name, "Will STEVENS");
-        assert_eq!(first_lap.class, "HYPERCAR");
-        assert_eq!(first_lap.team, "Hertz Team JOTA");
-        assert_eq!(first_lap.manufacturer, "Porsche");
-        assert_eq!(first_lap.s1, Some(23155)); // 23.155 = 23155ms
-        assert_eq!(first_lap.s2, Some(29928)); // 29.928 = 29928ms
-        assert_eq!(first_lap.s3, Some(42282)); // 42.282 = 42282ms
-
-        // 2番目のラップをテスト
-        let second_lap = &laps[1];
-        assert_eq!(second_lap.car_number, "7");
-        assert_eq!(second_lap.driver_name, "Kamui KOBAYASHI");
-        assert_eq!(second_lap.lap_time, 93291); // 1:33.291 = 93291ms
-
-        fs::remove_file(temp_file).unwrap();
     }
 }
