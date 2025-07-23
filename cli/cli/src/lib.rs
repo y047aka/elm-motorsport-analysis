@@ -3,6 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use motorsport::duration::{self, Duration};
+use motorsport::{parse_laps_from_csv, group_laps_by_car};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -140,18 +141,13 @@ pub fn read_csv<P: AsRef<Path>>(path: P) -> Result<Vec<WecLap>> {
 
 /// メイン実行関数
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let laps = read_csv(&config.input_file)?;
-
+    let csv_content = fs::read_to_string(&config.input_file)?;
+    let laps = parse_laps_from_csv(&csv_content);
     println!("Read {} laps", laps.len());
-    laps.iter()
-        .take(3)
-        .for_each(|lap| {
-            println!("車両 {}: ラップ {} - {}",
-                lap.car_number,
-                lap.lap_number,
-                duration::to_string(lap.lap_time)
-            );
-        });
+
+    let cars = group_laps_by_car(laps);
+    let json = serde_json::to_string_pretty(&cars)?;
+    println!("{}", json);
 
     Ok(())
 }
