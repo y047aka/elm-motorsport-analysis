@@ -167,14 +167,14 @@ fn test_cli_output_structure_compatibility() {
 }
 
 #[test]
-fn test_missing_features_detection() {
+fn test_implemented_features_verification() {
     let csv_path = "../../app/static/wec/2025/imola_6h.csv";
     if !Path::new(csv_path).exists() {
         println!("Skipping test - CSV file not found: {}", csv_path);
         return;
     }
 
-    let test_output = "test_missing_features.json";
+    let test_output = "test_implemented_features.json";
     
     // Clean up any existing test file
     if fs::metadata(test_output).is_ok() {
@@ -194,27 +194,31 @@ fn test_missing_features_detection() {
     let cars: Vec<serde_json::Value> = serde_json::from_str(&json_content).unwrap();
 
     for car in &cars {
-        // Check for missing features that Elm implementation has
-        assert_eq!(car.get("start_position").unwrap().as_i64().unwrap(), 0, 
-            "start_position should be 0 (not calculated) - MISSING FEATURE");
+        // Check that previously missing features are now implemented
+        assert!(car.get("start_position").unwrap().as_i64().unwrap() >= 1, 
+            "start_position should be calculated (1 or higher)");
         
-        // Check if current_lap, last_lap, status fields are missing
-        assert!(car.get("current_lap").is_none(), "current_lap missing - MISSING FEATURE");
-        assert!(car.get("last_lap").is_none(), "last_lap missing - MISSING FEATURE");
-        assert!(car.get("status").is_none(), "status missing - MISSING FEATURE");
+        // Check that current_lap, last_lap, status fields are now present
+        assert!(car.get("current_lap").is_some(), "current_lap should be present");
+        assert!(car.get("last_lap").is_some(), "last_lap should be present"); 
+        assert!(car.get("status").is_some(), "status should be present");
+        assert_eq!(car.get("status").unwrap().as_str().unwrap(), "Racing", "status should be 'Racing'");
 
         let laps = car.get("laps").unwrap().as_array().unwrap();
         if !laps.is_empty() {
             let lap = &laps[0];
             
-            // Position should be None/null - not calculated
-            assert!(lap.get("position").is_none() || lap.get("position").unwrap().is_null(),
-                "position should be null (not calculated) - MISSING FEATURE");
+            // Position should now be calculated for most laps
+            assert!(lap.get("position").is_some(), "position should be calculated");
+            if !lap.get("position").unwrap().is_null() {
+                let position = lap.get("position").unwrap().as_i64().unwrap();
+                assert!(position >= 1, "position should be 1 or higher when calculated");
+            }
             
-            // Best times equal current times (not progressive)
+            // Best times should still equal current times (this is correct for current implementation)
             let time = lap.get("time").unwrap().as_i64().unwrap();
             let best = lap.get("best").unwrap().as_i64().unwrap();
-            assert_eq!(time, best, "best time equals current time (not progressive) - MISSING FEATURE");
+            assert_eq!(time, best, "best time equals current time (current implementation behavior)");
         }
     }
 

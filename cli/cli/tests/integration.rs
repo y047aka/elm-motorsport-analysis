@@ -109,19 +109,19 @@ fn test_integration_cli_run_command() {
 #[test]
 fn test_integration_csv_parsing_edge_cases() {
     // 空のCSVデータのテスト
-    let empty_csv = "NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;S1;S2;S3;ELAPSED;CLASS;GROUP;TEAM;MANUFACTURER\n";
+    let empty_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n";
     let laps = parse_laps_from_csv(empty_csv);
     assert_eq!(laps.len(), 0, "空のCSVからは0個のラップが解析されるはず");
 
     // 不正なデータを含むCSVのテスト（エラーハンドリング確認）
-    let invalid_csv = "NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;S1;S2;S3;ELAPSED;CLASS;GROUP;TEAM;MANUFACTURER\n12;Will STEVENS;1;invalid_time;23.155;29.928;42.282;1:35.365;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
+    let invalid_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;Will STEVENS;1;invalid_time;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
     let laps = parse_laps_from_csv(invalid_csv);
     // 不正なデータは0に変換されるが、ラップ自体は作成される
     assert_eq!(laps.len(), 1, "不正なタイムを含む行も処理されるはず");
     assert_eq!(laps[0].lap.time, 0, "不正なタイムは0に変換されるはず");
 
     // 単一ラップのCSVテスト
-    let single_lap_csv = "NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;S1;S2;S3;ELAPSED;CLASS;GROUP;TEAM;MANUFACTURER\n7;Kamui KOBAYASHI;1;1:33.291;23.119;29.188;40.984;1:33.291;HYPERCAR;H;Toyota Gazoo Racing;Toyota\n";
+    let single_lap_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n7;1;Kamui KOBAYASHI;1;1:33.291;0;;23.119;0;29.188;0;40.984;0;175.0;1:33.291;11:02:00.782;298.6;;HYPERCAR;H;Toyota Gazoo Racing;Toyota\n";
     let laps = parse_laps_from_csv(single_lap_csv);
     assert_eq!(laps.len(), 1, "単一ラップが正しく解析されるはず");
     assert_eq!(laps[0].lap.car_number, "7");
@@ -133,12 +133,12 @@ fn test_integration_csv_parsing_edge_cases() {
 #[test]
 fn test_integration_car_grouping_logic() {
     // 複数ドライバー、複数車両のテストデータ
-    let multi_driver_csv = r#"NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;S1;S2;S3;ELAPSED;CLASS;GROUP;TEAM;MANUFACTURER
-12;Will STEVENS;1;1:35.365;23.155;29.928;42.282;1:35.365;HYPERCAR;H;Hertz Team JOTA;Porsche
-12;Robin FRIJNS;2;1:33.610;26.770;29.296;37.544;3:08.975;HYPERCAR;H;Hertz Team JOTA;Porsche
-7;Kamui KOBAYASHI;1;1:33.291;23.119;29.188;40.984;1:33.291;HYPERCAR;H;Toyota Gazoo Racing;Toyota
-7;Jose Maria LOPEZ;2;1:34.121;23.277;29.848;40.996;3:07.412;HYPERCAR;H;Toyota Gazoo Racing;Toyota
-8;Sebastien BOURDAIS;1;1:36.500;24.000;30.500;42.000;1:36.500;HYPERCAR;H;Peugeot;Peugeot"#;
+    let multi_driver_csv = r#"NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER
+12;1;Will STEVENS;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;;HYPERCAR;H;Hertz Team JOTA;Porsche
+12;2;Robin FRIJNS;2;1:33.610;0;;26.770;0;29.296;0;37.544;0;170.5;3:08.975;11:05:11.831;;;HYPERCAR;H;Hertz Team JOTA;Porsche
+7;1;Kamui KOBAYASHI;1;1:33.291;0;;23.119;0;29.188;0;40.984;0;175.0;1:33.291;11:02:00.782;298.6;;HYPERCAR;H;Toyota Gazoo Racing;Toyota
+7;2;Jose Maria LOPEZ;2;1:34.121;0;;23.277;0;29.848;0;40.996;0;172.3;3:07.412;11:04:35.194;;;HYPERCAR;H;Toyota Gazoo Racing;Toyota
+8;1;Sebastien BOURDAIS;1;1:36.500;0;;24.000;0;30.500;0;42.000;0;165.2;1:36.500;11:02:04.991;;;HYPERCAR;H;Peugeot;Peugeot"#;
 
     let laps_with_metadata = parse_laps_from_csv(multi_driver_csv);
     assert_eq!(laps_with_metadata.len(), 5, "5つのラップが解析されるはず");
