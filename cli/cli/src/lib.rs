@@ -1,6 +1,7 @@
 use std::error::Error;
 use std::fs;
 use std::path::Path;
+use std::io::Write;
 
 use motorsport::duration::{self, Duration};
 use motorsport::{parse_laps_from_csv, group_laps_by_car};
@@ -147,8 +148,12 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
     let cars = group_laps_by_car(laps);
     let json = serde_json::to_string_pretty(&cars)?;
-    println!("{}", json);
 
+    // 出力ファイル名（指定がなければ test.json）
+    let output_path = config.output_file.as_deref().unwrap_or("test.json");
+    let mut file = fs::File::create(output_path)?;
+    file.write_all(json.as_bytes())?;
+    println!("Wrote JSON to {}", output_path);
     Ok(())
 }
 
