@@ -161,7 +161,7 @@ fn accumulate_laps_by_car(
 /// グループ化されたデータからCarを作成する純粋関数
 fn create_car_from_grouped_data(
     car_number: String,
-    laps: Vec<Lap>,
+    mut laps: Vec<Lap>,
     car_metadata: CarMetadata,
     driver_names: Vec<String>,
 ) -> Car {
@@ -187,7 +187,26 @@ fn create_car_from_grouped_data(
         car_metadata.manufacturer,
     );
 
-    Car::new(meta, 1, laps)
+    // ラップを番号順にソート
+    laps.sort_by_key(|lap| lap.lap);
+
+    // current_lapとlast_lapを決定
+    let current_lap = laps.last().cloned();
+    let last_lap = if laps.len() >= 2 {
+        laps.get(laps.len() - 2).cloned()
+    } else {
+        None
+    };
+
+    let mut car = Car::new(meta, 1, laps);
+    car.current_lap = current_lap;
+    car.last_lap = last_lap;
+    
+    // レース状況に応じてステータスを設定
+    use motorsport::car::Status;
+    car.status = Status::Racing; // デフォルトはRacing
+    
+    car
 }
 
 /// 各車両の各ラップでの位置を計算する
