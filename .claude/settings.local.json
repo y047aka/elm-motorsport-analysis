@@ -4,6 +4,8 @@
       "mcp__ide__getDiagnostics",
       "Bash(cd:*)",
       "Bash(find:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
       "Bash(mkdir:*)",
       "Bash(rg:*)",
       "Bash(npm run:*)",
