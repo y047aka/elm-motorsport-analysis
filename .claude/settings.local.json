@@ -1,4 +1,5 @@
 {
+  "includeCoAuthoredBy": false,
   "permissions": {
     "allow": [
       "mcp__ide__getDiagnostics",
@@ -6,6 +7,7 @@
       "Bash(find:*)",
       "Bash(git add:*)",
       "Bash(git commit:*)",
+      "Bash(git checkout:*)",
       "Bash(mkdir:*)",
       "Bash(rg:*)",
       "Bash(npm run:*)",
@@ -17,6 +19,5 @@
       "WebFetch(domain:package.elm-lang.org)"
     ],
     "deny": []
-  },
-  "includeCoAuthoredBy": false
+  }
 }
