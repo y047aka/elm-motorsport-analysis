@@ -5,29 +5,49 @@ use motorsport::{Lap, Car, MetaData, Class, Driver, duration};
 /// CSV解析用の中間構造体
 #[derive(Debug, Deserialize)]
 struct LapCsvRow {
-    #[serde(rename = "NUMBER")]
+    #[serde(rename = "NUMBER", alias = " NUMBER")]
     car_number: String,
-    #[serde(rename = "DRIVER_NAME")]
+    #[serde(rename = "DRIVER_NUMBER", alias = " DRIVER_NUMBER")]
+    driver_number: u32,
+    #[serde(rename = "DRIVER_NAME", alias = " DRIVER_NAME")]
     driver: String,
-    #[serde(rename = "LAP_NUMBER")]
+    #[serde(rename = "LAP_NUMBER", alias = " LAP_NUMBER")]
     lap: u32,
-    #[serde(rename = "LAP_TIME")]
+    #[serde(rename = "LAP_TIME", alias = " LAP_TIME")]
     lap_time: String,
-    #[serde(rename = "S1")]
+    #[serde(rename = "LAP_IMPROVEMENT", alias = " LAP_IMPROVEMENT")]
+    lap_improvement: i32,
+    #[serde(rename = "CROSSING_FINISH_LINE_IN_PIT", alias = " CROSSING_FINISH_LINE_IN_PIT")]
+    crossing_finish_line_in_pit: String,
+    #[serde(rename = "S1", alias = " S1")]
     s1: String,
-    #[serde(rename = "S2")]
+    #[serde(rename = "S1_IMPROVEMENT", alias = " S1_IMPROVEMENT")]
+    s1_improvement: i32,
+    #[serde(rename = "S2", alias = " S2")]
     s2: String,
-    #[serde(rename = "S3")]
+    #[serde(rename = "S2_IMPROVEMENT", alias = " S2_IMPROVEMENT")]
+    s2_improvement: i32,
+    #[serde(rename = "S3", alias = " S3")]
     s3: String,
-    #[serde(rename = "ELAPSED")]
+    #[serde(rename = "S3_IMPROVEMENT", alias = " S3_IMPROVEMENT")]
+    s3_improvement: i32,
+    #[serde(rename = "KPH", alias = " KPH")]
+    kph: f32,
+    #[serde(rename = "ELAPSED", alias = " ELAPSED")]
     elapsed: String,
-    #[serde(rename = "CLASS")]
+    #[serde(rename = "HOUR", alias = " HOUR")]
+    hour: String,
+    #[serde(rename = "TOP_SPEED", alias = " TOP_SPEED")]
+    top_speed: Option<String>,
+    #[serde(rename = "PIT_TIME", alias = " PIT_TIME")]
+    pit_time: Option<String>,
+    #[serde(rename = "CLASS", alias = " CLASS")]
     class: String,
-    #[serde(rename = "GROUP")]
+    #[serde(rename = "GROUP", alias = " GROUP")]
     group: String,
-    #[serde(rename = "TEAM")]
+    #[serde(rename = "TEAM", alias = " TEAM")]
     team: String,
-    #[serde(rename = "MANUFACTURER")]
+    #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
     manufacturer: String,
 }
 
