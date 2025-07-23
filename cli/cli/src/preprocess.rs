@@ -33,51 +33,52 @@ struct LapCsvRow {
 
 /// CSVからLapのリストを生成する
 pub fn parse_laps_from_csv(csv: &str) -> Vec<LapWithMetadata> {
-    let mut reader = csv::ReaderBuilder::new()
+    csv::ReaderBuilder::new()
         .delimiter(b';')
-        .from_reader(csv.as_bytes());
-    let mut laps = Vec::new();
-    for result in reader.deserialize() {
-        match result {
-            Ok(row) => {
-                let row: LapCsvRow = row;
-                let time = duration::from_string(&row.lap_time).unwrap_or(0);
-                let s1 = duration::from_string(&row.s1).unwrap_or(0);
-                let s2 = duration::from_string(&row.s2).unwrap_or(0);
-                let s3 = duration::from_string(&row.s3).unwrap_or(0);
-                let elapsed = duration::from_string(&row.elapsed).unwrap_or(0);
-
-                let lap = Lap::new(
-                    row.car_number.clone(),
-                    row.driver.clone(),
-                    row.lap,
-                    None,
-                    time,
-                    time,
-                    s1,
-                    s2,
-                    s3,
-                    s1,
-                    s2,
-                    s3,
-                    elapsed,
-                );
-
-                let metadata = CarMetadata {
-                    class: row.class,
-                    group: row.group,
-                    team: row.team,
-                    manufacturer: row.manufacturer,
-                };
-
-                laps.push(LapWithMetadata { lap, metadata });
-            }
+        .from_reader(csv.as_bytes())
+        .deserialize::<LapCsvRow>()
+        .filter_map(|result| match result {
+            Ok(row) => Some(convert_row_to_lap_with_metadata(row)),
             Err(e) => {
                 eprintln!("Lap parse error: {e}");
+                None
             }
-        }
-    }
-    laps
+        })
+        .collect()
+}
+
+/// CSVの行データをLapWithMetadataに変換する純粋関数
+fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
+    let time = duration::from_string(&row.lap_time).unwrap_or(0);
+    let s1 = duration::from_string(&row.s1).unwrap_or(0);
+    let s2 = duration::from_string(&row.s2).unwrap_or(0);
+    let s3 = duration::from_string(&row.s3).unwrap_or(0);
+    let elapsed = duration::from_string(&row.elapsed).unwrap_or(0);
+
+    let lap = Lap::new(
+        row.car_number.clone(),
+        row.driver.clone(),
+        row.lap,
+        None,
+        time,
+        time,
+        s1,
+        s2,
+        s3,
+        s1,
+        s2,
+        s3,
+        elapsed,
+    );
+
+    let metadata = CarMetadata {
+        class: row.class,
+        group: row.group,
+        team: row.team,
+        manufacturer: row.manufacturer,
+    };
+
+    LapWithMetadata { lap, metadata }
 }
 
 /// Lapとメタデータを組み合わせた構造体
@@ -98,54 +99,70 @@ pub struct CarMetadata {
 
 /// LapWithMetadataリストをCarごとにグループ化する
 pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
-    let mut car_map: HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)> = HashMap::new();
-
-    for lap_with_meta in laps_with_metadata {
-        let car_number = lap_with_meta.lap.car_number.clone();
-        let driver_name = lap_with_meta.lap.driver.clone();
-
-        let entry = car_map.entry(car_number).or_insert((
-            Vec::new(),
-            lap_with_meta.metadata.clone(),
-            Vec::new(),
-        ));
-
-        entry.0.push(lap_with_meta.lap);
-
-        // ドライバーが既にリストにない場合は追加
-        if !entry.2.contains(&driver_name) {
-            entry.2.push(driver_name);
-        }
-    }
-
-    // 実際のメタデータを使用してCarを生成
-    car_map.into_iter()
+    laps_with_metadata
+        .into_iter()
+        .fold(HashMap::new(), accumulate_laps_by_car)
+        .into_iter()
         .map(|(car_number, (laps, car_metadata, driver_names))| {
-            // ドライバーリストを作成（最後のドライバーを現在のドライバーとする）
-            let drivers: Vec<Driver> = driver_names.into_iter().enumerate()
-                .map(|(i, name)| Driver::new(name, i == 0)) // 最初のドライバーを現在のドライバーとする
-                .collect();
-
-            // CLASSフィールドからClass enumに変換
-            let class = match car_metadata.class.as_str() {
-                "HYPERCAR" => Class::LMH,
-                "LMP2" => Class::LMP2,
-                "LMGT3" => Class::LMGT3,
-                _ => Class::LMH, // デフォルト
-            };
-
-            let meta = MetaData::new(
-                car_number,
-                drivers,
-                class,
-                car_metadata.group,
-                car_metadata.team,
-                car_metadata.manufacturer,
-            );
-
-            Car::new(meta, 0, laps)
+            create_car_from_grouped_data(car_number, laps, car_metadata, driver_names)
         })
         .collect()
+}
+
+/// LapWithMetadataを車両ごとに蓄積する純粋関数
+fn accumulate_laps_by_car(
+    mut acc: HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)>,
+    lap_with_meta: LapWithMetadata,
+) -> HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)> {
+    let car_number = lap_with_meta.lap.car_number.clone();
+    let driver_name = lap_with_meta.lap.driver.clone();
+
+    acc.entry(car_number)
+        .and_modify(|(laps, _, drivers)| {
+            laps.push(lap_with_meta.lap.clone());
+            if !drivers.contains(&driver_name) {
+                drivers.push(driver_name.clone());
+            }
+        })
+        .or_insert((
+            vec![lap_with_meta.lap],
+            lap_with_meta.metadata,
+            vec![driver_name],
+        ));
+
+    acc
+}
+
+/// グループ化されたデータからCarを作成する純粋関数
+fn create_car_from_grouped_data(
+    car_number: String,
+    laps: Vec<Lap>,
+    car_metadata: CarMetadata,
+    driver_names: Vec<String>,
+) -> Car {
+    let drivers: Vec<Driver> = driver_names
+        .into_iter()
+        .enumerate()
+        .map(|(i, name)| Driver::new(name, i == 0))
+        .collect();
+
+    let class = match car_metadata.class.as_str() {
+        "HYPERCAR" => Class::LMH,
+        "LMP2" => Class::LMP2,
+        "LMGT3" => Class::LMGT3,
+        _ => Class::LMH, // デフォルト
+    };
+
+    let meta = MetaData::new(
+        car_number,
+        drivers,
+        class,
+        car_metadata.group,
+        car_metadata.team,
+        car_metadata.manufacturer,
+    );
+
+    Car::new(meta, 0, laps)
 }
 
 #[cfg(test)]

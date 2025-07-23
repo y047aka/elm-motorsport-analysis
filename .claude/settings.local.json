@@ -17,5 +17,6 @@
       "WebFetch(domain:package.elm-lang.org)"
     ],
     "deny": []
-  }
+  },
+  "includeCoAuthoredBy": false
 }
