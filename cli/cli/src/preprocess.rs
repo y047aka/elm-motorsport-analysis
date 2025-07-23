@@ -119,14 +119,19 @@ pub struct CarMetadata {
 
 /// LapWithMetadataリストをCarごとにグループ化する
 pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
-    laps_with_metadata
+    let mut cars: Vec<Car> = laps_with_metadata
         .into_iter()
         .fold(HashMap::new(), accumulate_laps_by_car)
         .into_iter()
         .map(|(car_number, (laps, car_metadata, driver_names))| {
             create_car_from_grouped_data(car_number, laps, car_metadata, driver_names)
         })
-        .collect()
+        .collect();
+
+    // 位置計算を実行
+    calculate_positions(&mut cars);
+    
+    cars
 }
 
 /// LapWithMetadataを車両ごとに蓄積する純粋関数
@@ -182,7 +187,76 @@ fn create_car_from_grouped_data(
         car_metadata.manufacturer,
     );
 
-    Car::new(meta, 0, laps)
+    Car::new(meta, 1, laps)
+}
+
+/// 各車両の各ラップでの位置を計算する
+fn calculate_positions(cars: &mut Vec<Car>) {
+    if cars.is_empty() {
+        return;
+    }
+
+    // スタートポジションを計算（1週目の経過時間順）
+    calculate_start_positions(cars);
+
+    // 最大ラップ数を取得
+    let max_lap = cars.iter()
+        .flat_map(|car| &car.laps)
+        .map(|lap| lap.lap)
+        .max()
+        .unwrap_or(0);
+
+    // 各ラップの位置を計算
+    for lap_num in 1..=max_lap {
+        calculate_position_for_lap(cars, lap_num);
+    }
+}
+
+/// スタートポジションを計算（1週目の経過時間順）
+fn calculate_start_positions(cars: &mut Vec<Car>) {
+    // 1週目のラップを収集
+    let mut lap1_times: Vec<(String, u32)> = cars.iter()
+        .filter_map(|car| {
+            car.laps.iter()
+                .find(|lap| lap.lap == 1)
+                .map(|lap| (car.meta_data.car_number.clone(), lap.elapsed))
+        })
+        .collect();
+
+    // 経過時間でソート
+    lap1_times.sort_by_key(|(_, elapsed)| *elapsed);
+
+    // スタートポジションを設定
+    for car in cars.iter_mut() {
+        if let Some(position) = lap1_times.iter()
+            .position(|(car_num, _)| car_num == &car.meta_data.car_number) {
+            car.start_position = (position + 1) as i32;
+        }
+    }
+}
+
+/// 特定のラップでの各車両の位置を計算
+fn calculate_position_for_lap(cars: &mut Vec<Car>, lap_num: u32) {
+    // 指定されたラップでの各車両の経過時間を収集
+    let mut lap_times: Vec<(String, u32, usize)> = Vec::new();
+    
+    for (car_idx, car) in cars.iter().enumerate() {
+        if let Some(lap) = car.laps.iter().find(|l| l.lap == lap_num) {
+            lap_times.push((car.meta_data.car_number.clone(), lap.elapsed, car_idx));
+        }
+    }
+
+    // 経過時間でソート
+    lap_times.sort_by_key(|(_, elapsed, _)| *elapsed);
+
+    // 各車両のラップに位置を設定
+    for (position, (car_number, _, car_idx)) in lap_times.iter().enumerate() {
+        if let Some(car) = cars.get_mut(*car_idx) {
+            if let Some(lap) = car.laps.iter_mut().find(|l| l.lap == lap_num && l.car_number == *car_number) {
+                lap.position = Some((position + 1) as u32);
+            }
+        }
+    }
 }
 
 #[cfg(test)]
