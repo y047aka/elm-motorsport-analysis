@@ -780,6 +780,61 @@ fn test_elm_optional_field_handling() {
 }
 
 #[test]
+fn test_position_and_start_position_elm_compatibility() {
+    // positionとstartPositionがElm互換の0-basedインデックスになることを確認
+    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
+    let elm_json_path = "../../app/static/wec/2025/imola_6h.json";
+    
+    if !std::path::Path::new(csv_path).exists() || !std::path::Path::new(elm_json_path).exists() {
+        println!("Skipping position compatibility test - required files not found");
+        return;
+    }
+    
+    // Rust CLI出力を生成
+    let csv_content = std::fs::read_to_string(csv_path).expect("Failed to read Imola CSV");
+    let laps_with_metadata = parse_laps_from_csv(&csv_content);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let rust_output = create_elm_compatible_output("imola_6h", &laps_with_metadata, &cars);
+    let rust_json = serde_json::to_value(&rust_output).unwrap();
+    
+    // Elm JSON出力を読み込み
+    let elm_json_content = std::fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
+    let elm_json: serde_json::Value = serde_json::from_str(&elm_json_content).unwrap();
+    
+    let rust_preprocessed = rust_json["preprocessed"].as_array().unwrap();
+    let elm_preprocessed = elm_json["preprocessed"].as_array().unwrap();
+    
+    assert_eq!(rust_preprocessed.len(), elm_preprocessed.len(), 
+        "Preprocessed配列の長さが一致するはず");
+    
+    // 各車両のstartPositionを比較
+    for (rust_car, elm_car) in rust_preprocessed.iter().zip(elm_preprocessed.iter()) {
+        let car_number = rust_car["carNumber"].as_str().unwrap();
+        let rust_start_pos = rust_car["startPosition"].as_i64().unwrap();
+        let elm_start_pos = elm_car["startPosition"].as_i64().unwrap();
+        
+        assert_eq!(rust_start_pos, elm_start_pos, 
+            "車両{}のstartPositionが一致するはず: Rust={}, Elm={}", 
+            car_number, rust_start_pos, elm_start_pos);
+        
+        // 各ラップのpositionも比較（最初の数ラップをサンプル）
+        let rust_laps = rust_car["laps"].as_array().unwrap();
+        let elm_laps = elm_car["laps"].as_array().unwrap();
+        
+        for (rust_lap, elm_lap) in rust_laps.iter().zip(elm_laps.iter()).take(5) {
+            if let (Some(rust_pos), Some(elm_pos)) = 
+                (rust_lap["position"].as_i64(), elm_lap["position"].as_i64()) {
+                assert_eq!(rust_pos, elm_pos,
+                    "車両{}のラップ{}のpositionが一致するはず: Rust={}, Elm={}",
+                    car_number, rust_lap["lap"].as_i64().unwrap(), rust_pos, elm_pos);
+            }
+        }
+    }
+    
+    println!("✓ 全ての車両のpositionとstartPositionがElm出力と一致");
+}
+
+#[test]
 fn test_current_lap_and_last_lap_are_null() {
     // currentLapとlastLapがElm互換のためnullになることを確認
     let csv_data = create_test_csv_data();

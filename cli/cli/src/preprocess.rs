@@ -295,7 +295,9 @@ fn calculate_start_positions(cars: &mut Vec<Car>) {
     for car in cars.iter_mut() {
         if let Some(position) = lap1_times.iter()
             .position(|(car_num, _)| car_num == &car.meta_data.car_number) {
-            car.start_position = (position + 1) as i32;
+            // Elm互換のため0-basedのindexをそのまま使用
+            // 注意: 将来的には1-basedの position + 1 に変更する可能性がある
+            car.start_position = position as i32;
         }
     }
 }
@@ -317,7 +319,9 @@ fn calculate_position_for_lap(cars: &mut Vec<Car>, lap_num: u32) {
     for (position, (car_number, _, car_idx)) in lap_times.iter().enumerate() {
         if let Some(car) = cars.get_mut(*car_idx) {
             if let Some(lap) = car.laps.iter_mut().find(|l| l.lap == lap_num && l.car_number == *car_number) {
-                lap.position = Some((position + 1) as u32);
+                // Elm互換のため0-basedのindexをそのまま使用
+                // 注意: 将来的には1-basedの position + 1 に変更する可能性がある
+                lap.position = Some(position as u32);
             }
         }
     }
