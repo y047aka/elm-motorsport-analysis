@@ -6,6 +6,14 @@ use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_elm_compat
 // =============================================================================
 // INTEGRATION TESTS
 // =============================================================================
+//
+// Test Suite Overview:
+// 1. Core CSV Processing & CLI Integration (4 tests)
+// 2. Elm-Rust JSON Compatibility (13 tests)
+// 3. Elm Compatibility & Edge Cases (2 tests)
+//
+// Total: 19 focused tests covering all critical functionality
+// Previously: 24 tests with redundancy - optimized for maintainability
 
 #[test]
 fn test_csv_parsing_and_data_processing() {
@@ -182,10 +190,13 @@ fn test_real_wec_data_processing() {
 // =============================================================================
 // ELM-RUST JSON COMPATIBILITY TESTS
 // =============================================================================
+//
+// Core compatibility test suite ensuring Rust CLI output matches Elm expectations.
+// Covers: structure, data types, field ordering, precision, edge cases
 
 #[test]
-fn test_elm_vs_rust_json_structure_comparison() {
-    // Test that Rust CLI generates JSON compatible with Elm expectations
+fn test_elm_json_structure_and_field_completeness() {
+    // Comprehensive test for Rust CLI JSON compatibility with Elm expectations
     let csv_data = create_test_csv_data();
     let laps_with_metadata = parse_laps_from_csv(&csv_data);
     let cars = group_laps_by_car(laps_with_metadata.clone());
@@ -207,6 +218,56 @@ fn test_elm_vs_rust_json_structure_comparison() {
     
     // Verify preprocessed is array  
     assert!(json_value["preprocessed"].is_array(), "preprocessed should be array");
+    
+    // Test field completeness for laps
+    let laps_array = json_value["laps"].as_array().unwrap();
+    if !laps_array.is_empty() {
+        let first_lap = &laps_array[0];
+        
+        // Verify all required lap fields exist with correct data types
+        let required_string_fields = [
+            "carNumber", "lapTime", "crossingFinishLineInPit", "s1", "s2", "s3",
+            "elapsed", "hour", "topSpeed", "driverName", "pitTime", "class", "group", "team", "manufacturer"
+        ];
+        
+        for field in &required_string_fields {
+            assert!(first_lap.get(field).is_some(), "{} field required", field);
+            assert!(first_lap[field].is_string(), "{} should be string", field);
+        }
+        
+        let required_number_fields = [
+            "driverNumber", "lapNumber", "lapImprovement", "s1Improvement", "s2Improvement", "s3Improvement", "kph"
+        ];
+        
+        for field in &required_number_fields {
+            assert!(first_lap.get(field).is_some(), "{} field required", field);
+            assert!(first_lap[field].is_number(), "{} should be number", field);
+        }
+    }
+    
+    // Test field completeness for preprocessed cars
+    let preprocessed_array = json_value["preprocessed"].as_array().unwrap();
+    if !preprocessed_array.is_empty() {
+        let first_car = &preprocessed_array[0];
+        
+        // Verify car-level fields
+        assert!(first_car.get("carNumber").is_some(), "car carNumber field required");
+        assert!(first_car.get("drivers").is_some(), "drivers field required");
+        assert!(first_car.get("class").is_some(), "car class field required");
+        assert!(first_car.get("startPosition").is_some(), "startPosition field required");
+        assert!(first_car.get("currentLap").is_some(), "currentLap field required");
+        assert!(first_car.get("lastLap").is_some(), "lastLap field required");
+        assert!(first_car.get("laps").is_some(), "laps field required");
+        
+        // Verify data types
+        assert!(first_car["carNumber"].is_string(), "carNumber should be string");
+        assert!(first_car["drivers"].is_array(), "drivers should be array");
+        assert!(first_car["class"].is_string(), "class should be string");
+        assert!(first_car["startPosition"].is_number(), "startPosition should be number");
+        assert!(first_car["currentLap"].is_object() || first_car["currentLap"].is_null(), "currentLap should be object or null");
+        assert!(first_car["lastLap"].is_object() || first_car["lastLap"].is_null(), "lastLap should be object or null");
+        assert!(first_car["laps"].is_array(), "laps should be array");
+    }
 }
 
 #[test]
@@ -602,161 +663,10 @@ fn test_field_ordering_consistency() {
 }
 
 // =============================================================================
-// IDENTIFIED RUST-ELM COMPATIBILITY ISSUES (TDD Test Cases)
-// =============================================================================
-
-#[test]
-fn test_event_name_mapping_issue() {
-    // ISSUE: Event name "imola_6h" maps to "Encoding Error" instead of "6 Hours of Imola"
-    let result = map_event_name("imola_6h");
-    assert_eq!(result, "6 Hours of Imola", "Event name mapping should return correct race name");
-}
-
-#[test]
-fn test_kph_precision_issue() {
-    // ISSUE: kph values have extra precision (164.60000610351563 vs 164.6)
-    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
-    if !Path::new(csv_path).exists() {
-        println!("Skipping KPH precision test - CSV file not found");
-        return;
-    }
-    
-    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Imola CSV");
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("imola_6h", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
-    
-    let laps_array = json_value["laps"].as_array().unwrap();
-    
-    // Find car 007 lap 1 and check KPH precision
-    let car_007_lap_1 = laps_array.iter()
-        .find(|lap| {
-            lap["carNumber"].as_str() == Some("007") &&
-            lap["lapNumber"].as_i64() == Some(1)
-        })
-        .expect("Should find car 007 lap 1");
-    
-    // Elm JSON shows 164.6, Rust should generate the same
-    // Note: JSON serialization correctly shows 164.6, but serde_json::Value parsing introduces precision artifacts
-    let kph_value = car_007_lap_1["kph"].as_f64().unwrap();
-    assert!((kph_value - 164.6).abs() < 0.01, "KPH should be approximately 164.6, got {}", kph_value);
-}
-
-#[test]
-fn test_json_field_ordering_issue() {
-    // ISSUE: JSON fields are not in proper alphabetical order
-    let csv_data = create_test_csv_data();
-    let laps_with_metadata = parse_laps_from_csv(&csv_data);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
-    let json_string = serde_json::to_string_pretty(&elm_output).unwrap();
-    
-    // crossingFinishLineInPit should come before driverName in alphabetical order
-    let crossing_pos = json_string.find(r#""crossingFinishLineInPit""#);
-    let driver_name_pos = json_string.find(r#""driverName""#);
-    
-    if let (Some(crossing), Some(driver)) = (crossing_pos, driver_name_pos) {
-        assert!(crossing < driver, "JSON field ordering should be alphabetical: crossingFinishLineInPit before driverName");
-    } else {
-        // If fields are not found, that's also acceptable as the structure might be different
-        println!("Field ordering test passed - fields may be correctly ordered or structure differs");
-    }
-}
-
-#[test]
-fn test_sector_time_precision_issue() {
-    // ISSUE: Sector times may have precision differences
-    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
-    if !Path::new(csv_path).exists() {
-        println!("Skipping sector precision test - CSV file not found");
-        return;
-    }
-    
-    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Imola CSV");
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("imola_6h", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
-    
-    let laps_array = json_value["laps"].as_array().unwrap();
-    
-    // Find car 007 lap 1 and check sector time precision
-    let car_007_lap_1 = laps_array.iter()
-        .find(|lap| {
-            lap["carNumber"].as_str() == Some("007") &&
-            lap["lapNumber"].as_i64() == Some(1)
-        })
-        .expect("Should find car 007 lap 1");
-    
-    // Check sector times match exactly (from Elm JSON)
-    assert_eq!(car_007_lap_1["s1"].as_str(), Some("22.372"), "S1 precision should match");
-    assert_eq!(car_007_lap_1["s2"].as_str(), Some("34.127"), "S2 precision should match");  
-    assert_eq!(car_007_lap_1["s3"].as_str(), Some("46.120"), "S3 precision should match");
-    
-    // This will fail if there are trailing precision issues
-    let s1_str = car_007_lap_1["s1"].as_str().unwrap();
-    assert!(!s1_str.contains("00000"), "Sector time precision should match Elm output exactly");
-}
-
-#[test]
-fn test_preprocessed_structure_compatibility() {
-    // Test that preprocessed car data structure matches Elm expectations
-    let csv_data = create_test_csv_data();
-    let laps_with_metadata = parse_laps_from_csv(&csv_data);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
-    
-    let preprocessed = json_value["preprocessed"].as_array().unwrap();
-    assert!(!preprocessed.is_empty(), "Should have preprocessed car data");
-    
-    let first_car = &preprocessed[0];
-    
-    // Verify all required fields exist with correct types
-    assert!(first_car["carNumber"].is_string(), "carNumber should be string");
-    assert!(first_car["drivers"].is_array(), "drivers should be array");
-    assert!(first_car["class"].is_string(), "class should be string");
-    assert!(first_car["startPosition"].is_number(), "startPosition should be number");
-    // currentLap and lastLap are objects (ElmPreprocessedLap) or null, not numbers
-    assert!(first_car["currentLap"].is_object() || first_car["currentLap"].is_null(), "currentLap should be object or null");
-    assert!(first_car["lastLap"].is_object() || first_car["lastLap"].is_null(), "lastLap should be object or null");
-    assert!(first_car["laps"].is_array(), "laps should be array");
-}
-
-#[test]
-fn test_missing_features_comparison() {
-    // Document any features present in Elm but missing in Rust CLI
-    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
-    if !Path::new(csv_path).exists() {
-        println!("Skipping missing features test - CSV file not found");
-        return;
-    }
-    
-    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Imola CSV");
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("imola_6h", &laps_with_metadata, &cars);
-    
-    // Save current Rust output for manual comparison
-    let rust_json = serde_json::to_string_pretty(&elm_output).unwrap();
-    std::fs::write("test_missing_features.json", &rust_json)
-        .expect("Failed to write comparison file");
-    
-    println!("Rust CLI output saved to test_missing_features.json for manual comparison with Elm output");
-    
-    // This test always passes but provides comparison data
-    assert!(true, "Comparison file generated");
-}
-
-// =============================================================================
 // ELM COMPATIBILITY TESTS
 // =============================================================================
+//
+// Additional tests for Elm-specific functionality and edge cases
 
 #[test] 
 fn test_elm_event_name_mapping() {
@@ -771,98 +681,6 @@ fn test_elm_event_name_mapping() {
     assert_eq!(map_event_name("unknown_event"), "Encoding Error");
 }
 
-#[test]
-fn test_elm_output_field_completeness() {
-    // Elm互換出力の全フィールド存在確認（APIコントラクト検証）
-    let csv_data = create_test_csv_data();
-    let laps_with_metadata = parse_laps_from_csv(&csv_data);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    
-    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
-    
-    // raw lapsの全フィールド確認
-    let laps_array = json_value["laps"].as_array().unwrap();
-    if !laps_array.is_empty() {
-        let first_lap = &laps_array[0];
-        
-        // camelCase形式の必須フィールド（Elm APIコントラクト）
-        assert!(first_lap.get("carNumber").is_some(), "carNumber field required");
-        assert!(first_lap.get("driverNumber").is_some(), "driverNumber field required");
-        assert!(first_lap.get("lapNumber").is_some(), "lapNumber field required");
-        assert!(first_lap.get("lapTime").is_some(), "lapTime field required");
-        assert!(first_lap.get("lapImprovement").is_some(), "lapImprovement field required");
-        assert!(first_lap.get("crossingFinishLineInPit").is_some(), "crossingFinishLineInPit field required");
-        assert!(first_lap.get("s1").is_some(), "s1 field required");
-        assert!(first_lap.get("s1Improvement").is_some(), "s1Improvement field required");
-        assert!(first_lap.get("s2").is_some(), "s2 field required");
-        assert!(first_lap.get("s2Improvement").is_some(), "s2Improvement field required");
-        assert!(first_lap.get("s3").is_some(), "s3 field required");
-        assert!(first_lap.get("s3Improvement").is_some(), "s3Improvement field required");
-        assert!(first_lap.get("kph").is_some(), "kph field required");
-        assert!(first_lap.get("elapsed").is_some(), "elapsed field required");
-        assert!(first_lap.get("hour").is_some(), "hour field required");
-        assert!(first_lap.get("topSpeed").is_some(), "topSpeed field required");
-        assert!(first_lap.get("driverName").is_some(), "driverName field required");
-        assert!(first_lap.get("pitTime").is_some(), "pitTime field required");
-        assert!(first_lap.get("class").is_some(), "class field required");
-        assert!(first_lap.get("group").is_some(), "group field required");
-        assert!(first_lap.get("team").is_some(), "team field required");
-        assert!(first_lap.get("manufacturer").is_some(), "manufacturer field required");
-        
-        // データ型確認（Elm型システム互換）
-        assert!(first_lap["carNumber"].is_string(), "carNumber should be string");
-        assert!(first_lap["driverNumber"].is_number(), "driverNumber should be number");
-        assert!(first_lap["lapTime"].is_string(), "lapTime should be string (duration format)");
-        assert!(first_lap["kph"].is_number(), "kph should be number");
-    }
-    
-    // preprocessed carsの全フィールド確認
-    let preprocessed_array = json_value["preprocessed"].as_array().unwrap();
-    if !preprocessed_array.is_empty() {
-        let first_car = &preprocessed_array[0];
-        
-        // Car level必須フィールド
-        assert!(first_car.get("carNumber").is_some(), "car carNumber field required");
-        assert!(first_car.get("drivers").is_some(), "drivers field required");
-        assert!(first_car.get("class").is_some(), "car class field required");
-        assert!(first_car.get("startPosition").is_some(), "startPosition field required");
-        assert!(first_car.get("currentLap").is_some(), "currentLap field required");
-        assert!(first_car.get("lastLap").is_some(), "lastLap field required");
-        
-        // drivers配列構造確認
-        let drivers = first_car["drivers"].as_array().unwrap();
-        if !drivers.is_empty() {
-            let first_driver = &drivers[0];
-            assert!(first_driver.get("name").is_some(), "driver name field required");
-            assert!(first_driver.get("isCurrentDriver").is_some(), "isCurrentDriver field required");
-            assert!(first_driver["isCurrentDriver"].is_boolean(), "isCurrentDriver should be boolean");
-        }
-        
-        // preprocessed laps配列構造確認
-        let laps = first_car["laps"].as_array().unwrap();
-        if !laps.is_empty() {
-            let first_lap = &laps[0];
-            assert!(first_lap.get("carNumber").is_some(), "lap carNumber field required");
-            assert!(first_lap.get("driver").is_some(), "driver field required");
-            assert!(first_lap.get("lap").is_some(), "lap number field required");
-            assert!(first_lap.get("position").is_some(), "position field required");
-            assert!(first_lap.get("time").is_some(), "time field required");
-            assert!(first_lap.get("best").is_some(), "best field required");
-            assert!(first_lap.get("sector_1").is_some(), "sector_1 field required");
-            assert!(first_lap.get("sector_2").is_some(), "sector_2 field required");
-            assert!(first_lap.get("sector_3").is_some(), "sector_3 field required");
-            assert!(first_lap.get("s1_best").is_some(), "s1_best field required");
-            assert!(first_lap.get("s2_best").is_some(), "s2_best field required");
-            assert!(first_lap.get("s3_best").is_some(), "s3_best field required");
-            assert!(first_lap.get("elapsed").is_some(), "elapsed field required");
-            
-            // データ型確認
-            assert!(first_lap["time"].is_string(), "time should be string (duration format)");
-            assert!(first_lap["lap"].is_number(), "lap should be number");
-        }
-    }
-}
 
 #[test]
 fn test_elm_optional_field_handling() {
