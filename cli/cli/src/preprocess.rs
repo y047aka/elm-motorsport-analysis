@@ -158,14 +158,46 @@ pub struct CarMetadata {
 
 /// LapWithMetadataリストをCarごとにグループ化する
 pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
-    let mut cars: Vec<Car> = laps_with_metadata
-        .into_iter()
-        .fold(HashMap::new(), accumulate_laps_by_car)
+    // インデックス付きグループ化でCSV出現順序を保持
+    let mut car_data: HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)> = HashMap::new();
+    let mut first_appearance: HashMap<String, usize> = HashMap::new();
+    
+    for (index, lap_with_meta) in laps_with_metadata.into_iter().enumerate() {
+        let car_number = lap_with_meta.lap.car_number.clone();
+        let driver_name = lap_with_meta.lap.driver.clone();
+        
+        // 最初の出現位置を記録
+        first_appearance.entry(car_number.clone()).or_insert(index);
+        
+        // 車両データを蓄積
+        car_data.entry(car_number)
+            .and_modify(|(laps, _, drivers)| {
+                laps.push(lap_with_meta.lap.clone());
+                if !drivers.contains(&driver_name) {
+                    drivers.push(driver_name.clone());
+                }
+            })
+            .or_insert((
+                vec![lap_with_meta.lap],
+                lap_with_meta.metadata,
+                vec![driver_name],
+            ));
+    }
+
+    // 車両を作成し、最初の出現順序でソート
+    let mut cars_with_index: Vec<(usize, Car)> = car_data
         .into_iter()
         .map(|(car_number, (laps, car_metadata, driver_names))| {
-            create_car_from_grouped_data(car_number, laps, car_metadata, driver_names)
+            let first_index = first_appearance[&car_number];
+            let car = create_car_from_grouped_data(car_number, laps, car_metadata, driver_names);
+            (first_index, car)
         })
         .collect();
+
+    // CSVの出現順序でソート
+    cars_with_index.sort_by_key(|(index, _)| *index);
+    
+    let mut cars: Vec<Car> = cars_with_index.into_iter().map(|(_, car)| car).collect();
 
     // 位置計算を実行
     calculate_positions(&mut cars);
@@ -173,29 +205,6 @@ pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
     cars
 }
 
-/// LapWithMetadataを車両ごとに蓄積する純粋関数
-fn accumulate_laps_by_car(
-    mut acc: HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)>,
-    lap_with_meta: LapWithMetadata,
-) -> HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)> {
-    let car_number = lap_with_meta.lap.car_number.clone();
-    let driver_name = lap_with_meta.lap.driver.clone();
-
-    acc.entry(car_number)
-        .and_modify(|(laps, _, drivers)| {
-            laps.push(lap_with_meta.lap.clone());
-            if !drivers.contains(&driver_name) {
-                drivers.push(driver_name.clone());
-            }
-        })
-        .or_insert((
-            vec![lap_with_meta.lap],
-            lap_with_meta.metadata,
-            vec![driver_name],
-        ));
-
-    acc
-}
 
 /// グループ化されたデータからCarを作成する純粋関数
 fn create_car_from_grouped_data(
