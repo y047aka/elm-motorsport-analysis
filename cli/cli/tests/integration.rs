@@ -663,6 +663,92 @@ fn test_field_ordering_consistency() {
 }
 
 // =============================================================================
+// EXACT ELM-RUST JSON COMPATIBILITY TESTS (TDD)
+// =============================================================================
+//
+// Complete JSON comparison tests following TDD methodology
+// Goal: Achieve 100% identical JSON output between Elm and Rust CLI
+
+#[test]
+fn test_exact_json_match_imola_6h() {
+    // TDD: Test exact JSON match between Elm and Rust CLI output for Imola 6h
+    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
+    let elm_json_path = "../../app/static/wec/2025/imola_6h.json";
+    
+    if !Path::new(csv_path).exists() || !Path::new(elm_json_path).exists() {
+        println!("Skipping exact match test - required files not found");
+        return;
+    }
+    
+    // Generate Rust CLI output
+    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Imola CSV");
+    let laps_with_metadata = parse_laps_from_csv(&csv_content);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let rust_output = create_elm_compatible_output("imola_6h", &laps_with_metadata, &cars);
+    
+    // Load expected Elm JSON output
+    let elm_json_content = fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
+    let elm_output: serde_json::Value = serde_json::from_str(&elm_json_content)
+        .expect("Failed to parse Elm JSON");
+    
+    // Convert Rust output to JSON Value for comparison
+    let rust_json_value = serde_json::to_value(&rust_output).unwrap();
+    
+    // TDD: This test should initially fail, revealing exact differences
+    assert_json_exact_match(&elm_output, &rust_json_value, "Imola 6h");
+}
+
+#[test]
+fn test_exact_json_match_le_mans_24h() {
+    // TDD: Test exact JSON match for Le Mans 24h
+    let csv_path = "../../app/static/wec/2025/le_mans_24h.csv";
+    let elm_json_path = "../../app/static/wec/2025/le_mans_24h.json";
+    
+    if !Path::new(csv_path).exists() || !Path::new(elm_json_path).exists() {
+        println!("Skipping Le Mans exact match test - required files not found");
+        return;
+    }
+    
+    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Le Mans CSV");
+    let laps_with_metadata = parse_laps_from_csv(&csv_content);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let rust_output = create_elm_compatible_output("le_mans_24h", &laps_with_metadata, &cars);
+    
+    let elm_json_content = fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
+    let elm_output: serde_json::Value = serde_json::from_str(&elm_json_content)
+        .expect("Failed to parse Elm JSON");
+    
+    let rust_json_value = serde_json::to_value(&rust_output).unwrap();
+    
+    assert_json_exact_match(&elm_output, &rust_json_value, "Le Mans 24h");
+}
+
+#[test]
+fn test_exact_json_match_spa_6h() {
+    // TDD: Test exact JSON match for Spa 6h
+    let csv_path = "../../app/static/wec/2025/spa_6h.csv";
+    let elm_json_path = "../../app/static/wec/2025/spa_6h.json";
+    
+    if !Path::new(csv_path).exists() || !Path::new(elm_json_path).exists() {
+        println!("Skipping Spa exact match test - required files not found");
+        return;
+    }
+    
+    let csv_content = fs::read_to_string(csv_path).expect("Failed to read Spa CSV");
+    let laps_with_metadata = parse_laps_from_csv(&csv_content);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let rust_output = create_elm_compatible_output("spa_6h", &laps_with_metadata, &cars);
+    
+    let elm_json_content = fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
+    let elm_output: serde_json::Value = serde_json::from_str(&elm_json_content)
+        .expect("Failed to parse Elm JSON");
+    
+    let rust_json_value = serde_json::to_value(&rust_output).unwrap();
+    
+    assert_json_exact_match(&elm_output, &rust_json_value, "Spa 6h");
+}
+
+// =============================================================================
 // ELM COMPATIBILITY TESTS
 // =============================================================================
 //
@@ -696,6 +782,110 @@ fn test_elm_optional_field_handling() {
 fn optional_string_to_elm(value: &str) -> String {
     // Elmでは空の値は空文字列として表現（nullではなく）
     value.to_string()
+}
+
+/// Detailed JSON comparison function for TDD exact matching (ignoring KPH precision)
+fn assert_json_exact_match(elm_json: &serde_json::Value, rust_json: &serde_json::Value, race_name: &str) {
+    // Write comparison files for detailed analysis
+    let elm_pretty = serde_json::to_string_pretty(elm_json).unwrap();
+    let rust_pretty = serde_json::to_string_pretty(rust_json).unwrap();
+    
+    fs::write(format!("test_exact_match_{}_elm.json", race_name.replace(" ", "_").to_lowercase()), &elm_pretty)
+        .expect("Failed to write Elm comparison file");
+    fs::write(format!("test_exact_match_{}_rust.json", race_name.replace(" ", "_").to_lowercase()), &rust_pretty)
+        .expect("Failed to write Rust comparison file");
+    
+    // Detailed comparison with specific error messages (ignoring KPH precision)
+    if !json_equals_ignore_kph_precision(elm_json, rust_json) {
+        // Compare top-level structure
+        assert_eq!(elm_json.get("name"), rust_json.get("name"), 
+            "[{}] Event name mismatch", race_name);
+        
+        // Compare laps array length
+        let elm_laps = elm_json.get("laps").and_then(|v| v.as_array()).unwrap();
+        let rust_laps = rust_json.get("laps").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(elm_laps.len(), rust_laps.len(), 
+            "[{}] Laps array length mismatch: Elm={}, Rust={}", race_name, elm_laps.len(), rust_laps.len());
+        
+        // Compare preprocessed array length  
+        let elm_preprocessed = elm_json.get("preprocessed").and_then(|v| v.as_array()).unwrap();
+        let rust_preprocessed = rust_json.get("preprocessed").and_then(|v| v.as_array()).unwrap();
+        assert_eq!(elm_preprocessed.len(), rust_preprocessed.len(),
+            "[{}] Preprocessed array length mismatch: Elm={}, Rust={}", race_name, elm_preprocessed.len(), rust_preprocessed.len());
+        
+        // Find and report first difference in laps
+        for (i, (elm_lap, rust_lap)) in elm_laps.iter().zip(rust_laps.iter()).enumerate() {
+            if elm_lap != rust_lap {
+                println!("[{}] First lap difference at index {}", race_name, i);
+                println!("Elm lap:  {}", serde_json::to_string_pretty(elm_lap).unwrap());
+                println!("Rust lap: {}", serde_json::to_string_pretty(rust_lap).unwrap());
+                
+                // Compare individual fields
+                for (field_name, elm_value) in elm_lap.as_object().unwrap() {
+                    let rust_value = rust_lap.get(field_name);
+                    if Some(elm_value) != rust_value {
+                        println!("[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}", 
+                            race_name, i, field_name, elm_value, rust_value);
+                    }
+                }
+                break;
+            }
+        }
+        
+        // Find and report first difference in preprocessed
+        for (i, (elm_car, rust_car)) in elm_preprocessed.iter().zip(rust_preprocessed.iter()).enumerate() {
+            if elm_car != rust_car {
+                println!("[{}] First preprocessed car difference at index {}", race_name, i);
+                println!("Elm car:  {}", serde_json::to_string_pretty(elm_car).unwrap());
+                println!("Rust car: {}", serde_json::to_string_pretty(rust_car).unwrap());
+                break;
+            }
+        }
+        
+        panic!("[{}] JSON outputs do not match exactly. Check test_exact_match_*_{}.json files for detailed comparison.", 
+            race_name, race_name.replace(" ", "_").to_lowercase());
+    }
+    
+    println!("[{}] ✓ JSON outputs match exactly!", race_name);
+}
+
+/// Custom JSON equality check that ignores KPH precision differences
+fn json_equals_ignore_kph_precision(elm: &serde_json::Value, rust: &serde_json::Value) -> bool {
+    match (elm, rust) {
+        (serde_json::Value::Object(elm_obj), serde_json::Value::Object(rust_obj)) => {
+            if elm_obj.len() != rust_obj.len() {
+                return false;
+            }
+            for (key, elm_value) in elm_obj {
+                if let Some(rust_value) = rust_obj.get(key) {
+                    if key == "kph" {
+                        // Special handling for KPH precision
+                        if let (Some(elm_num), Some(rust_num)) = (elm_value.as_f64(), rust_value.as_f64()) {
+                            // Allow small precision differences for KPH values
+                            if (elm_num - rust_num).abs() > 0.01 {
+                                return false;
+                            }
+                        } else {
+                            return false;
+                        }
+                    } else if !json_equals_ignore_kph_precision(elm_value, rust_value) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
+            true
+        }
+        (serde_json::Value::Array(elm_arr), serde_json::Value::Array(rust_arr)) => {
+            if elm_arr.len() != rust_arr.len() {
+                return false;
+            }
+            elm_arr.iter().zip(rust_arr.iter())
+                .all(|(elm_item, rust_item)| json_equals_ignore_kph_precision(elm_item, rust_item))
+        }
+        _ => elm == rust,
+    }
 }
 
 fn create_test_csv_data() -> String {
