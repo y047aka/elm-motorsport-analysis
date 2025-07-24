@@ -82,24 +82,30 @@ fn test_integration_cli_run_command() {
     let json_content = fs::read_to_string(test_output).expect("出力ファイルの読み込みに失敗");
     assert!(!json_content.is_empty(), "JSONファイルは空でないはず");
 
-    // JSONとして有効であることを確認
-    let cars: Result<Vec<serde_json::Value>, _> = serde_json::from_str(&json_content);
-    assert!(cars.is_ok(), "出力されたJSONは有効な形式であるはず");
+    // JSONとして有効であることを確認（Elm互換形式）
+    let elm_output: Result<serde_json::Value, _> = serde_json::from_str(&json_content);
+    assert!(elm_output.is_ok(), "出力されたJSONは有効な形式であるはず");
 
-    let cars = cars.unwrap();
-    assert!(!cars.is_empty(), "車両データが存在するはず");
+    let elm_output = elm_output.unwrap();
+    assert!(elm_output.is_object(), "トップレベルはオブジェクトであるはず");
 
-    // 各車両の基本構造を検証
-    for car in &cars {
-        assert!(car.get("meta_data").is_some(), "meta_dataフィールドが存在するはず");
+    // Elm互換の3層構造を検証
+    let obj = elm_output.as_object().unwrap();
+    assert!(obj.contains_key("name"), "nameフィールドが存在するはず");
+    assert!(obj.contains_key("laps"), "lapsフィールドが存在するはず");
+    assert!(obj.contains_key("preprocessed"), "preprocessedフィールドが存在するはず");
+
+    // preprocessed車両データが存在することを確認
+    let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
+    assert!(!preprocessed.is_empty(), "車両データが存在するはず");
+
+    // 各車両の基本構造を検証（Elm互換形式）
+    for car in preprocessed {
+        assert!(car.get("carNumber").is_some(), "carNumberフィールドが存在するはず");
+        assert!(car.get("drivers").is_some(), "driversフィールドが存在するはず");
         assert!(car.get("laps").is_some(), "lapsフィールドが存在するはず");
-        assert!(car.get("start_position").is_some(), "start_positionフィールドが存在するはず");
-        assert!(car.get("status").is_some(), "statusフィールドが存在するはず");
-
-        let meta_data = car.get("meta_data").unwrap();
-        assert!(meta_data.get("car_number").is_some(), "car_numberフィールドが存在するはず");
-        assert!(meta_data.get("drivers").is_some(), "driversフィールドが存在するはず");
-        assert!(meta_data.get("class").is_some(), "classフィールドが存在するはず");
+        assert!(car.get("startPosition").is_some(), "startPositionフィールドが存在するはず");
+        assert!(car.get("class").is_some(), "classフィールドが存在するはず");
     }
 
     // テストファイルをクリーンアップ

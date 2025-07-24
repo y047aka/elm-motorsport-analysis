@@ -1,6 +1,4 @@
-use cli::{parse_laps_from_csv, group_laps_by_car};
-use cli::preprocess::LapWithMetadata;
-use serde_json::{Value, json};
+use cli::{parse_laps_from_csv, group_laps_by_car, create_elm_compatible_output, map_event_name};
 
 /// Elm互換の3層出力構造をテストする
 #[test]
@@ -10,11 +8,12 @@ fn test_elm_compatible_output_structure() {
     let cars = group_laps_by_car(laps_with_metadata.clone());
     
     // Elm互換のJSON構造を作成する関数をテスト
-    let elm_output = create_elm_compatible_output("Qatar 1812km", &laps_with_metadata, &cars);
+    let elm_output = create_elm_compatible_output("qatar_1812km", &laps_with_metadata, &cars);
+    let json_value = serde_json::to_value(&elm_output).unwrap();
     
     // トップレベル構造の確認
-    assert!(elm_output.is_object());
-    let obj = elm_output.as_object().unwrap();
+    assert!(json_value.is_object());
+    let obj = json_value.as_object().unwrap();
     
     // 必須フィールドの存在確認
     assert!(obj.contains_key("name"));
@@ -43,7 +42,8 @@ fn test_elm_raw_lap_format() {
     let cars = group_laps_by_car(laps_with_metadata.clone());
     
     let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
-    let laps_array = elm_output["laps"].as_array().unwrap();
+    let json_value = serde_json::to_value(&elm_output).unwrap();
+    let laps_array = json_value["laps"].as_array().unwrap();
     
     if !laps_array.is_empty() {
         let first_lap = &laps_array[0];
@@ -91,7 +91,8 @@ fn test_elm_preprocessed_car_format() {
     let cars = group_laps_by_car(laps_with_metadata.clone());
     
     let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
-    let preprocessed_array = elm_output["preprocessed"].as_array().unwrap();
+    let json_value = serde_json::to_value(&elm_output).unwrap();
+    let preprocessed_array = json_value["preprocessed"].as_array().unwrap();
     
     if !preprocessed_array.is_empty() {
         let first_car = &preprocessed_array[0];
@@ -176,36 +177,7 @@ fn test_optional_field_handling() {
     assert_eq!(optional_string_to_elm("123.456"), "123.456");
 }
 
-// ===== Helper functions (実装予定) =====
-
-fn create_elm_compatible_output(
-    event_name: &str,
-    laps_with_metadata: &[LapWithMetadata],
-    cars: &[motorsport::Car],
-) -> Value {
-    // この関数は実装が必要
-    // テストファーストのため、まず期待する構造を返すダミーを作成
-    json!({
-        "name": event_name,
-        "laps": [],
-        "preprocessed": []
-    })
-}
-
-
-fn map_event_name(event_id: &str) -> String {
-    // Elm Main.toEventName の実装が必要
-    match event_id {
-        "qatar_1812km" => "Qatar 1812km".to_string(),
-        "imola_6h" => "6 Hours of Imola".to_string(),
-        "spa_6h" => "6 Hours of Spa".to_string(),
-        "le_mans_24h" => "24 Hours of Le Mans".to_string(),
-        "fuji_6h" => "6 Hours of Fuji".to_string(),
-        "bahrain_8h" => "8 Hours of Bahrain".to_string(),
-        "sao_paulo_6h" => "6 Hours of São Paulo".to_string(),
-        _ => "Encoding Error".to_string(),
-    }
-}
+// ===== Helper functions =====
 
 fn optional_string_to_elm(value: &str) -> String {
     // Elmでは空の値は空文字列として表現
