@@ -153,16 +153,7 @@ fn test_elm_preprocessed_car_format() {
     }
 }
 
-/// Duration format（Elm互換）をテストする
-#[test]
-fn test_elm_duration_format() {
-    // Elmの Duration.toString 形式のテスト
-    assert_eq!(format_duration_elm_style(0), "0.000");
-    assert_eq!(format_duration_elm_style(4321), "4.321");
-    assert_eq!(format_duration_elm_style(28076), "28.076");
-    assert_eq!(format_duration_elm_style(414321), "6:54.321");
-    assert_eq!(format_duration_elm_style(25614321), "7:06:54.321");
-}
+/// Duration format（Elm互換）は motorsport::duration でテスト済みのため省略
 
 /// Event name mappingをテストする
 #[test]
@@ -201,11 +192,6 @@ fn create_elm_compatible_output(
     })
 }
 
-fn format_duration_elm_style(_milliseconds: u32) -> String {
-    // Elm Duration.toString の実装が必要
-    // テストファーストのため、まず失敗させる
-    "0.000".to_string()
-}
 
 fn map_event_name(event_id: &str) -> String {
     // Elm Main.toEventName の実装が必要

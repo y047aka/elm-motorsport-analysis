@@ -28,23 +28,29 @@ pub fn from_string(s: &str) -> Option<Duration> {
     }
 }
 
-/// ミリ秒をDuration文字列に変換
+/// ミリ秒をDuration文字列に変換（整数演算ベース、Elm互換形式）
 pub fn to_string(ms: Duration) -> String {
-    if ms >= 3600000 {
-        // 1時間以上
-        let hours = ms / 3600000;
-        let minutes = (ms % 3600000) / 60000;
-        let seconds = ((ms % 60000) as f64) / 1000.0;
-        format!("{}:{:02}:{:06.3}", hours, minutes, seconds)
-    } else if ms >= 60000 {
-        // 1分以上
-        let minutes = ms / 60000;
-        let seconds = ((ms % 60000) as f64) / 1000.0;
-        format!("{}:{:06.3}", minutes, seconds)
+    if ms == 0 {
+        return "0.000".to_string();
+    }
+    
+    let total_seconds = ms / 1000;
+    let milliseconds = ms % 1000;
+    
+    if total_seconds < 60 {
+        // 60秒未満: "4.321"
+        format!("{}.{:03}", total_seconds, milliseconds)
+    } else if total_seconds < 3600 {
+        // 1時間未満: "6:54.321" 
+        let minutes = total_seconds / 60;
+        let seconds = total_seconds % 60;
+        format!("{}:{:02}.{:03}", minutes, seconds, milliseconds)
     } else {
-        // 1分未満
-        let seconds = (ms as f64) / 1000.0;
-        format!("{:.3}", seconds)
+        // 1時間以上: "7:06:54.321"
+        let hours = total_seconds / 3600;
+        let minutes = (total_seconds % 3600) / 60;
+        let seconds = total_seconds % 60;
+        format!("{}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds)
     }
 }
 
@@ -62,9 +68,14 @@ mod tests {
 
     #[test]
     fn test_duration_to_string() {
+        // Elm Duration.toString 互換の動作をテスト
+        assert_eq!(to_string(0), "0.000");
+        assert_eq!(to_string(4321), "4.321");
+        assert_eq!(to_string(28076), "28.076");
         assert_eq!(to_string(95365), "1:35.365");
         assert_eq!(to_string(23155), "23.155");
         assert_eq!(to_string(29928), "29.928");
+        assert_eq!(to_string(414321), "6:54.321");
         assert_eq!(to_string(25614321), "7:06:54.321");
     }
 }
