@@ -7,56 +7,6 @@ use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_elm_compat
 // BASIC INTEGRATION TESTS
 // =============================================================================
 
-#[test]
-fn test_basic_csv_to_json_full_flow() {
-    // テスト用CSVファイルを読み込む
-    let csv_path = "../test_data.csv";
-    let csv_content = fs::read_to_string(csv_path).expect("CSVファイルの読み込みに失敗");
-
-    // CSVからLapリストにパース
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    assert!(!laps_with_metadata.is_empty(), "CSVから少なくとも1つのラップが解析されるはず");
-
-    // 最初のラップの内容を検証
-    let first_lap = &laps_with_metadata[0];
-    assert_eq!(first_lap.lap.car_number, "12");
-    assert_eq!(first_lap.lap.driver, "Will STEVENS");
-    assert_eq!(first_lap.lap.lap, 1);
-    assert!(first_lap.lap.time > 0, "ラップタイムは0より大きいはず");
-    assert!(first_lap.lap.elapsed > 0, "経過時間は0より大きいはず");
-    
-    // メタデータの検証
-    assert_eq!(first_lap.metadata.team, "Hertz Team JOTA");
-    assert_eq!(first_lap.metadata.manufacturer, "Porsche");
-    assert_eq!(first_lap.metadata.class, "HYPERCAR");
-
-    // Carごとにグループ化
-    let cars = group_laps_by_car(laps_with_metadata);
-    assert!(!cars.is_empty(), "少なくとも1台の車両が存在するはず");
-
-    // 各車両にラップデータが存在することを確認
-    for car in &cars {
-        assert!(!car.laps.is_empty(), "各車両にはラップデータが存在するはず");
-        assert!(!car.meta_data.car_number.is_empty(), "車両番号は存在するはず");
-        assert!(!car.meta_data.drivers.is_empty(), "ドライバー情報は存在するはず");
-    }
-
-    // 特定の車両の詳細検証
-    let car12 = cars.iter().find(|c| c.meta_data.car_number == "12");
-    assert!(car12.is_some(), "車両12が存在するはず");
-
-    let car12 = car12.unwrap();
-    assert!(car12.laps.len() >= 1, "車両12には少なくとも1つのラップが存在するはず");
-
-    // ラップデータの整合性チェック
-    for lap in &car12.laps {
-        assert_eq!(lap.car_number, "12");
-        assert!(lap.time > 0, "ラップタイムは正の値であるはず");
-        assert!(lap.sector_1 > 0, "セクター1は正の値であるはず");
-        assert!(lap.sector_2 > 0, "セクター2は正の値であるはず");
-        assert!(lap.sector_3 > 0, "セクター3は正の値であるはず");
-    }
-}
 
 #[test]
 fn test_basic_cli_run_command() {
@@ -117,12 +67,22 @@ fn test_basic_cli_run_command() {
 }
 
 #[test]
-fn test_basic_car_grouping_logic() {
+fn test_basic_csv_to_car_grouping() {
+    // CSV読み込みとパース（統合）
     let csv_content = fs::read_to_string("../test_data.csv").expect("CSVファイル読み込み失敗");
     let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata);
+    assert!(!laps_with_metadata.is_empty(), "CSVから少なくとも1つのラップが解析されるはず");
 
-    // 基本的なグループ化の検証            
+    // 最初のラップの内容を検証
+    let first_lap = &laps_with_metadata[0];
+    assert_eq!(first_lap.lap.car_number, "12");
+    assert_eq!(first_lap.lap.driver, "Will STEVENS");
+    assert_eq!(first_lap.metadata.team, "Hertz Team JOTA");
+    assert_eq!(first_lap.metadata.manufacturer, "Porsche");
+    assert_eq!(first_lap.metadata.class, "HYPERCAR");
+
+    // Carごとにグループ化
+    let cars = group_laps_by_car(laps_with_metadata);
     assert_eq!(cars.len(), 2, "テストデータには2台の車両が存在するはず");
 
     // 車両12の検証
@@ -137,10 +97,16 @@ fn test_basic_car_grouping_logic() {
     assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
     assert_eq!(car7.meta_data.manufacturer, "Toyota");
 
-    // 位置計算の検証
+    // ラップデータの整合性とポジション計算の検証
     for car in &cars {
+        assert!(!car.laps.is_empty(), "各車両にはラップデータが存在するはず");
         assert!(car.start_position > 0, "スタートポジションは1以上であるはず");
+        
         for lap in &car.laps {
+            assert!(lap.time > 0, "ラップタイムは正の値であるはず");
+            assert!(lap.sector_1 > 0, "セクター1は正の値であるはず");
+            assert!(lap.sector_2 > 0, "セクター2は正の値であるはず");
+            assert!(lap.sector_3 > 0, "セクター3は正の値であるはず");
             if lap.position.is_some() {
                 assert!(lap.position.unwrap() > 0, "位置は1以上であるはず");
             }
@@ -408,14 +374,14 @@ fn test_real_data_le_mans_24h_processing() {
 }
 
 #[test]
-fn test_real_data_cli_output_structure_compatibility() {
+fn test_real_data_elm_compatibility() {
     let csv_path = "../../app/static/wec/2025/imola_6h.csv";
     if !Path::new(csv_path).exists() {
         println!("Skipping test - CSV file not found: {}", csv_path);
         return;
     }
 
-    let test_output = "test_real_data_output.json";
+    let test_output = "test_real_data_elm_compatibility.json";
     
     // Clean up any existing test file
     if fs::metadata(test_output).is_ok() {
@@ -451,7 +417,7 @@ fn test_real_data_cli_output_structure_compatibility() {
     let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
     assert!(!preprocessed.is_empty(), "Should have cars in preprocessed array");
 
-    // Validate Elm-compatible car structure
+    // Validate Elm-compatible car structure and implemented features
     for car in preprocessed {
         // Required fields for Elm compatibility
         assert!(car.get("carNumber").is_some(), "Car should have carNumber");
@@ -461,6 +427,12 @@ fn test_real_data_cli_output_structure_compatibility() {
         assert!(car.get("manufacturer").is_some(), "Car should have manufacturer");
         assert!(car.get("startPosition").is_some(), "Car should have startPosition");
         assert!(car.get("laps").is_some(), "Car should have laps");
+        
+        // Check implemented features
+        assert!(car.get("startPosition").unwrap().as_i64().unwrap() >= 1, 
+            "startPosition should be calculated (1 or higher)");
+        assert!(car.get("currentLap").is_some(), "currentLap should be present");
+        assert!(car.get("lastLap").is_some(), "lastLap should be present");
 
         // Validate drivers array structure
         let drivers = car.get("drivers").unwrap().as_array().unwrap();
@@ -470,7 +442,7 @@ fn test_real_data_cli_output_structure_compatibility() {
             assert!(driver.get("isCurrentDriver").is_some(), "Driver should have isCurrentDriver");
         }
 
-        // Validate laps array structure
+        // Validate laps array structure and features
         let laps = car.get("laps").unwrap().as_array().unwrap();
         if !laps.is_empty() {
             let lap = &laps[0];
@@ -479,75 +451,22 @@ fn test_real_data_cli_output_structure_compatibility() {
             assert!(lap.get("lap").is_some(), "Lap should have lap number");
             assert!(lap.get("time").is_some(), "Lap should have time");
             assert!(lap.get("elapsed").is_some(), "Lap should have elapsed");
-        }
-    }
-
-    // Clean up test file
-    fs::remove_file(test_output).expect("Failed to clean up test file");
-}
-
-#[test]
-fn test_real_data_implemented_features_verification() {
-    let csv_path = "../../app/static/wec/2025/imola_6h.csv";
-    if !Path::new(csv_path).exists() {
-        println!("Skipping test - CSV file not found: {}", csv_path);
-        return;
-    }
-
-    let test_output = "test_implemented_features.json";
-    
-    // Clean up any existing test file
-    if fs::metadata(test_output).is_ok() {
-        fs::remove_file(test_output).expect("Failed to remove existing test file");
-    }
-
-    let config = Config {
-        input_file: csv_path.to_string(),
-        output_file: Some(test_output.to_string()),
-        event_name: Some("Test Event".to_string()),
-    };
-
-    let result = run(config);
-    assert!(result.is_ok(), "CLI should run successfully");
-
-    let json_content = fs::read_to_string(test_output).unwrap();
-    let elm_output: serde_json::Value = serde_json::from_str(&json_content).unwrap();
-
-    // Verify Elm-compatible structure
-    let obj = elm_output.as_object().unwrap();
-    assert!(obj.contains_key("preprocessed"), "Should have preprocessed field");
-    
-    let cars = obj.get("preprocessed").unwrap().as_array().unwrap();
-
-    for car in cars {
-        // Check that previously missing features are now implemented (Elm-compatible format)
-        assert!(car.get("startPosition").unwrap().as_i64().unwrap() >= 1, 
-            "startPosition should be calculated (1 or higher)");
-        
-        // Check that currentLap, lastLap fields are now present
-        assert!(car.get("currentLap").is_some(), "currentLap should be present");
-        assert!(car.get("lastLap").is_some(), "lastLap should be present"); 
-
-        let laps = car.get("laps").unwrap().as_array().unwrap();
-        if !laps.is_empty() {
-            let lap = &laps[0];
             
-            // Position should now be calculated for most laps
+            // Position should be calculated for most laps
             assert!(lap.get("position").is_some(), "position should be calculated");
             if !lap.get("position").unwrap().is_null() {
                 let position = lap.get("position").unwrap().as_i64().unwrap();
                 assert!(position >= 1, "position should be 1 or higher when calculated");
             }
             
-            // Best times should still equal current times (this is correct for current implementation)
-            // In Elm-compatible format, times are strings
+            // Best times should equal current times (current implementation behavior)
             let time = lap.get("time").unwrap().as_str().unwrap();
             let best = lap.get("best").unwrap().as_str().unwrap();
             assert_eq!(time, best, "best time equals current time (current implementation behavior)");
         }
     }
 
-    // Clean up
+    // Clean up test file
     fs::remove_file(test_output).expect("Failed to clean up test file");
 }
 
