@@ -117,6 +117,10 @@ fn test_cli_end_to_end_execution() {
         assert!(car.get("class").is_some(), "classフィールドが存在するはず");
         assert!(car.get("currentLap").is_some(), "currentLapフィールドが存在するはず");
         assert!(car.get("lastLap").is_some(), "lastLapフィールドが存在するはず");
+        
+        // Elm互換性のためcurrentLapとlastLapがnullであることを確認
+        assert!(car.get("currentLap").unwrap().is_null(), "currentLapはnullであるはず");
+        assert!(car.get("lastLap").unwrap().is_null(), "lastLapはnullであるはず");
     }
 
     // テストファイルをクリーンアップ
@@ -773,6 +777,32 @@ fn test_elm_optional_field_handling() {
     // Elm特有の空文字列処理（nullではなく空文字列として表現）
     assert_eq!(optional_string_to_elm(""), "", "Empty string should remain empty");
     assert_eq!(optional_string_to_elm("123.456"), "123.456", "Non-empty string should be preserved");
+}
+
+#[test]
+fn test_current_lap_and_last_lap_are_null() {
+    // currentLapとlastLapがElm互換のためnullになることを確認
+    let csv_data = create_test_csv_data();
+    let laps_with_metadata = parse_laps_from_csv(&csv_data);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    
+    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
+    let json_value = serde_json::to_value(&elm_output).unwrap();
+    
+    let preprocessed_array = json_value["preprocessed"].as_array().unwrap();
+    assert!(!preprocessed_array.is_empty(), "少なくとも1台の車両が存在するはず");
+    
+    // 全ての車両のcurrentLapとlastLapがnullであることを確認
+    for (i, car) in preprocessed_array.iter().enumerate() {
+        assert!(car.get("currentLap").is_some(), "車両{}にcurrentLapフィールドが存在するはず", i);
+        assert!(car.get("lastLap").is_some(), "車両{}にlastLapフィールドが存在するはず", i);
+        
+        assert!(car["currentLap"].is_null(), "車両{}のcurrentLapはnullであるはず", i);
+        assert!(car["lastLap"].is_null(), "車両{}のlastLapはnullであるはず", i);
+        
+        println!("✓ 車両 {} ({})のcurrentLapとlastLapがnullであることを確認", 
+                 i, car["carNumber"].as_str().unwrap_or("不明"));
+    }
 }
 
 // =============================================================================

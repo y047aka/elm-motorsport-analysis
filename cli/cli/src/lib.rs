@@ -165,41 +165,9 @@ fn convert_to_preprocessed_cars(cars: &[Car]) -> Vec<ElmPreprocessedCar> {
             }
         }).collect();
         
-        let current_lap = car.current_lap.as_ref().map(|lap| {
-            ElmPreprocessedLap {
-                car_number: lap.car_number.clone(),
-                driver: lap.driver.clone(),
-                lap: lap.lap,
-                position: lap.position,
-                time: duration::to_string(lap.time),
-                best: duration::to_string(lap.best),
-                sector_1: duration::to_string(lap.sector_1),
-                sector_2: duration::to_string(lap.sector_2),
-                sector_3: duration::to_string(lap.sector_3),
-                s1_best: duration::to_string(lap.s1_best),
-                s2_best: duration::to_string(lap.s2_best),
-                s3_best: duration::to_string(lap.s3_best),
-                elapsed: duration::to_string(lap.elapsed),
-            }
-        });
-        
-        let last_lap = car.last_lap.as_ref().map(|lap| {
-            ElmPreprocessedLap {
-                car_number: lap.car_number.clone(),
-                driver: lap.driver.clone(),
-                lap: lap.lap,
-                position: lap.position,
-                time: duration::to_string(lap.time),
-                best: duration::to_string(lap.best),
-                sector_1: duration::to_string(lap.sector_1),
-                sector_2: duration::to_string(lap.sector_2),
-                sector_3: duration::to_string(lap.sector_3),
-                s1_best: duration::to_string(lap.s1_best),
-                s2_best: duration::to_string(lap.s2_best),
-                s3_best: duration::to_string(lap.s3_best),
-                elapsed: duration::to_string(lap.elapsed),
-            }
-        });
+        // Elm互換のためcurrent_lapとlast_lapをnullに設定
+        let current_lap = None;
+        let last_lap = None;
         
         ElmPreprocessedCar {
             car_number: car.meta_data.car_number.clone(),
