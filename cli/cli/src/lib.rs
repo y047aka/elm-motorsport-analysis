@@ -112,23 +112,23 @@ fn convert_to_raw_laps(laps_with_metadata: &[LapWithMetadata]) -> Vec<ElmRawLap>
         
         ElmRawLap {
             car_number: lap.car_number.clone(),
-            driver_number: 1, // CSVから取得する必要があるが、とりあえず1
+            driver_number: lap_meta.csv_data.driver_number,
             lap_number: lap.lap,
             lap_time: duration::to_string(lap.time),
-            lap_improvement: 0, // CSVから取得する必要があるが、とりあえず0
-            crossing_finish_line_in_pit: String::new(),
+            lap_improvement: lap_meta.csv_data.lap_improvement,
+            crossing_finish_line_in_pit: lap_meta.csv_data.crossing_finish_line_in_pit.clone(),
             s1: duration::to_string(lap.sector_1),
-            s1_improvement: 0,
+            s1_improvement: lap_meta.csv_data.s1_improvement,
             s2: duration::to_string(lap.sector_2),
-            s2_improvement: 0,
+            s2_improvement: lap_meta.csv_data.s2_improvement,
             s3: duration::to_string(lap.sector_3),
-            s3_improvement: 0,
-            kph: 160.0, // CSVから取得する必要があるが、とりあえず160.0
+            s3_improvement: lap_meta.csv_data.s3_improvement,
+            kph: lap_meta.csv_data.kph,
             elapsed: duration::to_string(lap.elapsed),
-            hour: String::new(), // CSVから取得する必要がある
-            top_speed: String::new(),
+            hour: lap_meta.csv_data.hour.clone(),
+            top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
             driver_name: lap.driver.clone(),
-            pit_time: String::new(),
+            pit_time: lap_meta.csv_data.pit_time.clone().unwrap_or_default(),
             class: meta.class.clone(),
             group: meta.group.clone(),
             team: meta.team.clone(),
@@ -204,7 +204,7 @@ fn convert_to_preprocessed_cars(cars: &[Car]) -> Vec<ElmPreprocessedCar> {
         ElmPreprocessedCar {
             car_number: car.meta_data.car_number.clone(),
             drivers,
-            class: format!("{:?}", car.meta_data.class), // Class enum を文字列に変換
+            class: car.meta_data.class.to_string().to_string(), // Elm互換の文字列変換
             group: car.meta_data.group.clone(),
             team: car.meta_data.team.clone(),
             manufacturer: car.meta_data.manufacturer.clone(),

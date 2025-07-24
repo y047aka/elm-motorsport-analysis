@@ -108,7 +108,20 @@ fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
         manufacturer: row.manufacturer,
     };
 
-    LapWithMetadata { lap, metadata }
+    let csv_data = CsvExtraData {
+        driver_number: row.driver_number,
+        lap_improvement: row.lap_improvement,
+        crossing_finish_line_in_pit: row.crossing_finish_line_in_pit,
+        s1_improvement: row.s1_improvement,
+        s2_improvement: row.s2_improvement,
+        s3_improvement: row.s3_improvement,
+        kph: row.kph,
+        hour: row.hour,
+        top_speed: row.top_speed,
+        pit_time: row.pit_time,
+    };
+
+    LapWithMetadata { lap, metadata, csv_data }
 }
 
 /// Lapとメタデータを組み合わせた構造体
@@ -116,6 +129,22 @@ fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
 pub struct LapWithMetadata {
     pub lap: Lap,
     pub metadata: CarMetadata,
+    pub csv_data: CsvExtraData,
+}
+
+/// CSVから取得した追加データ
+#[derive(Debug, Clone)]
+pub struct CsvExtraData {
+    pub driver_number: u32,
+    pub lap_improvement: i32,
+    pub crossing_finish_line_in_pit: String,
+    pub s1_improvement: i32,
+    pub s2_improvement: i32,
+    pub s3_improvement: i32,
+    pub kph: f32,
+    pub hour: String,
+    pub top_speed: Option<String>,
+    pub pit_time: Option<String>,
 }
 
 /// 車両のメタデータ情報
@@ -319,6 +348,18 @@ mod tests {
                     team: "Hertz Team JOTA".to_string(),
                     manufacturer: "Porsche".to_string(),
                 },
+                csv_data: CsvExtraData {
+                    driver_number: 1,
+                    lap_improvement: 0,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 0,
+                    s2_improvement: 0,
+                    s3_improvement: 0,
+                    kph: 160.7,
+                    hour: "11:02:02.856".to_string(),
+                    top_speed: None,
+                    pit_time: None,
+                },
             },
             LapWithMetadata {
                 lap: Lap::new(
@@ -330,6 +371,18 @@ mod tests {
                     team: "Hertz Team JOTA".to_string(),
                     manufacturer: "Porsche".to_string(),
                 },
+                csv_data: CsvExtraData {
+                    driver_number: 2,
+                    lap_improvement: 1,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 1,
+                    s2_improvement: 1,
+                    s3_improvement: 1,
+                    kph: 165.2,
+                    hour: "11:03:35.101".to_string(),
+                    top_speed: Some("298.6".to_string()),
+                    pit_time: None,
+                },
             },
             LapWithMetadata {
                 lap: Lap::new(
@@ -340,6 +393,18 @@ mod tests {
                     group: "H".to_string(),
                     team: "Toyota Gazoo Racing".to_string(),
                     manufacturer: "Toyota".to_string(),
+                },
+                csv_data: CsvExtraData {
+                    driver_number: 1,
+                    lap_improvement: 0,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 0,
+                    s2_improvement: 0,
+                    s3_improvement: 0,
+                    kph: 175.0,
+                    hour: "11:02:00.782".to_string(),
+                    top_speed: Some("298.6".to_string()),
+                    pit_time: None,
                 },
             },
         ];
