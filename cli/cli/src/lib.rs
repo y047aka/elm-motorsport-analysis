@@ -123,7 +123,7 @@ fn convert_to_raw_laps(laps_with_metadata: &[LapWithMetadata]) -> Vec<ElmRawLap>
             s2_improvement: lap_meta.csv_data.s2_improvement,
             s3: duration::to_string(lap.sector_3),
             s3_improvement: lap_meta.csv_data.s3_improvement,
-            kph: lap_meta.csv_data.kph,
+            kph: (lap_meta.csv_data.kph * 10.0).round() / 10.0,
             elapsed: duration::to_string(lap.elapsed),
             hour: lap_meta.csv_data.hour.clone(),
             top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
