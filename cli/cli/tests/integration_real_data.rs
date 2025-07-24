@@ -130,31 +130,46 @@ fn test_cli_output_structure_compatibility() {
     assert!(fs::metadata(test_output).is_ok(), "Output file should be created");
     
     let json_content = fs::read_to_string(test_output).unwrap();
-    let cars: Result<Vec<serde_json::Value>, _> = serde_json::from_str(&json_content);
-    assert!(cars.is_ok(), "Output should be valid JSON");
+    let elm_output: Result<serde_json::Value, _> = serde_json::from_str(&json_content);
+    assert!(elm_output.is_ok(), "Output should be valid JSON");
 
-    let cars = cars.unwrap();
-    assert!(!cars.is_empty(), "Should have cars in output");
+    let elm_output = elm_output.unwrap();
+    assert!(elm_output.is_object(), "Output should be an Elm-compatible object");
 
-    // Validate structure matches expected format
-    for car in &cars {
-        // Required fields that should match the existing JSON structure
-        assert!(car.get("meta_data").is_some(), "Car should have meta_data");
+    // Validate Elm-compatible 3-layer structure
+    let obj = elm_output.as_object().unwrap();
+    assert!(obj.contains_key("name"), "Should have name field");
+    assert!(obj.contains_key("laps"), "Should have laps field");
+    assert!(obj.contains_key("preprocessed"), "Should have preprocessed field");
+
+    // Validate preprocessed cars array
+    let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
+    assert!(!preprocessed.is_empty(), "Should have cars in preprocessed array");
+
+    // Validate Elm-compatible car structure
+    for car in preprocessed {
+        // Required fields for Elm compatibility
+        assert!(car.get("carNumber").is_some(), "Car should have carNumber");
+        assert!(car.get("drivers").is_some(), "Car should have drivers");
+        assert!(car.get("class").is_some(), "Car should have class");
+        assert!(car.get("team").is_some(), "Car should have team");
+        assert!(car.get("manufacturer").is_some(), "Car should have manufacturer");
+        assert!(car.get("startPosition").is_some(), "Car should have startPosition");
         assert!(car.get("laps").is_some(), "Car should have laps");
-        assert!(car.get("start_position").is_some(), "Car should have start_position");
-        
-        let meta_data = car.get("meta_data").unwrap();
-        assert!(meta_data.get("car_number").is_some(), "Meta data should have car_number");
-        assert!(meta_data.get("drivers").is_some(), "Meta data should have drivers");
-        assert!(meta_data.get("class").is_some(), "Meta data should have class");
-        assert!(meta_data.get("team").is_some(), "Meta data should have team");
-        assert!(meta_data.get("manufacturer").is_some(), "Meta data should have manufacturer");
 
+        // Validate drivers array structure
+        let drivers = car.get("drivers").unwrap().as_array().unwrap();
+        if !drivers.is_empty() {
+            let driver = &drivers[0];
+            assert!(driver.get("name").is_some(), "Driver should have name");
+            assert!(driver.get("isCurrentDriver").is_some(), "Driver should have isCurrentDriver");
+        }
+
+        // Validate laps array structure
         let laps = car.get("laps").unwrap().as_array().unwrap();
         if !laps.is_empty() {
             let lap = &laps[0];
-            // Check lap structure
-            assert!(lap.get("car_number").is_some(), "Lap should have car_number");
+            assert!(lap.get("carNumber").is_some(), "Lap should have carNumber");
             assert!(lap.get("driver").is_some(), "Lap should have driver");
             assert!(lap.get("lap").is_some(), "Lap should have lap number");
             assert!(lap.get("time").is_some(), "Lap should have time");
@@ -191,18 +206,22 @@ fn test_implemented_features_verification() {
     assert!(result.is_ok(), "CLI should run successfully");
 
     let json_content = fs::read_to_string(test_output).unwrap();
-    let cars: Vec<serde_json::Value> = serde_json::from_str(&json_content).unwrap();
+    let elm_output: serde_json::Value = serde_json::from_str(&json_content).unwrap();
 
-    for car in &cars {
-        // Check that previously missing features are now implemented
-        assert!(car.get("start_position").unwrap().as_i64().unwrap() >= 1, 
-            "start_position should be calculated (1 or higher)");
+    // Verify Elm-compatible structure
+    let obj = elm_output.as_object().unwrap();
+    assert!(obj.contains_key("preprocessed"), "Should have preprocessed field");
+    
+    let cars = obj.get("preprocessed").unwrap().as_array().unwrap();
+
+    for car in cars {
+        // Check that previously missing features are now implemented (Elm-compatible format)
+        assert!(car.get("startPosition").unwrap().as_i64().unwrap() >= 1, 
+            "startPosition should be calculated (1 or higher)");
         
-        // Check that current_lap, last_lap, status fields are now present
-        assert!(car.get("current_lap").is_some(), "current_lap should be present");
-        assert!(car.get("last_lap").is_some(), "last_lap should be present"); 
-        assert!(car.get("status").is_some(), "status should be present");
-        assert_eq!(car.get("status").unwrap().as_str().unwrap(), "Racing", "status should be 'Racing'");
+        // Check that currentLap, lastLap fields are now present
+        assert!(car.get("currentLap").is_some(), "currentLap should be present");
+        assert!(car.get("lastLap").is_some(), "lastLap should be present"); 
 
         let laps = car.get("laps").unwrap().as_array().unwrap();
         if !laps.is_empty() {
@@ -216,8 +235,9 @@ fn test_implemented_features_verification() {
             }
             
             // Best times should still equal current times (this is correct for current implementation)
-            let time = lap.get("time").unwrap().as_i64().unwrap();
-            let best = lap.get("best").unwrap().as_i64().unwrap();
+            // In Elm-compatible format, times are strings
+            let time = lap.get("time").unwrap().as_str().unwrap();
+            let best = lap.get("best").unwrap().as_str().unwrap();
             assert_eq!(time, best, "best time equals current time (current implementation behavior)");
         }
     }
