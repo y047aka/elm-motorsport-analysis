@@ -145,7 +145,7 @@ fromString str =
             String.toInt m |> Maybe.map ((*) 60000)
 
         fromSeconds s =
-            String.toFloat s |> Maybe.map ((*) 1000 >> floor)
+            String.toFloat s |> Maybe.map ((*) 1000 >> round)
     in
     case String.split ":" str of
         [ h, m, s ] ->
