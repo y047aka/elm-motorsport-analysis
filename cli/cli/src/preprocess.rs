@@ -4,61 +4,51 @@ use motorsport::{Lap, Car, MetaData, Class, Driver, duration};
 
 /// CSV解析用の中間構造体
 #[derive(Debug, Deserialize)]
-struct LapCsvRow {
+pub struct LapCsvRow {
     #[serde(rename = "NUMBER", alias = " NUMBER")]
     car_number: String,
     #[serde(rename = "DRIVER_NUMBER", alias = " DRIVER_NUMBER")]
-    #[allow(dead_code)]
-    driver_number: u32,
+    pub driver_number: u32,
     #[serde(rename = "DRIVER_NAME", alias = " DRIVER_NAME")]
-    driver: String,
+    pub driver: String,
     #[serde(rename = "LAP_NUMBER", alias = " LAP_NUMBER")]
-    lap: u32,
+    pub lap: u32,
     #[serde(rename = "LAP_TIME", alias = " LAP_TIME")]
-    lap_time: String,
+    pub lap_time: String,
     #[serde(rename = "LAP_IMPROVEMENT", alias = " LAP_IMPROVEMENT")]
-    #[allow(dead_code)]
-    lap_improvement: i32,
+    pub lap_improvement: i32,
     #[serde(rename = "CROSSING_FINISH_LINE_IN_PIT", alias = " CROSSING_FINISH_LINE_IN_PIT")]
-    #[allow(dead_code)]
-    crossing_finish_line_in_pit: String,
+    pub crossing_finish_line_in_pit: String,
     #[serde(rename = "S1", alias = " S1")]
-    s1: String,
+    pub s1: String,
     #[serde(rename = "S1_IMPROVEMENT", alias = " S1_IMPROVEMENT")]
-    #[allow(dead_code)]
-    s1_improvement: i32,
+    pub s1_improvement: i32,
     #[serde(rename = "S2", alias = " S2")]
-    s2: String,
+    pub s2: String,
     #[serde(rename = "S2_IMPROVEMENT", alias = " S2_IMPROVEMENT")]
-    #[allow(dead_code)]
-    s2_improvement: i32,
+    pub s2_improvement: i32,
     #[serde(rename = "S3", alias = " S3")]
-    s3: String,
+    pub s3: String,
     #[serde(rename = "S3_IMPROVEMENT", alias = " S3_IMPROVEMENT")]
-    #[allow(dead_code)]
-    s3_improvement: i32,
+    pub s3_improvement: i32,
     #[serde(rename = "KPH", alias = " KPH")]
-    #[allow(dead_code)]
-    kph: f32,
+    pub kph: f32,
     #[serde(rename = "ELAPSED", alias = " ELAPSED")]
-    elapsed: String,
+    pub elapsed: String,
     #[serde(rename = "HOUR", alias = " HOUR")]
-    #[allow(dead_code)]
-    hour: String,
+    pub hour: String,
     #[serde(rename = "TOP_SPEED", alias = " TOP_SPEED")]
-    #[allow(dead_code)]
-    top_speed: Option<String>,
+    pub top_speed: Option<String>,
     #[serde(rename = "PIT_TIME", alias = " PIT_TIME")]
-    #[allow(dead_code)]
-    pit_time: Option<String>,  // Raw string from CSV, will be converted to Duration
+    pub pit_time: Option<String>,  // Raw string from CSV, will be converted to Duration
     #[serde(rename = "CLASS", alias = " CLASS")]
-    class: String,
+    pub class: String,
     #[serde(rename = "GROUP", alias = " GROUP")]
-    group: String,
+    pub group: String,
     #[serde(rename = "TEAM", alias = " TEAM")]
-    team: String,
+    pub team: String,
     #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
-    manufacturer: String,
+    pub manufacturer: String,
 }
 
 /// CSVからLapのリストを生成する
@@ -219,49 +209,77 @@ fn create_car_from_grouped_data_with_best_times(
     laps_with_metadata: Vec<LapWithMetadata>,
     driver_names: Vec<String>,
 ) -> Car {
-    let drivers: Vec<Driver> = driver_names
+    let drivers = create_drivers_from_names(driver_names);
+    let car_metadata = &laps_with_metadata[0].metadata;
+    let class = map_class_from_string(&car_metadata.class);
+    let meta = create_metadata(car_number, drivers, class, car_metadata);
+    
+    let processed_laps = process_laps_with_best_times(laps_with_metadata);
+    let (current_lap, last_lap) = determine_current_and_last_lap(&processed_laps);
+    
+    create_car_with_lap_data(meta, processed_laps, current_lap, last_lap)
+}
+
+/// ドライバー名のリストからDriverのリストを作成
+fn create_drivers_from_names(driver_names: Vec<String>) -> Vec<Driver> {
+    driver_names
         .into_iter()
         .enumerate()
         .map(|(i, name)| Driver::new(name, i == 0))
-        .collect();
+        .collect()
+}
 
-    // 最初のラップからメタデータを取得
-    let car_metadata = &laps_with_metadata[0].metadata;
-    let class = match car_metadata.class.as_str() {
+/// クラス文字列をClass enumにマッピング
+fn map_class_from_string(class_str: &str) -> Class {
+    match class_str {
         "HYPERCAR" => Class::LMH,
         "LMP2" => Class::LMP2,
         "LMGT3" => Class::LMGT3,
         _ => Class::LMH, // デフォルト
-    };
+    }
+}
 
-    let meta = MetaData::new(
+/// MetaDataを作成
+fn create_metadata(
+    car_number: String,
+    drivers: Vec<Driver>,
+    class: Class,
+    car_metadata: &CarMetadata,
+) -> MetaData {
+    MetaData::new(
         car_number,
         drivers,
         class,
         car_metadata.group.clone(),
         car_metadata.team.clone(),
         car_metadata.manufacturer.clone(),
-    );
+    )
+}
 
-    // ベストタイムを追跡してラップを処理
-    let processed_laps = process_laps_with_best_times(laps_with_metadata);
-
-    // current_lapとlast_lapを決定
+/// current_lapとlast_lapを決定
+fn determine_current_and_last_lap(processed_laps: &[Lap]) -> (Option<Lap>, Option<Lap>) {
     let current_lap = processed_laps.last().cloned();
     let last_lap = if processed_laps.len() >= 2 {
         processed_laps.get(processed_laps.len() - 2).cloned()
     } else {
         None
     };
+    (current_lap, last_lap)
+}
 
-    // レース状況に応じてステータスを設定
+/// ラップデータを含むCarを作成
+fn create_car_with_lap_data(
+    meta: MetaData,
+    processed_laps: Vec<Lap>,
+    current_lap: Option<Lap>,
+    last_lap: Option<Lap>,
+) -> Car {
     use motorsport::car::Status;
     
     let mut car = Car::new(meta, 1, processed_laps);
     car.current_lap = current_lap;
     car.last_lap = last_lap;
-    car.status = Status::Racing; // デフォルトはRacing
-    
+    car.status = Status::Racing;
     car
 }
 
@@ -337,56 +355,6 @@ fn process_laps_with_best_times(mut laps_with_metadata: Vec<LapWithMetadata>) ->
     processed_laps
 }
 
-/// グループ化されたデータからCarを作成する純粋関数（旧バージョン、互換性のため残す）
-fn create_car_from_grouped_data(
-    car_number: String,
-    mut laps: Vec<Lap>,
-    car_metadata: CarMetadata,
-    driver_names: Vec<String>,
-) -> Car {
-    let drivers: Vec<Driver> = driver_names
-        .into_iter()
-        .enumerate()
-        .map(|(i, name)| Driver::new(name, i == 0))
-        .collect();
-
-    let class = match car_metadata.class.as_str() {
-        "HYPERCAR" => Class::LMH,
-        "LMP2" => Class::LMP2,
-        "LMGT3" => Class::LMGT3,
-        _ => Class::LMH, // デフォルト
-    };
-
-    let meta = MetaData::new(
-        car_number,
-        drivers,
-        class,
-        car_metadata.group,
-        car_metadata.team,
-        car_metadata.manufacturer,
-    );
-
-    // ラップを番号順にソート
-    laps.sort_by_key(|lap| lap.lap);
-
-    // current_lapとlast_lapを決定
-    let current_lap = laps.last().cloned();
-    let last_lap = if laps.len() >= 2 {
-        laps.get(laps.len() - 2).cloned()
-    } else {
-        None
-    };
-
-    // レース状況に応じてステータスを設定
-    use motorsport::car::Status;
-    
-    let mut car = Car::new(meta, 1, laps);
-    car.current_lap = current_lap;
-    car.last_lap = last_lap;
-    car.status = Status::Racing; // デフォルトはRacing
-    
-    car
-}
 
 /// 各車両の各ラップでの位置を計算する
 fn calculate_positions(cars: &mut Vec<Car>) {
