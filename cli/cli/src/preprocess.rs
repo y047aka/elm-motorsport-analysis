@@ -119,6 +119,10 @@ fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
         hour: row.hour,
         top_speed: row.top_speed,
         pit_time: row.pit_time.as_ref().and_then(|s| duration::from_string(s)),
+        // 元のCSV値を保存
+        s1_raw: row.s1,
+        s2_raw: row.s2,
+        s3_raw: row.s3,
     };
 
     LapWithMetadata { lap, metadata, csv_data }
@@ -145,6 +149,10 @@ pub struct CsvExtraData {
     pub hour: String,
     pub top_speed: Option<String>,
     pub pit_time: Option<duration::Duration>,
+    // 元のCSVセクター文字列値（空欄検出のため）
+    pub s1_raw: String,
+    pub s2_raw: String,
+    pub s3_raw: String,
 }
 
 /// 車両のメタデータ情報
@@ -372,6 +380,9 @@ mod tests {
                     hour: "11:02:02.856".to_string(),
                     top_speed: None,
                     pit_time: None,
+                    s1_raw: "23.155".to_string(),
+                    s2_raw: "29.928".to_string(),
+                    s3_raw: "42.282".to_string(),
                 },
             },
             LapWithMetadata {
@@ -395,6 +406,9 @@ mod tests {
                     hour: "11:03:35.101".to_string(),
                     top_speed: Some("298.6".to_string()),
                     pit_time: None,
+                    s1_raw: "23.155".to_string(),
+                    s2_raw: "29.928".to_string(),
+                    s3_raw: "42.282".to_string(),
                 },
             },
             LapWithMetadata {
@@ -418,6 +432,9 @@ mod tests {
                     hour: "11:02:00.782".to_string(),
                     top_speed: Some("298.6".to_string()),
                     pit_time: None,
+                    s1_raw: "23.119".to_string(),
+                    s2_raw: "29.188".to_string(),
+                    s3_raw: "40.984".to_string(),
                 },
             },
         ];
