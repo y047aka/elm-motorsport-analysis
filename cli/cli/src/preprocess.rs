@@ -50,7 +50,7 @@ struct LapCsvRow {
     top_speed: Option<String>,
     #[serde(rename = "PIT_TIME", alias = " PIT_TIME")]
     #[allow(dead_code)]
-    pit_time: Option<String>,
+    pit_time: Option<String>,  // Raw string from CSV, will be converted to Duration
     #[serde(rename = "CLASS", alias = " CLASS")]
     class: String,
     #[serde(rename = "GROUP", alias = " GROUP")]
@@ -118,7 +118,7 @@ fn convert_row_to_lap_with_metadata(row: LapCsvRow) -> LapWithMetadata {
         kph: row.kph,
         hour: row.hour,
         top_speed: row.top_speed,
-        pit_time: row.pit_time,
+        pit_time: row.pit_time.as_ref().and_then(|s| duration::from_string(s)),
     };
 
     LapWithMetadata { lap, metadata, csv_data }
@@ -144,7 +144,7 @@ pub struct CsvExtraData {
     pub kph: f32,
     pub hour: String,
     pub top_speed: Option<String>,
-    pub pit_time: Option<String>,
+    pub pit_time: Option<duration::Duration>,
 }
 
 /// 車両のメタデータ情報

@@ -2,6 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_elm_compatible_output, map_event_name};
+use motorsport::duration;
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -375,7 +376,55 @@ fn test_pit_stop_data_compatibility() {
         .find(|lap| !lap["pitTime"].as_str().unwrap_or("").is_empty())
         .expect("Should find pit exit lap with pit time");
     
+    // Duration should be serialized as formatted string like "1:28.944"
     assert_eq!(pit_exit_lap["pitTime"].as_str(), Some("1:28.944"));
+}
+
+#[test]
+fn test_pit_time_duration_handling() {
+    // Test that pit times are properly converted from strings to Duration and back to formatted strings
+    let csv_with_pit_times = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
+007;1;35;2:03.956;0;;39.723;0;35.798;0;48.435;0;142.6;1:00:16.857;14:01:42.367;0:39.723;0:35.798;0:48.435;186.9;Harry TINCKNELL;1:28.944;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;39.723;35.798;48.435;
+007;1;36;1:35.123;0;;19.400;0;31.200;0;44.523;0;185.2;1:01:51.980;14:03:17.490;0:19.400;0:31.200;0:44.523;304.2;Harry TINCKNELL;45.678;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.400;31.200;44.523;"#.to_string();
+    
+    let laps_with_metadata = parse_laps_from_csv(&csv_with_pit_times);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    
+    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
+    let json_value = serde_json::to_value(&elm_output).unwrap();
+    
+    let laps_array = json_value["laps"].as_array().unwrap();
+    
+    // Find lap with pit time "1:28.944"
+    let lap_with_long_pit = laps_array.iter()
+        .find(|lap| lap["pitTime"].as_str() == Some("1:28.944"))
+        .expect("Should find lap with pit time 1:28.944");
+    
+    assert_eq!(lap_with_long_pit["pitTime"].as_str(), Some("1:28.944"));
+    
+    // Find lap with pit time "45.678"
+    let lap_with_short_pit = laps_array.iter()
+        .find(|lap| lap["pitTime"].as_str() == Some("45.678"))
+        .expect("Should find lap with pit time 45.678");
+    
+    assert_eq!(lap_with_short_pit["pitTime"].as_str(), Some("45.678"));
+    
+    // Test Duration conversion manually
+    assert_eq!(duration::from_string("1:28.944"), Some(88944));
+    assert_eq!(duration::to_string(88944), "1:28.944");
+    assert_eq!(duration::from_string("45.678"), Some(45678));
+    assert_eq!(duration::to_string(45678), "45.678");
+    
+    // Test empty pit time handling
+    assert_eq!(duration::from_string(""), None);
+    assert_eq!(duration::to_string(0), "0.000");
+    
+    // Test that the internal Duration conversion works correctly
+    // Verify the first lap has the correct Duration internally
+    assert_eq!(laps_with_metadata[0].csv_data.pit_time, Some(88944));
+    
+    // Verify the second lap has the correct Duration internally
+    assert_eq!(laps_with_metadata[1].csv_data.pit_time, Some(45678));
 }
 
 #[test]

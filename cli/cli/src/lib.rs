@@ -167,7 +167,7 @@ fn convert_to_raw_laps(laps_with_metadata: &[LapWithMetadata]) -> Vec<ElmRawLap>
             hour: lap_meta.csv_data.hour.clone(),
             top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
             driver_name: lap.driver.clone(),
-            pit_time: lap_meta.csv_data.pit_time.clone().unwrap_or_default(),
+            pit_time: lap_meta.csv_data.pit_time.map_or_else(String::new, |duration| duration::to_string(duration)),
             class: meta.class.clone(),
             group: meta.group.clone(),
             team: meta.team.clone(),
@@ -223,7 +223,7 @@ fn convert_to_preprocessed_cars(cars: &[Car]) -> Vec<ElmPreprocessedCar> {
     }).collect()
 }
 
-/// Event name mapping (Elm Main.toEventName 互換)
+/// Event name mapping (Elm Main.toEventName 互換) 
 pub fn map_event_name(event_id: &str) -> &str {
     match event_id {
         "qatar_1812km" => "Qatar 1812km",
