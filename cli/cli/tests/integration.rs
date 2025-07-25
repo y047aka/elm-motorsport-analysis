@@ -862,6 +862,39 @@ fn test_kph_dot_zero_removal_elm_compatibility() {
 }
 
 #[test]
+fn test_top_speed_dot_zero_removal_elm_compatibility() {
+    // topSpeed値の.0除去がElm互換JSON表現のために正しく動作することを検証
+    let csv_data = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
+007;1;1;1:35.020;0;;19.584;0;31.338;0;44.098;0;186.0;4:53.731;13:06:19.241;0:19.584;0:31.338;0:44.098;300.0;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.584;31.338;44.098;
+007;1;2;1:36.500;0;;19.800;0;31.500;0;45.200;0;184.3;6:30.231;13:07:55.741;0:19.800;0:31.500;0:45.200;288.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.800;31.500;45.200;
+007;1;3;1:37.000;0;;20.000;0;32.000;0;45.000;0;180.0;8:07.231;13:09:32.741;0:20.000;0:32.000;0:45.000;;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;20.000;32.000;45.000;"#.to_string();
+    
+    let laps_with_metadata = parse_laps_from_csv(&csv_data);
+    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
+    
+    // JSON文字列として直接シリアライズして文字列表現を確認
+    let json_string = serde_json::to_string_pretty(&elm_output).unwrap();
+    
+    // 300.0は"300"として出力されるはず（整数文字列）
+    assert!(json_string.contains(r#""topSpeed": "300","#), 
+        "300.0 should be serialized as string \"300\"\nActual JSON:\n{}", json_string);
+    
+    // 288.8は"288.8"として出力されるはず（小数点保持）
+    assert!(json_string.contains(r#""topSpeed": "288.8","#), 
+        "288.8 should be serialized as string \"288.8\"\nActual JSON:\n{}", json_string);
+    
+    // 空文字列は""として出力されるはず
+    assert!(json_string.contains(r#""topSpeed": "","#), 
+        "Empty topSpeed should be serialized as empty string\nActual JSON:\n{}", json_string);
+    
+    println!("✓ topSpeed .0除去が正しく動作:");
+    println!("  300.0 → \"300\" (整数文字列)");
+    println!("  288.8 → \"288.8\" (小数点保持)");
+    println!("  \"\" → \"\" (空文字列保持)");
+}
+
+#[test]
 fn test_current_lap_and_last_lap_are_null() {
     // currentLapとlastLapがElm互換のためnullになることを確認
     let csv_data = create_test_csv_data();

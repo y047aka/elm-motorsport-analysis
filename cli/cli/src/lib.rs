@@ -22,6 +22,30 @@ where
     }
 }
 
+/// Elm互換のtopSpeed値（.0を除去して整数として表示）
+fn serialize_top_speed_elm_compatible<S>(top_speed: &String, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    // 空文字列の場合はそのまま文字列として出力
+    if top_speed.is_empty() {
+        return serializer.serialize_str(top_speed);
+    }
+    
+    // 数値として解析を試行
+    if let Ok(speed) = top_speed.parse::<f32>() {
+        // .0の場合は整数文字列として出力、それ以外は元の文字列として出力
+        if speed.fract() == 0.0 {
+            serializer.serialize_str(&format!("{}", speed as i32))
+        } else {
+            serializer.serialize_str(top_speed)
+        }
+    } else {
+        // 解析できない場合は元の文字列をそのまま出力
+        serializer.serialize_str(top_speed)
+    }
+}
+
 /// Elm互換の3層出力構造
 #[derive(Debug, Serialize)]
 pub struct ElmCompatibleOutput {
@@ -50,6 +74,7 @@ pub struct ElmRawLap {
     pub kph: f32,
     pub elapsed: String,
     pub hour: String,
+    #[serde(serialize_with = "serialize_top_speed_elm_compatible")]
     pub top_speed: String,
     pub driver_name: String,
     pub pit_time: String,
