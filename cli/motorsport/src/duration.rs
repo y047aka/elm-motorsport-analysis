@@ -11,18 +11,18 @@ pub fn from_string(s: &str) -> Option<Duration> {
             let hours = h.parse::<u32>().ok()?;
             let minutes = m.parse::<u32>().ok()?;
             let seconds = s.parse::<f64>().ok()?;
-            Some(hours * 3600000 + minutes * 60000 + (seconds * 1000.0) as u32)
+            Some(hours * 3600000 + minutes * 60000 + (seconds * 1000.0).round() as u32)
         }
         // "mm:ss.ms" 形式
         [m, s] => {
             let minutes = m.parse::<u32>().ok()?;
             let seconds = s.parse::<f64>().ok()?;
-            Some(minutes * 60000 + (seconds * 1000.0) as u32)
+            Some(minutes * 60000 + (seconds * 1000.0).round() as u32)
         }
         // "ss.ms" 形式
         [s] => {
             let seconds = s.parse::<f64>().ok()?;
-            Some((seconds * 1000.0) as u32)
+            Some((seconds * 1000.0).round() as u32)
         }
         _ => None,
     }
