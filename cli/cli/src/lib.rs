@@ -326,4 +326,104 @@ mod tests {
         let result = Config::build(args.into_iter());
         assert!(result.is_err());
     }
+
+    #[test]
+    fn test_numeric_formatting_functions() {
+        // 削除されたインテグレーションテストから移行された数値フォーマットテスト
+        
+        // KPH値のシリアライゼーションテスト
+        let kph_integer: f32 = 186.0;
+        let _kph_decimal: f32 = 184.3; // 将来的なテストケース用に保持
+        
+        // serialize_kph_elm_compatible関数の動作を間接的にテスト
+        let test_lap = ElmRawLap {
+            car_number: "007".to_string(),
+            driver_number: 1,
+            lap_number: 1,
+            lap_time: "1:35.020".to_string(),
+            lap_improvement: 0,
+            crossing_finish_line_in_pit: "".to_string(),
+            s1: "19.584".to_string(),
+            s1_improvement: 0,
+            s2: "31.338".to_string(),
+            s2_improvement: 0,
+            s3: "44.098".to_string(),
+            s3_improvement: 0,
+            kph: kph_integer,
+            elapsed: "4:53.731".to_string(),
+            hour: "13:06:19.241".to_string(),
+            top_speed: "300.0".to_string(),
+            driver_name: "Harry TINCKNELL".to_string(),
+            pit_time: "".to_string(),
+            class: "HYPERCAR".to_string(),
+            group: "".to_string(),
+            team: "Aston Martin Thor Team".to_string(),
+            manufacturer: "Aston Martin".to_string(),
+        };
+        
+        let json = serde_json::to_string(&test_lap).unwrap();
+        
+        // 186.0は186として出力される（整数）
+        assert!(json.contains(r#""kph":186,"#) || json.contains(r#""kph": 186,"#));
+        
+        // topSpeed "300.0"は"300"として出力される
+        assert!(json.contains(r#""topSpeed":"300","#) || json.contains(r#""topSpeed": "300","#));
+    }
+
+    #[test]
+    fn test_top_speed_formatting_edge_cases() {
+        // topSpeed値のフォーマット処理のエッジケーステスト
+        
+        let test_cases = vec![
+            ("300.0", "300"),     // .0除去
+            ("288.8", "288.8"),   // 小数点保持
+            ("", ""),             // 空文字列保持
+            ("invalid", "invalid"), // 不正値はそのまま
+        ];
+        
+        for (input, expected) in test_cases {
+            let test_lap = ElmRawLap {
+                car_number: "007".to_string(),
+                driver_number: 1,
+                lap_number: 1,
+                lap_time: "1:35.020".to_string(),
+                lap_improvement: 0,
+                crossing_finish_line_in_pit: "".to_string(),
+                s1: "19.584".to_string(),
+                s1_improvement: 0,
+                s2: "31.338".to_string(),
+                s2_improvement: 0,
+                s3: "44.098".to_string(),
+                s3_improvement: 0,
+                kph: 186.0,
+                elapsed: "4:53.731".to_string(),
+                hour: "13:06:19.241".to_string(),
+                top_speed: input.to_string(),
+                driver_name: "Harry TINCKNELL".to_string(),
+                pit_time: "".to_string(),
+                class: "HYPERCAR".to_string(),
+                group: "".to_string(),
+                team: "Aston Martin Thor Team".to_string(),
+                manufacturer: "Aston Martin".to_string(),
+            };
+            
+            let json = serde_json::to_string(&test_lap).unwrap();
+            let expected_json = format!(r#""topSpeed":"{}""#, expected);
+            assert!(json.contains(&expected_json), 
+                "Expected {} to be formatted as {}, but got: {}", input, expected, json);
+        }
+    }
+
+    #[test]
+    fn test_event_name_mapping() {
+        // イベント名マッピングのテスト（削除されたテストから移行）
+        assert_eq!(map_event_name("qatar_1812km"), "Qatar 1812km");
+        assert_eq!(map_event_name("imola_6h"), "6 Hours of Imola");
+        assert_eq!(map_event_name("spa_6h"), "6 Hours of Spa");
+        assert_eq!(map_event_name("le_mans_24h"), "24 Hours of Le Mans");
+        assert_eq!(map_event_name("fuji_6h"), "6 Hours of Fuji");
+        assert_eq!(map_event_name("bahrain_8h"), "8 Hours of Bahrain");
+        assert_eq!(map_event_name("sao_paulo_6h"), "6 Hours of São Paulo");
+        assert_eq!(map_event_name("unknown_event"), "Encoding Error");
+    }
 }
