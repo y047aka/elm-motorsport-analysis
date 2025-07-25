@@ -3,11 +3,24 @@ use std::fs;
 use std::io::Write;
 
 use anyhow::Result;
-use serde::Serialize;
+use serde::{Serialize, Serializer};
 use motorsport::{Car, duration};
 
 pub mod preprocess;
 pub use preprocess::{parse_laps_from_csv, group_laps_by_car, LapWithMetadata};
+
+/// Elm互換のKPH値（.0を除去して整数として表示）
+fn serialize_kph_elm_compatible<S>(kph: &f32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    // .0の場合は整数として出力、それ以外は元のf32として出力
+    if kph.fract() == 0.0 {
+        serializer.serialize_i32(*kph as i32)
+    } else {
+        serializer.serialize_f32(*kph)
+    }
+}
 
 /// Elm互換の3層出力構造
 #[derive(Debug, Serialize)]
@@ -33,6 +46,7 @@ pub struct ElmRawLap {
     pub s2_improvement: i32,
     pub s3: String,
     pub s3_improvement: i32,
+    #[serde(serialize_with = "serialize_kph_elm_compatible")]
     pub kph: f32,
     pub elapsed: String,
     pub hour: String,
