@@ -50,14 +50,14 @@ durationDecoder =
 -}
 toString : Duration -> String
 toString ms =
-    if ms > (60 * 60 * 1000) then
-        toStringInHours ms
+    if ms < (60 * 1000) then
+        toStringInSeconds ms
 
-    else if ms > (60 * 1000) then
+    else if ms < (60 * 60 * 1000) then
         toStringInMinutes ms
 
     else
-        toStringInSeconds ms
+        toStringInHours ms
 
 
 toStringInSeconds : Duration -> String
