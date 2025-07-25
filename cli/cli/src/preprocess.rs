@@ -167,7 +167,7 @@ pub struct CarMetadata {
 /// LapWithMetadataリストをCarごとにグループ化する
 pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
     // インデックス付きグループ化でCSV出現順序を保持
-    let mut car_data: HashMap<String, (Vec<Lap>, CarMetadata, Vec<String>)> = HashMap::new();
+    let mut car_data: HashMap<String, (Vec<LapWithMetadata>, Vec<String>)> = HashMap::new();
     let mut first_appearance: HashMap<String, usize> = HashMap::new();
     
     for (index, lap_with_meta) in laps_with_metadata.into_iter().enumerate() {
@@ -179,15 +179,14 @@ pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
         
         // 車両データを蓄積
         car_data.entry(car_number)
-            .and_modify(|(laps, _, drivers)| {
-                laps.push(lap_with_meta.lap.clone());
+            .and_modify(|(laps, drivers)| {
+                laps.push(lap_with_meta.clone());
                 if !drivers.contains(&driver_name) {
                     drivers.push(driver_name.clone());
                 }
             })
             .or_insert((
-                vec![lap_with_meta.lap],
-                lap_with_meta.metadata,
+                vec![lap_with_meta],
                 vec![driver_name],
             ));
     }
@@ -195,9 +194,9 @@ pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
     // 車両を作成し、最初の出現順序でソート
     let mut cars_with_index: Vec<(usize, Car)> = car_data
         .into_iter()
-        .map(|(car_number, (laps, car_metadata, driver_names))| {
+        .map(|(car_number, (laps_with_metadata, driver_names))| {
             let first_index = first_appearance[&car_number];
-            let car = create_car_from_grouped_data(car_number, laps, car_metadata, driver_names);
+            let car = create_car_from_grouped_data_with_best_times(car_number, laps_with_metadata, driver_names);
             (first_index, car)
         })
         .collect();
@@ -214,7 +213,131 @@ pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
 }
 
 
-/// グループ化されたデータからCarを作成する純粋関数
+/// グループ化されたデータからCarを作成し、ベストタイムを計算する関数
+fn create_car_from_grouped_data_with_best_times(
+    car_number: String,
+    laps_with_metadata: Vec<LapWithMetadata>,
+    driver_names: Vec<String>,
+) -> Car {
+    let drivers: Vec<Driver> = driver_names
+        .into_iter()
+        .enumerate()
+        .map(|(i, name)| Driver::new(name, i == 0))
+        .collect();
+
+    // 最初のラップからメタデータを取得
+    let car_metadata = &laps_with_metadata[0].metadata;
+    let class = match car_metadata.class.as_str() {
+        "HYPERCAR" => Class::LMH,
+        "LMP2" => Class::LMP2,
+        "LMGT3" => Class::LMGT3,
+        _ => Class::LMH, // デフォルト
+    };
+
+    let meta = MetaData::new(
+        car_number,
+        drivers,
+        class,
+        car_metadata.group.clone(),
+        car_metadata.team.clone(),
+        car_metadata.manufacturer.clone(),
+    );
+
+    // ベストタイムを追跡してラップを処理
+    let processed_laps = process_laps_with_best_times(laps_with_metadata);
+
+    // current_lapとlast_lapを決定
+    let current_lap = processed_laps.last().cloned();
+    let last_lap = if processed_laps.len() >= 2 {
+        processed_laps.get(processed_laps.len() - 2).cloned()
+    } else {
+        None
+    };
+
+    // レース状況に応じてステータスを設定
+    use motorsport::car::Status;
+    
+    let mut car = Car::new(meta, 1, processed_laps);
+    car.current_lap = current_lap;
+    car.last_lap = last_lap;
+    car.status = Status::Racing; // デフォルトはRacing
+    
+    car
+}
+
+/// ベストタイムを追跡してラップを処理する関数（Elm実装に基づく）
+fn process_laps_with_best_times(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
+    // ラップ番号順にソート
+    laps_with_metadata.sort_by_key(|lap| lap.lap.lap);
+
+    let mut best_lap_time: Option<u32> = None;
+    let mut best_s1: Option<u32> = None;
+    let mut best_s2: Option<u32> = None;
+    let mut best_s3: Option<u32> = None;
+    let mut processed_laps = Vec::new();
+
+    for lap_with_meta in laps_with_metadata {
+        let lap = &lap_with_meta.lap;
+        
+        // 現在のラップタイムとセクタータイムを取得
+        let current_lap_time = lap.time;
+        let current_s1 = lap.sector_1;
+        let current_s2 = lap.sector_2;
+        let current_s3 = lap.sector_3;
+
+        // ベストタイムを更新（0でない場合のみ）
+        if current_lap_time > 0 {
+            best_lap_time = Some(match best_lap_time {
+                Some(best) => best.min(current_lap_time),
+                None => current_lap_time,
+            });
+        }
+
+        if current_s1 > 0 {
+            best_s1 = Some(match best_s1 {
+                Some(best) => best.min(current_s1),
+                None => current_s1,
+            });
+        }
+
+        if current_s2 > 0 {
+            best_s2 = Some(match best_s2 {
+                Some(best) => best.min(current_s2),
+                None => current_s2,
+            });
+        }
+
+        if current_s3 > 0 {
+            best_s3 = Some(match best_s3 {
+                Some(best) => best.min(current_s3),
+                None => current_s3,
+            });
+        }
+
+        // 新しいLapを作成（ベストタイムを設定）
+        let processed_lap = Lap::new(
+            lap.car_number.clone(),
+            lap.driver.clone(),
+            lap.lap,
+            lap.position,
+            lap.time,
+            best_lap_time.unwrap_or(0), // best field
+            lap.sector_1,
+            lap.sector_2,
+            lap.sector_3,
+            best_s1.unwrap_or(0), // s1_best field
+            best_s2.unwrap_or(0), // s2_best field
+            best_s3.unwrap_or(0), // s3_best field
+            lap.elapsed,
+        );
+
+        processed_laps.push(processed_lap);
+    }
+
+    processed_laps
+}
+
+/// グループ化されたデータからCarを作成する純粋関数（旧バージョン、互換性のため残す）
 fn create_car_from_grouped_data(
     car_number: String,
     mut laps: Vec<Lap>,
@@ -452,5 +575,117 @@ mod tests {
         assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
         assert_eq!(car7.meta_data.manufacturer, "Toyota");
         assert_eq!(car7.meta_data.drivers.len(), 1); // 1人のドライバー
+    }
+
+    #[test]
+    fn test_best_time_tracking() {
+        // Test best time tracking logic based on Elm implementation
+        let laps_with_metadata = vec![
+            LapWithMetadata {
+                lap: Lap::new(
+                    "12".to_string(), "Will STEVENS".to_string(), 1, None, 95365, 0, 23155, 29928, 42282, 0, 0, 0, 95365
+                ),
+                metadata: CarMetadata {
+                    class: "HYPERCAR".to_string(),
+                    group: "H".to_string(),
+                    team: "Hertz Team JOTA".to_string(),
+                    manufacturer: "Porsche".to_string(),
+                },
+                csv_data: CsvExtraData {
+                    driver_number: 1,
+                    lap_improvement: 0,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 0,
+                    s2_improvement: 0,
+                    s3_improvement: 0,
+                    kph: 160.7,
+                    hour: "11:02:02.856".to_string(),
+                    top_speed: None,
+                    pit_time: None,
+                    s1_raw: "23.155".to_string(),
+                    s2_raw: "29.928".to_string(),
+                    s3_raw: "42.282".to_string(),
+                },
+            },
+            LapWithMetadata {
+                lap: Lap::new(
+                    "12".to_string(), "Will STEVENS".to_string(), 2, None, 92245, 0, 22500, 29100, 40645, 0, 0, 0, 187610
+                ),
+                metadata: CarMetadata {
+                    class: "HYPERCAR".to_string(),
+                    group: "H".to_string(),
+                    team: "Hertz Team JOTA".to_string(),
+                    manufacturer: "Porsche".to_string(),
+                },
+                csv_data: CsvExtraData {
+                    driver_number: 1,
+                    lap_improvement: 1,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 1,
+                    s2_improvement: 1,
+                    s3_improvement: 1,
+                    kph: 165.2,
+                    hour: "11:03:35.101".to_string(),
+                    top_speed: None,
+                    pit_time: None,
+                    s1_raw: "22.500".to_string(),
+                    s2_raw: "29.100".to_string(),
+                    s3_raw: "40.645".to_string(),
+                },
+            },
+            LapWithMetadata {
+                lap: Lap::new(
+                    "12".to_string(), "Will STEVENS".to_string(), 3, None, 94000, 0, 23000, 29500, 41500, 0, 0, 0, 281610
+                ),
+                metadata: CarMetadata {
+                    class: "HYPERCAR".to_string(),
+                    group: "H".to_string(),
+                    team: "Hertz Team JOTA".to_string(),
+                    manufacturer: "Porsche".to_string(),
+                },
+                csv_data: CsvExtraData {
+                    driver_number: 1,
+                    lap_improvement: 0,
+                    crossing_finish_line_in_pit: String::new(),
+                    s1_improvement: 0,
+                    s2_improvement: 0,
+                    s3_improvement: 0,
+                    kph: 163.0,
+                    hour: "11:05:10.101".to_string(),
+                    top_speed: None,
+                    pit_time: None,
+                    s1_raw: "23.000".to_string(),
+                    s2_raw: "29.500".to_string(),
+                    s3_raw: "41.500".to_string(),
+                },
+            },
+        ];
+
+        let cars = group_laps_by_car(laps_with_metadata);
+        assert_eq!(cars.len(), 1);
+
+        let car = &cars[0];
+        assert_eq!(car.laps.len(), 3);
+
+        // Verify lap 1: first lap sets all bests
+        let lap1 = &car.laps[0];
+        assert_eq!(lap1.best, 95365); // best lap time is lap 1 time
+        assert_eq!(lap1.s1_best, 23155); // best S1 is lap 1 S1
+        assert_eq!(lap1.s2_best, 29928); // best S2 is lap 1 S2
+        assert_eq!(lap1.s3_best, 42282); // best S3 is lap 1 S3
+
+        // Verify lap 2: faster overall and in all sectors
+        let lap2 = &car.laps[1];
+        assert_eq!(lap2.best, 92245); // best lap time updated to lap 2 time
+        assert_eq!(lap2.s1_best, 22500); // best S1 updated to lap 2 S1
+        assert_eq!(lap2.s2_best, 29100); // best S2 updated to lap 2 S2
+        assert_eq!(lap2.s3_best, 40645); // best S3 updated to lap 2 S3
+
+        // Verify lap 3: slower overall, mixed sector performance
+        let lap3 = &car.laps[2];
+        assert_eq!(lap3.best, 92245); // best lap time remains lap 2 time
+        assert_eq!(lap3.s1_best, 22500); // best S1 remains lap 2 S1 (23000 > 22500)
+        assert_eq!(lap3.s2_best, 29100); // best S2 remains lap 2 S2 (29500 > 29100)
+        assert_eq!(lap3.s3_best, 40645); // best S3 remains lap 2 S3 (41500 > 40645)
     }
 }
