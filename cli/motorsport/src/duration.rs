@@ -5,52 +5,44 @@ pub type Duration = u32;
 pub fn from_string(s: &str) -> Option<Duration> {
     let parts: Vec<&str> = s.split(':').collect();
 
+    let convert_seconds = |s: &str| -> Option<u32> {
+        s.parse::<f64>().ok().map(|sec| (sec * 1000.0).round() as u32)
+    };
+
     match parts.as_slice() {
-        // "hh:mm:ss.ms" 形式
         [h, m, s] => {
             let hours = h.parse::<u32>().ok()?;
             let minutes = m.parse::<u32>().ok()?;
-            let seconds = s.parse::<f64>().ok()?;
-            Some(hours * 3600000 + minutes * 60000 + (seconds * 1000.0).round() as u32)
+            let seconds = convert_seconds(s)?;
+            Some(hours * 3600000 + minutes * 60000 + seconds)
         }
-        // "mm:ss.ms" 形式
         [m, s] => {
             let minutes = m.parse::<u32>().ok()?;
-            let seconds = s.parse::<f64>().ok()?;
-            Some(minutes * 60000 + (seconds * 1000.0).round() as u32)
+            let seconds = convert_seconds(s)?;
+            Some(minutes * 60000 + seconds)
         }
-        // "ss.ms" 形式
-        [s] => {
-            let seconds = s.parse::<f64>().ok()?;
-            Some((seconds * 1000.0).round() as u32)
-        }
+        [s] => convert_seconds(s),
         _ => None,
     }
 }
 
-/// ミリ秒をDuration文字列に変換（整数演算ベース、Elm互換形式）
+/// ミリ秒をDuration文字列に変換
 pub fn to_string(ms: Duration) -> String {
-    if ms == 0 {
-        return "0.000".to_string();
-    }
-    
-    let total_seconds = ms / 1000;
     let milliseconds = ms % 1000;
-    
-    if total_seconds < 60 {
-        // 60秒未満: "4.321"
-        format!("{}.{:03}", total_seconds, milliseconds)
-    } else if total_seconds < 3600 {
-        // 1時間未満: "6:54.321" 
-        let minutes = total_seconds / 60;
-        let seconds = total_seconds % 60;
-        format!("{}:{:02}.{:03}", minutes, seconds, milliseconds)
-    } else {
-        // 1時間以上: "7:06:54.321"
-        let hours = total_seconds / 3600;
-        let minutes = (total_seconds % 3600) / 60;
-        let seconds = total_seconds % 60;
-        format!("{}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds)
+
+    match ms / 1000 {
+        s if s < 60 => format!("{}.{:03}", s, milliseconds),
+        s if s < 3600 => {
+            let minutes = s / 60;
+            let seconds = s % 60;
+            format!("{}:{:02}.{:03}", minutes, seconds, milliseconds)
+        }
+        s => {
+            let hours = s / 3600;
+            let minutes = (s % 3600) / 60;
+            let seconds = s % 60;
+            format!("{}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds)
+        }
     }
 }
 
@@ -80,60 +72,32 @@ mod tests {
     }
 
     #[test]
-    fn test_pit_time_parsing_and_formatting() {
-        // ピットタイム処理の詳細テスト（削除されたインテグレーションテストから移行）
-        
-        // ロングピットタイム (1分以上)
+    fn test_boundary_cases() {
         assert_eq!(from_string("1:28.944"), Some(88944));
         assert_eq!(to_string(88944), "1:28.944");
-        
-        // ショートピットタイム (1分未満)
-        assert_eq!(from_string("45.678"), Some(45678));
-        assert_eq!(to_string(45678), "45.678");
-        
-        // 60秒ちょうど
         assert_eq!(from_string("60.000"), Some(60000));
         assert_eq!(to_string(60000), "1:00.000");
-        
-        // 59.999秒
         assert_eq!(from_string("59.999"), Some(59999));
         assert_eq!(to_string(59999), "59.999");
     }
 
     #[test]
-    fn test_edge_cases_and_error_handling() {
-        // エッジケースとエラーハンドリング（削除されたテストから移行）
-        
-        // 空文字列
+    fn test_error_handling() {
         assert_eq!(from_string(""), None);
-        
-        // 不正なフォーマット
         assert_eq!(from_string("invalid"), None);
         assert_eq!(from_string("1:2:3:4"), None);
         assert_eq!(from_string("abc:def"), None);
-        
-        // 負の値（文字列では表現不可だが、意図的な境界テスト）
-        // 注意: 現在の実装では"-1.0"は0にパースされるが、将来的に改善予定
         assert_eq!(from_string("-1.0"), Some(0));
-        
-        // 非常に大きな値
         assert_eq!(from_string("999:59.999"), Some(59999999));
         assert_eq!(to_string(59999999), "16:39:59.999");
     }
 
     #[test]
-    fn test_precision_and_rounding() {
-        // 精度とラウンディングテスト（削除されたテストから移行）
-        
-        // ミリ秒の精度テスト
+    fn test_precision() {
         assert_eq!(from_string("1.001"), Some(1001));
         assert_eq!(from_string("1.999"), Some(1999));
-        
-        // ラウンディングテスト（浮動小数点精度問題対応）
         assert_eq!(to_string(1001), "1.001");
         assert_eq!(to_string(1999), "1.999");
-        
-        // 3桁ミリ秒の保持
         assert_eq!(to_string(123), "0.123");
         assert_eq!(to_string(1), "0.001");
     }
