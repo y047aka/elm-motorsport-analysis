@@ -6,7 +6,7 @@ pub mod output;
 pub mod config;
 
 pub use preprocess::{parse_laps_from_csv, group_laps_by_car, LapWithMetadata};
-pub use output::{ElmCompatibleOutput, create_elm_compatible_output};
+pub use output::{Output, create_output};
 pub use config::Config;
 
 
@@ -19,7 +19,7 @@ pub fn run(config: config::Config) -> Result<(), Box<dyn Error>> {
     println!("Read {} cars from CSV", cars.len());
 
     let event_name = config.event_name.as_deref().unwrap_or("test_event");
-    let elm_output = output::create_elm_compatible_output(event_name, &laps_with_metadata, &cars);
+    let elm_output = output::create_output(event_name, &laps_with_metadata, &cars);
     let json = serde_json::to_string_pretty(&elm_output)
         .map_err(|e| format!("Failed to serialize output to JSON: {}", e))?;
 

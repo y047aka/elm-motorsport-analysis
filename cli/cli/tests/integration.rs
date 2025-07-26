@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_elm_compatible_output};
+use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_output};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -201,7 +201,7 @@ fn test_elm_json_structure_and_field_compatibility() {
     let laps_with_metadata = parse_laps_from_csv(&csv_data);
     let cars = group_laps_by_car(laps_with_metadata.clone());
 
-    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
+    let elm_output = create_output("Test Event", &laps_with_metadata, &cars);
     let json_value = serde_json::to_value(&elm_output).unwrap();
 
     // トップレベル構造のチェック
@@ -264,7 +264,7 @@ fn test_racing_data_processing_compatibility() {
 
     let laps_with_metadata = parse_laps_from_csv(&csv_with_racing_data);
     let cars = group_laps_by_car(laps_with_metadata.clone());
-    let elm_output = create_elm_compatible_output("Test Event", &laps_with_metadata, &cars);
+    let elm_output = create_output("Test Event", &laps_with_metadata, &cars);
     let json_value = serde_json::to_value(&elm_output).unwrap();
     let laps_array = json_value["laps"].as_array().unwrap();
 
@@ -321,7 +321,7 @@ fn test_exact_json_match_le_mans_24h() {
     let csv_content = fs::read_to_string(csv_path).expect("Failed to read Le Mans CSV");
     let laps_with_metadata = parse_laps_from_csv(&csv_content);
     let cars = group_laps_by_car(laps_with_metadata.clone());
-    let rust_output = create_elm_compatible_output("le_mans_24h", &laps_with_metadata, &cars);
+    let rust_output = create_output("le_mans_24h", &laps_with_metadata, &cars);
 
     let elm_json_content = fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
     let elm_output: serde_json::Value = serde_json::from_str(&elm_json_content)
