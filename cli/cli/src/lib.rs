@@ -2,8 +2,6 @@ use std::error::Error;
 use std::fs;
 use std::io::Write;
 
-use anyhow::Result;
-
 pub mod preprocess;
 pub mod output;
 pub mod config;
