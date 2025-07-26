@@ -17,12 +17,12 @@ use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_output};
 
 #[test]
 fn test_csv_parsing_and_data_processing() {
-    // CSV読み込みとパース（統合）
-    let csv_content = fs::read_to_string("../test_data.csv").expect("CSVファイル読み込み失敗");
+    // CSV reading and parsing (integrated)
+    let csv_content = fs::read_to_string("../test_data.csv").expect("Failed to read CSV file");
     let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    assert!(!laps_with_metadata.is_empty(), "CSVから少なくとも1つのラップが解析されるはず");
+    assert!(!laps_with_metadata.is_empty(), "At least one lap should be parsed from CSV");
 
-    // 最初のラップの内容を検証
+    // Validate first lap content
     let first_lap = &laps_with_metadata[0];
     assert_eq!(first_lap.lap.car_number, "12");
     assert_eq!(first_lap.lap.driver, "Will STEVENS");
@@ -30,99 +30,99 @@ fn test_csv_parsing_and_data_processing() {
     assert_eq!(first_lap.metadata.manufacturer, "Porsche");
     assert_eq!(first_lap.metadata.class, "HYPERCAR");
 
-    // Carごとにグループ化
+    // Group by car
     let cars = group_laps_by_car(laps_with_metadata);
-    assert_eq!(cars.len(), 2, "テストデータには2台の車両が存在するはず");
+    assert_eq!(cars.len(), 2, "Test data should contain 2 cars");
 
-    // 車両12の検証
+    // Validate car 12
     let car12 = cars.iter().find(|c| c.meta_data.car_number == "12").unwrap();
-    assert!(car12.laps.len() >= 2, "車両12には複数のラップが存在するはず");
+    assert!(car12.laps.len() >= 2, "Car 12 should have multiple laps");
     assert_eq!(car12.meta_data.team, "Hertz Team JOTA");
     assert_eq!(car12.meta_data.manufacturer, "Porsche");
 
-    // 車両7の検証
+    // Validate car 7
     let car7 = cars.iter().find(|c| c.meta_data.car_number == "7").unwrap();
-    assert!(car7.laps.len() >= 1, "車両7には少なくとも1つのラップが存在するはず");
+    assert!(car7.laps.len() >= 1, "Car 7 should have at least one lap");
     assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
     assert_eq!(car7.meta_data.manufacturer, "Toyota");
 
-    // ラップデータの整合性とポジション計算の検証
+    // Validate lap data consistency and position calculations
     for car in &cars {
-        assert!(!car.laps.is_empty(), "各車両にはラップデータが存在するはず");
-        assert!(car.start_position >= 0, "スタートポジションは0以上であるはず");
+        assert!(!car.laps.is_empty(), "Each car should have lap data");
+        assert!(car.start_position >= 0, "Start position should be non-negative");
 
         for lap in &car.laps {
-            assert!(lap.time > 0, "ラップタイムは正の値であるはず");
-            assert!(lap.sector_1 > 0, "セクター1は正の値であるはず");
-            assert!(lap.sector_2 > 0, "セクター2は正の値であるはず");
-            assert!(lap.sector_3 > 0, "セクター3は正の値であるはず");
-            // position は u32 型なので常に >= 0 であり、明示的なチェックは不要
+            assert!(lap.time > 0, "Lap time should be positive");
+            assert!(lap.sector_1 > 0, "Sector 1 should be positive");
+            assert!(lap.sector_2 > 0, "Sector 2 should be positive");
+            assert!(lap.sector_3 > 0, "Sector 3 should be positive");
+            // position is u32 type, so always >= 0 - no explicit check needed
         }
     }
 }
 
 #[test]
 fn test_cli_end_to_end_execution() {
-    // テスト用の出力ファイル名
+    // Test output filename
     let test_output = "test_integration_output.json";
 
-    // テスト後のクリーンアップのため、事前に存在チェック
+    // Pre-cleanup check for existing test files
     if fs::metadata(test_output).is_ok() {
-        fs::remove_file(test_output).expect("既存のテストファイル削除に失敗");
+        fs::remove_file(test_output).expect("Failed to remove existing test file");
     }
 
-    // CLI設定を作成
+    // Create CLI configuration
     let config = Config {
         input_file: "../test_data.csv".to_string(),
         output_file: Some(test_output.to_string()),
         event_name: Some("Test Event".to_string()),
     };
 
-    // CLI実行
+    // Execute CLI
     let result = run(config);
-    assert!(result.is_ok(), "CLI実行は成功するはず: {:?}", result.err());
+    assert!(result.is_ok(), "CLI execution should succeed: {:?}", result.err());
 
-    // 出力ファイルが作成されていることを確認
-    assert!(fs::metadata(test_output).is_ok(), "出力ファイルが作成されているはず");
+    // Verify output file creation
+    assert!(fs::metadata(test_output).is_ok(), "Output file should be created");
 
-    // 出力ファイルの内容を検証
-    let json_content = fs::read_to_string(test_output).expect("出力ファイルの読み込みに失敗");
-    assert!(!json_content.is_empty(), "JSONファイルは空でないはず");
+    // Validate output file content
+    let json_content = fs::read_to_string(test_output).expect("Failed to read output file");
+    assert!(!json_content.is_empty(), "JSON file should not be empty");
 
-    // JSONとして有効であることを確認
+    // Verify valid JSON format
     let output: Result<serde_json::Value, _> = serde_json::from_str(&json_content);
-    assert!(output.is_ok(), "出力されたJSONは有効な形式であるはず");
+    assert!(output.is_ok(), "Output JSON should be valid format");
 
     let output = output.unwrap();
-    assert!(output.is_object(), "トップレベルはオブジェクトであるはず");
+    assert!(output.is_object(), "Top level should be object");
 
-    // 3層構造を検証
+    // Validate 3-layer structure
     let obj = output.as_object().unwrap();
-    assert!(obj.contains_key("name"), "nameフィールドが存在するはず");
-    assert!(obj.contains_key("laps"), "lapsフィールドが存在するはず");
-    assert!(obj.contains_key("preprocessed"), "preprocessedフィールドが存在するはず");
+    assert!(obj.contains_key("name"), "name field should exist");
+    assert!(obj.contains_key("laps"), "laps field should exist");
+    assert!(obj.contains_key("preprocessed"), "preprocessed field should exist");
 
-    // preprocessed車両データが存在することを確認
+    // Verify preprocessed car data exists
     let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
-    assert!(!preprocessed.is_empty(), "車両データが存在するはず");
+    assert!(!preprocessed.is_empty(), "Car data should exist");
 
-    // 各車両の基本構造を検証
+    // Validate basic structure of each car
     for car in preprocessed {
-        assert!(car.get("carNumber").is_some(), "carNumberフィールドが存在するはず");
-        assert!(car.get("drivers").is_some(), "driversフィールドが存在するはず");
-        assert!(car.get("laps").is_some(), "lapsフィールドが存在するはず");
-        assert!(car.get("startPosition").is_some(), "startPositionフィールドが存在するはず");
-        assert!(car.get("class").is_some(), "classフィールドが存在するはず");
-        assert!(car.get("currentLap").is_some(), "currentLapフィールドが存在するはず");
-        assert!(car.get("lastLap").is_some(), "lastLapフィールドが存在するはず");
+        assert!(car.get("carNumber").is_some(), "carNumber field should exist");
+        assert!(car.get("drivers").is_some(), "drivers field should exist");
+        assert!(car.get("laps").is_some(), "laps field should exist");
+        assert!(car.get("startPosition").is_some(), "startPosition field should exist");
+        assert!(car.get("class").is_some(), "class field should exist");
+        assert!(car.get("currentLap").is_some(), "currentLap field should exist");
+        assert!(car.get("lastLap").is_some(), "lastLap field should exist");
 
-        // Elm互換性のためcurrentLapとlastLapがnullであることを確認
-        assert!(car.get("currentLap").unwrap().is_null(), "currentLapはnullであるはず");
-        assert!(car.get("lastLap").unwrap().is_null(), "lastLapはnullであるはず");
+        // Verify currentLap and lastLap are null for Elm compatibility
+        assert!(car.get("currentLap").unwrap().is_null(), "currentLap should be null");
+        assert!(car.get("lastLap").unwrap().is_null(), "lastLap should be null");
     }
 
-    // テストファイルをクリーンアップ
-    fs::remove_file(test_output).expect("テストファイルのクリーンアップに失敗");
+    // Cleanup test file
+    fs::remove_file(test_output).expect("Failed to cleanup test file");
 }
 
 #[test]
@@ -268,21 +268,21 @@ fn test_racing_data_processing_compatibility() {
     let json_value = serde_json::to_value(&elm_output).unwrap();
     let laps_array = json_value["laps"].as_array().unwrap();
 
-    // 改善フラグテスト (0, 1, 2)
+    // Improvement flag test (0, 1, 2)
     let lap_with_improvement = laps_array.iter()
         .find(|lap| lap["lapImprovement"].as_i64() == Some(2))
         .expect("Should find lap with improvement flag 2");
     assert_eq!(lap_with_improvement["lapImprovement"].as_i64(), Some(2));
     assert_eq!(lap_with_improvement["s2Improvement"].as_i64(), Some(2));
 
-    // ピットストップデータテスト
+    // Pit stop data test
     let pit_entry_lap = laps_array.iter()
         .find(|lap| lap["crossingFinishLineInPit"].as_str() == Some("B"))
         .expect("Should find pit entry lap");
     assert_eq!(pit_entry_lap["crossingFinishLineInPit"].as_str(), Some("B"));
     assert!(pit_entry_lap["lapTime"].as_str().unwrap().starts_with("2:"));
 
-    // ピットタイム処理テスト（フォーマットのみ確認、詳細はduration単体テストでカバー）
+    // Pit time processing test (format only, details covered by duration unit tests)
     let pit_exit_lap = laps_array.iter()
         .find(|lap| !lap["pitTime"].as_str().unwrap_or("").is_empty())
         .expect("Should find lap with pit time");
