@@ -6,6 +6,7 @@ import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Scale exposing (ContinuousScale)
+import SortedList
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
@@ -155,7 +156,7 @@ renderCars : TrackConfig -> ViewModel -> Svg msg
 renderCars config viewModel =
     Keyed.node "g"
         []
-        (viewModel.items
+        (SortedList.toList viewModel.items
             |> List.reverse
             |> List.map
                 (\car ->

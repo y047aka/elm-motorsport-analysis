@@ -6,6 +6,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (MetaData, Timing, ViewModelItem)
 import Test exposing (Test, describe, test)
 
@@ -25,7 +26,7 @@ suite =
 
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = items
+                            , items = Ordering.byPosition items
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -45,7 +46,7 @@ suite =
 
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = items
+                            , items = Ordering.byPosition items
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -65,7 +66,7 @@ suite =
 
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = items
+                            , items = Ordering.byPosition items
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
