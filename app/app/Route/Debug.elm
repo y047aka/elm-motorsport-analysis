@@ -246,7 +246,7 @@ config analysis =
 raceControlToLeaderboard : RaceControl.Model -> ViewModel
 raceControlToLeaderboard { lapCount, cars } =
     let
-        items =
+        sortedItems =
             cars
                 |> NonEmpty.find (\car -> car.metaData.carNumber == "2")
                 |> Maybe.map
@@ -274,10 +274,11 @@ raceControlToLeaderboard { lapCount, cars } =
                                 )
                     )
                 |> Maybe.withDefault []
+                |> Ordering.byPosition
 
         leadLapNumber =
-            items |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
+            sortedItems |> SortedList.head |> Maybe.map .lap |> Maybe.withDefault 0
     in
     { leadLapNumber = leadLapNumber
-    , items = Ordering.byPosition items
+    , items = sortedItems
     }

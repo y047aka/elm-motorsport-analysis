@@ -1,48 +1,64 @@
 module SortedList exposing
-    ( SortedList(..)
-    , sortBy, toList, map
+    ( sortBy
+    , map
+    , length
+    , head, toList
+    , gatherEqualsBy
+    , SortedList
     )
 
-{-| Type-safe sorted lists using phantom types
+{-| A library for sorted lists with compile-time type safety.
 
-This module provides phantom type-based sorting guarantees that can be used
-with any sorting criteria. The sorting type parameter ensures compile-time
-safety for sorted lists.
+You create a `SortedList` with a sorting criteria, and that particular sorting
+order is preserved throughout transformations.
 
-# Types
-@docs SortedList
 
-# Functions
-@docs sortBy, toList, map
+# Create
+
+@docs sortBy
+
+
+# Transform
+
+@docs map
+
+
+# Utilities
+
+@docs length
+
+
+# Deconstruct
+
+@docs head, toList
+
+
+# Sublists
+
+@docs gatherEqualsBy
 
 -}
 
+import List.Extra
 
-{-| Phantom type for type-safe sorted lists
 
-The `sorting` parameter is a phantom type that represents the sorting criteria.
-This ensures that different sorting types cannot be mixed at compile time.
+{-| Represents a sorted list with type-safe sorting guarantees.
 
-    type ByPosition = ByPosition Never
-    type ByTime = ByTime Never
-    
-    sortedByPosition : SortedList ByPosition Item
-    sortedByTime : SortedList ByTime Item
-    
-    -- This would be a compile-time error:
-    -- combinedList = List.append (toList sortedByPosition) (toList sortedByTime)
+The `sorting` parameter is a phantom type that represents the sorting criteria,
+ensuring different sorting types cannot be mixed at compile time.
 
 -}
 type SortedList sorting a
     = SortedList (List a)
 
 
-{-| Create a sorted list by applying a sorter function
+{-| Sort values by a derived property.
 
-The sorter function determines the sorting criteria, and the phantom type
-parameter ensures type safety.
+    sortBy .name [{ name = "Bob" }, { name = "Alice" }]
+    -- Creates a SortedList sorted by name
 
-    sortBy (compareBy .position) items
+    sortBy .age [{ age = 25 }, { age = 20 }]
+    -- Creates a SortedList sorted by age
 
 -}
 sortBy : (a -> a -> Order) -> List a -> SortedList sorting a
@@ -52,12 +68,46 @@ sortBy sortFn items =
         |> SortedList
 
 
-{-| Extract the list from a sorted list
+{-| Apply a function to every element of a sorted list.
 
-This is the only way to access the underlying list, ensuring that the sorting
-guarantee is maintained.
+    map sqrt (sortBy compare [ 1, 4, 9 ]) == sortBy compare [ 1, 2, 3 ]
 
-    toList sortedItems
+    map .name (sortBy .age people) == sortBy .age (map .name people)
+
+The sort order is preserved after mapping.
+
+-}
+map : (a -> b) -> SortedList sorting a -> SortedList sorting b
+map fn (SortedList items) =
+    List.map fn items
+        |> SortedList
+
+
+{-| Determine the length of a sorted list.
+
+    length (sortBy compare [ 1, 2, 3 ]) == 3
+
+-}
+length : SortedList sorting a -> Int
+length (SortedList items) =
+    List.length items
+
+
+{-| Extract the first element of a sorted list.
+
+    head (sortBy compare [ 1, 2, 3 ]) == Just 1
+
+    head (sortBy compare []) == Nothing
+
+-}
+head : SortedList sorting a -> Maybe a
+head (SortedList items) =
+    List.head items
+
+
+{-| Convert a sorted list to a normal list.
+
+    toList mySortedList == [ 1, 2, 3 ]
 
 -}
 toList : SortedList sorting a -> List a
@@ -65,15 +115,16 @@ toList (SortedList items) =
     items
 
 
-{-| Map over a sorted list while preserving sorting guarantee
+{-| Group equal elements together. A function is applied to each element of the sorted list
+and then the equality check is performed against the results of that function evaluation.
+Elements will be grouped in the same order as they appear in the original sorted list. The
+same applies to elements within each group.
 
-The mapping function is applied to each element while maintaining the original
-sorting order.
-
-    map .name sortedItems
+    gatherEqualsBy .age (sortBy .name [{age=25,name="Bob"},{age=23,name="Alice"},{age=25,name="Charlie"}])
+    --> [({age=25,name="Bob"},(sortBy .name [{age=25,name="Charlie"}])),({age=23,name="Alice"},(sortBy .name []))]
 
 -}
-map : (a -> b) -> SortedList sorting a -> SortedList sorting b
-map fn (SortedList items) =
-    List.map fn items
-        |> SortedList
+gatherEqualsBy : (a -> b) -> SortedList sorting a -> List ( a, SortedList sorting a )
+gatherEqualsBy keyFn (SortedList items) =
+    List.Extra.gatherEqualsBy keyFn items
+        |> List.map (\( first, rest ) -> ( first, SortedList rest ))

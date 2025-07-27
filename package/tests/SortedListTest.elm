@@ -1,9 +1,9 @@
 module SortedListTest exposing (suite)
 
 import Expect
-import SortedList exposing (SortedList)
 import Motorsport.Ordering exposing (ByPosition)
 import Motorsport.Utils exposing (compareBy)
+import SortedList exposing (SortedList)
 import Test exposing (Test, describe, test)
 
 
@@ -103,8 +103,7 @@ suite =
                             SortedList.sortBy (compareBy .position)
                                 [ { position = 1, name = "Test" } ]
                     in
-                    SortedList.toList byPosition
-                        |> List.length
+                    SortedList.length byPosition
                         |> Expect.equal 1
             ]
         ]

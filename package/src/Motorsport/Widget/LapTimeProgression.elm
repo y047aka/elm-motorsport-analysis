@@ -81,9 +81,9 @@ view clock viewModel =
 
 processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData
 processClassProgressionData clock viewModel =
-    SortedList.toList viewModel.items
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
+    viewModel.items
+        |> SortedList.gatherEqualsBy (.metaData >> .class)
+        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
         |> List.map
             (\( class, carsInClass ) ->
                 let

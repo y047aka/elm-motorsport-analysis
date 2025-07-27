@@ -94,16 +94,15 @@ processClassPositionData clock viewModel =
             currentRaceTime - (60 * 60 * 1000)
 
         lapThreshold =
-            SortedList.toList viewModel.items
-                |> List.head
+            SortedList.head viewModel.items
                 |> Maybe.map .history
                 |> Maybe.andThen (List.Extra.find (\{ elapsed } -> elapsed >= timeThreshold))
                 |> Maybe.map .lap
                 |> Maybe.withDefault 1
     in
-    SortedList.toList viewModel.items
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
+    viewModel.items
+        |> SortedList.gatherEqualsBy (.metaData >> .class)
+        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
         |> List.map
             (\( class, carsInClass ) ->
                 let
