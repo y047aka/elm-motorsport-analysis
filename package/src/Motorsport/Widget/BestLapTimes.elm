@@ -3,12 +3,12 @@ module Motorsport.Widget.BestLapTimes exposing (view)
 import Css exposing (alignItems, backgroundColor, bold, borderRadius, borderTop3, center, color, displayFlex, fontSize, fontWeight, height, hsl, nthChild, padding, padding2, property, px, solid, textAlign, width, zero)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
+import SortedList
 
 
 type alias CarLapData =
@@ -43,8 +43,8 @@ view analysis viewModel =
 processClassBestTimes : ViewModel -> List ClassData
 processClassBestTimes viewModel =
     viewModel.items
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
+        |> SortedList.gatherEqualsBy (.metaData >> .class)
+        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
         |> List.map
             (\( class, cars ) ->
                 { class = class

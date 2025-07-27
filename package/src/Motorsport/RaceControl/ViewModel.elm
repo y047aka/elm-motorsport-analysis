@@ -27,12 +27,14 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
+import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RaceControl as RaceControl
+import SortedList exposing (SortedList)
 
 
 type alias ViewModel =
     { leadLapNumber : Int
-    , items : List ViewModelItem
+    , items : SortedList ByPosition ViewModelItem
     }
 
 
@@ -106,7 +108,7 @@ init { clock, lapCount, cars } =
                     )
     in
     { leadLapNumber = lapCount
-    , items = items
+    , items = Ordering.byPosition items
     }
 
 
@@ -200,7 +202,7 @@ groupCarsByCloseIntervals vm =
                     in
                     (first :: group) :: groupCars remaining
     in
-    vm.items
+    SortedList.toList vm.items
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 

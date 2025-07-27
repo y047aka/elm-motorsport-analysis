@@ -16,6 +16,7 @@ import Motorsport.Widget as Widget
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
+import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Attributes as TA
@@ -93,15 +94,15 @@ processClassPositionData clock viewModel =
             currentRaceTime - (60 * 60 * 1000)
 
         lapThreshold =
-            List.head viewModel.items
+            SortedList.head viewModel.items
                 |> Maybe.map .history
                 |> Maybe.andThen (List.Extra.find (\{ elapsed } -> elapsed >= timeThreshold))
                 |> Maybe.map .lap
                 |> Maybe.withDefault 1
     in
     viewModel.items
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: rest ))
+        |> SortedList.gatherEqualsBy (.metaData >> .class)
+        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
         |> List.map
             (\( class, carsInClass ) ->
                 let
