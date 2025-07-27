@@ -14,12 +14,14 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
+import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import SortedList
 import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
@@ -163,7 +165,7 @@ view app { analysis, raceControl } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (raceControlToLeaderboard raceControl).items
+            , DataView.view (config analysis) leaderboardState (SortedList.toList (raceControlToLeaderboard raceControl).items)
             ]
         }
 
@@ -277,5 +279,5 @@ raceControlToLeaderboard { lapCount, cars } =
             items |> List.head |> Maybe.map .lap |> Maybe.withDefault 0
     in
     { leadLapNumber = leadLapNumber
-    , items = items
+    , items = Ordering.byPosition items
     }

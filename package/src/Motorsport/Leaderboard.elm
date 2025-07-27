@@ -61,6 +61,7 @@ import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
 import Scale exposing (ContinuousScale)
+import SortedList
 import Svg.Styled exposing (Svg, g, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes
 import TypedSvg.Styled.Attributes as TypedSvgAttributes
@@ -733,7 +734,7 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
 
 view : Config ViewModelItem msg -> Model -> ViewModel -> Html msg
 view config state viewModel =
-    DataView.view config state viewModel.items
+    DataView.view config state (SortedList.toList viewModel.items)
 
 
 
