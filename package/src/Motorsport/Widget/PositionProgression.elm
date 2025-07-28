@@ -100,9 +100,7 @@ processClassPositionData clock viewModel =
                 |> Maybe.map .lap
                 |> Maybe.withDefault 1
     in
-    viewModel.items
-        |> SortedList.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+    viewModel.itemsByClass
         |> List.map
             (\( class, carsInClass ) ->
                 let

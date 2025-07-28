@@ -8,6 +8,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (MetaData, Timing, ViewModelItem)
+import SortedList
 import Test exposing (Test, describe, test)
 
 
@@ -24,9 +25,16 @@ suite =
                             , createViewModelItem 3 "3" 1501 -- 1.501s - not close
                             ]
 
+                        sortedItems =
+                            Ordering.byPosition items
+
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = Ordering.byPosition items
+                            , items = sortedItems
+                            , itemsByClass =
+                                sortedItems
+                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -44,9 +52,16 @@ suite =
                             , createViewModelItem 3 "3" 1200 -- Continues Group 2
                             ]
 
+                        sortedItems =
+                            Ordering.byPosition items
+
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = Ordering.byPosition items
+                            , items = sortedItems
+                            , itemsByClass =
+                                sortedItems
+                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -64,9 +79,16 @@ suite =
                             , createViewModelItemWithGap 3 "3" (Gap.Laps 1)
                             ]
 
+                        sortedItems =
+                            Ordering.byPosition items
+
                         viewModel =
                             { leadLapNumber = List.head items |> Maybe.map .lap |> Maybe.withDefault 0
-                            , items = Ordering.byPosition items
+                            , items = sortedItems
+                            , itemsByClass =
+                                sortedItems
+                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel

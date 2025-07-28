@@ -8,7 +8,6 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
-import SortedList
 
 
 type alias CarLapData =
@@ -42,9 +41,7 @@ view analysis viewModel =
 
 processClassBestTimes : ViewModel -> List ClassData
 processClassBestTimes viewModel =
-    viewModel.items
-        |> SortedList.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+    viewModel.itemsByClass
         |> List.map
             (\( class, cars ) ->
                 { class = class
