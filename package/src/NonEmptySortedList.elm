@@ -150,4 +150,4 @@ gatherEqualsBy keyFn (NonEmptySortedList items) =
     items
         |> NonEmpty.toList
         |> List.Extra.gatherEqualsBy keyFn
-        |> List.map (\( first, rest ) -> ( first, SortedList.fromSortedList rest ))
+        |> List.map (\( first, rest ) -> ( first, SortedList.SortedList rest ))
