@@ -42,14 +42,12 @@ view analysis viewModel =
 
 processClassBestTimes : ViewModel -> List ClassData
 processClassBestTimes viewModel =
-    viewModel.items
-        |> SortedList.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+    viewModel.itemsByClass
         |> List.map
             (\( class, cars ) ->
                 { class = class
                 , cars =
-                    cars
+                    SortedList.toList cars
                         |> List.sortBy (.lastLap >> Maybe.map .best >> Maybe.withDefault 999999)
                         |> List.take 3
                         |> List.map

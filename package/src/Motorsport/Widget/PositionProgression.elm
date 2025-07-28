@@ -100,14 +100,12 @@ processClassPositionData clock viewModel =
                 |> Maybe.map .lap
                 |> Maybe.withDefault 1
     in
-    viewModel.items
-        |> SortedList.gatherEqualsBy (.metaData >> .class)
-        |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+    viewModel.itemsByClass
         |> List.map
             (\( class, carsInClass ) ->
                 let
                     cars =
-                        carsInClass
+                        SortedList.toList carsInClass
                             |> List.map
                                 (\car ->
                                     let
@@ -123,7 +121,7 @@ processClassPositionData clock viewModel =
                 in
                 { class = class
                 , cars = cars
-                , carCount = List.length carsInClass
+                , carCount = SortedList.length carsInClass
                 }
             )
         |> List.filter (\classData -> List.length classData.cars > 0)
