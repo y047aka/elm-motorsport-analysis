@@ -17,6 +17,7 @@ import Motorsport.Widget as Widget
 import Path
 import Scale exposing (ContinuousScale)
 import Shape
+import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Attributes as TA
@@ -85,7 +86,7 @@ processClassProgressionData clock viewModel =
             (\( class, carsInClass ) ->
                 let
                     cars =
-                        carsInClass
+                        SortedList.toList carsInClass
                             |> List.map
                                 (\car ->
                                     let

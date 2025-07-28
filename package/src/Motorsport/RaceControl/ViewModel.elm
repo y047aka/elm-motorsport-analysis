@@ -35,7 +35,7 @@ import SortedList exposing (SortedList)
 type alias ViewModel =
     { leadLapNumber : Int
     , items : SortedList ByPosition ViewModelItem
-    , itemsByClass : List ( Class, List ViewModelItem )
+    , itemsByClass : List ( Class, SortedList ByPosition ViewModelItem )
     }
 
 
@@ -116,7 +116,7 @@ init { clock, lapCount, cars } =
     , itemsByClass =
         sortedItems
             |> SortedList.gatherEqualsBy (.metaData >> .class)
-            |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+            |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
     }
 
 

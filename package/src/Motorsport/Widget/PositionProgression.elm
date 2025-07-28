@@ -105,7 +105,7 @@ processClassPositionData clock viewModel =
             (\( class, carsInClass ) ->
                 let
                     cars =
-                        carsInClass
+                        SortedList.toList carsInClass
                             |> List.map
                                 (\car ->
                                     let
@@ -121,7 +121,7 @@ processClassPositionData clock viewModel =
                 in
                 { class = class
                 , cars = cars
-                , carCount = List.length carsInClass
+                , carCount = SortedList.length carsInClass
                 }
             )
         |> List.filter (\classData -> List.length classData.cars > 0)

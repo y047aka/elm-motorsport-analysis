@@ -284,5 +284,5 @@ raceControlToLeaderboard { lapCount, cars } =
     , itemsByClass =
         sortedItems
             |> SortedList.gatherEqualsBy (.metaData >> .class)
-            |> List.map (\( first, rest ) -> ( first.metaData.class, first :: SortedList.toList rest ))
+            |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
     }

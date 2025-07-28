@@ -8,6 +8,7 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
+import SortedList
 
 
 type alias CarLapData =
@@ -46,7 +47,7 @@ processClassBestTimes viewModel =
             (\( class, cars ) ->
                 { class = class
                 , cars =
-                    cars
+                    SortedList.toList cars
                         |> List.sortBy (.lastLap >> Maybe.map .best >> Maybe.withDefault 999999)
                         |> List.take 3
                         |> List.map
