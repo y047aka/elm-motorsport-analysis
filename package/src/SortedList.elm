@@ -4,6 +4,7 @@ module SortedList exposing
     , length
     , head, toList
     , gatherEqualsBy
+    , fromSortedList
     , SortedList
     )
 
@@ -15,7 +16,7 @@ order is preserved throughout transformations.
 
 # Create
 
-@docs sortBy
+@docs sortBy, fromSortedList
 
 
 # Transform
@@ -127,4 +128,19 @@ same applies to elements within each group.
 gatherEqualsBy : (a -> b) -> SortedList sorting a -> List ( a, SortedList sorting a )
 gatherEqualsBy keyFn (SortedList items) =
     List.Extra.gatherEqualsBy keyFn items
-        |> List.map (\( first, rest ) -> ( first, SortedList rest ))
+        |> List.map (\( first, rest ) -> ( first, fromSortedList rest ))
+
+
+{-| Create a SortedList from a list that maintains the same sort order.
+This is intended for internal use when you know the list maintains the same ordering.
+For example, when filtering or taking sublists of an already sorted list.
+
+    fromSortedList [1, 2, 3] -- Creates a SortedList with the same sort order
+
+This function should only be used when you're certain the input maintains
+the original sort order (e.g., from gatherEqualsBy results).
+
+-}
+fromSortedList : List a -> SortedList sorting a
+fromSortedList items =
+    SortedList items

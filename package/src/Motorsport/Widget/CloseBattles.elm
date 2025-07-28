@@ -8,12 +8,15 @@ import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import List.Extra
-import List.NonEmpty as NonEmpty exposing (NonEmpty)
+import List.NonEmpty as NonEmpty
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Ordering exposing (ByPosition)
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget as Widget
+import NonEmptySortedList exposing (NonEmptySortedList)
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
@@ -25,7 +28,7 @@ import TypedSvg.Types exposing (Length(..), Opacity(..), Paint(..), Transform(..
 
 
 type alias CloseBattle =
-    { cars : NonEmpty ViewModelItem
+    { cars : NonEmptySortedList ByPosition ViewModelItem
     , position : Int
     }
 
@@ -90,18 +93,20 @@ view viewModel =
 detectCloseBattles : ViewModel -> List CloseBattle
 detectCloseBattles viewModel =
     ViewModel.groupCarsByCloseIntervals viewModel
-        |> List.filterMap createCloseBattle
-
-
-createCloseBattle : List ViewModelItem -> Maybe CloseBattle
-createCloseBattle cars =
-    NonEmpty.fromList cars
-        |> Maybe.map
-            (\nonEmptyCars ->
-                { cars = nonEmptyCars
-                , position = NonEmpty.head nonEmptyCars |> .position
-                }
+        |> List.filterMap
+            (\cars ->
+                cars
+                    |> NonEmpty.fromList
+                    |> Maybe.map (NonEmptySortedList.sortBy (compareBy .position))
+                    |> Maybe.map createCloseBattle
             )
+
+
+createCloseBattle : NonEmptySortedList ByPosition ViewModelItem -> CloseBattle
+createCloseBattle cars =
+    { cars = cars
+    , position = NonEmptySortedList.head cars |> .position
+    }
 
 
 closeBattleItem : CloseBattle -> Html msg
@@ -122,12 +127,12 @@ closeBattleItem { cars } =
         ]
 
 
-battleHeaderView : NonEmpty ViewModelItem -> Html msg
+battleHeaderView : NonEmptySortedList ByPosition ViewModelItem -> Html msg
 battleHeaderView cars =
     let
         carNumbers =
             cars
-                |> NonEmpty.toList
+                |> NonEmptySortedList.toList
                 |> List.map (.metaData >> .carNumber)
                 |> String.join " - "
     in
@@ -141,19 +146,24 @@ battleHeaderView cars =
         [ text carNumbers ]
 
 
-lapTimeComparison : NonEmpty ViewModelItem -> Html msg
+lapTimeComparison : NonEmptySortedList ByPosition ViewModelItem -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
             let
                 options =
-                    { leadLapNumber = NonEmpty.head cars |> .lap }
+                    { leadLapNumber = NonEmptySortedList.head cars |> .lap }
             in
-            cars
-                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
+            NonEmptySortedList.map (\car -> ViewModel.getRecentLaps 3 options car.history) cars
 
         headerLaps =
-            NonEmpty.head allRecentLaps
+            NonEmptySortedList.head allRecentLaps
+
+        carTimeRows =
+            NonEmpty.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps)
+                (NonEmptySortedList.toNonEmpty cars)
+                (NonEmptySortedList.toNonEmpty allRecentLaps)
+                |> NonEmpty.toList
     in
     Html.table
         [ css
@@ -178,18 +188,15 @@ lapTimeComparison cars =
                     :: List.map (\lap -> Html.th [] [ text ("Lap " ++ String.fromInt lap.lap) ]) headerLaps
                 )
             ]
-        , Html.tbody []
-            (NonEmpty.map2 (\car recentLaps -> carTimeRow car recentLaps allRecentLaps) cars allRecentLaps
-                |> NonEmpty.toList
-            )
+        , Html.tbody [] carTimeRows
         ]
 
 
-carTimeRow : ViewModelItem -> List Lap -> NonEmpty (List Lap) -> Html msg
+carTimeRow : ViewModelItem -> List Lap -> NonEmptySortedList ByPosition (List Lap) -> Html msg
 carTimeRow car carLaps allCarsLaps =
     let
         leaderLaps =
-            NonEmpty.head allCarsLaps
+            NonEmptySortedList.head allCarsLaps
 
         lapCells =
             List.map2
@@ -197,7 +204,7 @@ carTimeRow car carLaps allCarsLaps =
                     let
                         allTimesForThisLap =
                             allCarsLaps
-                                |> NonEmpty.toList
+                                |> NonEmptySortedList.toList
                                 |> List.filterMap (List.Extra.find (\otherLap -> otherLap.lap == lap.lap))
                                 |> List.map .time
 
@@ -274,15 +281,15 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : NonEmpty ViewModelItem -> Html msg
+battleChart : NonEmptySortedList ByPosition ViewModelItem -> Html msg
 battleChart cars =
     let
         options =
-            { leadLapNumber = NonEmpty.head cars |> .lap }
+            { leadLapNumber = NonEmptySortedList.head cars |> .lap }
 
         carProgressionData =
             cars
-                |> NonEmpty.map
+                |> NonEmptySortedList.map
                     (\car ->
                         { carNumber = car.metaData.carNumber
                         , laps = ViewModel.getRecentLaps 10 options car.history
@@ -292,10 +299,10 @@ battleChart cars =
 
         carGapData =
             calculateGapData carProgressionData
+                |> NonEmptySortedList.toList
 
         allGapPoints =
             carGapData
-                |> NonEmpty.toList
                 |> List.concatMap .gapData
     in
     svg
@@ -306,16 +313,16 @@ battleChart cars =
         ([ xAxis allGapPoints
          , yAxis allGapPoints
          ]
-            ++ (carGapData |> NonEmpty.toList |> renderBattleGapLines)
+            ++ (carGapData |> renderBattleGapLines)
         )
 
 
-calculateGapData : NonEmpty CarProgressionData -> NonEmpty CarGapData
+calculateGapData : NonEmptySortedList ByPosition CarProgressionData -> NonEmptySortedList ByPosition CarGapData
 calculateGapData carProgressionData =
     let
         allLaps =
             carProgressionData
-                |> NonEmpty.toList
+                |> NonEmptySortedList.toList
                 |> List.concatMap .laps
 
         fastestLapTime =
@@ -345,7 +352,7 @@ calculateGapData carProgressionData =
 
                 latestLeaderElapsed =
                     carProgressionData
-                        |> NonEmpty.head
+                        |> NonEmptySortedList.head
                         |> .laps
                         |> List.Extra.maximumBy .lap
                         |> Maybe.map .elapsed
@@ -375,7 +382,7 @@ calculateGapData carProgressionData =
             }
     in
     carProgressionData
-        |> NonEmpty.map calculateGapForCar
+        |> NonEmptySortedList.map calculateGapForCar
 
 
 average : List Float -> Maybe Float
