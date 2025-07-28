@@ -1,102 +1,71 @@
-# CLAUDE.md
+# Claude Code Spec-Driven Development
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
 
-## Overview
+## Project Context
 
-This is a motorsport analysis application built with Elm and elm-pages. It provides visualization and analysis tools for Formula 1, Formula E, and WEC racing data. The app displays race control information, lap times, position progressions, and various racing analytics.
+### Paths
+- Steering: `.kiro/steering/`
+- Specs: `.kiro/specs/`
+- Commands: `.claude/commands/`
 
-## Architecture
+### Steering vs Specification
 
-The codebase is organized as a monorepo with multiple workspaces:
+**Steering** (`.kiro/steering/`) - Guide AI with project-wide rules and context
+**Specs** (`.kiro/specs/`) - Formalize development process for individual features
 
-### Workspaces Structure
-- **`app/`**: Main elm-pages application (web frontend)
-- **`package/`**: Core Elm library with motorsport analysis logic
-- **`cli/`**: Command-line tools for data processing and conversion
-- **`review/`**: Elm-review configuration and rules
+### Active Specifications
+- Check `.kiro/specs/` for active specifications
+- Use `/kiro:spec-status [feature-name]` to check progress
 
-### Key Components
+## Development Guidelines
+- Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)
 
-**Core Motorsport Library (`package/src/Motorsport/`)**:
-- `Analysis.elm`: Race analysis calculations and performance metrics
-- `Car.elm`, `Driver.elm`, `Class.elm`: Core data models
-- `RaceControl.elm`: Race control state management
-- `Chart/`: Visualization components (GapChart, LapTimeChart, Tracker, etc.)
-- `Widget/`: UI components for race data display
+## Workflow
 
-**Data Processing (`app/src/Data/`)**:
-- `Series/`: Sport-specific data handling (F1, FormulaE, WEC)
-- `F1/Decoder.elm`: Formula 1 data parsing
-- `FormulaE.elm`, `Wec.elm`: Series-specific data models
+### Phase 0: Steering (Optional)
+`/kiro:steering` - Create/update steering documents
+`/kiro:steering-custom` - Create custom steering for specialized contexts
 
-**UI Components (`app/src/UI/`)**:
-- Styled components using elm-css
-- Reusable table, button, and form components
+**Note**: Optional for new features or small additions. Can proceed directly to spec-init.
 
-## Development Commands
+### Phase 1: Specification Creation
+1. `/kiro:spec-init [detailed description]` - Initialize spec with detailed project description
+2. `/kiro:spec-requirements [feature]` - Generate requirements document
+3. `/kiro:spec-design [feature]` - Interactive: "requirements.mdをレビューしましたか？ [y/N]"
+4. `/kiro:spec-tasks [feature]` - Interactive: Confirms both requirements and design review
 
-### Root Commands
-```bash
-npm run start         # Start development server
-npm run build         # Build the application
-npm run test          # Run tests
-npm run benchmark     # Run performance benchmarks
-npm run csv_to_json   # Convert CSV data to JSON
-```
+### Phase 2: Progress Tracking
+`/kiro:spec-status [feature]` - Check current progress and phases
 
-### Workspace-Specific Commands
+## Development Rules
+1. **Consider steering**: Run `/kiro:steering` before major development (optional for new features)
+2. **Follow 3-phase approval workflow**: Requirements → Design → Tasks → Implementation
+3. **Approval required**: Each phase requires human review (interactive prompt or manual)
+4. **No skipping phases**: Design requires approved requirements; Tasks require approved design
+5. **Update task status**: Mark tasks as completed when working on them
+6. **Keep steering current**: Run `/kiro:steering` after significant changes
+7. **Check spec compliance**: Use `/kiro:spec-status` to verify alignment
 
-**App (elm-pages frontend)**:
-```bash
-npm run -w app start  # Start dev server
-npm run -w app build  # Build for production
-```
+## Steering Configuration
 
-**Package (core library)**:
-```bash
-npm run -w package test       # Run elm-test and elm-verify-examples
-npm run -w package benchmark  # Run benchmarks
-```
+### Current Steering Files
+Managed by `/kiro:steering` command. Updates here reflect command changes.
 
-**CLI (data processing)**:
-```bash
-npm run -w cli build    # Build CLI tools
-npm run -w cli start    # Run CLI application
-npm run -w cli test     # Run CLI tests
-npm run -w cli watch    # Build in watch mode
-```
+### Active Steering Files
+- `product.md`: Always included - Product context and business objectives
+- `tech.md`: Always included - Technology stack and architectural decisions
+- `structure.md`: Always included - File organization and code patterns
 
-**Review (code quality)**:
-```bash
-npm run -w review package  # Review package code
-npm run -w review app      # Review app code
-npm run -w review cli      # Review CLI code
-```
+### Custom Steering Files
+<!-- Added by /kiro:steering-custom command -->
+<!-- Format:
+- `filename.md`: Mode - Pattern(s) - Description
+  Mode: Always|Conditional|Manual
+  Pattern: File patterns for Conditional mode
+-->
 
-## Data Format
-
-The application processes motorsport data from multiple sources:
-- **Static data**: Located in `app/static/` with CSV and JSON files
-- **Race data**: Includes lap times, positions, sector times, and timing data
-- **Images**: Car images stored in `app/static/images/wec/`
-
-## Code Quality
-
-- **Biome**: Used for TypeScript/JavaScript formatting and linting
-- **elm-format**: Automatic Elm code formatting
-- **elm-review**: Elm-specific linting and best practices
-- **elm-test**: Unit testing framework
-
-## Testing
-
-- Run `npm run test` to execute the full test suite
-- Tests use `elm-test` and `elm-verify-examples`
-- Benchmarks available for performance-critical code
-
-## Build Process
-
-- Uses `elm-pages` for static site generation
-- Vite for TypeScript/JavaScript bundling
-- `elm-optimize-level-2` for production builds
-- Development server available at localhost with hot reloading
+### Inclusion Modes
+- **Always**: Loaded in every interaction (default)
+- **Conditional**: Loaded for specific file patterns (e.g., `"*.test.js"`)
+- **Manual**: Reference with `@filename.md` syntax
