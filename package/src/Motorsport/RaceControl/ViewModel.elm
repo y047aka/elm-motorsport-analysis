@@ -129,7 +129,7 @@ init_metaData { metaData } lastLap =
         List.map
             (\{ name } ->
                 { name = name
-                , isCurrentDriver = name == lastLap.driver
+                , isCurrentDriver = name == Lap.getDriver lastLap
                 }
             )
             metaData.drivers
@@ -151,13 +151,13 @@ init_timing clock { leader, rival } car =
         currentSector =
             case Lap.currentSector raceClock currentLap of
                 S1 ->
-                    Just ( S1, min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100) )
+                    Just ( S1, min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat (Lap.getSector1 currentLap)) * 100) )
 
                 S2 ->
-                    Just ( S2, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100) )
+                    Just ( S2, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + Lap.getSector1 currentLap)) / toFloat (Lap.getSector2 currentLap)) * 100) )
 
                 S3 ->
-                    Just ( S3, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100) )
+                    Just ( S3, min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + Lap.getSector1 currentLap + Lap.getSector2 currentLap)) / toFloat (Lap.getSector3 currentLap)) * 100) )
 
         currentMiniSector =
             Lap.miniSectorProgressAt raceClock ( currentLap, lastLap )

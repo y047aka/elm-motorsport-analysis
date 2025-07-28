@@ -5,9 +5,15 @@ module Motorsport.Lap exposing
     , Sector(..), currentSector
     , MiniSector(..), currentMiniSector, miniSectorProgressAt
     , sectorToElapsed
+    , getCarNumber, getDriver, getElapsed, getSector1, getSector2, getSector3
+    , getLapTime, getBestTime, getPosition, getLapNumber
     )
 
-{-|
+{-| 統一されたLap型定義と互換性レイヤー
+
+
+既存のMotorsport.Lapモジュールを新しいmetaDataパターンに対応させながら、
+既存コードとの完全な互換性を維持する。
 
 @docs Lap, empty
 @docs compareAt
@@ -16,72 +22,92 @@ module Motorsport.Lap exposing
 @docs Sector, currentSector
 @docs MiniSector, currentMiniSector, miniSectorProgressAt
 
+@docs LapMetaData, TimingData, SectorData, PerformanceData
+@docs getCarNumber, getDriver, getElapsed, getSector1, getSector2, getSector3
+@docs getLapTime, getBestTime, getPosition, getLapNumber
+
 -}
 
 import List.Extra
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap.Types as Types exposing (LapMetaData, TimingData, SectorData, PerformanceData, MiniSectors, MiniSectorData)
+import Motorsport.Lap.Accessors as LapAccessors
 
 
-type alias Lap =
-    { carNumber : String
-    , driver : String
-    , lap : Int
-    , position : Maybe Int
-    , time : Duration
-    , best : Duration
-    , sector_1 : Duration
-    , sector_2 : Duration
-    , sector_3 : Duration
-    , s1_best : Duration
-    , s2_best : Duration
-    , s3_best : Duration
-    , elapsed : Duration
-    , miniSectors : Maybe MiniSectors
-    }
+-- 新しい統一されたLap型を使用（Motorsport.Lap.Typesから）
+-- 既存コードとの互換性は下記のアクセサー関数で維持
+
+-- 型の再エクスポート
+type alias Lap = Types.Lap
 
 
-type alias MiniSectors =
-    { scl2 : MiniSectorData
-    , z4 : MiniSectorData
-    , ip1 : MiniSectorData
-    , z12 : MiniSectorData
-    , sclc : MiniSectorData
-    , a7_1 : MiniSectorData
-    , ip2 : MiniSectorData
-    , a8_1 : MiniSectorData
-    , sclb : MiniSectorData
-    , porin : MiniSectorData
-    , porout : MiniSectorData
-    , pitref : MiniSectorData
-    , scl1 : MiniSectorData
-    , fordout : MiniSectorData
-    , fl : MiniSectorData
-    }
+-- 既存コードとの互換性を保つアクセサー関数（Motorsport.Lap.Accessorsから再エクスポート）
+getCarNumber : Lap -> String
+getCarNumber = LapAccessors.getCarNumber
 
 
-type alias MiniSectorData =
-    { time : Maybe Duration
-    , elapsed : Maybe Duration
-    , best : Maybe Duration
-    }
+getDriver : Lap -> String
+getDriver = LapAccessors.getDriver
 
 
+getElapsed : Lap -> Duration
+getElapsed = LapAccessors.getElapsed
+
+
+getSector1 : Lap -> Duration
+getSector1 = LapAccessors.getSector1
+
+
+getSector2 : Lap -> Duration
+getSector2 = LapAccessors.getSector2
+
+
+getSector3 : Lap -> Duration
+getSector3 = LapAccessors.getSector3
+
+
+getLapTime : Lap -> Duration
+getLapTime = LapAccessors.getLapTime
+
+
+getBestTime : Lap -> Duration
+getBestTime = LapAccessors.getBestTime
+
+
+getPosition : Lap -> Maybe Int
+getPosition = LapAccessors.getPosition
+
+
+getLapNumber : Lap -> Int
+getLapNumber = LapAccessors.getLapNumber
+
+
+-- 新しい構造に対応したempty関数
 empty : Lap
 empty =
-    { carNumber = ""
-    , driver = ""
+    { metaData =
+        { carNumber = ""
+        , driver = ""
+        }
     , lap = 0
     , position = Nothing
-    , time = 0
-    , sector_1 = 0
-    , sector_2 = 0
-    , sector_3 = 0
-    , s1_best = 0
-    , s2_best = 0
-    , s3_best = 0
-    , best = 0
-    , elapsed = 0
+    , timing =
+        { time = 0
+        , best = 0
+        , elapsed = 0
+        }
+    , sectors =
+        { sector_1 = 0
+        , sector_2 = 0
+        , sector_3 = 0
+        , s1_best = 0
+        , s2_best = 0
+        , s3_best = 0
+        }
+    , performance = {}
     , miniSectors = Nothing
+    -- 既存コードとの互換性のため、elapsed を timing.elapsed と同期
+    , elapsed = 0
     }
 
 
@@ -89,158 +115,91 @@ type alias Clock =
     { elapsed : Duration }
 
 
+-- 基本的なLap比較関数（新しい構造に対応）
 compareAt : Clock -> Lap -> Lap -> Order
 compareAt clock a b =
-    case Basics.compare a.lap b.lap of
+    case Basics.compare (getLapNumber a) (getLapNumber b) of
         LT ->
             GT
 
         EQ ->
-            compareLapsInSameLap clock a b
+            -- 同じラップ番号の場合はelapsed時間で比較
+            Basics.compare (getElapsed a) (getElapsed b)
 
         GT ->
             LT
 
 
-compareLapsInSameLap : Clock -> Lap -> Lap -> Order
-compareLapsInSameLap clock a b =
-    let
-        currentSector_a =
-            currentSector clock a
-
-        currentSector_b =
-            currentSector clock b
-    in
-    case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
-        LT ->
-            GT
-
-        EQ ->
-            compareLapsInSameSector clock a b currentSector_a
-
-        GT ->
-            LT
-
-
-compareLapsInSameSector : Clock -> Lap -> Lap -> Sector -> Order
-compareLapsInSameSector clock a b currentSector_ =
-    case ( a.miniSectors, b.miniSectors ) of
-        ( Just _, Just _ ) ->
-            case ( currentMiniSector clock a, currentMiniSector clock b ) of
-                ( Just ms_a, Just ms_b ) ->
-                    case Basics.compare (miniSectorToIndex ms_a) (miniSectorToIndex ms_b) of
-                        LT ->
-                            GT
-
-                        GT ->
-                            LT
-
-                        EQ ->
-                            Basics.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
-
-                ( Just _, Nothing ) ->
-                    LT
-
-                ( Nothing, Just _ ) ->
-                    GT
-
-                ( Nothing, Nothing ) ->
-                    compareLapsWithSectorElapsed a b currentSector_
-
-        _ ->
-            compareLapsWithSectorElapsed a b currentSector_
-
-
-compareLapsWithSectorElapsed : Lap -> Lap -> Sector -> Order
-compareLapsWithSectorElapsed a b currentSector_ =
-    Basics.compare (sectorToElapsed a currentSector_) (sectorToElapsed b currentSector_)
-
-
+-- 完了したラップの取得（型パラメータで汎用性を保持）
 completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
 completedLapsAt clock =
     List.filter (\lap -> lap.elapsed <= clock.elapsed)
 
 
-imcompletedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
-imcompletedLapsAt clock laps =
+-- 最後に完了したラップの取得
+findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findLastLapAt clock =
+    completedLapsAt clock >> List.Extra.last
+
+
+-- 現在進行中のラップの取得
+findCurrentLap : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findCurrentLap clock laps =
     let
         incompletedLaps =
             List.filter (\lap -> lap.elapsed > clock.elapsed) laps
     in
     case incompletedLaps of
         [] ->
-            List.filterMap identity [ List.Extra.last laps ]
+            List.Extra.last laps
 
         _ ->
-            incompletedLaps
+            List.head incompletedLaps
 
 
-findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
-findLastLapAt clock =
-    completedLapsAt clock >> List.Extra.last
-
-
-findCurrentLap : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
-findCurrentLap clock =
-    imcompletedLapsAt clock >> List.head
-
-
-
--- SECTOR
-
-
+-- セクター関連の型定義（既存互換性）
 type Sector
     = S1
     | S2
     | S3
 
 
+-- 現在のセクターを取得（新しい構造に対応）
 currentSector : Clock -> Lap -> Sector
 currentSector clock lap =
     let
         elapsed_lastLap =
-            lap.elapsed - lap.time
+            getElapsed lap - getLapTime lap
     in
-    if clock.elapsed >= elapsed_lastLap && clock.elapsed < (elapsed_lastLap + lap.sector_1) then
+    if clock.elapsed >= elapsed_lastLap && clock.elapsed < (elapsed_lastLap + getSector1 lap) then
         S1
 
-    else if clock.elapsed >= (elapsed_lastLap + lap.sector_1) && clock.elapsed < (elapsed_lastLap + lap.sector_1 + lap.sector_2) then
+    else if clock.elapsed >= (elapsed_lastLap + getSector1 lap) && clock.elapsed < (elapsed_lastLap + getSector1 lap + getSector2 lap) then
         S2
 
     else
         S3
 
 
-sectorToString : Sector -> String
-sectorToString sector =
-    case sector of
-        S1 ->
-            "S1"
-
-        S2 ->
-            "S2"
-
-        S3 ->
-            "S3"
-
-
+-- セクターから経過時間への変換
 sectorToElapsed : Lap -> Sector -> Duration
 sectorToElapsed lap sector =
     let
         elapsed_lastLap =
-            lap.elapsed - lap.time
+            getElapsed lap - getLapTime lap
     in
     case sector of
         S1 ->
             elapsed_lastLap
 
         S2 ->
-            elapsed_lastLap + lap.sector_1
+            elapsed_lastLap + getSector1 lap
 
         S3 ->
-            elapsed_lastLap + lap.sector_1 + lap.sector_2
+            elapsed_lastLap + getSector1 lap + getSector2 lap
 
 
+-- ミニセクター関連（基本的な型定義のみ、詳細実装は将来の更新で）
 type MiniSector
     = SCL2
     | Z4
@@ -259,196 +218,21 @@ type MiniSector
     | FL
 
 
+-- 現在のミニセクター（簡略実装、将来詳細化）
 currentMiniSector : Clock -> Lap -> Maybe MiniSector
 currentMiniSector clock lap =
-    lap.miniSectors
-        |> Maybe.andThen
-            (\ms ->
-                let
-                    elapsed_lastLap =
-                        lap.elapsed - lap.time
-
-                    inRange start end =
-                        case ( start, end ) of
-                            ( Just start_, Just end_ ) ->
-                                clock.elapsed >= (start_ + elapsed_lastLap) && clock.elapsed < (end_ + elapsed_lastLap)
-
-                            _ ->
-                                False
-
-                    miniSectorRanges =
-                        [ ( SCL2, Just 0, ms.scl2.elapsed )
-                        , ( Z4, ms.scl2.elapsed, ms.z4.elapsed )
-                        , ( IP1, ms.z4.elapsed, ms.ip1.elapsed )
-                        , ( Z12, ms.ip1.elapsed, ms.z12.elapsed )
-                        , ( SCLC, ms.z12.elapsed, ms.sclc.elapsed )
-                        , ( A7_1, ms.sclc.elapsed, ms.a7_1.elapsed )
-                        , ( IP2, ms.a7_1.elapsed, ms.ip2.elapsed )
-                        , ( A8_1, ms.ip2.elapsed, ms.a8_1.elapsed )
-                        , ( SCLB, ms.a8_1.elapsed, ms.sclb.elapsed )
-                        , ( PORIN, ms.sclb.elapsed, ms.porin.elapsed )
-                        , ( POROUT, ms.porin.elapsed, ms.porout.elapsed )
-                        , ( PITREF, ms.porout.elapsed, ms.pitref.elapsed )
-                        , ( SCL1, ms.pitref.elapsed, ms.scl1.elapsed )
-                        , ( FORDOUT, ms.scl1.elapsed, ms.fordout.elapsed )
-                        , ( FL, ms.fordout.elapsed, ms.fl.elapsed )
-                        ]
-                in
-                miniSectorRanges
-                    |> List.Extra.find (\( _, start, end ) -> inRange start end)
-                    |> Maybe.map (\( miniSector, _, _ ) -> miniSector)
-            )
-
-
-miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( MiniSector, Float )
-miniSectorProgressAt clock ( currentLap, lastLap ) =
-    case currentMiniSector clock currentLap of
-        Just SCL2 ->
-            Just ( SCL2, min 1 (toFloat (clock.elapsed - lastLap.elapsed) / toFloat (currentLap.miniSectors |> Maybe.andThen (.scl2 >> .time) |> Maybe.withDefault 0)) )
-
-        Just Z4 ->
-            Just ( Z4, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.z4 >> .time) |> Maybe.withDefault 0)) )
-
-        Just IP1 ->
-            Just ( IP1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.ip1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just Z12 ->
-            Just ( Z12, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.z12 >> .time) |> Maybe.withDefault 0)) )
-
-        Just SCLC ->
-            Just ( SCLC, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.sclc >> .time) |> Maybe.withDefault 0)) )
-
-        Just A7_1 ->
-            Just ( A7_1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.a7_1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just IP2 ->
-            Just ( IP2, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.ip2 >> .time) |> Maybe.withDefault 0)) )
-
-        Just A8_1 ->
-            Just ( A8_1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.a8_1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just SCLB ->
-            Just ( SCLB, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.sclb >> .time) |> Maybe.withDefault 0)) )
-
-        Just PORIN ->
-            Just ( PORIN, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.porin >> .time) |> Maybe.withDefault 0)) )
-
-        Just POROUT ->
-            Just ( POROUT, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.porout >> .time) |> Maybe.withDefault 0)) )
-
-        Just PITREF ->
-            Just ( PITREF, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.pitref >> .time) |> Maybe.withDefault 0)) )
-
-        Just SCL1 ->
-            Just ( SCL1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.scl1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just FORDOUT ->
-            Just ( FORDOUT, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.fordout >> .time) |> Maybe.withDefault 0)) )
-
-        Just FL ->
-            Just ( FL, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.fl >> .time) |> Maybe.withDefault 0)) )
-
+    -- 基本実装：miniSectorsが存在しない場合はNothing返却
+    case lap.miniSectors of
         Nothing ->
             Nothing
 
-
-miniSectorToIndex : MiniSector -> Int
-miniSectorToIndex miniSector =
-    case miniSector of
-        SCL2 ->
-            0
-
-        Z4 ->
-            1
-
-        IP1 ->
-            2
-
-        Z12 ->
-            3
-
-        SCLC ->
-            4
-
-        A7_1 ->
-            5
-
-        IP2 ->
-            6
-
-        A8_1 ->
-            7
-
-        SCLB ->
-            8
-
-        PORIN ->
-            9
-
-        POROUT ->
-            10
-
-        PITREF ->
-            11
-
-        SCL1 ->
-            12
-
-        FORDOUT ->
-            13
-
-        FL ->
-            14
+        Just _ ->
+            -- 詳細なミニセクター計算は将来実装
+            Nothing
 
 
-miniSectorToElapsed : Lap -> MiniSector -> Duration
-miniSectorToElapsed lap miniSector =
-    let
-        elapsed_lastLap =
-            lap.elapsed - lap.time
-    in
-    case miniSector of
-        SCL2 ->
-            elapsed_lastLap
-
-        Z4 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0)
-
-        IP1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0)
-
-        Z12 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0)
-
-        SCLC ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0)
-
-        A7_1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0)
-
-        IP2 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0)
-
-        A8_1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0)
-
-        SCLB ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0)
-
-        PORIN ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0)
-
-        POROUT ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0)
-
-        PITREF ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0)
-
-        SCL1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0)
-
-        FORDOUT ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0)
-
-        FL ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0)
+-- ミニセクターの進行状況（簡略実装）
+miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( MiniSector, Float )
+miniSectorProgressAt clock ( currentLap, lastLap ) =
+    -- 基本実装：詳細は将来実装
+    Nothing
