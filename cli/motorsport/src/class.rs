@@ -91,7 +91,10 @@ mod tests {
         assert_eq!(Class::from_string("LMGTE Pro"), Some(Class::LMGTEPro));
         assert_eq!(Class::from_string("LMGTE Am"), Some(Class::LMGTEAm));
         assert_eq!(Class::from_string("LMGT3"), Some(Class::LMGT3));
-        assert_eq!(Class::from_string("INNOVATIVE CAR"), Some(Class::InnovativeCar));
+        assert_eq!(
+            Class::from_string("INNOVATIVE CAR"),
+            Some(Class::InnovativeCar)
+        );
 
         // 不正なケース
         assert_eq!(Class::from_string("UNKNOWN"), None);

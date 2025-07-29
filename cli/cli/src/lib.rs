@@ -1,14 +1,13 @@
 use std::error::Error;
 use std::fs;
 
-pub mod preprocess;
-pub mod output;
 pub mod config;
+pub mod output;
+pub mod preprocess;
 
-pub use preprocess::{parse_laps_from_csv, group_laps_by_car, LapWithMetadata};
-pub use output::{Output, create_output};
 pub use config::Config;
-
+pub use output::{create_output, Output};
+pub use preprocess::{group_laps_by_car, parse_laps_from_csv, LapWithMetadata};
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let csv_content = fs::read_to_string(&config.input_file)
@@ -20,7 +19,7 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
 
     let event_name = config.event_name.as_deref().unwrap_or("test_event");
     let output = create_output(event_name, &laps_with_metadata, &cars);
-    
+
     let json = serde_json::to_string_pretty(&output)
         .map_err(|e| format!("Failed to serialize output to JSON: {}", e))?;
 

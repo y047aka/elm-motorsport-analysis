@@ -24,7 +24,7 @@ pub fn find_current_driver(drivers: &[Driver]) -> Option<&Driver> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Driver, find_current_driver};
+    use super::{find_current_driver, Driver};
 
     #[test]
     fn find_current_driver_() {

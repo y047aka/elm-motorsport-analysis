@@ -1,5 +1,5 @@
-use std::path::Path;
 use std::error::Error;
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct Config {
@@ -47,7 +47,10 @@ mod tests {
         let input_path = temp_dir.path().join("input.csv");
         let output_path = temp_dir.path().join("output.json");
 
-        File::create(&input_path).unwrap().write_all(b"test").unwrap();
+        File::create(&input_path)
+            .unwrap()
+            .write_all(b"test")
+            .unwrap();
 
         let args = vec![
             "program".to_string(),
@@ -58,7 +61,10 @@ mod tests {
 
         let config = Config::build(args.into_iter()).unwrap();
         assert_eq!(config.input_file, input_path.to_string_lossy().to_string());
-        assert_eq!(config.output_file, Some(output_path.to_string_lossy().to_string()));
+        assert_eq!(
+            config.output_file,
+            Some(output_path.to_string_lossy().to_string())
+        );
         assert_eq!(config.event_name, Some("test_event".to_string()));
     }
 
@@ -71,10 +77,7 @@ mod tests {
 
     #[test]
     fn config_build_nonexistent_file() {
-        let args = vec![
-            "program".to_string(),
-            "nonexistent.csv".to_string(),
-        ];
+        let args = vec!["program".to_string(), "nonexistent.csv".to_string()];
         let result = Config::build(args.into_iter());
         assert!(result.is_err());
     }

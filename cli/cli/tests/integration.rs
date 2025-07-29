@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cli::{run, Config, parse_laps_from_csv, group_laps_by_car, create_output};
+use cli::{create_output, group_laps_by_car, parse_laps_from_csv, run, Config};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -20,7 +20,10 @@ fn test_csv_parsing_and_data_processing() {
     // CSV reading and parsing (integrated)
     let csv_content = fs::read_to_string("../test_data.csv").expect("Failed to read CSV file");
     let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    assert!(!laps_with_metadata.is_empty(), "At least one lap should be parsed from CSV");
+    assert!(
+        !laps_with_metadata.is_empty(),
+        "At least one lap should be parsed from CSV"
+    );
 
     // Validate first lap content
     let first_lap = &laps_with_metadata[0];
@@ -35,7 +38,10 @@ fn test_csv_parsing_and_data_processing() {
     assert_eq!(cars.len(), 2, "Test data should contain 2 cars");
 
     // Validate car 12
-    let car12 = cars.iter().find(|c| c.meta_data.car_number == "12").unwrap();
+    let car12 = cars
+        .iter()
+        .find(|c| c.meta_data.car_number == "12")
+        .unwrap();
     assert!(car12.laps.len() >= 2, "Car 12 should have multiple laps");
     assert_eq!(car12.meta_data.team, "Hertz Team JOTA");
     assert_eq!(car12.meta_data.manufacturer, "Porsche");
@@ -49,7 +55,10 @@ fn test_csv_parsing_and_data_processing() {
     // Validate lap data consistency and position calculations
     for car in &cars {
         assert!(!car.laps.is_empty(), "Each car should have lap data");
-        assert!(car.start_position >= 0, "Start position should be non-negative");
+        assert!(
+            car.start_position >= 0,
+            "Start position should be non-negative"
+        );
 
         for lap in &car.laps {
             assert!(lap.time > 0, "Lap time should be positive");
@@ -80,10 +89,17 @@ fn test_cli_end_to_end_execution() {
 
     // Execute CLI
     let result = run(config);
-    assert!(result.is_ok(), "CLI execution should succeed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "CLI execution should succeed: {:?}",
+        result.err()
+    );
 
     // Verify output file creation
-    assert!(fs::metadata(test_output).is_ok(), "Output file should be created");
+    assert!(
+        fs::metadata(test_output).is_ok(),
+        "Output file should be created"
+    );
 
     // Validate output file content
     let json_content = fs::read_to_string(test_output).expect("Failed to read output file");
@@ -100,7 +116,10 @@ fn test_cli_end_to_end_execution() {
     let obj = output.as_object().unwrap();
     assert!(obj.contains_key("name"), "name field should exist");
     assert!(obj.contains_key("laps"), "laps field should exist");
-    assert!(obj.contains_key("preprocessed"), "preprocessed field should exist");
+    assert!(
+        obj.contains_key("preprocessed"),
+        "preprocessed field should exist"
+    );
 
     // Verify preprocessed car data exists
     let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
@@ -108,17 +127,32 @@ fn test_cli_end_to_end_execution() {
 
     // Validate basic structure of each car
     for car in preprocessed {
-        assert!(car.get("carNumber").is_some(), "carNumber field should exist");
+        assert!(
+            car.get("carNumber").is_some(),
+            "carNumber field should exist"
+        );
         assert!(car.get("drivers").is_some(), "drivers field should exist");
         assert!(car.get("laps").is_some(), "laps field should exist");
-        assert!(car.get("startPosition").is_some(), "startPosition field should exist");
+        assert!(
+            car.get("startPosition").is_some(),
+            "startPosition field should exist"
+        );
         assert!(car.get("class").is_some(), "class field should exist");
-        assert!(car.get("currentLap").is_some(), "currentLap field should exist");
+        assert!(
+            car.get("currentLap").is_some(),
+            "currentLap field should exist"
+        );
         assert!(car.get("lastLap").is_some(), "lastLap field should exist");
 
         // Verify currentLap and lastLap are null for Elm compatibility
-        assert!(car.get("currentLap").unwrap().is_null(), "currentLap should be null");
-        assert!(car.get("lastLap").unwrap().is_null(), "lastLap should be null");
+        assert!(
+            car.get("currentLap").unwrap().is_null(),
+            "currentLap should be null"
+        );
+        assert!(
+            car.get("lastLap").unwrap().is_null(),
+            "lastLap should be null"
+        );
     }
 
     // Cleanup test file
@@ -142,9 +176,13 @@ fn test_csv_parsing_edge_cases() {
 
 #[test]
 fn test_real_wec_data_processing() {
-    let test_files = vec![
-        ("../../app/static/wec/2025/le_mans_24h.csv", "Le Mans", 50, "007", "Aston Martin Thor Team"),
-    ];
+    let test_files = vec![(
+        "../../app/static/wec/2025/le_mans_24h.csv",
+        "Le Mans",
+        50,
+        "007",
+        "Aston Martin Thor Team",
+    )];
 
     for (csv_path, race_name, min_cars, test_car, expected_team) in test_files {
         if !Path::new(csv_path).exists() {
@@ -156,34 +194,71 @@ fn test_real_wec_data_processing() {
             .unwrap_or_else(|_| panic!("Failed to read CSV for {}", race_name));
 
         let laps_with_metadata = parse_laps_from_csv(&csv_content);
-        assert!(!laps_with_metadata.is_empty(), "{} should parse laps from CSV", race_name);
+        assert!(
+            !laps_with_metadata.is_empty(),
+            "{} should parse laps from CSV",
+            race_name
+        );
 
         let cars = group_laps_by_car(laps_with_metadata);
         assert!(!cars.is_empty(), "{} should have cars grouped", race_name);
-        assert!(cars.len() >= min_cars, "{} should have at least {} cars", race_name, min_cars);
+        assert!(
+            cars.len() >= min_cars,
+            "{} should have at least {} cars",
+            race_name,
+            min_cars
+        );
 
         // Test specific car exists and has expected data
         if let Some(test_car_data) = cars.iter().find(|c| c.meta_data.car_number == test_car) {
-            assert!(!test_car_data.laps.is_empty(), "{}: Car {} should have laps", race_name, test_car);
-            assert_eq!(test_car_data.meta_data.team, expected_team,
-                "{}: Car {} should have correct team", race_name, test_car);
+            assert!(
+                !test_car_data.laps.is_empty(),
+                "{}: Car {} should have laps",
+                race_name,
+                test_car
+            );
+            assert_eq!(
+                test_car_data.meta_data.team, expected_team,
+                "{}: Car {} should have correct team",
+                race_name, test_car
+            );
         }
 
         // Validate all cars have consistent structure
         for car in &cars {
-            assert!(!car.meta_data.car_number.is_empty(), "{}: Car should have number", race_name);
-            assert!(!car.meta_data.drivers.is_empty(), "{}: Car should have drivers", race_name);
+            assert!(
+                !car.meta_data.car_number.is_empty(),
+                "{}: Car should have number",
+                race_name
+            );
+            assert!(
+                !car.meta_data.drivers.is_empty(),
+                "{}: Car should have drivers",
+                race_name
+            );
             assert!(!car.laps.is_empty(), "{}: Car should have laps", race_name);
-            assert!(car.start_position >= 0, "{}: Car should have valid start position", race_name);
+            assert!(
+                car.start_position >= 0,
+                "{}: Car should have valid start position",
+                race_name
+            );
 
             for lap in &car.laps {
                 assert!(lap.time > 0, "{}: Lap should have positive time", race_name);
-                assert!(lap.elapsed > 0, "{}: Lap should have positive elapsed time", race_name);
+                assert!(
+                    lap.elapsed > 0,
+                    "{}: Lap should have positive elapsed time",
+                    race_name
+                );
             }
         }
 
-        println!("✓ {} processed successfully: {} cars, {} total laps",
-                race_name, cars.len(), cars.iter().map(|c| c.laps.len()).sum::<usize>());
+        println!(
+            "✓ {} processed successfully: {} cars, {} total laps",
+            race_name,
+            cars.len(),
+            cars.iter().map(|c| c.laps.len()).sum::<usize>()
+        );
     }
 }
 
@@ -208,10 +283,16 @@ fn test_elm_json_structure_and_field_compatibility() {
     assert!(json_value.is_object(), "JSON should be an object");
     assert!(json_value.get("name").is_some(), "name field required");
     assert!(json_value.get("laps").is_some(), "laps field required");
-    assert!(json_value.get("preprocessed").is_some(), "preprocessed field required");
+    assert!(
+        json_value.get("preprocessed").is_some(),
+        "preprocessed field required"
+    );
     assert!(json_value["name"].is_string(), "name should be string");
     assert!(json_value["laps"].is_array(), "laps should be array");
-    assert!(json_value["preprocessed"].is_array(), "preprocessed should be array");
+    assert!(
+        json_value["preprocessed"].is_array(),
+        "preprocessed should be array"
+    );
 
     // ラップフィールドの完全性と型チェック
     let laps_array = json_value["laps"].as_array().unwrap();
@@ -219,15 +300,38 @@ fn test_elm_json_structure_and_field_compatibility() {
         let lap = &laps_array[0];
 
         // 文字列フィールド
-        let string_fields = ["carNumber", "lapTime", "crossingFinishLineInPit", "s1", "s2", "s3",
-                           "elapsed", "hour", "topSpeed", "driverName", "pitTime", "class", "group", "team", "manufacturer"];
+        let string_fields = [
+            "carNumber",
+            "lapTime",
+            "crossingFinishLineInPit",
+            "s1",
+            "s2",
+            "s3",
+            "elapsed",
+            "hour",
+            "topSpeed",
+            "driverName",
+            "pitTime",
+            "class",
+            "group",
+            "team",
+            "manufacturer",
+        ];
         for field in &string_fields {
             assert!(lap.get(field).is_some(), "{} field required", field);
             assert!(lap[field].is_string(), "{} should be string", field);
         }
 
         // 数値フィールド
-        let number_fields = ["driverNumber", "lapNumber", "lapImprovement", "s1Improvement", "s2Improvement", "s3Improvement", "kph"];
+        let number_fields = [
+            "driverNumber",
+            "lapNumber",
+            "lapImprovement",
+            "s1Improvement",
+            "s2Improvement",
+            "s3Improvement",
+            "kph",
+        ];
         for field in &number_fields {
             assert!(lap.get(field).is_some(), "{} field required", field);
             assert!(lap[field].is_number(), "{} should be number", field);
@@ -240,18 +344,38 @@ fn test_elm_json_structure_and_field_compatibility() {
         let car = &preprocessed_array[0];
 
         // 車両レベルフィールド
-        assert!(car.get("carNumber").is_some() && car["carNumber"].is_string(), "carNumber field required and should be string");
-        assert!(car.get("drivers").is_some() && car["drivers"].is_array(), "drivers field required and should be array");
-        assert!(car.get("class").is_some() && car["class"].is_string(), "class field required and should be string");
-        assert!(car.get("startPosition").is_some() && car["startPosition"].is_number(), "startPosition field required and should be number");
-        assert!(car.get("laps").is_some() && car["laps"].is_array(), "laps field required and should be array");
+        assert!(
+            car.get("carNumber").is_some() && car["carNumber"].is_string(),
+            "carNumber field required and should be string"
+        );
+        assert!(
+            car.get("drivers").is_some() && car["drivers"].is_array(),
+            "drivers field required and should be array"
+        );
+        assert!(
+            car.get("class").is_some() && car["class"].is_string(),
+            "class field required and should be string"
+        );
+        assert!(
+            car.get("startPosition").is_some() && car["startPosition"].is_number(),
+            "startPosition field required and should be number"
+        );
+        assert!(
+            car.get("laps").is_some() && car["laps"].is_array(),
+            "laps field required and should be array"
+        );
 
         // Elm互換性のためcurrentLapとlastLapがnullであることを確認
-        assert!(car.get("currentLap").is_some() && car["currentLap"].is_null(), "currentLap should exist and be null");
-        assert!(car.get("lastLap").is_some() && car["lastLap"].is_null(), "lastLap should exist and be null");
+        assert!(
+            car.get("currentLap").is_some() && car["currentLap"].is_null(),
+            "currentLap should exist and be null"
+        );
+        assert!(
+            car.get("lastLap").is_some() && car["lastLap"].is_null(),
+            "lastLap should exist and be null"
+        );
     }
 }
-
 
 #[test]
 fn test_racing_data_processing_compatibility() {
@@ -269,34 +393,31 @@ fn test_racing_data_processing_compatibility() {
     let laps_array = json_value["laps"].as_array().unwrap();
 
     // Improvement flag test (0, 1, 2)
-    let lap_with_improvement = laps_array.iter()
+    let lap_with_improvement = laps_array
+        .iter()
         .find(|lap| lap["lapImprovement"].as_i64() == Some(2))
         .expect("Should find lap with improvement flag 2");
     assert_eq!(lap_with_improvement["lapImprovement"].as_i64(), Some(2));
     assert_eq!(lap_with_improvement["s2Improvement"].as_i64(), Some(2));
 
     // Pit stop data test
-    let pit_entry_lap = laps_array.iter()
+    let pit_entry_lap = laps_array
+        .iter()
         .find(|lap| lap["crossingFinishLineInPit"].as_str() == Some("B"))
         .expect("Should find pit entry lap");
     assert_eq!(pit_entry_lap["crossingFinishLineInPit"].as_str(), Some("B"));
     assert!(pit_entry_lap["lapTime"].as_str().unwrap().starts_with("2:"));
 
     // Pit time processing test (format only, details covered by duration unit tests)
-    let pit_exit_lap = laps_array.iter()
+    let pit_exit_lap = laps_array
+        .iter()
         .find(|lap| !lap["pitTime"].as_str().unwrap_or("").is_empty())
         .expect("Should find lap with pit time");
-    assert!(!pit_exit_lap["pitTime"].as_str().unwrap().is_empty(), "Pit time should be formatted as non-empty string");
+    assert!(
+        !pit_exit_lap["pitTime"].as_str().unwrap().is_empty(),
+        "Pit time should be formatted as non-empty string"
+    );
 }
-
-
-
-
-
-
-
-
-
 
 // =============================================================================
 // EXACT ELM-RUST JSON COMPATIBILITY TESTS (TDD)
@@ -304,7 +425,6 @@ fn test_racing_data_processing_compatibility() {
 //
 // Complete JSON comparison tests following TDD methodology
 // Goal: Achieve 100% identical JSON output between Elm and Rust CLI
-
 
 #[test]
 #[ignore = "Skipped: Mini-sectors not yet implemented, will pass once mini-sector support is added"]
@@ -324,14 +444,13 @@ fn test_exact_json_match_le_mans_24h() {
     let rust_output = create_output("le_mans_24h", &laps_with_metadata, &cars);
 
     let elm_json_content = fs::read_to_string(elm_json_path).expect("Failed to read Elm JSON");
-    let elm_output: serde_json::Value = serde_json::from_str(&elm_json_content)
-        .expect("Failed to parse Elm JSON");
+    let elm_output: serde_json::Value =
+        serde_json::from_str(&elm_json_content).expect("Failed to parse Elm JSON");
 
     let rust_json_value = serde_json::to_value(&rust_output).unwrap();
 
     assert_json_exact_match(&elm_output, &rust_json_value, "Le Mans 24h");
 }
-
 
 // =============================================================================
 // ELM COMPATIBILITY TESTS
@@ -339,70 +458,115 @@ fn test_exact_json_match_le_mans_24h() {
 //
 // Additional tests for Elm-specific functionality and edge cases
 
-
-
-
-
-
-
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
-
 /// Detailed JSON comparison function for TDD exact matching (ignoring KPH precision)
-fn assert_json_exact_match(elm_json: &serde_json::Value, rust_json: &serde_json::Value, race_name: &str) {
+fn assert_json_exact_match(
+    elm_json: &serde_json::Value,
+    rust_json: &serde_json::Value,
+    race_name: &str,
+) {
     // Write comparison files for detailed analysis
     let elm_pretty = serde_json::to_string_pretty(elm_json).unwrap();
     let rust_pretty = serde_json::to_string_pretty(rust_json).unwrap();
 
-    fs::write(format!("test_exact_match_{}_elm.json", race_name.replace(" ", "_").to_lowercase()), &elm_pretty)
-        .expect("Failed to write Elm comparison file");
-    fs::write(format!("test_exact_match_{}_rust.json", race_name.replace(" ", "_").to_lowercase()), &rust_pretty)
-        .expect("Failed to write Rust comparison file");
+    fs::write(
+        format!(
+            "test_exact_match_{}_elm.json",
+            race_name.replace(" ", "_").to_lowercase()
+        ),
+        &elm_pretty,
+    )
+    .expect("Failed to write Elm comparison file");
+    fs::write(
+        format!(
+            "test_exact_match_{}_rust.json",
+            race_name.replace(" ", "_").to_lowercase()
+        ),
+        &rust_pretty,
+    )
+    .expect("Failed to write Rust comparison file");
 
     // Detailed comparison with specific error messages (ignoring KPH precision)
     if !json_equals_ignore_kph_precision(elm_json, rust_json) {
         // Compare top-level structure
-        assert_eq!(elm_json.get("name"), rust_json.get("name"),
-            "[{}] Event name mismatch", race_name);
+        assert_eq!(
+            elm_json.get("name"),
+            rust_json.get("name"),
+            "[{}] Event name mismatch",
+            race_name
+        );
 
         // Compare laps array length
         let elm_laps = elm_json.get("laps").and_then(|v| v.as_array()).unwrap();
         let rust_laps = rust_json.get("laps").and_then(|v| v.as_array()).unwrap();
-        assert_eq!(elm_laps.len(), rust_laps.len(),
-            "[{}] Laps array length mismatch: Elm={}, Rust={}", race_name, elm_laps.len(), rust_laps.len());
+        assert_eq!(
+            elm_laps.len(),
+            rust_laps.len(),
+            "[{}] Laps array length mismatch: Elm={}, Rust={}",
+            race_name,
+            elm_laps.len(),
+            rust_laps.len()
+        );
 
         // Compare preprocessed array length
-        let elm_preprocessed = elm_json.get("preprocessed").and_then(|v| v.as_array()).unwrap();
-        let rust_preprocessed = rust_json.get("preprocessed").and_then(|v| v.as_array()).unwrap();
-        assert_eq!(elm_preprocessed.len(), rust_preprocessed.len(),
-            "[{}] Preprocessed array length mismatch: Elm={}, Rust={}", race_name, elm_preprocessed.len(), rust_preprocessed.len());
+        let elm_preprocessed = elm_json
+            .get("preprocessed")
+            .and_then(|v| v.as_array())
+            .unwrap();
+        let rust_preprocessed = rust_json
+            .get("preprocessed")
+            .and_then(|v| v.as_array())
+            .unwrap();
+        assert_eq!(
+            elm_preprocessed.len(),
+            rust_preprocessed.len(),
+            "[{}] Preprocessed array length mismatch: Elm={}, Rust={}",
+            race_name,
+            elm_preprocessed.len(),
+            rust_preprocessed.len()
+        );
 
         // Find and report first difference in laps (ignoring KPH precision)
         for (i, (elm_lap, rust_lap)) in elm_laps.iter().zip(rust_laps.iter()).enumerate() {
             if !json_equals_ignore_kph_precision(elm_lap, rust_lap) {
                 println!("[{}] First lap difference at index {}", race_name, i);
-                println!("Elm lap:  {}", serde_json::to_string_pretty(elm_lap).unwrap());
-                println!("Rust lap: {}", serde_json::to_string_pretty(rust_lap).unwrap());
+                println!(
+                    "Elm lap:  {}",
+                    serde_json::to_string_pretty(elm_lap).unwrap()
+                );
+                println!(
+                    "Rust lap: {}",
+                    serde_json::to_string_pretty(rust_lap).unwrap()
+                );
 
                 // Compare individual fields (ignoring KPH precision)
                 for (field_name, elm_value) in elm_lap.as_object().unwrap() {
                     let rust_value = rust_lap.get(field_name);
                     if field_name == "kph" {
                         // Special handling for KPH precision
-                        if let (Some(elm_num), Some(rust_num)) = (elm_value.as_f64(), rust_value.and_then(|v| v.as_f64())) {
+                        if let (Some(elm_num), Some(rust_num)) =
+                            (elm_value.as_f64(), rust_value.and_then(|v| v.as_f64()))
+                        {
                             if (elm_num - rust_num).abs() > 0.01 {
-                                println!("[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                                    race_name, i, field_name, elm_value, rust_value);
+                                println!(
+                                    "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
+                                    race_name, i, field_name, elm_value, rust_value
+                                );
                             }
                         } else if Some(elm_value) != rust_value {
-                            println!("[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                                race_name, i, field_name, elm_value, rust_value);
+                            println!(
+                                "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
+                                race_name, i, field_name, elm_value, rust_value
+                            );
                         }
                     } else if Some(elm_value) != rust_value {
-                        println!("[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                            race_name, i, field_name, elm_value, rust_value);
+                        println!(
+                            "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
+                            race_name, i, field_name, elm_value, rust_value
+                        );
                     }
                 }
                 break;
@@ -410,11 +574,24 @@ fn assert_json_exact_match(elm_json: &serde_json::Value, rust_json: &serde_json:
         }
 
         // Find and report first difference in preprocessed (ignoring KPH precision)
-        for (i, (elm_car, rust_car)) in elm_preprocessed.iter().zip(rust_preprocessed.iter()).enumerate() {
+        for (i, (elm_car, rust_car)) in elm_preprocessed
+            .iter()
+            .zip(rust_preprocessed.iter())
+            .enumerate()
+        {
             if !json_equals_ignore_kph_precision(elm_car, rust_car) {
-                println!("[{}] First preprocessed car difference at index {}", race_name, i);
-                println!("Elm car:  {}", serde_json::to_string_pretty(elm_car).unwrap());
-                println!("Rust car: {}", serde_json::to_string_pretty(rust_car).unwrap());
+                println!(
+                    "[{}] First preprocessed car difference at index {}",
+                    race_name, i
+                );
+                println!(
+                    "Elm car:  {}",
+                    serde_json::to_string_pretty(elm_car).unwrap()
+                );
+                println!(
+                    "Rust car: {}",
+                    serde_json::to_string_pretty(rust_car).unwrap()
+                );
                 break;
             }
         }
@@ -437,7 +614,9 @@ fn json_equals_ignore_kph_precision(elm: &serde_json::Value, rust: &serde_json::
                 if let Some(rust_value) = rust_obj.get(key) {
                     if key == "kph" {
                         // Special handling for KPH precision
-                        if let (Some(elm_num), Some(rust_num)) = (elm_value.as_f64(), rust_value.as_f64()) {
+                        if let (Some(elm_num), Some(rust_num)) =
+                            (elm_value.as_f64(), rust_value.as_f64())
+                        {
                             // Allow small precision differences for KPH values
                             if (elm_num - rust_num).abs() > 0.01 {
                                 return false;
@@ -458,7 +637,9 @@ fn json_equals_ignore_kph_precision(elm: &serde_json::Value, rust: &serde_json::
             if elm_arr.len() != rust_arr.len() {
                 return false;
             }
-            elm_arr.iter().zip(rust_arr.iter())
+            elm_arr
+                .iter()
+                .zip(rust_arr.iter())
                 .all(|(elm_item, rust_item)| json_equals_ignore_kph_precision(elm_item, rust_item))
         }
         _ => elm == rust,

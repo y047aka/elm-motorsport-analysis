@@ -4,6 +4,7 @@
 FROM rust:1.88-bookworm AS rust-stage
 RUN apt-get update && apt-get install -y build-essential pkg-config libssl-dev \
     && rm -rf /var/lib/apt/lists/* \
+    && rustup component add rustfmt \
     && cargo install cargo-watch cargo-expand
 
 # Stage 2: Node.js with latest npm
