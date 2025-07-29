@@ -21,12 +21,12 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let output = create_output(event_name, &laps_with_metadata, &cars);
 
     let json = serde_json::to_string_pretty(&output)
-        .map_err(|e| format!("Failed to serialize output to JSON: {}", e))?;
+        .map_err(|e| format!("Failed to serialize output to JSON: {e}"))?;
 
     let output_path = config.output_file.as_deref().unwrap_or("test.json");
     fs::write(output_path, &json)
-        .map_err(|e| format!("Failed to write output file '{}': {}", output_path, e))?;
+        .map_err(|e| format!("Failed to write output file '{output_path}': {e}"))?;
 
-    println!("Wrote JSON to {}", output_path);
+    println!("Wrote JSON to {output_path}");
     Ok(())
 }

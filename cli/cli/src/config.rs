@@ -19,7 +19,7 @@ impl Config {
                 if Path::new(&file).exists() {
                     Ok(file)
                 } else {
-                    Err(format!("Input file does not exist: {}", file).into())
+                    Err(format!("Input file does not exist: {file}").into())
                 }
             })?;
 

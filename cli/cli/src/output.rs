@@ -251,7 +251,7 @@ mod tests {
         if let Value::Number(n) = result {
             assert!((n.as_f64().unwrap() - 184.3).abs() < 0.001);
         } else {
-            panic!("Expected number, got {:?}", result);
+            panic!("Expected number, got {result:?}");
         }
     }
 
@@ -271,10 +271,7 @@ mod tests {
             assert_eq!(
                 result,
                 serde_json::Value::String(expected.to_string()),
-                "Expected '{}' to be formatted as '{}', but got: {:?}",
-                input,
-                expected,
-                result
+                "Expected '{input}' to be formatted as '{expected}', but got: {result:?}"
             );
         }
     }

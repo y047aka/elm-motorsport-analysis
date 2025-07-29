@@ -48,7 +48,7 @@ fn test_csv_parsing_and_data_processing() {
 
     // Validate car 7
     let car7 = cars.iter().find(|c| c.meta_data.car_number == "7").unwrap();
-    assert!(car7.laps.len() >= 1, "Car 7 should have at least one lap");
+    assert!(!car7.laps.is_empty(), "Car 7 should have at least one lap");
     assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
     assert_eq!(car7.meta_data.manufacturer, "Toyota");
 
@@ -186,41 +186,35 @@ fn test_real_wec_data_processing() {
 
     for (csv_path, race_name, min_cars, test_car, expected_team) in test_files {
         if !Path::new(csv_path).exists() {
-            println!("Skipping {} - CSV file not found: {}", race_name, csv_path);
+            println!("Skipping {race_name} - CSV file not found: {csv_path}");
             continue;
         }
 
         let csv_content = fs::read_to_string(csv_path)
-            .unwrap_or_else(|_| panic!("Failed to read CSV for {}", race_name));
+            .unwrap_or_else(|_| panic!("Failed to read CSV for {race_name}"));
 
         let laps_with_metadata = parse_laps_from_csv(&csv_content);
         assert!(
             !laps_with_metadata.is_empty(),
-            "{} should parse laps from CSV",
-            race_name
+            "{race_name} should parse laps from CSV"
         );
 
         let cars = group_laps_by_car(laps_with_metadata);
-        assert!(!cars.is_empty(), "{} should have cars grouped", race_name);
+        assert!(!cars.is_empty(), "{race_name} should have cars grouped");
         assert!(
             cars.len() >= min_cars,
-            "{} should have at least {} cars",
-            race_name,
-            min_cars
+            "{race_name} should have at least {min_cars} cars"
         );
 
         // Test specific car exists and has expected data
         if let Some(test_car_data) = cars.iter().find(|c| c.meta_data.car_number == test_car) {
             assert!(
                 !test_car_data.laps.is_empty(),
-                "{}: Car {} should have laps",
-                race_name,
-                test_car
+                "{race_name}: Car {test_car} should have laps"
             );
             assert_eq!(
                 test_car_data.meta_data.team, expected_team,
-                "{}: Car {} should have correct team",
-                race_name, test_car
+                "{race_name}: Car {test_car} should have correct team"
             );
         }
 
@@ -228,27 +222,23 @@ fn test_real_wec_data_processing() {
         for car in &cars {
             assert!(
                 !car.meta_data.car_number.is_empty(),
-                "{}: Car should have number",
-                race_name
+                "{race_name}: Car should have number"
             );
             assert!(
                 !car.meta_data.drivers.is_empty(),
-                "{}: Car should have drivers",
-                race_name
+                "{race_name}: Car should have drivers"
             );
-            assert!(!car.laps.is_empty(), "{}: Car should have laps", race_name);
+            assert!(!car.laps.is_empty(), "{race_name}: Car should have laps");
             assert!(
                 car.start_position >= 0,
-                "{}: Car should have valid start position",
-                race_name
+                "{race_name}: Car should have valid start position"
             );
 
             for lap in &car.laps {
-                assert!(lap.time > 0, "{}: Lap should have positive time", race_name);
+                assert!(lap.time > 0, "{race_name}: Lap should have positive time");
                 assert!(
                     lap.elapsed > 0,
-                    "{}: Lap should have positive elapsed time",
-                    race_name
+                    "{race_name}: Lap should have positive elapsed time"
                 );
             }
         }
@@ -318,8 +308,8 @@ fn test_elm_json_structure_and_field_compatibility() {
             "manufacturer",
         ];
         for field in &string_fields {
-            assert!(lap.get(field).is_some(), "{} field required", field);
-            assert!(lap[field].is_string(), "{} should be string", field);
+            assert!(lap.get(field).is_some(), "{field} field required");
+            assert!(lap[field].is_string(), "{field} should be string");
         }
 
         // 数値フィールド
@@ -333,8 +323,8 @@ fn test_elm_json_structure_and_field_compatibility() {
             "kph",
         ];
         for field in &number_fields {
-            assert!(lap.get(field).is_some(), "{} field required", field);
-            assert!(lap[field].is_number(), "{} should be number", field);
+            assert!(lap.get(field).is_some(), "{field} field required");
+            assert!(lap[field].is_number(), "{field} should be number");
         }
     }
 
@@ -495,8 +485,7 @@ fn assert_json_exact_match(
         assert_eq!(
             elm_json.get("name"),
             rust_json.get("name"),
-            "[{}] Event name mismatch",
-            race_name
+            "[{race_name}] Event name mismatch"
         );
 
         // Compare laps array length
@@ -532,7 +521,7 @@ fn assert_json_exact_match(
         // Find and report first difference in laps (ignoring KPH precision)
         for (i, (elm_lap, rust_lap)) in elm_laps.iter().zip(rust_laps.iter()).enumerate() {
             if !json_equals_ignore_kph_precision(elm_lap, rust_lap) {
-                println!("[{}] First lap difference at index {}", race_name, i);
+                println!("[{race_name}] First lap difference at index {i}");
                 println!(
                     "Elm lap:  {}",
                     serde_json::to_string_pretty(elm_lap).unwrap()
@@ -552,20 +541,17 @@ fn assert_json_exact_match(
                         {
                             if (elm_num - rust_num).abs() > 0.01 {
                                 println!(
-                                    "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                                    race_name, i, field_name, elm_value, rust_value
+                                    "[{race_name}][lap {i}][{field_name}] Field mismatch: Elm={elm_value:?}, Rust={rust_value:?}"
                                 );
                             }
                         } else if Some(elm_value) != rust_value {
                             println!(
-                                "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                                race_name, i, field_name, elm_value, rust_value
+                                "[{race_name}][lap {i}][{field_name}] Field mismatch: Elm={elm_value:?}, Rust={rust_value:?}"
                             );
                         }
                     } else if Some(elm_value) != rust_value {
                         println!(
-                            "[{}][lap {}][{}] Field mismatch: Elm={:?}, Rust={:?}",
-                            race_name, i, field_name, elm_value, rust_value
+                            "[{race_name}][lap {i}][{field_name}] Field mismatch: Elm={elm_value:?}, Rust={rust_value:?}"
                         );
                     }
                 }
@@ -581,8 +567,7 @@ fn assert_json_exact_match(
         {
             if !json_equals_ignore_kph_precision(elm_car, rust_car) {
                 println!(
-                    "[{}] First preprocessed car difference at index {}",
-                    race_name, i
+                    "[{race_name}] First preprocessed car difference at index {i}"
                 );
                 println!(
                     "Elm car:  {}",
@@ -600,7 +585,7 @@ fn assert_json_exact_match(
             race_name, race_name.replace(" ", "_").to_lowercase());
     }
 
-    println!("[{}] ✓ JSON outputs match exactly!", race_name);
+    println!("[{race_name}] ✓ JSON outputs match exactly!");
 }
 
 /// Custom JSON equality check that ignores KPH precision differences
