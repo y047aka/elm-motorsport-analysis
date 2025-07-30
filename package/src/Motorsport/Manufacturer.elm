@@ -131,59 +131,59 @@ toColor manufacturer =
     case manufacturer of
         Alpine ->
             -- Alpine Blue
-            Color.rgb255 0 144 255
+            Color.hsl (210 / 360) 1.0 0.5
 
         AstonMartin ->
             -- Aston Martin Racing Green
-            Color.rgb255 0 75 45
+            Color.hsl (150 / 360) 1.0 0.15
 
         BMW ->
             -- BMW Blue/White
-            Color.rgb255 0 120 215
+            Color.hsl (207 / 360) 1.0 0.42
 
         Cadillac ->
             -- Cadillac Black/Gold
-            Color.rgb255 20 20 20
+            Color.hsl (0 / 360) 0.0 0.08
 
         Corvette ->
             -- Classic Corvette Yellow
-            Color.rgb255 255 225 0
+            Color.hsl (53 / 360) 1.0 0.5
 
         Ferrari ->
             -- Ferrari Red
-            Color.rgb255 220 20 60
+            Color.hsl (349 / 360) 0.83 0.47
 
         Ford ->
             -- Ford Blue
-            Color.rgb255 0 50 160
+            Color.hsl (221 / 360) 1.0 0.31
 
         Lexus ->
             -- Lexus Dark Blue
-            Color.rgb255 30 30 100
+            Color.hsl (231 / 360) 0.54 0.25
 
         McLaren ->
             -- McLaren Orange
-            Color.rgb255 255 140 0
+            Color.hsl (33 / 360) 1.0 0.5
 
         Mercedes ->
             -- Mercedes Silver
-            Color.rgb255 190 190 190
+            Color.hsl (0 / 360) 0.0 0.75
 
         Peugeot ->
             -- Peugeot Blue
-            Color.rgb255 0 45 100
+            Color.hsl (213 / 360) 1.0 0.2
 
         Porsche ->
             -- Porsche Silver/Red
-            Color.rgb255 180 30 50
+            Color.hsl (350 / 360) 0.71 0.41
 
         Toyota ->
             -- Toyota Red
-            Color.rgb255 235 10 30
+            Color.hsl (355 / 360) 0.92 0.48
 
         Other ->
             -- Neutral Gray
-            Color.rgb255 120 120 120
+            Color.hsl (0 / 360) 0.0 0.47
 
 
 {-| Generate color for a manufacturer with car number fallback.
