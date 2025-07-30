@@ -287,7 +287,7 @@ battleChart cars =
                     (\car ->
                         { carNumber = car.metaData.carNumber
                         , laps = ViewModel.getRecentLaps 10 options car.history
-                        , color = Manufacturer.toColor car.metaData.manufacturer
+                        , color = Manufacturer.toColorWithFallback car.metaData.carNumber car.metaData.manufacturer
                         }
                     )
 

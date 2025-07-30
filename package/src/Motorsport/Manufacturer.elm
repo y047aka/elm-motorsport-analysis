@@ -2,6 +2,7 @@ module Motorsport.Manufacturer exposing
     ( Manufacturer(..)
     , fromString, toString
     , toColor
+    , toColorWithFallback
     )
 
 {-|
@@ -9,6 +10,7 @@ module Motorsport.Manufacturer exposing
 @docs Manufacturer
 @docs fromString, toString
 @docs toColor
+@docs toColorWithFallback
 
 -}
 
@@ -182,3 +184,33 @@ toColor manufacturer =
         Other ->
             -- Neutral Gray
             Color.rgb255 120 120 120
+
+
+{-| Generate color for a manufacturer with car number fallback.
+When manufacturer is Other, generates a color based on car number for distinction.
+-}
+toColorWithFallback : String -> Manufacturer -> Color
+toColorWithFallback carNumber manufacturer =
+    case manufacturer of
+        Other ->
+            generateCarColor carNumber
+
+        _ ->
+            toColor manufacturer
+
+
+{-| Generate a distinct color based on car number using HSL color space.
+-}
+generateCarColor : String -> Color
+generateCarColor carNumber =
+    let
+        carHash =
+            String.toInt carNumber |> Maybe.withDefault 0
+
+        ( hue, saturation, lightness ) =
+            ( carHash * 37 |> modBy 360 |> toFloat
+            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
+            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
+            )
+    in
+    Color.hsl (hue / 360) saturation lightness

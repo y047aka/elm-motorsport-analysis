@@ -111,4 +111,36 @@ suite =
                         ]
                         ()
             ]
+        , describe "toColorWithFallback"
+            [ test "uses manufacturer color for known manufacturers" <|
+                \_ ->
+                    let
+                        ferrariColor =
+                            Manufacturer.toColorWithFallback "123" Ferrari
+
+                        expectedFerrariColor =
+                            Manufacturer.toColor Ferrari
+                    in
+                    ferrariColor |> Expect.equal expectedFerrariColor
+            , test "generates distinct colors for Other manufacturer based on car number" <|
+                \_ ->
+                    let
+                        color1 =
+                            Manufacturer.toColorWithFallback "1" Other
+
+                        color2 =
+                            Manufacturer.toColorWithFallback "2" Other
+                    in
+                    color1 |> Expect.notEqual color2
+            , test "generates consistent colors for same car number with Other manufacturer" <|
+                \_ ->
+                    let
+                        color1 =
+                            Manufacturer.toColorWithFallback "123" Other
+
+                        color2 =
+                            Manufacturer.toColorWithFallback "123" Other
+                    in
+                    color1 |> Expect.equal color2
+            ]
         ]
