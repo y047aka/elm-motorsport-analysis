@@ -94,7 +94,13 @@ init { clock, lapCount, cars } =
                                     List.map
                                         (\{ name } ->
                                             { name = name
-                                            , isCurrentDriver = name == lastLap.driver
+                                            , isCurrentDriver =
+                                                case car.currentLap of
+                                                    Just currentLap ->
+                                                        name == currentLap.driver
+
+                                                    Nothing ->
+                                                        False
                                             }
                                         )
                                         car.metaData.drivers
