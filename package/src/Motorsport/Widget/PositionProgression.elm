@@ -11,6 +11,7 @@ import List.Extra
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
 import Path
@@ -114,7 +115,7 @@ processClassPositionData clock viewModel =
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , positions = positionHistory
-                                    , color = generateCarColor car.metaData.carNumber
+                                    , color = Manufacturer.toColor car.metaData.manufacturer
                                     }
                                 )
                             |> List.filter (\car -> List.length car.positions >= 2)
@@ -141,21 +142,6 @@ extractPositionDataForCar lapThreshold laps =
                     Nothing ->
                         Nothing
             )
-
-
-generateCarColor : String -> Color.Color
-generateCarColor carNumber =
-    let
-        carHash =
-            String.toInt carNumber |> Maybe.withDefault 0
-
-        ( hue, saturation, lightness ) =
-            ( carHash * 37 |> modBy 360 |> toFloat
-            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
-            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
-            )
-    in
-    Color.hsl (hue / 360) saturation lightness
 
 
 colorToCss : Color.Color -> Css.Color
