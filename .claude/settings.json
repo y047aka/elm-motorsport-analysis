@@ -1,0 +1,68 @@
+{
+  "includeCoAuthoredBy": false,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".rs\"))' | xargs -I {} sh -c 'cd cli && cargo fmt -- {}'"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".elm\"))' | xargs -r elm-format --yes"
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(cd:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(jq:*)",
+      "Bash(ls:*)",
+      "Bash(mkdir:*)",
+      "Bash(rg:*)",
+      "Bash(git:*)",
+      "Bash(npm:*)",
+      "Bash(elm:*)",
+      "Bash(cargo:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:package.elm-lang.org)"
+    ],
+    "deny": [
+      "Read(.env*)",
+      "Bash(sudo:*)",
+      "Bash(chmod:*)",
+      "Bash(chown:*)",
+      "Bash(rm:*)",
+      "Bash(rm -rf:*)",
+      "Bash(find * -delete:*)",
+      "Bash(find * -exec:*)",
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(nc:*)",
+      "Bash(ssh:*)",
+      "Bash(docker:*)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git push:*)",
+      "Bash(git rebase:*)",
+      "Bash(git reset:*)",
+      "Bash(git rm:*)",
+      "Bash(npm config:*)",
+      "Bash(npm exec:*)",
+      "Bash(npm install:*)",
+      "Bash(npm login:*)",
+      "Bash(npm publish:*)",
+      "Bash(cargo install:*)",
+      "Bash(cargo login:*)",
+      "Bash(cargo publish:*)"
+    ]
+  }
+}
