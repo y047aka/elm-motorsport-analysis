@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use motorsport::{duration, Car, Class, Driver, Lap, MetaData};
 use serde::Deserialize;
-use motorsport::{Lap, Car, MetaData, Class, Driver, duration};
+use std::collections::HashMap;
 
 /// CSV解析用の中間構造体
 #[derive(Debug, Deserialize)]
@@ -17,7 +17,10 @@ pub struct CsvRow {
     pub lap_time: String,
     #[serde(rename = "LAP_IMPROVEMENT", alias = " LAP_IMPROVEMENT")]
     pub lap_improvement: i32,
-    #[serde(rename = "CROSSING_FINISH_LINE_IN_PIT", alias = " CROSSING_FINISH_LINE_IN_PIT")]
+    #[serde(
+        rename = "CROSSING_FINISH_LINE_IN_PIT",
+        alias = " CROSSING_FINISH_LINE_IN_PIT"
+    )]
     pub crossing_finish_line_in_pit: String,
     #[serde(rename = "S1", alias = " S1")]
     pub s1: String,
@@ -40,7 +43,7 @@ pub struct CsvRow {
     #[serde(rename = "TOP_SPEED", alias = " TOP_SPEED")]
     pub top_speed: Option<String>,
     #[serde(rename = "PIT_TIME", alias = " PIT_TIME")]
-    pub pit_time: Option<String>,  // Raw string from CSV, will be converted to Duration
+    pub pit_time: Option<String>, // Raw string from CSV, will be converted to Duration
     #[serde(rename = "CLASS", alias = " CLASS")]
     pub class: String,
     #[serde(rename = "GROUP", alias = " GROUP")]
@@ -115,7 +118,11 @@ fn lap_with_metadata_from(row: CsvRow) -> LapWithMetadata {
         s3_raw: row.s3,
     };
 
-    LapWithMetadata { lap, metadata, csv_data }
+    LapWithMetadata {
+        lap,
+        metadata,
+        csv_data,
+    }
 }
 
 /// Lapとメタデータを組み合わせた構造体
@@ -158,13 +165,14 @@ pub struct Metadata {
 pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
     // インデックス付きグループ化でCSV出現順序を保持
     let mut car_data: HashMap<String, (Vec<LapWithMetadata>, Vec<String>, usize)> = HashMap::new();
-    
+
     for (index, lap_with_meta) in laps_with_metadata.into_iter().enumerate() {
         let car_number = lap_with_meta.lap.car_number.clone();
         let driver_name = lap_with_meta.lap.driver.clone();
-        
+
         // 車両データを蓄積
-        car_data.entry(car_number)
+        car_data
+            .entry(car_number)
             .and_modify(|(laps, drivers, _)| {
                 laps.push(lap_with_meta.clone());
                 if !drivers.contains(&driver_name) {
@@ -174,30 +182,31 @@ pub fn group_laps_by_car(laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Car> {
             .or_insert((
                 vec![lap_with_meta],
                 vec![driver_name],
-                index,  // 最初の出現インデックスを保存
+                index, // 最初の出現インデックスを保存
             ));
     }
 
     // 車両を作成し、最初の出現順序でソート
     let mut cars_with_index: Vec<(usize, Car)> = car_data
         .into_iter()
-        .map(|(car_number, (laps_with_metadata, driver_names, first_index))| {
-            let car = car_from_grouped_data(car_number, laps_with_metadata, driver_names);
-            (first_index, car)
-        })
+        .map(
+            |(car_number, (laps_with_metadata, driver_names, first_index))| {
+                let car = car_from_grouped_data(car_number, laps_with_metadata, driver_names);
+                (first_index, car)
+            },
+        )
         .collect();
 
     // CSVの出現順序でソート
     cars_with_index.sort_by_key(|(index, _)| *index);
-    
+
     let mut cars: Vec<Car> = cars_with_index.into_iter().map(|(_, car)| car).collect();
 
     // 位置計算を実行
     calculate_positions(&mut cars);
-    
+
     cars
 }
-
 
 /// グループ化されたデータからCarを作成し、ベストタイムを計算する関数
 fn car_from_grouped_data(
@@ -209,10 +218,10 @@ fn car_from_grouped_data(
     let car_metadata = &laps_with_metadata[0].metadata;
     let class = class_from(&car_metadata.class);
     let meta = metadata_from(car_number, drivers, class, car_metadata);
-    
+
     let processed_laps = process_laps(laps_with_metadata);
     let (current_lap, last_lap) = current_and_last_lap(&processed_laps);
-    
+
     car_with_lap_data(meta, processed_laps, current_lap, last_lap)
 }
 
@@ -271,7 +280,7 @@ fn car_with_lap_data(
     last_lap: Option<Lap>,
 ) -> Car {
     use motorsport::car::Status;
-    
+
     let mut car = Car::new(meta, 1, processed_laps);
     car.current_lap = current_lap;
     car.last_lap = last_lap;
@@ -292,7 +301,7 @@ fn process_laps(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
 
     for lap_with_meta in laps_with_metadata {
         let lap = &lap_with_meta.lap;
-        
+
         // 現在のラップタイムとセクタータイムを取得
         let current_lap_time = lap.time;
         let current_s1 = lap.sector_1;
@@ -307,7 +316,7 @@ fn process_laps(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
                 best
             }
         };
-        
+
         best_lap_time = update_best(best_lap_time, current_lap_time);
         best_s1 = update_best(best_s1, current_s1);
         best_s2 = update_best(best_s2, current_s2);
@@ -336,7 +345,6 @@ fn process_laps(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
     processed_laps
 }
 
-
 /// 各車両の各ラップでの位置を計算する
 fn calculate_positions(cars: &mut [Car]) {
     if cars.is_empty() {
@@ -347,7 +355,8 @@ fn calculate_positions(cars: &mut [Car]) {
     start_positions(cars);
 
     // 最大ラップ数を取得
-    let max_lap = cars.iter()
+    let max_lap = cars
+        .iter()
         .flat_map(|car| &car.laps)
         .map(|lap| lap.lap)
         .max()
@@ -362,9 +371,11 @@ fn calculate_positions(cars: &mut [Car]) {
 /// スタートポジションを計算（1週目の経過時間順）
 fn start_positions(cars: &mut [Car]) {
     // 1週目のラップを収集してソート
-    let mut lap1_times: Vec<(String, u32)> = cars.iter()
+    let mut lap1_times: Vec<(String, u32)> = cars
+        .iter()
         .filter_map(|car| {
-            car.laps.iter()
+            car.laps
+                .iter()
                 .find(|lap| lap.lap == 1)
                 .map(|lap| (car.meta_data.car_number.clone(), lap.elapsed))
         })
@@ -373,8 +384,10 @@ fn start_positions(cars: &mut [Car]) {
 
     // スタートポジションを設定
     for car in cars.iter_mut() {
-        if let Some(position) = lap1_times.iter()
-            .position(|(car_num, _)| car_num == &car.meta_data.car_number) {
+        if let Some(position) = lap1_times
+            .iter()
+            .position(|(car_num, _)| car_num == &car.meta_data.car_number)
+        {
             // Elm互換のため0-basedのindexをそのまま使用
             // 注意: 将来的には1-basedの position + 1 に変更する可能性がある
             car.start_position = position as i32;
@@ -385,10 +398,12 @@ fn start_positions(cars: &mut [Car]) {
 /// 特定のラップでの各車両の位置を計算
 fn position_for_lap(cars: &mut [Car], lap_num: u32) {
     // 指定されたラップでの各車両の経過時間を収集してソート
-    let mut lap_times: Vec<(String, u32, usize)> = cars.iter()
+    let mut lap_times: Vec<(String, u32, usize)> = cars
+        .iter()
         .enumerate()
         .filter_map(|(car_idx, car)| {
-            car.laps.iter()
+            car.laps
+                .iter()
                 .find(|l| l.lap == lap_num)
                 .map(|lap| (car.meta_data.car_number.clone(), lap.elapsed, car_idx))
         })
@@ -398,7 +413,11 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
     // 各車両のラップに位置を設定
     for (position, (car_number, _, car_idx)) in lap_times.iter().enumerate() {
         if let Some(car) = cars.get_mut(*car_idx) {
-            if let Some(lap) = car.laps.iter_mut().find(|l| l.lap == lap_num && l.car_number == *car_number) {
+            if let Some(lap) = car
+                .laps
+                .iter_mut()
+                .find(|l| l.lap == lap_num && l.car_number == *car_number)
+            {
                 // Elm互換のため0-basedのindexをそのまま使用
                 // 注意: 将来的には1-basedの position + 1 に変更する可能性がある
                 lap.position = Some(position as u32);
@@ -421,7 +440,12 @@ mod tests {
         }
     }
 
-    fn create_test_extra_data(driver_number: u32, kph: f32, lap_improvement: i32, top_speed: Option<&str>) -> ExtraData {
+    fn create_test_extra_data(
+        driver_number: u32,
+        kph: f32,
+        lap_improvement: i32,
+        top_speed: Option<&str>,
+    ) -> ExtraData {
         ExtraData {
             driver_number,
             lap_improvement,
@@ -440,19 +464,30 @@ mod tests {
     }
 
     fn create_test_lap_with_metadata(
-        car_number: &str, 
-        driver: &str, 
-        lap_num: u32, 
+        car_number: &str,
+        driver: &str,
+        lap_num: u32,
         position: Option<u32>,
         times: (u32, u32, u32, u32, u32), // (lap_time, s1, s2, s3, elapsed)
         metadata: Metadata,
-        extra_data: ExtraData
+        extra_data: ExtraData,
     ) -> LapWithMetadata {
         let (lap_time, s1, s2, s3, elapsed) = times;
         LapWithMetadata {
             lap: Lap::new(
-                car_number.to_string(), driver.to_string(), lap_num, position, 
-                lap_time, lap_time, s1, s2, s3, s1, s2, s3, elapsed
+                car_number.to_string(),
+                driver.to_string(),
+                lap_num,
+                position,
+                lap_time,
+                lap_time,
+                s1,
+                s2,
+                s3,
+                s1,
+                s2,
+                s3,
+                elapsed,
             ),
             metadata,
             csv_data: extra_data,
@@ -480,28 +515,40 @@ mod tests {
     fn test_group_laps_by_car() {
         let laps_with_metadata = vec![
             create_test_lap_with_metadata(
-                "12", "Will STEVENS", 1, Some(3),
+                "12",
+                "Will STEVENS",
+                1,
+                Some(3),
                 (95365, 23155, 29928, 42282, 95365),
                 create_test_metadata("Hertz Team JOTA", "Porsche"),
-                create_test_extra_data(1, 160.7, 0, None)
+                create_test_extra_data(1, 160.7, 0, None),
             ),
             create_test_lap_with_metadata(
-                "12", "Robin FRIJNS", 2, Some(2),
+                "12",
+                "Robin FRIJNS",
+                2,
+                Some(2),
                 (113610, 23155, 29928, 42282, 113610),
                 create_test_metadata("Hertz Team JOTA", "Porsche"),
-                create_test_extra_data(2, 165.2, 1, Some("298.6"))
+                create_test_extra_data(2, 165.2, 1, Some("298.6")),
             ),
             create_test_lap_with_metadata(
-                "7", "Kamui KOBAYASHI", 1, Some(1),
+                "7",
+                "Kamui KOBAYASHI",
+                1,
+                Some(1),
                 (93291, 23119, 29188, 40984, 93291),
                 create_test_metadata("Toyota Gazoo Racing", "Toyota"),
-                create_test_extra_data(1, 175.0, 0, Some("298.6"))
+                create_test_extra_data(1, 175.0, 0, Some("298.6")),
             ),
         ];
         let cars = group_laps_by_car(laps_with_metadata);
         assert_eq!(cars.len(), 2);
 
-        let car12 = cars.iter().find(|c| c.meta_data.car_number == "12").unwrap();
+        let car12 = cars
+            .iter()
+            .find(|c| c.meta_data.car_number == "12")
+            .unwrap();
         assert_eq!(car12.laps.len(), 2);
         assert_eq!(car12.meta_data.team, "Hertz Team JOTA");
         assert_eq!(car12.meta_data.manufacturer, "Porsche");
@@ -518,28 +565,37 @@ mod tests {
     fn test_best_time_tracking() {
         // Test best time tracking logic based on Elm implementation
         let team_metadata = create_test_metadata("Hertz Team JOTA", "Porsche");
-        
+
         let laps_with_metadata = vec![
             // Lap 1: Sets initial best times
             create_test_lap_with_metadata(
-                "12", "Will STEVENS", 1, None,
+                "12",
+                "Will STEVENS",
+                1,
+                None,
                 (95365, 23155, 29928, 42282, 95365),
                 team_metadata.clone(),
-                create_test_extra_data(1, 160.7, 0, None)
+                create_test_extra_data(1, 160.7, 0, None),
             ),
             // Lap 2: Faster in all areas - updates all bests
             create_test_lap_with_metadata(
-                "12", "Will STEVENS", 2, None,
+                "12",
+                "Will STEVENS",
+                2,
+                None,
                 (92245, 22500, 29100, 40645, 187610),
                 team_metadata.clone(),
-                create_test_extra_data(1, 165.2, 1, None)
+                create_test_extra_data(1, 165.2, 1, None),
             ),
             // Lap 3: Slower overall but tests mixed sector performance
             create_test_lap_with_metadata(
-                "12", "Will STEVENS", 3, None,
+                "12",
+                "Will STEVENS",
+                3,
+                None,
                 (94000, 23000, 29500, 41500, 281610),
                 team_metadata,
-                create_test_extra_data(1, 163.0, 0, None)
+                create_test_extra_data(1, 163.0, 0, None),
             ),
         ];
 
@@ -555,10 +611,17 @@ mod tests {
             (92245, 22500, 29100, 40645), // Lap 2: all improved
             (92245, 22500, 29100, 40645), // Lap 3: bests remain from lap 2
         ];
-        
-        for (i, (expected_lap_best, expected_s1, expected_s2, expected_s3)) in expected_bests.iter().enumerate() {
+
+        for (i, (expected_lap_best, expected_s1, expected_s2, expected_s3)) in
+            expected_bests.iter().enumerate()
+        {
             let lap = &car.laps[i];
-            assert_eq!(lap.best, *expected_lap_best, "Lap {} best time mismatch", i + 1);
+            assert_eq!(
+                lap.best,
+                *expected_lap_best,
+                "Lap {} best time mismatch",
+                i + 1
+            );
             assert_eq!(lap.s1_best, *expected_s1, "Lap {} S1 best mismatch", i + 1);
             assert_eq!(lap.s2_best, *expected_s2, "Lap {} S2 best mismatch", i + 1);
             assert_eq!(lap.s3_best, *expected_s3, "Lap {} S3 best mismatch", i + 1);

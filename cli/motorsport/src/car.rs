@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{Class, Driver};
 use crate::lap::Lap;
+use crate::{Class, Driver};
 
 /// 車両情報（ElmのCar型と互換）
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
@@ -16,11 +16,7 @@ pub struct Car {
 
 impl Car {
     /// 新しい車両を作成
-    pub fn new(
-        meta_data: MetaData,
-        start_position: i32,
-        laps: Vec<Lap>,
-    ) -> Self {
+    pub fn new(meta_data: MetaData, start_position: i32, laps: Vec<Lap>) -> Self {
         Car {
             meta_data,
             start_position,
@@ -204,9 +200,7 @@ mod tests {
 
     #[test]
     fn test_car_json_serialization() {
-        let drivers = vec![
-            Driver::new("Will STEVENS".to_string(), true),
-        ];
+        let drivers = vec![Driver::new("Will STEVENS".to_string(), true)];
 
         let metadata = MetaData::new(
             "12".to_string(),

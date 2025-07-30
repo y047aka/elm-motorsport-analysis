@@ -1,5 +1,5 @@
+use motorsport::{duration, Car, Driver};
 use serde::{Serialize, Serializer};
-use motorsport::{Car, duration, Driver};
 
 use crate::preprocess::LapWithMetadata;
 
@@ -122,7 +122,6 @@ pub struct PreprocessedCar {
     pub last_lap: Option<PreprocessedLap>,
 }
 
-
 /// Preprocessed lap format (車両内のlaps配列の要素)
 #[derive(Debug, Serialize)]
 pub struct PreprocessedLap {
@@ -160,57 +159,65 @@ pub fn create_output(
 
 /// LapWithMetadata から RawLap への変換
 fn raw_laps_from(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
-    laps_with_metadata.iter().map(|lap_meta| {
-        let lap = &lap_meta.lap;
-        let meta = &lap_meta.metadata;
+    laps_with_metadata
+        .iter()
+        .map(|lap_meta| {
+            let lap = &lap_meta.lap;
+            let meta = &lap_meta.metadata;
 
-        RawLap {
-            car_number: lap.car_number.clone(),
-            driver_number: lap_meta.csv_data.driver_number,
-            lap_number: lap.lap,
-            lap_time: duration::to_string(lap.time),
-            lap_improvement: lap_meta.csv_data.lap_improvement,
-            crossing_finish_line_in_pit: lap_meta.csv_data.crossing_finish_line_in_pit.clone(),
-            s1: format_sector_time(&lap_meta.csv_data.s1_raw, lap.sector_1),
-            s1_improvement: lap_meta.csv_data.s1_improvement,
-            s2: format_sector_time(&lap_meta.csv_data.s2_raw, lap.sector_2),
-            s2_improvement: lap_meta.csv_data.s2_improvement,
-            s3: format_sector_time(&lap_meta.csv_data.s3_raw, lap.sector_3),
-            s3_improvement: lap_meta.csv_data.s3_improvement,
-            kph: (lap_meta.csv_data.kph * 10.0).round() / 10.0,
-            elapsed: duration::to_string(lap.elapsed),
-            hour: lap_meta.csv_data.hour.clone(),
-            top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
-            driver_name: lap.driver.clone(),
-            pit_time: lap_meta.csv_data.pit_time.map_or_else(String::new, duration::to_string),
-            class: meta.class.clone(),
-            group: meta.group.clone(),
-            team: meta.team.clone(),
-            manufacturer: meta.manufacturer.clone(),
-        }
-    }).collect()
+            RawLap {
+                car_number: lap.car_number.clone(),
+                driver_number: lap_meta.csv_data.driver_number,
+                lap_number: lap.lap,
+                lap_time: duration::to_string(lap.time),
+                lap_improvement: lap_meta.csv_data.lap_improvement,
+                crossing_finish_line_in_pit: lap_meta.csv_data.crossing_finish_line_in_pit.clone(),
+                s1: format_sector_time(&lap_meta.csv_data.s1_raw, lap.sector_1),
+                s1_improvement: lap_meta.csv_data.s1_improvement,
+                s2: format_sector_time(&lap_meta.csv_data.s2_raw, lap.sector_2),
+                s2_improvement: lap_meta.csv_data.s2_improvement,
+                s3: format_sector_time(&lap_meta.csv_data.s3_raw, lap.sector_3),
+                s3_improvement: lap_meta.csv_data.s3_improvement,
+                kph: (lap_meta.csv_data.kph * 10.0).round() / 10.0,
+                elapsed: duration::to_string(lap.elapsed),
+                hour: lap_meta.csv_data.hour.clone(),
+                top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
+                driver_name: lap.driver.clone(),
+                pit_time: lap_meta
+                    .csv_data
+                    .pit_time
+                    .map_or_else(String::new, duration::to_string),
+                class: meta.class.clone(),
+                group: meta.group.clone(),
+                team: meta.team.clone(),
+                manufacturer: meta.manufacturer.clone(),
+            }
+        })
+        .collect()
 }
 
 /// Car から PreprocessedCar への変換
 fn preprocessed_cars_from(cars: &[Car]) -> Vec<PreprocessedCar> {
-    cars.iter().map(|car| {
-        let drivers = car.meta_data.drivers.clone();
+    cars.iter()
+        .map(|car| {
+            let drivers = car.meta_data.drivers.clone();
 
-        let laps = car.laps.iter().map(lap_to_preprocessed).collect();
+            let laps = car.laps.iter().map(lap_to_preprocessed).collect();
 
-        PreprocessedCar {
-            car_number: car.meta_data.car_number.clone(),
-            drivers,
-            class: car.meta_data.class.to_string().to_string(),
-            group: car.meta_data.group.clone(),
-            team: car.meta_data.team.clone(),
-            manufacturer: car.meta_data.manufacturer.clone(),
-            start_position: car.start_position,
-            laps,
-            current_lap: None,
-            last_lap: None,
-        }
-    }).collect()
+            PreprocessedCar {
+                car_number: car.meta_data.car_number.clone(),
+                drivers,
+                class: car.meta_data.class.to_string().to_string(),
+                group: car.meta_data.group.clone(),
+                team: car.meta_data.team.clone(),
+                manufacturer: car.meta_data.manufacturer.clone(),
+                start_position: car.start_position,
+                laps,
+                current_lap: None,
+                last_lap: None,
+            }
+        })
+        .collect()
 }
 
 /// Event name mapping
@@ -234,35 +241,38 @@ mod tests {
     #[test]
     fn test_serialize_speed() {
         use serde_json::Value;
-        
+
         // 整数値: .0を除去
         let result = serialize_speed(&186.0, serde_json::value::Serializer).unwrap();
         assert_eq!(result, Value::Number(186.into()));
-        
+
         // 小数値: そのまま保持
         let result = serialize_speed(&184.3, serde_json::value::Serializer).unwrap();
         if let Value::Number(n) = result {
             assert!((n.as_f64().unwrap() - 184.3).abs() < 0.001);
         } else {
-            panic!("Expected number, got {:?}", result);
+            panic!("Expected number, got {result:?}");
         }
     }
 
     #[test]
     fn test_serialize_top_speed() {
         use serde_json::value::Serializer;
-        
+
         let test_cases = vec![
-            ("300.0", "300"),        // .0除去
-            ("288.8", "288.8"),      // 小数点保持
-            ("", ""),                // 空文字列保持
-            ("invalid", "invalid"),  // 不正値はそのまま
+            ("300.0", "300"),       // .0除去
+            ("288.8", "288.8"),     // 小数点保持
+            ("", ""),               // 空文字列保持
+            ("invalid", "invalid"), // 不正値はそのまま
         ];
 
         for (input, expected) in test_cases {
             let result = serialize_top_speed(input, Serializer).unwrap();
-            assert_eq!(result, serde_json::Value::String(expected.to_string()),
-                "Expected '{}' to be formatted as '{}', but got: {:?}", input, expected, result);
+            assert_eq!(
+                result,
+                serde_json::Value::String(expected.to_string()),
+                "Expected '{input}' to be formatted as '{expected}', but got: {result:?}"
+            );
         }
     }
 

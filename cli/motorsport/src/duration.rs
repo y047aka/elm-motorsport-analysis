@@ -6,7 +6,9 @@ pub fn from_string(s: &str) -> Option<Duration> {
     let parts: Vec<&str> = s.split(':').collect();
 
     let convert_seconds = |s: &str| -> Option<u32> {
-        s.parse::<f64>().ok().map(|sec| (sec * 1000.0).round() as u32)
+        s.parse::<f64>()
+            .ok()
+            .map(|sec| (sec * 1000.0).round() as u32)
     };
 
     match parts.as_slice() {
@@ -31,17 +33,19 @@ pub fn to_string(ms: Duration) -> String {
     let milliseconds = ms % 1000;
 
     match ms / 1000 {
-        s if s < 60 => format!("{}.{:03}", s, milliseconds),
+        s if s < 60 => format!("{s}.{milliseconds:03}"),
         s if s < 3600 => {
             let minutes = s / 60;
             let seconds = s % 60;
-            format!("{}:{:02}.{:03}", minutes, seconds, milliseconds)
+            format!("{minutes}:{seconds:02}.{milliseconds:03}")
         }
         s => {
             let hours = s / 3600;
             let minutes = (s % 3600) / 60;
             let seconds = s % 60;
-            format!("{}:{:02}:{:02}.{:03}", hours, minutes, seconds, milliseconds)
+            format!(
+                "{hours}:{minutes:02}:{seconds:02}.{milliseconds:03}"
+            )
         }
     }
 }

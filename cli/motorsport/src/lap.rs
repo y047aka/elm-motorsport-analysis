@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use crate::Duration;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Lap {
