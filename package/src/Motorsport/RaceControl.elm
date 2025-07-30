@@ -7,6 +7,7 @@ import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
+import Motorsport.Manufacturer as Manufacturer
 import Time exposing (Posix, millisToPosix)
 
 
@@ -43,7 +44,7 @@ placeholder : Model
 placeholder =
     let
         dummyCar =
-            { metaData = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = "" }
+            { metaData = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
             , startPosition = 0
             , laps = []
             , currentLap = Nothing

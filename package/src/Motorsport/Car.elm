@@ -15,6 +15,7 @@ module Motorsport.Car exposing
 import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Manufacturer exposing (Manufacturer)
 
 
 type alias Car =
@@ -33,7 +34,7 @@ type alias MetaData =
     , class : Class
     , group : String
     , team : String
-    , manufacturer : String
+    , manufacturer : Manufacturer
     }
 
 

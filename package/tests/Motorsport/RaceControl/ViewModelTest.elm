@@ -6,6 +6,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (MetaData, Timing, ViewModelItem)
 import SortedList
@@ -126,6 +127,7 @@ createMetaData carNumber =
     , class = Class.none
     , team = "Test Team"
     , drivers = [ createDriver "Test Driver" ]
+    , manufacturer = Manufacturer.Other
     }
 
 

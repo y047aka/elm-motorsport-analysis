@@ -27,6 +27,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
+import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RaceControl as RaceControl
 import SortedList exposing (SortedList)
@@ -57,6 +58,7 @@ type alias MetaData =
     , class : Class
     , team : String
     , drivers : List Driver
+    , manufacturer : Manufacturer
     }
 
 
@@ -133,6 +135,7 @@ init_metaData { metaData } lastLap =
                 }
             )
             metaData.drivers
+    , manufacturer = metaData.manufacturer
     }
 
 

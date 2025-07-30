@@ -8,6 +8,7 @@ import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Lap as Lap
 import Motorsport.Lap.Performance exposing (findPersonalBest)
+import Motorsport.Manufacturer as Manufacturer
 
 
 preprocess : F1.Data -> List Car
@@ -91,7 +92,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
             , class = Class.none
             , group = "TODO"
             , team = driverToTeamName_2022 driver.name
-            , manufacturer = "TODO"
+            , manufacturer = teamNameToManufacturer (driverToTeamName_2022 driver.name)
             }
 
         startPosition =
@@ -136,6 +137,48 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     , lastLap = Nothing
     , status = PreRace
     }
+
+
+teamNameToManufacturer : String -> Manufacturer.Manufacturer
+teamNameToManufacturer teamName =
+    case teamName of
+        "Red Bull Racing" ->
+            Manufacturer.Other
+
+        -- Red Bull is an energy drink company, not a car manufacturer
+        "Mercedes" ->
+            Manufacturer.Mercedes
+
+        "Ferrari" ->
+            Manufacturer.Ferrari
+
+        "McLaren" ->
+            Manufacturer.McLaren
+
+        "Aston Martin" ->
+            Manufacturer.AstonMartin
+
+        "Alpine" ->
+            Manufacturer.Alpine
+
+        "AlphaTauri" ->
+            Manufacturer.Other
+
+        -- AlphaTauri is Red Bull subsidiary
+        "Alfa Romeo" ->
+            Manufacturer.Other
+
+        -- Alfa Romeo not in our WEC list
+        "Haas" ->
+            Manufacturer.Other
+
+        -- Haas is not a car manufacturer
+        "Williams" ->
+            Manufacturer.Other
+
+        -- Williams is not a car manufacturer
+        _ ->
+            Manufacturer.Other
 
 
 driverToTeamName_2022 : String -> String
