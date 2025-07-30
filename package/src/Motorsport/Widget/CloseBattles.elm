@@ -538,7 +538,6 @@ renderCarGapLine allGapPoints carData =
                 , SvgAttr.css
                     [ Css.fill (colorToCss carData.color)
                     , Css.property "stroke" "none"
-                    , Css.opacity (Css.num 0.7)
                     ]
                 ]
                 []
@@ -547,7 +546,6 @@ renderCarGapLine allGapPoints carData =
         [ SvgAttr.stroke (Color.toCssString carData.color)
         , SvgAttr.strokeWidth "1.5"
         , SvgAttr.fill "none"
-        , SvgAttr.strokeOpacity "0.5"
         ]
         :: points
 

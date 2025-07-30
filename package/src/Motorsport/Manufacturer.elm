@@ -131,59 +131,59 @@ toColor manufacturer =
     case manufacturer of
         Alpine ->
             -- Alpine Blue
-            Color.hsl (210 / 360) 1.0 0.5
+            Color.hsl (210 / 360) 1 0.5
 
         AstonMartin ->
             -- Aston Martin Racing Green
-            Color.hsl (150 / 360) 1.0 0.15
+            Color.hsl (170 / 360) 0.8 0.35
 
         BMW ->
-            -- BMW Blue/White
-            Color.hsl (207 / 360) 1.0 0.42
+            -- BMW Blue
+            Color.hsl (220 / 360) 1 0.5
 
         Cadillac ->
-            -- Cadillac Black/Gold
-            Color.hsl (0 / 360) 0.0 0.08
+            -- Cadillac Gold
+            Color.hsl (45 / 360) 1 0.45
 
         Corvette ->
             -- Classic Corvette Yellow
-            Color.hsl (53 / 360) 1.0 0.5
+            Color.hsl (50 / 360) 1 0.5
 
         Ferrari ->
             -- Ferrari Red
-            Color.hsl (349 / 360) 0.83 0.47
+            Color.hsl (0 / 360) 0.85 0.4
 
         Ford ->
             -- Ford Blue
-            Color.hsl (221 / 360) 1.0 0.31
+            Color.hsl (230 / 360) 1 0.5
 
         Lexus ->
             -- Lexus Dark Blue
-            Color.hsl (231 / 360) 0.54 0.25
+            Color.hsl (0 / 360) 0.55 0.4
 
         McLaren ->
             -- McLaren Orange
-            Color.hsl (33 / 360) 1.0 0.5
+            Color.hsl (30 / 360) 1 0.45
 
         Mercedes ->
             -- Mercedes Silver
-            Color.hsl (0 / 360) 0.0 0.75
+            Color.hsl 0 0 0.6
 
         Peugeot ->
-            -- Peugeot Blue
-            Color.hsl (213 / 360) 1.0 0.2
+            -- Peugeot Lime Green
+            Color.hsl (75 / 360) 0.9 0.45
 
         Porsche ->
-            -- Porsche Silver/Red
-            Color.hsl (350 / 360) 0.71 0.41
+            -- Porsche Silver
+            Color.hsl 0 0 0.8
 
         Toyota ->
-            -- Toyota Red
-            Color.hsl (355 / 360) 0.92 0.48
+            -- Toyota Dark Grey
+            Color.hsl 0 0 0.5
 
         Other ->
             -- Neutral Gray
-            Color.hsl (0 / 360) 0.0 0.47
+            Color.hsl (0 / 360) 0 0.47
 
 
 {-| Generate color for a manufacturer with car number fallback.

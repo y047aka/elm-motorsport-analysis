@@ -369,9 +369,7 @@ renderCarPositionLine allPositions carData =
                 , InPx.cy y
                 , InPx.r 2
                 , SvgAttr.css
-                    [ Css.fill (colorToCss carData.color)
-                    , Css.opacity (Css.num 0.8)
-                    ]
+                    [ Css.fill (colorToCss carData.color) ]
                 ]
                 []
     in
@@ -380,7 +378,6 @@ renderCarPositionLine allPositions carData =
             [ TA.stroke (Paint carData.color)
             , TA.strokeWidth (Px 1.5)
             , TA.fill PaintNone
-            , TA.strokeOpacity (Opacity 0.7)
             ]
     )
         :: points

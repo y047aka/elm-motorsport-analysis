@@ -368,7 +368,6 @@ renderCarProgressionLine laps carData =
                 , SvgAttr.css
                     [ Css.fill (colorToCss carData.color)
                     , Css.property "stroke" "none"
-                    , Css.opacity (Css.num 0.7)
                     ]
                 ]
                 []
@@ -378,7 +377,6 @@ renderCarProgressionLine laps carData =
             [ TA.stroke (Paint carData.color)
             , TA.strokeWidth (Px 1.5)
             , TA.fill PaintNone
-            , TA.strokeOpacity (Opacity 0.5)
             ]
     )
         :: points
