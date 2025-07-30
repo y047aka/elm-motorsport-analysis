@@ -116,7 +116,7 @@ suite =
                 \_ ->
                     let
                         ferrariColor =
-                            Manufacturer.toColorWithFallback "123" Ferrari
+                            Manufacturer.toColorWithFallback { carNumber = "123", manufacturer = Ferrari }
 
                         expectedFerrariColor =
                             Manufacturer.toColor Ferrari
@@ -126,20 +126,20 @@ suite =
                 \_ ->
                     let
                         color1 =
-                            Manufacturer.toColorWithFallback "1" Other
+                            Manufacturer.toColorWithFallback { carNumber = "1", manufacturer = Other }
 
                         color2 =
-                            Manufacturer.toColorWithFallback "2" Other
+                            Manufacturer.toColorWithFallback { carNumber = "2", manufacturer = Other }
                     in
                     color1 |> Expect.notEqual color2
             , test "generates consistent colors for same car number with Other manufacturer" <|
                 \_ ->
                     let
                         color1 =
-                            Manufacturer.toColorWithFallback "123" Other
+                            Manufacturer.toColorWithFallback { carNumber = "123", manufacturer = Other }
 
                         color2 =
-                            Manufacturer.toColorWithFallback "123" Other
+                            Manufacturer.toColorWithFallback { carNumber = "123", manufacturer = Other }
                     in
                     color1 |> Expect.equal color2
             ]

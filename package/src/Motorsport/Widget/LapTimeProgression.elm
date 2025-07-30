@@ -96,7 +96,7 @@ processClassProgressionData clock viewModel =
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , laps = allLaps
-                                    , color = Manufacturer.toColorWithFallback car.metaData.carNumber car.metaData.manufacturer
+                                    , color = Manufacturer.toColorWithFallback car.metaData
                                     }
                                 )
                             |> List.filter (\car -> List.length car.laps >= 2)

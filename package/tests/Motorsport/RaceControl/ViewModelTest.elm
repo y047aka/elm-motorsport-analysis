@@ -1,14 +1,14 @@
 module Motorsport.RaceControl.ViewModelTest exposing (suite)
 
 import Expect
-import Motorsport.Car exposing (Status(..))
+import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Ordering as Ordering
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (MetaData, Timing, ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (Timing, ViewModelItem)
 import SortedList
 import Test exposing (Test, describe, test)
 
@@ -121,10 +121,11 @@ createViewModelItemWithGap position carNumber gap =
     }
 
 
-createMetaData : String -> MetaData
+createMetaData : String -> Car.MetaData
 createMetaData carNumber =
     { carNumber = carNumber
     , class = Class.none
+    , group = "Test Group"
     , team = "Test Team"
     , drivers = [ createDriver "Test Driver" ]
     , manufacturer = Manufacturer.Other

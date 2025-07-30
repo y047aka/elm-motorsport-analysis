@@ -189,8 +189,8 @@ toColor manufacturer =
 {-| Generate color for a manufacturer with car number fallback.
 When manufacturer is Other, generates a color based on car number for distinction.
 -}
-toColorWithFallback : String -> Manufacturer -> Color
-toColorWithFallback carNumber manufacturer =
+toColorWithFallback : { a | carNumber : String, manufacturer : Manufacturer } -> Color
+toColorWithFallback { carNumber, manufacturer } =
     case manufacturer of
         Other ->
             generateCarColor carNumber
