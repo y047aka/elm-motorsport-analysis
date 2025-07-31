@@ -12,6 +12,7 @@ import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
@@ -286,7 +287,7 @@ battleChart cars =
                     (\car ->
                         { carNumber = car.metaData.carNumber
                         , laps = ViewModel.getRecentLaps 10 options car.history
-                        , color = generateCarColor car.metaData.carNumber
+                        , color = Manufacturer.toColorWithFallback car.metaData
                         }
                     )
 
@@ -537,7 +538,6 @@ renderCarGapLine allGapPoints carData =
                 , SvgAttr.css
                     [ Css.fill (colorToCss carData.color)
                     , Css.property "stroke" "none"
-                    , Css.opacity (Css.num 0.7)
                     ]
                 ]
                 []
@@ -546,24 +546,8 @@ renderCarGapLine allGapPoints carData =
         [ SvgAttr.stroke (Color.toCssString carData.color)
         , SvgAttr.strokeWidth "1.5"
         , SvgAttr.fill "none"
-        , SvgAttr.strokeOpacity "0.5"
         ]
         :: points
-
-
-generateCarColor : String -> Color.Color
-generateCarColor carNumber =
-    let
-        carHash =
-            String.toInt carNumber |> Maybe.withDefault 0
-
-        ( hue, saturation, lightness ) =
-            ( carHash * 37 |> modBy 360 |> toFloat
-            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
-            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
-            )
-    in
-    Color.hsl (hue / 360) saturation lightness
 
 
 colorToCss : Color.Color -> Css.Color

@@ -18,6 +18,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap
+import Motorsport.Manufacturer as Manufacturer
 
 
 type alias Event =
@@ -135,7 +136,7 @@ metaDataDecoder =
         |> required "class" classDecoder
         |> required "group" string
         |> required "team" string
-        |> required "manufacturer" string
+        |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
 
 
 driverDecoder : Decoder Driver

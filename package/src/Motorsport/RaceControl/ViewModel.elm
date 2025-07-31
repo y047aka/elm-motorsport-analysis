@@ -1,7 +1,7 @@
 module Motorsport.RaceControl.ViewModel exposing
     ( ViewModel, ViewModelItem
-    , MetaData, Timing
-    , init, init_metaData
+    , Timing
+    , init
     , groupCarsByCloseIntervals
     , getRecentLaps
     )
@@ -9,8 +9,8 @@ module Motorsport.RaceControl.ViewModel exposing
 {-|
 
 @docs ViewModel, ViewModelItem
-@docs MetaData, Timing
-@docs init, init_metaData
+@docs Timing
+@docs init
 
 @docs groupCarsByCloseIntervals
 @docs getRecentLaps
@@ -20,10 +20,9 @@ module Motorsport.RaceControl.ViewModel exposing
 import Dict exposing (Dict)
 import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
-import Motorsport.Car exposing (Car, Status)
+import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
-import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
@@ -43,20 +42,12 @@ type alias ViewModelItem =
     { position : Int
     , positionInClass : Int
     , status : Status
-    , metaData : MetaData
+    , metaData : Car.MetaData
     , lap : Int
     , timing : Timing
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , history : List Lap
-    }
-
-
-type alias MetaData =
-    { carNumber : String
-    , class : Class
-    , team : String
-    , drivers : List Driver
     }
 
 
@@ -84,6 +75,9 @@ init { clock, lapCount, cars } =
                             raceClock =
                                 { elapsed = Clock.getElapsed clock }
 
+                            metaData =
+                                car.metaData
+
                             positionInClass =
                                 Dict.get car.metaData.carNumber positionsInClass
                                     |> Maybe.withDefault 1
@@ -94,7 +88,23 @@ init { clock, lapCount, cars } =
                         { position = index + 1
                         , positionInClass = positionInClass
                         , status = car.status
-                        , metaData = init_metaData car lastLap
+                        , metaData =
+                            { metaData
+                                | drivers =
+                                    List.map
+                                        (\{ name } ->
+                                            { name = name
+                                            , isCurrentDriver =
+                                                case car.currentLap of
+                                                    Just currentLap ->
+                                                        name == currentLap.driver
+
+                                                    Nothing ->
+                                                        False
+                                            }
+                                        )
+                                        car.metaData.drivers
+                            }
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
@@ -117,22 +127,6 @@ init { clock, lapCount, cars } =
         sortedItems
             |> SortedList.gatherEqualsBy (.metaData >> .class)
             |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-    }
-
-
-init_metaData : Car -> Lap -> MetaData
-init_metaData { metaData } lastLap =
-    { carNumber = metaData.carNumber
-    , class = metaData.class
-    , team = metaData.team
-    , drivers =
-        List.map
-            (\{ name } ->
-                { name = name
-                , isCurrentDriver = name == lastLap.driver
-                }
-            )
-            metaData.drivers
     }
 
 

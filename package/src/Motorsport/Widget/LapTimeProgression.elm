@@ -12,6 +12,7 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
 import Path
@@ -95,7 +96,7 @@ processClassProgressionData clock viewModel =
                                     in
                                     { carNumber = car.metaData.carNumber
                                     , laps = allLaps
-                                    , color = generateCarColor car.metaData.carNumber
+                                    , color = Manufacturer.toColorWithFallback car.metaData
                                     }
                                 )
                             |> List.filter (\car -> List.length car.laps >= 2)
@@ -151,21 +152,6 @@ filterOutlierLaps laps =
     in
     laps
         |> List.filter (\lap -> lap.time <= threshold)
-
-
-generateCarColor : String -> Color.Color
-generateCarColor carNumber =
-    let
-        carHash =
-            String.toInt carNumber |> Maybe.withDefault 0
-
-        ( hue, saturation, lightness ) =
-            ( carHash * 37 |> modBy 360 |> toFloat
-            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
-            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
-            )
-    in
-    Color.hsl (hue / 360) saturation lightness
 
 
 colorToCss : Color.Color -> Css.Color
@@ -382,7 +368,6 @@ renderCarProgressionLine laps carData =
                 , SvgAttr.css
                     [ Css.fill (colorToCss carData.color)
                     , Css.property "stroke" "none"
-                    , Css.opacity (Css.num 0.7)
                     ]
                 ]
                 []
@@ -392,7 +377,6 @@ renderCarProgressionLine laps carData =
             [ TA.stroke (Paint carData.color)
             , TA.strokeWidth (Px 1.5)
             , TA.fill PaintNone
-            , TA.strokeOpacity (Opacity 0.5)
             ]
     )
         :: points
