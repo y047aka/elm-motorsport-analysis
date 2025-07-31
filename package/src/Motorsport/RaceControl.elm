@@ -360,8 +360,13 @@ applyEventToCar : Event -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
+            let
+                currentLap =
+                    List.head car.laps
+            in
             { car
-                | currentLap = List.head car.laps
+                | currentLap = currentLap
+                , currentDriver = currentLap |> Maybe.map (.driver >> Driver)
                 , status = Racing
             }
 
@@ -372,9 +377,14 @@ applyEventToCar event car =
             Car.setStatus Car.Checkered car
 
         CarEvent _ (LapCompleted lapNumber) ->
+            let
+                currentLap =
+                    List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+            in
             { car
-                | currentLap = List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+                | currentLap = currentLap
                 , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
+                , currentDriver = currentLap |> Maybe.map (.driver >> Driver)
             }
 
 
