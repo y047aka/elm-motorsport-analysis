@@ -127,14 +127,9 @@ createMetadata carNumber =
     , class = Class.none
     , group = "Test Group"
     , team = "Test Team"
-    , drivers = [ createDriver "Test Driver" ]
+    , drivers = [ Driver "Test Driver" ]
     , manufacturer = Manufacturer.Other
     }
-
-
-createDriver : String -> Driver
-createDriver name =
-    { name = name }
 
 
 createTiming : Gap -> Timing
