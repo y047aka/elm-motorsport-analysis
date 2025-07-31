@@ -1,16 +1,16 @@
 module Data.Wec exposing
     ( Event
-    , eventDecoder, lapDecoder
+    , eventDecoder
     )
 
 {-|
 
 @docs Event
-@docs eventDecoder, lapDecoder
+@docs eventDecoder
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
+import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Car as Car exposing (Car, Status(..))
@@ -24,36 +24,8 @@ import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 type alias Event =
     { name : String
-    , laps : List Lap
     , preprocessed : List Car
     , timelineEvents : List TimelineEvent
-    }
-
-
-type alias Lap =
-    { carNumber : String
-    , driverNumber : Int
-    , lapNumber : Int
-    , lapTime : RaceClock
-    , lapImprovement : Int
-    , crossingFinishLineInPit : String
-    , s1 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , s1Improvement : Int
-    , s2 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , s2Improvement : Int
-    , s3 : Maybe RaceClock -- 2024年のデータで部分的に欠落しているのでMaybeを付けている
-    , s3Improvement : Int
-    , kph : Float
-    , elapsed : RaceClock
-    , hour : RaceClock
-    , topSpeed : Maybe Float -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , driverName : String
-    , pitTime : Maybe RaceClock
-    , class : Class
-    , group : String
-    , team : String
-    , manufacturer : String
-    , miniSectors : Maybe MiniSectors
     }
 
 
@@ -93,39 +65,10 @@ type alias MiniSector =
 
 eventDecoder : Decoder Event
 eventDecoder =
-    Decode.map4 Event
+    Decode.map3 Event
         (field "name" string)
-        (field "laps" (list lapDecoder))
         (field "preprocessed" (list carDecoder))
         (field "timeline_events" (list TimelineEvent.decoder))
-
-
-lapDecoder : Decoder Lap
-lapDecoder =
-    Decode.succeed Lap
-        |> required "carNumber" string
-        |> required "driverNumber" int
-        |> required "lapNumber" int
-        |> required "lapTime" raceClockDecoder
-        |> required "lapImprovement" int
-        |> required "crossingFinishLineInPit" string
-        |> required "s1" (Decode.maybe raceClockDecoder)
-        |> required "s1Improvement" int
-        |> required "s2" (Decode.maybe raceClockDecoder)
-        |> required "s2Improvement" int
-        |> required "s3" (Decode.maybe raceClockDecoder)
-        |> required "s3Improvement" int
-        |> required "kph" float
-        |> required "elapsed" raceClockDecoder
-        |> required "hour" raceClockDecoder
-        |> required "topSpeed" (Decode.map String.toFloat string)
-        |> required "driverName" string
-        |> required "pitTime" (Decode.maybe raceClockDecoder)
-        |> required "class" classDecoder
-        |> required "group" string
-        |> required "team" string
-        |> required "manufacturer" string
-        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
 
 
 raceClockDecoder : Decoder Duration
@@ -171,9 +114,9 @@ carDecoder =
     Decode.map7 Car
         metadataDecoder
         (field "startPosition" int)
-        (field "laps" (Decode.list lapDecoder_))
-        (field "currentLap" (Decode.maybe lapDecoder_))
-        (field "lastLap" (Decode.maybe lapDecoder_))
+        (field "laps" (Decode.list lapDecoder))
+        (field "currentLap" (Decode.maybe lapDecoder))
+        (field "lastLap" (Decode.maybe lapDecoder))
         (Decode.succeed PreRace)
         (Decode.succeed Nothing)
 
@@ -195,8 +138,8 @@ driverDecoder =
         (field "name" string)
 
 
-lapDecoder_ : Decoder Motorsport.Lap.Lap
-lapDecoder_ =
+lapDecoder : Decoder Motorsport.Lap.Lap
+lapDecoder =
     Decode.succeed Motorsport.Lap.Lap
         |> required "carNumber" string
         |> required "driver" (Decode.map Driver string)
