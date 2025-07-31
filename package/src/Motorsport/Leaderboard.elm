@@ -279,14 +279,14 @@ driverAndTeamColumn_Wec { getter } =
                     List.map
                         (\driver ->
                             let
-                                isNotCurrentDriver =
-                                    Maybe.map .name currentDriver /= Just driver.name
+                                isCurrentDriver =
+                                    Maybe.map .name currentDriver == Just driver.name
                             in
                             div
                                 [ css
                                     [ fontSize (px 10)
                                     , fontStyle italic
-                                    , when isNotCurrentDriver
+                                    , when (not isCurrentDriver)
                                         (color (hsl 0 0 0.75))
                                     ]
                                 ]
