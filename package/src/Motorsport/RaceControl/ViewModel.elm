@@ -23,6 +23,7 @@ import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
@@ -42,12 +43,13 @@ type alias ViewModelItem =
     { position : Int
     , positionInClass : Int
     , status : Status
-    , metaData : Car.MetaData
+    , metadata : Car.Metadata
     , lap : Int
     , timing : Timing
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , history : List Lap
+    , currentDriver : Maybe Driver
     }
 
 
@@ -75,11 +77,11 @@ init { clock, lapCount, cars } =
                             raceClock =
                                 { elapsed = Clock.getElapsed clock }
 
-                            metaData =
-                                car.metaData
+                            metadata =
+                                car.metadata
 
                             positionInClass =
-                                Dict.get car.metaData.carNumber positionsInClass
+                                Dict.get car.metadata.carNumber positionsInClass
                                     |> Maybe.withDefault 1
 
                             lastLap =
@@ -88,23 +90,7 @@ init { clock, lapCount, cars } =
                         { position = index + 1
                         , positionInClass = positionInClass
                         , status = car.status
-                        , metaData =
-                            { metaData
-                                | drivers =
-                                    List.map
-                                        (\{ name } ->
-                                            { name = name
-                                            , isCurrentDriver =
-                                                case car.currentLap of
-                                                    Just currentLap ->
-                                                        name == currentLap.driver
-
-                                                    Nothing ->
-                                                        False
-                                            }
-                                        )
-                                        car.metaData.drivers
-                            }
+                        , metadata = metadata
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
@@ -115,6 +101,7 @@ init { clock, lapCount, cars } =
                         , currentLap = car.currentLap
                         , lastLap = car.lastLap
                         , history = completedLapsAt raceClock car.laps
+                        , currentDriver = car.currentDriver
                         }
                     )
 
@@ -125,8 +112,8 @@ init { clock, lapCount, cars } =
     , items = sortedItems
     , itemsByClass =
         sortedItems
-            |> SortedList.gatherEqualsBy (.metaData >> .class)
-            |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+            |> SortedList.gatherEqualsBy (.metadata >> .class)
+            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
     }
 
 
@@ -172,11 +159,11 @@ positionsInClassByCarNumber : NonEmpty Car -> Dict String Int
 positionsInClassByCarNumber cars =
     cars
         |> NonEmpty.toList
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
+        |> List.Extra.gatherEqualsBy (.metadata >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->
                 (firstCar :: restCars)
-                    |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
+                    |> List.indexedMap (\index car -> ( car.metadata.carNumber, index + 1 ))
             )
         |> Dict.fromList
 

@@ -1,12 +1,12 @@
 module Motorsport.Car exposing
-    ( Car, MetaData, CarNumber
+    ( Car, Metadata, CarNumber
     , Status(..), hasRetired, statusToString
     , setStatus
     )
 
 {-|
 
-@docs Car, MetaData, CarNumber
+@docs Car, Metadata, CarNumber
 @docs Status, hasRetired, statusToString
 @docs setStatus
 
@@ -19,16 +19,17 @@ import Motorsport.Manufacturer exposing (Manufacturer)
 
 
 type alias Car =
-    { metaData : MetaData
+    { metadata : Metadata
     , startPosition : Int
     , laps : List Lap
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , status : Status
+    , currentDriver : Maybe Driver
     }
 
 
-type alias MetaData =
+type alias Metadata =
     { carNumber : CarNumber
     , drivers : List Driver
     , class : Class

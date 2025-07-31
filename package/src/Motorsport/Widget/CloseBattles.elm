@@ -129,7 +129,7 @@ battleHeaderView cars =
         carNumbers =
             cars
                 |> NonEmpty.toList
-                |> List.map (.metaData >> .carNumber)
+                |> List.map (.metadata >> .carNumber)
                 |> String.join " - "
     in
     div
@@ -231,7 +231,7 @@ carTimeRow car carLaps allCarsLaps =
                 ]
     in
     Html.tr [ css [ children [ Css.Global.td [ Css.padding Css.zero ] ] ] ]
-        (Html.th [ css [ Css.width (px 25) ] ] [ text car.metaData.carNumber ]
+        (Html.th [ css [ Css.width (px 25) ] ] [ text car.metadata.carNumber ]
             :: intervalCell
             :: lapCells
         )
@@ -285,9 +285,9 @@ battleChart cars =
             cars
                 |> NonEmpty.map
                     (\car ->
-                        { carNumber = car.metaData.carNumber
+                        { carNumber = car.metadata.carNumber
                         , laps = ViewModel.getRecentLaps 10 options car.history
-                        , color = Manufacturer.toColorWithFallback car.metaData
+                        , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )
 

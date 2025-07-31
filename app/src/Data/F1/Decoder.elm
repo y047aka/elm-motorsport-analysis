@@ -1,6 +1,7 @@
-module Data.F1.Decoder exposing (Car, Data, Driver, Lap, decoder)
+module Data.F1.Decoder exposing (Car, Data, Lap, decoder)
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration, durationDecoder)
 
 
@@ -17,10 +18,6 @@ type alias Car =
     , driver : Driver
     , laps : List Lap
     }
-
-
-type alias Driver =
-    { name : String }
 
 
 type alias Lap =

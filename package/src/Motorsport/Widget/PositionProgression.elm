@@ -113,9 +113,9 @@ processClassPositionData clock viewModel =
                                         positionHistory =
                                             extractPositionDataForCar lapThreshold car.history
                                     in
-                                    { carNumber = car.metaData.carNumber
+                                    { carNumber = car.metadata.carNumber
                                     , positions = positionHistory
-                                    , color = Manufacturer.toColorWithFallback car.metaData
+                                    , color = Manufacturer.toColorWithFallback car.metadata
                                     }
                                 )
                             |> List.filter (\car -> List.length car.positions >= 2)

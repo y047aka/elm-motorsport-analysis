@@ -262,12 +262,12 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
 
 config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config season analysis =
-    { toId = .metaData >> .carNumber
+    { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
+        , carNumberColumn_Wec season { getter = .metadata }
+        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"

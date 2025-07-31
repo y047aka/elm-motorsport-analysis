@@ -94,9 +94,9 @@ processClassProgressionData clock viewModel =
                                         allLaps =
                                             extractLapDataForCar clock car.history
                                     in
-                                    { carNumber = car.metaData.carNumber
+                                    { carNumber = car.metadata.carNumber
                                     , laps = allLaps
-                                    , color = Manufacturer.toColorWithFallback car.metaData
+                                    , color = Manufacturer.toColorWithFallback car.metadata
                                     }
                                 )
                             |> List.filter (\car -> List.length car.laps >= 2)

@@ -119,18 +119,19 @@ classDecoder =
 
 carDecoder : Decoder Car
 carDecoder =
-    Decode.map6 Car
-        metaDataDecoder
+    Decode.map7 Car
+        metadataDecoder
         (field "startPosition" int)
         (field "laps" (Decode.list lapDecoder_))
         (field "currentLap" (Decode.maybe lapDecoder_))
         (field "lastLap" (Decode.maybe lapDecoder_))
         (Decode.succeed PreRace)
+        (Decode.succeed Nothing)
 
 
-metaDataDecoder : Decoder Car.MetaData
-metaDataDecoder =
-    Decode.succeed Car.MetaData
+metadataDecoder : Decoder Car.Metadata
+metadataDecoder =
+    Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" classDecoder
@@ -141,16 +142,15 @@ metaDataDecoder =
 
 driverDecoder : Decoder Driver
 driverDecoder =
-    Decode.map2 Driver
+    Decode.map Driver
         (field "name" string)
-        (field "isCurrentDriver" bool)
 
 
 lapDecoder_ : Decoder Motorsport.Lap.Lap
 lapDecoder_ =
     Decode.succeed Motorsport.Lap.Lap
         |> required "carNumber" string
-        |> required "driver" string
+        |> required "driver" (Decode.map Driver string)
         |> required "lap" int
         |> required "position" (Decode.maybe int)
         |> required "time" durationDecoder

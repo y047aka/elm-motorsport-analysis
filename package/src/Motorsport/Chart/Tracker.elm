@@ -160,7 +160,7 @@ renderCars config viewModel =
             |> List.reverse
             |> List.map
                 (\car ->
-                    ( car.metaData.carNumber
+                    ( car.metadata.carNumber
                     , Lazy.lazy2 renderCarOnTrack config car
                     )
                 )
@@ -194,7 +194,7 @@ renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
 renderCar car { x, y } =
     let
         { carNumber, class } =
-            car.metaData
+            car.metadata
     in
     g [ Attributes.transform [ Translate x y ] ]
         [ Lazy.lazy2 carWithPositionInClass car.positionInClass { carNumber = carNumber, class = class } ]

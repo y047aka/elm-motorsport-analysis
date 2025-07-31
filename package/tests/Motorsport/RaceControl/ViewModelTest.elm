@@ -34,8 +34,8 @@ suite =
                             , items = sortedItems
                             , itemsByClass =
                                 sortedItems
-                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -61,8 +61,8 @@ suite =
                             , items = sortedItems
                             , itemsByClass =
                                 sortedItems
-                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -88,8 +88,8 @@ suite =
                             , items = sortedItems
                             , itemsByClass =
                                 sortedItems
-                                    |> SortedList.gatherEqualsBy (.metaData >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
+                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
                     ViewModel.groupCarsByCloseIntervals viewModel
@@ -112,7 +112,7 @@ createViewModelItemWithGap position carNumber gap =
     { position = position
     , positionInClass = 1
     , status = Racing
-    , metaData = createMetaData carNumber
+    , metadata = createMetadata carNumber
     , lap = 5
     , timing = createTiming gap
     , currentLap = Nothing
@@ -121,21 +121,14 @@ createViewModelItemWithGap position carNumber gap =
     }
 
 
-createMetaData : String -> Car.MetaData
-createMetaData carNumber =
+createMetadata : String -> Car.Metadata
+createMetadata carNumber =
     { carNumber = carNumber
     , class = Class.none
     , group = "Test Group"
     , team = "Test Team"
-    , drivers = [ createDriver "Test Driver" ]
+    , drivers = [ Driver "Test Driver" ]
     , manufacturer = Manufacturer.Other
-    }
-
-
-createDriver : String -> Driver
-createDriver name =
-    { name = name
-    , isCurrentDriver = True
     }
 
 

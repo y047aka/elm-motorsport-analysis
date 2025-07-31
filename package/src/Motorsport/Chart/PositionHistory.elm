@@ -107,7 +107,7 @@ view { clock, lapTotal, cars } =
                     (\car ->
                         let
                             { carNumber, team, class } =
-                                car.metaData
+                                car.metadata
 
                             positions =
                                 car.laps
@@ -149,7 +149,7 @@ history { x, y, svgPalette, label } ( car, positions ) =
         , positionLabels =
             (car.startPosition :: positions)
                 |> List.indexedMap (\i position -> ( x i, y position ))
-                |> positionLabels { label = text car.metaData.carNumber }
+                |> positionLabels { label = text car.metadata.carNumber }
         }
 
 

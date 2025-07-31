@@ -269,15 +269,19 @@ driverNameColumn_F1 { label, getter } =
     }
 
 
-driverAndTeamColumn_Wec : { getter : data -> { a | drivers : List Driver, team : String } } -> Column data msg
+driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } } -> Column data msg
 driverAndTeamColumn_Wec { getter } =
     let
-        view_ { drivers, team } =
+        view_ { metadata, currentDriver } =
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ div [] [ text team ]
+                [ div [] [ text metadata.team ]
                 , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
                     List.map
-                        (\{ name, isCurrentDriver } ->
+                        (\driver ->
+                            let
+                                isCurrentDriver =
+                                    Maybe.map .name currentDriver == Just driver.name
+                            in
                             div
                                 [ css
                                     [ fontSize (px 10)
@@ -286,9 +290,9 @@ driverAndTeamColumn_Wec { getter } =
                                         (color (hsl 0 0 0.75))
                                     ]
                                 ]
-                                [ text (formatName name) ]
+                                [ text (formatName driver.name) ]
                         )
-                        drivers
+                        metadata.drivers
                 ]
 
         formatName name =
@@ -298,9 +302,9 @@ driverAndTeamColumn_Wec { getter } =
                 |> Maybe.withDefault (String.toUpper name)
     in
     { name = "Team / Driver"
-    , view = getter >> (\{ drivers, team } -> Lazy.lazy view_ { drivers = drivers, team = team })
-    , sorter = compareBy (getter >> .team)
-    , filter = \data query -> getter data |> .team |> String.startsWith query
+    , view = getter >> (\{ metadata, currentDriver } -> Lazy.lazy view_ { metadata = metadata, currentDriver = currentDriver })
+    , sorter = compareBy (getter >> .metadata >> .team)
+    , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
     }
 
 

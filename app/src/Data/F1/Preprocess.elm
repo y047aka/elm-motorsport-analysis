@@ -6,7 +6,7 @@ import Data.F1.Decoder as F1
 import List.Extra as List
 import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
-import Motorsport.Lap as Lap
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap.Performance exposing (findPersonalBest)
 import Motorsport.Manufacturer as Manufacturer
 
@@ -78,7 +78,7 @@ getPositionAt { carNumber, lapNumber } ordersByLap =
 
 preprocess_ :
     { carNumber : String
-    , driver : F1.Driver
+    , driver : Driver
     , laps : List F1.Lap
     , startPositions : List String
     , ordersByLap : OrdersByLap
@@ -86,9 +86,9 @@ preprocess_ :
     -> Car
 preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
-        metaData =
+        metadata =
             { carNumber = carNumber
-            , drivers = [ { name = driver.name, isCurrentDriver = True } ]
+            , drivers = [ driver ]
             , class = Class.none
             , group = "TODO"
             , team = driverToTeamName_2022 driver.name
@@ -105,7 +105,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                 |> List.indexedMap
                     (\count { lap, time } ->
                         { carNumber = carNumber
-                        , driver = driver.name
+                        , driver = driver
                         , lap = lap
                         , position =
                             getPositionAt { carNumber = carNumber, lapNumber = lap } ordersByLap
@@ -130,12 +130,13 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         }
                     )
     in
-    { metaData = metaData
+    { metadata = metadata
     , startPosition = startPosition
     , laps = laps_
     , currentLap = Nothing
     , lastLap = Nothing
     , status = PreRace
+    , currentDriver = Just driver
     }
 
 

@@ -94,7 +94,7 @@ view analysis { lapTotal, cars } =
             |> List.map
                 (\car ->
                     li [ css [ listStyle none ] ]
-                        [ p [] [ text car.metaData.carNumber ]
+                        [ p [] [ text car.metadata.carNumber ]
                         , svg [ viewBox 0 0 w h ]
                             [ xAxis lapTotal
                             , yAxis fastestLapTime

@@ -44,12 +44,13 @@ placeholder : Model
 placeholder =
     let
         dummyCar =
-            { metaData = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
+            { metadata = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
             , startPosition = 0
             , laps = []
             , currentLap = Nothing
             , lastLap = Nothing
             , status = PreRace
+            , currentDriver = Nothing
             }
     in
     init (NonEmpty.singleton dummyCar)
@@ -111,7 +112,7 @@ calcEvents timeLimit cars =
                             |> List.map
                                 (\lap ->
                                     { eventTime = lap.elapsed
-                                    , eventType = CarEvent car.metaData.carNumber (LapCompleted lap.lap)
+                                    , eventType = CarEvent car.metadata.carNumber (LapCompleted lap.lap)
                                     }
                                 )
                     )
@@ -126,10 +127,10 @@ calcEvents timeLimit cars =
                                 (\finalLap ->
                                     -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
                                     if finalLap.elapsed < timeLimit then
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Retirement }
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Retirement }
 
                                     else
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Checkered }
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Checkered }
                                 )
                     )
     in
@@ -288,9 +289,14 @@ updateCars raceClock cars =
     cars
         |> NonEmpty.map
             (\car ->
+                let
+                    currentLap =
+                        Lap.findCurrentLap raceClock car.laps
+                in
                 { car
-                    | currentLap = Lap.findCurrentLap raceClock car.laps
+                    | currentLap = currentLap
                     , lastLap = Lap.findLastLapAt raceClock car.laps
+                    , currentDriver = currentLap |> Maybe.map .driver
                 }
             )
         |> NonEmpty.sortWith
@@ -333,7 +339,7 @@ applyEvents currentElapsed events cars =
                                 (\event ->
                                     case event.eventType of
                                         CarEvent carNumber _ ->
-                                            carNumber == car.metaData.carNumber
+                                            carNumber == car.metadata.carNumber
 
                                         _ ->
                                             False
@@ -353,8 +359,13 @@ applyEventToCar : Event -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
+            let
+                currentLap =
+                    List.head car.laps
+            in
             { car
-                | currentLap = List.head car.laps
+                | currentLap = currentLap
+                , currentDriver = currentLap |> Maybe.map .driver
                 , status = Racing
             }
 
@@ -365,9 +376,14 @@ applyEventToCar event car =
             Car.setStatus Car.Checkered car
 
         CarEvent _ (LapCompleted lapNumber) ->
+            let
+                currentLap =
+                    List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+            in
             { car
-                | currentLap = List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+                | currentLap = currentLap
                 , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
+                , currentDriver = currentLap |> Maybe.map .driver
             }
 
 
