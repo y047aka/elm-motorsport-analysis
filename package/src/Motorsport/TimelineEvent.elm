@@ -1,18 +1,18 @@
 module Motorsport.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , decoder, eventTypeDecoder, carEventTypeDecoder
+    , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
     )
 
 {-|
 
 @docs TimelineEvent, EventType, CarEventType
-@docs decoder, eventTypeDecoder, carEventTypeDecoder
+@docs decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
 
 -}
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Motorsport.Car exposing (CarNumber)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Duration as Duration exposing (Duration)
 
 
 type alias TimelineEvent =
@@ -33,8 +33,22 @@ type CarEventType
 decoder : Decoder TimelineEvent
 decoder =
     Decode.map2 TimelineEvent
-        (field "event_time" int)
+        (field "event_time" eventTimeDecoder)
         (field "event_type" eventTypeDecoder)
+
+
+eventTimeDecoder : Decoder Duration
+eventTimeDecoder =
+    string
+        |> Decode.andThen
+            (\str ->
+                case Duration.fromString str of
+                    Just duration ->
+                        Decode.succeed duration
+
+                    Nothing ->
+                        Decode.fail ("Invalid duration format: " ++ str)
+            )
 
 
 eventTypeDecoder : Decoder EventType

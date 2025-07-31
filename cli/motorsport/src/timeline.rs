@@ -1,12 +1,22 @@
 use crate::car::CarNumber;
-use crate::{Car, Duration};
-use serde::{Deserialize, Serialize};
+use crate::{Car, Duration, duration};
+use serde::{Deserialize, Serialize, Serializer};
 
 /// タイムラインイベント（レース中の時刻ベースのイベント）
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub struct TimelineEvent {
+    #[serde(serialize_with = "serialize_event_time")]
     pub event_time: Duration,
     pub event_type: EventType,
+}
+
+/// event_timeをduration::to_stringを使って整形してシリアライズする
+fn serialize_event_time<S>(event_time: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let formatted_time = duration::to_string(*event_time);
+    serializer.serialize_str(&formatted_time)
 }
 
 /// イベントタイプ
@@ -222,6 +232,20 @@ mod tests {
         for i in 1..events.len() {
             assert!(events[i - 1].event_time <= events[i].event_time);
         }
+    }
+
+    #[test]
+    fn test_timeline_event_json_serialization() {
+        let event = TimelineEvent {
+            event_time: 95365, // 1:35.365
+            event_type: EventType::RaceStart,
+        };
+
+        let json = serde_json::to_string(&event).unwrap();
+        
+        // event_timeが文字列形式で出力されることを確認
+        assert!(json.contains("\"event_time\":\"1:35.365\""));
+        assert!(json.contains("\"event_type\":\"RaceStart\""));
     }
 
     // テストヘルパー関数
