@@ -19,12 +19,13 @@ module Motorsport.Lap exposing
 -}
 
 import List.Extra
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 
 
 type alias Lap =
     { carNumber : String
-    , driver : String
+    , driver : Driver
     , lap : Int
     , position : Maybe Int
     , time : Duration
@@ -69,7 +70,7 @@ type alias MiniSectorData =
 empty : Lap
 empty =
     { carNumber = ""
-    , driver = ""
+    , driver = Driver ""
     , lap = 0
     , position = Nothing
     , time = 0

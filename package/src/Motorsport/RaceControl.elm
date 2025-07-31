@@ -5,7 +5,6 @@ import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
-import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer as Manufacturer
@@ -297,7 +296,7 @@ updateCars raceClock cars =
                 { car
                     | currentLap = currentLap
                     , lastLap = Lap.findLastLapAt raceClock car.laps
-                    , currentDriver = currentLap |> Maybe.map (\lap -> Driver lap.driver)
+                    , currentDriver = currentLap |> Maybe.map .driver
                 }
             )
         |> NonEmpty.sortWith
@@ -366,7 +365,7 @@ applyEventToCar event car =
             in
             { car
                 | currentLap = currentLap
-                , currentDriver = currentLap |> Maybe.map (.driver >> Driver)
+                , currentDriver = currentLap |> Maybe.map .driver
                 , status = Racing
             }
 
@@ -384,7 +383,7 @@ applyEventToCar event car =
             { car
                 | currentLap = currentLap
                 , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
-                , currentDriver = currentLap |> Maybe.map (.driver >> Driver)
+                , currentDriver = currentLap |> Maybe.map .driver
             }
 
 

@@ -196,7 +196,7 @@ lapDecoder_ : Decoder Motorsport.Lap.Lap
 lapDecoder_ =
     Decode.succeed Motorsport.Lap.Lap
         |> required "carNumber" string
-        |> required "driver" string
+        |> required "driver" (Decode.map Driver string)
         |> required "lap" int
         |> required "position" (Decode.maybe int)
         |> required "time" durationDecoder

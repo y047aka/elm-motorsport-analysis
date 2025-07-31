@@ -271,7 +271,7 @@ raceControlToLeaderboard { lapCount, cars } =
                                     , currentLap = Just lap
                                     , lastLap = Just lap
                                     , history = []
-                                    , currentDriver = Just (Driver lap.driver)
+                                    , currentDriver = Just lap.driver
                                     }
                                 )
                     )

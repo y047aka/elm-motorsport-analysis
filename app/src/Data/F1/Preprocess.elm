@@ -105,7 +105,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                 |> List.indexedMap
                     (\count { lap, time } ->
                         { carNumber = carNumber
-                        , driver = driver.name
+                        , driver = driver
                         , lap = lap
                         , position =
                             getPositionAt { carNumber = carNumber, lapNumber = lap } ordersByLap
