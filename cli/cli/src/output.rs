@@ -1,4 +1,4 @@
-use motorsport::{duration, Car, Driver};
+use motorsport::{Car, Driver, duration};
 use serde::{Serialize, Serializer};
 
 use crate::preprocess::LapWithMetadata;

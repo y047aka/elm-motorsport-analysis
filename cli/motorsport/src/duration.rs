@@ -43,9 +43,7 @@ pub fn to_string(ms: Duration) -> String {
             let hours = s / 3600;
             let minutes = (s % 3600) / 60;
             let seconds = s % 60;
-            format!(
-                "{hours}:{minutes:02}:{seconds:02}.{milliseconds:03}"
-            )
+            format!("{hours}:{minutes:02}:{seconds:02}.{milliseconds:03}")
         }
     }
 }

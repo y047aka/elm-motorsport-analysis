@@ -1,4 +1,4 @@
-use motorsport::{duration, Car, Class, Driver, Lap, MetaData};
+use motorsport::{Car, Class, Driver, Lap, MetaData, duration};
 use serde::Deserialize;
 use std::collections::HashMap;
 

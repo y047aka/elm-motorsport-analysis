@@ -6,8 +6,8 @@ pub mod output;
 pub mod preprocess;
 
 pub use config::Config;
-pub use output::{create_output, Output};
-pub use preprocess::{group_laps_by_car, parse_laps_from_csv, LapWithMetadata};
+pub use output::{Output, create_output};
+pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let csv_content = fs::read_to_string(&config.input_file)

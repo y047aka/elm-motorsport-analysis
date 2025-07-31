@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cli::{create_output, group_laps_by_car, parse_laps_from_csv, run, Config};
+use cli::{Config, create_output, group_laps_by_car, parse_laps_from_csv, run};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -566,9 +566,7 @@ fn assert_json_exact_match(
             .enumerate()
         {
             if !json_equals_ignore_kph_precision(elm_car, rust_car) {
-                println!(
-                    "[{race_name}] First preprocessed car difference at index {i}"
-                );
+                println!("[{race_name}] First preprocessed car difference at index {i}");
                 println!(
                     "Elm car:  {}",
                     serde_json::to_string_pretty(elm_car).unwrap()
@@ -581,8 +579,11 @@ fn assert_json_exact_match(
             }
         }
 
-        panic!("[{}] JSON outputs do not match exactly. Check test_exact_match_*_{}.json files for detailed comparison.",
-            race_name, race_name.replace(" ", "_").to_lowercase());
+        panic!(
+            "[{}] JSON outputs do not match exactly. Check test_exact_match_*_{}.json files for detailed comparison.",
+            race_name,
+            race_name.replace(" ", "_").to_lowercase()
+        );
     }
 
     println!("[{race_name}] ✓ JSON outputs match exactly!");
