@@ -6,7 +6,7 @@ import Data.F1.Decoder as F1
 import List.Extra as List
 import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Class as Class
-import Motorsport.Lap as Lap
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap.Performance exposing (findPersonalBest)
 import Motorsport.Manufacturer as Manufacturer
 
@@ -78,7 +78,7 @@ getPositionAt { carNumber, lapNumber } ordersByLap =
 
 preprocess_ :
     { carNumber : String
-    , driver : F1.Driver
+    , driver : Driver
     , laps : List F1.Lap
     , startPositions : List String
     , ordersByLap : OrdersByLap
