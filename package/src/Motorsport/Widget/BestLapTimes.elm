@@ -55,8 +55,8 @@ processClassBestTimes viewModel =
                                 car.lastLap
                                     |> Maybe.map
                                         (\lap ->
-                                            { class = car.metaData.class
-                                            , carNumber = car.metaData.carNumber
+                                            { class = car.metadata.class
+                                            , carNumber = car.metadata.carNumber
                                             , bestTime = lap.best
                                             , sector1 = lap.sector_1
                                             , sector2 = lap.sector_2

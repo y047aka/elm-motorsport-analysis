@@ -269,12 +269,12 @@ driverNameColumn_F1 { label, getter } =
     }
 
 
-driverAndTeamColumn_Wec : { getter : data -> { a | metaData : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } } -> Column data msg
+driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } } -> Column data msg
 driverAndTeamColumn_Wec { getter } =
     let
-        view_ { metaData, currentDriver } =
+        view_ { metadata, currentDriver } =
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ div [] [ text metaData.team ]
+                [ div [] [ text metadata.team ]
                 , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
                     List.map
                         (\driver ->
@@ -292,7 +292,7 @@ driverAndTeamColumn_Wec { getter } =
                                 ]
                                 [ text (formatName driver.name) ]
                         )
-                        metaData.drivers
+                        metadata.drivers
                 ]
 
         formatName name =
@@ -302,9 +302,9 @@ driverAndTeamColumn_Wec { getter } =
                 |> Maybe.withDefault (String.toUpper name)
     in
     { name = "Team / Driver"
-    , view = getter >> (\{ metaData, currentDriver } -> Lazy.lazy view_ { metaData = metaData, currentDriver = currentDriver })
-    , sorter = compareBy (getter >> .metaData >> .team)
-    , filter = \data query -> getter data |> (.metaData >> .team) |> String.startsWith query
+    , view = getter >> (\{ metadata, currentDriver } -> Lazy.lazy view_ { metadata = metadata, currentDriver = currentDriver })
+    , sorter = compareBy (getter >> .metadata >> .team)
+    , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
     }
 
 

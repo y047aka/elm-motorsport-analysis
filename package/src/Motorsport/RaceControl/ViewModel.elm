@@ -43,7 +43,7 @@ type alias ViewModelItem =
     { position : Int
     , positionInClass : Int
     , status : Status
-    , metaData : Car.MetaData
+    , metadata : Car.Metadata
     , lap : Int
     , timing : Timing
     , currentLap : Maybe Lap
@@ -77,11 +77,11 @@ init { clock, lapCount, cars } =
                             raceClock =
                                 { elapsed = Clock.getElapsed clock }
 
-                            metaData =
-                                car.metaData
+                            metadata =
+                                car.metadata
 
                             positionInClass =
-                                Dict.get car.metaData.carNumber positionsInClass
+                                Dict.get car.metadata.carNumber positionsInClass
                                     |> Maybe.withDefault 1
 
                             lastLap =
@@ -90,7 +90,7 @@ init { clock, lapCount, cars } =
                         { position = index + 1
                         , positionInClass = positionInClass
                         , status = car.status
-                        , metaData = metaData
+                        , metadata = metadata
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
@@ -112,8 +112,8 @@ init { clock, lapCount, cars } =
     , items = sortedItems
     , itemsByClass =
         sortedItems
-            |> SortedList.gatherEqualsBy (.metaData >> .class)
-            |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+            |> SortedList.gatherEqualsBy (.metadata >> .class)
+            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
     }
 
 
@@ -159,11 +159,11 @@ positionsInClassByCarNumber : NonEmpty Car -> Dict String Int
 positionsInClassByCarNumber cars =
     cars
         |> NonEmpty.toList
-        |> List.Extra.gatherEqualsBy (.metaData >> .class)
+        |> List.Extra.gatherEqualsBy (.metadata >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->
                 (firstCar :: restCars)
-                    |> List.indexedMap (\index car -> ( car.metaData.carNumber, index + 1 ))
+                    |> List.indexedMap (\index car -> ( car.metadata.carNumber, index + 1 ))
             )
         |> Dict.fromList
 

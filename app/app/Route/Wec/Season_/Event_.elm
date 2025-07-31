@@ -372,12 +372,12 @@ analysisWidgets { clock } analysis viewModel =
 
 config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config season analysis =
-    { toId = .metaData >> .carNumber
+    { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
+        , carNumberColumn_Wec season { getter = .metadata }
+        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , let
             view_ carNumber =
                 case Series.carImageUrl_Wec season carNumber of
@@ -389,8 +389,8 @@ config season analysis =
           in
           veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Lazy.lazy view_
-            , sorter = compareBy (.metaData >> .carNumber)
+            , getter = .metadata >> .carNumber >> Lazy.lazy view_
+            , sorter = compareBy (.metadata >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
@@ -487,12 +487,12 @@ eventTypeToString eventType =
 
 config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
 config_LeMans24h season analysis =
-    { toId = .metaData >> .carNumber
+    { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
+        , carNumberColumn_Wec season { getter = .metadata }
+        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , let
             view_ carNumber =
                 case Series.carImageUrl_Wec season carNumber of
@@ -504,8 +504,8 @@ config_LeMans24h season analysis =
           in
           veryCustomColumn
             { label = "-"
-            , getter = .metaData >> .carNumber >> Lazy.lazy view_
-            , sorter = compareBy (.metaData >> .carNumber)
+            , getter = .metadata >> .carNumber >> Lazy.lazy view_
+            , sorter = compareBy (.metadata >> .carNumber)
             }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn

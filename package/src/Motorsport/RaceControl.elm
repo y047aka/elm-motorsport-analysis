@@ -45,7 +45,7 @@ placeholder : Model
 placeholder =
     let
         dummyCar =
-            { metaData = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
+            { metadata = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
             , startPosition = 0
             , laps = []
             , currentLap = Nothing
@@ -113,7 +113,7 @@ calcEvents timeLimit cars =
                             |> List.map
                                 (\lap ->
                                     { eventTime = lap.elapsed
-                                    , eventType = CarEvent car.metaData.carNumber (LapCompleted lap.lap)
+                                    , eventType = CarEvent car.metadata.carNumber (LapCompleted lap.lap)
                                     }
                                 )
                     )
@@ -128,10 +128,10 @@ calcEvents timeLimit cars =
                                 (\finalLap ->
                                     -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
                                     if finalLap.elapsed < timeLimit then
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Retirement }
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Retirement }
 
                                     else
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metaData.carNumber Checkered }
+                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Checkered }
                                 )
                     )
     in
@@ -340,7 +340,7 @@ applyEvents currentElapsed events cars =
                                 (\event ->
                                     case event.eventType of
                                         CarEvent carNumber _ ->
-                                            carNumber == car.metaData.carNumber
+                                            carNumber == car.metadata.carNumber
 
                                         _ ->
                                             False

@@ -176,16 +176,16 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
 
 config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
-    { toId = .metaData >> .carNumber
+    { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , stringColumn { label = "#", getter = .metaData >> .carNumber }
+        , stringColumn { label = "#", getter = .metadata >> .carNumber }
         , driverNameColumn_F1
             { label = "Driver"
             , getter = .currentDriver >> Maybe.map .name >> Maybe.withDefault ""
             }
-        , stringColumn { label = "Team", getter = .metaData >> .team }
+        , stringColumn { label = "Team", getter = .metadata >> .team }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"

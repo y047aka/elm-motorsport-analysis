@@ -173,12 +173,12 @@ view app { analysis, raceControl } { leaderboardState } =
 
 config : Analysis -> Leaderboard.Config ViewModelItem Msg
 config analysis =
-    { toId = .metaData >> .carNumber
+    { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec 2025 { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
+        , carNumberColumn_Wec 2025 { getter = .metadata }
+        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lap }
         , sectorTimeColumn
             { label = "S1"
@@ -249,7 +249,7 @@ raceControlToLeaderboard { lapCount, cars } =
     let
         sortedItems =
             cars
-                |> NonEmpty.find (\car -> car.metaData.carNumber == "2")
+                |> NonEmpty.find (\car -> car.metadata.carNumber == "2")
                 |> Maybe.map
                     (\car ->
                         car.laps
@@ -259,7 +259,7 @@ raceControlToLeaderboard { lapCount, cars } =
                                     { position = index + 1
                                     , positionInClass = index + 1
                                     , status = car.status
-                                    , metaData = car.metaData
+                                    , metadata = car.metadata
                                     , lap = lap.lap
                                     , timing =
                                         { time = 0
@@ -285,6 +285,6 @@ raceControlToLeaderboard { lapCount, cars } =
     , items = sortedItems
     , itemsByClass =
         sortedItems
-            |> SortedList.gatherEqualsBy (.metaData >> .class)
-            |> List.map (\( first, rest ) -> ( first.metaData.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+            |> SortedList.gatherEqualsBy (.metadata >> .class)
+            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
     }

@@ -86,7 +86,7 @@ preprocess_ :
     -> Car
 preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
-        metaData =
+        metadata =
             { carNumber = carNumber
             , drivers = [ driver ]
             , class = Class.none
@@ -130,7 +130,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                         }
                     )
     in
-    { metaData = metaData
+    { metadata = metadata
     , startPosition = startPosition
     , laps = laps_
     , currentLap = Nothing

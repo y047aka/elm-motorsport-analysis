@@ -166,7 +166,7 @@ miniSectorDecoder =
 carDecoder : Decoder Car
 carDecoder =
     Decode.map7 Car
-        metaDataDecoder
+        metadataDecoder
         (field "startPosition" int)
         (field "laps" (Decode.list lapDecoder_))
         (field "currentLap" (Decode.maybe lapDecoder_))
@@ -175,9 +175,9 @@ carDecoder =
         (Decode.succeed Nothing)
 
 
-metaDataDecoder : Decoder Car.MetaData
-metaDataDecoder =
-    Decode.succeed Car.MetaData
+metadataDecoder : Decoder Car.Metadata
+metadataDecoder =
+    Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" classDecoder
