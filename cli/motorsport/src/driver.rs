@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct Driver {
     pub name: String,
+    #[serde(rename = "isCurrentDriver")]
     pub is_current_driver: bool,
 }
 
@@ -55,5 +56,17 @@ mod tests {
         let drivers: Vec<Driver> = vec![];
         let current = find_current_driver(&drivers);
         assert!(current.is_none());
+    }
+
+    #[test]
+    fn test_driver_json_serialization() {
+        let driver = Driver::new("Kamui KOBAYASHI".to_string(), true);
+        let json = serde_json::to_string(&driver).unwrap();
+
+        // キャメルケースで出力されることを確認
+        assert!(json.contains("\"isCurrentDriver\":true"));
+        assert!(!json.contains("\"is_current_driver\":true"));
+
+        println!("Driver JSON: {}", json);
     }
 }
