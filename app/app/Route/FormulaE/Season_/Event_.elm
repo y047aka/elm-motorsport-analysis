@@ -267,7 +267,7 @@ config season analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"

@@ -88,7 +88,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     let
         metaData =
             { carNumber = carNumber
-            , drivers = [ { name = driver.name, isCurrentDriver = True } ]
+            , drivers = [ driver ]
             , class = Class.none
             , group = "TODO"
             , team = driverToTeamName_2022 driver.name
@@ -136,6 +136,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
     , currentLap = Nothing
     , lastLap = Nothing
     , status = PreRace
+    , currentDriver = Just driver
     }
 
 

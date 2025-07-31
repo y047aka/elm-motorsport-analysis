@@ -5,6 +5,7 @@ import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer as Manufacturer
@@ -50,6 +51,7 @@ placeholder =
             , currentLap = Nothing
             , lastLap = Nothing
             , status = PreRace
+            , currentDriver = Nothing
             }
     in
     init (NonEmpty.singleton dummyCar)
@@ -288,9 +290,14 @@ updateCars raceClock cars =
     cars
         |> NonEmpty.map
             (\car ->
+                let
+                    currentLap =
+                        Lap.findCurrentLap raceClock car.laps
+                in
                 { car
-                    | currentLap = Lap.findCurrentLap raceClock car.laps
+                    | currentLap = currentLap
                     , lastLap = Lap.findLastLapAt raceClock car.laps
+                    , currentDriver = currentLap |> Maybe.map (\lap -> Driver lap.driver)
                 }
             )
         |> NonEmpty.sortWith

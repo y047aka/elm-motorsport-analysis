@@ -134,9 +134,7 @@ createMetaData carNumber =
 
 createDriver : String -> Driver
 createDriver name =
-    { name = name
-    , isCurrentDriver = True
-    }
+    { name = name }
 
 
 createTiming : Gap -> Timing

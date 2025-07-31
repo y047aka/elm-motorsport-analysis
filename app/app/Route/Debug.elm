@@ -11,6 +11,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
@@ -177,7 +178,7 @@ config analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec 2025 { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lap }
         , sectorTimeColumn
             { label = "S1"
@@ -270,6 +271,7 @@ raceControlToLeaderboard { lapCount, cars } =
                                     , currentLap = Just lap
                                     , lastLap = Just lap
                                     , history = []
+                                    , currentDriver = Just (Driver lap.driver)
                                     }
                                 )
                     )

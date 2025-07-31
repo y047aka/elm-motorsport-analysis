@@ -183,7 +183,7 @@ config analysis =
         , stringColumn { label = "#", getter = .metaData >> .carNumber }
         , driverNameColumn_F1
             { label = "Driver"
-            , getter = .metaData >> .drivers >> Driver.findCurrentDriver >> Maybe.map .name >> Maybe.withDefault ""
+            , getter = .currentDriver >> Maybe.map .name >> Maybe.withDefault ""
             }
         , stringColumn { label = "Team", getter = .metaData >> .team }
         , intColumn { label = "Lap", getter = .lap }

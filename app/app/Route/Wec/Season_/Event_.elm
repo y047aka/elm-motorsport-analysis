@@ -377,7 +377,7 @@ config season analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
         , let
             view_ carNumber =
                 case Series.carImageUrl_Wec season carNumber of
@@ -492,7 +492,7 @@ config_LeMans24h season analysis =
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metaData }
-        , driverAndTeamColumn_Wec { getter = .metaData }
+        , driverAndTeamColumn_Wec { getter = \item -> { metaData = item.metaData, currentDriver = item.currentDriver } }
         , let
             view_ carNumber =
                 case Series.carImageUrl_Wec season carNumber of

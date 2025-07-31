@@ -25,6 +25,7 @@ type alias Car =
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , status : Status
+    , currentDriver : Maybe Driver
     }
 
 

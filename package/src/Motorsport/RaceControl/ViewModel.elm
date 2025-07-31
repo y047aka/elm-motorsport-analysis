@@ -23,6 +23,7 @@ import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
@@ -48,6 +49,7 @@ type alias ViewModelItem =
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
     , history : List Lap
+    , currentDriver : Maybe Driver
     }
 
 
@@ -88,23 +90,7 @@ init { clock, lapCount, cars } =
                         { position = index + 1
                         , positionInClass = positionInClass
                         , status = car.status
-                        , metaData =
-                            { metaData
-                                | drivers =
-                                    List.map
-                                        (\{ name } ->
-                                            { name = name
-                                            , isCurrentDriver =
-                                                case car.currentLap of
-                                                    Just currentLap ->
-                                                        name == currentLap.driver
-
-                                                    Nothing ->
-                                                        False
-                                            }
-                                        )
-                                        car.metaData.drivers
-                            }
+                        , metaData = metaData
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
@@ -115,6 +101,7 @@ init { clock, lapCount, cars } =
                         , currentLap = car.currentLap
                         , lastLap = car.lastLap
                         , history = completedLapsAt raceClock car.laps
+                        , currentDriver = car.currentDriver
                         }
                     )
 
