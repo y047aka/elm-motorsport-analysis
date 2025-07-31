@@ -1,13 +1,14 @@
-module Motorsport.RaceControl exposing (CarEventType(..), Event, EventType(..), Model, Msg(..), applyEvents, calcEvents, fromCars, init, placeholder, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, fromCars, placeholder, update)
 
 import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
-import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
+import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
 import Time exposing (Posix, millisToPosix)
 
 
@@ -21,23 +22,8 @@ type alias Model =
     , lapTotal : Int
     , timeLimit : Int
     , cars : NonEmpty Car
-    , events : List Event
+    , timelineEvents : List TimelineEvent
     }
-
-
-type alias Event =
-    { eventTime : Duration, eventType : EventType }
-
-
-type EventType
-    = RaceStart
-    | CarEvent CarNumber CarEventType
-
-
-type CarEventType
-    = Retirement
-    | Checkered
-    | LapCompleted Int
 
 
 placeholder : Model
@@ -53,16 +39,16 @@ placeholder =
             , currentDriver = Nothing
             }
     in
-    init (NonEmpty.singleton dummyCar)
+    init [] (NonEmpty.singleton dummyCar)
 
 
-fromCars : List Car -> Maybe Model
-fromCars =
-    NonEmpty.fromList >> Maybe.map init
+fromCars : List TimelineEvent -> List Car -> Maybe Model
+fromCars timelineEvents cars =
+    NonEmpty.fromList cars |> Maybe.map (init timelineEvents)
 
 
-init : NonEmpty Car -> Model
-init cars =
+init : List TimelineEvent -> NonEmpty Car -> Model
+init timelineEvents cars =
     let
         carsList =
             NonEmpty.toList cars
@@ -75,7 +61,7 @@ init cars =
     , lapTotal = calcLapTotal cars
     , timeLimit = timeLimit
     , cars = cars
-    , events = calcEvents timeLimit carsList
+    , timelineEvents = timelineEvents
     }
 
 
@@ -92,50 +78,6 @@ calcTimeLimit =
         >> List.maximum
         >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
         >> Maybe.withDefault 0
-
-
-{-| 車両から各種イベント時刻を事前計算する関数
--}
-calcEvents : Duration -> List Car -> List Event
-calcEvents timeLimit cars =
-    let
-        -- レーススタートイベント（1つのみ、全車両に適用）
-        raceStartEvent =
-            { eventTime = 0, eventType = RaceStart }
-
-        -- 各車のラップ完了イベント
-        lapCompletionEvents =
-            cars
-                |> List.concatMap
-                    (\car ->
-                        car.laps
-                            |> List.map
-                                (\lap ->
-                                    { eventTime = lap.elapsed
-                                    , eventType = CarEvent car.metadata.carNumber (LapCompleted lap.lap)
-                                    }
-                                )
-                    )
-
-        -- 既存のリタイア・チェッカーイベント
-        finalEvents =
-            cars
-                |> List.filterMap
-                    (\car ->
-                        List.Extra.last car.laps
-                            |> Maybe.map
-                                (\finalLap ->
-                                    -- 時間制限より前に終わった車両はリタイア、以降はチェッカー
-                                    if finalLap.elapsed < timeLimit then
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Retirement }
-
-                                    else
-                                        { eventTime = finalLap.elapsed, eventType = CarEvent car.metadata.carNumber Checkered }
-                                )
-                    )
-    in
-    (raceStartEvent :: (lapCompletionEvents ++ finalEvents))
-        |> List.sortBy .eventTime
 
 
 
@@ -177,7 +119,7 @@ update msg m =
                             , lapCount = newClock.lapCount
                             , cars =
                                 m.cars
-                                    |> applyEvents newElapsed m.events
+                                    |> applyEvents newElapsed m.timelineEvents
                                     |> NonEmpty.sortWith
                                         (\a b ->
                                             Maybe.map2 (Lap.compareAt { elapsed = newClock.elapsed }) a.currentLap b.currentLap
@@ -276,7 +218,7 @@ update msg m =
                 , cars =
                     m.cars
                         |> updateCars { elapsed = elapsed }
-                        |> applyEvents elapsed m.events
+                        |> applyEvents elapsed m.timelineEvents
             }
 
 
@@ -308,7 +250,7 @@ updateCars raceClock cars =
 
 {-| イベントが車両固有のイベントかどうかを判定する
 -}
-isCarEvent : Event -> Bool
+isCarEvent : TimelineEvent -> Bool
 isCarEvent { eventType } =
     case eventType of
         CarEvent _ _ ->
@@ -320,7 +262,7 @@ isCarEvent { eventType } =
 
 {-| イベント情報に基づいて車両のステータスを更新する
 -}
-applyEvents : Duration -> List Event -> NonEmpty Car -> NonEmpty Car
+applyEvents : Duration -> List TimelineEvent -> NonEmpty Car -> NonEmpty Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
@@ -355,7 +297,7 @@ applyEvents currentElapsed events cars =
 
 {-| 単一のイベントを車両に適用する
 -}
-applyEventToCar : Event -> Car -> Car
+applyEventToCar : TimelineEvent -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
@@ -369,13 +311,13 @@ applyEventToCar event car =
                 , status = Racing
             }
 
-        CarEvent _ Retirement ->
+        CarEvent _ TimelineEvent.Retirement ->
             Car.setStatus Retired car
 
-        CarEvent _ Checkered ->
+        CarEvent _ TimelineEvent.Checkered ->
             Car.setStatus Car.Checkered car
 
-        CarEvent _ (LapCompleted lapNumber) ->
+        CarEvent _ (TimelineEvent.LapCompleted lapNumber) ->
             let
                 currentLap =
                     List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
