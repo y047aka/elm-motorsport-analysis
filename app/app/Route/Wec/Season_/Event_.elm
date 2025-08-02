@@ -476,6 +476,9 @@ eventTypeToString eventType =
         RaceStart ->
             "Race Started"
 
+        CarEvent _ (Start _) ->
+            "Start"
+
         CarEvent _ Retirement ->
             "Retirement"
 

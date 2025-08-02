@@ -29,7 +29,8 @@ type EventType
 
 
 type CarEventType
-    = Retirement
+    = Start { currentLap : Lap }
+    | Retirement
     | Checkered
     | LapCompleted Int { nextLap : Lap }
 
@@ -102,7 +103,13 @@ lapDecoder =
 carEventTypeDecoder : Decoder CarEventType
 carEventTypeDecoder =
     Decode.oneOf
-        [ Decode.map (\_ -> Retirement)
+        [ Decode.map Start
+            (field "Start"
+                (Decode.map (\currentLap -> { currentLap = currentLap })
+                    (field "current_lap" lapDecoder)
+                )
+            )
+        , Decode.map (\_ -> Retirement)
             (Decode.string
                 |> Decode.andThen
                     (\s ->

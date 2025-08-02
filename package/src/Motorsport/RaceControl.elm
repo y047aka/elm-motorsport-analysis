@@ -301,13 +301,12 @@ applyEventToCar : TimelineEvent -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
-            let
-                currentLap =
-                    List.head car.laps
-            in
+            car
+
+        CarEvent _ (TimelineEvent.Start { currentLap }) ->
             { car
-                | currentLap = currentLap
-                , currentDriver = currentLap |> Maybe.map .driver
+                | currentLap = Just currentLap
+                , currentDriver = Just currentLap.driver
                 , status = Racing
             }
 

@@ -30,6 +30,7 @@ pub enum EventType {
 /// 車両イベントタイプ
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum CarEventType {
+    Start { current_lap: Lap },
     Retirement,
     Checkered,
     LapCompleted { lap_number: u32, next_lap: Lap },
@@ -59,6 +60,21 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
         event_time: 0,
         event_type: EventType::RaceStart,
     });
+
+    // 各車の1周目開始（Startイベント）
+    for car in cars {
+        if let Some(first_lap) = car.laps.first() {
+            events.push(TimelineEvent {
+                event_time: 0,
+                event_type: EventType::CarEvent(
+                    car.meta_data.car_number.clone(),
+                    CarEventType::Start {
+                        current_lap: first_lap.clone(),
+                    },
+                ),
+            });
+        }
+    }
 
     // 各車のラップ完了イベント（最終周以外）
     for car in cars {
