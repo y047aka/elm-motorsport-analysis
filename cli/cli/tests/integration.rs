@@ -132,27 +132,11 @@ fn test_cli_end_to_end_execution() {
             "carNumber field should exist"
         );
         assert!(car.get("drivers").is_some(), "drivers field should exist");
-        assert!(car.get("laps").is_some(), "laps field should exist");
         assert!(
             car.get("startPosition").is_some(),
             "startPosition field should exist"
         );
         assert!(car.get("class").is_some(), "class field should exist");
-        assert!(
-            car.get("currentLap").is_some(),
-            "currentLap field should exist"
-        );
-        assert!(car.get("lastLap").is_some(), "lastLap field should exist");
-
-        // Verify currentLap and lastLap are null for Elm compatibility
-        assert!(
-            car.get("currentLap").unwrap().is_null(),
-            "currentLap should be null"
-        );
-        assert!(
-            car.get("lastLap").unwrap().is_null(),
-            "lastLap should be null"
-        );
     }
 
     // Cleanup test file
@@ -349,20 +333,6 @@ fn test_elm_json_structure_and_field_compatibility() {
         assert!(
             car.get("startPosition").is_some() && car["startPosition"].is_number(),
             "startPosition field required and should be number"
-        );
-        assert!(
-            car.get("laps").is_some() && car["laps"].is_array(),
-            "laps field required and should be array"
-        );
-
-        // Elm互換性のためcurrentLapとlastLapがnullであることを確認
-        assert!(
-            car.get("currentLap").is_some() && car["currentLap"].is_null(),
-            "currentLap should exist and be null"
-        );
-        assert!(
-            car.get("lastLap").is_some() && car["lastLap"].is_null(),
-            "lastLap should exist and be null"
         );
     }
 }

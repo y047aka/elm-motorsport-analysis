@@ -17,7 +17,6 @@ import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap
 import Motorsport.LapExtractor as LapExtractor
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -183,8 +182,8 @@ carDecoder =
         metadataDecoder
         (field "startPosition" int)
         (Decode.succeed [])
-        (field "currentLap" (Decode.maybe lapDecoder_))
-        (field "lastLap" (Decode.maybe lapDecoder_))
+        (Decode.succeed Nothing)
+        (Decode.succeed Nothing)
         (Decode.succeed PreRace)
         (Decode.succeed Nothing)
 
@@ -204,27 +203,3 @@ driverDecoder : Decoder Driver
 driverDecoder =
     Decode.map Driver
         (field "name" string)
-
-
-lapDecoder_ : Decoder Motorsport.Lap.Lap
-lapDecoder_ =
-    Decode.succeed Motorsport.Lap.Lap
-        |> required "carNumber" string
-        |> required "driver" (Decode.map Driver string)
-        |> required "lap" int
-        |> required "position" (Decode.maybe int)
-        |> required "time" durationDecoder
-        |> required "best" durationDecoder
-        |> required "sector_1" durationDecoder
-        |> required "sector_2" durationDecoder
-        |> required "sector_3" durationDecoder
-        |> required "s1_best" durationDecoder
-        |> required "s2_best" durationDecoder
-        |> required "s3_best" durationDecoder
-        |> required "elapsed" durationDecoder
-        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
-
-
-durationDecoder : Decoder Duration
-durationDecoder =
-    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")

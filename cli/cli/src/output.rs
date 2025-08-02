@@ -99,28 +99,6 @@ pub struct PreprocessedCar {
     pub team: String,
     pub manufacturer: String,
     pub start_position: i32,
-    pub laps: Vec<PreprocessedLap>,
-    pub current_lap: Option<PreprocessedLap>,
-    pub last_lap: Option<PreprocessedLap>,
-}
-
-/// Preprocessed lap format (車両内のlaps配列の要素)
-#[derive(Debug, Serialize)]
-pub struct PreprocessedLap {
-    #[serde(rename = "carNumber")]
-    pub car_number: String,
-    pub driver: String,
-    pub lap: u32,
-    pub position: Option<u32>,
-    pub time: String,
-    pub best: String,
-    pub sector_1: String,
-    pub sector_2: String,
-    pub sector_3: String,
-    pub s1_best: String,
-    pub s2_best: String,
-    pub s3_best: String,
-    pub elapsed: String,
 }
 
 /// 出力データ作成関数
@@ -197,9 +175,6 @@ fn preprocessed_cars_from(cars: &[Car]) -> Vec<PreprocessedCar> {
                 team: car.meta_data.team.clone(),
                 manufacturer: car.meta_data.manufacturer.clone(),
                 start_position: car.start_position,
-                laps: vec![],
-                current_lap: None,
-                last_lap: None,
             }
         })
         .collect()

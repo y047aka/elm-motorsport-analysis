@@ -9,8 +9,6 @@ pub struct Car {
     pub meta_data: MetaData,
     pub start_position: i32,
     pub laps: Vec<Lap>,
-    pub current_lap: Option<Lap>,
-    pub last_lap: Option<Lap>,
     pub status: Status,
 }
 
@@ -21,8 +19,6 @@ impl Car {
             meta_data,
             start_position,
             laps,
-            current_lap: None,
-            last_lap: None,
             status: Status::PreRace,
         }
     }
