@@ -266,7 +266,7 @@ applyEvents : Duration -> List TimelineEvent -> NonEmpty Car -> NonEmpty Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
-            List.filter (\{ eventTime } -> (currentElapsed - 10000) < eventTime && eventTime <= currentElapsed) events
+            List.filter (\{ eventTime } -> (currentElapsed - 1000) < eventTime && eventTime <= currentElapsed) events
 
         ( carSpecificEvents, globalEvents ) =
             List.partition isCarEvent activeEvents
