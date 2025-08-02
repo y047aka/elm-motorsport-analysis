@@ -19,8 +19,9 @@ import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, veryCustomColumn)
-import Motorsport.RaceControl as RaceControl exposing (CarEventType(..), Event, EventType(..))
+import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
@@ -430,7 +431,7 @@ eventsView eventsState raceControl =
             Clock.getElapsed raceControl.clock
 
         occurredEvents =
-            raceControl.events
+            raceControl.timelineEvents
                 |> List.filter (\event -> currentElapsed >= event.eventTime)
                 |> List.sortBy .eventTime
     in
@@ -440,7 +441,7 @@ eventsView eventsState raceControl =
         ]
 
 
-eventsConfig : DataView.Config Event Msg
+eventsConfig : DataView.Config TimelineEvent Msg
 eventsConfig =
     { toId = .eventTime >> Duration.toString
     , toMsg = EventsMsg

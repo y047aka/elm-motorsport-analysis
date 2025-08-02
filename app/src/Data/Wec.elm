@@ -1,12 +1,12 @@
 module Data.Wec exposing
     ( Event
-    , eventDecoder, lapDecoder
+    , eventDecoder
     )
 
 {-|
 
 @docs Event
-@docs eventDecoder, lapDecoder
+@docs eventDecoder
 
 -}
 
@@ -19,12 +19,14 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 type alias Event =
     { name : String
     , laps : List Lap
     , preprocessed : List Car
+    , timelineEvents : List TimelineEvent
     }
 
 
@@ -91,10 +93,11 @@ type alias MiniSector =
 
 eventDecoder : Decoder Event
 eventDecoder =
-    Decode.map3 Event
+    Decode.map4 Event
         (field "name" string)
         (field "laps" (list lapDecoder))
         (field "preprocessed" (list carDecoder))
+        (field "timeline_events" (list TimelineEvent.decoder))
 
 
 lapDecoder : Decoder Lap

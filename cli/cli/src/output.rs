@@ -1,4 +1,4 @@
-use motorsport::{Car, Driver, duration};
+use motorsport::{Car, Driver, TimelineEvent, calc_time_limit, calc_timeline_events, duration};
 use serde::{Serialize, Serializer};
 
 use crate::preprocess::LapWithMetadata;
@@ -74,6 +74,7 @@ pub struct Output {
     pub name: String,
     pub laps: Vec<RawLap>,
     pub preprocessed: Vec<PreprocessedCar>,
+    pub timeline_events: Vec<TimelineEvent>,
 }
 
 /// Raw lap data format (laps配列の要素)
@@ -150,10 +151,15 @@ pub fn create_output(
     let raw_laps = raw_laps_from(laps_with_metadata);
     let preprocessed_cars = preprocessed_cars_from(cars);
 
+    // タイムラインイベントを計算
+    let time_limit = calc_time_limit(cars);
+    let timeline_events = calc_timeline_events(time_limit, cars);
+
     Output {
         name: map_event_name(event_name).to_string(),
         laps: raw_laps,
         preprocessed: preprocessed_cars,
+        timeline_events,
     }
 }
 
@@ -287,5 +293,53 @@ mod tests {
         assert_eq!(map_event_name("bahrain_8h"), "8 Hours of Bahrain");
         assert_eq!(map_event_name("sao_paulo_6h"), "6 Hours of São Paulo");
         assert_eq!(map_event_name("unknown_event"), "Encoding Error");
+    }
+
+    #[test]
+    fn test_create_output_includes_timeline_events() {
+        use motorsport::{Car, Class, Driver, Lap, MetaData};
+
+        // テスト用の車両データを作成
+        let drivers = vec![Driver::new("Test Driver".to_string(), false)];
+        let metadata = MetaData::new(
+            "1".to_string(),
+            drivers,
+            Class::LMH,
+            "H".to_string(),
+            "Test Team".to_string(),
+            "Test Manufacturer".to_string(),
+        );
+
+        let laps = vec![Lap::new(
+            "1".to_string(),
+            "Test Driver".to_string(),
+            1,
+            Some(1),
+            95365,
+            95365,
+            23155,
+            29928,
+            42282,
+            23155,
+            29928,
+            42282,
+            95365,
+        )];
+
+        let car = Car::new(metadata, 1, laps);
+        let cars = vec![car];
+
+        // create_output関数でtimeline_eventsが含まれることをテスト
+        let output = create_output("test_event", &[], &cars);
+
+        // timeline_eventsフィールドが存在することを確認
+        assert!(!output.timeline_events.is_empty());
+
+        // 最初のイベントはレーススタートである
+        assert_eq!(output.timeline_events[0].event_time, 0);
+        assert_eq!(
+            output.timeline_events[0].event_type,
+            motorsport::EventType::RaceStart
+        );
     }
 }

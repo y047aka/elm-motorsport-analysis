@@ -109,7 +109,7 @@ update msg m =
             let
                 rcNew =
                     Preprocess_F1.preprocess decoded
-                        |> RaceControl.fromCars
+                        |> RaceControl.fromCars []
                         |> Maybe.withDefault RaceControl.placeholder
             in
             ( { m
@@ -140,8 +140,7 @@ update msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 rcNew =
-                    decoded.preprocessed
-                        |> RaceControl.fromCars
+                    RaceControl.fromCars decoded.timelineEvents decoded.preprocessed
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -176,8 +175,7 @@ update msg m =
         JsonLoaded_FormulaE (Ok decoded) ->
             let
                 rcNew =
-                    decoded.preprocessed
-                        |> RaceControl.fromCars
+                    RaceControl.fromCars decoded.timelineEvents decoded.preprocessed
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
