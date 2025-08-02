@@ -11,8 +11,12 @@ module Motorsport.TimelineEvent exposing
 -}
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
+import Json.Decode.Extra
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Car exposing (CarNumber)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Lap exposing (Lap)
 
 
 type alias TimelineEvent =
@@ -27,7 +31,7 @@ type EventType
 type CarEventType
     = Retirement
     | Checkered
-    | LapCompleted Int
+    | LapCompleted Int { nextLap : Lap }
 
 
 decoder : Decoder TimelineEvent
@@ -71,6 +75,30 @@ eventTypeDecoder =
         ]
 
 
+durationDecoder : Decoder Duration
+durationDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
+
+
+lapDecoder : Decoder Lap
+lapDecoder =
+    Decode.succeed Lap
+        |> required "car_number" string
+        |> required "driver" (Decode.map Driver string)
+        |> required "lap" int
+        |> required "position" (Decode.maybe int)
+        |> required "time" durationDecoder
+        |> required "best" durationDecoder
+        |> required "sector_1" durationDecoder
+        |> required "sector_2" durationDecoder
+        |> required "sector_3" durationDecoder
+        |> required "s1_best" durationDecoder
+        |> required "s2_best" durationDecoder
+        |> required "s3_best" durationDecoder
+        |> required "elapsed" durationDecoder
+        |> optional "miniSectors" (Decode.succeed Nothing) Nothing
+
+
 carEventTypeDecoder : Decoder CarEventType
 carEventTypeDecoder =
     Decode.oneOf
@@ -96,6 +124,11 @@ carEventTypeDecoder =
                             Decode.fail "Expected Checkered"
                     )
             )
-        , Decode.map LapCompleted
-            (field "LapCompleted" int)
+        , Decode.map2 LapCompleted
+            (field "LapCompleted" (field "lap_number" int))
+            (field "LapCompleted"
+                (Decode.map (\nextLap -> { nextLap = nextLap })
+                    (field "next_lap" lapDecoder)
+                )
+            )
         ]

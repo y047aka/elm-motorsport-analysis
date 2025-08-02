@@ -1,9 +1,10 @@
 use crate::car::CarNumber;
+use crate::lap::Lap;
 use crate::{Car, Duration, duration};
 use serde::{Deserialize, Serialize, Serializer};
 
 /// タイムラインイベント（レース中の時刻ベースのイベント）
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub struct TimelineEvent {
     #[serde(serialize_with = "serialize_event_time")]
     pub event_time: Duration,
@@ -20,18 +21,18 @@ where
 }
 
 /// イベントタイプ
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum EventType {
     RaceStart,
     CarEvent(CarNumber, CarEventType),
 }
 
 /// 車両イベントタイプ
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum CarEventType {
     Retirement,
     Checkered,
-    LapCompleted(u32),
+    LapCompleted { lap_number: u32, next_lap: Lap },
 }
 
 /// 車両データから時間制限を計算する関数
@@ -59,16 +60,23 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
         event_type: EventType::RaceStart,
     });
 
-    // 各車のラップ完了イベント
+    // 各車のラップ完了イベント（最終周以外）
     for car in cars {
-        for lap in &car.laps {
-            events.push(TimelineEvent {
-                event_time: lap.elapsed,
-                event_type: EventType::CarEvent(
-                    car.meta_data.car_number.clone(),
-                    CarEventType::LapCompleted(lap.lap),
-                ),
-            });
+        for (i, lap) in car.laps.iter().enumerate() {
+            // 最終周でない場合のみLapCompletedイベントを生成
+            if i + 1 < car.laps.len() {
+                let next_lap = car.laps[i + 1].clone();
+                events.push(TimelineEvent {
+                    event_time: lap.elapsed,
+                    event_type: EventType::CarEvent(
+                        car.meta_data.car_number.clone(),
+                        CarEventType::LapCompleted { 
+                            lap_number: lap.lap, 
+                            next_lap 
+                        },
+                    ),
+                });
+            }
         }
     }
 
@@ -135,11 +143,32 @@ mod tests {
         // Red: CarEventType enumがまだ存在しないため、このテストは失敗する
         let retirement = CarEventType::Retirement;
         let checkered = CarEventType::Checkered;
-        let lap_completed = CarEventType::LapCompleted(5);
+        let test_lap = Lap::new(
+            "1".to_string(),
+            "Test Driver".to_string(),
+            5,
+            Some(1),
+            95365,
+            95365,
+            23155,
+            29928,
+            42282,
+            23155,
+            29928,
+            42282,
+            95365,
+        );
+        let lap_completed = CarEventType::LapCompleted {
+            lap_number: 5,
+            next_lap: test_lap.clone(),
+        };
 
         assert_eq!(retirement, CarEventType::Retirement);
         assert_eq!(checkered, CarEventType::Checkered);
-        assert_eq!(lap_completed, CarEventType::LapCompleted(5));
+        assert_eq!(
+            lap_completed,
+            CarEventType::LapCompleted { lap_number: 5, next_lap: test_lap }
+        );
     }
 
     #[test]
@@ -242,7 +271,7 @@ mod tests {
         };
 
         let json = serde_json::to_string(&event).unwrap();
-        
+
         // event_timeが文字列形式で出力されることを確認
         assert!(json.contains("\"event_time\":\"1:35.365\""));
         assert!(json.contains("\"event_type\":\"RaceStart\""));

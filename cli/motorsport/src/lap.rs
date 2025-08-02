@@ -1,5 +1,21 @@
-use crate::Duration;
-use serde::{Deserialize, Serialize};
+use crate::{Duration, duration};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
+
+fn serialize_duration<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let formatted_duration = duration::to_string(*duration);
+    serializer.serialize_str(&formatted_duration)
+}
+
+fn deserialize_duration<'de, D>(deserializer: D) -> Result<Duration, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = String::deserialize(deserializer)?;
+    duration::from_string(&s).ok_or_else(|| serde::de::Error::custom("Invalid duration format"))
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Lap {
@@ -7,14 +23,23 @@ pub struct Lap {
     pub driver: String,
     pub lap: u32,
     pub position: Option<u32>,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub time: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub best: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub sector_1: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub sector_2: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub sector_3: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub s1_best: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub s2_best: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub s3_best: Duration,
+    #[serde(serialize_with = "serialize_duration", deserialize_with = "deserialize_duration")]
     pub elapsed: Duration,
     // pub mini_sectors: Option<MiniSectors>, // 後で拡張
 }

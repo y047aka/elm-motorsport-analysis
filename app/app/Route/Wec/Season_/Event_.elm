@@ -482,7 +482,7 @@ eventTypeToString eventType =
         CarEvent _ Checkered ->
             "Checkered Flag"
 
-        CarEvent _ (LapCompleted lap) ->
+        CarEvent _ (LapCompleted lap _) ->
             "Lap " ++ String.fromInt lap ++ " Completed"
 
 

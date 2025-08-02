@@ -317,10 +317,10 @@ applyEventToCar event car =
         CarEvent _ TimelineEvent.Checkered ->
             Car.setStatus Car.Checkered car
 
-        CarEvent _ (TimelineEvent.LapCompleted lapNumber) ->
+        CarEvent _ (TimelineEvent.LapCompleted lapNumber { nextLap }) ->
             let
                 currentLap =
-                    List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+                    Just nextLap
             in
             { car
                 | currentLap = currentLap
