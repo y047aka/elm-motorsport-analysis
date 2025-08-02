@@ -12,25 +12,6 @@ fn format_sector_time(raw_time: &str, sector_duration: u32) -> String {
     }
 }
 
-/// motorsport::Lap から PreprocessedLap への変換
-fn lap_to_preprocessed(lap: &motorsport::Lap) -> PreprocessedLap {
-    PreprocessedLap {
-        car_number: lap.car_number.clone(),
-        driver: lap.driver.clone(),
-        lap: lap.lap,
-        position: lap.position,
-        time: duration::to_string(lap.time),
-        best: duration::to_string(lap.best),
-        sector_1: duration::to_string(lap.sector_1),
-        sector_2: duration::to_string(lap.sector_2),
-        sector_3: duration::to_string(lap.sector_3),
-        s1_best: duration::to_string(lap.s1_best),
-        s2_best: duration::to_string(lap.s2_best),
-        s3_best: duration::to_string(lap.s3_best),
-        elapsed: duration::to_string(lap.elapsed),
-    }
-}
-
 /// KPH値のシリアライゼーション（.0を除去して整数として表示）
 fn serialize_speed<S>(kph: &f32, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -208,8 +189,6 @@ fn preprocessed_cars_from(cars: &[Car]) -> Vec<PreprocessedCar> {
         .map(|car| {
             let drivers = car.meta_data.drivers.clone();
 
-            let laps = car.laps.iter().map(lap_to_preprocessed).collect();
-
             PreprocessedCar {
                 car_number: car.meta_data.car_number.clone(),
                 drivers,
@@ -218,7 +197,7 @@ fn preprocessed_cars_from(cars: &[Car]) -> Vec<PreprocessedCar> {
                 team: car.meta_data.team.clone(),
                 manufacturer: car.meta_data.manufacturer.clone(),
                 start_position: car.start_position,
-                laps,
+                laps: vec![],
                 current_lap: None,
                 last_lap: None,
             }

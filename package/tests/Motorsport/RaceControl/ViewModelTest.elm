@@ -117,6 +117,7 @@ createViewModelItemWithGap position carNumber gap =
     , timing = createTiming gap
     , currentLap = Nothing
     , lastLap = Nothing
+    , currentDriver = Nothing
     , history = []
     }
 

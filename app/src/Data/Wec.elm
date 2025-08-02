@@ -18,6 +18,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap
+import Motorsport.LapExtractor as LapExtractor
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
@@ -96,8 +97,18 @@ eventDecoder =
     Decode.map4 Event
         (field "name" string)
         (field "laps" (list lapDecoder))
-        (field "preprocessed" (list carDecoder))
+        (Decode.map2 restoreLapsFromTimelineEvents
+            (field "timeline_events" (list TimelineEvent.decoder))
+            (field "preprocessed" (list carDecoder))
+        )
         (field "timeline_events" (list TimelineEvent.decoder))
+
+
+{-| timeline\_eventsからlapsを復元してpreprocessedのCarsに適用する
+-}
+restoreLapsFromTimelineEvents : List TimelineEvent -> List Car -> List Car
+restoreLapsFromTimelineEvents timelineEvents cars =
+    LapExtractor.extractLapsFromTimelineEvents timelineEvents cars
 
 
 lapDecoder : Decoder Lap
@@ -171,7 +182,7 @@ carDecoder =
     Decode.map7 Car
         metadataDecoder
         (field "startPosition" int)
-        (field "laps" (Decode.list lapDecoder_))
+        (Decode.succeed [])
         (field "currentLap" (Decode.maybe lapDecoder_))
         (field "lastLap" (Decode.maybe lapDecoder_))
         (Decode.succeed PreRace)
