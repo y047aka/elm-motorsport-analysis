@@ -70,9 +70,9 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
                     event_time: lap.elapsed,
                     event_type: EventType::CarEvent(
                         car.meta_data.car_number.clone(),
-                        CarEventType::LapCompleted { 
-                            lap_number: lap.lap, 
-                            next_lap 
+                        CarEventType::LapCompleted {
+                            lap_number: lap.lap,
+                            next_lap,
                         },
                     ),
                 });
@@ -167,7 +167,10 @@ mod tests {
         assert_eq!(checkered, CarEventType::Checkered);
         assert_eq!(
             lap_completed,
-            CarEventType::LapCompleted { lap_number: 5, next_lap: test_lap }
+            CarEventType::LapCompleted {
+                lap_number: 5,
+                next_lap: test_lap
+            }
         );
     }
 
