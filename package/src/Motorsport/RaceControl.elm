@@ -266,7 +266,7 @@ applyEvents : Duration -> List TimelineEvent -> NonEmpty Car -> NonEmpty Car
 applyEvents currentElapsed events cars =
     let
         activeEvents =
-            List.filter (\{ eventTime } -> (currentElapsed - 10000) < eventTime && eventTime <= currentElapsed) events
+            List.filter (\{ eventTime } -> (currentElapsed - 1000) < eventTime && eventTime <= currentElapsed) events
 
         ( carSpecificEvents, globalEvents ) =
             List.partition isCarEvent activeEvents
@@ -301,13 +301,12 @@ applyEventToCar : TimelineEvent -> Car -> Car
 applyEventToCar event car =
     case event.eventType of
         RaceStart ->
-            let
-                currentLap =
-                    List.head car.laps
-            in
+            car
+
+        CarEvent _ (TimelineEvent.Start { currentLap }) ->
             { car
-                | currentLap = currentLap
-                , currentDriver = currentLap |> Maybe.map .driver
+                | currentLap = Just currentLap
+                , currentDriver = Just currentLap.driver
                 , status = Racing
             }
 
@@ -317,10 +316,10 @@ applyEventToCar event car =
         CarEvent _ TimelineEvent.Checkered ->
             Car.setStatus Car.Checkered car
 
-        CarEvent _ (TimelineEvent.LapCompleted lapNumber) ->
+        CarEvent _ (TimelineEvent.LapCompleted lapNumber { nextLap }) ->
             let
                 currentLap =
-                    List.Extra.find (\lap -> lap.lap == lapNumber + 1) car.laps
+                    Just nextLap
             in
             { car
                 | currentLap = currentLap
