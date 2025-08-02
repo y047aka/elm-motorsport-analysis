@@ -31,9 +31,9 @@ pub enum EventType {
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum CarEventType {
     Start { current_lap: Lap },
+    LapCompleted { lap_number: u32, next_lap: Lap },
     Retirement,
     Checkered,
-    LapCompleted { lap_number: u32, next_lap: Lap },
 }
 
 /// 車両データから時間制限を計算する関数

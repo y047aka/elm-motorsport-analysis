@@ -479,14 +479,14 @@ eventTypeToString eventType =
         CarEvent _ (Start _) ->
             "Start"
 
+        CarEvent _ (LapCompleted lap _) ->
+            "Lap " ++ String.fromInt lap ++ " Completed"
+
         CarEvent _ Retirement ->
             "Retirement"
 
         CarEvent _ Checkered ->
             "Checkered Flag"
-
-        CarEvent _ (LapCompleted lap _) ->
-            "Lap " ++ String.fromInt lap ++ " Completed"
 
 
 config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg

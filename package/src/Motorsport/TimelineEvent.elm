@@ -30,9 +30,9 @@ type EventType
 
 type CarEventType
     = Start { currentLap : Lap }
+    | LapCompleted Int { nextLap : Lap }
     | Retirement
     | Checkered
-    | LapCompleted Int { nextLap : Lap }
 
 
 decoder : Decoder TimelineEvent
@@ -109,6 +109,13 @@ carEventTypeDecoder =
                     (field "current_lap" lapDecoder)
                 )
             )
+        , Decode.map2 LapCompleted
+            (field "LapCompleted" (field "lap_number" int))
+            (field "LapCompleted"
+                (Decode.map (\nextLap -> { nextLap = nextLap })
+                    (field "next_lap" lapDecoder)
+                )
+            )
         , Decode.map (\_ -> Retirement)
             (Decode.string
                 |> Decode.andThen
@@ -130,12 +137,5 @@ carEventTypeDecoder =
                         else
                             Decode.fail "Expected Checkered"
                     )
-            )
-        , Decode.map2 LapCompleted
-            (field "LapCompleted" (field "lap_number" int))
-            (field "LapCompleted"
-                (Decode.map (\nextLap -> { nextLap = nextLap })
-                    (field "next_lap" lapDecoder)
-                )
             )
         ]
