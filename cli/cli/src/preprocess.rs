@@ -220,9 +220,7 @@ fn car_from_grouped_data(
     let meta = metadata_from(car_number, drivers, class, car_metadata);
 
     let processed_laps = process_laps(laps_with_metadata);
-    let (current_lap, last_lap) = current_and_last_lap(&processed_laps);
-
-    car_with_lap_data(meta, processed_laps, current_lap, last_lap)
+    car_with_lap_data(meta, processed_laps)
 }
 
 /// ドライバー名のリストからDriverのリストを作成
@@ -237,10 +235,10 @@ fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
 /// クラス文字列をClass enumにマッピング
 fn class_from(class_str: &str) -> Class {
     match class_str {
-        "HYPERCAR" => Class::LMH,
+        "HYPERCAR" => Class::HYPERCAR,
         "LMP2" => Class::LMP2,
         "LMGT3" => Class::LMGT3,
-        _ => Class::LMH, // デフォルト
+        _ => Class::HYPERCAR, // デフォルト
     }
 }
 
@@ -261,29 +259,11 @@ fn metadata_from(
     )
 }
 
-/// current_lapとlast_lapを決定
-fn current_and_last_lap(processed_laps: &[Lap]) -> (Option<Lap>, Option<Lap>) {
-    let current_lap = processed_laps.last().cloned();
-    let last_lap = if processed_laps.len() >= 2 {
-        processed_laps.get(processed_laps.len() - 2).cloned()
-    } else {
-        None
-    };
-    (current_lap, last_lap)
-}
-
 /// ラップデータを含むCarを作成
-fn car_with_lap_data(
-    meta: MetaData,
-    processed_laps: Vec<Lap>,
-    current_lap: Option<Lap>,
-    last_lap: Option<Lap>,
-) -> Car {
+fn car_with_lap_data(meta: MetaData, processed_laps: Vec<Lap>) -> Car {
     use motorsport::car::Status;
 
     let mut car = Car::new(meta, 1, processed_laps);
-    car.current_lap = current_lap;
-    car.last_lap = last_lap;
     car.status = Status::Racing;
     car
 }

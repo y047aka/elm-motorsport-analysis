@@ -117,42 +117,28 @@ fn test_cli_end_to_end_execution() {
     assert!(obj.contains_key("name"), "name field should exist");
     assert!(obj.contains_key("laps"), "laps field should exist");
     assert!(
-        obj.contains_key("preprocessed"),
-        "preprocessed field should exist"
+        obj.contains_key("startingGrid"),
+        "startingGrid field should exist"
     );
 
-    // Verify preprocessed car data exists
-    let preprocessed = obj.get("preprocessed").unwrap().as_array().unwrap();
-    assert!(!preprocessed.is_empty(), "Car data should exist");
+    // Verify starting grid data exists
+    let starting_grid = obj.get("startingGrid").unwrap().as_array().unwrap();
+    assert!(!starting_grid.is_empty(), "Car data should exist");
 
-    // Validate basic structure of each car
-    for car in preprocessed {
+    // Validate basic structure of each starting grid entry
+    for grid_entry in starting_grid {
+        assert!(
+            grid_entry.get("position").is_some(),
+            "position field should exist"
+        );
+        assert!(grid_entry.get("car").is_some(), "car field should exist");
+        let car = grid_entry.get("car").unwrap();
         assert!(
             car.get("carNumber").is_some(),
             "carNumber field should exist"
         );
         assert!(car.get("drivers").is_some(), "drivers field should exist");
-        assert!(car.get("laps").is_some(), "laps field should exist");
-        assert!(
-            car.get("startPosition").is_some(),
-            "startPosition field should exist"
-        );
         assert!(car.get("class").is_some(), "class field should exist");
-        assert!(
-            car.get("currentLap").is_some(),
-            "currentLap field should exist"
-        );
-        assert!(car.get("lastLap").is_some(), "lastLap field should exist");
-
-        // Verify currentLap and lastLap are null for Elm compatibility
-        assert!(
-            car.get("currentLap").unwrap().is_null(),
-            "currentLap should be null"
-        );
-        assert!(
-            car.get("lastLap").unwrap().is_null(),
-            "lastLap should be null"
-        );
     }
 
     // Cleanup test file
@@ -274,14 +260,14 @@ fn test_elm_json_structure_and_field_compatibility() {
     assert!(json_value.get("name").is_some(), "name field required");
     assert!(json_value.get("laps").is_some(), "laps field required");
     assert!(
-        json_value.get("preprocessed").is_some(),
-        "preprocessed field required"
+        json_value.get("startingGrid").is_some(),
+        "startingGrid field required"
     );
     assert!(json_value["name"].is_string(), "name should be string");
     assert!(json_value["laps"].is_array(), "laps should be array");
     assert!(
-        json_value["preprocessed"].is_array(),
-        "preprocessed should be array"
+        json_value["startingGrid"].is_array(),
+        "startingGrid should be array"
     );
 
     // ラップフィールドの完全性と型チェック
@@ -328,10 +314,22 @@ fn test_elm_json_structure_and_field_compatibility() {
         }
     }
 
-    // 前処理済み車両フィールドの完全性と型チェック
-    let preprocessed_array = json_value["preprocessed"].as_array().unwrap();
-    if !preprocessed_array.is_empty() {
-        let car = &preprocessed_array[0];
+    // スターティンググリッドフィールドの完全性と型チェック
+    let starting_grid_array = json_value["startingGrid"].as_array().unwrap();
+    if !starting_grid_array.is_empty() {
+        let grid_entry = &starting_grid_array[0];
+
+        // グリッドエントリレベルフィールド
+        assert!(
+            grid_entry.get("position").is_some() && grid_entry["position"].is_number(),
+            "position field required and should be number"
+        );
+        assert!(
+            grid_entry.get("car").is_some() && grid_entry["car"].is_object(),
+            "car field required and should be object"
+        );
+
+        let car = &grid_entry["car"];
 
         // 車両レベルフィールド
         assert!(
@@ -345,24 +343,6 @@ fn test_elm_json_structure_and_field_compatibility() {
         assert!(
             car.get("class").is_some() && car["class"].is_string(),
             "class field required and should be string"
-        );
-        assert!(
-            car.get("startPosition").is_some() && car["startPosition"].is_number(),
-            "startPosition field required and should be number"
-        );
-        assert!(
-            car.get("laps").is_some() && car["laps"].is_array(),
-            "laps field required and should be array"
-        );
-
-        // Elm互換性のためcurrentLapとlastLapがnullであることを確認
-        assert!(
-            car.get("currentLap").is_some() && car["currentLap"].is_null(),
-            "currentLap should exist and be null"
-        );
-        assert!(
-            car.get("lastLap").is_some() && car["lastLap"].is_null(),
-            "lastLap should exist and be null"
         );
     }
 }

@@ -1,4 +1,4 @@
-use motorsport::{Car, Driver, TimelineEvent, calc_time_limit, calc_timeline_events, duration};
+use motorsport::{Car, TimelineEvent, calc_time_limit, calc_timeline_events, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::preprocess::LapWithMetadata;
@@ -51,10 +51,11 @@ where
 
 /// 3層出力データ構造
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Output {
     pub name: String,
     pub laps: Vec<RawLap>,
-    pub preprocessed: Vec<PreprocessedCar>,
+    pub starting_grid: Vec<StartingGrid>,
     pub timeline_events: Vec<TimelineEvent>,
 }
 
@@ -88,39 +89,12 @@ pub struct RawLap {
     pub manufacturer: String,
 }
 
-/// Preprocessed car data format (preprocessed配列の要素)
+/// Starting grid entry format (startingGrid配列の要素)
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PreprocessedCar {
-    pub car_number: String,
-    pub drivers: Vec<Driver>,
-    pub class: String,
-    pub group: String,
-    pub team: String,
-    pub manufacturer: String,
-    pub start_position: i32,
-    pub laps: Vec<PreprocessedLap>,
-    pub current_lap: Option<PreprocessedLap>,
-    pub last_lap: Option<PreprocessedLap>,
-}
-
-/// Preprocessed lap format (車両内のlaps配列の要素)
-#[derive(Debug, Serialize)]
-pub struct PreprocessedLap {
-    #[serde(rename = "carNumber")]
-    pub car_number: String,
-    pub driver: String,
-    pub lap: u32,
-    pub position: Option<u32>,
-    pub time: String,
-    pub best: String,
-    pub sector_1: String,
-    pub sector_2: String,
-    pub sector_3: String,
-    pub s1_best: String,
-    pub s2_best: String,
-    pub s3_best: String,
-    pub elapsed: String,
+pub struct StartingGrid {
+    pub position: i32,
+    pub car: car::MetaData,
 }
 
 /// 出力データ作成関数
@@ -130,7 +104,7 @@ pub fn create_output(
     cars: &[Car],
 ) -> Output {
     let raw_laps = raw_laps_from(laps_with_metadata);
-    let preprocessed_cars = preprocessed_cars_from(cars);
+    let starting_grid = starting_grid_from(cars);
 
     // タイムラインイベントを計算
     let time_limit = calc_time_limit(cars);
@@ -139,7 +113,7 @@ pub fn create_output(
     Output {
         name: map_event_name(event_name).to_string(),
         laps: raw_laps,
-        preprocessed: preprocessed_cars,
+        starting_grid,
         timeline_events,
     }
 }
@@ -183,24 +157,12 @@ fn raw_laps_from(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
         .collect()
 }
 
-/// Car から PreprocessedCar への変換
-fn preprocessed_cars_from(cars: &[Car]) -> Vec<PreprocessedCar> {
+/// Car から StartingGrid への変換
+fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
     cars.iter()
-        .map(|car| {
-            let drivers = car.meta_data.drivers.clone();
-
-            PreprocessedCar {
-                car_number: car.meta_data.car_number.clone(),
-                drivers,
-                class: car.meta_data.class.to_string().to_string(),
-                group: car.meta_data.group.clone(),
-                team: car.meta_data.team.clone(),
-                manufacturer: car.meta_data.manufacturer.clone(),
-                start_position: car.start_position,
-                laps: vec![],
-                current_lap: None,
-                last_lap: None,
-            }
+        .map(|car| StartingGrid {
+            position: car.start_position,
+            car: car.meta_data.clone(),
         })
         .collect()
 }
@@ -283,7 +245,7 @@ mod tests {
         let metadata = MetaData::new(
             "1".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Test Team".to_string(),
             "Test Manufacturer".to_string(),
@@ -320,5 +282,53 @@ mod tests {
             output.timeline_events[0].event_type,
             motorsport::EventType::RaceStart
         );
+    }
+
+    #[test]
+    fn test_create_output_includes_starting_grid() {
+        use motorsport::{Car, Class, Driver, Lap, MetaData};
+
+        // テスト用の車両データを作成
+        let drivers = vec![Driver::new("Test Driver".to_string(), false)];
+        let metadata = MetaData::new(
+            "1".to_string(),
+            drivers,
+            Class::HYPERCAR,
+            "H".to_string(),
+            "Test Team".to_string(),
+            "Test Manufacturer".to_string(),
+        );
+
+        let laps = vec![Lap::new(
+            "1".to_string(),
+            "Test Driver".to_string(),
+            1,
+            Some(1),
+            95365,
+            95365,
+            23155,
+            29928,
+            42282,
+            23155,
+            29928,
+            42282,
+            95365,
+        )];
+
+        let car = Car::new(metadata, 1, laps);
+        let cars = vec![car];
+
+        // create_output関数でstarting_gridが含まれることをテスト
+        let output = create_output("test_event", &[], &cars);
+
+        // starting_gridフィールドが存在することを確認
+        assert_eq!(output.starting_grid.len(), 1);
+
+        // starting_gridの構造を確認
+        let grid_entry = &output.starting_grid[0];
+        assert_eq!(grid_entry.position, 1);
+        assert_eq!(grid_entry.car.car_number, "1");
+        assert_eq!(grid_entry.car.team, "Test Team");
+        assert_eq!(grid_entry.car.manufacturer, "Test Manufacturer");
     }
 }

@@ -214,7 +214,7 @@ mod tests {
         let metadata = MetaData::new(
             "1".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Test Team".to_string(),
             "Test Manufacturer".to_string(),
@@ -308,7 +308,7 @@ mod tests {
         let metadata = MetaData::new(
             "1".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Test Team".to_string(),
             "Test Manufacturer".to_string(),

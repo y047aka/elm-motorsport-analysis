@@ -13,12 +13,10 @@ module Data.Wec exposing
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Car as Car exposing (Car, Status(..))
+import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap
-import Motorsport.LapExtractor as LapExtractor
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
@@ -26,8 +24,14 @@ import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 type alias Event =
     { name : String
     , laps : List Lap
-    , preprocessed : List Car
+    , startingGrid : List StartingGridItem
     , timelineEvents : List TimelineEvent
+    }
+
+
+type alias StartingGridItem =
+    { position : Int
+    , car : Car.Metadata
     }
 
 
@@ -97,18 +101,15 @@ eventDecoder =
     Decode.map4 Event
         (field "name" string)
         (field "laps" (list lapDecoder))
-        (Decode.map2 restoreLapsFromTimelineEvents
-            (field "timeline_events" (list TimelineEvent.decoder))
-            (field "preprocessed" (list carDecoder))
-        )
-        (field "timeline_events" (list TimelineEvent.decoder))
+        (field "startingGrid" (list startingGridItemDecoder))
+        (field "timelineEvents" (list TimelineEvent.decoder))
 
 
-{-| timeline\_eventsからlapsを復元してpreprocessedのCarsに適用する
--}
-restoreLapsFromTimelineEvents : List TimelineEvent -> List Car -> List Car
-restoreLapsFromTimelineEvents timelineEvents cars =
-    LapExtractor.extractLapsFromTimelineEvents timelineEvents cars
+startingGridItemDecoder : Decoder StartingGridItem
+startingGridItemDecoder =
+    Decode.map2 StartingGridItem
+        (field "position" int)
+        (field "car" carMetadataDecoder)
 
 
 lapDecoder : Decoder Lap
@@ -177,20 +178,8 @@ miniSectorDecoder =
         |> required "best" (Decode.maybe raceClockDecoder)
 
 
-carDecoder : Decoder Car
-carDecoder =
-    Decode.map7 Car
-        metadataDecoder
-        (field "startPosition" int)
-        (Decode.succeed [])
-        (field "currentLap" (Decode.maybe lapDecoder_))
-        (field "lastLap" (Decode.maybe lapDecoder_))
-        (Decode.succeed PreRace)
-        (Decode.succeed Nothing)
-
-
-metadataDecoder : Decoder Car.Metadata
-metadataDecoder =
+carMetadataDecoder : Decoder Car.Metadata
+carMetadataDecoder =
     Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
@@ -204,27 +193,3 @@ driverDecoder : Decoder Driver
 driverDecoder =
     Decode.map Driver
         (field "name" string)
-
-
-lapDecoder_ : Decoder Motorsport.Lap.Lap
-lapDecoder_ =
-    Decode.succeed Motorsport.Lap.Lap
-        |> required "carNumber" string
-        |> required "driver" (Decode.map Driver string)
-        |> required "lap" int
-        |> required "position" (Decode.maybe int)
-        |> required "time" durationDecoder
-        |> required "best" durationDecoder
-        |> required "sector_1" durationDecoder
-        |> required "sector_2" durationDecoder
-        |> required "sector_3" durationDecoder
-        |> required "s1_best" durationDecoder
-        |> required "s2_best" durationDecoder
-        |> required "s3_best" durationDecoder
-        |> required "elapsed" durationDecoder
-        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
-
-
-durationDecoder : Decoder Duration
-durationDecoder =
-    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
