@@ -13,7 +13,7 @@ module Data.FormulaE exposing
 import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (hardcoded, required)
-import Motorsport.Car as Car exposing (Car, Status(..))
+import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -24,8 +24,14 @@ import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 type alias Event =
     { name : String
     , laps : List Lap
-    , preprocessed : List Car
+    , startingGrid : List StartingGridItem
     , timelineEvents : List TimelineEvent
+    }
+
+
+type alias StartingGridItem =
+    { position : Int
+    , car : Car.Metadata
     }
 
 
@@ -72,8 +78,15 @@ eventDecoder =
     Decode.map4 Event
         (field "name" string)
         (field "laps" (list lapDecoder))
-        (field "preprocessed" (list carDecoder))
-        (field "timeline_events" (list TimelineEvent.decoder))
+        (field "startingGrid" (list startingGridItemDecoder))
+        (field "timelineEvents" (list TimelineEvent.decoder))
+
+
+startingGridItemDecoder : Decoder StartingGridItem
+startingGridItemDecoder =
+    Decode.map2 StartingGridItem
+        (field "position" int)
+        (field "car" carMetadataDecoder)
 
 
 lapDecoder : Decoder Lap
@@ -119,20 +132,8 @@ classDecoder =
     Decode.succeed Class.none
 
 
-carDecoder : Decoder Car
-carDecoder =
-    Decode.map7 Car
-        metadataDecoder
-        (field "startPosition" int)
-        (Decode.succeed [])
-        (Decode.succeed Nothing)
-        (Decode.succeed Nothing)
-        (Decode.succeed PreRace)
-        (Decode.succeed Nothing)
-
-
-metadataDecoder : Decoder Car.Metadata
-metadataDecoder =
+carMetadataDecoder : Decoder Car.Metadata
+carMetadataDecoder =
     Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)

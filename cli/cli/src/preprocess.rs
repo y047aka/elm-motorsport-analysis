@@ -235,10 +235,10 @@ fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
 /// クラス文字列をClass enumにマッピング
 fn class_from(class_str: &str) -> Class {
     match class_str {
-        "HYPERCAR" => Class::LMH,
+        "HYPERCAR" => Class::HYPERCAR,
         "LMP2" => Class::LMP2,
         "LMGT3" => Class::LMGT3,
-        _ => Class::LMH, // デフォルト
+        _ => Class::HYPERCAR, // デフォルト
     }
 }
 

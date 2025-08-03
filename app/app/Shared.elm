@@ -17,6 +17,8 @@ import Html exposing (Html)
 import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
+import Motorsport.Car as Car exposing (Car)
+import Motorsport.LapExtractor as LapExtractor
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
@@ -139,8 +141,12 @@ update msg m =
 
         JsonLoaded_Wec (Ok decoded) ->
             let
+                cars =
+                    List.map startingGridItemToCar decoded.startingGrid
+                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
+
                 rcNew =
-                    RaceControl.fromCars decoded.timelineEvents decoded.preprocessed
+                    RaceControl.fromCars decoded.timelineEvents cars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -174,8 +180,12 @@ update msg m =
 
         JsonLoaded_FormulaE (Ok decoded) ->
             let
+                cars =
+                    List.map startingGridItemToCar decoded.startingGrid
+                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
+
                 rcNew =
-                    RaceControl.fromCars decoded.timelineEvents decoded.preprocessed
+                    RaceControl.fromCars decoded.timelineEvents cars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -215,6 +225,20 @@ update msg m =
               }
             , Effect.none
             )
+
+
+{-| StartingGridItemからCar型に変換する
+-}
+startingGridItemToCar : { position : Int, car : Car.Metadata } -> Car
+startingGridItemToCar item =
+    { metadata = item.car
+    , startPosition = item.position
+    , laps = []
+    , currentLap = Nothing
+    , lastLap = Nothing
+    , status = Car.PreRace
+    , currentDriver = Nothing
+    }
 
 
 

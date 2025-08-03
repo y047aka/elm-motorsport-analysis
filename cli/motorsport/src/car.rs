@@ -34,6 +34,7 @@ impl Car {
 
 /// 車両メタデータ
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct MetaData {
     pub car_number: CarNumber,
     pub drivers: Vec<Driver>,
@@ -120,14 +121,14 @@ mod tests {
         let metadata = MetaData::new(
             "12".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Hertz Team JOTA".to_string(),
             "Porsche".to_string(),
         );
 
         assert_eq!(metadata.car_number, "12");
-        assert_eq!(metadata.class, Class::LMH);
+        assert_eq!(metadata.class, Class::HYPERCAR);
         assert_eq!(metadata.group, "H");
         assert_eq!(metadata.team, "Hertz Team JOTA");
         assert_eq!(metadata.manufacturer, "Porsche");
@@ -144,7 +145,7 @@ mod tests {
         let metadata = MetaData::new(
             "12".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Hertz Team JOTA".to_string(),
             "Porsche".to_string(),
@@ -187,7 +188,7 @@ mod tests {
 
         assert_eq!(car.meta_data.car_number, "12");
         assert_eq!(car.meta_data.team, "Hertz Team JOTA");
-        assert_eq!(car.meta_data.class, Class::LMH);
+        assert_eq!(car.meta_data.class, Class::HYPERCAR);
         assert_eq!(car.start_position, 3);
         assert_eq!(car.laps.len(), 2);
         assert_eq!(car.status, Status::PreRace);
@@ -201,7 +202,7 @@ mod tests {
         let metadata = MetaData::new(
             "12".to_string(),
             drivers,
-            Class::LMH,
+            Class::HYPERCAR,
             "H".to_string(),
             "Hertz Team JOTA".to_string(),
             "Porsche".to_string(),
