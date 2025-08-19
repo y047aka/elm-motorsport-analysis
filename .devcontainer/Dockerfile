@@ -59,7 +59,14 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && mkdir -p /home/$USERNAME/.elm /home/$USERNAME/.cargo /home/$USERNAME/.rustup \
     && chown -R $USER_UID:$USER_GID /home/$USERNAME /usr/local/cargo /usr/local/rustup
 
+# Install Cursor CLI
+# https://docs.cursor.com/en/cli/installation
+USER $USERNAME
+RUN curl https://cursor.com/install -fsS | bash
+ENV PATH="/home/node/.local/bin:$PATH"
+
 # Setup Claude Code
+USER root
 RUN npm install -g @anthropic-ai/claude-code
 
 USER $USERNAME
