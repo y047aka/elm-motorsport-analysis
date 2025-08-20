@@ -4,9 +4,10 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
+				"eamodio.gitlens",
+				"anthropic.claude-code",
 				"elmTooling.elm-ls-vscode",
-				"rust-lang.rust-analyzer",
-				"anthropic.claude-code"
+				"rust-lang.rust-analyzer"
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",
@@ -20,13 +21,12 @@
 			}
 		}
 	},
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// 8000 is the default port used for the `elm reactor` command
-	// "forwardPorts": [8000],
-	"postCreateCommand": "npm install --ignore-scripts && elm --version && rustc --version",
 	"remoteUser": "node",
 	"mounts": [
 		"source=elm-cache,target=/home/node/.elm,type=volume",
 		"source=cargo-cache,target=/home/node/.cargo,type=volume"
-	]
+	],
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+	"workspaceFolder": "/workspace",
+	"postCreateCommand": "npm install --ignore-scripts && elm --version && rustc --version"
 }
