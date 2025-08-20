@@ -29,21 +29,12 @@ RUN apt-get update && apt-get install -y curl \
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
 
 ARG USERNAME=node
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
 
-# Install system packages and create user
+# Install system packages
 RUN apt-get update && apt-get install -y \
     curl wget git build-essential pkg-config libssl-dev ca-certificates sudo \
     && rm -rf /var/lib/apt/lists/* \
-    && userdel -r node 2>/dev/null || true \
-    && userdel -r vscode 2>/dev/null || true \
-    && groupdel node 2>/dev/null || true \
-    && groupdel vscode 2>/dev/null || true \
-    && groupadd --gid $USER_GID $USERNAME \
-    && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME \
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
+    && adduser $USERNAME
 
 # Copy tools from build stages
 COPY --from=nushell-stage /usr/bin/nu /usr/local/bin/nu
@@ -61,13 +52,13 @@ ENV CARGO_HOME=/usr/local/cargo \
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && npm install -g elm-format elm-test elm-review elm-verify-examples elm-pages \
     && mkdir -p /home/$USERNAME/.elm /home/$USERNAME/.cargo /home/$USERNAME/.rustup \
-    && chown -R $USER_UID:$USER_GID /home/$USERNAME /usr/local/cargo /usr/local/rustup
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME /usr/local/cargo /usr/local/rustup
 
 # Install Cursor CLI
 # https://docs.cursor.com/en/cli/installation
 USER $USERNAME
 RUN curl https://cursor.com/install -fsS | bash
-ENV PATH="/home/node/.local/bin:$PATH"
+ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 
 # Setup Claude Code
 USER root
