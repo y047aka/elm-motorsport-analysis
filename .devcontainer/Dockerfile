@@ -1,5 +1,8 @@
 # Multi-language development environment: Elm + Node.js + Rust
 
+# Stage 0: nushell
+FROM ghcr.io/nushell/nushell:latest-bookworm AS nushell-stage
+
 # Stage 1: Rust tools
 FROM rust:1.88-bookworm AS rust-stage
 RUN apt-get update && apt-get install -y build-essential pkg-config libssl-dev \
@@ -43,6 +46,7 @@ RUN apt-get update && apt-get install -y \
     && chmod 0440 /etc/sudoers.d/$USERNAME
 
 # Copy tools from build stages
+COPY --from=nushell-stage /usr/bin/nu /usr/local/bin/nu
 COPY --from=rust-stage /usr/local/cargo /usr/local/cargo
 COPY --from=rust-stage /usr/local/rustup /usr/local/rustup
 COPY --from=node-stage /usr/local/bin/node /usr/local/bin/node
@@ -55,7 +59,7 @@ ENV CARGO_HOME=/usr/local/cargo \
     PATH=/usr/local/cargo/bin:$PATH
 
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
-    && npm install -g elm-format elm-test elm-review elm-verify-examples elm-pages nushell \
+    && npm install -g elm-format elm-test elm-review elm-verify-examples elm-pages \
     && mkdir -p /home/$USERNAME/.elm /home/$USERNAME/.cargo /home/$USERNAME/.rustup \
     && chown -R $USER_UID:$USER_GID /home/$USERNAME /usr/local/cargo /usr/local/rustup
 
