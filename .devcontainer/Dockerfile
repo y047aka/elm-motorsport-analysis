@@ -1,4 +1,4 @@
-# Multi-language development environment: Elm + Node.js + Rust
+ARG CLAUDE_CODE_VERSION=latest
 
 # Stage 0: nushell
 FROM ghcr.io/nushell/nushell:latest-bookworm AS nushell-stage
@@ -25,8 +25,8 @@ RUN apt-get update && apt-get install -y curl \
     && mv elm /usr/local/bin/ \
     && rm -rf /var/lib/apt/lists/*
 
-# Stage 4: Final development environment
-FROM mcr.microsoft.com/devcontainers/base:ubuntu
+# Stage 4: Development environment without Claude CLI
+FROM mcr.microsoft.com/devcontainers/base:ubuntu AS without-agent-cli
 
 ARG USERNAME=node
 
@@ -60,14 +60,18 @@ RUN mkdir -p /workspace /home/$USERNAME/.cursor && \
 
 WORKDIR /workspace
 
+
+# Stage 5: Final development environment with Claude CLI
+FROM without-agent-cli
+
 # Install Cursor CLI
 # https://docs.cursor.com/en/cli/installation
 USER $USERNAME
 RUN curl https://cursor.com/install -fsS | bash
 ENV PATH="/home/$USERNAME/.local/bin:$PATH"
 
-# Setup Claude Code
+# Install Claude CLI
 USER root
-RUN npm install -g @anthropic-ai/claude-code
+RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}
 
 USER $USERNAME
