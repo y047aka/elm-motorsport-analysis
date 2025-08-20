@@ -18,10 +18,27 @@ RUN apt-get update && apt-get install -y curl \
     && mv elm /usr/local/bin/ \
     && rm -rf /var/lib/apt/lists/*
 
-# Stage 4: Development environment without Agent CLI
-FROM node:22-bookworm AS without-agent-cli
+# Stage 4: Base tools installation using official Playwright image
+FROM node:22-bookworm AS base-tools
 
 RUN npm install -g npm@latest
+
+# Install basic development tools
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    less \
+    git \
+    procps \
+    fzf \
+    zsh \
+    man-db \
+    unzip \
+    gnupg2 \
+    gh \
+    jq \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Stage 5: Development environment without Agent CLI
+FROM base-tools AS without-agent-cli
 
 # Copy tools from build stages
 COPY --from=nushell-stage /usr/bin/nu /usr/local/bin/nu
@@ -48,7 +65,7 @@ RUN mkdir -p /workspace /home/$USERNAME/.cursor && \
 WORKDIR /workspace
 
 
-# Stage 5: Final development environment with Claude CLI
+# Stage 6: Final development environment with Claude CLI
 FROM without-agent-cli
 
 # Install Cursor CLI
