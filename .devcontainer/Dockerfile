@@ -5,9 +5,7 @@ FROM ghcr.io/nushell/nushell:latest-bookworm AS nushell-stage
 
 # Stage 1: Rust tools
 FROM rust:1.88-bookworm AS rust-stage
-RUN apt-get update && apt-get install -y build-essential pkg-config libssl-dev \
-    && rm -rf /var/lib/apt/lists/* \
-    && rustup component add rustfmt clippy \
+RUN rustup component add rustfmt clippy \
     && cargo install cargo-watch cargo-expand
 
 # Stage 2: Node.js with latest npm
@@ -25,16 +23,11 @@ RUN apt-get update && apt-get install -y curl \
     && mv elm /usr/local/bin/ \
     && rm -rf /var/lib/apt/lists/*
 
-# Stage 4: Development environment without Claude CLI
-FROM mcr.microsoft.com/devcontainers/base:ubuntu AS without-agent-cli
+# Stage 4: Development environment without Agent CLI
+FROM mcr.microsoft.com/devcontainers/base:bookworm AS without-agent-cli
 
 ARG USERNAME=node
-
-# Install system packages
-RUN apt-get update && apt-get install -y \
-    curl wget git build-essential pkg-config libssl-dev ca-certificates sudo \
-    && rm -rf /var/lib/apt/lists/* \
-    && adduser $USERNAME
+RUN adduser $USERNAME
 
 # Copy tools from build stages
 COPY --from=nushell-stage /usr/bin/nu /usr/local/bin/nu
