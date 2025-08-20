@@ -89,9 +89,9 @@ fn test_cli_end_to_end_execution() {
 
     // Create CLI configuration
     let config = Config {
-        input_file: test_input.to_string(),
+        input_type: cli::InputType::File(test_input.to_string()),
         output_file: Some(test_output.to_string()),
-        event_name: Some("Test Event".to_string()),
+        event_name: Some("test_integration_output".to_string()),
     };
 
     // Execute CLI
