@@ -74,15 +74,22 @@ fn test_csv_parsing_and_data_processing() {
 fn test_cli_end_to_end_execution() {
     // Test output filename
     let test_output = "test_integration_output.json";
+    let test_input = "test_integration_output.csv";
 
     // Pre-cleanup check for existing test files
     if fs::metadata(test_output).is_ok() {
         fs::remove_file(test_output).expect("Failed to remove existing test file");
     }
+    if fs::metadata(test_input).is_ok() {
+        fs::remove_file(test_input).expect("Failed to remove existing input file");
+    }
+
+    // Copy test data to expected input filename
+    fs::copy("../test_data.csv", test_input).expect("Failed to copy test data");
 
     // Create CLI configuration
     let config = Config {
-        input_file: "../test_data.csv".to_string(),
+        input_file: test_input.to_string(),
         output_file: Some(test_output.to_string()),
         event_name: Some("Test Event".to_string()),
     };
@@ -141,8 +148,9 @@ fn test_cli_end_to_end_execution() {
         assert!(car.get("class").is_some(), "class field should exist");
     }
 
-    // Cleanup test file
-    fs::remove_file(test_output).expect("Failed to cleanup test file");
+    // Cleanup test files
+    fs::remove_file(test_output).expect("Failed to cleanup test output file");
+    fs::remove_file(test_input).expect("Failed to cleanup test input file");
 }
 
 #[test]
