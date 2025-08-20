@@ -28,5 +28,7 @@
 	"mounts": [
 		"source=elm-cache,target=/home/node/.elm,type=volume",
 		"source=cargo-cache,target=/home/node/.cargo,type=volume"
-	]
+	],
+	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
+	"workspaceFolder": "/workspace"
 }
