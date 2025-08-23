@@ -9,5 +9,5 @@ pub use car::{Car, CarNumber, MetaData, Status};
 pub use class::Class;
 pub use driver::Driver;
 pub use duration::Duration;
-pub use lap::Lap;
+pub use lap::{Lap, MiniSector, MiniSectors};
 pub use timeline::{CarEventType, EventType, TimelineEvent, calc_time_limit, calc_timeline_events};
