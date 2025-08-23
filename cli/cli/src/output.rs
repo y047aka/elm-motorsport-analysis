@@ -1,7 +1,7 @@
 use motorsport::{Car, TimelineEvent, calc_time_limit, calc_timeline_events, car, duration};
 use serde::{Serialize, Serializer};
 
-use crate::preprocess::LapWithMetadata;
+use crate::preprocess::{LapWithMetadata, MiniSectorsRaw};
 
 /// セクタータイムのフォーマット
 fn format_sector_time(raw_time: &str, sector_duration: u32) -> String {
@@ -87,6 +87,8 @@ pub struct RawLap {
     pub group: String,
     pub team: String,
     pub manufacturer: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mini_sectors: Option<MiniSectorsRaw>,
 }
 
 /// Starting grid entry format (startingGrid配列の要素)
@@ -152,6 +154,7 @@ fn raw_laps_from(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
                 group: meta.group.clone(),
                 team: meta.team.clone(),
                 manufacturer: meta.manufacturer.clone(),
+                mini_sectors: lap_meta.csv_data.mini_sectors.clone(),
             }
         })
         .collect()

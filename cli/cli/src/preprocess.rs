@@ -2,6 +2,35 @@ use motorsport::{Car, Class, Driver, Lap, MetaData, duration};
 use serde::Deserialize;
 use std::collections::HashMap;
 
+/// JSON出力用のミニセクター構造体
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MiniSectorRaw {
+    pub time: String,
+    pub elapsed: String,
+}
+
+/// JSON出力用のミニセクター集合
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MiniSectorsRaw {
+    pub scl2: MiniSectorRaw,
+    pub z4: MiniSectorRaw,
+    pub ip1: MiniSectorRaw,
+    pub z12: MiniSectorRaw,
+    pub sclc: MiniSectorRaw,
+    pub a7_1: MiniSectorRaw,
+    pub ip2: MiniSectorRaw,
+    pub a8_1: MiniSectorRaw,
+    pub sclb: MiniSectorRaw,
+    pub porin: MiniSectorRaw,
+    pub porout: MiniSectorRaw,
+    pub pitref: MiniSectorRaw,
+    pub scl1: MiniSectorRaw,
+    pub fordout: MiniSectorRaw,
+    pub fl: MiniSectorRaw,
+}
+
 /// CSV解析用の中間構造体
 #[derive(Debug, Deserialize)]
 pub struct CsvRow {
@@ -52,6 +81,67 @@ pub struct CsvRow {
     pub team: String,
     #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
     pub manufacturer: String,
+    // Le Mans 24h 専用：ミニセクター列（存在しないイベントもあるためOption）
+    #[serde(rename = "SCL2_time", alias = " SCL2_time")]
+    pub scl2_time: Option<String>,
+    #[serde(rename = "SCL2_elapsed", alias = " SCL2_elapsed")]
+    pub scl2_elapsed: Option<String>,
+    #[serde(rename = "Z4_time", alias = " Z4_time")]
+    pub z4_time: Option<String>,
+    #[serde(rename = "Z4_elapsed", alias = " Z4_elapsed")]
+    pub z4_elapsed: Option<String>,
+    #[serde(rename = "IP1_time", alias = " IP1_time")]
+    pub ip1_time: Option<String>,
+    #[serde(rename = "IP1_elapsed", alias = " IP1_elapsed")]
+    pub ip1_elapsed: Option<String>,
+    #[serde(rename = "Z12_time", alias = " Z12_time")]
+    pub z12_time: Option<String>,
+    #[serde(rename = "Z12_elapsed", alias = " Z12_elapsed")]
+    pub z12_elapsed: Option<String>,
+    #[serde(rename = "SCLC_time", alias = " SCLC_time")]
+    pub sclc_time: Option<String>,
+    #[serde(rename = "SCLC_elapsed", alias = " SCLC_elapsed")]
+    pub sclc_elapsed: Option<String>,
+    #[serde(rename = "A7-1_time", alias = " A7-1_time")]
+    pub a7_1_time: Option<String>,
+    #[serde(rename = "A7-1_elapsed", alias = " A7-1_elapsed")]
+    pub a7_1_elapsed: Option<String>,
+    #[serde(rename = "IP2_time", alias = " IP2_time")]
+    pub ip2_time: Option<String>,
+    #[serde(rename = "IP2_elapsed", alias = " IP2_elapsed")]
+    pub ip2_elapsed: Option<String>,
+    #[serde(rename = "A8-1_time", alias = " A8-1_time")]
+    pub a8_1_time: Option<String>,
+    #[serde(rename = "A8-1_elapsed", alias = " A8-1_elapsed")]
+    pub a8_1_elapsed: Option<String>,
+    #[serde(rename = "SCLB_time", alias = " SCLB_time")]
+    pub sclb_time: Option<String>,
+    #[serde(rename = "SCLB_elapsed", alias = " SCLB_elapsed")]
+    pub sclb_elapsed: Option<String>,
+    #[serde(rename = "PORIN_time", alias = " PORIN_time")]
+    pub porin_time: Option<String>,
+    #[serde(rename = "PORIN_elapsed", alias = " PORIN_elapsed")]
+    pub porin_elapsed: Option<String>,
+    #[serde(rename = "POROUT_time", alias = " POROUT_time")]
+    pub porout_time: Option<String>,
+    #[serde(rename = "POROUT_elapsed", alias = " POROUT_elapsed")]
+    pub porout_elapsed: Option<String>,
+    #[serde(rename = "PITREF_time", alias = " PITREF_time")]
+    pub pitref_time: Option<String>,
+    #[serde(rename = "PITREF_elapsed", alias = " PITREF_elapsed")]
+    pub pitref_elapsed: Option<String>,
+    #[serde(rename = "SCL1_time", alias = " SCL1_time")]
+    pub scl1_time: Option<String>,
+    #[serde(rename = "SCL1_elapsed", alias = " SCL1_elapsed")]
+    pub scl1_elapsed: Option<String>,
+    #[serde(rename = "FORDOUT_time", alias = " FORDOUT_time")]
+    pub fordout_time: Option<String>,
+    #[serde(rename = "FORDOUT_elapsed", alias = " FORDOUT_elapsed")]
+    pub fordout_elapsed: Option<String>,
+    #[serde(rename = "FL_time", alias = " FL_time")]
+    pub fl_time: Option<String>,
+    #[serde(rename = "FL_elapsed", alias = " FL_elapsed")]
+    pub fl_elapsed: Option<String>,
 }
 
 /// CSVからLapのリストを生成する
@@ -77,6 +167,9 @@ fn lap_with_metadata_from(row: CsvRow) -> LapWithMetadata {
     let s2 = duration::from_string(&row.s2).unwrap_or(0);
     let s3 = duration::from_string(&row.s3).unwrap_or(0);
     let elapsed = duration::from_string(&row.elapsed).unwrap_or(0);
+
+    // ミニセクターは所有権を移す前に参照から構築しておく
+    let mini_sectors_data = build_mini_sectors(&row);
 
     let lap = Lap::new(
         row.car_number,
@@ -116,6 +209,7 @@ fn lap_with_metadata_from(row: CsvRow) -> LapWithMetadata {
         s1_raw: row.s1,
         s2_raw: row.s2,
         s3_raw: row.s3,
+        mini_sectors: mini_sectors_data,
     };
 
     LapWithMetadata {
@@ -123,6 +217,82 @@ fn lap_with_metadata_from(row: CsvRow) -> LapWithMetadata {
         metadata,
         csv_data,
     }
+}
+
+fn normalize_cell(opt: &Option<String>) -> Option<String> {
+    opt.as_ref().and_then(|s| {
+        let trimmed = s.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
+}
+
+fn build_mini_sectors(row: &CsvRow) -> Option<MiniSectorsRaw> {
+    // いずれかの値が存在すればミニセクターありとみなす
+    let any_present = [
+        &row.scl2_time,
+        &row.scl2_elapsed,
+        &row.z4_time,
+        &row.z4_elapsed,
+        &row.ip1_time,
+        &row.ip1_elapsed,
+        &row.z12_time,
+        &row.z12_elapsed,
+        &row.sclc_time,
+        &row.sclc_elapsed,
+        &row.a7_1_time,
+        &row.a7_1_elapsed,
+        &row.ip2_time,
+        &row.ip2_elapsed,
+        &row.a8_1_time,
+        &row.a8_1_elapsed,
+        &row.sclb_time,
+        &row.sclb_elapsed,
+        &row.porin_time,
+        &row.porin_elapsed,
+        &row.porout_time,
+        &row.porout_elapsed,
+        &row.pitref_time,
+        &row.pitref_elapsed,
+        &row.scl1_time,
+        &row.scl1_elapsed,
+        &row.fordout_time,
+        &row.fordout_elapsed,
+        &row.fl_time,
+        &row.fl_elapsed,
+    ]
+    .iter()
+    .any(|v| normalize_cell(v).is_some());
+
+    if !any_present {
+        return None;
+    }
+
+    let mk = |time: &Option<String>, elapsed: &Option<String>| MiniSectorRaw {
+        time: normalize_cell(time).unwrap_or_default(),
+        elapsed: normalize_cell(elapsed).unwrap_or_default(),
+    };
+
+    Some(MiniSectorsRaw {
+        scl2: mk(&row.scl2_time, &row.scl2_elapsed),
+        z4: mk(&row.z4_time, &row.z4_elapsed),
+        ip1: mk(&row.ip1_time, &row.ip1_elapsed),
+        z12: mk(&row.z12_time, &row.z12_elapsed),
+        sclc: mk(&row.sclc_time, &row.sclc_elapsed),
+        a7_1: mk(&row.a7_1_time, &row.a7_1_elapsed),
+        ip2: mk(&row.ip2_time, &row.ip2_elapsed),
+        a8_1: mk(&row.a8_1_time, &row.a8_1_elapsed),
+        sclb: mk(&row.sclb_time, &row.sclb_elapsed),
+        porin: mk(&row.porin_time, &row.porin_elapsed),
+        porout: mk(&row.porout_time, &row.porout_elapsed),
+        pitref: mk(&row.pitref_time, &row.pitref_elapsed),
+        scl1: mk(&row.scl1_time, &row.scl1_elapsed),
+        fordout: mk(&row.fordout_time, &row.fordout_elapsed),
+        fl: mk(&row.fl_time, &row.fl_elapsed),
+    })
 }
 
 /// Lapとメタデータを組み合わせた構造体
@@ -150,6 +320,7 @@ pub struct ExtraData {
     pub s1_raw: String,
     pub s2_raw: String,
     pub s3_raw: String,
+    pub mini_sectors: Option<MiniSectorsRaw>,
 }
 
 /// 車両のメタデータ情報
@@ -440,6 +611,7 @@ mod tests {
             s1_raw: "23.155".to_string(),
             s2_raw: "29.928".to_string(),
             s3_raw: "42.282".to_string(),
+            mini_sectors: None,
         }
     }
 
