@@ -12,7 +12,7 @@ module Data.Wec exposing
 
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (hardcoded, required)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -137,7 +137,7 @@ lapDecoder =
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" string
-        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
+        |> hardcoded Nothing
 
 
 raceClockDecoder : Decoder Duration
@@ -148,34 +148,6 @@ raceClockDecoder =
 classDecoder : Decoder Class
 classDecoder =
     string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
-
-
-miniSectorsDecoder : Decoder MiniSectors
-miniSectorsDecoder =
-    Decode.succeed MiniSectors
-        |> required "scl2" miniSectorDecoder
-        |> required "z4" miniSectorDecoder
-        |> required "ip1" miniSectorDecoder
-        |> required "z12" miniSectorDecoder
-        |> required "sclc" miniSectorDecoder
-        |> required "a7_1" miniSectorDecoder
-        |> required "ip2" miniSectorDecoder
-        |> required "a8_1" miniSectorDecoder
-        |> required "sclb" miniSectorDecoder
-        |> required "porin" miniSectorDecoder
-        |> required "porout" miniSectorDecoder
-        |> required "pitref" miniSectorDecoder
-        |> required "scl1" miniSectorDecoder
-        |> required "fordout" miniSectorDecoder
-        |> required "fl" miniSectorDecoder
-
-
-miniSectorDecoder : Decoder MiniSector
-miniSectorDecoder =
-    Decode.succeed MiniSector
-        |> required "time" (Decode.maybe raceClockDecoder)
-        |> required "elapsed" (Decode.maybe raceClockDecoder)
-        |> optional "best" (Decode.maybe raceClockDecoder) Nothing
 
 
 carMetadataDecoder : Decoder Car.Metadata
