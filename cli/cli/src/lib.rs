@@ -7,7 +7,7 @@ pub mod output;
 pub mod preprocess;
 
 pub use config::{Config, InputType};
-pub use output::{Output, create_output};
+pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
 /// Process a single CSV file and convert to JSON
@@ -35,24 +35,31 @@ fn process_single_file(config: &Config) -> Result<(), Box<dyn Error>> {
         .or_else(|| Path::new(input_path).file_stem().and_then(|s| s.to_str()))
         .unwrap_or("test_event");
 
-    let output = create_output(event_name, &laps_with_metadata, &cars);
+    let output_metadata = create_metadata_output(event_name, &cars);
+    let output_laps = create_laps_output(&laps_with_metadata);
 
-    let json = serde_json::to_string_pretty(&output)
-        .map_err(|e| format!("Failed to serialize output to JSON: {e}"))?;
+    let metadata_json = serde_json::to_string_pretty(&output_metadata)
+        .map_err(|e| format!("Failed to serialize metadata to JSON: {e}"))?;
 
-    let output_path = output_path
-        .unwrap_or_else(|| {
-            Path::new(input_path)
-                .with_extension("json")
-                .to_string_lossy()
-                .into_owned()
-        })
-        .to_string();
+    let laps_json = serde_json::to_string_pretty(&output_laps)
+        .map_err(|e| format!("Failed to serialize laps to JSON: {e}"))?;
 
-    fs::write(&output_path, &json)
-        .map_err(|e| format!("Failed to write output file '{}': {e}", output_path))?;
+    let base_output_path = output_path.unwrap_or_else(|| {
+        Path::new(input_path)
+            .with_extension("json")
+            .to_string_lossy()
+            .into_owned()
+    });
 
-    println!("Wrote JSON to {}", output_path);
+    fs::write(&base_output_path, &metadata_json)
+        .map_err(|e| format!("Failed to write output file '{}': {e}", base_output_path))?;
+
+    let laps_output_path = base_output_path.replace(".json", "_laps.json");
+    fs::write(&laps_output_path, &laps_json)
+        .map_err(|e| format!("Failed to write laps file '{}': {e}", laps_output_path))?;
+
+    println!("Wrote metadata JSON to {}", base_output_path);
+    println!("Wrote laps JSON to {}", laps_output_path);
     Ok(())
 }
 

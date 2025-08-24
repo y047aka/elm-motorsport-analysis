@@ -19,8 +19,20 @@ impl Config {
     pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, Box<dyn Error>> {
         args.next();
 
-        let input_path = args
-            .next()
+        let mut input_path = None;
+        let mut output_file = None;
+
+        while let Some(arg) = args.next() {
+            if arg == "--output" {
+                output_file = args.next();
+            } else if input_path.is_none() {
+                input_path = Some(arg);
+            } else {
+                return Err(format!("Unexpected argument: {arg}").into());
+            }
+        }
+
+        let input_path = input_path
             .ok_or_else(|| -> Box<dyn Error> { "Missing required input path argument".into() })?;
 
         let path = Path::new(&input_path);
@@ -34,13 +46,22 @@ impl Config {
             return Err(format!("Input path is neither a file nor directory: {input_path}").into());
         };
 
-        // 引数の順序は入力タイプによって異なる
-        let (output_file, event_name) = match &input_type {
+        // output_fileが指定されていない場合はデフォルト値を生成
+        let output_file = output_file.or_else(|| match &input_type {
             InputType::File(file_path) => {
-                let (default_output, default_event) = Self::generate_output_names(file_path);
-                (Some(default_output), Some(default_event))
+                let (default_output, _) = Self::generate_output_names(file_path);
+                Some(default_output)
             }
-            InputType::Directory(_) => (None, None),
+            InputType::Directory(_) => None,
+        });
+
+        // event_nameは常にデフォルト値を使用
+        let event_name = match &input_type {
+            InputType::File(file_path) => {
+                let (_, default_event) = Self::generate_output_names(file_path);
+                Some(default_event)
+            }
+            InputType::Directory(_) => None,
         };
 
         Ok(Config {

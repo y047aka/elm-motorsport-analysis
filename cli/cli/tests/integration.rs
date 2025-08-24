@@ -1,7 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use cli::{Config, create_output, group_laps_by_car, parse_laps_from_csv, run};
+use cli::{
+    Config, create_laps_output, create_metadata_output, group_laps_by_car, parse_laps_from_csv, run,
+};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -119,13 +121,22 @@ fn test_cli_end_to_end_execution() {
     let output = output.unwrap();
     assert!(output.is_object(), "Top level should be object");
 
-    // Validate 3-layer structure
+    // Validate metadata structure (name, startingGrid, timelineEvents)
     let obj = output.as_object().unwrap();
     assert!(obj.contains_key("name"), "name field should exist");
-    assert!(obj.contains_key("laps"), "laps field should exist");
     assert!(
         obj.contains_key("startingGrid"),
         "startingGrid field should exist"
+    );
+    assert!(
+        obj.contains_key("timelineEvents"),
+        "timelineEvents field should exist"
+    );
+
+    // Verify that laps field is NOT in metadata file (moved to separate laps file)
+    assert!(
+        !obj.contains_key("laps"),
+        "laps field should NOT exist in metadata file"
     );
 
     // Verify starting grid data exists
@@ -147,6 +158,57 @@ fn test_cli_end_to_end_execution() {
         assert!(car.get("drivers").is_some(), "drivers field should exist");
         assert!(car.get("class").is_some(), "class field should exist");
     }
+
+    // Verify laps data file exists and has correct structure
+    let laps_output_path = test_output.replace(".json", "_laps.json");
+    assert!(
+        fs::metadata(&laps_output_path).is_ok(),
+        "Laps data file should exist"
+    );
+
+    let laps_json_content =
+        fs::read_to_string(&laps_output_path).expect("Failed to read laps data file");
+
+    let laps_output: Result<serde_json::Value, _> = serde_json::from_str(&laps_json_content);
+    assert!(laps_output.is_ok(), "Laps data JSON should be valid format");
+
+    let laps_binding = laps_output.unwrap();
+    let laps = laps_binding.as_array().unwrap();
+
+    assert!(!laps.is_empty(), "laps array should not be empty");
+
+    // Validate first lap structure
+    let first_lap = laps[0].as_object().unwrap();
+    assert!(
+        first_lap.contains_key("carNumber"),
+        "carNumber field should exist"
+    );
+    assert!(
+        first_lap.contains_key("driverName"),
+        "driverName field should exist"
+    );
+    assert!(
+        first_lap.contains_key("lapNumber"),
+        "lapNumber field should exist"
+    );
+    assert!(
+        first_lap.contains_key("lapTime"),
+        "lapTime field should exist"
+    );
+    assert!(
+        first_lap.contains_key("elapsed"),
+        "elapsed field should exist"
+    );
+    assert!(first_lap.contains_key("kph"), "kph field should exist");
+    assert!(first_lap.contains_key("class"), "class field should exist");
+    assert!(first_lap.contains_key("team"), "team field should exist");
+    assert!(
+        first_lap.contains_key("manufacturer"),
+        "manufacturer field should exist"
+    );
+
+    // Cleanup laps data file
+    fs::remove_file(&laps_output_path).expect("Failed to cleanup laps data file");
 
     // Cleanup test files
     fs::remove_file(test_output).expect("Failed to cleanup test output file");
@@ -260,26 +322,42 @@ fn test_elm_json_structure_and_field_compatibility() {
     let laps_with_metadata = parse_laps_from_csv(&csv_data);
     let cars = group_laps_by_car(laps_with_metadata.clone());
 
-    let elm_output = create_output("Test Event", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
+    let metadata_output = create_metadata_output("Test Event", &cars);
+    let laps_output = create_laps_output(&laps_with_metadata);
+    let metadata_json_value = serde_json::to_value(&metadata_output).unwrap();
+    let laps_json_value = serde_json::to_value(&laps_output).unwrap();
 
-    // トップレベル構造のチェック
-    assert!(json_value.is_object(), "JSON should be an object");
-    assert!(json_value.get("name").is_some(), "name field required");
-    assert!(json_value.get("laps").is_some(), "laps field required");
+    // メタデータJSON構造のチェック
     assert!(
-        json_value.get("startingGrid").is_some(),
+        metadata_json_value.is_object(),
+        "Metadata JSON should be an object"
+    );
+    assert!(
+        metadata_json_value.get("name").is_some(),
+        "name field required"
+    );
+    assert!(
+        metadata_json_value.get("startingGrid").is_some(),
         "startingGrid field required"
     );
-    assert!(json_value["name"].is_string(), "name should be string");
-    assert!(json_value["laps"].is_array(), "laps should be array");
     assert!(
-        json_value["startingGrid"].is_array(),
+        metadata_json_value.get("timelineEvents").is_some(),
+        "timelineEvents field required"
+    );
+
+    // ラップデータJSON構造のチェック（直接配列形式）
+    assert!(laps_json_value.is_array(), "Laps JSON should be an array");
+    assert!(
+        metadata_json_value["name"].is_string(),
+        "name should be string"
+    );
+    assert!(
+        metadata_json_value["startingGrid"].is_array(),
         "startingGrid should be array"
     );
 
     // ラップフィールドの完全性と型チェック
-    let laps_array = json_value["laps"].as_array().unwrap();
+    let laps_array = laps_json_value.as_array().unwrap();
     if !laps_array.is_empty() {
         let lap = &laps_array[0];
 
@@ -323,7 +401,7 @@ fn test_elm_json_structure_and_field_compatibility() {
     }
 
     // スターティンググリッドフィールドの完全性と型チェック
-    let starting_grid_array = json_value["startingGrid"].as_array().unwrap();
+    let starting_grid_array = metadata_json_value["startingGrid"].as_array().unwrap();
     if !starting_grid_array.is_empty() {
         let grid_entry = &starting_grid_array[0];
 
@@ -365,10 +443,9 @@ fn test_racing_data_processing_compatibility() {
 007;1;36;1:35.123;0;;19.400;0;31.200;0;44.523;0;185.2;1:01:51.980;14:03:17.490;0:19.400;0:31.200;0:44.523;304.2;Harry TINCKNELL;45.678;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.400;31.200;44.523;"#.to_string();
 
     let laps_with_metadata = parse_laps_from_csv(&csv_with_racing_data);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    let elm_output = create_output("Test Event", &laps_with_metadata, &cars);
-    let json_value = serde_json::to_value(&elm_output).unwrap();
-    let laps_array = json_value["laps"].as_array().unwrap();
+    let laps_output = create_laps_output(&laps_with_metadata);
+    let json_value = serde_json::to_value(&laps_output).unwrap();
+    let laps_array = json_value.as_array().unwrap();
 
     // Improvement flag test (0, 1, 2)
     let lap_with_improvement = laps_array

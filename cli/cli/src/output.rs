@@ -49,12 +49,11 @@ where
     }
 }
 
-/// 3層出力データ構造
+/// メタデータ出力データ構造（name, startingGrid, timelineEvents）
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Output {
+pub struct MetadataOutput {
     pub name: String,
-    pub laps: Vec<RawLap>,
     pub starting_grid: Vec<StartingGrid>,
     pub timeline_events: Vec<TimelineEvent>,
 }
@@ -97,25 +96,24 @@ pub struct StartingGrid {
     pub car: car::MetaData,
 }
 
-/// 出力データ作成関数
-pub fn create_output(
-    event_name: &str,
-    laps_with_metadata: &[LapWithMetadata],
-    cars: &[Car],
-) -> Output {
-    let raw_laps = raw_laps_from(laps_with_metadata);
+/// メタデータ出力データ作成関数（name, startingGrid, timelineEvents）
+pub fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput {
     let starting_grid = starting_grid_from(cars);
 
     // タイムラインイベントを計算
     let time_limit = calc_time_limit(cars);
     let timeline_events = calc_timeline_events(time_limit, cars);
 
-    Output {
+    MetadataOutput {
         name: map_event_name(event_name).to_string(),
-        laps: raw_laps,
         starting_grid,
         timeline_events,
     }
+}
+
+/// ラップデータ出力データ作成関数（lapsのみ）
+pub fn create_laps_output(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
+    raw_laps_from(laps_with_metadata)
 }
 
 /// LapWithMetadata から RawLap への変換
@@ -270,8 +268,8 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // create_output関数でtimeline_eventsが含まれることをテスト
-        let output = create_output("test_event", &[], &cars);
+        // create_metadata_output関数でtimeline_eventsが含まれることをテスト
+        let output = create_metadata_output("test_event", &cars);
 
         // timeline_eventsフィールドが存在することを確認
         assert!(!output.timeline_events.is_empty());
@@ -318,8 +316,8 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // create_output関数でstarting_gridが含まれることをテスト
-        let output = create_output("test_event", &[], &cars);
+        // create_metadata_output関数でstarting_gridが含まれることをテスト
+        let output = create_metadata_output("test_event", &cars);
 
         // starting_gridフィールドが存在することを確認
         assert_eq!(output.starting_grid.len(), 1);

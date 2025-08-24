@@ -10,20 +10,18 @@ module Data.Wec exposing
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
+import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (hardcoded, required)
+import Json.Decode.Pipeline exposing (required)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
-import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 type alias Event =
     { name : String
-    , laps : List Lap
     , startingGrid : List StartingGridItem
     , timelineEvents : List TimelineEvent
     }
@@ -35,72 +33,14 @@ type alias StartingGridItem =
     }
 
 
-type alias Lap =
-    { carNumber : String
-    , driverNumber : Int
-    , lapNumber : Int
-    , lapTime : RaceClock
-    , lapImprovement : Int
-    , crossingFinishLineInPit : String
-    , s1 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , s1Improvement : Int
-    , s2 : Maybe RaceClock -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , s2Improvement : Int
-    , s3 : Maybe RaceClock -- 2024年のデータで部分的に欠落しているのでMaybeを付けている
-    , s3Improvement : Int
-    , kph : Float
-    , elapsed : RaceClock
-    , hour : RaceClock
-    , topSpeed : Maybe Float -- 2023年のデータで部分的に欠落しているのでMaybeを付けている
-    , driverName : String
-    , pitTime : Maybe RaceClock
-    , class : Class
-    , group : String
-    , team : String
-    , manufacturer : String
-    , miniSectors : Maybe MiniSectors
-    }
-
-
-type alias RaceClock =
-    Duration
-
-
-type alias MiniSectors =
-    { scl2 : MiniSector
-    , z4 : MiniSector
-    , ip1 : MiniSector
-    , z12 : MiniSector
-    , sclc : MiniSector
-    , a7_1 : MiniSector
-    , ip2 : MiniSector
-    , a8_1 : MiniSector
-    , sclb : MiniSector
-    , porin : MiniSector
-    , porout : MiniSector
-    , pitref : MiniSector
-    , scl1 : MiniSector
-    , fordout : MiniSector
-    , fl : MiniSector
-    }
-
-
-type alias MiniSector =
-    { time : Maybe RaceClock
-    , elapsed : Maybe RaceClock
-    , best : Maybe RaceClock
-    }
-
-
 
 -- DECODER
 
 
 eventDecoder : Decoder Event
 eventDecoder =
-    Decode.map4 Event
+    Decode.map3 Event
         (field "name" string)
-        (field "laps" (list lapDecoder))
         (field "startingGrid" (list startingGridItemDecoder))
         (field "timelineEvents" (list TimelineEvent.decoder))
 
@@ -110,39 +50,6 @@ startingGridItemDecoder =
     Decode.map2 StartingGridItem
         (field "position" int)
         (field "car" carMetadataDecoder)
-
-
-lapDecoder : Decoder Lap
-lapDecoder =
-    Decode.succeed Lap
-        |> required "carNumber" string
-        |> required "driverNumber" int
-        |> required "lapNumber" int
-        |> required "lapTime" raceClockDecoder
-        |> required "lapImprovement" int
-        |> required "crossingFinishLineInPit" string
-        |> required "s1" (Decode.maybe raceClockDecoder)
-        |> required "s1Improvement" int
-        |> required "s2" (Decode.maybe raceClockDecoder)
-        |> required "s2Improvement" int
-        |> required "s3" (Decode.maybe raceClockDecoder)
-        |> required "s3Improvement" int
-        |> required "kph" float
-        |> required "elapsed" raceClockDecoder
-        |> required "hour" raceClockDecoder
-        |> required "topSpeed" (Decode.map String.toFloat string)
-        |> required "driverName" string
-        |> required "pitTime" (Decode.maybe raceClockDecoder)
-        |> required "class" classDecoder
-        |> required "group" string
-        |> required "team" string
-        |> required "manufacturer" string
-        |> hardcoded Nothing
-
-
-raceClockDecoder : Decoder Duration
-raceClockDecoder =
-    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a RaceClock")
 
 
 classDecoder : Decoder Class
