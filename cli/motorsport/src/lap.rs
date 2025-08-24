@@ -173,8 +173,10 @@ pub struct MiniSectors {
     pub ip1: MiniSector,
     pub z12: MiniSector,
     pub sclc: MiniSector,
+    #[serde(rename = "a7_1")]
     pub a7_1: MiniSector,
     pub ip2: MiniSector,
+    #[serde(rename = "a8_1")]
     pub a8_1: MiniSector,
     pub sclb: MiniSector,
     pub porin: MiniSector,
