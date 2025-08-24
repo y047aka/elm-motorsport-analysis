@@ -97,7 +97,70 @@ lapDecoder =
         |> required "s2_best" durationDecoder
         |> required "s3_best" durationDecoder
         |> required "elapsed" durationDecoder
-        |> optional "miniSectors" (Decode.succeed Nothing) Nothing
+        |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
+
+
+type alias MiniSectors =
+    { scl2 : MiniSector
+    , z4 : MiniSector
+    , ip1 : MiniSector
+    , z12 : MiniSector
+    , sclc : MiniSector
+    , a7_1 : MiniSector
+    , ip2 : MiniSector
+    , a8_1 : MiniSector
+    , sclb : MiniSector
+    , porin : MiniSector
+    , porout : MiniSector
+    , pitref : MiniSector
+    , scl1 : MiniSector
+    , fordout : MiniSector
+    , fl : MiniSector
+    }
+
+
+type alias MiniSector =
+    { time : Maybe RaceClock
+    , elapsed : Maybe RaceClock
+    , best : Maybe RaceClock
+    }
+
+
+type alias RaceClock =
+    Duration
+
+
+miniSectorsDecoder : Decoder MiniSectors
+miniSectorsDecoder =
+    Decode.succeed MiniSectors
+        |> required "scl2" miniSectorDecoder
+        |> required "z4" miniSectorDecoder
+        |> required "ip1" miniSectorDecoder
+        |> required "z12" miniSectorDecoder
+        |> required "sclc" miniSectorDecoder
+        |> required "a7_1" miniSectorDecoder
+        |> required "ip2" miniSectorDecoder
+        |> required "a8_1" miniSectorDecoder
+        |> required "sclb" miniSectorDecoder
+        |> required "porin" miniSectorDecoder
+        |> required "porout" miniSectorDecoder
+        |> required "pitref" miniSectorDecoder
+        |> required "scl1" miniSectorDecoder
+        |> required "fordout" miniSectorDecoder
+        |> required "fl" miniSectorDecoder
+
+
+miniSectorDecoder : Decoder MiniSector
+miniSectorDecoder =
+    Decode.succeed MiniSector
+        |> required "time" (Decode.maybe raceClockDecoder)
+        |> required "elapsed" (Decode.maybe raceClockDecoder)
+        |> required "best" (Decode.maybe raceClockDecoder)
+
+
+raceClockDecoder : Decoder Duration
+raceClockDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a RaceClock")
 
 
 carEventTypeDecoder : Decoder CarEventType

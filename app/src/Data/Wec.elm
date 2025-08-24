@@ -175,7 +175,7 @@ miniSectorDecoder =
     Decode.succeed MiniSector
         |> required "time" (Decode.maybe raceClockDecoder)
         |> required "elapsed" (Decode.maybe raceClockDecoder)
-        |> required "best" (Decode.maybe raceClockDecoder)
+        |> optional "best" (Decode.maybe raceClockDecoder) Nothing
 
 
 carMetadataDecoder : Decoder Car.Metadata
