@@ -12,7 +12,7 @@ module Motorsport.Widget exposing
 
 import Css exposing (..)
 import Html.Styled as Html exposing (Html, div, h3, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (class, css)
 import Motorsport.Class as Class exposing (Class)
 
 
@@ -21,16 +21,13 @@ import Motorsport.Class as Class exposing (Class)
 container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
-        [ css
-            [ padding (px 10)
-            , borderRadius (px 12)
-            , property "display" "grid"
-            , property "row-gap" "10px"
-            , backgroundColor (hsl 0 0 0.2)
-            ]
+        [ class "card card-sm"
+        , css [ backgroundColor (hsl 0 0 0.2) ]
         ]
-        [ title widgetTitle
-        , content
+        [ div [ class "card-body" ]
+            [ title widgetTitle
+            , content
+            ]
         ]
 
 
@@ -39,13 +36,8 @@ container widgetTitle content =
 title : String -> Html msg
 title titleText =
     h3
-        [ css
-            [ margin zero
-            , fontSize (rem 1.1)
-            , fontWeight bold
-            , letterSpacing (px 0.5)
-            , color (hsl 0 0 0.9)
-            ]
+        [ class "card-title"
+        , css [ color (hsl 0 0 0.9) ]
         ]
         [ text titleText ]
 
