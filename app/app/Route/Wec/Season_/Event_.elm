@@ -297,13 +297,13 @@ header { eventSummary, raceControl } =
             [ nav []
                 ([ case raceControl.clock of
                     Initial ->
-                        button [ class "btn btn-sm", onClick StartRace ] [ text "Start" ]
+                        button [ class "btn", onClick StartRace ] [ text "Start" ]
 
                     Started _ _ ->
-                        button [ class "btn btn-sm", onClick PauseRace ] [ text "Pause" ]
+                        button [ class "btn", onClick PauseRace ] [ text "Pause" ]
 
                     Paused _ ->
-                        button [ class "btn btn-sm", onClick StartRace ] [ text "Resume" ]
+                        button [ class "btn", onClick StartRace ] [ text "Resume" ]
 
                     _ ->
                         text ""
@@ -313,17 +313,17 @@ header { eventSummary, raceControl } =
                                 []
 
                             _ ->
-                                [ button [ class "btn btn-sm", onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                                , button [ class "btn btn-sm", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                                [ button [ class "btn", onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                                , button [ class "btn", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                                 ]
                        )
                 )
             , statusBar raceControl
             , nav []
-                [ button [ class "btn btn-sm", onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
-                , button [ class "btn btn-sm", onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                , button [ class "btn btn-sm", onClick (ModeChange Tracker) ] [ text "Tracker" ]
-                , button [ class "btn btn-sm", onClick (ModeChange Events) ] [ text "Events" ]
+                [ button [ class "btn", onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
+                , button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ]
+                , button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ]
+                , button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ]
                 ]
             ]
         ]
