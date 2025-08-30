@@ -1,9 +1,17 @@
 import { defineConfig } from "vite";
+import tailwindcss from '@tailwindcss/vite'
 
 export default {
-  vite: defineConfig({}),
+  vite: defineConfig({
+    plugins: [
+      tailwindcss(),
+    ],
+  }),
   headTagsTemplate(context) {
-    return `<meta name="generator" content="elm-pages v${context.cliVersion}" />`;
+    return `
+<link rel="stylesheet" href="/style.css" />
+<meta name="generator" content="elm-pages v${context.cliVersion}" />
+`;
   },
   preloadTagForFile(file) {
     // add preload directives for JS assets and font assets, etc., skip for CSS files
