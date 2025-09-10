@@ -241,19 +241,12 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 [ height (pct 100)
                                 , overflowY hidden
                                 , property "display" "grid"
-                                , property "grid-template-columns" "1fr 1fr 370px"
-                                , property "grid-gap" "10px"
+                                , property "grid-template-columns" "370px 1fr 370px"
+                                , property "grid-template-rows" "1fr 300px"
                                 ]
                             ]
-                            [ div [ css [ height (pct 100), overflowY scroll ] ]
-                                [ case ( eventSummary.season, eventSummary.name ) of
-                                    ( 2025, "24 Hours of Le Mans" ) ->
-                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
-
-                                    _ ->
-                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
-                                ]
-                            , div [ css [ property "display" "grid", property "place-items" "center" ] ]
+                            [  div [] []
+                            ,  div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                 [ case ( eventSummary.season, eventSummary.name ) of
                                     ( 2025, "24 Hours of Le Mans" ) ->
                                         TrackerChart.viewWithMiniSectors analysis viewModel
@@ -273,6 +266,19 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     ]
                                 ]
                                 [ analysisWidgets raceControl analysis viewModel ]
+                            , div
+                                [ css
+                                    [ property "grid-column" "1 / -1"
+                                    , overflowY scroll
+                                    ]
+                                ]
+                                [ case ( eventSummary.season, eventSummary.name ) of
+                                    ( 2025, "24 Hours of Le Mans" ) ->
+                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
+
+                                    _ ->
+                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                                ]
                             ]
 
                     Events ->
