@@ -63,6 +63,14 @@ toEventSummary_Wec_2024 event =
             , jsonPath = jsonPath
             }
 
+        Cota_6h ->
+            { id = id
+            , name = "Lone Star Le Mans"
+            , season = 2024
+            , date = "2024-09-01"
+            , jsonPath = jsonPath
+            }
+
         Fuji_6h ->
             { id = id
             , name = "6 Hours of Fuji"

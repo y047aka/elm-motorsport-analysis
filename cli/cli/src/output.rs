@@ -172,6 +172,7 @@ pub fn map_event_name(event_id: &str) -> &str {
         "imola_6h" => "6 Hours of Imola",
         "spa_6h" => "6 Hours of Spa",
         "le_mans_24h" => "24 Hours of Le Mans",
+        "cota_6h" => "Lone Star Le Mans",
         "fuji_6h" => "6 Hours of Fuji",
         "bahrain_8h" => "8 Hours of Bahrain",
         "sao_paulo_6h" => "6 Hours of São Paulo",
@@ -228,6 +229,7 @@ mod tests {
         assert_eq!(map_event_name("imola_6h"), "6 Hours of Imola");
         assert_eq!(map_event_name("spa_6h"), "6 Hours of Spa");
         assert_eq!(map_event_name("le_mans_24h"), "24 Hours of Le Mans");
+        assert_eq!(map_event_name("cota_6h"), "Lone Star Le Mans");
         assert_eq!(map_event_name("fuji_6h"), "6 Hours of Fuji");
         assert_eq!(map_event_name("bahrain_8h"), "8 Hours of Bahrain");
         assert_eq!(map_event_name("sao_paulo_6h"), "6 Hours of São Paulo");

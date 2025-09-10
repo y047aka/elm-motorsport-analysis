@@ -68,6 +68,7 @@ pages =
         , { season = "2025", event = "spa_6h" }
         , { season = "2025", event = "le_mans_24h" }
         , { season = "2025", event = "sao_paulo_6h" }
+        , { season = "2025", event = "cota_6h" }
         ]
 
 

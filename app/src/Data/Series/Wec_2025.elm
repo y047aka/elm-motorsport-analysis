@@ -12,6 +12,7 @@ wec_2025 =
         , Spa_6h
         , LeMans_24h
         , SaoPaulo_6h
+        , Cota_6h
         ]
 
 
@@ -62,6 +63,14 @@ toEventSummary_Wec_2025 event =
             , name = "6 Hours of São Paulo"
             , season = 2025
             , date = "2025-07-13"
+            , jsonPath = jsonPath
+            }
+
+        Cota_6h ->
+            { id = id
+            , name = "Lone Star Le Mans"
+            , season = 2025
+            , date = "2025-09-07"
             , jsonPath = jsonPath
             }
 

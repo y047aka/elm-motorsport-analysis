@@ -13,6 +13,7 @@ type Wec
     | Spa_6h
     | LeMans_24h
     | SaoPaulo_6h
+    | Cota_6h
     | Fuji_6h
     | Bahrain_8h
 
@@ -34,6 +35,9 @@ fromString string =
 
         "sao_paulo_6h" ->
             Just SaoPaulo_6h
+
+        "cota_6h" ->
+            Just Cota_6h
 
         "fuji_6h" ->
             Just Fuji_6h
@@ -62,6 +66,9 @@ toString event =
 
         SaoPaulo_6h ->
             "sao_paulo_6h"
+
+        Cota_6h ->
+            "cota_6h"
 
         Fuji_6h ->
             "fuji_6h"
