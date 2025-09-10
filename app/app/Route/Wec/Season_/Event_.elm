@@ -8,8 +8,8 @@ import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (Html, div, h1, img, input, main_, nav, text)
-import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
+import Html.Styled as Html exposing (Html, button, div, h1, img, input, main_, nav, text)
+import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
 import Motorsport.Analysis exposing (Analysis)
@@ -33,7 +33,7 @@ import Shared
 import String exposing (dropRight)
 import Task
 import Time
-import UI.Button exposing (button, labeledButton)
+import UI.Button exposing (labeledButton)
 import UrlPath exposing (UrlPath)
 import View exposing (View)
 
@@ -295,34 +295,35 @@ header { eventSummary, raceControl } =
         [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
         , div [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []
-                [ case raceControl.clock of
+                ([ case raceControl.clock of
                     Initial ->
-                        button [ onClick StartRace ] [ text "Start" ]
+                        button [ class "btn", onClick StartRace ] [ text "Start" ]
 
                     Started _ _ ->
-                        button [ onClick PauseRace ] [ text "Pause" ]
+                        button [ class "btn", onClick PauseRace ] [ text "Pause" ]
 
                     Paused _ ->
-                        button [ onClick StartRace ] [ text "Resume" ]
+                        button [ class "btn", onClick StartRace ] [ text "Resume" ]
 
                     _ ->
                         text ""
-                , case raceControl.clock of
-                    Started _ _ ->
-                        text ""
+                 ]
+                    ++ (case raceControl.clock of
+                            Started _ _ ->
+                                []
 
-                    _ ->
-                        labeledButton []
-                            [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
-                            ]
-                ]
+                            _ ->
+                                [ button [ class "btn", onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                                , button [ class "btn", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                                ]
+                       )
+                )
             , statusBar raceControl
             , nav []
-                [ button [ onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
-                , button [ onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                , button [ onClick (ModeChange Tracker) ] [ text "Tracker" ]
-                , button [ onClick (ModeChange Events) ] [ text "Events" ]
+                [ button [ class "btn", onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
+                , button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ]
+                , button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ]
+                , button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ]
                 ]
             ]
         ]

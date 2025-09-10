@@ -47,7 +47,7 @@ import Array exposing (Array)
 import Css exposing (..)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html.Styled exposing (Attribute, Html, a, button, div, input, span, text)
-import Html.Styled.Attributes as Attributes exposing (css, type_)
+import Html.Styled.Attributes as Attributes exposing (class, css, type_)
 import Html.Styled.Events exposing (on, onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy exposing (lazy4)
@@ -434,7 +434,7 @@ view ({ columns } as config) model dataList =
 table : Config data msg -> Model -> Array data -> List Int -> Html msg
 table config model dataArray displayIndexes =
     Table.table
-        [ css [ fontSize (px 14) ] ]
+        [ class "table table-sm" ]
         [ thead config model dataArray
         , Keyed.node "tbody" [] <|
             viewBodyRows config model displayIndexes dataArray
