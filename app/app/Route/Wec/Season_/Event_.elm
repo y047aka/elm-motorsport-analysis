@@ -33,7 +33,7 @@ import Shared
 import String exposing (dropRight)
 import Task
 import Time
-import UI.Button exposing (labeledButton)
+import UI.HalfModal as HalfModal
 import UrlPath exposing (UrlPath)
 import View exposing (View)
 
@@ -81,6 +81,7 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , eventsState : DataView.Model
     , query : String
+    , isLeaderboardModalOpen : Bool
     }
 
 
@@ -109,6 +110,7 @@ init app shared =
                        )
                 )
       , query = ""
+      , isLeaderboardModalOpen = False
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -129,6 +131,7 @@ type Msg
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
+    | ToggleLeaderboardModal
 
 
 update :
@@ -162,6 +165,12 @@ update app shared msg m =
 
         EventsMsg eventsMsg ->
             ( { m | eventsState = DataView.update eventsMsg m.eventsState }
+            , Effect.none
+            , Nothing
+            )
+
+        ToggleLeaderboardModal ->
+            ( { m | isLeaderboardModalOpen = not m.isLeaderboardModalOpen }
             , Effect.none
             , Nothing
             )
@@ -207,11 +216,23 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState } =
+view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
-            [ main_
+            [ Html.node "style"
+                []
+                [ text """
+                    @keyframes slideUp {
+                        from {
+                            transform: translateY(100%);
+                        }
+                        to {
+                            transform: translateY(0);
+                        }
+                    }
+                """ ]
+            , main_
                 [ css
                     [ height (pct 100)
                     , property "display" "grid"
@@ -240,45 +261,51 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                             [ css
                                 [ height (pct 100)
                                 , overflowY hidden
-                                , property "display" "grid"
-                                , property "grid-template-columns" "370px 1fr 370px"
-                                , property "grid-template-rows" "1fr 300px"
+                                , property "position" "relative"
                                 ]
                             ]
-                            [  div [] []
-                            ,  div [ css [ property "display" "grid", property "place-items" "center" ] ]
-                                [ case ( eventSummary.season, eventSummary.name ) of
-                                    ( 2025, "24 Hours of Le Mans" ) ->
-                                        TrackerChart.viewWithMiniSectors analysis viewModel
-
-                                    _ ->
-                                        TrackerChart.view analysis viewModel
-                                ]
-                            , div
+                            [ div
                                 [ css
                                     [ height (pct 100)
-                                    , overflowY scroll
-                                    , backgroundColor (hsl 0 0 0.15)
-                                    , padding (px 10)
-                                    , property "display" "flex"
-                                    , property "flex-direction" "column"
-                                    , property "gap" "24px"
+                                    , property "display" "grid"
+                                    , property "grid-template-columns" "370px 1fr 370px"
+                                    , property "grid-template-rows" "1fr"
                                     ]
                                 ]
-                                [ analysisWidgets raceControl analysis viewModel ]
-                            , div
-                                [ css
-                                    [ property "grid-column" "1 / -1"
-                                    , overflowY scroll
-                                    ]
-                                ]
-                                [ case ( eventSummary.season, eventSummary.name ) of
-                                    ( 2025, "24 Hours of Le Mans" ) ->
-                                        Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
+                                [ div [] []
+                                , div [ css [ property "display" "grid", property "place-items" "center" ] ]
+                                    [ case ( eventSummary.season, eventSummary.name ) of
+                                        ( 2025, "24 Hours of Le Mans" ) ->
+                                            TrackerChart.viewWithMiniSectors analysis viewModel
 
-                                    _ ->
-                                        Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                                        _ ->
+                                            TrackerChart.view analysis viewModel
+                                    ]
+                                , div
+                                    [ css
+                                        [ height (pct 100)
+                                        , overflowY scroll
+                                        , backgroundColor (hsl 0 0 0.15)
+                                        , padding (px 10)
+                                        , property "display" "flex"
+                                        , property "flex-direction" "column"
+                                        , property "gap" "24px"
+                                        ]
+                                    ]
+                                    [ analysisWidgets raceControl analysis viewModel ]
                                 ]
+                            , HalfModal.view
+                                { isOpen = isLeaderboardModalOpen
+                                , onToggle = ToggleLeaderboardModal
+                                , children =
+                                    [ case ( eventSummary.season, eventSummary.name ) of
+                                        ( 2025, "24 Hours of Le Mans" ) ->
+                                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
+
+                                        _ ->
+                                            Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                                    ]
+                                }
                             ]
 
                     Events ->
