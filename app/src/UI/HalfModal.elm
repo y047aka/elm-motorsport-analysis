@@ -26,14 +26,14 @@ view props =
                 "85vh"
 
             else
-                "350px"
+                "400px"
 
         modalTransform =
             if props.isOpen then
                 "translateY(0)"
 
             else
-                "translateY(calc(100% - 350px))"
+                "translateY(calc(100% - 400px))"
 
         modalTransition =
             "all 0.3s ease"

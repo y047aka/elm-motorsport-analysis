@@ -257,7 +257,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ height (pct 100)
                                     , property "display" "grid"
                                     , property "grid-template-columns" "370px 1fr 370px"
-                                    , property "grid-template-rows" "1fr 350px"
+                                    , property "grid-template-rows" "1fr 400px"
                                     ]
                                 ]
                                 [ div [] []
