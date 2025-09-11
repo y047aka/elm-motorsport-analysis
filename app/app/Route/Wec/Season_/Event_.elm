@@ -257,7 +257,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ height (pct 100)
                                     , property "display" "grid"
                                     , property "grid-template-columns" "370px 1fr 370px"
-                                    , property "grid-template-rows" "1fr"
+                                    , property "grid-template-rows" "1fr 350px"
                                     ]
                                 ]
                                 [ div [] []
@@ -281,19 +281,27 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         ]
                                     ]
                                     [ analysisWidgets raceControl analysis viewModel ]
-                                ]
-                            , HalfModal.view
-                                { isOpen = isLeaderboardModalOpen
-                                , onToggle = ToggleLeaderboardModal
-                                , children =
-                                    [ case ( eventSummary.season, eventSummary.name ) of
-                                        ( 2025, "24 Hours of Le Mans" ) ->
-                                            Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
-
-                                        _ ->
-                                            Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                                , div
+                                    [ css
+                                        [ property "grid-column" "1 / -1"
+                                        , property "position" "relative"
+                                        , height (pct 100)
+                                        ]
                                     ]
-                                }
+                                    [ HalfModal.view
+                                        { isOpen = isLeaderboardModalOpen
+                                        , onToggle = ToggleLeaderboardModal
+                                        , children =
+                                            [ case ( eventSummary.season, eventSummary.name ) of
+                                                ( 2025, "24 Hours of Le Mans" ) ->
+                                                    Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
+
+                                                _ ->
+                                                    Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                                            ]
+                                        }
+                                    ]
+                                ]
                             ]
 
                     PositionHistory ->
