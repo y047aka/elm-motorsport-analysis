@@ -86,9 +86,8 @@ type alias Model =
 
 
 type Mode
-    = Leaderboard
+    = Tracker
     | PositionHistory
-    | Tracker
     | Events
 
 
@@ -245,17 +244,6 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                         ViewModel.init raceControl
                   in
                   case mode of
-                    Leaderboard ->
-                        case ( eventSummary.season, eventSummary.name ) of
-                            ( 2025, "24 Hours of Le Mans" ) ->
-                                Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
-
-                            _ ->
-                                Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
-
-                    PositionHistory ->
-                        PositionHistoryChart.view raceControl
-
                     Tracker ->
                         div
                             [ css
@@ -308,6 +296,9 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 }
                             ]
 
+                    PositionHistory ->
+                        PositionHistoryChart.view raceControl
+
                     Events ->
                         eventsView eventsState raceControl
                 ]
@@ -353,9 +344,8 @@ header { eventSummary, raceControl } =
                 )
             , statusBar raceControl
             , nav []
-                [ button [ class "btn", onClick (ModeChange Leaderboard) ] [ text "Leaderboard" ]
+                [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ]
                 , button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                , button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ]
                 , button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ]
                 ]
             ]
