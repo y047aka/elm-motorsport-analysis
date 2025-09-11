@@ -32,7 +32,7 @@ basis options additionalStyles =
     styledBlock
         { tag = Html.table
         , position = Nothing
-        , margin = Just <| margin2 (em 1) zero
+        , margin = Just <| margin zero
         , padding = Nothing
         , borderRadius = Just (rem 0.28571429)
         , palette =
@@ -56,14 +56,6 @@ basis options additionalStyles =
             }
         , borderCollapse separate
         , borderSpacing zero
-
-        -- .ui.table:first-child
-        , firstChild
-            [ marginTop zero ]
-
-        -- .ui.table:last-child
-        , lastChild
-            [ marginBottom zero ]
         , children
             [ -- .ui.table > thead
               -- .ui.table > tbody
