@@ -45,7 +45,7 @@ view props =
             , property "left" "0"
             , width (pct 100)
             , property "height" modalHeight
-            , padding2 (px 10) (px 20)
+            , padding2 (px 10) (px 15)
             , property "display" "grid"
             , property "row-gap" "10px"
             , property "background-color" "hsl(0 0% 45% / 0.8)"
@@ -70,7 +70,7 @@ view props =
                     , fontSize (em 1.2)
                     , property "cursor" "pointer"
                     , padding2 (px 4) (px 6)
-                    , property "border-radius" "6px"
+                    , property "border-radius" "99px"
                     , property "transition" "all 0.3s ease"
                     , hover
                         [ property "background-color" "hsl(0 0% 100% / 0.05)"
