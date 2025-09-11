@@ -53,7 +53,6 @@ view props =
             , property "border-radius" "16px 16px 0 0"
             , property "box-shadow" "0 -4px 20px hsl(0 0% 0% / 0.1)"
             , property "z-index" "1"
-            , overflowY scroll
             , property "transform" modalTransform
             , property "transition" modalTransition
             , Css.Global.children
