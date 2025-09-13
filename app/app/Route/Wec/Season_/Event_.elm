@@ -2,13 +2,13 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, backgroundColor, center, displayFlex, em, fontSize, height, hidden, hsl, justifyContent, overflowY, padding, pct, position, property, px, right, scroll, spaceBetween, sticky, textAlign, top, width, zero)
+import Css exposing (alignItems, backgroundColor, center, displayFlex, height, hidden, hsl, overflowY, padding, pct, property, px, right, scroll, textAlign, width)
 import Data.Series as Series
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (Html, button, div, h1, img, input, main_, nav, text)
+import Html.Styled as Html exposing (Html, button, div, img, input, li, main_, nav, text, ul)
 import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
@@ -235,10 +235,11 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                 [ css
                     [ height (pct 100)
                     , property "display" "grid"
-                    , property "grid-template-rows" "auto 1fr"
+                    , property "grid-template-rows" "auto auto 1fr"
                     ]
                 ]
-                [ header shared
+                [ div [] [ text eventSummary.name ]
+                , navigation shared.raceControl
                 , let
                     viewModel =
                         ViewModel.init raceControl
@@ -314,47 +315,41 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
         }
 
 
-header : Shared.Model -> Html Msg
-header { eventSummary, raceControl } =
-    Html.header
-        [ css
-            [ position sticky
-            , top zero
-            , padding (px 10)
-            , backgroundColor (hsl 0 0 0.4)
-            ]
-        ]
-        [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
-        , div [ css [ displayFlex, justifyContent spaceBetween ] ]
-            [ nav []
-                ([ case raceControl.clock of
+navigation : RaceControl.Model -> Html Msg
+navigation raceControl =
+    nav
+        [ class "navbar" ]
+        [ div [ class "navbar-start" ]
+            [ ul [ class "menu menu-horizontal px-1" ] <|
+                (case raceControl.clock of
                     Initial ->
-                        button [ class "btn", onClick StartRace ] [ text "Start" ]
+                        li [] [ button [ class "btn", onClick StartRace ] [ text "Start" ] ]
 
                     Started _ _ ->
-                        button [ class "btn", onClick PauseRace ] [ text "Pause" ]
+                        li [] [ button [ class "btn", onClick PauseRace ] [ text "Pause" ] ]
 
                     Paused _ ->
-                        button [ class "btn", onClick StartRace ] [ text "Resume" ]
+                        li [] [ button [ class "btn", onClick StartRace ] [ text "Resume" ] ]
 
-                    _ ->
+                    Finished ->
                         text ""
-                 ]
-                    ++ (case raceControl.clock of
+                )
+                    :: (case raceControl.clock of
                             Started _ _ ->
                                 []
 
                             _ ->
-                                [ button [ class "btn", onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
-                                , button [ class "btn", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                                [ li [] [ button [ class "btn", onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ] ]
+                                , li [] [ button [ class "btn", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ] ]
                                 ]
                        )
-                )
-            , statusBar raceControl
-            , nav []
-                [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ]
-                , button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ]
-                , button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ]
+            ]
+        , div [ class "navbar-center" ] [ statusBar raceControl ]
+        , div [ class "navbar-end" ]
+            [ ul [ class "menu menu-horizontal px-1" ]
+                [ li [] [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ] ]
+                , li [] [ button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ] ]
+                , li [] [ button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ] ]
                 ]
             ]
         ]
