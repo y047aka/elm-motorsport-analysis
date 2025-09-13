@@ -40,5 +40,5 @@ carRow season item =
                 [ text (item.currentDriver |> Maybe.map .name |> Maybe.withDefault "") ]
             ]
         , div [ class "text-xs text-right" ]
-            [ text (Gap.toString item.timing.gap) ]
+            [ text (Gap.toString item.timing.interval) ]
         ]
