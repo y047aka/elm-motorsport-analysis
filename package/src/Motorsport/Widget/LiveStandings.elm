@@ -25,7 +25,7 @@ view eventSummary viewModel =
 carRow : Int -> ViewModelItem -> Html msg
 carRow season item =
     li
-        [ class "list-row p-2 grid-cols-[20px_30px_1fr_80px] items-center gap-2"
+        [ class "list-row p-2 grid-cols-[20px_30px_1fr_auto] items-center gap-2"
         , css [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ] ]
         ]
         [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]

@@ -10,8 +10,6 @@
     --spacing: 0.25rem;
     --text-xs: 0.75rem;
     --text-xs--line-height: calc(1 / 0.75);
-    --text-sm: 0.875rem;
-    --text-sm--line-height: calc(1.25 / 0.875);
     --font-weight-bold: 700;
     --default-transition-duration: 150ms;
     --default-transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
@@ -219,8 +217,8 @@
   .transform {
     transform: var(--tw-rotate-x,) var(--tw-rotate-y,) var(--tw-rotate-z,) var(--tw-skew-x,) var(--tw-skew-y,);
   }
-  .grid-cols-\[20px_30px_1fr_80px\] {
-    grid-template-columns: 20px 30px 1fr 80px;
+  .grid-cols-\[20px_30px_1fr_auto\] {
+    grid-template-columns: 20px 30px 1fr auto;
   }
   .items-center {
     align-items: center;
