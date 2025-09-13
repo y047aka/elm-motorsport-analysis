@@ -25,6 +25,7 @@ import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
+import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.PositionProgression as PositionProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -236,8 +237,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                     , property "grid-template-rows" "auto auto 1fr"
                     ]
                 ]
-                [ div [] [ text eventSummary.name ]
-                , navigation shared.raceControl
+                [ navigation shared.raceControl
                 , let
                     viewModel =
                         ViewModel.init raceControl
@@ -259,7 +259,15 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     , property "grid-template-rows" "1fr 400px"
                                     ]
                                 ]
-                                [ div [] []
+                                [ div
+                                    [ css
+                                        [ height (pct 100)
+                                        , overflowY scroll
+                                        , backgroundColor (hsl 0 0 0.15)
+                                        , padding (px 10)
+                                        ]
+                                    ]
+                                    [ LiveStandingsWidget.view eventSummary viewModel ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                     [ case ( eventSummary.season, eventSummary.name ) of
                                         ( 2025, "24 Hours of Le Mans" ) ->
@@ -276,7 +284,6 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , padding (px 10)
                                         , property "display" "flex"
                                         , property "flex-direction" "column"
-                                        , property "gap" "24px"
                                         ]
                                     ]
                                     [ analysisWidgets raceControl analysis viewModel ]
