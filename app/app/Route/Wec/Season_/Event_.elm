@@ -237,8 +237,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                     , property "grid-template-rows" "auto auto 1fr"
                     ]
                 ]
-                [ div [] [ text eventSummary.name ]
-                , navigation shared.raceControl
+                [ navigation shared.raceControl
                 , let
                     viewModel =
                         ViewModel.init raceControl
@@ -268,7 +267,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , padding (px 10)
                                         ]
                                     ]
-                                    [ LiveStandingsWidget.view eventSummary.season viewModel ]
+                                    [ LiveStandingsWidget.view eventSummary viewModel ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                     [ case ( eventSummary.season, eventSummary.name ) of
                                         ( 2025, "24 Hours of Le Mans" ) ->

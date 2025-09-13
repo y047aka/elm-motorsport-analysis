@@ -1,6 +1,7 @@
 module Motorsport.Widget.LiveStandings exposing (view)
 
 import Css exposing (after, backgroundColor, property)
+import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, li, text, ul)
 import Html.Styled.Attributes exposing (class, css)
 import Motorsport.Class as Class
@@ -10,13 +11,13 @@ import Motorsport.Widget as Widget
 import SortedList
 
 
-view : Int -> ViewModel -> Html msg
-view season viewModel =
-    Widget.container ""
+view : EventSummary -> ViewModel -> Html msg
+view eventSummary viewModel =
+    Widget.container (eventSummary.name ++ " (" ++ String.fromInt eventSummary.season ++ ")")
         (ul [ class "list" ]
             (viewModel.items
                 |> SortedList.toList
-                |> List.map (carRow season)
+                |> List.map (carRow eventSummary.season)
             )
         )
 
