@@ -13,7 +13,6 @@ import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, va
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
@@ -87,7 +86,6 @@ type alias Model =
 
 type Mode
     = Tracker
-    | PositionHistory
     | Events
 
 
@@ -305,9 +303,6 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                 ]
                             ]
 
-                    PositionHistory ->
-                        PositionHistoryChart.view raceControl
-
                     Events ->
                         eventsView eventsState raceControl
                 ]
@@ -348,7 +343,6 @@ navigation raceControl =
         , div [ class "navbar-end" ]
             [ ul [ class "menu menu-horizontal px-1" ]
                 [ li [] [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ] ]
-                , li [] [ button [ class "btn", onClick (ModeChange PositionHistory) ] [ text "Position History" ] ]
                 , li [] [ button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ] ]
                 ]
             ]
