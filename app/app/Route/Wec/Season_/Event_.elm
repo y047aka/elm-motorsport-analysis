@@ -22,7 +22,6 @@ import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
-import Motorsport.Widget.BestLapTimes as BestLapTimesWidget
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -393,8 +392,7 @@ analysisWidgets { clock } analysis viewModel =
             , property "row-gap" "10px"
             ]
         ]
-        [ BestLapTimesWidget.view analysis viewModel
-        , LapTimeProgressionWidget.view clock viewModel
+        [ LapTimeProgressionWidget.view clock viewModel
         , PositionProgressionWidget.view clock viewModel
         , CloseBattlesWidget.view viewModel
         ]
