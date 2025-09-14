@@ -2,6 +2,7 @@
 
 [data-theme="dark"] {
     --root-bg: oklch(0.2 0 0);
+    --btn-color: oklch(1 0 0 / 0.2);
 
     --widget-bg: oklch(1 0 0 / 0.04);
 
