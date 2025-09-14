@@ -2,7 +2,7 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding, pct, property, px, right, scroll, textAlign, width)
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, width, zero)
 import Data.Series as Series
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
@@ -263,7 +263,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ css
                                         [ height (pct 100)
                                         , overflowY scroll
-                                        , padding (px 10)
+                                        , padding2 zero (px 10)
                                         ]
                                     ]
                                     [ LiveStandingsWidget.view eventSummary viewModel ]
@@ -279,7 +279,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ css
                                         [ height (pct 100)
                                         , overflowY scroll
-                                        , padding (px 10)
+                                        , padding2 zero (px 10)
                                         , property "display" "flex"
                                         , property "flex-direction" "column"
                                         ]
