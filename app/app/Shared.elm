@@ -1,7 +1,7 @@
 module Shared exposing (Data, Model, Msg(..), template)
 
 import BackendTask exposing (BackendTask)
-import Css exposing (..)
+import Css exposing (borderBox, boxSizing, fontFamilies, height, margin, qt, vh, zero)
 import Css.Global exposing (global)
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
@@ -283,8 +283,6 @@ view sharedData page model toMsg pageView =
                         [ height (vh 100)
                         , margin zero
                         , fontFamilies [ "-apple-system", "BlinkMacSystemFont", qt "Segoe UI", "Helvetica", "Arial", "sans-serif", qt "Apple Color Emoji", qt "Segoe UI Emoji" ]
-                        , backgroundColor (hsl 0 0 0.4)
-                        , color (hsla 0 0 1 0.9)
                         ]
                     ]
         in

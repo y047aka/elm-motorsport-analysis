@@ -6,8 +6,8 @@ import Data.Series.FormulaE_2025 exposing (formulaE_2025)
 import Data.Series.Wec_2024 exposing (wec_2024)
 import Data.Series.Wec_2025 exposing (wec_2025)
 import FatalError exposing (FatalError)
-import Html.Styled exposing (Html, a, h2, section, text)
-import Html.Styled.Attributes exposing (css, href)
+import Html.Styled exposing (Html, a, div, h2, section, text)
+import Html.Styled.Attributes exposing (attribute, css, href)
 import PagesMsg exposing (PagesMsg)
 import Route exposing (Route)
 import RouteBuilder exposing (App, StatelessRoute)
@@ -53,40 +53,42 @@ view :
 view app shared =
     { title = "Race Analysis"
     , body =
-        [ link { path = Route.GapChart, label = "Gap Chart" }
-        , link { path = Route.LapTimeChart, label = "LapTime Chart" }
-        , link { path = Route.LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
-        , link { path = Route.F1, label = "F1" }
-        , section_ "WEC 2025"
-            (List.map
-                (\eventSummary ->
-                    link
-                        { label = eventSummary.name
-                        , path = Route.Wec__Season___Event_ { season = "2025", event = eventSummary.id }
-                        }
+        [ div [ attribute "data-theme" "dark" ]
+            [ link { path = Route.GapChart, label = "Gap Chart" }
+            , link { path = Route.LapTimeChart, label = "LapTime Chart" }
+            , link { path = Route.LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
+            , link { path = Route.F1, label = "F1" }
+            , section_ "WEC 2025"
+                (List.map
+                    (\eventSummary ->
+                        link
+                            { label = eventSummary.name
+                            , path = Route.Wec__Season___Event_ { season = "2025", event = eventSummary.id }
+                            }
+                    )
+                    wec_2025
                 )
-                wec_2025
-            )
-        , section_ "WEC 2024"
-            (List.map
-                (\eventSummary ->
-                    link
-                        { label = eventSummary.name
-                        , path = Route.Wec__Season___Event_ { season = "2024", event = eventSummary.id }
-                        }
+            , section_ "WEC 2024"
+                (List.map
+                    (\eventSummary ->
+                        link
+                            { label = eventSummary.name
+                            , path = Route.Wec__Season___Event_ { season = "2024", event = eventSummary.id }
+                            }
+                    )
+                    wec_2024
                 )
-                wec_2024
-            )
-        , section_ "Formula E 2025"
-            (List.map
-                (\eventSummary ->
-                    link
-                        { label = eventSummary.name
-                        , path = Route.FormulaE__Season___Event_ { season = "2025", event = eventSummary.id }
-                        }
+            , section_ "Formula E 2025"
+                (List.map
+                    (\eventSummary ->
+                        link
+                            { label = eventSummary.name
+                            , path = Route.FormulaE__Season___Event_ { season = "2025", event = eventSummary.id }
+                            }
+                    )
+                    formulaE_2025
                 )
-                formulaE_2025
-            )
+            ]
         ]
     }
 
