@@ -1,12 +1,9 @@
 @import "tailwindcss";
-@plugin "daisyui";
 
-@layer theme {
-    :root {
-        --root-bg: oklch(0.2 0 0);
+[data-theme="dark"] {
+    --root-bg: oklch(0.2 0 0);
 
-        --widget-bg: oklch(1 0 0 / 0.04);
+    --widget-bg: oklch(1 0 0 / 0.04);
 
-        --half-modal-bg: oklch(0.3 0 0 / 0.8);
-    }
+    --half-modal-bg: oklch(0.3 0 0 / 0.8);
 }
