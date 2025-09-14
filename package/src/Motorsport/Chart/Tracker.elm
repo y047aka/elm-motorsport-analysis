@@ -120,7 +120,7 @@ track config =
             trackCircle "#eee" (trackWidth + 8)
 
         innerTrackCircle =
-            trackCircle "#666" trackWidth
+            trackCircle "oklch(0.2 0 0)" trackWidth
 
         startFinishLine =
             line
@@ -139,7 +139,7 @@ track config =
                 , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
                 , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
                 , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
-                , stroke "#666"
+                , stroke "oklch(0.2 0 0)"
                 , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []
