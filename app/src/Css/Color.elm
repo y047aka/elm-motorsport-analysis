@@ -1,4 +1,4 @@
-module Css.Color exposing (Color(..), currentColor, gray, transparent)
+module Css.Color exposing (Color(..), currentColor, gray, oklch, transparent)
 
 import Css
 
@@ -9,6 +9,14 @@ type Color
         { red : Int
         , green : Int
         , blue : Int
+        , alpha : Float
+        , value : String
+        , color : Css.Compatible
+        }
+    | Oklch
+        { luminance : Float
+        , chroma : Float
+        , hue : Float
         , alpha : Float
         , value : String
         , color : Css.Compatible
@@ -30,3 +38,21 @@ transparent =
 gray : Color
 gray =
     ColorValue (Css.hex "#eee")
+
+
+oklch : Float -> Float -> Float -> Css.Color
+oklch luminance chroma hue =
+    let
+        valuesList =
+            [ numericalPercentageToString luminance
+            , String.fromFloat chroma
+            , String.fromFloat hue
+            ]
+    in
+    Css.rgb 0 0 0
+        |> (\color -> { color | value = "oklch(" ++ String.join " " valuesList ++ ")" })
+
+
+numericalPercentageToString : Float -> String
+numericalPercentageToString value =
+    String.fromFloat (value * 100) ++ "%"

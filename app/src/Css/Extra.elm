@@ -1,7 +1,7 @@
 module Css.Extra exposing (strokeWidth, svgPalette, when)
 
 import Css exposing (Style, batch, property)
-import Css.Color exposing (Color(..))
+import Css.Color exposing (Color(..), oklch)
 import Css.Palette.Svg exposing (SvgPalette)
 
 
@@ -38,6 +38,9 @@ backgroundColor c =
         ColorValue c_ ->
             Css.backgroundColor c_
 
+        Oklch { luminance, chroma, hue } ->
+            Css.backgroundColor (oklch luminance chroma hue)
+
         CurrentColor ->
             Css.backgroundColor Css.currentColor
 
@@ -50,6 +53,9 @@ color c =
     case c of
         ColorValue c_ ->
             Css.color c_
+
+        Oklch { luminance, chroma, hue } ->
+            Css.color (oklch luminance chroma hue)
 
         CurrentColor ->
             Css.color Css.currentColor
@@ -64,6 +70,9 @@ borderColor c =
         ColorValue c_ ->
             Css.borderColor c_
 
+        Oklch { luminance, chroma, hue } ->
+            Css.borderColor (oklch luminance chroma hue)
+
         CurrentColor ->
             Css.borderColor Css.currentColor
 
@@ -76,6 +85,9 @@ fill c =
     case c of
         ColorValue c_ ->
             Css.fill c_
+
+        Oklch { luminance, chroma, hue } ->
+            Css.fill (oklch luminance chroma hue)
 
         CurrentColor ->
             Css.fill Css.currentColor
@@ -93,6 +105,9 @@ stroke c =
     case c of
         ColorValue c_ ->
             stroke_ c_
+
+        Oklch { luminance, chroma, hue } ->
+            stroke_ (oklch luminance chroma hue)
 
         CurrentColor ->
             stroke_ Css.currentColor
