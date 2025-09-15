@@ -7,4 +7,8 @@
     --widget-bg: oklch(1 0 0 / 0.04);
 
     --half-modal-bg: oklch(0.3 0 0 / 0.8);
+
+    --performance-standard: oklch(0.8652 0.1768 90.38);
+    --performance-personal-best: oklch(0.7323 0.249195 142.4953);
+    --performance-fastest: oklch(0.7017 0.3225 328.36);
 }

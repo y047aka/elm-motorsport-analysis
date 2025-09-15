@@ -44,6 +44,7 @@ module Motorsport.Leaderboard exposing
 -}
 
 import Css exposing (..)
+import Css.Color exposing (oklch)
 import Css.Extra exposing (when)
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
@@ -172,14 +173,13 @@ sectorTimeColumn { label, getter } =
                         [ css
                             [ height (px 18)
                             , borderRadius (px 1)
-                            , backgroundColor <|
+                            , property "background-color" <|
                                 if sector.progress < 100 then
-                                    hsla 0 0 1 0.9
+                                    "oklch(1 0 0 / 0.9)"
 
                                 else
                                     performanceLevel sector
-                                        |> Performance.toHexColorString
-                                        |> hex
+                                        |> Performance.toColorVariable
                             ]
                         ]
                         []
@@ -330,9 +330,8 @@ lastLapColumn_F1 { getter, sorter, analysis } =
                                 batch []
 
                               else
-                                Performance.toHexColorString status
-                                    |> hex
-                                    |> color
+                                Performance.toColorVariable status
+                                    |> property "color"
                             ]
                         ]
                         [ text (Duration.toString time) ]
@@ -403,9 +402,8 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                         batch []
 
                       else
-                        Performance.toHexColorString status
-                            |> hex
-                            |> color
+                        Performance.toColorVariable status
+                            |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
@@ -418,15 +416,14 @@ currentLapColumn_Wec { getter, sorter, analysis } =
                     , batch <|
                         if sector_.progress < 100 then
                             [ width (pct sector_.progress)
-                            , backgroundColor (hsla 0 0 1 0.9)
+                            , backgroundColor (oklch 1 0 0)
                             ]
 
                         else
                             [ width (pct 100)
-                            , backgroundColor
+                            , property "background-color"
                                 (performanceLevel sector_
-                                    |> Performance.toHexColorString
-                                    |> hex
+                                    |> Performance.toColorVariable
                                 )
                             ]
                     ]
@@ -544,9 +541,8 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                         batch []
 
                       else
-                        Performance.toHexColorString status
-                            |> hex
-                            |> color
+                        Performance.toColorVariable status
+                            |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
@@ -559,15 +555,14 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
                     , batch <|
                         if sector_.progress < 1 then
                             [ width (pct (sector_.progress * 100))
-                            , backgroundColor (hsla 0 0 1 0.9)
+                            , backgroundColor (oklch 1 0 0)
                             ]
 
                         else
                             [ width (pct 100)
-                            , backgroundColor
+                            , property "background-color"
                                 (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
-                                    |> Performance.toHexColorString
-                                    |> hex
+                                    |> Performance.toColorVariable
                                 )
                             ]
                     ]
@@ -622,9 +617,8 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                         batch []
 
                       else
-                        Performance.toHexColorString status
-                            |> hex
-                            |> color
+                        Performance.toColorVariable status
+                            |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
@@ -634,10 +628,9 @@ lastLapColumn_Wec { getter, sorter, analysis } =
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , backgroundColor
+                    , property "background-color"
                         (performanceLevel sector_
-                            |> Performance.toHexColorString
-                            |> hex
+                            |> Performance.toColorVariable
                         )
                     ]
                 ]
@@ -704,9 +697,8 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                         batch []
 
                       else
-                        Performance.toHexColorString status
-                            |> hex
-                            |> color
+                        Performance.toColorVariable status
+                            |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
@@ -716,10 +708,9 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , backgroundColor
+                    , property "background-color"
                         (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
-                            |> Performance.toHexColorString
-                            |> hex
+                            |> Performance.toColorVariable
                         )
                     ]
                 ]
@@ -786,10 +777,10 @@ histogram { fastestLapTime, slowestLapTime } coefficient laps =
         color lap =
             if isCurrentLap lap then
                 performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
-                    |> Performance.toHexColorString
+                    |> Performance.toColorVariable
 
             else
-                "hsla(0, 0%, 100%, 0.2)"
+                "oklch(1 0 0 / 0.2)"
 
         isCurrentLap { lap } =
             List.length laps == lap
@@ -841,8 +832,7 @@ performanceHistory_ { fastestLapTime } laps =
     let
         toCssColor { time, best } =
             performanceLevel { time = time, personalBest = best, fastest = fastestLapTime }
-                |> Performance.toHexColorString
-                |> hex
+                |> Performance.toColorVariable
     in
     div
         [ css
@@ -863,14 +853,14 @@ performanceHistory_ { fastestLapTime } laps =
         (List.map (\lap -> coloredCell (toCssColor lap)) laps)
 
 
-coloredCell : Color -> Html msg
+coloredCell : String -> Html msg
 coloredCell backgroundColor_ =
     div
         [ css
             [ width (pct 100)
             , height (pct 100)
             , borderRadius (pct 10)
-            , backgroundColor backgroundColor_
+            , property "background-color" backgroundColor_
             ]
         ]
         []

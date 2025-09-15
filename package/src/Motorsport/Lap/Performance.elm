@@ -3,7 +3,7 @@ module Motorsport.Lap.Performance exposing
     , calculateMiniSectorFastest, MiniSectorFastest
     , PerformanceLevel, performanceLevel
     , isStandard
-    , toHexColorString
+    , toColorVariable
     )
 
 {-|
@@ -13,7 +13,7 @@ module Motorsport.Lap.Performance exposing
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
-@docs toHexColorString
+@docs toColorVariable
 
 -}
 
@@ -75,17 +75,17 @@ isStandard level =
     level == Standard
 
 
-toHexColorString : PerformanceLevel -> String
-toHexColorString level =
+toColorVariable : PerformanceLevel -> String
+toColorVariable level =
     case level of
         Fastest ->
-            "#F0F"
+            "var(--performance-fastest)"
 
         PersonalBest ->
-            "#0C0"
+            "var(--performance-personal-best)"
 
         Standard ->
-            "#FC0"
+            "var(--performance-standard)"
 
 
 
