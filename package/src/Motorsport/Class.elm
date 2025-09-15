@@ -1,7 +1,7 @@
 module Motorsport.Class exposing (Class, fromString, none, toHexColor, toString, toStrokePalette)
 
 import Css
-import Css.Color exposing (Color(..))
+import Css.Color exposing (Color(..), oklch)
 import Css.Palette.Svg exposing (SvgPalette, empty)
 
 
@@ -84,31 +84,39 @@ toStrokePalette class =
 
 toHexColor : Int -> Class -> Css.Color
 toHexColor season class =
+    let
+        { red, blue, green, orange } =
+            { red = oklch 0.5 0.25 29
+            , blue = oklch 0.5 0.25 264
+            , green = oklch 0.5 0.25 142
+            , orange = oklch 0.7 0.2 43
+            }
+    in
     case class of
         None ->
-            Css.hex "#000"
+            oklch 0 0 0
 
         LMH ->
-            Css.hex "#f00"
+            red
 
         LMP1 ->
-            Css.hex "#f00"
+            red
 
         LMP2 ->
-            Css.hex "#00f"
+            blue
 
         LMGTE_Pro ->
-            Css.hex "#060"
+            green
 
         LMGTE_Am ->
-            Css.hex "#f60"
+            orange
 
         LMGT3 ->
             if season > 2024 then
-                Css.hex "#060"
+                green
 
             else
-                Css.hex "#f60"
+                orange
 
         InnovativeCar ->
-            Css.hex "#00f"
+            blue

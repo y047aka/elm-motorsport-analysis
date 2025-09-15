@@ -1,7 +1,7 @@
 module Shared exposing (Data, Model, Msg(..), template)
 
 import BackendTask exposing (BackendTask)
-import Css exposing (..)
+import Css exposing (height, vh)
 import Css.Global exposing (global)
 import Data.F1.Decoder as F1
 import Data.F1.Preprocess as Preprocess_F1
@@ -275,17 +275,8 @@ view sharedData page model toMsg pageView =
         let
             globalReset =
                 global
-                    [ Css.Global.everything
-                        [ boxSizing borderBox ]
-                    , Css.Global.html
-                        [ height (vh 100) ]
-                    , Css.Global.body
-                        [ height (vh 100)
-                        , margin zero
-                        , fontFamilies [ "-apple-system", "BlinkMacSystemFont", qt "Segoe UI", "Helvetica", "Arial", "sans-serif", qt "Apple Color Emoji", qt "Segoe UI Emoji" ]
-                        , backgroundColor (hsl 0 0 0.4)
-                        , color (hsla 0 0 1 0.9)
-                        ]
+                    [ Css.Global.html [ height (vh 100) ]
+                    , Css.Global.body [ height (vh 100) ]
                     ]
         in
         List.map Html.Styled.toUnstyled

@@ -2,14 +2,14 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, backgroundColor, center, displayFlex, height, hidden, hsl, overflowY, padding, pct, property, px, right, scroll, textAlign, width)
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, width, zero)
 import Data.Series as Series
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, button, div, img, input, li, main_, nav, text, ul)
-import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
+import Html.Styled.Attributes as Attributes exposing (attribute, class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
 import Motorsport.Analysis exposing (Analysis)
@@ -230,7 +230,8 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                     }
                 """ ]
             , main_
-                [ css
+                [ attribute "data-theme" "dark"
+                , css
                     [ height (pct 100)
                     , property "display" "grid"
                     , property "grid-template-rows" "auto auto 1fr"
@@ -262,8 +263,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ css
                                         [ height (pct 100)
                                         , overflowY scroll
-                                        , backgroundColor (hsl 0 0 0.15)
-                                        , padding (px 10)
+                                        , padding2 zero (px 10)
                                         ]
                                     ]
                                     [ LiveStandingsWidget.view eventSummary viewModel ]
@@ -279,8 +279,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ css
                                         [ height (pct 100)
                                         , overflowY scroll
-                                        , backgroundColor (hsl 0 0 0.15)
-                                        , padding (px 10)
+                                        , padding2 zero (px 10)
                                         , property "display" "flex"
                                         , property "flex-direction" "column"
                                         ]

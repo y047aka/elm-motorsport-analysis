@@ -48,8 +48,8 @@ view props =
             , padding2 (px 10) (px 15)
             , property "display" "grid"
             , property "row-gap" "10px"
-            , property "background-color" "hsl(0 0% 45% / 0.8)"
-            , property "backdrop-filter" "blur(10px)"
+            , property "background-color" "var(--half-modal-bg)"
+            , property "backdrop-filter" "blur(15px)"
             , property "border-radius" "16px 16px 0 0"
             , property "box-shadow" "0 -4px 20px hsl(0 0% 0% / 0.1)"
             , property "z-index" "1"

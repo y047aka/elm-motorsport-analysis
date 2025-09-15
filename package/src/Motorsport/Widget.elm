@@ -22,24 +22,13 @@ container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
         [ class "card card-sm"
-        , css [ backgroundColor (hsl 0 0 0.2) ]
+        , css [ property "background-color" "var(--widget-bg)" ]
         ]
         [ div [ class "card-body" ]
-            [ title widgetTitle
+            [ h3 [ class "card-title" ] [ text widgetTitle ]
             , content
             ]
         ]
-
-
-{-| Create a standard widget title with consistent styling
--}
-title : String -> Html msg
-title titleText =
-    h3
-        [ class "card-title"
-        , css [ color (hsl 0 0 0.9) ]
-        ]
-        [ text titleText ]
 
 
 {-| Create a consistent empty state message
@@ -69,7 +58,6 @@ classHeader class additionalContent =
             , property "column-gap" "5px"
             , fontSize (px 14)
             , property "font-weight" "600"
-            , color (hsl 0 0 0.9)
             ]
         ]
         [ div
