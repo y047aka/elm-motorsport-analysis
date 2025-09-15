@@ -3,11 +3,6 @@ ARG CLAUDE_CODE_VERSION=latest
 # Stage 1: nushell
 FROM ghcr.io/nushell/nushell:latest-bookworm AS nushell-stage
 
-# Stage 2: Rust tools
-FROM rust:1.88-bookworm AS rust-stage
-RUN rustup component add rustfmt clippy \
-    && cargo install cargo-watch cargo-expand
-
 # Stage 3: Elm compiler
 FROM debian:bookworm-slim AS elm-stage
 # https://github.com/elm/compiler/blob/master/installers/linux/README.md
@@ -42,21 +37,14 @@ FROM base-tools AS without-agent-cli
 
 # Copy tools from build stages
 COPY --from=nushell-stage /usr/bin/nu /usr/local/bin/nu
-COPY --from=rust-stage /usr/local/cargo /usr/local/cargo
-COPY --from=rust-stage /usr/local/rustup /usr/local/rustup
 COPY --from=elm-stage /usr/local/bin/elm /usr/local/bin/elm
-
-# Setup environment and tools
-ENV CARGO_HOME=/usr/local/cargo \
-    RUSTUP_HOME=/usr/local/rustup \
-    PATH=/usr/local/cargo/bin:$PATH
 
 ARG USERNAME=node
 
 RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && npm install -g elm-format elm-test elm-review elm-verify-examples elm-pages \
-    && mkdir -p /home/$USERNAME/.elm /home/$USERNAME/.cargo /home/$USERNAME/.rustup \
-    && chown -R $USERNAME:$USERNAME /home/$USERNAME /usr/local/cargo /usr/local/rustup
+    && mkdir -p /home/$USERNAME/.elm \
+    && chown -R $USERNAME:$USERNAME /home/$USERNAME
 
 # Create workspace and config directories and set permissions
 RUN mkdir -p /workspace /home/$USERNAME/.cursor && \
