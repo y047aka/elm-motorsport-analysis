@@ -1,6 +1,9 @@
 {
 	"name": "Rust + Elm",
 	"dockerFile": "Dockerfile",
+	"features": {
+		"ghcr.io/devcontainers/features/rust:1": {}
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
@@ -23,8 +26,7 @@
 	},
 	"remoteUser": "node",
 	"mounts": [
-		"source=elm-cache,target=/home/node/.elm,type=volume",
-		"source=cargo-cache,target=/home/node/.cargo,type=volume"
+		"source=elm-cache,target=/home/node/.elm,type=volume"
 	],
 	"workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=delegated",
 	"workspaceFolder": "/workspace",
