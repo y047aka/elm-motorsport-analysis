@@ -1,8 +1,7 @@
 module Motorsport.Widget.PositionProgression exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Color
-import Css
+import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
@@ -14,16 +13,15 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel)
 import Motorsport.Widget as Widget
-import Path
+import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
 import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
 import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Attributes as TA
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
-import TypedSvg.Types exposing (Length(..), Opacity(..), Paint(..), Transform(..))
+import TypedSvg.Types exposing (Length(..), Transform(..))
 
 
 
@@ -64,7 +62,7 @@ type alias PositionPoint =
 type alias CarPositionData =
     { carNumber : String
     , positions : List PositionPoint
-    , color : Color.Color
+    , color : Color
     }
 
 
@@ -142,15 +140,6 @@ extractPositionDataForCar lapThreshold laps =
                     Nothing ->
                         Nothing
             )
-
-
-colorToCss : Color.Color -> Css.Color
-colorToCss color =
-    let
-        rgba =
-            Color.toRgba color
-    in
-    Css.rgba (round (rgba.red * 255)) (round (rgba.green * 255)) (round (rgba.blue * 255)) rgba.alpha
 
 
 separateClassChartsView : List ClassPositionData -> Html msg
@@ -369,15 +358,13 @@ renderCarPositionLine allPositions carData =
                 , InPx.cy y
                 , InPx.r 2
                 , SvgAttr.css
-                    [ Css.fill (colorToCss carData.color) ]
+                    [ Css.fill carData.color ]
                 ]
                 []
     in
-    (fromUnstyled <|
-        Path.element linePath
-            [ TA.stroke (Paint carData.color)
-            , TA.strokeWidth (Px 1.5)
-            , TA.fill PaintNone
-            ]
-    )
+    Path.element linePath
+        [ SvgAttr.stroke carData.color.value
+        , SvgAttr.strokeWidth "1.5"
+        , SvgAttr.fill "none"
+        ]
         :: points

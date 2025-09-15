@@ -1,8 +1,7 @@
 module Motorsport.Widget.CloseBattles exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Color
-import Css exposing (pct, px)
+import Css exposing (Color, pct, px)
 import Css.Extra
 import Css.Global exposing (children, descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
@@ -34,14 +33,14 @@ type alias CloseBattle =
 type alias CarProgressionData =
     { carNumber : String
     , laps : List Lap
-    , color : Color.Color
+    , color : Color
     }
 
 
 type alias CarGapData =
     { carNumber : String
     , gapData : List { lap : Int, gap : Int }
-    , color : Color.Color
+    , color : Color
     }
 
 
@@ -536,24 +535,15 @@ renderCarGapLine allGapPoints carData =
                 , InPx.cy y
                 , InPx.r 2
                 , SvgAttr.css
-                    [ Css.fill (colorToCss carData.color)
+                    [ Css.fill carData.color
                     , Css.property "stroke" "none"
                     ]
                 ]
                 []
     in
     Path.element linePath
-        [ SvgAttr.stroke (Color.toCssString carData.color)
+        [ SvgAttr.stroke carData.color.value
         , SvgAttr.strokeWidth "1.5"
         , SvgAttr.fill "none"
         ]
         :: points
-
-
-colorToCss : Color.Color -> Css.Color
-colorToCss color =
-    let
-        rgba =
-            Color.toRgba color
-    in
-    Css.rgba (Basics.round (rgba.red * 255)) (Basics.round (rgba.green * 255)) (Basics.round (rgba.blue * 255)) rgba.alpha

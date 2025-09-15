@@ -14,7 +14,8 @@ module Motorsport.Manufacturer exposing
 
 -}
 
-import Color exposing (Color)
+import Css exposing (Color)
+import Css.Color exposing (oklch)
 
 
 type Manufacturer
@@ -131,59 +132,59 @@ toColor manufacturer =
     case manufacturer of
         Alpine ->
             -- Alpine Blue
-            Color.hsl (210 / 360) 1 0.5
+            oklch 0.6 0.25 230
 
         AstonMartin ->
             -- Aston Martin Racing Green
-            Color.hsl (170 / 360) 0.8 0.35
+            oklch 0.5 0.25 180
 
         BMW ->
             -- BMW Blue
-            Color.hsl (220 / 360) 1 0.5
+            oklch 0.5 0.25 250
 
         Cadillac ->
             -- Cadillac Gold
-            Color.hsl (45 / 360) 1 0.45
+            oklch 0.7 0.3 105
 
         Corvette ->
             -- Classic Corvette Yellow
-            Color.hsl (50 / 360) 1 0.5
+            oklch 0.7 0.3 105
 
         Ferrari ->
             -- Ferrari Red
-            Color.hsl (0 / 360) 0.85 0.4
+            oklch 0.45 0.25 30
 
         Ford ->
             -- Ford Blue
-            Color.hsl (230 / 360) 1 0.5
+            oklch 0.45 0.25 260
 
         Lexus ->
-            -- Lexus Dark Blue
-            Color.hsl (0 / 360) 0.55 0.4
+            -- Lexus Dark Red
+            oklch 0.4 0.2 50
 
         McLaren ->
             -- McLaren Orange
-            Color.hsl (30 / 360) 1 0.45
+            oklch 0.6 0.25 80
 
         Mercedes ->
             -- Mercedes Silver
-            Color.hsl 0 0 0.6
+            oklch 0.7 0 0
 
         Peugeot ->
             -- Peugeot Lime Green
-            Color.hsl (75 / 360) 0.9 0.45
+            oklch 0.7 0.25 120
 
         Porsche ->
             -- Porsche Silver
-            Color.hsl 0 0 0.8
+            oklch 0.8 0 0
 
         Toyota ->
             -- Toyota Dark Grey
-            Color.hsl 0 0 0.5
+            oklch 0.6 0 0
 
         Other ->
             -- Neutral Gray
-            Color.hsl (0 / 360) 0 0.47
+            oklch 0.5 0 0
 
 
 {-| Generate color for a manufacturer with car number fallback.
@@ -199,7 +200,7 @@ toColorWithFallback { carNumber, manufacturer } =
             toColor manufacturer
 
 
-{-| Generate a distinct color based on car number using HSL color space.
+{-| Generate a distinct color based on car number using Oklch color space.
 -}
 generateCarColor : String -> Color
 generateCarColor carNumber =
@@ -207,10 +208,7 @@ generateCarColor carNumber =
         carHash =
             String.toInt carNumber |> Maybe.withDefault 0
 
-        ( hue, saturation, lightness ) =
-            ( carHash * 37 |> modBy 360 |> toFloat
-            , 0.7 + (toFloat (carHash * 17 |> modBy 30) / 100)
-            , 0.5 + (toFloat (carHash * 13 |> modBy 20) / 100)
-            )
+        hue =
+            carHash * 37 |> modBy 360 |> toFloat
     in
-    Color.hsl (hue / 360) saturation lightness
+    oklch 0.55 0.25 hue
