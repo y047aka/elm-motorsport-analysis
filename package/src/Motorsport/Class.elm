@@ -86,10 +86,10 @@ toHexColor : Int -> Class -> Css.Color
 toHexColor season class =
     let
         { red, blue, green, orange } =
-            { red = oklch 0.628 0.2577 29.23
-            , blue = oklch 0.452 0.313214 264.052
-            , green = oklch 0.4421 0.1504 142.5
-            , orange = oklch 0.6958 0.204259 43.491
+            { red = oklch 0.5 0.25 29
+            , blue = oklch 0.5 0.25 264
+            , green = oklch 0.5 0.25 142
+            , orange = oklch 0.7 0.2 43
             }
     in
     case class of
