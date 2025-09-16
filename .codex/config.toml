@@ -1,0 +1,24 @@
+# https://github.com/openai/codex/blob/main/docs/config.md
+
+model_provider = "lmstudio"
+model = "openai/gpt-oss-120b"
+
+# Codex has hardcoded logic that defines a set of "trusted" commands.
+# Setting the approval_policy to `untrusted` means that Codex will prompt the
+# user before running a command not in the "trusted" set.
+#
+# See https://github.com/openai/codex/issues/1260 for the plan to enable
+# end-users to define their own trusted commands.
+approval_policy = "on-request"
+
+sandbox_mode = "workspace-write"
+
+[sandbox_workspace_write]
+network_access = true
+
+[tools]
+web_search = true
+
+[model_providers.lmstudio]
+name = "LM Studio"
+base_url = "http://192.168.1.6:1234/v1"

@@ -1,3 +1,8 @@
+.codex/history.jsonl
+.codex/version.json
+.codex/log
+.codex/sessions
+
 dist
 /.env
 elm-stuff
