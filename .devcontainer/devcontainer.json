@@ -4,6 +4,9 @@
 	"features": {
 		"ghcr.io/devcontainers/features/rust:1": {}
 	},
+	"remoteEnv": {
+		"CODEX_HOME": ".codex"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [

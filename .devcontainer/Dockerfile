@@ -56,6 +56,9 @@ WORKDIR /workspace
 # Stage 6: Final development environment with Claude CLI
 FROM without-agent-cli
 
+# Install Codex CLI
+RUN npm install -g @openai/codex@latest
+
 # Install Cursor CLI
 # https://docs.cursor.com/en/cli/installation
 USER $USERNAME
