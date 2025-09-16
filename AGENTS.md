@@ -1,13 +1,13 @@
 # Claude Code Spec-Driven Development
 
-Kiro-style Spec Driven Development implementation using claude code slash commands, hooks and agents.
+Kiro-style Spec Driven Development implementation using codex cli slash commands, hooks and agents.
 
 ## Project Context
 
 ### Paths
 - Steering: `.kiro/steering/`
 - Specs: `.kiro/specs/`
-- Commands: `.claude/commands/`
+- Commands: `.codex/prompts/`
 
 ### Steering vs Specification
 
