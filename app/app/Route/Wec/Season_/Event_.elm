@@ -29,6 +29,7 @@ import Motorsport.Widget.PositionProgression as PositionProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import SortedList
 import String exposing (dropRight)
 import Task
 import Time
@@ -81,6 +82,7 @@ type alias Model =
     , eventsState : DataView.Model
     , query : String
     , isLeaderboardModalOpen : Bool
+    , selectedCar : Maybe String
     }
 
 
@@ -108,6 +110,7 @@ init app shared =
                 )
       , query = ""
       , isLeaderboardModalOpen = False
+      , selectedCar = Nothing
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -129,6 +132,8 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
+    | OpenCarModal String
+    | CloseCarModal
 
 
 update :
@@ -168,6 +173,18 @@ update app shared msg m =
 
         ToggleLeaderboardModal ->
             ( { m | isLeaderboardModalOpen = not m.isLeaderboardModalOpen }
+            , Effect.none
+            , Nothing
+            )
+
+        OpenCarModal carNumber ->
+            ( { m | selectedCar = Just carNumber }
+            , Effect.none
+            , Nothing
+            )
+
+        CloseCarModal ->
+            ( { m | selectedCar = Nothing }
             , Effect.none
             , Nothing
             )
@@ -213,7 +230,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen } =
+view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen, selectedCar } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -241,6 +258,16 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                 , let
                     viewModel =
                         ViewModel.init raceControl
+
+                    selectedCarItem =
+                        selectedCar
+                            |> Maybe.andThen
+                                (\carNumber ->
+                                    viewModel.items
+                                        |> SortedList.toList
+                                        |> List.filter (\item -> item.metadata.carNumber == carNumber)
+                                        |> List.head
+                                )
                   in
                   case mode of
                     Tracker ->
@@ -266,7 +293,14 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , padding2 zero (px 10)
                                         ]
                                     ]
-                                    [ LiveStandingsWidget.view eventSummary viewModel ]
+                                    [ LiveStandingsWidget.view
+                                        { eventSummary = eventSummary
+                                        , viewModel = viewModel
+                                        , selectedCar = selectedCarItem
+                                        , onSelectCar = \item -> OpenCarModal item.metadata.carNumber
+                                        , onCloseModal = CloseCarModal
+                                        }
+                                    ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                     [ case ( eventSummary.season, eventSummary.name ) of
                                         ( 2025, "24 Hours of Le Mans" ) ->
