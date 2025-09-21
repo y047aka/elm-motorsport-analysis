@@ -79,28 +79,8 @@ modalView props =
 
         Just item ->
             div
-                [ class "car-modal-overlay"
-                , css
-                    [ property "position" "fixed"
-                    , property "inset" "0"
-                    , property "background-color" "hsl(0 0% 0% / 0.6)"
-                    , property "display" "grid"
-                    , property "place-items" "center"
-                    , property "z-index" "50"
-                    ]
-                ]
-                [ div
-                    [ class "car-modal-content"
-                    , css
-                        [ property "width" "min(420px, 90vw)"
-                        , property "background-color" "var(--widget-bg, hsl(240 8% 14%))"
-                        , property "border-radius" "16px"
-                        , property "padding" "20px"
-                        , property "display" "grid"
-                        , property "row-gap" "16px"
-                        , property "box-shadow" "0 20px 40px hsl(0 0% 0% / 0.35)"
-                        ]
-                    ]
+                [ class "modal modal-open" ]
+                [ div [ class "modal-box w-full max-w-md p-6 bg-base-200" ]
                     [ modalHeader props.onCloseModal item
                     , modalDetails item
                     ]
