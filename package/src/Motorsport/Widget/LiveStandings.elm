@@ -1,14 +1,15 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, backgroundColor, fontSize, hover, padding2, property, px)
+import Css exposing (after, backgroundColor, fontSize, hover, padding2, property, px, width)
+import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, button, div, li, span, text, ul)
-import Html.Styled.Attributes exposing (class, css)
+import Html.Styled as Html exposing (Html, button, div, img, li, text, ul)
+import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Car exposing (statusToString)
 import Motorsport.Class as Class
-import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
+import Motorsport.Lap.Performance as Performance
+import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import SortedList
@@ -81,37 +82,34 @@ modalView props =
             div
                 [ class "modal modal-open" ]
                 [ div [ class "modal-box w-full max-w-md p-6 bg-base-200" ]
-                    [ modalHeader props.onCloseModal item
-                    , modalDetails item
+                    [ modalHeader props.onCloseModal props.eventSummary.season item
+                    , modalDetails props.eventSummary item
                     ]
                 ]
 
 
-modalHeader : msg -> ViewModelItem -> Html msg
-modalHeader onClose item =
+modalHeader : msg -> Int -> ViewModelItem -> Html msg
+modalHeader onClose season item =
+    let
+        carImage carNumber =
+            case Series.carImageUrl_Wec season carNumber of
+                Just url ->
+                    img [ src url, css [ width (px 100) ] ] []
+
+                Nothing ->
+                    text ""
+    in
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "1fr auto"
+            , property "grid-template-columns" "auto auto 1fr auto"
             , property "align-items" "center"
+            , property "column-gap" "10px"
             ]
         ]
-        [ div []
-            [ span
-                [ css
-                    [ fontSize (px 12)
-                    , property "opacity" "0.7"
-                    ]
-                ]
-                [ text ("POS " ++ String.fromInt item.position ++ " • Class " ++ String.fromInt item.positionInClass) ]
-            , div
-                [ css
-                    [ fontSize (px 20)
-                    , property "font-weight" "700"
-                    ]
-                ]
-                [ text ("#" ++ item.metadata.carNumber ++ " " ++ item.metadata.team) ]
-            ]
+        [ carImage item.metadata.carNumber
+        , Leaderboard.viewCarNumberColumn_Wec season item.metadata
+        , Leaderboard.viewDriverAndTeamColumn_Wec item
         , button
             [ onClick onClose
             , class "btn btn-sm"
@@ -124,62 +122,51 @@ modalHeader onClose item =
         ]
 
 
-modalDetails : ViewModelItem -> Html msg
-modalDetails item =
+modalDetails : EventSummary -> ViewModelItem -> Html msg
+modalDetails eventSummary item =
     let
-        formatLastLap =
-            item.lastLap
-                |> Maybe.map (.time >> Duration.toString)
-                |> Maybe.withDefault "-"
-
-        formatCurrentDriver =
-            item.currentDriver
-                |> Maybe.map .name
-                |> Maybe.withDefault "-"
-
-        formatDrivers =
-            if List.isEmpty item.metadata.drivers then
-                "-"
-
-            else
-                item.metadata.drivers
-                    |> List.map .name
-                    |> String.join ", "
+        analysis =
+            let
+                laps =
+                    item.history
+            in
+            { fastestLapTime = [ laps ] |> Performance.findFastest |> Maybe.map .time |> Maybe.withDefault 0
+            , slowestLapTime = [ laps ] |> Performance.findSlowest |> Maybe.map .time |> Maybe.withDefault 0
+            , sector_1_fastest = [ laps ] |> Performance.findFastestBy .sector_1 |> Maybe.withDefault 0
+            , sector_2_fastest = [ laps ] |> Performance.findFastestBy .sector_2 |> Maybe.withDefault 0
+            , sector_3_fastest = [ laps ] |> Performance.findFastestBy .sector_3 |> Maybe.withDefault 0
+            , miniSectorFastest = Performance.calculateMiniSectorFastest [ laps ]
+            }
     in
     div
         [ css
             [ property "display" "grid"
-            , property "row-gap" "12px"
-            ]
-        ]
-        [ detailRow "Class" (Class.toString item.metadata.class)
-        , detailRow "Status" (statusToString item.status)
-        , detailRow "Gap" (Gap.toString item.timing.gap)
-        , detailRow "Interval" (Gap.toString item.timing.interval)
-        , detailRow "Current driver" formatCurrentDriver
-        , detailRow "Drivers" formatDrivers
-        , detailRow "Last lap" formatLastLap
-        ]
-
-
-detailRow : String -> String -> Html msg
-detailRow label value =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "120px 1fr"
+            , property "grid-template-columns" "1fr 1fr"
             , property "column-gap" "12px"
-            , property "align-items" "center"
             ]
         ]
-        [ span
-            [ css
-                [ fontSize (px 12)
-                , property "opacity" "0.6"
-                ]
+        [ div []
+            [ Html.div [ class "text-xs opacity-60" ] [ text "Current Lap" ]
+            , (case ( eventSummary.season, eventSummary.name ) of
+                ( 2025, "24 Hours of Le Mans" ) ->
+                    Leaderboard.viewCurrentLapColumn_LeMans24h
+
+                _ ->
+                    Leaderboard.viewCurrentLapColumn_Wec
+              )
+                analysis
+                item
             ]
-            [ text label ]
-        , span
-            [ css [ fontSize (px 14) ] ]
-            [ text value ]
+        , div []
+            [ Html.div [ class "text-xs opacity-60" ] [ text "Last Lap" ]
+            , (case ( eventSummary.season, eventSummary.name ) of
+                ( 2025, "24 Hours of Le Mans" ) ->
+                    Leaderboard.viewLastLapColumn_LeMans24h
+
+                _ ->
+                    Leaderboard.viewLastLapColumn_Wec
+              )
+                analysis
+                item.lastLap
+            ]
         ]
