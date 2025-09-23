@@ -1,4 +1,4 @@
-module Motorsport.Widget.LiveStandings exposing (ListProps, view)
+module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, hover, property)
 import Data.Series.EventSummary exposing (EventSummary)
@@ -12,14 +12,14 @@ import Motorsport.Widget as Widget
 import SortedList
 
 
-type alias ListProps msg =
+type alias Props msg =
     { eventSummary : EventSummary
     , viewModel : ViewModel
     , onSelectCar : ViewModelItem -> msg
     }
 
 
-view : ListProps msg -> Html msg
+view : Props msg -> Html msg
 view props =
     let
         headerTitle =
