@@ -131,8 +131,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
-    | OpenCarModal String
-    | CloseCarModal
+    | CarSelected String
 
 
 update :
@@ -176,14 +175,8 @@ update app shared msg m =
             , Nothing
             )
 
-        OpenCarModal carNumber ->
+        CarSelected carNumber ->
             ( { m | selectedCar = Just carNumber }
-            , Effect.none
-            , Nothing
-            )
-
-        CloseCarModal ->
-            ( { m | selectedCar = Nothing }
             , Effect.none
             , Nothing
             )
@@ -295,7 +288,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ LiveStandingsWidget.view
                                         { eventSummary = eventSummary
                                         , viewModel = viewModel
-                                        , onSelectCar = \item -> OpenCarModal item.metadata.carNumber
+                                        , onSelectCar = \item -> CarSelected item.metadata.carNumber
                                         }
                                     ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
