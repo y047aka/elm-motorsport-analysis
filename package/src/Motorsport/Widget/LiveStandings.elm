@@ -478,22 +478,16 @@ yAxis positions =
 renderPositionLine : List PositionPoint -> PositionSeries -> Svg msg
 renderPositionLine allPoints series =
     let
-        x_ =
-            xScale allPoints
-
-        y_ =
-            yScale allPoints
-
         dataPoints =
             series.points
                 |> List.map
                     (\{ lapNumber, position } ->
                         ( lapNumber
                             |> toFloat
-                            |> Scale.convert x_
+                            |> Scale.convert (xScale allPoints)
                         , position
                             |> toFloat
-                            |> Scale.convert y_
+                            |> Scale.convert (yScale allPoints)
                         )
                     )
 
