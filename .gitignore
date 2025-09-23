@@ -1,4 +1,6 @@
+.codex/auth.json
 .codex/history.jsonl
+.codex/internal_storage.json
 .codex/version.json
 .codex/log
 .codex/sessions

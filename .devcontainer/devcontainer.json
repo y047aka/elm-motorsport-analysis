@@ -11,6 +11,7 @@
 		"vscode": {
 			"extensions": [
 				"eamodio.gitlens",
+				"openai.chatgpt",
 				"anthropic.claude-code",
 				"elmTooling.elm-ls-vscode",
 				"rust-lang.rust-analyzer"
