@@ -296,10 +296,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ LiveStandingsWidget.view
                                         { eventSummary = eventSummary
                                         , viewModel = viewModel
-                                        , clock = raceControl.clock
-                                        , selectedCar = selectedCarItem
                                         , onSelectCar = \item -> OpenCarModal item.metadata.carNumber
-                                        , onCloseModal = CloseCarModal
                                         }
                                     ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
@@ -319,7 +316,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , property "flex-direction" "column"
                                         ]
                                     ]
-                                    [ analysisWidgets raceControl analysis viewModel ]
+                                    [ analysisWidgets shared viewModel selectedCarItem ]
                                 , div
                                     [ css
                                         [ property "grid-column" "1 / -1"
@@ -417,8 +414,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-analysisWidgets : RaceControl.Model -> Analysis -> ViewModel -> Html Msg
-analysisWidgets { clock } analysis viewModel =
+analysisWidgets : Shared.Model -> ViewModel -> Maybe ViewModelItem -> Html Msg
+analysisWidgets { eventSummary, raceControl } viewModel selectedCarItem =
     div
         [ css
             [ property "display" "grid"
@@ -426,8 +423,14 @@ analysisWidgets { clock } analysis viewModel =
             , property "row-gap" "10px"
             ]
         ]
-        [ LapTimeProgressionWidget.view clock viewModel
-        , PositionProgressionWidget.view clock viewModel
+        [ LiveStandingsWidget.detailView
+            { eventSummary = eventSummary
+            , viewModel = viewModel
+            , clock = raceControl.clock
+            , selectedCar = selectedCarItem
+            }
+        , LapTimeProgressionWidget.view raceControl.clock viewModel
+        , PositionProgressionWidget.view raceControl.clock viewModel
         , CloseBattlesWidget.view viewModel
         ]
 

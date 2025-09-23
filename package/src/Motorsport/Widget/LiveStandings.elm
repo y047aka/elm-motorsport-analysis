@@ -1,12 +1,12 @@
-module Motorsport.Widget.LiveStandings exposing (Props, view)
+module Motorsport.Widget.LiveStandings exposing (DetailProps, ListProps, detailView, view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Css exposing (Color, after, backgroundColor, fontSize, hover, num, padding2, property, px, width)
+import Css exposing (Color, after, backgroundColor, hover, num, property, px, width)
 import Css.Extra
 import Css.Global exposing (descendants, each)
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, button, div, img, li, text, ul)
+import Html.Styled as Html exposing (Html, div, img, li, text, ul)
 import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
@@ -30,17 +30,22 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-type alias Props msg =
+type alias ListProps msg =
+    { eventSummary : EventSummary
+    , viewModel : ViewModel
+    , onSelectCar : ViewModelItem -> msg
+    }
+
+
+type alias DetailProps =
     { eventSummary : EventSummary
     , viewModel : ViewModel
     , clock : Clock.Model
     , selectedCar : Maybe ViewModelItem
-    , onSelectCar : ViewModelItem -> msg
-    , onCloseModal : msg
     }
 
 
-view : Props msg -> Html msg
+view : ListProps msg -> Html msg
 view props =
     let
         headerTitle =
@@ -50,14 +55,9 @@ view props =
             props.viewModel.items
                 |> SortedList.toList
                 |> List.map (carRow props.eventSummary.season props.onSelectCar)
-
-        content =
-            div []
-                [ ul [ class "list" ] carList
-                , modalView props
-                ]
     in
-    Widget.container headerTitle content
+    Widget.container headerTitle <|
+        ul [ class "list" ] carList
 
 
 carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
@@ -88,24 +88,34 @@ carRow season onSelect item =
         ]
 
 
-modalView : Props msg -> Html msg
-modalView props =
-    case props.selectedCar of
-        Nothing ->
-            Html.text ""
+detailView : DetailProps -> Html msg
+detailView props =
+    let
+        ( title, body ) =
+            case props.selectedCar of
+                Nothing ->
+                    ( "Car Details"
+                    , Widget.emptyState "Select a car from the standings to view details"
+                    )
 
-        Just item ->
-            div
-                [ class "modal modal-open" ]
-                [ div [ class "modal-box w-full max-w-md p-6 bg-base-200" ]
-                    [ modalHeader props.onCloseModal props.eventSummary.season item
-                    , modalDetails props item
-                    ]
-                ]
+                Just item ->
+                    ( item.metadata.carNumber ++ " - " ++ item.metadata.team
+                    , div
+                        [ css
+                            [ property "display" "grid"
+                            , property "row-gap" "16px"
+                            ]
+                        ]
+                        [ detailHeader props.eventSummary.season item
+                        , detailBody props item
+                        ]
+                    )
+    in
+    Widget.container title body
 
 
-modalHeader : msg -> Int -> ViewModelItem -> Html msg
-modalHeader onClose season item =
+detailHeader : Int -> ViewModelItem -> Html msg
+detailHeader season item =
     let
         carImage carNumber =
             case Series.carImageUrl_Wec season carNumber of
@@ -118,28 +128,21 @@ modalHeader onClose season item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto auto 1fr auto"
+            , property "grid-template-columns" "auto auto 1fr"
             , property "align-items" "center"
             , property "column-gap" "10px"
+            , property "padding-bottom" "12px"
+            , property "border-bottom" "1px solid hsl(0 0% 100% / 0.1)"
             ]
         ]
-        [ carImage item.metadata.carNumber
-        , Leaderboard.viewCarNumberColumn_Wec season item.metadata
+        [ Leaderboard.viewCarNumberColumn_Wec season item.metadata
         , Leaderboard.viewDriverAndTeamColumn_Wec item
-        , button
-            [ onClick onClose
-            , class "btn btn-sm"
-            , css
-                [ fontSize (px 14)
-                , padding2 (px 6) (px 10)
-                ]
-            ]
-            [ text "Close" ]
+        , carImage item.metadata.carNumber
         ]
 
 
-modalDetails : Props msg -> ViewModelItem -> Html msg
-modalDetails { eventSummary, viewModel, clock } item =
+detailBody : DetailProps -> ViewModelItem -> Html msg
+detailBody { eventSummary, viewModel, clock } item =
     let
         analysis =
             let
@@ -208,7 +211,7 @@ type alias PositionPoint =
 
 chartWidth : Float
 chartWidth =
-    400
+    320
 
 
 chartHeight : Float
