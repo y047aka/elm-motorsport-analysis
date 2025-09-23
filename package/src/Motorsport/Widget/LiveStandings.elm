@@ -2,9 +2,11 @@ module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, hover, property)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, li, text, ul)
+import Html.Styled as Html exposing (Html, div, li, text)
 import Html.Styled.Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
+import Html.Styled.Keyed as Keyed
+import Html.Styled.Lazy as Lazy
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -28,10 +30,15 @@ view props =
         carList =
             props.viewModel.items
                 |> SortedList.toList
-                |> List.map (carRow props.eventSummary.season props.onSelectCar)
+                |> List.map
+                    (\item ->
+                        ( item.metadata.carNumber
+                        , Lazy.lazy3 carRow props.eventSummary.season props.onSelectCar item
+                        )
+                    )
     in
     Widget.container headerTitle <|
-        ul [ class "list" ] carList
+        Keyed.node "ul" [ class "list" ] carList
 
 
 carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
