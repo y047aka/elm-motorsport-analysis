@@ -296,6 +296,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                     [ LiveStandingsWidget.view
                                         { eventSummary = eventSummary
                                         , viewModel = viewModel
+                                        , clock = raceControl.clock
                                         , selectedCar = selectedCarItem
                                         , onSelectCar = \item -> OpenCarModal item.metadata.carNumber
                                         , onCloseModal = CloseCarModal
