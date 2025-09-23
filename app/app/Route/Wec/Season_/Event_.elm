@@ -22,6 +22,7 @@ import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
+import Motorsport.Widget.CarDetails as CarDetails
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -415,7 +416,7 @@ analysisWidgets { eventSummary, raceControl } viewModel selectedCarItem =
             , property "row-gap" "10px"
             ]
         ]
-        [ LiveStandingsWidget.detailView
+        [ CarDetails.view
             { eventSummary = eventSummary
             , viewModel = viewModel
             , clock = raceControl.clock
