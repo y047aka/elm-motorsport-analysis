@@ -24,7 +24,6 @@ import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), Timel
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.CarDetails as CarDetails
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
-import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -423,7 +422,6 @@ analysisWidgets { eventSummary, raceControl, analysis } viewModel selectedCarIte
             , selectedCar = selectedCarItem
             , analysis = analysis
             }
-        , LapTimeProgressionWidget.view raceControl.clock viewModel
         , CloseBattlesWidget.view viewModel
         ]
 

@@ -1,4 +1,4 @@
-module Motorsport.Widget.LapTimeProgression exposing (view)
+module Motorsport.Widget.CarDetails.LapTimeProgression exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color)
@@ -70,12 +70,9 @@ type alias ClassProgressionData =
 
 view : Clock.Model -> ViewModel -> Html msg
 view clock viewModel =
-    let
-        classDataList =
-            processClassProgressionData clock viewModel
-    in
-    Widget.container "Lap Time Progression"
-        (separateClassChartsView classDataList)
+    viewModel
+        |> processClassProgressionData clock
+        |> separateClassChartsView
 
 
 processClassProgressionData : Clock.Model -> ViewModel -> List ClassProgressionData

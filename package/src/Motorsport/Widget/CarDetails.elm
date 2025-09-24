@@ -10,6 +10,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
+import Motorsport.Widget.CarDetails.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.CarDetails.PositionProgression exposing (positionProgressionSection)
 
 
@@ -116,4 +117,5 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
                 ]
             ]
         , positionProgressionSection clock viewModel item.metadata
+        , LapTimeProgression.view clock viewModel
         ]
