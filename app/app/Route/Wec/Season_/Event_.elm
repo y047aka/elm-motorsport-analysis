@@ -408,7 +408,7 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
 
 
 analysisWidgets : Shared.Model -> ViewModel -> Maybe ViewModelItem -> Html Msg
-analysisWidgets { eventSummary, raceControl } viewModel selectedCarItem =
+analysisWidgets { eventSummary, raceControl, analysis } viewModel selectedCarItem =
     div
         [ css
             [ property "display" "grid"
@@ -421,6 +421,7 @@ analysisWidgets { eventSummary, raceControl } viewModel selectedCarItem =
             , viewModel = viewModel
             , clock = raceControl.clock
             , selectedCar = selectedCarItem
+            , analysis = analysis
             }
         , LapTimeProgressionWidget.view raceControl.clock viewModel
         , CloseBattlesWidget.view viewModel

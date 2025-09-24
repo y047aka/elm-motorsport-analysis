@@ -5,8 +5,8 @@ import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
-import Motorsport.Lap.Performance as Performance
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
@@ -18,6 +18,7 @@ type alias Props =
     , viewModel : ViewModel
     , clock : Clock.Model
     , selectedCar : Maybe ViewModelItem
+    , analysis : Analysis
     }
 
 
@@ -75,21 +76,7 @@ detailHeader season item =
 
 
 detailBody : Props -> ViewModelItem -> Html msg
-detailBody { eventSummary, viewModel, clock } item =
-    let
-        analysis =
-            let
-                laps =
-                    item.history
-            in
-            { fastestLapTime = [ laps ] |> Performance.findFastest |> Maybe.map .time |> Maybe.withDefault 0
-            , slowestLapTime = [ laps ] |> Performance.findSlowest |> Maybe.map .time |> Maybe.withDefault 0
-            , sector_1_fastest = [ laps ] |> Performance.findFastestBy .sector_1 |> Maybe.withDefault 0
-            , sector_2_fastest = [ laps ] |> Performance.findFastestBy .sector_2 |> Maybe.withDefault 0
-            , sector_3_fastest = [ laps ] |> Performance.findFastestBy .sector_3 |> Maybe.withDefault 0
-            , miniSectorFastest = Performance.calculateMiniSectorFastest [ laps ]
-            }
-    in
+detailBody { eventSummary, viewModel, clock, analysis } item =
     div
         [ css
             [ property "display" "grid"
