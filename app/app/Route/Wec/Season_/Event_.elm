@@ -22,13 +22,13 @@ import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
+import Motorsport.Widget.CarDetails as CarDetails
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
-import Motorsport.Widget.LapTimeProgression as LapTimeProgressionWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
-import Motorsport.Widget.PositionProgression as PositionProgressionWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
+import SortedList
 import String exposing (dropRight)
 import Task
 import Time
@@ -81,6 +81,7 @@ type alias Model =
     , eventsState : DataView.Model
     , query : String
     , isLeaderboardModalOpen : Bool
+    , selectedCar : Maybe String
     }
 
 
@@ -108,6 +109,7 @@ init app shared =
                 )
       , query = ""
       , isLeaderboardModalOpen = False
+      , selectedCar = Nothing
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -129,6 +131,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
+    | CarSelected String
 
 
 update :
@@ -168,6 +171,12 @@ update app shared msg m =
 
         ToggleLeaderboardModal ->
             ( { m | isLeaderboardModalOpen = not m.isLeaderboardModalOpen }
+            , Effect.none
+            , Nothing
+            )
+
+        CarSelected carNumber ->
+            ( { m | selectedCar = Just carNumber }
             , Effect.none
             , Nothing
             )
@@ -213,7 +222,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen } =
+view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen, selectedCar } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -241,6 +250,16 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                 , let
                     viewModel =
                         ViewModel.init raceControl
+
+                    selectedCarItem =
+                        selectedCar
+                            |> Maybe.andThen
+                                (\carNumber ->
+                                    viewModel.items
+                                        |> SortedList.toList
+                                        |> List.filter (\item -> item.metadata.carNumber == carNumber)
+                                        |> List.head
+                                )
                   in
                   case mode of
                     Tracker ->
@@ -266,7 +285,12 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , padding2 zero (px 10)
                                         ]
                                     ]
-                                    [ LiveStandingsWidget.view eventSummary viewModel ]
+                                    [ LiveStandingsWidget.view
+                                        { eventSummary = eventSummary
+                                        , viewModel = viewModel
+                                        , onSelectCar = \item -> CarSelected item.metadata.carNumber
+                                        }
+                                    ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
                                     [ case ( eventSummary.season, eventSummary.name ) of
                                         ( 2025, "24 Hours of Le Mans" ) ->
@@ -284,7 +308,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , property "flex-direction" "column"
                                         ]
                                     ]
-                                    [ analysisWidgets raceControl analysis viewModel ]
+                                    [ analysisWidgets shared viewModel selectedCarItem ]
                                 , div
                                     [ css
                                         [ property "grid-column" "1 / -1"
@@ -382,8 +406,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-analysisWidgets : RaceControl.Model -> Analysis -> ViewModel -> Html Msg
-analysisWidgets { clock } analysis viewModel =
+analysisWidgets : Shared.Model -> ViewModel -> Maybe ViewModelItem -> Html Msg
+analysisWidgets { eventSummary, raceControl, analysis } viewModel selectedCarItem =
     div
         [ css
             [ property "display" "grid"
@@ -391,8 +415,13 @@ analysisWidgets { clock } analysis viewModel =
             , property "row-gap" "10px"
             ]
         ]
-        [ LapTimeProgressionWidget.view clock viewModel
-        , PositionProgressionWidget.view clock viewModel
+        [ CarDetails.view
+            { eventSummary = eventSummary
+            , viewModel = viewModel
+            , clock = raceControl.clock
+            , selectedCar = selectedCarItem
+            , analysis = analysis
+            }
         , CloseBattlesWidget.view viewModel
         ]
 

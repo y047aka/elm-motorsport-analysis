@@ -1,9 +1,12 @@
-module Motorsport.Widget.LiveStandings exposing (view)
+module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, backgroundColor, property)
+import Css exposing (after, backgroundColor, hover, property)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, li, text, ul)
+import Html.Styled as Html exposing (Html, div, li, text)
 import Html.Styled.Attributes exposing (class, css)
+import Html.Styled.Events exposing (onClick)
+import Html.Styled.Keyed as Keyed
+import Html.Styled.Lazy as Lazy
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -11,22 +14,44 @@ import Motorsport.Widget as Widget
 import SortedList
 
 
-view : EventSummary -> ViewModel -> Html msg
-view eventSummary viewModel =
-    Widget.container (eventSummary.name ++ " (" ++ String.fromInt eventSummary.season ++ ")")
-        (ul [ class "list" ]
-            (viewModel.items
+type alias Props msg =
+    { eventSummary : EventSummary
+    , viewModel : ViewModel
+    , onSelectCar : ViewModelItem -> msg
+    }
+
+
+view : Props msg -> Html msg
+view props =
+    let
+        headerTitle =
+            props.eventSummary.name ++ " (" ++ String.fromInt props.eventSummary.season ++ ")"
+
+        carList =
+            props.viewModel.items
                 |> SortedList.toList
-                |> List.map (carRow eventSummary.season)
-            )
-        )
+                |> List.map
+                    (\item ->
+                        ( item.metadata.carNumber
+                        , Lazy.lazy3 carRow props.eventSummary.season props.onSelectCar item
+                        )
+                    )
+    in
+    Widget.container headerTitle <|
+        Keyed.node "ul" [ class "list" ] carList
 
 
-carRow : Int -> ViewModelItem -> Html msg
-carRow season item =
+carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
+carRow season onSelect item =
     li
-        [ class "list-row p-2 grid-cols-[20px_30px_1fr_auto] items-center gap-2"
-        , css [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ] ]
+        [ onClick (onSelect item)
+        , class "list-row p-2 grid-cols-[20px_30px_1fr_auto] items-center gap-2"
+        , css
+            [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ]
+            , property "cursor" "pointer"
+            , property "transition" "background-color 0.2s ease"
+            , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
+            ]
         ]
         [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
         , div
