@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetails.PositionProgression exposing (positionProgressionSection)
+module Motorsport.Widget.CarDetails.PositionProgression exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
@@ -23,8 +23,8 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-positionProgressionSection : Clock.Model -> ViewModel -> Car.Metadata -> Html msg
-positionProgressionSection clock viewModel metadata =
+view : Clock.Model -> ViewModel -> Car.Metadata -> Html msg
+view clock viewModel metadata =
     let
         lapThreshold =
             calculateLapThreshold clock viewModel

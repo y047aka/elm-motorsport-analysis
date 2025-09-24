@@ -11,7 +11,7 @@ import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Motorsport.Widget.CarDetails.LapTimeProgression as LapTimeProgression
-import Motorsport.Widget.CarDetails.PositionProgression exposing (positionProgressionSection)
+import Motorsport.Widget.CarDetails.PositionProgression as PositionProgression
 
 
 type alias Props =
@@ -116,6 +116,6 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
                     item.lastLap
                 ]
             ]
-        , positionProgressionSection clock viewModel item.metadata
+        , PositionProgression.view clock viewModel item.metadata
         , LapTimeProgression.view clock viewModel
         ]
