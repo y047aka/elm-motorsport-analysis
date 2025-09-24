@@ -117,5 +117,5 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
                 ]
             ]
         , PositionProgression.view clock viewModel item.metadata
-        , LapTimeProgression.view clock viewModel
+        , LapTimeProgression.view clock viewModel item.metadata
         ]
