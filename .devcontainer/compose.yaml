@@ -5,12 +5,14 @@ services:
       context: .
       dockerfile: ./Dockerfile
     environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
       - CODEX_HOME=.codex
       - CLAUDE_CONFIG_DIR=/home/node/.claude
     tty: true
     user: node
     volumes:
       - ../:/workspace:delegated
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - elm-cache:/home/node/.elm
       - claude-code-config:/home/node/.claude
 
