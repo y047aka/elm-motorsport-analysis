@@ -1,48 +1,60 @@
-# Product Overview
+# Product Overview (Kiro Steering)
 
-## What is Elm Motorsport Analysis
+Inclusion: Always
 
-A web-based motorsport data analysis platform that provides comprehensive race analytics and visualizations for multiple racing series including Formula 1, Formula E, and World Endurance Championship (WEC).
+Updated: 2025-09-25
+
+## What This Product Is
+This repository is a monorepo for a motorsport race analysis toolkit combining:
+- A Rust CLI that ingests lap timing CSVs and produces JSON outputs (event metadata and per-lap data).
+- An Elm web application (via elm-pages + Vite) that visualizes results for F1/Formula E/WEC style data.
+- Shared Elm code and developer tooling to enable spec-driven development with Codex CLI (Kiro workflow).
+
+The goal is a type-safe, reproducible pipeline from raw timing data to interactive visualizations.
 
 ## Core Features
+- CSV → JSON processing (Rust CLI)
+  - Accepts a file or directory of CSVs; recursively processes directories.
+  - Auto-derives default output file name (`<input>.json`) and event id from the input path.
+  - Writes 2 files per input: `metadata` (event name, starting grid, timeline events) and `laps` (per-lap records).
+  - Laps JSON fields include (based on code): `carNumber`, `driverNumber`, `lapNumber`, `lapTime`, `lapImprovement`, `crossingFinishLineInPit`, `s1`, `s1Improvement`, `s2`, `s2Improvement`, `s3`, `s3Improvement`, `kph`, `elapsed`, `hour`, `topSpeed`, `driverName`, `pitTime`, `class`, `group`, `team`, `manufacturer`.
+  - Metadata JSON includes: `name` (mapped from event id), `startingGrid` (position + car meta), `timelineEvents` (computed from car/lap data).
 
-- **Multi-Series Support**: Analysis for F1, Formula E, and WEC races
-- **Interactive Data Visualization**: 
-  - Lap time charts and comparisons
-  - Gap analysis between drivers
-  - Position progression tracking
-  - Best lap time analysis
-- **Race Control Dashboard**: Real-time race monitoring and analysis tools
-- **Data Processing Pipeline**: Rust CLI for preprocessing race data from CSV sources
-- **Responsive Web Interface**: Elm-based frontend with clean, interactive charts
-- **Historical Data Analysis**: Support for multiple seasons and events
+- Web visualization (Elm app)
+  - Uses `elm-pages` (Elm library) with Vite integration for a fast dev/build pipeline.
+  - Data decoders and preprocessors for F1, Formula E, and WEC data models.
+  - Tailwind CSS v4 and DaisyUI for styling, plus additional Elm visualization libraries.
 
-## Target Use Case
+- Developer experience
+  - npm workspaces (`app`, `package`, `review`) with shared tooling (Biome, Elm, elm-format).
+  - Devcontainer sets up Node 22, Rust, Elm, Codex CLI, and Claude CLI for a consistent environment.
+  - Spec-driven prompts in `.codex/prompts/` and steering in `.kiro/steering/`.
 
-**Primary Users**: Motorsport enthusiasts, race engineers, and data analysts who need to:
-- Analyze race performance data across different racing series
-- Compare driver and car performance metrics
-- Visualize race progression and key moments
-- Process and transform raw timing data into meaningful insights
-
-**Specific Scenarios**:
-- Post-race analysis of driver performance
-- Strategy analysis using gap charts and position tracking
-- Historical comparison between seasons and events
-- Data preparation and cleaning for race analysis
+## Target Use Cases
+- Convert official/team timing CSVs into a consistent JSON schema for analysis.
+- Generate assets consumed by the Elm UI for static or hybrid hosting.
+- Batch-process race-weekend folders and quickly validate outputs via integration tests.
 
 ## Key Value Proposition
+- End-to-end type safety: Rust domain model → JSON → Elm decoders.
+- Reproducibility: devcontainer + npm workspaces ensure consistent local and CI environments.
+- Performance: Rust for ingestion/processing; Elm for reliable, maintainable UI.
 
-- **Multi-Series Integration**: Unified platform for analyzing different racing categories
-- **Performance-Focused**: Built with Elm for reliable, fast frontend experience
-- **Data Processing Reliability**: Rust-based CLI ensures robust data handling
-- **Developer-Friendly**: Clean architecture supporting both analysis and development workflows
-- **Extensible Design**: Modular structure allowing for new racing series and analysis types
+## Notable Constraints & Assumptions
+- Input format: current CLI assumes a specific CSV layout (see Rust crate `cli` for parsers and tests).
+- Event naming: CLI maps known event ids (e.g., `le_mans_24h`) to display names; unknown ids map to "Encoding Error" until extended.
+- Ports/ENV: app dev server/ports are not pinned in repo; no mandatory environment variables are required for basic usage.
 
-## Business Context
+## Getting Started Examples
+- Run the UI: `npm run start` (root calls `app` workspace)
+- Build the UI: `npm run build`
+- Process a CSV: `cargo run -p cli -- ./cli/test_data.csv --output ./out.json`
+  - Outputs: `./out.json` (metadata) and `./out_laps.json` (laps)
 
-This is a specialized tool for motorsport data analysis, prioritizing:
-1. **Data Accuracy**: Precise timing and position data processing
-2. **Visual Clarity**: Clear, interactive charts for complex race data
-3. **Performance**: Fast loading and responsive interface for large datasets
-4. **Maintainability**: Type-safe codebase with strong architectural foundations
+## Change Notes
+- 2025-09-25: Regenerated steering files. Last steering commit affecting deletes was `9891ef3` (product.md, structure.md, tech.md removed in that commit).
+
+## Security & Privacy
+- Do not commit secrets or proprietary timing data. Sample CSVs should be sanitized.
+- JSON outputs may contain driver names and team info; ensure usage complies with licensing and privacy.
+

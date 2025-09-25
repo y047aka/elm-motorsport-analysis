@@ -12,7 +12,7 @@ Generate detailed implementation tasks for feature: **[feature-name]**
 ### Prerequisites & Context Loading
 - If invoked with `-y`: Auto-approve requirements and design in `spec.json`
 - Otherwise: Stop if requirements/design missing or unapproved with message:
-  "Run `/kiro/spec-requirements` and `/kiro/spec-design` first, or use `-y` flag to auto-approve"
+  "Run `/kiro-spec-requirements` and `/kiro-spec-design` first, or use `-y` flag to auto-approve"
 - If tasks.md exists: Prompt [o]verwrite/[m]erge/[c]ancel
 
 **Context Loading (Full Paths)**:

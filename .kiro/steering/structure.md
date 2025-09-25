@@ -1,174 +1,74 @@
-# Project Structure
+# Project Structure (Kiro Steering)
+
+Inclusion: Always
+
+Updated: 2025-09-25
 
 ## Root Directory Organization
+- `.kiro/steering/` — Steering docs (product/tech/structure). Always loaded for AI.
+- `.kiro/specs/` — Feature specs and phase artifacts (init/requirements/design/tasks).
+- `.codex/prompts/` — Slash-command prompts for Kiro workflow (spec/steering).
+- `app/` — Elm application (elm-pages + Vite), UI and decoders.
+- `package/` — Shared Elm code, tests, and benchmarks used by the app.
+- `review/` — elm-review rules/config for linting Elm code.
+- `cli/` — Rust workspace with `cli` (bin) and `motorsport` (lib) crates.
+- `.devcontainer/` — Reproducible development environment setup.
+- `package.json` — Workspace scripts (start/build/test/benchmark).
 
-```
-elm-motorsport-analysis/
-├── app/                    # Main Elm frontend application
-├── cli/                    # Rust workspace for data processing
-├── package/                # Reusable Elm motorsport analysis library
-├── review/                 # Elm code review configuration
-├── node_modules/           # JavaScript dependencies
-├── .kiro/                  # Kiro spec-driven development files
-├── package.json           # Workspace coordination and scripts
-├── biome.json             # Code formatting configuration
-└── CLAUDE.md              # Project instructions and guidelines
-```
+## Subdirectory Details
+### `app/`
+- `src/` — Elm modules.
+  - `Data/` — Decoders and domain preprocessors (F1/FormulaE/WEC, lap/timeline models).
+  - `UI/` — UI components (e.g., tables/visualizations/styles).
+- `elm.json` — Elm app config (includes `../package/src` as a source directory).
+- `elm-pages.config.mjs` — Vite + headTags config.
+- `index.ts` — Elm app bootstrap (`ElmPagesInit`).
+- `custom-backend-task.ts` — Example custom task hook.
+- `functions/` — Server-like tasks (if used by elm-pages).
+- `style.css` / `output.css` — Tailwind/DaisyUI styling artifacts.
 
-## App Directory (`app/`)
+### `package/`
+- `src/` — Shared Elm modules (visualizations/utilities) used by `app`.
+- `elm.json` — Elm application used for shared code and benchmarks.
+- `benchmark/` — Elm benchmarking assets.
+- `fixture/` — Sample data used by benchmarks/tests.
 
-### Source Structure
-```
-app/
-├── src/                   # Elm source code
-│   ├── Data/              # Data models and decoders
-│   │   ├── F1/            # Formula 1 specific data handling
-│   │   ├── Series/        # Multi-series data models
-│   │   └── *.elm          # Core data types
-│   ├── Css/               # Styling modules
-│   ├── UI/                # Reusable UI components
-│   └── Path/              # Route handling utilities
-├── app/                   # Page components and routing
-│   ├── Route/             # Individual page modules
-│   │   ├── FormulaE/      # Formula E specific pages
-│   │   └── Wec/           # WEC specific pages
-│   └── *.elm              # Core app modules (Api, Site, View)
-└── static/                # Static assets and data
-    ├── formula-e/         # Formula E data files
-    ├── wec/               # WEC data files
-    └── images/            # Car and series imagery
-```
+### `review/`
+- `src/` — elm-review configuration and custom rules.
+- `elm.json` — Config for elm-review app.
 
-### Configuration Files
-- `elm.json`: Elm package configuration
-- `package.json`: npm scripts and dependencies
-- `elm-pages.config.mjs`: elm-pages build configuration
-- `custom-backend-task.ts`: Custom data processing tasks
-
-## CLI Directory (`cli/`)
-
-### Rust Workspace Structure
-```
-cli/
-├── cli/                   # Main CLI application
-│   ├── src/
-│   │   ├── main.rs        # CLI entry point
-│   │   ├── config.rs      # Configuration handling
-│   │   ├── preprocess.rs  # Data preprocessing logic
-│   │   └── output.rs      # Output generation
-│   └── tests/             # Integration tests
-└── motorsport/            # Core motorsport data library
-    └── src/
-        ├── lib.rs         # Library entry point
-        ├── lap.rs         # Lap time data structures
-        ├── driver.rs      # Driver information
-        ├── car.rs         # Car/vehicle data
-        ├── class.rs       # Racing class definitions
-        └── duration.rs    # Time duration utilities
-```
-
-## Package Directory (`package/`)
-
-### Elm Library Structure
-```
-package/
-├── src/
-│   ├── Motorsport/        # Core motorsport analysis modules
-│   │   ├── Chart/         # Visualization components
-│   │   ├── Widget/        # Analysis widgets
-│   │   ├── RaceControl/   # Race control functionality
-│   │   └── *.elm          # Core analysis types
-│   ├── DataView/          # Data visualization utilities
-│   ├── SortedList.elm     # Custom data structures
-│   └── TypedSvg/          # SVG generation utilities
-├── tests/                 # Unit tests
-├── examples/              # Usage examples
-└── benchmark/             # Performance benchmarks
-```
+### `cli/`
+- `cli/src/` — Binary entry and orchestration:
+  - `main.rs` — Parses CLI args and runs.
+  - `config.rs` — CLI arg parsing, auto naming of output/event.
+  - `preprocess.rs` — CSV parsing + domain preprocessing (grouping laps etc.).
+  - `output.rs` — JSON shape (metadata/laps) and serializers.
+- `cli/tests/integration.rs` — End-to-end tests for CSV→JSON output.
+- `motorsport/src/` — Domain types (`Car`, `Driver`, `Lap`, `MetaData`, etc.).
+- `Cargo.toml` / `Cargo.lock` — Rust workspace configuration.
 
 ## Code Organization Patterns
-
-### Elm Module Hierarchy
-- **Domain-First**: Modules organized by motorsport domain (F1, FormulaE, WEC)
-- **Feature-Based**: Related functionality grouped together (Chart, Widget, RaceControl)
-- **Reusable Components**: UI and utility modules designed for cross-series use
-
-### Rust Module Structure
-- **Library-Binary Separation**: Core logic in `motorsport` library, CLI in separate crate
-- **Data-Driven Design**: Types closely mirror race data structures
-- **Processing Pipeline**: Clear separation between input, processing, and output
-
-### Data Flow Architecture
-```
-Raw CSV Data → Rust CLI Processing → JSON Output → Elm Frontend → Interactive Charts
-```
+- Strongly-typed pipeline: Rust domain → JSON → Elm decoders.
+- Shared Elm code is surfaced to the app by including `../package/src` in `app/elm.json`.
+- Integration tests verify the JSON schema fields expected by the Elm decoders.
 
 ## File Naming Conventions
+- Rust: `snake_case.rs` modules; tests in `tests/`.
+- Elm: `PascalCase.elm` modules under `src/`.
+- Generated outputs: `<input>.json` (metadata), `<input>_laps.json` (laps).
 
-### Elm Files
-- **PascalCase**: Module names match file names (`DataView.elm`)
-- **Hyphenated Routes**: Page modules use hyphens (`Route-F1.elm`)
-- **Descriptive Names**: Clear indication of module purpose (`Chart-GapChart.elm`)
+## Import/Dependency Conventions
+- Rust crates use workspace dependencies (`serde`, `serde_json`) and internal crate `motorsport`.
+- Elm uses `elm-pages` (Elm lib) and visualization libraries; decoders in `Data/*` mirror CLI JSON.
+- Node/npm handles workspace orchestration and tooling (Biome, elm-format, Tailwind CLI).
 
-### Rust Files
-- **snake_case**: Standard Rust naming (`lap.rs`, `driver.rs`)
-- **Descriptive**: Module names indicate data domain
-- **Hierarchical**: Related modules in same directory
+## Architectural Principles
+- Type-first design across Rust and Elm.
+- Reproducible development via devcontainer and workspace scripts.
+- Additive documentation: deprecations are marked, not deleted.
 
-### Data Files
-- **Series/Season/Event**: Organized by racing series and chronology
-- **Format Consistency**: CSV for input, JSON for processed output
-- **Descriptive Naming**: Event names and dates in filenames
+## Extending The System
+- New event types: add mapping in Rust `map_event_name` and supporting decoders in Elm `Data/*`.
+- New CSV formats: implement parsing in `preprocess.rs` and update integration tests.
+- New UI views: add Elm modules under `UI/` and wire into pages.
 
-## Import Organization
-
-### Elm Import Standards
-```elm
--- Standard library imports first
-import Dict
-import List
-
--- Third-party packages
-import Css
-import Html.Styled
-
--- Internal modules, organized by hierarchy
-import Data.Series
-import Motorsport.Analysis
-import UI.Button
-```
-
-### Rust Import Standards
-```rust
-// Standard library
-use std::collections::HashMap;
-
-// External crates  
-use serde::{Deserialize, Serialize};
-
-// Internal modules
-use crate::lap::Lap;
-use motorsport::Driver;
-```
-
-## Key Architectural Principles
-
-### Type Safety First
-- **Elm's Guarantees**: No runtime exceptions in frontend code
-- **Rust's Memory Safety**: Guaranteed memory safety in data processing
-- **Strong Typing**: Custom types for domain concepts (Duration, Gap, Position)
-
-### Functional Programming
-- **Immutable Data**: All data transformations create new values
-- **Pure Functions**: Predictable, testable data processing
-- **Composable Components**: Small, reusable functions and modules
-
-### Performance Optimization
-- **Rust for Heavy Lifting**: Data processing in high-performance Rust
-- **Elm for UI**: Efficient virtual DOM and minimal JavaScript
-- **Static Generation**: Pre-processed data for fast loading
-
-### Modularity and Reusability
-- **Package System**: Shared components in separate Elm package
-- **Workspace Organization**: Clear boundaries between concerns
-- **Domain Abstraction**: Generic components work across racing series

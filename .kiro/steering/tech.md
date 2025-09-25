@@ -1,111 +1,79 @@
-# Technology Stack
+# Technology Stack (Kiro Steering)
 
-## Architecture
+Inclusion: Always
 
-**Multi-Workspace Monorepo** with clear separation of concerns:
-- **Frontend**: Elm application with static site generation
-- **Data Processing**: Rust CLI for high-performance data transformation
-- **Package**: Reusable Elm library for motorsport analysis components
-- **Development**: TypeScript tooling and build pipeline
+Updated: 2025-09-25
 
-## Frontend Stack
+## Architecture Overview
+- Monorepo with npm workspaces: `app` (Elm UI), `package` (shared Elm code/bench), `review` (elm-review config), plus a Rust workspace under `cli` (`cli` binary and `motorsport` library).
+- Data flow: CSV files → Rust CLI parses and computes → JSON (`metadata.json`, `*_laps.json`) → Elm app decodes and renders.
+- Dev environment is defined via `.devcontainer` for reproducible toolchains (Node 22, Rust, Elm, Codex CLI, Claude CLI).
 
-### Core Framework
-- **Elm 0.19.1**: Main application language for type safety and reliability
-- **elm-pages 3.0.22**: Static site generator with dynamic data loading
-- **Vite 6.2.4**: Build tool and development server
+## Frontend (Elm + elm-pages + Vite)
+- Elm version: 0.19.1 (see `app/elm.json`).
+- Elm library: `dillonkearns/elm-pages` 10.x for routing and data workflows in Elm code.
+- Node CLI: `elm-pages` (npm) present in devcontainer; `app/elm-pages.config.mjs` configures Vite and head tags.
+- Build tooling: Vite 6.x, Tailwind CSS 4.x (`@tailwindcss/cli`), DaisyUI (via CDN in head tags).
+- Commands (from root):
+  - `npm run start` → `npm run -w app start` → `elm-pages dev`.
+  - `npm run build` → `npm run -w app build` → `elm-pages build`.
+- Styling: `app/style.css` and generated `app/output.css`; Tailwind v4 CLI is used.
 
-### UI & Visualization
-- **TypedSvg**: Type-safe SVG generation for charts
-- **Elm Styling**: CSS-in-Elm approach for component styling
-- **Interactive Charts**: Custom motorsport-specific visualization components
-
-### Development Tools
-- **elm-format**: Code formatting
-- **elm-review**: Static analysis and linting
-- **elm-test**: Unit testing framework
-- **elm-verify-examples**: Documentation testing
-
-## Backend & Data Processing
-
-### Rust CLI Tools
-- **Rust 2021 Edition**: High-performance data processing
-- **Serde**: JSON/CSV serialization and deserialization
-- **CSV Processing**: Native CSV parsing for race data
-- **Workspace Structure**: Modular Rust packages (`cli` + `motorsport` library)
-
-### Data Pipeline
-- **Input**: CSV race data files
-- **Processing**: Rust CLI transforms raw timing data
-- **Output**: JSON files for frontend consumption
-- **Static Assets**: Processed data served via elm-pages
+## CLI / Backend (Rust)
+- Rust edition: 2024 (see `cli/Cargo.toml`).
+- Workspace members: `cli` (binary), `motorsport` (library with domain types: `Car`, `Driver`, `Lap`, etc.).
+- Dependencies: `serde`, `serde_json`, `csv`.
+- Binary entry: `cli/cli/src/main.rs` uses `Config::build(args)` and runs `cli::run(config)`.
+- Features:
+  - Accepts a file or directory input.
+  - Auto-generates default output file name and event id from input path.
+  - For each CSV input, writes `<name>.json` (metadata) and `<name>_laps.json` (laps).
+- Example usage:
+  - `cargo run -p cli -- ./cli/test_data.csv` (writes `./cli/test_data.json` and `./cli/test_data_laps.json`).
+  - Provide a custom output: `cargo run -p cli -- ./cli/test_data.csv --output ./out.json`.
+- Tests: integration tests in `cli/cli/tests/integration.rs` validate JSON schemas and fields.
 
 ## Development Environment
-
-### Package Management
-- **npm**: JavaScript dependencies and workspace management
-- **Cargo**: Rust dependency management
-- **elm.json**: Elm package configuration
-
-### Build System
-- **Workspaces**: Root package.json coordinates `app`, `package`, `review` workspaces
-- **Development Scripts**: Unified commands across all workspaces
-- **Build Pipeline**: elm-pages handles Elm compilation and asset bundling
+- Devcontainer (`.devcontainer/devcontainer.json` & `Dockerfile`):
+  - Node 22, global installs for Elm toolchain (`elm`, `elm-format`, `elm-test`, `elm-review`, `elm-verify-examples`, `elm-pages`).
+  - Rust toolchain via devcontainer feature; `rust-analyzer` extension pinned.
+  - Codex CLI and Claude Code CLI installed globally.
+  - `postCreateCommand`: `npm install --ignore-scripts && elm --version && rustc --version`.
+- Editor tooling: VS Code extensions for Elm and Rust configured.
 
 ## Common Commands
-
-### Development
-```bash
-npm run start    # Start development server (app workspace)
-npm run build    # Build production assets (app workspace)
-npm run test     # Run Elm tests (package workspace)
-npm run benchmark # Run performance benchmarks (CLI)
-```
-
-### Data Processing
-```bash
-cd cli && cargo run    # Process race data
-cargo test            # Run Rust tests
-```
-
-### Code Quality
-```bash
-elm-format --validate  # Check Elm code formatting
-elm-review            # Run static analysis
-elm-test              # Run test suite
-```
+- Root package.json scripts:
+  - `start` → run Elm app dev server.
+  - `build` → build Elm app.
+  - `test` → run tests in `package` workspace (Elm tests).
+  - `benchmark` → run Elm benchmarks in `package/benchmark`.
+- Rust:
+  - `cargo run -p cli -- <path|dir> [--output <file>]`.
+  - `cargo test -p cli` (or workspace-wide `cargo test`).
 
 ## Environment Variables
+- None required for default CLI or app flows.
+- Devcontainer sets `PATH` to include user-local bin; no fixed ports configured here.
 
-### Build Configuration
-- **NODE_ENV**: Development/production mode
-- **VITE_***: Vite-specific configuration variables
+## Ports
+- Vite dev server uses its default port unless overridden; repo does not pin a port.
+- No backend server process; CLI is offline/local.
 
-### Data Paths
-- Static data served from `app/static/` directory
-- Race data organized by series and season
-- Image assets in `app/static/images/` with series-specific subdirectories
+## Data Contracts (High-Level)
+- Metadata JSON structure:
+  - `name: string` (mapped pretty name from event id)
+  - `startingGrid: Array<{ position: number, car: { class, group, team, manufacturer, drivers: Driver[] } }>`
+  - `timelineEvents: Array<TimelineEvent>` (computed from laps)
+- Laps JSON structure (per record):
+  - Keys include: `carNumber`, `driverNumber`, `lapNumber`, `lapTime`, `lapImprovement`, `crossingFinishLineInPit`, `s1`, `s1Improvement`, `s2`, `s2Improvement`, `s3`, `s3Improvement`, `kph`, `elapsed`, `hour`, `topSpeed`, `driverName`, `pitTime`, `class`, `group`, `team`, `manufacturer`.
+  - Note: time values are serialized to strings by helpers (e.g., `duration::to_string`).
 
-## Port Configuration
+## Third-Party & Tooling
+- Lint/format: Biome, elm-format.
+- Quality gates: elm-review; Rust tests (unit + integration).
+- CSS: Tailwind 4.x (CLI), DaisyUI.
 
-### Development Ports
-- **elm-pages dev**: Typically port 3000 (configurable)
-- **elm reactor**: Port 8000 for package benchmarks
-- **Vite dev server**: Integrated with elm-pages
+## Notes / Gaps To Revisit
+- Extend `map_event_name` in Rust for additional events when needed.
+- If the app should consume JSON via HTTP, introduce a small static hosting doc (currently not present).
 
-## Key Dependencies
-
-### Elm Ecosystem
-- **elm-pages**: Static site generation and routing
-- **elm-codegen**: Code generation utilities
-- **lamdera**: Development tooling
-- **elm-optimize-level-2**: Production optimization
-
-### Rust Ecosystem
-- **serde**: Serialization framework
-- **csv**: CSV parsing and writing
-- **tempfile**: Testing utilities
-
-### JavaScript/TypeScript
-- **@biomejs/biome**: Code formatting and linting
-- **TypeScript**: Type checking for custom backend tasks

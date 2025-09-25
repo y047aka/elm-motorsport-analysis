@@ -127,7 +127,7 @@ JSON update: update via file tools, set ISO `updated_at`, merge only needed keys
   <next_phase>
   After generating requirements.md, review the requirements and choose:
 
-  - If requirements look good: Run `/kiro/spec-design [feature-name] -y` to proceed to design phase.
+  - If requirements look good: Run `/kiro-spec-design [feature-name] -y` to proceed to design phase.
   - If requirements need modification: Request changes, then re-run this command after modifications.
 
   The `-y` flag auto-approves requirements and generates design directly, streamlining the workflow while maintaining review enforcement.

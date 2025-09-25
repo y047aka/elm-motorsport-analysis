@@ -17,12 +17,12 @@ Available specs: Discover via list_dir/glob_file_search under `.kiro/specs/`
 ### Help Mode (--help)
 If arguments contain "--help", show usage:
 ```
-/kiro/spec-impl [feature-name] <task-numbers>
+/kiro-spec-impl [feature-name] <task-numbers>
 
 Examples:
-  /kiro/spec-impl auth-system 1.1            # Execute task 1.1
-  /kiro/spec-impl auth-system 1,2,3          # Execute tasks 1, 2, 3
-  /kiro/spec-impl auth-system --all          # Execute all pending tasks
+  /kiro-spec-impl auth-system 1.1            # Execute task 1.1
+  /kiro-spec-impl auth-system 1,2,3          # Execute tasks 1, 2, 3
+  /kiro-spec-impl auth-system --all          # Execute all pending tasks
 ```
 
 ### Pre-Execution Validation
@@ -108,7 +108,7 @@ Execute using TDD methodology directly:
 
 ## Error Handling
 
-- Spec not found: Run /kiro/spec-init first
+- Spec not found: Run /kiro-spec-init first
 - Not approved: Complete spec workflow first
 - Task failure: Keep checkbox unchecked, show error
 

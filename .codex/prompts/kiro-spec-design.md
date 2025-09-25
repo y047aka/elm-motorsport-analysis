@@ -472,14 +472,14 @@ Final Reminder: Do not skip discovery.
 
 ### Actionable Messages
 If requirements are not approved and no `-y` flag:
-- **Error Message**: "Requirements must be approved before generating design. Run `/kiro/spec-requirements [feature-name]` to review requirements, then run `/kiro/spec-design [feature-name] -y` to proceed."
-- **Alternative**: "Or run `/kiro/spec-design [feature-name] -y` to auto-approve requirements and generate design."
+- **Error Message**: "Requirements must be approved before generating design. Run `/kiro-spec-requirements [feature-name]` to review requirements, then run `/kiro-spec-design [feature-name] -y` to proceed."
+- **Alternative**: "Or run `/kiro-spec-design [feature-name] -y` to auto-approve requirements and generate design."
 
 ### Conversation Guidance
 After generation:
 - Guide user to review design narrative and visualizations
 - Suggest specific diagram additions if needed
-- Direct to run `/kiro/spec-tasks [feature-name] -y` when approved
+- Direct to run `/kiro-spec-tasks [feature-name] -y` when approved
 
 Create design document that tells complete story through clear narrative, structured components, and effective visualizations.
 

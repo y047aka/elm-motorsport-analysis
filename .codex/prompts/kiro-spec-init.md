@@ -64,7 +64,7 @@ Write requirements.md with project description:
 <what-to-build>
 
 ## Requirements
-<!-- Will be generated in /kiro/spec-requirements phase -->
+<!-- Will be generated in /kiro-spec-requirements phase -->
 ```
 
 
@@ -75,9 +75,9 @@ Add the new spec to the active specifications list with the generated feature na
 ## Next Steps After Initialization
 
 Follow the strict spec-driven development workflow:
-1. **`/kiro/spec-requirements [feature-name]`** - Create and generate requirements.md
-2. **`/kiro/spec-design [feature-name]`** - Create and generate design.md (requires approved requirements)
-3. **`/kiro/spec-tasks [feature-name]`** - Create and generate tasks.md (requires approved design)
+1. **`/kiro-spec-requirements [feature-name]`** - Create and generate requirements.md
+2. **`/kiro-spec-design [feature-name]`** - Create and generate design.md (requires approved requirements)
+3. **`/kiro-spec-tasks [feature-name]`** - Create and generate tasks.md (requires approved design)
 
 **Important**: Each phase creates its respective file and requires approval before proceeding to the next phase.
 
@@ -87,6 +87,5 @@ After initialization, provide:
 1. Generated feature name and rationale
 2. Brief project summary
 3. Created spec.json path
-4. **Clear next step**: `/kiro/spec-requirements [feature-name]`
+4. **Clear next step**: `/kiro-spec-requirements [feature-name]`
 5. Explanation that only spec.json was created, following stage-by-stage development principles
-
