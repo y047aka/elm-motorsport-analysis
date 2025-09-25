@@ -6,6 +6,7 @@ import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -89,6 +90,7 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
                 [ property "display" "grid"
                 , property "grid-template-columns" "1fr 1fr"
                 , property "column-gap" "12px"
+                , property "row-gap" "12px"
                 ]
             ]
             [ div []
@@ -114,6 +116,10 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
                   )
                     analysis
                     item.lastLap
+                ]
+            , div [ css [ property "grid-column" "1 / -1" ] ]
+                [ Html.div [ class "text-xs opacity-60" ] [ text "Histogram" ]
+                , Histogram.view analysis 1.05 item.history
                 ]
             ]
         , PositionProgression.view clock viewModel item.metadata

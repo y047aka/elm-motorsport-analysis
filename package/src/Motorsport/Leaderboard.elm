@@ -61,6 +61,7 @@ import Html.Styled.Lazy as Lazy
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
+import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
@@ -68,12 +69,7 @@ import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
 import Motorsport.Utils exposing (compareBy)
-import Scale exposing (ContinuousScale)
 import SortedList
-import Svg.Styled exposing (Svg, g, rect, svg)
-import Svg.Styled.Attributes as SvgAttributes
-import TypedSvg.Styled.Attributes as TypedSvgAttributes
-import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 
@@ -215,7 +211,7 @@ histogramColumn :
     -> Column data msg
 histogramColumn { getter, sorter, analysis, coefficient } =
     { name = "Histogram"
-    , view = getter >> Lazy.lazy3 histogram analysis coefficient
+    , view = getter >> Lazy.lazy3 Histogram.view analysis coefficient
     , sorter = sorter
     , filter = \_ _ -> True
     }
@@ -752,86 +748,6 @@ view config state viewModel =
 
 
 -- VIEW
-
-
-w : Float
-w =
-    200
-
-
-h : Float
-h =
-    20
-
-
-padding : Float
-padding =
-    1
-
-
-xScale : ( Int, Float ) -> ContinuousScale Float
-xScale ( min, max ) =
-    ( toFloat min, max ) |> Scale.linear ( padding, w - padding )
-
-
-yScale : ( Float, Float ) -> ContinuousScale Float
-yScale ( min, max ) =
-    ( min, max ) |> Scale.linear ( h - padding, padding )
-
-
-histogram : Analysis -> Float -> List Lap -> Html msg
-histogram { fastestLapTime, slowestLapTime } coefficient laps =
-    let
-        xScale_ =
-            xScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
-
-        width lap =
-            if isCurrentLap lap then
-                3
-
-            else
-                1
-
-        color lap =
-            if isCurrentLap lap then
-                performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
-                    |> Performance.toColorVariable
-
-            else
-                "oklch(1 0 0 / 0.2)"
-
-        isCurrentLap { lap } =
-            List.length laps == lap
-    in
-    svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
-        [ histogram_
-            { x = .time >> toFloat >> Scale.convert xScale_
-            , y = always 0 >> Scale.convert (yScale ( 0, 0 ))
-            , width = width
-            , color = color
-            }
-            laps
-        ]
-
-
-histogram_ :
-    { x : a -> Float, y : a -> Float, width : a -> Float, color : a -> String }
-    -> List a
-    -> Svg msg
-histogram_ { x, y, width, color } laps =
-    g [] <|
-        List.map
-            (\lap ->
-                rect
-                    [ InPx.x (x lap - 1)
-                    , InPx.y (y lap - 10)
-                    , InPx.width (width lap)
-                    , InPx.height 20
-                    , SvgAttributes.fill (color lap)
-                    ]
-                    []
-            )
-            laps
 
 
 performanceHistory : { a | fastestLapTime : Duration } -> List Lap -> Html msg
