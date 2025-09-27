@@ -26,28 +26,20 @@ type alias Props =
 
 view : Props -> Html msg
 view props =
-    let
-        ( title, body ) =
-            case props.selectedCar of
-                Nothing ->
-                    ( "Car Details"
-                    , Widget.emptyState "Select a car from the standings to view details"
-                    )
+    case props.selectedCar of
+        Nothing ->
+            Widget.emptyState "Select a car from the standings to view details"
 
-                Just item ->
-                    ( item.metadata.carNumber ++ " - " ++ item.metadata.team
-                    , div
-                        [ css
-                            [ property "display" "grid"
-                            , property "row-gap" "16px"
-                            ]
-                        ]
-                        [ detailHeader props.eventSummary.season item
-                        , detailBody props item
-                        ]
-                    )
-    in
-    Widget.container title body
+        Just item ->
+            div
+                [ css
+                    [ property "display" "grid"
+                    , property "row-gap" "16px"
+                    ]
+                ]
+                [ detailHeader props.eventSummary.season item
+                , detailBody props item
+                ]
 
 
 detailHeader : Int -> ViewModelItem -> Html msg
