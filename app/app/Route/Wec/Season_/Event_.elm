@@ -314,7 +314,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) model =
                                         , property "flex-direction" "column"
                                         ]
                                     ]
-                                    [ analysisWidgets carDetailsProps ]
+                                    [ analysisWidgets viewModel ]
                                 , div
                                     [ css
                                         [ property "grid-column" "1 / -1"
@@ -426,8 +426,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-analysisWidgets : CarDetails.Props -> Html Msg
-analysisWidgets carDetailsProps =
+analysisWidgets : ViewModel -> Html Msg
+analysisWidgets viewModel =
     div
         [ css
             [ property "display" "grid"
@@ -435,9 +435,7 @@ analysisWidgets carDetailsProps =
             , property "row-gap" "10px"
             ]
         ]
-        [ CarDetails.view carDetailsProps
-        , CloseBattlesWidget.view carDetailsProps.viewModel
-        ]
+        [ CloseBattlesWidget.view viewModel ]
 
 
 config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
