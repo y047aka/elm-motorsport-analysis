@@ -2,23 +2,20 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, width, zero)
-import Data.Series as Series
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, zero)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (Html, button, div, img, input, li, main_, nav, text, ul)
-import Html.Styled.Attributes as Attributes exposing (attribute, class, css, src, type_, value)
+import Html.Styled as Html exposing (Html, button, div, input, li, main_, nav, text, ul)
+import Html.Styled.Attributes as Attributes exposing (attribute, class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
 import List.Extra
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
-import Motorsport.Gap as Gap
-import Motorsport.Leaderboard as Leaderboard exposing (carNumberColumn_Wec, currentLapColumn_LeMans24h, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_LeMans24h, lastLapColumn_Wec, veryCustomColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -438,59 +435,6 @@ analysisWidgets viewModel =
         [ CloseBattlesWidget.view viewModel ]
 
 
-config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
-config season analysis =
-    { toId = .metadata >> .carNumber
-    , toMsg = LeaderboardMsg
-    , columns =
-        [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metadata }
-        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , let
-            view_ carNumber =
-                case Series.carImageUrl_Wec season carNumber of
-                    Just url ->
-                        img [ src url, css [ width (px 100) ] ] []
-
-                    Nothing ->
-                        text ""
-          in
-          veryCustomColumn
-            { label = "-"
-            , getter = .metadata >> .carNumber >> Lazy.lazy view_
-            , sorter = compareBy (.metadata >> .carNumber)
-            }
-        , intColumn { label = "Lap", getter = .lap }
-        , customColumn
-            { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , customColumn
-            { label = "Interval"
-            , getter = .timing >> .interval >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , currentLapColumn_Wec
-            { getter = identity
-            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , lastLapColumn_Wec
-            { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , histogramColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            , coefficient = 1.2
-            }
-        ]
-    }
-
-
 eventsView : DataView.Model -> RaceControl.Model -> Html Msg
 eventsView eventsState raceControl =
     let
@@ -554,56 +498,3 @@ eventTypeToString eventType =
 
         CarEvent _ Checkered ->
             "Checkered Flag"
-
-
-config_LeMans24h : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
-config_LeMans24h season analysis =
-    { toId = .metadata >> .carNumber
-    , toMsg = LeaderboardMsg
-    , columns =
-        [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec season { getter = .metadata }
-        , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , let
-            view_ carNumber =
-                case Series.carImageUrl_Wec season carNumber of
-                    Just url ->
-                        img [ src url, css [ width (px 100) ] ] []
-
-                    Nothing ->
-                        text ""
-          in
-          veryCustomColumn
-            { label = "-"
-            , getter = .metadata >> .carNumber >> Lazy.lazy view_
-            , sorter = compareBy (.metadata >> .carNumber)
-            }
-        , intColumn { label = "Lap", getter = .lap }
-        , customColumn
-            { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , customColumn
-            { label = "Interval"
-            , getter = .timing >> .interval >> Gap.toString
-            , sorter = compareBy .position
-            }
-        , currentLapColumn_LeMans24h
-            { getter = identity
-            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , lastLapColumn_LeMans24h
-            { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            }
-        , histogramColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
-            , coefficient = 1.2
-            }
-        ]
-    }
