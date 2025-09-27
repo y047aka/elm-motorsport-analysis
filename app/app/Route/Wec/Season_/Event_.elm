@@ -12,6 +12,7 @@ import Html.Styled as Html exposing (Html, button, div, img, input, li, main_, n
 import Html.Styled.Attributes as Attributes exposing (attribute, class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
@@ -223,7 +224,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState, eventsState, isLeaderboardModalOpen, selectedCar } =
+view app ({ eventSummary, analysis, raceControl } as shared) model =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -249,18 +250,22 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                 ]
                 [ navigation shared.raceControl
                 , let
+                    { mode, eventsState, isLeaderboardModalOpen, selectedCar } =
+                        model
+
                     viewModel =
                         ViewModel.init raceControl
 
                     selectedCarItem =
-                        selectedCar
-                            |> Maybe.andThen
-                                (\carNumber ->
-                                    viewModel.items
-                                        |> SortedList.toList
-                                        |> List.filter (\item -> item.metadata.carNumber == carNumber)
-                                        |> List.head
-                                )
+                        resolveSelectedCar selectedCar viewModel
+
+                    carDetailsProps =
+                        { eventSummary = eventSummary
+                        , viewModel = viewModel
+                        , clock = raceControl.clock
+                        , selectedCar = selectedCarItem
+                        , analysis = analysis
+                        }
                   in
                   case mode of
                     Tracker ->
@@ -309,7 +314,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         , property "flex-direction" "column"
                                         ]
                                     ]
-                                    [ analysisWidgets shared viewModel selectedCarItem ]
+                                    [ analysisWidgets carDetailsProps ]
                                 , div
                                     [ css
                                         [ property "grid-column" "1 / -1"
@@ -321,13 +326,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                                         { isOpen = isLeaderboardModalOpen
                                         , onToggle = ToggleLeaderboardModal
                                         , children =
-                                            [ case ( eventSummary.season, eventSummary.name ) of
-                                                ( 2025, "24 Hours of Le Mans" ) ->
-                                                    Leaderboard.view (config_LeMans24h eventSummary.season analysis) leaderboardState viewModel
-
-                                                _ ->
-                                                    Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
-                                            ]
+                                            [ Lazy.lazy CarDetails.view carDetailsProps ]
                                         }
                                     ]
                                 ]
@@ -338,6 +337,26 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                 ]
             ]
         }
+
+
+resolveSelectedCar : Maybe String -> ViewModel -> Maybe ViewModelItem
+resolveSelectedCar selectedCar viewModel =
+    let
+        selectedItem =
+            selectedCar
+                |> Maybe.andThen
+                    (\carNumber ->
+                        viewModel.items
+                            |> SortedList.toList
+                            |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
+                    )
+    in
+    case selectedItem of
+        Just item ->
+            Just item
+
+        Nothing ->
+            SortedList.head viewModel.items
 
 
 navigation : RaceControl.Model -> Html Msg
@@ -407,8 +426,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-analysisWidgets : Shared.Model -> ViewModel -> Maybe ViewModelItem -> Html Msg
-analysisWidgets { eventSummary, raceControl, analysis } viewModel selectedCarItem =
+analysisWidgets : CarDetails.Props -> Html Msg
+analysisWidgets carDetailsProps =
     div
         [ css
             [ property "display" "grid"
@@ -416,14 +435,8 @@ analysisWidgets { eventSummary, raceControl, analysis } viewModel selectedCarIte
             , property "row-gap" "10px"
             ]
         ]
-        [ CarDetails.view
-            { eventSummary = eventSummary
-            , viewModel = viewModel
-            , clock = raceControl.clock
-            , selectedCar = selectedCarItem
-            , analysis = analysis
-            }
-        , CloseBattlesWidget.view viewModel
+        [ CarDetails.view carDetailsProps
+        , CloseBattlesWidget.view carDetailsProps.viewModel
         ]
 
 
