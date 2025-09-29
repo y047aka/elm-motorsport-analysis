@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetails.PositionProgression exposing (view)
+module Motorsport.Widget.Compare.PositionProgression exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
@@ -7,7 +7,6 @@ import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
 import List.Extra
-import Motorsport.Car as Car
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -23,57 +22,11 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-view : Clock.Model -> ViewModel -> Car.Metadata -> Html msg
-view clock viewModel metadata =
+view : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
+view clock viewModel carA carB =
     let
-        lapThreshold =
-            calculateLapThreshold clock viewModel
-
-        classCars : List ViewModelItem
-        classCars =
-            viewModel.itemsByClass
-                |> List.Extra.find (\( class_, _ ) -> class_ == metadata.class)
-                |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
-                |> Maybe.withDefault []
-
-        candidates =
-            classCars
-                |> List.map
-                    (\item ->
-                        { carNumber = item.metadata.carNumber
-                        , points = buildPositionPoints lapThreshold item
-                        , color = Manufacturer.toColorWithFallback item.metadata
-                        }
-                    )
-
-        seriesResult : Result String (List PositionSeries)
-        seriesResult =
-            case candidates |> List.Extra.find (\candidate -> candidate.carNumber == metadata.carNumber) of
-                Nothing ->
-                    Err "Selected car data is unavailable."
-
-                Just selectedCandidate ->
-                    if List.length selectedCandidate.points < 2 then
-                        Err "Position chart will appear as more laps are completed."
-
-                    else
-                        candidates
-                            |> List.filterMap
-                                (\candidate ->
-                                    if List.length candidate.points < 2 then
-                                        Nothing
-
-                                    else
-                                        Just
-                                            { points = candidate.points
-                                            , color = candidate.color
-                                            , isSelected = candidate.carNumber == metadata.carNumber
-                                            }
-                                )
-                            |> Ok
-
-        chartBody =
-            case seriesResult of
+        body =
+            case buildClassProgressionData clock viewModel carA carB of
                 Ok series ->
                     positionProgressionChart series
 
@@ -89,8 +42,45 @@ view clock viewModel metadata =
             ]
         ]
         [ Html.div [ class "text-sm font-semibold" ] [ text "Position Progression" ]
-        , chartBody
+        , body
         ]
+
+
+buildClassProgressionData : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Result String (List PositionSeries)
+buildClassProgressionData clock viewModel carA carB =
+    let
+        lapThreshold =
+            calculateLapThreshold clock viewModel
+
+        classCars : List ViewModelItem
+        classCars =
+            viewModel.itemsByClass
+                |> List.Extra.find (\( class_, _ ) -> Just class_ == Maybe.map (.metadata >> .class) carA)
+                |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
+                |> Maybe.withDefault []
+
+        series =
+            classCars
+                |> List.map
+                    (\item ->
+                        let
+                            carNumber =
+                                item.metadata.carNumber
+                        in
+                        { points = buildPositionPoints lapThreshold item
+                        , color = Manufacturer.toColorWithFallback item.metadata
+                        , isSelected =
+                            (Just carNumber == Maybe.map (.metadata >> .carNumber) carA)
+                                || (Just carNumber == Maybe.map (.metadata >> .carNumber) carB)
+                        }
+                    )
+                |> List.filter (\item -> List.length item.points >= 2)
+    in
+    if List.isEmpty series then
+        Err "Lap chart will appear as more laps are completed."
+
+    else
+        Ok series
 
 
 type alias PositionPoint =

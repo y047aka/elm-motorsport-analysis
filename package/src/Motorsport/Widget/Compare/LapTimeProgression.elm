@@ -1,4 +1,4 @@
-module Motorsport.Widget.CarDetails.LapTimeProgression exposing (view)
+module Motorsport.Widget.Compare.LapTimeProgression exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
@@ -7,13 +7,11 @@ import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
 import List.Extra
-import Motorsport.Car as Car
-import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel)
+import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -67,69 +65,64 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : Clock.Model -> ViewModel -> Car.Metadata -> Html msg
-view clock viewModel metadata =
-    case buildClassProgressionData clock viewModel metadata of
-        Err message ->
-            Widget.emptyState message
+view : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
+view clock viewModel carA carB =
+    let
+        body =
+            case buildClassProgressionData clock viewModel carA carB of
+                Err message ->
+                    Widget.emptyState message
 
-        Ok classData ->
-            div
-                [ css
-                    [ Css.property "display" "grid"
-                    , Css.property "row-gap" "8px"
-                    , Css.property "padding-top" "12px"
-                    , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
-                    ]
-                ]
-                [ Html.div [ class "text-sm font-semibold" ] [ text "Lap Time Progression" ]
-                , lapTimeProgressionChart classData.series
-                ]
+                Ok classData ->
+                    lapTimeProgressionChart classData.series
+    in
+    div
+        [ css
+            [ Css.property "display" "grid"
+            , Css.property "row-gap" "8px"
+            , Css.property "padding-top" "12px"
+            , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
+            ]
+        ]
+        [ Html.div [ class "text-sm font-semibold" ] [ text "Lap Time Progression" ]
+        , body
+        ]
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> Car.Metadata -> Result String ClassProgressionData
-buildClassProgressionData clock viewModel metadata =
-    case viewModel.itemsByClass |> List.Extra.find (\( class_, _ ) -> class_ == metadata.class) of
-        Nothing ->
-            Err "Selected car data is unavailable."
+buildClassProgressionData : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Result String ClassProgressionData
+buildClassProgressionData clock viewModel carA carB =
+    let
+        carsInClass : List ViewModelItem
+        carsInClass =
+            viewModel.itemsByClass
+                |> List.Extra.find (\( class_, _ ) -> Just class_ == Maybe.map (.metadata >> .class) carA)
+                |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
+                |> Maybe.withDefault []
 
-        Just ( class_, carsInClass ) ->
-            let
-                candidates : List LapTimeSeries
-                candidates =
-                    SortedList.toList carsInClass
-                        |> List.map
-                            (\item ->
-                                { carNumber = item.metadata.carNumber
-                                , laps = extractLapDataForCar clock item.history
-                                , color = Manufacturer.toColorWithFallback item.metadata
-                                , isSelected = item.metadata.carNumber == metadata.carNumber
-                                }
-                            )
-
-                selectedSeries =
-                    candidates
-                        |> List.Extra.find (\candidate -> candidate.carNumber == metadata.carNumber)
-            in
-            case selectedSeries of
-                Nothing ->
-                    Err "Selected car data is unavailable."
-
-                Just selected ->
-                    if List.length selected.laps < 2 then
-                        Err "Lap chart will appear as more laps are completed."
-
-                    else
+        series : List LapTimeSeries
+        series =
+            carsInClass
+                |> List.map
+                    (\item ->
                         let
-                            series =
-                                candidates
-                                    |> List.filter (\candidate -> List.length candidate.laps >= 2)
+                            carNumber =
+                                item.metadata.carNumber
                         in
-                        if List.isEmpty series then
-                            Err "No lap progression data available."
+                        { carNumber = carNumber
+                        , laps = extractLapDataForCar clock item.history
+                        , color = Manufacturer.toColorWithFallback item.metadata
+                        , isSelected =
+                            (Just carNumber == Maybe.map (.metadata >> .carNumber) carA)
+                                || (Just carNumber == Maybe.map (.metadata >> .carNumber) carB)
+                        }
+                    )
+                |> List.filter (\item -> List.length item.laps >= 2)
+    in
+    if List.isEmpty series then
+        Err "Lap chart will appear as more laps are completed."
 
-                        else
-                            Ok { series = series }
+    else
+        Ok { series = series }
 
 
 extractLapDataForCar : Clock.Model -> List Lap -> List Lap

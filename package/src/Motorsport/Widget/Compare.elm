@@ -11,8 +11,8 @@ import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
-import Motorsport.Widget.CarDetails.LapTimeProgression as LapTimeProgression
-import Motorsport.Widget.CarDetails.PositionProgression as PositionProgression
+import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
+import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
 
@@ -47,13 +47,32 @@ view props =
         [ css
             [ property "display" "grid"
             , property "grid-template-columns" "1fr 1fr 1fr"
-            , property "align-items" "start"
             , property "column-gap" "16px"
             ]
         ]
         [ div [ css [ property "grid-column" "1" ] ]
             [ detailColumn "Car A" props props.carA ]
-        , controls props.actions props.carA props.carB
+        , div
+            [ css
+                [ property "grid-column" "2"
+                , property "display" "grid"
+                , property "grid-template-rows" "auto 1fr"
+                , property "align-items" "start"
+                , property "row-gap" "16px"
+                ]
+            ]
+            [ controls props.actions props.carA props.carB
+            , PositionProgression.view
+                props.clock
+                props.viewModel
+                props.carA
+                props.carB
+            , LapTimeProgression.view
+                props.clock
+                props.viewModel
+                props.carA
+                props.carB
+            ]
         , div [ css [ property "grid-column" "3" ] ]
             [ detailColumn "Car B" props props.carB ]
         ]
@@ -94,9 +113,6 @@ detailColumn label props maybeItem =
         Just item ->
             detailBody
                 { eventSummary = props.eventSummary
-                , viewModel = props.viewModel
-                , clock = props.clock
-                , selectedCar = maybeItem
                 , analysis = props.analysis
                 , actions = props.actions
                 }
@@ -108,16 +124,13 @@ detailColumn label props maybeItem =
 
 type alias Props_ msg =
     { eventSummary : EventSummary
-    , viewModel : ViewModel
-    , clock : Clock.Model
-    , selectedCar : Maybe ViewModelItem
     , analysis : Analysis
     , actions : Actions msg
     }
 
 
 detailBody : Props_ msg -> ViewModelItem -> Html msg
-detailBody { eventSummary, viewModel, clock, analysis, actions } item =
+detailBody { eventSummary, analysis, actions } item =
     let
         isLeMans2025 =
             ( eventSummary.season, eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
@@ -162,8 +175,6 @@ detailBody { eventSummary, viewModel, clock, analysis, actions } item =
                 , Histogram.view analysis 1.05 item.history
                 ]
             ]
-        , PositionProgression.view clock viewModel item.metadata
-        , LapTimeProgression.view clock viewModel item.metadata
         ]
 
 
