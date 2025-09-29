@@ -13,6 +13,7 @@ wec_2025 =
         , LeMans_24h
         , SaoPaulo_6h
         , Cota_6h
+        , Fuji_6h
         ]
 
 
@@ -71,6 +72,14 @@ toEventSummary_Wec_2025 event =
             , name = "Lone Star Le Mans"
             , season = 2025
             , date = "2025-09-07"
+            , jsonPath = jsonPath
+            }
+
+        Fuji_6h ->
+            { id = id
+            , name = "6 Hours of Fuji"
+            , season = 2025
+            , date = "2025-09-28"
             , jsonPath = jsonPath
             }
 
