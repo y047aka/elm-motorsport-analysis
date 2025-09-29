@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare exposing (Actions, Props, view)
+module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, view)
 
 import Css exposing (property, px, width)
 import Data.Series as Series
@@ -6,6 +6,7 @@ import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Clock as Clock
@@ -13,26 +14,70 @@ import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
+import SortedList
 
 
 
 -- TYPES
 
 
-type alias Props msg =
+type alias Model =
+    { carA : Maybe String
+    , carB : Maybe String
+    }
+
+
+init : Model
+init =
+    { carA = Nothing
+    , carB = Nothing
+    }
+
+
+type Msg
+    = SelectCar String
+    | ClearCarA
+    | ClearCarB
+
+
+update : Msg -> Model -> Model
+update msg model =
+    case msg of
+        SelectCar carNumber ->
+            case ( model.carA, model.carB ) of
+                ( Nothing, _ ) ->
+                    { model | carA = Just carNumber }
+
+                ( Just a, Nothing ) ->
+                    if a /= carNumber then
+                        { model | carB = Just carNumber }
+
+                    else
+                        model
+
+                ( Just a, Just b ) ->
+                    if carNumber == a || carNumber == b then
+                        model
+
+                    else
+                        { model | carB = Just carNumber }
+
+        ClearCarA ->
+            { model | carA = Nothing }
+
+        ClearCarB ->
+            { model | carB = Nothing }
+
+
+
+-- Props
+
+
+type alias Props =
     { eventSummary : EventSummary
     , viewModel : ViewModel
     , clock : Clock.Model
     , analysis : Analysis
-    , carA : Maybe ViewModelItem
-    , carB : Maybe ViewModelItem
-    , actions : Actions msg
-    }
-
-
-type alias Actions msg =
-    { clearA : msg
-    , clearB : msg
     }
 
 
@@ -40,8 +85,14 @@ type alias Actions msg =
 -- VIEW
 
 
-view : Props msg -> Html msg
-view props =
+view : Props -> Model -> Html Msg
+view props model =
+    let
+        ( carA, carB ) =
+            ( resolveCar model.carA props.viewModel
+            , resolveCar model.carB props.viewModel
+            )
+    in
     div
         [ css
             [ property "display" "grid"
@@ -50,7 +101,7 @@ view props =
             ]
         ]
         [ div [ css [ property "grid-column" "1" ] ]
-            [ detailColumn "Car A" props props.carA ]
+            [ detailColumn "Car A" ClearCarA props carA ]
         , div
             [ css
                 [ property "grid-column" "2"
@@ -63,27 +114,27 @@ view props =
             [ PositionProgression.view
                 props.clock
                 props.viewModel
-                props.carA
-                props.carB
+                carA
+                carB
             , LapTimeProgression.view
                 props.clock
                 props.viewModel
-                props.carA
-                props.carB
+                carA
+                carB
             ]
         , div [ css [ property "grid-column" "3" ] ]
-            [ detailColumn "Car B" props props.carB ]
+            [ detailColumn "Car B" ClearCarB props carB ]
         ]
 
 
-detailColumn : String -> Props msg -> Maybe ViewModelItem -> Html msg
-detailColumn label props maybeItem =
+detailColumn : String -> Msg -> Props -> Maybe ViewModelItem -> Html Msg
+detailColumn label clearMsg props maybeItem =
     case maybeItem of
         Just item ->
             detailBody
                 { eventSummary = props.eventSummary
                 , analysis = props.analysis
-                , actions = props.actions
+                , onClear = clearMsg
                 }
                 item
 
@@ -91,15 +142,15 @@ detailColumn label props maybeItem =
             emptyState label
 
 
-type alias Props_ msg =
+type alias DetailProps =
     { eventSummary : EventSummary
     , analysis : Analysis
-    , actions : Actions msg
+    , onClear : Msg
     }
 
 
-detailBody : Props_ msg -> ViewModelItem -> Html msg
-detailBody { eventSummary, analysis, actions } item =
+detailBody : DetailProps -> ViewModelItem -> Html Msg
+detailBody { eventSummary, analysis, onClear } item =
     let
         isLeMans2025 =
             ( eventSummary.season, eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
@@ -143,7 +194,7 @@ detailBody { eventSummary, analysis, actions } item =
                 , Histogram.view analysis 1.05 item.history
                 ]
             ]
-        , Html.button [ class "btn btn-xs", onClick actions.clearA ] [ text "Clear" ]
+        , Html.button [ class "btn btn-xs", onClick onClear ] [ text "Clear" ]
         ]
 
 
@@ -192,3 +243,14 @@ emptyState label =
         [ Html.div [ class "text-sm opacity-60" ] [ text label ]
         , Html.div [ class "text-xs opacity-40" ] [ text "Select a car to compare" ]
         ]
+
+
+resolveCar : Maybe String -> ViewModel -> Maybe ViewModelItem
+resolveCar maybeCarNumber viewModel =
+    maybeCarNumber
+        |> Maybe.andThen
+            (\carNumber ->
+                viewModel.items
+                    |> SortedList.toList
+                    |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
+            )

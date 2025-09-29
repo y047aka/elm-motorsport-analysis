@@ -11,7 +11,6 @@ import Html.Styled as Html exposing (Html, button, div, input, li, main_, nav, t
 import Html.Styled.Attributes as Attributes exposing (attribute, class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Html.Styled.Lazy as Lazy
-import List.Extra
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
@@ -26,7 +25,6 @@ import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
-import SortedList
 import String exposing (dropRight)
 import Task
 import Time
@@ -80,8 +78,7 @@ type alias Model =
     , eventsState : DataView.Model
     , query : String
     , isLeaderboardModalOpen : Bool
-    , selectedCar : Maybe String
-    , compareWith : Maybe String
+    , compare : CompareWidget.Model
     }
 
 
@@ -109,8 +106,7 @@ init app shared =
                 )
       , query = ""
       , isLeaderboardModalOpen = False
-      , selectedCar = Nothing
-      , compareWith = Nothing
+      , compare = CompareWidget.init
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -132,9 +128,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
-    | CarSelected String
-    | ClearCompare
-    | ClearSelectedCar
+    | CompareWidgetMsg CompareWidget.Msg
 
 
 update :
@@ -178,40 +172,8 @@ update app shared msg m =
             , Nothing
             )
 
-        CarSelected carNumber ->
-            let
-                nextModel =
-                    case ( m.selectedCar, m.compareWith ) of
-                        ( Nothing, _ ) ->
-                            { m | selectedCar = Just carNumber }
-
-                        ( Just a, Nothing ) ->
-                            if a /= carNumber then
-                                { m | compareWith = Just carNumber }
-
-                            else
-                                m
-
-                        ( Just a, Just _ ) ->
-                            if a /= carNumber then
-                                { m | compareWith = Just carNumber }
-
-                            else
-                                m
-            in
-            ( nextModel
-            , Effect.none
-            , Nothing
-            )
-
-        ClearCompare ->
-            ( { m | compareWith = Nothing }
-            , Effect.none
-            , Nothing
-            )
-
-        ClearSelectedCar ->
-            ( { m | selectedCar = Nothing }
+        CompareWidgetMsg compareMsg ->
+            ( { m | compare = CompareWidget.update compareMsg m.compare }
             , Effect.none
             , Nothing
             )
@@ -257,7 +219,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) m =
+view app { eventSummary, analysis, raceControl } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -281,29 +243,19 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                     , property "grid-template-rows" "auto auto 1fr"
                     ]
                 ]
-                [ navigation shared.raceControl
+                [ navigation raceControl
                 , let
-                    { mode, eventsState, isLeaderboardModalOpen, selectedCar } =
-                        m
-
                     viewModel =
                         ViewModel.init raceControl
 
-                    viewModelItems =
-                        viewModel.items
-                            |> SortedList.toList
-
-                    findByCarNumber carNo =
-                        viewModelItems
-                            |> List.Extra.find (\item -> item.metadata.carNumber == carNo)
-
-                    selectedCarItem =
-                        selectedCar |> Maybe.andThen findByCarNumber
-
-                    compareItem =
-                        m.compareWith |> Maybe.andThen findByCarNumber
+                    compareProps =
+                        { eventSummary = eventSummary
+                        , viewModel = viewModel
+                        , clock = raceControl.clock
+                        , analysis = analysis
+                        }
                   in
-                  case mode of
+                  case m.mode of
                     Tracker ->
                         div
                             [ css
@@ -330,7 +282,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                                     [ LiveStandingsWidget.view
                                         { eventSummary = eventSummary
                                         , viewModel = viewModel
-                                        , onSelectCar = \item -> CarSelected item.metadata.carNumber
+                                        , onSelectCar = (\item -> CompareWidget.SelectCar item.metadata.carNumber) >> CompareWidgetMsg
                                         }
                                     ]
                                 , div [ css [ property "display" "grid", property "place-items" "center" ] ]
@@ -359,18 +311,11 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                                         ]
                                     ]
                                     [ HalfModal.view
-                                        { isOpen = isLeaderboardModalOpen
+                                        { isOpen = m.isLeaderboardModalOpen
                                         , onToggle = ToggleLeaderboardModal
                                         , children =
-                                            [ Lazy.lazy CompareWidget.view
-                                                { eventSummary = eventSummary
-                                                , viewModel = viewModel
-                                                , clock = raceControl.clock
-                                                , analysis = analysis
-                                                , carA = selectedCarItem
-                                                , carB = compareItem
-                                                , actions = { clearA = ClearSelectedCar, clearB = ClearCompare }
-                                                }
+                                            [ Html.map CompareWidgetMsg <|
+                                                Lazy.lazy2 CompareWidget.view compareProps m.compare
                                             ]
                                         }
                                     ]
@@ -378,7 +323,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                             ]
 
                     Events ->
-                        eventsView eventsState raceControl
+                        eventsView m.eventsState raceControl
                 ]
             ]
         }
