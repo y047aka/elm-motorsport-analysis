@@ -211,27 +211,10 @@ update app shared msg m =
             )
 
         ClearSelectedCar ->
-            case ( m.selectedCar, m.compareWith ) of
-                ( Just _, Just compareCar ) ->
-                    ( { m | selectedCar = Just compareCar, compareWith = Nothing }
-                    , Effect.none
-                    , Nothing
-                    )
-
-                ( Just _, Nothing ) ->
-                    ( { m | selectedCar = Nothing }
-                    , Effect.none
-                    , Nothing
-                    )
-
-                ( Nothing, Just compareCar ) ->
-                    ( { m | selectedCar = Just compareCar, compareWith = Nothing }
-                    , Effect.none
-                    , Nothing
-                    )
-
-                _ ->
-                    ( m, Effect.none, Nothing )
+            ( { m | selectedCar = Nothing }
+            , Effect.none
+            , Nothing
+            )
 
 
 
