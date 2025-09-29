@@ -327,40 +327,10 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                             |> List.Extra.find (\item -> item.metadata.carNumber == carNo)
 
                     selectedCarItem =
-                        case selectedCar |> Maybe.andThen findByCarNumber of
-                            Just item ->
-                                Just item
-
-                            Nothing ->
-                                List.head viewModelItems
-
-                    fallbackCompareItem =
-                        case selectedCarItem of
-                            Just selectedItem ->
-                                viewModelItems
-                                    |> List.filter (\item -> item.metadata.carNumber /= selectedItem.metadata.carNumber)
-                                    |> List.head
-                                    |> Maybe.withDefault selectedItem
-                                    |> Just
-
-                            Nothing ->
-                                case viewModelItems of
-                                    _ :: second :: _ ->
-                                        Just second
-
-                                    first :: [] ->
-                                        Just first
-
-                                    [] ->
-                                        Nothing
+                        selectedCar |> Maybe.andThen findByCarNumber
 
                     compareItem =
-                        case m.compareWith |> Maybe.andThen findByCarNumber of
-                            Just item ->
-                                Just item
-
-                            Nothing ->
-                                fallbackCompareItem
+                        m.compareWith |> Maybe.andThen findByCarNumber
                   in
                   case mode of
                     Tracker ->
@@ -421,27 +391,19 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                                         { isOpen = isLeaderboardModalOpen
                                         , onToggle = ToggleLeaderboardModal
                                         , children =
-                                            [ case ( selectedCarItem, compareItem ) of
-                                                ( Just a, Just b ) ->
-                                                    let
-                                                        compareProps =
-                                                            { eventSummary = eventSummary
-                                                            , viewModel = viewModel
-                                                            , clock = raceControl.clock
-                                                            , analysis = analysis
-                                                            , carA = a
-                                                            , carB = b
-                                                            , actions =
-                                                                { swap = SwapCompare
-                                                                , clearA = ClearSelectedCar
-                                                                , clearB = ClearCompare
-                                                                }
-                                                            }
-                                                    in
-                                                    Lazy.lazy CompareWidget.view compareProps
-
-                                                _ ->
-                                                    div [] [ text "車両データがありません" ]
+                                            [ Lazy.lazy CompareWidget.view
+                                                { eventSummary = eventSummary
+                                                , viewModel = viewModel
+                                                , clock = raceControl.clock
+                                                , analysis = analysis
+                                                , carA = selectedCarItem
+                                                , carB = compareItem
+                                                , actions =
+                                                    { swap = SwapCompare
+                                                    , clearA = ClearSelectedCar
+                                                    , clearB = ClearCompare
+                                                    }
+                                                }
                                             ]
                                         }
                                     ]

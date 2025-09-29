@@ -4,7 +4,7 @@ import Css exposing (property, px, width)
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (class, css, src)
+import Html.Styled.Attributes exposing (class, css, disabled, src)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Histogram as Histogram
@@ -24,8 +24,8 @@ type alias Props msg =
     , viewModel : ViewModel
     , clock : Clock.Model
     , analysis : Analysis
-    , carA : ViewModelItem
-    , carB : ViewModelItem
+    , carA : Maybe ViewModelItem
+    , carB : Maybe ViewModelItem
     , actions : Actions msg
     }
 
@@ -46,60 +46,29 @@ view props =
     div
         [ css
             [ property "display" "grid"
-            , property "row-gap" "16px"
-            ]
-        ]
-        [ header props
-        , body props
-        ]
-
-
-header : Props msg -> Html msg
-header props =
-    let
-        season =
-            props.eventSummary.season
-
-        carImage carNumber =
-            case Series.carImageUrl_Wec season carNumber of
-                Just url ->
-                    img [ src url, css [ width (px 80) ] ] []
-
-                Nothing ->
-                    text ""
-
-        metadataBlock item =
-            div
-                [ css
-                    [ property "display" "flex"
-                    , property "column-gap" "15px"
-                    , property "justify-content" "center"
-                    , property "align-items" "center"
-                    ]
-                ]
-                [ Leaderboard.viewCarNumberColumn_Wec season item.metadata
-                , carImage item.metadata.carNumber
-                , Leaderboard.viewDriverAndTeamColumn_Wec item
-                ]
-    in
-    div
-        [ css
-            [ property "display" "grid"
             , property "grid-template-columns" "1fr 1fr 1fr"
-            , property "align-items" "center"
             , property "column-gap" "16px"
-            , property "padding-bottom" "12px"
-            , property "border-bottom" "1px solid hsl(0 0% 100% / 0.1)"
             ]
         ]
-        [ metadataBlock props.carA
-        , controls props.actions
-        , metadataBlock props.carB
+        [ div [ css [ property "grid-column" "1" ] ]
+            [ detailColumn "Car A" props props.carA ]
+        , controls props.actions props.carA props.carB
+        , div [ css [ property "grid-column" "3" ] ]
+            [ detailColumn "Car B" props props.carB ]
         ]
 
 
-controls : Actions msg -> Html msg
-controls actions =
+controls : Actions msg -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
+controls actions carA carB =
+    let
+        canSwap =
+            case ( carA, carB ) of
+                ( Just _, Just _ ) ->
+                    True
+
+                _ ->
+                    False
+    in
     div
         [ css
             [ property "display" "grid"
@@ -109,56 +78,45 @@ controls actions =
             , property "column-gap" "10px"
             ]
         ]
-        [ Html.button [ class "btn btn-xs", onClick actions.clearA ] [ text "Clear A" ]
-        , Html.button [ class "btn btn-xs", onClick actions.swap ] [ text "Swap" ]
-        , Html.button [ class "btn btn-xs", onClick actions.clearB ] [ text "Clear B" ]
-        ]
-
-
-body : Props msg -> Html msg
-body props =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr 1fr"
-            , property "column-gap" "12px"
-            , property "row-gap" "16px"
+        [ Html.button
+            [ class "btn btn-xs"
+            , onClick actions.swap
+            , disabled (not canSwap)
             ]
+            [ text "Swap" ]
         ]
-        [ div [ css [ property "grid-column" "1" ] ]
-            [ detailBody
+
+
+detailColumn : String -> Props msg -> Maybe ViewModelItem -> Html msg
+detailColumn label props maybeItem =
+    case maybeItem of
+        Just item ->
+            detailBody
                 { eventSummary = props.eventSummary
                 , viewModel = props.viewModel
                 , clock = props.clock
-                , selectedCar = Just props.carA
+                , selectedCar = maybeItem
                 , analysis = props.analysis
+                , actions = props.actions
                 }
-                props.carA
-            ]
-        , div [ css [ property "grid-column" "3" ] ]
-            [ detailBody
-                { eventSummary = props.eventSummary
-                , viewModel = props.viewModel
-                , clock = props.clock
-                , selectedCar = Just props.carB
-                , analysis = props.analysis
-                }
-                props.carB
-            ]
-        ]
+                item
+
+        Nothing ->
+            emptyState label
 
 
-type alias Props_ =
+type alias Props_ msg =
     { eventSummary : EventSummary
     , viewModel : ViewModel
     , clock : Clock.Model
     , selectedCar : Maybe ViewModelItem
     , analysis : Analysis
+    , actions : Actions msg
     }
 
 
-detailBody : Props_ -> ViewModelItem -> Html msg
-detailBody { eventSummary, viewModel, clock, analysis } item =
+detailBody : Props_ msg -> ViewModelItem -> Html msg
+detailBody { eventSummary, viewModel, clock, analysis, actions } item =
     let
         isLeMans2025 =
             ( eventSummary.season, eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
@@ -180,7 +138,9 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
             , property "row-gap" "20px"
             ]
         ]
-        [ div
+        [ Html.button [ class "btn btn-xs", onClick actions.clearA ] [ text "Clear" ]
+        , metadataBlock item eventSummary.season
+        , div
             [ css
                 [ property "display" "grid"
                 , property "grid-template-columns" "1fr 1fr"
@@ -203,4 +163,51 @@ detailBody { eventSummary, viewModel, clock, analysis } item =
             ]
         , PositionProgression.view clock viewModel item.metadata
         , LapTimeProgression.view clock viewModel item.metadata
+        ]
+
+
+metadataBlock : ViewModelItem -> Int -> Html msg
+metadataBlock item season =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "auto auto 1fr"
+            , property "column-gap" "15px"
+            , property "justify-content" "center"
+            , property "align-items" "center"
+            ]
+        ]
+        [ Leaderboard.viewCarNumberColumn_Wec season item.metadata
+        , carImage season item.metadata.carNumber
+        , Leaderboard.viewDriverAndTeamColumn_Wec item
+        ]
+
+
+carImage : Int -> String -> Html msg
+carImage season carNumber =
+    case Series.carImageUrl_Wec season carNumber of
+        Just url ->
+            img [ src url, css [ width (px 80) ] ] []
+
+        Nothing ->
+            text ""
+
+
+emptyState : String -> Html msg
+emptyState label =
+    div
+        [ css
+            [ property "display" "flex"
+            , property "flex-direction" "column"
+            , property "align-items" "center"
+            , property "justify-content" "center"
+            , property "row-gap" "8px"
+            , property "padding" "12px"
+            , property "border" "1px dashed hsl(0 0% 100% / 0.2)"
+            , property "border-radius" "8px"
+            , property "min-height" "140px"
+            ]
+        ]
+        [ Html.div [ class "text-sm opacity-60" ] [ text label ]
+        , Html.div [ class "text-xs opacity-40" ] [ text "Select a car to compare" ]
         ]
