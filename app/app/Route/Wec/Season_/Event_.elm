@@ -17,11 +17,11 @@ import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
-import Motorsport.Widget.CarDetails as CarDetails
 import Motorsport.Widget.CloseBattles as CloseBattlesWidget
+import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -81,6 +81,7 @@ type alias Model =
     , query : String
     , isLeaderboardModalOpen : Bool
     , selectedCar : Maybe String
+    , compareWith : Maybe String
     }
 
 
@@ -109,6 +110,7 @@ init app shared =
       , query = ""
       , isLeaderboardModalOpen = False
       , selectedCar = Nothing
+      , compareWith = Nothing
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -131,6 +133,9 @@ type Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
     | CarSelected String
+    | SwapCompare
+    | ClearCompare
+    | ClearSelectedCar
 
 
 update :
@@ -175,10 +180,70 @@ update app shared msg m =
             )
 
         CarSelected carNumber ->
-            ( { m | selectedCar = Just carNumber }
+            let
+                nextModel =
+                    case ( m.selectedCar, m.compareWith ) of
+                        ( Nothing, _ ) ->
+                            { m | selectedCar = Just carNumber }
+
+                        ( Just a, Nothing ) ->
+                            if a /= carNumber then
+                                { m | compareWith = Just carNumber }
+
+                            else
+                                m
+
+                        ( Just a, Just _ ) ->
+                            if a /= carNumber then
+                                { m | compareWith = Just carNumber }
+
+                            else
+                                m
+            in
+            ( nextModel
             , Effect.none
             , Nothing
             )
+
+        SwapCompare ->
+            ( case ( m.selectedCar, m.compareWith ) of
+                ( Just a, Just b ) ->
+                    { m | selectedCar = Just b, compareWith = Just a }
+
+                _ ->
+                    m
+            , Effect.none
+            , Nothing
+            )
+
+        ClearCompare ->
+            ( { m | compareWith = Nothing }
+            , Effect.none
+            , Nothing
+            )
+
+        ClearSelectedCar ->
+            case ( m.selectedCar, m.compareWith ) of
+                ( Just _, Just compareCar ) ->
+                    ( { m | selectedCar = Just compareCar, compareWith = Nothing }
+                    , Effect.none
+                    , Nothing
+                    )
+
+                ( Just _, Nothing ) ->
+                    ( { m | selectedCar = Nothing }
+                    , Effect.none
+                    , Nothing
+                    )
+
+                ( Nothing, Just compareCar ) ->
+                    ( { m | selectedCar = Just compareCar, compareWith = Nothing }
+                    , Effect.none
+                    , Nothing
+                    )
+
+                _ ->
+                    ( m, Effect.none, Nothing )
 
 
 
@@ -221,7 +286,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) model =
+view app ({ eventSummary, analysis, raceControl } as shared) m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -248,21 +313,54 @@ view app ({ eventSummary, analysis, raceControl } as shared) model =
                 [ navigation shared.raceControl
                 , let
                     { mode, eventsState, isLeaderboardModalOpen, selectedCar } =
-                        model
+                        m
 
                     viewModel =
                         ViewModel.init raceControl
 
-                    selectedCarItem =
-                        resolveSelectedCar selectedCar viewModel
+                    viewModelItems =
+                        viewModel.items
+                            |> SortedList.toList
 
-                    carDetailsProps =
-                        { eventSummary = eventSummary
-                        , viewModel = viewModel
-                        , clock = raceControl.clock
-                        , selectedCar = selectedCarItem
-                        , analysis = analysis
-                        }
+                    findByCarNumber carNo =
+                        viewModelItems
+                            |> List.Extra.find (\item -> item.metadata.carNumber == carNo)
+
+                    selectedCarItem =
+                        case selectedCar |> Maybe.andThen findByCarNumber of
+                            Just item ->
+                                Just item
+
+                            Nothing ->
+                                List.head viewModelItems
+
+                    fallbackCompareItem =
+                        case selectedCarItem of
+                            Just selectedItem ->
+                                viewModelItems
+                                    |> List.filter (\item -> item.metadata.carNumber /= selectedItem.metadata.carNumber)
+                                    |> List.head
+                                    |> Maybe.withDefault selectedItem
+                                    |> Just
+
+                            Nothing ->
+                                case viewModelItems of
+                                    _ :: second :: _ ->
+                                        Just second
+
+                                    first :: [] ->
+                                        Just first
+
+                                    [] ->
+                                        Nothing
+
+                    compareItem =
+                        case m.compareWith |> Maybe.andThen findByCarNumber of
+                            Just item ->
+                                Just item
+
+                            Nothing ->
+                                fallbackCompareItem
                   in
                   case mode of
                     Tracker ->
@@ -323,7 +421,28 @@ view app ({ eventSummary, analysis, raceControl } as shared) model =
                                         { isOpen = isLeaderboardModalOpen
                                         , onToggle = ToggleLeaderboardModal
                                         , children =
-                                            [ Lazy.lazy CarDetails.view carDetailsProps ]
+                                            [ case ( selectedCarItem, compareItem ) of
+                                                ( Just a, Just b ) ->
+                                                    let
+                                                        compareProps =
+                                                            { eventSummary = eventSummary
+                                                            , viewModel = viewModel
+                                                            , clock = raceControl.clock
+                                                            , analysis = analysis
+                                                            , carA = a
+                                                            , carB = b
+                                                            , actions =
+                                                                { swap = SwapCompare
+                                                                , clearA = ClearSelectedCar
+                                                                , clearB = ClearCompare
+                                                                }
+                                                            }
+                                                    in
+                                                    Lazy.lazy CompareWidget.view compareProps
+
+                                                _ ->
+                                                    div [] [ text "車両データがありません" ]
+                                            ]
                                         }
                                     ]
                                 ]
@@ -334,26 +453,6 @@ view app ({ eventSummary, analysis, raceControl } as shared) model =
                 ]
             ]
         }
-
-
-resolveSelectedCar : Maybe String -> ViewModel -> Maybe ViewModelItem
-resolveSelectedCar selectedCar viewModel =
-    let
-        selectedItem =
-            selectedCar
-                |> Maybe.andThen
-                    (\carNumber ->
-                        viewModel.items
-                            |> SortedList.toList
-                            |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
-                    )
-    in
-    case selectedItem of
-        Just item ->
-            Just item
-
-        Nothing ->
-            SortedList.head viewModel.items
 
 
 navigation : RaceControl.Model -> Html Msg

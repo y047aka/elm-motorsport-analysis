@@ -4,20 +4,21 @@
 CarDetailsの後方互換を保ちつつ、2台比較の新UI/描画を追加する。実装は新モジュール群で行い、ルート側での遷移・操作連携を行う。
 
 ## 実装タスク
-- [ ] 新規 `Motorsport.Widget.CarDetails.Compare` を追加（`Props`, `Alignment(..)`, `view` 公開）
-- [ ] Compare Header（A/Bメタ・画像・凡例・操作領域）
-- [ ] KPI Row（Current/Last を2列比較）
-- [ ] Histogram2（2系列オーバーレイ）。既存 `Motorsport.Chart.Histogram` を参考に薄いラッパー作成
-- [ ] PositionProgression2（対象2台のみを描画）。既存 `PositionProgression` から最小構成を移植
+- [x] 新規 `Motorsport.Widget.CarDetails.Compare` を追加（`Props`, `Alignment(..)`, `view` 公開）
+- [x] Compare Header（A/Bメタ・画像・凡例・操作領域）
+- [x] KPI Row（Current/Last を2列比較）
+- [x] Histogram2（2系列オーバーレイ）。既存 `Motorsport.Chart.Histogram` を参考に薄いラッパー作成
+- [x] PositionProgression2（対象2台のみを描画）。既存 `PositionProgression` から最小構成を移植
 - [ ] LapTimeProgression2（対象2台のみを描画）。既存 `LapTimeProgression` から最小構成を移植
 - [ ] アラインメント切替（`ByLap`/`ByElapsedTime`）の分岐ロジック（X軸変換）
-- [ ] A/B `Swap` と `ClearB` 操作用の `actions` レコードを `Props` に追加（`swap : msg`, `clearB : msg`, `toggleAlignment : msg`）
+- [x] A/B `Swap` と `ClearB` 操作用の `actions` レコードを `Props` に追加（`swap : msg`, `clearB : msg`, `toggleAlignment : msg`）
 - [ ] アクセシビリティ（色以外の区別: 線種/凡例/テキスト）、画像alt付与
 - [ ] HalfModal向けレスポンシブ: グリッド→1カラム化、チャートサイズ調整
 
 ## ルーティング/統合タスク（app側）
 - [ ] Leaderboard行からの「+比較」導線追加（B未選択時はピッカー表示）
-- [ ] Compare `actions` をルートの `Msg` に接続（Swap/Clear/Alignment切替とURL同期）
+- [x] Compare `actions` をルートの `Msg` に接続（Swap/Clear/Alignment切替）
+- [ ] URLクエリ `?car=A&compare=B` を初期状態に反映（URL同期/更新は任意）
 
 ## データ/整合タスク
 - [ ] 同一イベント内チェック（異なるイベントの車両は比較不可→警告表示/フォールバック）
