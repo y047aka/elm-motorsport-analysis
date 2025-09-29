@@ -133,7 +133,6 @@ type Msg
     | EventsMsg DataView.Msg
     | ToggleLeaderboardModal
     | CarSelected String
-    | SwapCompare
     | ClearCompare
     | ClearSelectedCar
 
@@ -201,17 +200,6 @@ update app shared msg m =
                                 m
             in
             ( nextModel
-            , Effect.none
-            , Nothing
-            )
-
-        SwapCompare ->
-            ( case ( m.selectedCar, m.compareWith ) of
-                ( Just a, Just b ) ->
-                    { m | selectedCar = Just b, compareWith = Just a }
-
-                _ ->
-                    m
             , Effect.none
             , Nothing
             )
@@ -398,11 +386,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) m =
                                                 , analysis = analysis
                                                 , carA = selectedCarItem
                                                 , carB = compareItem
-                                                , actions =
-                                                    { swap = SwapCompare
-                                                    , clearA = ClearSelectedCar
-                                                    , clearB = ClearCompare
-                                                    }
+                                                , actions = { clearA = ClearSelectedCar, clearB = ClearCompare }
                                                 }
                                             ]
                                         }

@@ -4,7 +4,7 @@ import Css exposing (property, px, width)
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (class, css, disabled, src)
+import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Histogram as Histogram
@@ -31,8 +31,7 @@ type alias Props msg =
 
 
 type alias Actions msg =
-    { swap : msg
-    , clearA : msg
+    { clearA : msg
     , clearB : msg
     }
 
@@ -61,8 +60,7 @@ view props =
                 , property "row-gap" "16px"
                 ]
             ]
-            [ controls props.actions props.carA props.carB
-            , PositionProgression.view
+            [ PositionProgression.view
                 props.clock
                 props.viewModel
                 props.carA
@@ -75,35 +73,6 @@ view props =
             ]
         , div [ css [ property "grid-column" "3" ] ]
             [ detailColumn "Car B" props props.carB ]
-        ]
-
-
-controls : Actions msg -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
-controls actions carA carB =
-    let
-        canSwap =
-            case ( carA, carB ) of
-                ( Just _, Just _ ) ->
-                    True
-
-                _ ->
-                    False
-    in
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-auto-flow" "column"
-            , property "justify-content" "center"
-            , property "align-items" "center"
-            , property "column-gap" "10px"
-            ]
-        ]
-        [ Html.button
-            [ class "btn btn-xs"
-            , onClick actions.swap
-            , disabled (not canSwap)
-            ]
-            [ text "Swap" ]
         ]
 
 
@@ -152,8 +121,7 @@ detailBody { eventSummary, analysis, actions } item =
             , property "row-gap" "20px"
             ]
         ]
-        [ Html.button [ class "btn btn-xs", onClick actions.clearA ] [ text "Clear" ]
-        , metadataBlock item eventSummary.season
+        [ metadataBlock item eventSummary.season
         , div
             [ css
                 [ property "display" "grid"
@@ -175,6 +143,7 @@ detailBody { eventSummary, analysis, actions } item =
                 , Histogram.view analysis 1.05 item.history
                 ]
             ]
+        , Html.button [ class "btn btn-xs", onClick actions.clearA ] [ text "Clear" ]
         ]
 
 
