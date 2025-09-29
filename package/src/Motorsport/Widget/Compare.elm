@@ -47,6 +47,7 @@ view props =
         [ css
             [ property "display" "grid"
             , property "grid-template-columns" "1fr 1fr 1fr"
+            , property "align-items" "start"
             , property "column-gap" "16px"
             ]
         ]
