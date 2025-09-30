@@ -1,6 +1,6 @@
 module UI.HalfModal exposing (view)
 
-import Css exposing (em, fontSize, height, hover, overflowY, padding2, pct, property, px, scroll, width)
+import Css exposing (auto, em, fontSize, height, hover, margin2, maxWidth, overflowY, padding2, pct, property, px, scroll, width, zero)
 import Css.Global
 import Html.Styled as Html exposing (Html, button, div, header)
 import Html.Styled.Attributes exposing (css)
@@ -23,17 +23,17 @@ view props =
     let
         modalHeight =
             if props.isOpen then
-                "50vh"
+                "40vh"
 
             else
-                "400px"
+                "350px"
 
         modalTransform =
             if props.isOpen then
                 "translateY(0)"
 
             else
-                "translateY(calc(100% - 400px))"
+                "translateY(calc(100% - 350px))"
 
         modalTransition =
             "all 0.3s ease"
@@ -43,8 +43,11 @@ view props =
             [ property "position" "absolute"
             , property "bottom" "0"
             , property "left" "0"
-            , width (pct 100)
+            , property "right" "0"
+            , width (pct 90)
+            , maxWidth (px 1200)
             , property "height" modalHeight
+            , margin2 zero auto
             , padding2 (px 10) (px 15)
             , property "display" "grid"
             , property "row-gap" "10px"

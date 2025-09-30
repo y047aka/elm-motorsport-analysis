@@ -2,7 +2,7 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, zero)
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, width, zero)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -269,7 +269,6 @@ view app { eventSummary, analysis, raceControl } m =
                                     [ height (pct 100)
                                     , property "display" "grid"
                                     , property "grid-template-columns" "370px 1fr 370px"
-                                    , property "grid-template-rows" "1fr 400px"
                                     ]
                                 ]
                                 [ div
@@ -285,13 +284,35 @@ view app { eventSummary, analysis, raceControl } m =
                                         , onSelectCar = (\item -> CompareWidget.SelectCar item.metadata.carNumber) >> CompareWidgetMsg
                                         }
                                     ]
-                                , div [ css [ property "display" "grid", property "place-items" "center" ] ]
+                                , div
+                                    [ css
+                                        [ property "display" "grid"
+                                        , property "grid-template-rows" "1fr 350px"
+                                        , property "place-items" "center"
+                                        ]
+                                    ]
                                     [ case ( eventSummary.season, eventSummary.name ) of
                                         ( 2025, "24 Hours of Le Mans" ) ->
                                             TrackerChart.viewWithMiniSectors analysis viewModel
 
                                         _ ->
                                             TrackerChart.view analysis viewModel
+                                    , div
+                                        [ css
+                                            [ property "position" "relative"
+                                            , width (pct 100)
+                                            , height (pct 100)
+                                            ]
+                                        ]
+                                        [ HalfModal.view
+                                            { isOpen = m.isLeaderboardModalOpen
+                                            , onToggle = ToggleLeaderboardModal
+                                            , children =
+                                                [ Html.map CompareWidgetMsg <|
+                                                    Lazy.lazy2 CompareWidget.view compareProps m.compare
+                                                ]
+                                            }
+                                        ]
                                     ]
                                 , div
                                     [ css
@@ -303,22 +324,6 @@ view app { eventSummary, analysis, raceControl } m =
                                         ]
                                     ]
                                     [ analysisWidgets viewModel ]
-                                , div
-                                    [ css
-                                        [ property "grid-column" "1 / -1"
-                                        , property "position" "relative"
-                                        , height (pct 100)
-                                        ]
-                                    ]
-                                    [ HalfModal.view
-                                        { isOpen = m.isLeaderboardModalOpen
-                                        , onToggle = ToggleLeaderboardModal
-                                        , children =
-                                            [ Html.map CompareWidgetMsg <|
-                                                Lazy.lazy2 CompareWidget.view compareProps m.compare
-                                            ]
-                                        }
-                                    ]
                                 ]
                             ]
 
