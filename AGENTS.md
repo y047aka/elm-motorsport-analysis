@@ -17,6 +17,8 @@ Kiro-style Spec Driven Development implementation using codex cli slash commands
 ### Active Specifications
 - Check `.kiro/specs/` for active specifications
 - Use `/kiro-spec-status [feature-name]` to check progress
+- wec-event-halfmodal-cardetails — Route.Wec.Season_.Event_ ハーフモーダル: Leaderboard → CarDetails 置換
+- motorsport-widget-cardetails-compare-two — Motorsport.Widget.CarDetails: 選択した2台の車両を比較できる機能の追加
 
 ## Development Guidelines
 - Think in English, but generate responses in Japanese (思考は英語、回答の生成は日本語で行うように)

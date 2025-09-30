@@ -23,7 +23,7 @@ view props =
     let
         modalHeight =
             if props.isOpen then
-                "85vh"
+                "50vh"
 
             else
                 "400px"
