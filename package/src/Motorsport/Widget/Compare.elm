@@ -45,8 +45,15 @@ update msg model =
     case msg of
         SelectCar carNumber ->
             case ( model.carA, model.carB ) of
-                ( Nothing, _ ) ->
+                ( Nothing, Nothing ) ->
                     { model | carA = Just carNumber }
+
+                ( Nothing, Just b ) ->
+                    if b /= carNumber then
+                        { model | carA = Just carNumber }
+
+                    else
+                        { carA = Just carNumber, carB = Nothing }
 
                 ( Just a, Nothing ) ->
                     if a /= carNumber then
