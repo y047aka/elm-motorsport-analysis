@@ -8,7 +8,7 @@ import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.Histogram as Histogram
+import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -198,7 +198,7 @@ detailBody { eventSummary, analysis, onClear } item =
                 ]
             , div [ css [ property "grid-column" "1 / -1" ] ]
                 [ Html.div [ class "text-xs opacity-60" ] [ text "Histogram" ]
-                , Histogram.view analysis 1.05 item.history
+                , BoxPlot.view analysis 1.07 item.history
                 ]
             ]
         , Html.button [ class "btn btn-xs", onClick onClear ] [ text "Clear" ]
