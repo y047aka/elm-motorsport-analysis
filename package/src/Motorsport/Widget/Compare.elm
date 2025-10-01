@@ -7,11 +7,13 @@ import Html.Styled as Html exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
+import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 import SortedList
@@ -113,25 +115,49 @@ view props model =
             [ css
                 [ property "grid-column" "2"
                 , property "display" "grid"
-                , property "grid-template-rows" "auto 1fr"
                 , property "align-items" "start"
                 , property "row-gap" "16px"
                 ]
             ]
-            [ PositionProgression.view
-                props.clock
-                props.viewModel
-                carA
-                carB
-            , LapTimeProgression.view
-                props.clock
-                props.viewModel
-                carA
-                carB
-            ]
+            (middleColumnContents props carA carB)
         , div [ css [ property "grid-column" "3" ] ]
             [ detailColumn "Car B" ClearCarB props carB ]
         ]
+
+
+middleColumnContents : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> List (Html Msg)
+middleColumnContents props carA carB =
+    [ PositionProgression.view
+        props.clock
+        props.viewModel
+        carA
+        carB
+    , LapTimeProgression.view
+        props.clock
+        props.viewModel
+        carA
+        carB
+    , case ( carA, carB ) of
+        ( Just itemA, Just itemB ) ->
+            [ itemA, itemB ]
+                |> List.sortBy .position
+                |> NonEmpty.fromList
+                |> Maybe.map
+                    (\cars ->
+                        let
+                            leader =
+                                NonEmpty.head cars
+                        in
+                        CloseBattles.closeBattleItem
+                            { cars = cars
+                            , position = leader.position
+                            }
+                    )
+                |> Maybe.withDefault (text "")
+
+        _ ->
+            text ""
+    ]
 
 
 detailColumn : String -> Msg -> Props -> Maybe ViewModelItem -> Html Msg

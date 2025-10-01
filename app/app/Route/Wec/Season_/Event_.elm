@@ -16,10 +16,9 @@ import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel)
+import Motorsport.RaceControl.ViewModel as ViewModel
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
-import Motorsport.Widget.CloseBattles as CloseBattlesWidget
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import PagesMsg exposing (PagesMsg)
@@ -268,7 +267,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ css
                                     [ height (pct 100)
                                     , property "display" "grid"
-                                    , property "grid-template-columns" "370px 1fr 370px"
+                                    , property "grid-template-columns" "370px 1fr"
                                     ]
                                 ]
                                 [ div
@@ -314,16 +313,6 @@ view app { eventSummary, analysis, raceControl } m =
                                             }
                                         ]
                                     ]
-                                , div
-                                    [ css
-                                        [ height (pct 100)
-                                        , overflowY scroll
-                                        , padding2 zero (px 10)
-                                        , property "display" "flex"
-                                        , property "flex-direction" "column"
-                                        ]
-                                    ]
-                                    [ analysisWidgets viewModel ]
                                 ]
                             ]
 
@@ -399,18 +388,6 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
             , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
         ]
-
-
-analysisWidgets : ViewModel -> Html Msg
-analysisWidgets viewModel =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-rows" "auto auto auto auto"
-            , property "row-gap" "10px"
-            ]
-        ]
-        [ CloseBattlesWidget.view viewModel ]
 
 
 eventsView : DataView.Model -> RaceControl.Model -> Html Msg

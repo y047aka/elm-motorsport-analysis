@@ -1,4 +1,4 @@
-module Motorsport.Widget.CloseBattles exposing (view)
+module Motorsport.Widget.CloseBattles exposing (closeBattleItem, view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, pct, px)
