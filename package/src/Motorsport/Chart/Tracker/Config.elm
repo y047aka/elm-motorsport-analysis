@@ -155,71 +155,25 @@ calcBasicSectorProgress ratio car =
 
 calcMiniSectorProgress : { scl2 : Float, z4 : Float, ip1 : Float, z12 : Float, sclc : Float, a7_1 : Float, ip2 : Float, a8_1 : Float, sclb : Float, porin : Float, porout : Float, pitref : Float, scl1 : Float, fordout : Float, fl : Float } -> ViewModelItem -> Float
 calcMiniSectorProgress ratio car =
+    let
+        segments =
+            miniSectorSegments ratio
+
+        sectorTotals =
+            miniSectorSectorTotals segments
+
+        fallback =
+            calcBasicSectorProgress sectorTotals car
+    in
     case car.timing.miniSector of
-        Just ( SCL2, progress ) ->
-            progress * ratio.scl2
-
-        Just ( Z4, progress ) ->
-            ratio.scl2 + progress * ratio.z4
-
-        Just ( IP1, progress ) ->
-            ratio.scl2 + ratio.z4 + progress * ratio.ip1
-
-        Just ( Z12, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + progress * ratio.z12
-
-        Just ( SCLC, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + progress * ratio.sclc
-
-        Just ( A7_1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + progress * ratio.a7_1
-
-        Just ( IP2, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + progress * ratio.ip2
-
-        Just ( A8_1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + progress * ratio.a8_1
-
-        Just ( SCLB, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + progress * ratio.sclb
-
-        Just ( PORIN, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + progress * ratio.porin
-
-        Just ( POROUT, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + progress * ratio.porout
-
-        Just ( PITREF, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + progress * ratio.pitref
-
-        Just ( SCL1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + progress * ratio.scl1
-
-        Just ( FORDOUT, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + progress * ratio.fordout
-
-        Just ( FL, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + ratio.fordout + progress * ratio.fl
+        Just ( miniSector, progress ) ->
+            segments
+                |> findMiniSectorSegment miniSector
+                |> Maybe.map (\segment -> segment.start + progress * segment.share)
+                |> Maybe.withDefault fallback
 
         Nothing ->
-            -- Fallback to sector-based calculation
-            case car.timing.sector of
-                Just ( S1, progress ) ->
-                    (progress / 100) * (ratio.scl2 + ratio.z4 + ratio.ip1)
-
-                Just ( S2, progress ) ->
-                    (ratio.scl2 + ratio.z4 + ratio.ip1) + (progress / 100) * (ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2)
-
-                Just ( S3, progress ) ->
-                    (ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2) + (progress / 100) * (ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + ratio.fordout + ratio.fl)
-
-                Nothing ->
-                    case car.currentLap of
-                        Nothing ->
-                            0
-
-                        Just currentLap ->
-                            min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+            fallback
 
 
 calcSectorBoundaries : TrackConfig -> List Float
@@ -231,37 +185,162 @@ calcSectorBoundaries config =
             ]
 
         MiniSectors ratio ->
-            let
-                ratios =
-                    [ ratio.scl2
-                    , ratio.z4
-                    , ratio.ip1
-                    , ratio.z12
-                    , ratio.sclc
-                    , ratio.a7_1
-                    , ratio.ip2
-                    , ratio.a8_1
-                    , ratio.sclb
-                    , ratio.porin
-                    , ratio.porout
-                    , ratio.pitref
-                    , ratio.scl1
-                    , ratio.fordout
+            miniSectorSegments ratio
+                -- flは別途 startFinishLine を描画するので不要
+                |> List.filter (\segment -> segment.mini /= FL)
+                |> List.map (\segment -> segment.start + segment.share)
 
-                    -- , miniSectorRatio.fl 別途 startFinishLine を描画するので不要
-                    ]
-            in
-            List.foldl
-                (\ratioValue acc ->
-                    let
-                        previousProgress =
-                            Maybe.withDefault 0 (List.head acc)
 
-                        newProgress =
-                            previousProgress + ratioValue
-                    in
-                    newProgress :: acc
-                )
-                []
-                ratios
-                |> List.reverse
+type alias MiniSectorSegment =
+    { mini : MiniSector
+    , start : Float
+    , share : Float
+    }
+
+
+miniSectorSegments :
+    { scl2 : Float
+    , z4 : Float
+    , ip1 : Float
+    , z12 : Float
+    , sclc : Float
+    , a7_1 : Float
+    , ip2 : Float
+    , a8_1 : Float
+    , sclb : Float
+    , porin : Float
+    , porout : Float
+    , pitref : Float
+    , scl1 : Float
+    , fordout : Float
+    , fl : Float
+    }
+    -> List MiniSectorSegment
+miniSectorSegments ratio =
+    let
+        ( segments, _ ) =
+            miniSectorRatios ratio
+                |> List.foldl
+                    (\( mini, share ) ( acc, total ) ->
+                        ( { mini = mini, start = total, share = share } :: acc, total + share )
+                    )
+                    ( [], 0 )
+    in
+    List.reverse segments
+
+
+miniSectorRatios :
+    { scl2 : Float
+    , z4 : Float
+    , ip1 : Float
+    , z12 : Float
+    , sclc : Float
+    , a7_1 : Float
+    , ip2 : Float
+    , a8_1 : Float
+    , sclb : Float
+    , porin : Float
+    , porout : Float
+    , pitref : Float
+    , scl1 : Float
+    , fordout : Float
+    , fl : Float
+    }
+    -> List ( MiniSector, Float )
+miniSectorRatios ratio =
+    [ ( SCL2, ratio.scl2 )
+    , ( Z4, ratio.z4 )
+    , ( IP1, ratio.ip1 )
+    , ( Z12, ratio.z12 )
+    , ( SCLC, ratio.sclc )
+    , ( A7_1, ratio.a7_1 )
+    , ( IP2, ratio.ip2 )
+    , ( A8_1, ratio.a8_1 )
+    , ( SCLB, ratio.sclb )
+    , ( PORIN, ratio.porin )
+    , ( POROUT, ratio.porout )
+    , ( PITREF, ratio.pitref )
+    , ( SCL1, ratio.scl1 )
+    , ( FORDOUT, ratio.fordout )
+    , ( FL, ratio.fl )
+    ]
+
+
+findMiniSectorSegment : MiniSector -> List MiniSectorSegment -> Maybe MiniSectorSegment
+findMiniSectorSegment mini segments =
+    case segments of
+        [] ->
+            Nothing
+
+        segment :: rest ->
+            if segment.mini == mini then
+                Just segment
+
+            else
+                findMiniSectorSegment mini rest
+
+
+miniSectorSectorTotals : List MiniSectorSegment -> { s1 : Float, s2 : Float, s3 : Float }
+miniSectorSectorTotals segments =
+    let
+        addShare segment totals =
+            case miniSectorToSector segment.mini of
+                S1 ->
+                    { totals | s1 = totals.s1 + segment.share }
+
+                S2 ->
+                    { totals | s2 = totals.s2 + segment.share }
+
+                S3 ->
+                    { totals | s3 = totals.s3 + segment.share }
+    in
+    List.foldl addShare { s1 = 0, s2 = 0, s3 = 0 } segments
+
+
+miniSectorToSector : MiniSector -> Sector
+miniSectorToSector miniSector =
+    case miniSector of
+        SCL2 ->
+            S1
+
+        Z4 ->
+            S1
+
+        IP1 ->
+            S1
+
+        Z12 ->
+            S2
+
+        SCLC ->
+            S2
+
+        A7_1 ->
+            S2
+
+        IP2 ->
+            S2
+
+        A8_1 ->
+            S3
+
+        SCLB ->
+            S3
+
+        PORIN ->
+            S3
+
+        POROUT ->
+            S3
+
+        PITREF ->
+            S3
+
+        SCL1 ->
+            S3
+
+        FORDOUT ->
+            S3
+
+        FL ->
+            S3
