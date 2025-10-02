@@ -17,29 +17,28 @@ import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 
 
+type alias SectorRatios =
+    { s1 : Float
+    , s2 : Float
+    , s3 : Float
+    }
+
+
+type alias MiniSectorShare =
+    { mini : MiniSector
+    , share : Float
+    }
+
+
+type alias SectorWithMiniSectors =
+    { sector : Sector
+    , miniSectors : List MiniSectorShare
+    }
+
+
 type TrackConfig
-    = Sectors
-        { s1 : Float
-        , s2 : Float
-        , s3 : Float
-        }
-    | MiniSectors
-        { scl2 : Float
-        , z4 : Float
-        , ip1 : Float
-        , z12 : Float
-        , sclc : Float
-        , a7_1 : Float
-        , ip2 : Float
-        , a8_1 : Float
-        , sclb : Float
-        , porin : Float
-        , porout : Float
-        , pitref : Float
-        , scl1 : Float
-        , fordout : Float
-        , fl : Float
-        }
+    = Sectors SectorRatios
+    | MiniSectors (List SectorWithMiniSectors)
 
 
 standard : Analysis -> TrackConfig
@@ -118,8 +117,32 @@ leMans24h analysis =
                 , fordout = toFloat analysis.miniSectorFastest.fordout / toFloat totalFastestTime
                 , fl = toFloat analysis.miniSectorFastest.fl / toFloat totalFastestTime
                 }
+
+        layout =
+            [ miniSectorGroup S1
+                [ ( SCL2, miniSectorRatio.scl2 )
+                , ( Z4, miniSectorRatio.z4 )
+                , ( IP1, miniSectorRatio.ip1 )
+                ]
+            , miniSectorGroup S2
+                [ ( Z12, miniSectorRatio.z12 )
+                , ( SCLC, miniSectorRatio.sclc )
+                , ( A7_1, miniSectorRatio.a7_1 )
+                , ( IP2, miniSectorRatio.ip2 )
+                ]
+            , miniSectorGroup S3
+                [ ( A8_1, miniSectorRatio.a8_1 )
+                , ( SCLB, miniSectorRatio.sclb )
+                , ( PORIN, miniSectorRatio.porin )
+                , ( POROUT, miniSectorRatio.porout )
+                , ( PITREF, miniSectorRatio.pitref )
+                , ( SCL1, miniSectorRatio.scl1 )
+                , ( FORDOUT, miniSectorRatio.fordout )
+                , ( FL, miniSectorRatio.fl )
+                ]
+            ]
     in
-    MiniSectors miniSectorRatio
+    MiniSectors layout
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
@@ -128,8 +151,8 @@ calcSectorProgress config car =
         Sectors ratio ->
             calcBasicSectorProgress ratio car
 
-        MiniSectors ratio ->
-            calcMiniSectorProgress ratio car
+        MiniSectors layout ->
+            calcMiniSectorProgress layout car
 
 
 calcBasicSectorProgress : { s1 : Float, s2 : Float, s3 : Float } -> ViewModelItem -> Float
@@ -153,14 +176,14 @@ calcBasicSectorProgress ratio car =
                     min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
 
 
-calcMiniSectorProgress : { scl2 : Float, z4 : Float, ip1 : Float, z12 : Float, sclc : Float, a7_1 : Float, ip2 : Float, a8_1 : Float, sclb : Float, porin : Float, porout : Float, pitref : Float, scl1 : Float, fordout : Float, fl : Float } -> ViewModelItem -> Float
-calcMiniSectorProgress ratio car =
+calcMiniSectorProgress : List SectorWithMiniSectors -> ViewModelItem -> Float
+calcMiniSectorProgress layout car =
     let
         segments =
-            miniSectorSegments ratio
+            miniSectorSegments layout
 
         sectorTotals =
-            miniSectorSectorTotals segments
+            miniSectorSectorTotals layout
 
         fallback =
             calcBasicSectorProgress sectorTotals car
@@ -184,86 +207,57 @@ calcSectorBoundaries config =
             , s1 + s2
             ]
 
-        MiniSectors ratio ->
-            miniSectorSegments ratio
-                -- flは別途 startFinishLine を描画するので不要
-                |> List.filter (\segment -> segment.mini /= FL)
-                |> List.map (\segment -> segment.start + segment.share)
+        MiniSectors layout ->
+            calcMiniSectorBoundaries layout
 
 
 type alias MiniSectorSegment =
-    { mini : MiniSector
+    { sector : Sector
+    , mini : MiniSector
     , start : Float
     , share : Float
     }
 
 
-miniSectorSegments :
-    { scl2 : Float
-    , z4 : Float
-    , ip1 : Float
-    , z12 : Float
-    , sclc : Float
-    , a7_1 : Float
-    , ip2 : Float
-    , a8_1 : Float
-    , sclb : Float
-    , porin : Float
-    , porout : Float
-    , pitref : Float
-    , scl1 : Float
-    , fordout : Float
-    , fl : Float
-    }
-    -> List MiniSectorSegment
-miniSectorSegments ratio =
-    let
-        ( segments, _ ) =
-            miniSectorRatios ratio
-                |> List.foldl
-                    (\( mini, share ) ( acc, total ) ->
-                        ( { mini = mini, start = total, share = share } :: acc, total + share )
-                    )
-                    ( [], 0 )
-    in
-    List.reverse segments
+miniSectorSegments : List SectorWithMiniSectors -> List MiniSectorSegment
+miniSectorSegments layout =
+    miniSectorSegmentsHelp layout 0 []
+        |> List.reverse
 
 
-miniSectorRatios :
-    { scl2 : Float
-    , z4 : Float
-    , ip1 : Float
-    , z12 : Float
-    , sclc : Float
-    , a7_1 : Float
-    , ip2 : Float
-    , a8_1 : Float
-    , sclb : Float
-    , porin : Float
-    , porout : Float
-    , pitref : Float
-    , scl1 : Float
-    , fordout : Float
-    , fl : Float
-    }
-    -> List ( MiniSector, Float )
-miniSectorRatios ratio =
-    [ ( SCL2, ratio.scl2 )
-    , ( Z4, ratio.z4 )
-    , ( IP1, ratio.ip1 )
-    , ( Z12, ratio.z12 )
-    , ( SCLC, ratio.sclc )
-    , ( A7_1, ratio.a7_1 )
-    , ( IP2, ratio.ip2 )
-    , ( A8_1, ratio.a8_1 )
-    , ( SCLB, ratio.sclb )
-    , ( PORIN, ratio.porin )
-    , ( POROUT, ratio.porout )
-    , ( PITREF, ratio.pitref )
-    , ( SCL1, ratio.scl1 )
-    , ( FORDOUT, ratio.fordout )
-    , ( FL, ratio.fl )
-    ]
+miniSectorSegmentsHelp : List SectorWithMiniSectors -> Float -> List MiniSectorSegment -> List MiniSectorSegment
+miniSectorSegmentsHelp layout total acc =
+    case layout of
+        [] ->
+            acc
+
+        sectorWithMini :: rest ->
+            let
+                ( updatedAcc, nextTotal ) =
+                    addMiniSectors sectorWithMini.sector sectorWithMini.miniSectors total acc
+            in
+            miniSectorSegmentsHelp rest nextTotal updatedAcc
+
+
+addMiniSectors : Sector -> List MiniSectorShare -> Float -> List MiniSectorSegment -> ( List MiniSectorSegment, Float )
+addMiniSectors sector minis total acc =
+    case minis of
+        [] ->
+            ( acc, total )
+
+        miniShare :: rest ->
+            let
+                segment =
+                    { sector = sector
+                    , mini = miniShare.mini
+                    , start = total
+                    , share = miniShare.share
+                    }
+
+                nextTotal =
+                    total + miniShare.share
+            in
+            addMiniSectors sector rest nextTotal (segment :: acc)
 
 
 findMiniSectorSegment : MiniSector -> List MiniSectorSegment -> Maybe MiniSectorSegment
@@ -280,67 +274,67 @@ findMiniSectorSegment mini segments =
                 findMiniSectorSegment mini rest
 
 
-miniSectorSectorTotals : List MiniSectorSegment -> { s1 : Float, s2 : Float, s3 : Float }
-miniSectorSectorTotals segments =
+miniSectorSectorTotals : List SectorWithMiniSectors -> SectorRatios
+miniSectorSectorTotals layout =
     let
-        addShare segment totals =
-            case miniSectorToSector segment.mini of
+        addSector sectorWithMini totals =
+            let
+                share =
+                    sumMiniSectorShares sectorWithMini.miniSectors
+            in
+            case sectorWithMini.sector of
                 S1 ->
-                    { totals | s1 = totals.s1 + segment.share }
+                    { totals | s1 = totals.s1 + share }
 
                 S2 ->
-                    { totals | s2 = totals.s2 + segment.share }
+                    { totals | s2 = totals.s2 + share }
 
                 S3 ->
-                    { totals | s3 = totals.s3 + segment.share }
+                    { totals | s3 = totals.s3 + share }
     in
-    List.foldl addShare { s1 = 0, s2 = 0, s3 = 0 } segments
+    List.foldl addSector { s1 = 0, s2 = 0, s3 = 0 } layout
 
 
-miniSectorToSector : MiniSector -> Sector
-miniSectorToSector miniSector =
-    case miniSector of
-        SCL2 ->
-            S1
+sumMiniSectorShares : List MiniSectorShare -> Float
+sumMiniSectorShares minis =
+    List.foldl (\miniShare acc -> acc + miniShare.share) 0 minis
 
-        Z4 ->
-            S1
 
-        IP1 ->
-            S1
+calcMiniSectorBoundaries : List SectorWithMiniSectors -> List Float
+calcMiniSectorBoundaries layout =
+    calcMiniSectorBoundariesHelp layout 0 []
+        |> List.reverse
 
-        Z12 ->
-            S2
 
-        SCLC ->
-            S2
+calcMiniSectorBoundariesHelp : List SectorWithMiniSectors -> Float -> List Float -> List Float
+calcMiniSectorBoundariesHelp layout total acc =
+    case layout of
+        [] ->
+            acc
 
-        A7_1 ->
-            S2
+        sectorWithMini :: rest ->
+            let
+                sectorShare =
+                    sumMiniSectorShares sectorWithMini.miniSectors
 
-        IP2 ->
-            S2
+                newTotal =
+                    total + sectorShare
 
-        A8_1 ->
-            S3
+                updatedAcc =
+                    case rest of
+                        [] ->
+                            acc
 
-        SCLB ->
-            S3
+                        _ ->
+                            newTotal :: acc
+            in
+            calcMiniSectorBoundariesHelp rest newTotal updatedAcc
 
-        PORIN ->
-            S3
 
-        POROUT ->
-            S3
-
-        PITREF ->
-            S3
-
-        SCL1 ->
-            S3
-
-        FORDOUT ->
-            S3
-
-        FL ->
-            S3
+miniSectorGroup : Sector -> List ( MiniSector, Float ) -> SectorWithMiniSectors
+miniSectorGroup sector miniPairs =
+    { sector = sector
+    , miniSectors =
+        miniPairs
+            |> List.map (\( mini, share ) -> { mini = mini, share = share })
+    }
