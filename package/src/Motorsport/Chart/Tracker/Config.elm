@@ -12,6 +12,7 @@ module Motorsport.Chart.Tracker.Config exposing
 
 -}
 
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.Lap.Performance exposing (MiniSectorFastest)
@@ -108,7 +109,7 @@ buildConfig isLeMans2025 analysis =
         totalTime =
             if isLeMans2025 then
                 leMansMiniSectorSpecs
-                    |> List.foldl (\spec -> \acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
+                    |> List.foldl (\spec acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
 
             else
                 toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
@@ -121,51 +122,46 @@ buildConfig isLeMans2025 analysis =
                 [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
 
         miniRatio miniSector =
-            if isLeMans2025 then
-                let
-                    spec =
-                        leMansSpecFor miniSector
+            let
+                spec =
+                    leMansSpecFor miniSector
 
-                    value =
-                        spec.getFastest analysis.miniSectorFastest
+                value =
+                    spec.getFastest analysis.miniSectorFastest
 
-                    defaultRatio =
-                        spec.defaultUnits / leMansDefaultUnits
-                in
-                if totalTime == 0 then
-                    defaultRatio
-
-                else
-                    value / totalTime
+                defaultRatio =
+                    spec.defaultUnits / leMansDefaultUnits
+            in
+            if totalTime == 0 then
+                defaultRatio
 
             else
-                0
+                value / totalTime
+
+        getSectorValue sector =
+            case sector of
+                S1 ->
+                    toFloat analysis.sector_1_fastest
+
+                S2 ->
+                    toFloat analysis.sector_2_fastest
+
+                S3 ->
+                    toFloat analysis.sector_3_fastest
 
         sectorRatio sector =
-            if isLeMans2025 then
-                0
+            let
+                value =
+                    getSectorValue sector
+
+                defaultRatio =
+                    1 / 3
+            in
+            if totalTime == 0 then
+                defaultRatio
 
             else
-                let
-                    value =
-                        case sector of
-                            S1 ->
-                                toFloat analysis.sector_1_fastest
-
-                            S2 ->
-                                toFloat analysis.sector_2_fastest
-
-                            S3 ->
-                                toFloat analysis.sector_3_fastest
-
-                    defaultRatio =
-                        1 / 3
-                in
-                if totalTime == 0 then
-                    defaultRatio
-
-                else
-                    value / totalTime
+                value / totalTime
 
         sectorConfig ( sector, miniSectors ) =
             let
@@ -188,8 +184,7 @@ buildConfig isLeMans2025 analysis =
 
         lookup targetSector =
             sectors
-                |> List.filter (\sectorConfig_ -> sectorConfig_.sector == targetSector)
-                |> List.head
+                |> List.Extra.find (\sectorConfig_ -> sectorConfig_.sector == targetSector)
                 |> Maybe.withDefault (SectorConfig targetSector (1 / 3) [])
     in
     { s1 = lookup S1
