@@ -111,19 +111,65 @@ calculateRatio totalTime defaultRatio value =
         value / totalTime
 
 
+buildTrackConfig : List ( Sector, List MiniSector ) -> (MiniSector -> Float) -> (Sector -> Float) -> TrackConfig
+buildTrackConfig layout miniRatio sectorRatio =
+    let
+        sectorConfig ( sector, miniSectors ) =
+            let
+                miniShares =
+                    miniSectors
+                        |> List.map (\mini -> { mini = mini, share = miniRatio mini })
+
+                share =
+                    if List.isEmpty miniSectors then
+                        sectorRatio sector
+
+                    else
+                        sumMiniSectorShares miniShares
+            in
+            SectorConfig sector share miniShares
+
+        sectors =
+            layout
+                |> List.map sectorConfig
+
+        lookup targetSector =
+            sectors
+                |> List.filter (\sectorConfig_ -> sectorConfig_.sector == targetSector)
+                |> List.head
+                |> Maybe.withDefault (SectorConfig targetSector (1 / 3) [])
+    in
+    { s1 = lookup S1
+    , s2 = lookup S2
+    , s3 = lookup S3
+    }
+
+
 standard : Analysis -> TrackConfig
 standard analysis =
     let
         totalFastestTime =
             toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
 
-        ratio value =
-            calculateRatio totalFastestTime (1 / 3) (toFloat value)
+        sectorRatio sector =
+            let
+                value =
+                    case sector of
+                        S1 ->
+                            toFloat analysis.sector_1_fastest
+
+                        S2 ->
+                            toFloat analysis.sector_2_fastest
+
+                        S3 ->
+                            toFloat analysis.sector_3_fastest
+            in
+            calculateRatio totalFastestTime (1 / 3) value
+
+        layout =
+            [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
     in
-    { s1 = SectorConfig S1 (ratio analysis.sector_1_fastest) []
-    , s2 = SectorConfig S2 (ratio analysis.sector_2_fastest) []
-    , s3 = SectorConfig S3 (ratio analysis.sector_3_fastest) []
-    }
+    buildTrackConfig layout (\_ -> 0) sectorRatio
 
 
 leMans24h : Analysis -> TrackConfig
@@ -133,7 +179,7 @@ leMans24h analysis =
             leMansMiniSectorSpecs
                 |> List.foldl (\spec acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
 
-        ratioFor miniSector =
+        miniRatio miniSector =
             let
                 spec =
                     leMansSpecFor miniSector
@@ -145,35 +191,8 @@ leMans24h analysis =
                     spec.getFastest analysis.miniSectorFastest
             in
             calculateRatio totalFastestTime defaultRatio value
-
-        sectorConfig ( sector, miniSectors ) =
-            let
-                miniShares =
-                    miniSectors
-                        |> List.map (\mini -> { mini = mini, share = ratioFor mini })
-
-                share =
-                    sumMiniSectorShares miniShares
-            in
-            SectorConfig sector share miniShares
-
-        sectors =
-            Motorsport.Lap.miniSectorLayout
-                |> List.map sectorConfig
-
-        lookup targetSector default =
-            sectors
-                |> List.filter (\sectorConfig_ -> sectorConfig_.sector == targetSector)
-                |> List.head
-                |> Maybe.withDefault default
-
-        defaultSector targetSector =
-            SectorConfig targetSector (1 / 3) []
     in
-    { s1 = lookup S1 (defaultSector S1)
-    , s2 = lookup S2 (defaultSector S2)
-    , s3 = lookup S3 (defaultSector S3)
-    }
+    buildTrackConfig Motorsport.Lap.miniSectorLayout miniRatio (\_ -> 0)
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
