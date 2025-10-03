@@ -42,7 +42,6 @@ type alias MiniSectorShare =
 
 type alias MiniSectorSpec =
     { mini : MiniSector
-    , defaultUnits : Float
     , getFastest : MiniSectorFastest -> Float
     }
 
@@ -71,7 +70,8 @@ buildConfig layout analysis =
                     spec.getFastest analysis.miniSectorFastest
 
                 defaultRatio =
-                    spec.defaultUnits / leMansDefaultUnits
+                    Circuit.leMans2025MiniSectorDefalutRatio miniSector
+                        |> Maybe.withDefault 0
             in
             if totalTime == 0 then
                 defaultRatio
@@ -142,42 +142,33 @@ leMansSpecFor mini =
         |> List.Extra.find (\spec -> spec.mini == mini)
         |> Maybe.withDefault
             { mini = mini
-            , defaultUnits = 0
             , getFastest = \_ -> 0
             }
-
-
-leMansDefaultUnits : Float
-leMansDefaultUnits =
-    leMansMiniSectorSpecs
-        |> List.map .defaultUnits
-        |> List.sum
 
 
 leMansMiniSectorSpecs : List MiniSectorSpec
 leMansMiniSectorSpecs =
     let
-        spec mini units accessor =
+        spec mini accessor =
             { mini = mini
-            , defaultUnits = units
             , getFastest = accessor >> toFloat
             }
     in
-    [ spec SCL2 7.5 .scl2
-    , spec Z4 7.5 .z4
-    , spec IP1 12 .ip1
-    , spec Z12 24 .z12
-    , spec SCLC 3 .sclc
-    , spec A7_1 15 .a7_1
-    , spec IP2 13 .ip2
-    , spec A8_1 5.5 .a8_1
-    , spec SCLB 26 .sclb
-    , spec PORIN 12.5 .porin
-    , spec POROUT 11 .porout
-    , spec PITREF 6 .pitref
-    , spec SCL1 2 .scl1
-    , spec FORDOUT 3 .fordout
-    , spec FL 2 .fl
+    [ spec SCL2 .scl2
+    , spec Z4 .z4
+    , spec IP1 .ip1
+    , spec Z12 .z12
+    , spec SCLC .sclc
+    , spec A7_1 .a7_1
+    , spec IP2 .ip2
+    , spec A8_1 .a8_1
+    , spec SCLB .sclb
+    , spec PORIN .porin
+    , spec POROUT .porout
+    , spec PITREF .pitref
+    , spec SCL1 .scl1
+    , spec FORDOUT .fordout
+    , spec FL .fl
     ]
 
 

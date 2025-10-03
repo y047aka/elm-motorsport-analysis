@@ -2,6 +2,7 @@ module Motorsport.Circuit exposing
     ( Circuit, Layout
     , standard, leMans2025
     , hasMiniSectors
+    , leMans2025MiniSectorDefalutRatio
     , Direction(..)
     )
 
@@ -11,8 +12,11 @@ module Motorsport.Circuit exposing
 @docs standard, leMans2025
 @docs hasMiniSectors
 
+@docs leMans2025MiniSectorDefalutRatio
+
 -}
 
+import List.Extra
 import Motorsport.Sector exposing (MiniSector(..), Sector(..))
 
 
@@ -62,3 +66,52 @@ hasMiniSectors : Layout -> Bool
 hasMiniSectors layout =
     layout
         |> List.all (\( _, miniSectors ) -> not (List.isEmpty miniSectors))
+
+
+{-| Mini sector ratio information
+Represents the default ratio of a mini sector for layout calculations
+-}
+type alias MiniSectorRatio =
+    { mini : MiniSector
+    , ratio : Float
+    }
+
+
+{-| Le Mans 2025 mini sector ratios
+-}
+leMans2025MiniSectorDefaultRatios : List MiniSectorRatio
+leMans2025MiniSectorDefaultRatios =
+    let
+        weights =
+            [ ( SCL2, 7.5 )
+            , ( Z4, 7.5 )
+            , ( IP1, 12 )
+            , ( Z12, 24 )
+            , ( SCLC, 3 )
+            , ( A7_1, 15 )
+            , ( IP2, 13 )
+            , ( A8_1, 5.5 )
+            , ( SCLB, 26 )
+            , ( PORIN, 12.5 )
+            , ( POROUT, 11 )
+            , ( PITREF, 6 )
+            , ( SCL1, 2 )
+            , ( FORDOUT, 3 )
+            , ( FL, 2 )
+            ]
+
+        total =
+            weights |> List.map Tuple.second |> List.sum
+    in
+    weights
+        |> List.map (\( mini, weight ) -> { mini = mini, ratio = weight / total })
+
+
+{-| Get the default ratio for a specific mini sector in Le Mans 2025
+Returns Nothing if the mini sector is not found
+-}
+leMans2025MiniSectorDefalutRatio : MiniSector -> Maybe Float
+leMans2025MiniSectorDefalutRatio miniSector =
+    leMans2025MiniSectorDefaultRatios
+        |> List.Extra.find (\r -> r.mini == miniSector)
+        |> Maybe.map .ratio
