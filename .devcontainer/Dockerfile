@@ -47,8 +47,8 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && chown -R $USERNAME:$USERNAME /home/$USERNAME
 
 # Create workspace and config directories and set permissions
-RUN mkdir -p /workspace /home/$USERNAME/.cursor && \
-    chown -R $USERNAME:$USERNAME /workspace /home/$USERNAME/.cursor
+RUN mkdir -p /workspace /home/$USERNAME/.claude && \
+    chown -R $USERNAME:$USERNAME  /workspace /home/$USERNAME/.claude
 
 WORKDIR /workspace
 

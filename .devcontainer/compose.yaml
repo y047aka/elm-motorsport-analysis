@@ -4,6 +4,9 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
     environment:
       - CODEX_HOME=.codex
       - CLAUDE_CONFIG_DIR=/home/node/.claude
