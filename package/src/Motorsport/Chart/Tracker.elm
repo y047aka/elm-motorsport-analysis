@@ -3,6 +3,7 @@ module Motorsport.Chart.Tracker exposing (view)
 import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
+import Motorsport.Circuit as Circuit
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Scale exposing (ContinuousScale)
@@ -67,8 +68,15 @@ progressToAngleScale =
 view : Bool -> Analysis -> ViewModel -> Svg msg
 view isLeMans2025 analysis vm =
     let
+        layout =
+            if isLeMans2025 then
+                Circuit.leMans2025
+
+            else
+                Circuit.standard
+
         config =
-            Config.buildConfig isLeMans2025 analysis
+            Config.buildConfig layout analysis
     in
     viewWithConfig config vm
 

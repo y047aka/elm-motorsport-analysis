@@ -14,6 +14,7 @@ module Motorsport.Chart.Tracker.Config exposing
 
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.Lap.Performance exposing (MiniSectorFastest)
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
@@ -46,9 +47,12 @@ type alias MiniSectorSpec =
     }
 
 
-buildConfig : Bool -> Analysis -> TrackConfig
-buildConfig isLeMans2025 analysis =
+buildConfig : Layout -> Analysis -> TrackConfig
+buildConfig layout analysis =
     let
+        isLeMans2025 =
+            Circuit.hasMiniSectors layout
+
         totalTime =
             if isLeMans2025 then
                 leMansMiniSectorSpecs
@@ -57,13 +61,6 @@ buildConfig isLeMans2025 analysis =
 
             else
                 toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
-
-        layout =
-            if isLeMans2025 then
-                Motorsport.Lap.miniSectorLayout
-
-            else
-                [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
 
         miniRatio miniSector =
             let
