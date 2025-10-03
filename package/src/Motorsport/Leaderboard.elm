@@ -65,9 +65,10 @@ import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
+import Motorsport.Sector exposing (MiniSector(..), Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import SortedList
 

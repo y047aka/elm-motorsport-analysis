@@ -13,7 +13,7 @@ module Motorsport.Circuit exposing
 
 -}
 
-import Motorsport.Lap exposing (MiniSector, Sector(..))
+import Motorsport.Sector exposing (MiniSector(..), Sector(..))
 
 
 {-| Circuit information
@@ -50,7 +50,10 @@ standard =
 -}
 leMans2025 : Layout
 leMans2025 =
-    Motorsport.Lap.miniSectorLayout
+    [ ( S1, [ SCL2, Z4, IP1 ] )
+    , ( S2, [ Z12, SCLC, A7_1, IP2 ] )
+    , ( S3, [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ] )
+    ]
 
 
 {-| Check if a layout contains mini sectors

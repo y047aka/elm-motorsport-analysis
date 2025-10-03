@@ -15,9 +15,9 @@ module Motorsport.Chart.Tracker.Config exposing
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Lap exposing (MiniSector(..), Sector(..))
 import Motorsport.Lap.Performance exposing (MiniSectorFastest)
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Sector exposing (MiniSector(..), Sector(..))
 
 
 type alias TrackConfig =

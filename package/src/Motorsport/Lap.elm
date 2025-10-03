@@ -2,9 +2,8 @@ module Motorsport.Lap exposing
     ( Lap, empty
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , Sector(..), currentSector
-    , MiniSector(..), currentMiniSector, miniSectorProgressAt
-    , miniSectorLayout
+    , currentSector
+    , currentMiniSector, miniSectorProgressAt
     , sectorToElapsed
     )
 
@@ -14,15 +13,16 @@ module Motorsport.Lap exposing
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
-@docs Sector, currentSector
-@docs MiniSector, currentMiniSector, miniSectorProgressAt
-@docs miniSectorLayout
+@docs currentSector
+@docs currentMiniSector, miniSectorProgressAt
 
 -}
 
 import List.Extra
+import Motorsport.Circuit as Circuit
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Sector as Sector exposing (MiniSector(..), Sector(..))
 
 
 type alias Lap =
@@ -114,7 +114,7 @@ compareLapsInSameLap clock a b =
         currentSector_b =
             currentSector clock b
     in
-    case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
+    case Basics.compare (Sector.toString currentSector_a) (Sector.toString currentSector_b) of
         LT ->
             GT
 
@@ -192,12 +192,6 @@ findCurrentLap clock =
 -- SECTOR
 
 
-type Sector
-    = S1
-    | S2
-    | S3
-
-
 currentSector : Clock -> Lap -> Sector
 currentSector clock lap =
     let
@@ -212,19 +206,6 @@ currentSector clock lap =
 
     else
         S3
-
-
-sectorToString : Sector -> String
-sectorToString sector =
-    case sector of
-        S1 ->
-            "S1"
-
-        S2 ->
-            "S2"
-
-        S3 ->
-            "S3"
 
 
 sectorToElapsed : Lap -> Sector -> Duration
@@ -244,35 +225,9 @@ sectorToElapsed lap sector =
             elapsed_lastLap + lap.sector_1 + lap.sector_2
 
 
-type MiniSector
-    = SCL2
-    | Z4
-    | IP1
-    | Z12
-    | SCLC
-    | A7_1
-    | IP2
-    | A8_1
-    | SCLB
-    | PORIN
-    | POROUT
-    | PITREF
-    | SCL1
-    | FORDOUT
-    | FL
-
-
-miniSectorLayout : List ( Sector, List MiniSector )
-miniSectorLayout =
-    [ ( S1, [ SCL2, Z4, IP1 ] )
-    , ( S2, [ Z12, SCLC, A7_1, IP2 ] )
-    , ( S3, [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ] )
-    ]
-
-
 miniSectorOrder : List MiniSector
 miniSectorOrder =
-    miniSectorLayout
+    Circuit.leMans2025
         |> List.concatMap (\( _, minis ) -> minis)
 
 

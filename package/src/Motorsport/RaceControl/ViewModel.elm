@@ -26,9 +26,10 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
+import Motorsport.Lap as Lap exposing (Lap, completedLapsAt)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.Sector exposing (MiniSector(..), Sector(..))
 import SortedList exposing (SortedList)
 
 
