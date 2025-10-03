@@ -1,13 +1,13 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig
-    , standard, leMans24h
+    , buildConfig
     , calcSectorProgress, calcSectorBoundaries
     )
 
 {-|
 
 @docs TrackConfig
-@docs standard, leMans24h
+@docs buildConfig
 @docs calcSectorProgress, calcSectorBoundaries
 
 -}
@@ -231,14 +231,17 @@ leMansSpec =
     }
 
 
-standard : Analysis -> TrackConfig
-standard =
-    fromSpec standardSpec
+buildConfig : Bool -> Analysis -> TrackConfig
+buildConfig isLeMans2025 analysis =
+    let
+        spec =
+            if isLeMans2025 then
+                leMansSpec
 
-
-leMans24h : Analysis -> TrackConfig
-leMans24h =
-    fromSpec leMansSpec
+            else
+                standardSpec
+    in
+    fromSpec spec analysis
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float

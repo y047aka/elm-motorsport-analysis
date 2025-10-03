@@ -1,4 +1,4 @@
-module Motorsport.Chart.Tracker exposing (view, viewWithMiniSectors)
+module Motorsport.Chart.Tracker exposing (view)
 
 import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
@@ -64,20 +64,11 @@ progressToAngleScale =
     Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
 
-view : Analysis -> ViewModel -> Svg msg
-view analysis vm =
+view : Bool -> Analysis -> ViewModel -> Svg msg
+view isLeMans2025 analysis vm =
     let
         config =
-            Config.standard analysis
-    in
-    viewWithConfig config vm
-
-
-viewWithMiniSectors : Analysis -> ViewModel -> Svg msg
-viewWithMiniSectors analysis vm =
-    let
-        config =
-            Config.leMans24h analysis
+            Config.buildConfig isLeMans2025 analysis
     in
     viewWithConfig config vm
 
