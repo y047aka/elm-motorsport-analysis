@@ -4,6 +4,7 @@ module Motorsport.Lap exposing
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Sector(..), currentSector
     , MiniSector(..), currentMiniSector, miniSectorProgressAt
+    , miniSectorLayout
     , sectorToElapsed
     )
 
@@ -15,6 +16,7 @@ module Motorsport.Lap exposing
 
 @docs Sector, currentSector
 @docs MiniSector, currentMiniSector, miniSectorProgressAt
+@docs miniSectorLayout
 
 -}
 
@@ -260,6 +262,20 @@ type MiniSector
     | FL
 
 
+miniSectorLayout : List ( Sector, List MiniSector )
+miniSectorLayout =
+    [ ( S1, [ SCL2, Z4, IP1 ] )
+    , ( S2, [ Z12, SCLC, A7_1, IP2 ] )
+    , ( S3, [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ] )
+    ]
+
+
+miniSectorOrder : List MiniSector
+miniSectorOrder =
+    miniSectorLayout
+        |> List.concatMap (\( _, minis ) -> minis)
+
+
 currentMiniSector : Clock -> Lap -> Maybe MiniSector
 currentMiniSector clock lap =
     lap.miniSectors
@@ -277,23 +293,23 @@ currentMiniSector clock lap =
                             _ ->
                                 False
 
+                    ( rangesReversed, _ ) =
+                        List.foldl
+                            (\mini ( acc, previousEnd ) ->
+                                let
+                                    end_ =
+                                        miniSectorElapsed ms mini
+
+                                    range =
+                                        ( mini, previousEnd, end_ )
+                                in
+                                ( range :: acc, end_ )
+                            )
+                            ( [], Just 0 )
+                            miniSectorOrder
+
                     miniSectorRanges =
-                        [ ( SCL2, Just 0, ms.scl2.elapsed )
-                        , ( Z4, ms.scl2.elapsed, ms.z4.elapsed )
-                        , ( IP1, ms.z4.elapsed, ms.ip1.elapsed )
-                        , ( Z12, ms.ip1.elapsed, ms.z12.elapsed )
-                        , ( SCLC, ms.z12.elapsed, ms.sclc.elapsed )
-                        , ( A7_1, ms.sclc.elapsed, ms.a7_1.elapsed )
-                        , ( IP2, ms.a7_1.elapsed, ms.ip2.elapsed )
-                        , ( A8_1, ms.ip2.elapsed, ms.a8_1.elapsed )
-                        , ( SCLB, ms.a8_1.elapsed, ms.sclb.elapsed )
-                        , ( PORIN, ms.sclb.elapsed, ms.porin.elapsed )
-                        , ( POROUT, ms.porin.elapsed, ms.porout.elapsed )
-                        , ( PITREF, ms.porout.elapsed, ms.pitref.elapsed )
-                        , ( SCL1, ms.pitref.elapsed, ms.scl1.elapsed )
-                        , ( FORDOUT, ms.scl1.elapsed, ms.fordout.elapsed )
-                        , ( FL, ms.fordout.elapsed, ms.fl.elapsed )
-                        ]
+                        List.reverse rangesReversed
                 in
                 miniSectorRanges
                     |> List.Extra.find (\( _, start, end ) -> inRange start end)
@@ -304,50 +320,40 @@ currentMiniSector clock lap =
 miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( MiniSector, Float )
 miniSectorProgressAt clock ( currentLap, lastLap ) =
     case currentMiniSector clock currentLap of
-        Just SCL2 ->
-            Just ( SCL2, min 1 (toFloat (clock.elapsed - lastLap.elapsed) / toFloat (currentLap.miniSectors |> Maybe.andThen (.scl2 >> .time) |> Maybe.withDefault 0)) )
+        Just miniSector ->
+            currentLap.miniSectors
+                |> Maybe.andThen
+                    (\miniSectors ->
+                        let
+                            maybeStart =
+                                miniSectorStartElapsed miniSectors miniSector
 
-        Just Z4 ->
-            Just ( Z4, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.z4 >> .time) |> Maybe.withDefault 0)) )
+                            maybeDuration =
+                                miniSectorTime miniSectors miniSector
+                        in
+                        case ( maybeStart, maybeDuration ) of
+                            ( Just start_, Just duration_ ) ->
+                                let
+                                    elapsedSinceStart =
+                                        clock.elapsed - (lastLap.elapsed + start_)
 
-        Just IP1 ->
-            Just ( IP1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.ip1 >> .time) |> Maybe.withDefault 0)) )
+                                    progress =
+                                        if duration_ <= 0 then
+                                            1
 
-        Just Z12 ->
-            Just ( Z12, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.z12 >> .time) |> Maybe.withDefault 0)) )
+                                        else
+                                            toFloat elapsedSinceStart / toFloat duration_
 
-        Just SCLC ->
-            Just ( SCLC, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.sclc >> .time) |> Maybe.withDefault 0)) )
+                                    clamped =
+                                        progress
+                                            |> Basics.max 0
+                                            |> Basics.min 1
+                                in
+                                Just ( miniSector, clamped )
 
-        Just A7_1 ->
-            Just ( A7_1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.a7_1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just IP2 ->
-            Just ( IP2, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.ip2 >> .time) |> Maybe.withDefault 0)) )
-
-        Just A8_1 ->
-            Just ( A8_1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.a8_1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just SCLB ->
-            Just ( SCLB, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.sclb >> .time) |> Maybe.withDefault 0)) )
-
-        Just PORIN ->
-            Just ( PORIN, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.porin >> .time) |> Maybe.withDefault 0)) )
-
-        Just POROUT ->
-            Just ( POROUT, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.porout >> .time) |> Maybe.withDefault 0)) )
-
-        Just PITREF ->
-            Just ( PITREF, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.pitref >> .time) |> Maybe.withDefault 0)) )
-
-        Just SCL1 ->
-            Just ( SCL1, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.scl1 >> .time) |> Maybe.withDefault 0)) )
-
-        Just FORDOUT ->
-            Just ( FORDOUT, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.fordout >> .time) |> Maybe.withDefault 0)) )
-
-        Just FL ->
-            Just ( FL, min 1 (toFloat (clock.elapsed - (lastLap.elapsed + (currentLap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0))) / toFloat (currentLap.miniSectors |> Maybe.andThen (.fl >> .time) |> Maybe.withDefault 0)) )
+                            _ ->
+                                Nothing
+                    )
 
         Nothing ->
             Nothing
@@ -355,51 +361,9 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
 
 miniSectorToIndex : MiniSector -> Int
 miniSectorToIndex miniSector =
-    case miniSector of
-        SCL2 ->
-            0
-
-        Z4 ->
-            1
-
-        IP1 ->
-            2
-
-        Z12 ->
-            3
-
-        SCLC ->
-            4
-
-        A7_1 ->
-            5
-
-        IP2 ->
-            6
-
-        A8_1 ->
-            7
-
-        SCLB ->
-            8
-
-        PORIN ->
-            9
-
-        POROUT ->
-            10
-
-        PITREF ->
-            11
-
-        SCL1 ->
-            12
-
-        FORDOUT ->
-            13
-
-        FL ->
-            14
+    miniSectorOrder
+        |> List.Extra.elemIndex miniSector
+        |> Maybe.withDefault 0
 
 
 miniSectorToElapsed : Lap -> MiniSector -> Duration
@@ -408,48 +372,92 @@ miniSectorToElapsed lap miniSector =
         elapsed_lastLap =
             lap.elapsed - lap.time
     in
-    case miniSector of
+    elapsed_lastLap
+        + (lap.miniSectors
+            |> Maybe.andThen (\miniSectors -> miniSectorStartElapsed miniSectors miniSector)
+            |> Maybe.withDefault 0
+          )
+
+
+miniSectorData : MiniSectors -> MiniSector -> MiniSectorData
+miniSectorData miniSectors mini =
+    case mini of
         SCL2 ->
-            elapsed_lastLap
+            miniSectors.scl2
 
         Z4 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl2 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.z4
 
         IP1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z4 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.ip1
 
         Z12 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip1 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.z12
 
         SCLC ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.z12 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.sclc
 
         A7_1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclc >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.a7_1
 
         IP2 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a7_1 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.ip2
 
         A8_1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.ip2 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.a8_1
 
         SCLB ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.a8_1 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.sclb
 
         PORIN ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.sclb >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.porin
 
         POROUT ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porin >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.porout
 
         PITREF ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.porout >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.pitref
 
         SCL1 ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.pitref >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.scl1
 
         FORDOUT ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.scl1 >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.fordout
 
         FL ->
-            elapsed_lastLap + (lap.miniSectors |> Maybe.andThen (.fordout >> .elapsed) |> Maybe.withDefault 0)
+            miniSectors.fl
+
+
+miniSectorElapsed : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorElapsed miniSectors mini =
+    miniSectorData miniSectors mini |> .elapsed
+
+
+miniSectorTime : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorTime miniSectors mini =
+    miniSectorData miniSectors mini |> .time
+
+
+miniSectorStartElapsed : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorStartElapsed miniSectors mini =
+    case mini of
+        SCL2 ->
+            Just 0
+
+        _ ->
+            miniSectorPrevious mini
+                |> Maybe.andThen (miniSectorElapsed miniSectors)
+
+
+miniSectorPrevious : MiniSector -> Maybe MiniSector
+miniSectorPrevious mini =
+    miniSectorOrder
+        |> List.Extra.elemIndex mini
+        |> Maybe.andThen
+            (\index ->
+                if index <= 0 then
+                    Nothing
+
+                else
+                    List.Extra.getAt (index - 1) miniSectorOrder
+            )

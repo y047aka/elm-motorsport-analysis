@@ -118,29 +118,61 @@ leMans24h analysis =
                 , fl = toFloat analysis.miniSectorFastest.fl / toFloat totalFastestTime
                 }
 
+        ratioFor miniSector =
+            case miniSector of
+                SCL2 ->
+                    miniSectorRatio.scl2
+
+                Z4 ->
+                    miniSectorRatio.z4
+
+                IP1 ->
+                    miniSectorRatio.ip1
+
+                Z12 ->
+                    miniSectorRatio.z12
+
+                SCLC ->
+                    miniSectorRatio.sclc
+
+                A7_1 ->
+                    miniSectorRatio.a7_1
+
+                IP2 ->
+                    miniSectorRatio.ip2
+
+                A8_1 ->
+                    miniSectorRatio.a8_1
+
+                SCLB ->
+                    miniSectorRatio.sclb
+
+                PORIN ->
+                    miniSectorRatio.porin
+
+                POROUT ->
+                    miniSectorRatio.porout
+
+                PITREF ->
+                    miniSectorRatio.pitref
+
+                SCL1 ->
+                    miniSectorRatio.scl1
+
+                FORDOUT ->
+                    miniSectorRatio.fordout
+
+                FL ->
+                    miniSectorRatio.fl
+
         layout =
-            [ miniSectorGroup S1
-                [ ( SCL2, miniSectorRatio.scl2 )
-                , ( Z4, miniSectorRatio.z4 )
-                , ( IP1, miniSectorRatio.ip1 )
-                ]
-            , miniSectorGroup S2
-                [ ( Z12, miniSectorRatio.z12 )
-                , ( SCLC, miniSectorRatio.sclc )
-                , ( A7_1, miniSectorRatio.a7_1 )
-                , ( IP2, miniSectorRatio.ip2 )
-                ]
-            , miniSectorGroup S3
-                [ ( A8_1, miniSectorRatio.a8_1 )
-                , ( SCLB, miniSectorRatio.sclb )
-                , ( PORIN, miniSectorRatio.porin )
-                , ( POROUT, miniSectorRatio.porout )
-                , ( PITREF, miniSectorRatio.pitref )
-                , ( SCL1, miniSectorRatio.scl1 )
-                , ( FORDOUT, miniSectorRatio.fordout )
-                , ( FL, miniSectorRatio.fl )
-                ]
-            ]
+            Motorsport.Lap.miniSectorLayout
+                |> List.map
+                    (\( sector, miniSectors ) ->
+                        miniSectors
+                            |> List.map (\mini -> ( mini, ratioFor mini ))
+                            |> miniSectorGroup sector
+                    )
     in
     MiniSectors layout
 
