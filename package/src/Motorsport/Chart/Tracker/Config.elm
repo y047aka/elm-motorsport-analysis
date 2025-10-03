@@ -38,16 +38,6 @@ type alias TrackConfig =
     }
 
 
-type alias TrackSpec =
-    { layout : List ( Sector, List MiniSector )
-    , getTotalTime : Analysis -> Float
-    , getDefaultTotal : Float
-    , getMiniValue : Analysis -> MiniSector -> Float
-    , getMiniDefault : MiniSector -> Float
-    , getSectorValue : Analysis -> Sector -> Float
-    }
-
-
 type alias MiniSectorSpec =
     { mini : MiniSector
     , defaultUnits : Float
@@ -112,39 +102,70 @@ leMansSpecFor mini =
             }
 
 
-fromSpec : TrackSpec -> Analysis -> TrackConfig
-fromSpec spec analysis =
+buildConfig : Bool -> Analysis -> TrackConfig
+buildConfig isLeMans2025 analysis =
     let
         totalTime =
-            spec.getTotalTime analysis
+            if isLeMans2025 then
+                leMansMiniSectorSpecs
+                    |> List.foldl (\spec -> \acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
+
+            else
+                toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
+
+        layout =
+            if isLeMans2025 then
+                Motorsport.Lap.miniSectorLayout
+
+            else
+                [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
 
         miniRatio miniSector =
-            let
-                value =
-                    spec.getMiniValue analysis miniSector
+            if isLeMans2025 then
+                let
+                    spec =
+                        leMansSpecFor miniSector
 
-                defaultRatio =
-                    spec.getMiniDefault miniSector / spec.getDefaultTotal
-            in
-            if totalTime == 0 then
-                defaultRatio
+                    value =
+                        spec.getFastest analysis.miniSectorFastest
+
+                    defaultRatio =
+                        spec.defaultUnits / leMansDefaultUnits
+                in
+                if totalTime == 0 then
+                    defaultRatio
+
+                else
+                    value / totalTime
 
             else
-                value / totalTime
+                0
 
         sectorRatio sector =
-            let
-                value =
-                    spec.getSectorValue analysis sector
-
-                defaultRatio =
-                    1 / 3
-            in
-            if totalTime == 0 then
-                defaultRatio
+            if isLeMans2025 then
+                0
 
             else
-                value / totalTime
+                let
+                    value =
+                        case sector of
+                            S1 ->
+                                toFloat analysis.sector_1_fastest
+
+                            S2 ->
+                                toFloat analysis.sector_2_fastest
+
+                            S3 ->
+                                toFloat analysis.sector_3_fastest
+
+                    defaultRatio =
+                        1 / 3
+                in
+                if totalTime == 0 then
+                    defaultRatio
+
+                else
+                    value / totalTime
 
         sectorConfig ( sector, miniSectors ) =
             let
@@ -162,7 +183,7 @@ fromSpec spec analysis =
             SectorConfig sector share miniShares
 
         sectors =
-            spec.layout
+            layout
                 |> List.map sectorConfig
 
         lookup targetSector =
@@ -175,66 +196,6 @@ fromSpec spec analysis =
     , s2 = lookup S2
     , s3 = lookup S3
     }
-
-
-standardSpec : TrackSpec
-standardSpec =
-    { layout = [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
-    , getTotalTime = \analysis -> toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
-    , getDefaultTotal = 3
-    , getMiniValue = \_ _ -> 0
-    , getMiniDefault = \_ -> 0
-    , getSectorValue =
-        \analysis sector ->
-            case sector of
-                S1 ->
-                    toFloat analysis.sector_1_fastest
-
-                S2 ->
-                    toFloat analysis.sector_2_fastest
-
-                S3 ->
-                    toFloat analysis.sector_3_fastest
-    }
-
-
-leMansSpec : TrackSpec
-leMansSpec =
-    { layout = Motorsport.Lap.miniSectorLayout
-    , getTotalTime =
-        \analysis ->
-            leMansMiniSectorSpecs
-                |> List.foldl (\spec acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
-    , getDefaultTotal = leMansDefaultUnits
-    , getMiniValue =
-        \analysis miniSector ->
-            let
-                spec =
-                    leMansSpecFor miniSector
-            in
-            spec.getFastest analysis.miniSectorFastest
-    , getMiniDefault =
-        \miniSector ->
-            let
-                spec =
-                    leMansSpecFor miniSector
-            in
-            spec.defaultUnits
-    , getSectorValue = \_ _ -> 0
-    }
-
-
-buildConfig : Bool -> Analysis -> TrackConfig
-buildConfig isLeMans2025 analysis =
-    let
-        spec =
-            if isLeMans2025 then
-                leMansSpec
-
-            else
-                standardSpec
-    in
-    fromSpec spec analysis
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
