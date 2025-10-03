@@ -38,6 +38,16 @@ type alias TrackConfig =
     }
 
 
+type alias TrackSpec =
+    { layout : List ( Sector, List MiniSector )
+    , getTotalTime : Analysis -> Float
+    , getDefaultTotal : Float
+    , getMiniValue : Analysis -> MiniSector -> Float
+    , getMiniDefault : MiniSector -> Float
+    , getSectorValue : Analysis -> Sector -> Float
+    }
+
+
 type alias MiniSectorSpec =
     { mini : MiniSector
     , defaultUnits : Float
@@ -111,6 +121,35 @@ calculateRatio totalTime defaultRatio value =
         value / totalTime
 
 
+fromSpec : TrackSpec -> Analysis -> TrackConfig
+fromSpec spec analysis =
+    let
+        totalTime =
+            spec.getTotalTime analysis
+
+        miniRatio miniSector =
+            let
+                value =
+                    spec.getMiniValue analysis miniSector
+
+                defaultRatio =
+                    spec.getMiniDefault miniSector / spec.getDefaultTotal
+            in
+            calculateRatio totalTime defaultRatio value
+
+        sectorRatio sector =
+            let
+                value =
+                    spec.getSectorValue analysis sector
+
+                defaultRatio =
+                    1 / 3
+            in
+            calculateRatio totalTime defaultRatio value
+    in
+    buildTrackConfig spec.layout miniRatio sectorRatio
+
+
 buildTrackConfig : List ( Sector, List MiniSector ) -> (MiniSector -> Float) -> (Sector -> Float) -> TrackConfig
 buildTrackConfig layout miniRatio sectorRatio =
     let
@@ -145,54 +184,61 @@ buildTrackConfig layout miniRatio sectorRatio =
     }
 
 
-standard : Analysis -> TrackConfig
-standard analysis =
-    let
-        totalFastestTime =
-            toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
+standardSpec : TrackSpec
+standardSpec =
+    { layout = [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
+    , getTotalTime = \analysis -> toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
+    , getDefaultTotal = 3
+    , getMiniValue = \_ _ -> 0
+    , getMiniDefault = \_ -> 0
+    , getSectorValue =
+        \analysis sector ->
+            case sector of
+                S1 ->
+                    toFloat analysis.sector_1_fastest
 
-        sectorRatio sector =
-            let
-                value =
-                    case sector of
-                        S1 ->
-                            toFloat analysis.sector_1_fastest
+                S2 ->
+                    toFloat analysis.sector_2_fastest
 
-                        S2 ->
-                            toFloat analysis.sector_2_fastest
-
-                        S3 ->
-                            toFloat analysis.sector_3_fastest
-            in
-            calculateRatio totalFastestTime (1 / 3) value
-
-        layout =
-            [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
-    in
-    buildTrackConfig layout (\_ -> 0) sectorRatio
+                S3 ->
+                    toFloat analysis.sector_3_fastest
+    }
 
 
-leMans24h : Analysis -> TrackConfig
-leMans24h analysis =
-    let
-        totalFastestTime =
+leMansSpec : TrackSpec
+leMansSpec =
+    { layout = Motorsport.Lap.miniSectorLayout
+    , getTotalTime =
+        \analysis ->
             leMansMiniSectorSpecs
                 |> List.foldl (\spec acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
-
-        miniRatio miniSector =
+    , getDefaultTotal = leMansDefaultUnits
+    , getMiniValue =
+        \analysis miniSector ->
             let
                 spec =
                     leMansSpecFor miniSector
-
-                defaultRatio =
-                    spec.defaultUnits / leMansDefaultUnits
-
-                value =
-                    spec.getFastest analysis.miniSectorFastest
             in
-            calculateRatio totalFastestTime defaultRatio value
-    in
-    buildTrackConfig Motorsport.Lap.miniSectorLayout miniRatio (\_ -> 0)
+            spec.getFastest analysis.miniSectorFastest
+    , getMiniDefault =
+        \miniSector ->
+            let
+                spec =
+                    leMansSpecFor miniSector
+            in
+            spec.defaultUnits
+    , getSectorValue = \_ _ -> 0
+    }
+
+
+standard : Analysis -> TrackConfig
+standard =
+    fromSpec standardSpec
+
+
+leMans24h : Analysis -> TrackConfig
+leMans24h =
+    fromSpec leMansSpec
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
