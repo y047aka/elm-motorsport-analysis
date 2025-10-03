@@ -61,4 +61,4 @@ leMans2025 =
 hasMiniSectors : Layout -> Bool
 hasMiniSectors layout =
     layout
-        |> List.any (\( _, miniSectors ) -> not (List.isEmpty miniSectors))
+        |> List.all (\( _, miniSectors ) -> not (List.isEmpty miniSectors))
