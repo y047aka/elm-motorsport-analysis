@@ -94,12 +94,9 @@ buildConfig layout analysis =
             let
                 value =
                     getSectorValue sector
-
-                defaultRatio =
-                    1 / 3
             in
             if totalTime == 0 then
-                defaultRatio
+                Circuit.leMans2025SectorDefaultRatio
 
             else
                 value / totalTime

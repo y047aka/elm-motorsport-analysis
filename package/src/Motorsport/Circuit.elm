@@ -2,7 +2,7 @@ module Motorsport.Circuit exposing
     ( Circuit, Layout
     , standard, leMans2025
     , hasMiniSectors
-    , leMans2025MiniSectorDefalutRatio
+    , leMans2025SectorDefaultRatio, leMans2025MiniSectorDefalutRatio
     , Direction(..)
     )
 
@@ -12,7 +12,7 @@ module Motorsport.Circuit exposing
 @docs standard, leMans2025
 @docs hasMiniSectors
 
-@docs leMans2025MiniSectorDefalutRatio
+@docs leMans2025SectorDefaultRatio, leMans2025MiniSectorDefalutRatio
 
 -}
 
@@ -66,6 +66,14 @@ hasMiniSectors : Layout -> Bool
 hasMiniSectors layout =
     layout
         |> List.all (\( _, miniSectors ) -> not (List.isEmpty miniSectors))
+
+
+{-| Get the default ratio for a specific sector in Le Mans 2025
+Returns Nothing if the sector is not found
+-}
+leMans2025SectorDefaultRatio : Float
+leMans2025SectorDefaultRatio =
+    1 / 3
 
 
 {-| Mini sector ratio information
