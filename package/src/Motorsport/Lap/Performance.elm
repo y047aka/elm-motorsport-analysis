@@ -1,6 +1,6 @@
 module Motorsport.Lap.Performance exposing
     ( findPersonalBest, findFastest, findFastestBy, findSlowest
-    , calculateMiniSectorFastest, MiniSectorFastest
+    , calculateMiniSectorFastest, LeMans2025MiniSectorFastest
     , PerformanceLevel, performanceLevel
     , isStandard
     , toColorVariable
@@ -9,7 +9,7 @@ module Motorsport.Lap.Performance exposing
 {-|
 
 @docs findPersonalBest, findFastest, findFastestBy, findSlowest
-@docs calculateMiniSectorFastest, MiniSectorFastest
+@docs calculateMiniSectorFastest, LeMans2025MiniSectorFastest
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
@@ -89,10 +89,10 @@ toColorVariable level =
 
 
 
--- MiniSectorFastest
+-- LeMans2025MiniSectorFastest
 
 
-type alias MiniSectorFastest =
+type alias LeMans2025MiniSectorFastest =
     { scl2 : Duration
     , z4 : Duration
     , ip1 : Duration
@@ -111,7 +111,7 @@ type alias MiniSectorFastest =
     }
 
 
-calculateMiniSectorFastest : List (List Lap) -> MiniSectorFastest
+calculateMiniSectorFastest : List (List Lap) -> LeMans2025MiniSectorFastest
 calculateMiniSectorFastest laps =
     let
         validLaps =

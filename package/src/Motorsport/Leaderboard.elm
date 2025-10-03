@@ -62,13 +62,14 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Chart.Histogram as Histogram
+import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
-import Motorsport.Sector exposing (MiniSector(..), Sector(..))
+import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import SortedList
 

@@ -1,13 +1,11 @@
 module Motorsport.Sector exposing
     ( Sector(..)
-    , MiniSector(..)
     , toString
     )
 
 {-|
 
 @docs Sector
-@docs MiniSector
 @docs toString
 
 -}
@@ -34,23 +32,3 @@ toString sector =
 
         S3 ->
             "S3"
-
-
-{-| A mini sector is a subsegment within a sector (used in some circuits like Le Mans)
--}
-type MiniSector
-    = SCL2
-    | Z4
-    | IP1
-    | Z12
-    | SCLC
-    | A7_1
-    | IP2
-    | A8_1
-    | SCLB
-    | PORIN
-    | POROUT
-    | PITREF
-    | SCL1
-    | FORDOUT
-    | FL
