@@ -102,28 +102,27 @@ leMansSpecFor mini =
             }
 
 
+calculateRatio : Float -> Float -> Float -> Float
+calculateRatio totalTime defaultRatio value =
+    if totalTime == 0 then
+        defaultRatio
+
+    else
+        value / totalTime
+
+
 standard : Analysis -> TrackConfig
 standard analysis =
     let
         totalFastestTime =
-            analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest
+            toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
 
         ratio value =
-            if totalFastestTime == 0 then
-                1 / 3
-
-            else
-                toFloat value / toFloat totalFastestTime
-
-        emptySector sector share =
-            { sector = sector
-            , share = share
-            , miniSectors = []
-            }
+            calculateRatio totalFastestTime (1 / 3) (toFloat value)
     in
-    { s1 = emptySector S1 (ratio analysis.sector_1_fastest)
-    , s2 = emptySector S2 (ratio analysis.sector_2_fastest)
-    , s3 = emptySector S3 (ratio analysis.sector_3_fastest)
+    { s1 = SectorConfig S1 (ratio analysis.sector_1_fastest) []
+    , s2 = SectorConfig S2 (ratio analysis.sector_2_fastest) []
+    , s3 = SectorConfig S3 (ratio analysis.sector_3_fastest) []
     }
 
 
@@ -138,12 +137,14 @@ leMans24h analysis =
             let
                 spec =
                     leMansSpecFor miniSector
-            in
-            if totalFastestTime == 0 then
-                spec.defaultUnits / leMansDefaultUnits
 
-            else
-                spec.getFastest analysis.miniSectorFastest / totalFastestTime
+                defaultRatio =
+                    spec.defaultUnits / leMansDefaultUnits
+
+                value =
+                    spec.getFastest analysis.miniSectorFastest
+            in
+            calculateRatio totalFastestTime defaultRatio value
 
         sectorConfig ( sector, miniSectors ) =
             let
@@ -154,10 +155,7 @@ leMans24h analysis =
                 share =
                     sumMiniSectorShares miniShares
             in
-            { sector = sector
-            , share = share
-            , miniSectors = miniShares
-            }
+            SectorConfig sector share miniShares
 
         sectors =
             Motorsport.Lap.miniSectorLayout
@@ -170,10 +168,7 @@ leMans24h analysis =
                 |> Maybe.withDefault default
 
         defaultSector targetSector =
-            { sector = targetSector
-            , share = 1 / 3
-            , miniSectors = []
-            }
+            SectorConfig targetSector (1 / 3) []
     in
     { s1 = lookup S1 (defaultSector S1)
     , s2 = lookup S2 (defaultSector S2)
