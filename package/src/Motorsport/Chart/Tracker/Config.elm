@@ -1,267 +1,355 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig
-    , standard, leMans24h
+    , buildConfig
     , calcSectorProgress, calcSectorBoundaries
     )
 
 {-|
 
 @docs TrackConfig
-@docs standard, leMans24h
+@docs buildConfig
 @docs calcSectorProgress, calcSectorBoundaries
 
 -}
 
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Lap exposing (MiniSector(..), Sector(..))
+import Motorsport.Lap.Performance exposing (MiniSectorFastest)
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 
 
-type TrackConfig
-    = Sectors
-        { s1 : Float
-        , s2 : Float
-        , s3 : Float
-        }
-    | MiniSectors
-        { scl2 : Float
-        , z4 : Float
-        , ip1 : Float
-        , z12 : Float
-        , sclc : Float
-        , a7_1 : Float
-        , ip2 : Float
-        , a8_1 : Float
-        , sclb : Float
-        , porin : Float
-        , porout : Float
-        , pitref : Float
-        , scl1 : Float
-        , fordout : Float
-        , fl : Float
-        }
+type alias TrackConfig =
+    { s1 : SectorConfig
+    , s2 : SectorConfig
+    , s3 : SectorConfig
+    }
 
 
-standard : Analysis -> TrackConfig
-standard analysis =
+type alias SectorConfig =
+    { sector : Sector
+    , share : Float
+    , miniSectors : List MiniSectorShare
+    }
+
+
+type alias MiniSectorShare =
+    { mini : MiniSector
+    , share : Float
+    }
+
+
+type alias MiniSectorSpec =
+    { mini : MiniSector
+    , defaultUnits : Float
+    , getFastest : MiniSectorFastest -> Float
+    }
+
+
+buildConfig : Bool -> Analysis -> TrackConfig
+buildConfig isLeMans2025 analysis =
     let
-        totalFastestTime =
-            analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest
-
-        sectorRatio =
-            if totalFastestTime == 0 then
-                { s1 = 1 / 3, s2 = 1 / 3, s3 = 1 / 3 }
+        totalTime =
+            if isLeMans2025 then
+                leMansMiniSectorSpecs
+                    |> List.map (\spec -> spec.getFastest analysis.miniSectorFastest)
+                    |> List.sum
 
             else
-                { s1 = toFloat analysis.sector_1_fastest / toFloat totalFastestTime
-                , s2 = toFloat analysis.sector_2_fastest / toFloat totalFastestTime
-                , s3 = toFloat analysis.sector_3_fastest / toFloat totalFastestTime
-                }
-    in
-    Sectors sectorRatio
+                toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
 
-
-leMans24h : Analysis -> TrackConfig
-leMans24h analysis =
-    let
-        totalFastestTime =
-            analysis.miniSectorFastest.scl2
-                + analysis.miniSectorFastest.z4
-                + analysis.miniSectorFastest.ip1
-                + analysis.miniSectorFastest.z12
-                + analysis.miniSectorFastest.sclc
-                + analysis.miniSectorFastest.a7_1
-                + analysis.miniSectorFastest.ip2
-                + analysis.miniSectorFastest.a8_1
-                + analysis.miniSectorFastest.sclb
-                + analysis.miniSectorFastest.porin
-                + analysis.miniSectorFastest.porout
-                + analysis.miniSectorFastest.pitref
-                + analysis.miniSectorFastest.scl1
-                + analysis.miniSectorFastest.fordout
-                + analysis.miniSectorFastest.fl
-
-        miniSectorRatio =
-            if totalFastestTime == 0 then
-                -- Le Mans circuit layout-based ratios
-                { scl2 = 7.5 / 150
-                , z4 = 7.5 / 150
-                , ip1 = 12 / 150
-                , z12 = 24 / 150
-                , sclc = 3 / 150
-                , a7_1 = 15 / 150
-                , ip2 = 13 / 150
-                , a8_1 = 5.5 / 150
-                , sclb = 26 / 150
-                , porin = 12.5 / 150
-                , porout = 11 / 150
-                , pitref = 6 / 150
-                , scl1 = 2 / 150
-                , fordout = 3 / 150
-                , fl = 2 / 150
-                }
+        layout =
+            if isLeMans2025 then
+                Motorsport.Lap.miniSectorLayout
 
             else
-                { scl2 = toFloat analysis.miniSectorFastest.scl2 / toFloat totalFastestTime
-                , z4 = toFloat analysis.miniSectorFastest.z4 / toFloat totalFastestTime
-                , ip1 = toFloat analysis.miniSectorFastest.ip1 / toFloat totalFastestTime
-                , z12 = toFloat analysis.miniSectorFastest.z12 / toFloat totalFastestTime
-                , sclc = toFloat analysis.miniSectorFastest.sclc / toFloat totalFastestTime
-                , a7_1 = toFloat analysis.miniSectorFastest.a7_1 / toFloat totalFastestTime
-                , ip2 = toFloat analysis.miniSectorFastest.ip2 / toFloat totalFastestTime
-                , a8_1 = toFloat analysis.miniSectorFastest.a8_1 / toFloat totalFastestTime
-                , sclb = toFloat analysis.miniSectorFastest.sclb / toFloat totalFastestTime
-                , porin = toFloat analysis.miniSectorFastest.porin / toFloat totalFastestTime
-                , porout = toFloat analysis.miniSectorFastest.porout / toFloat totalFastestTime
-                , pitref = toFloat analysis.miniSectorFastest.pitref / toFloat totalFastestTime
-                , scl1 = toFloat analysis.miniSectorFastest.scl1 / toFloat totalFastestTime
-                , fordout = toFloat analysis.miniSectorFastest.fordout / toFloat totalFastestTime
-                , fl = toFloat analysis.miniSectorFastest.fl / toFloat totalFastestTime
-                }
+                [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
+
+        miniRatio miniSector =
+            let
+                spec =
+                    leMansSpecFor miniSector
+
+                value =
+                    spec.getFastest analysis.miniSectorFastest
+
+                defaultRatio =
+                    spec.defaultUnits / leMansDefaultUnits
+            in
+            if totalTime == 0 then
+                defaultRatio
+
+            else
+                value / totalTime
+
+        getSectorValue sector =
+            case sector of
+                S1 ->
+                    toFloat analysis.sector_1_fastest
+
+                S2 ->
+                    toFloat analysis.sector_2_fastest
+
+                S3 ->
+                    toFloat analysis.sector_3_fastest
+
+        sectorRatio sector =
+            let
+                value =
+                    getSectorValue sector
+
+                defaultRatio =
+                    1 / 3
+            in
+            if totalTime == 0 then
+                defaultRatio
+
+            else
+                value / totalTime
+
+        sectorConfig ( sector, miniSectors ) =
+            let
+                miniShares =
+                    miniSectors
+                        |> List.map (\mini -> { mini = mini, share = miniRatio mini })
+
+                share =
+                    if List.isEmpty miniSectors then
+                        sectorRatio sector
+
+                    else
+                        miniShares
+                            |> List.map .share
+                            |> List.sum
+            in
+            SectorConfig sector share miniShares
+
+        sectors =
+            layout
+                |> List.map sectorConfig
+
+        lookup targetSector =
+            sectors
+                |> List.Extra.find (\sectorConfig_ -> sectorConfig_.sector == targetSector)
+                |> Maybe.withDefault (SectorConfig targetSector (1 / 3) [])
     in
-    MiniSectors miniSectorRatio
+    { s1 = lookup S1
+    , s2 = lookup S2
+    , s3 = lookup S3
+    }
+
+
+leMansSpecFor : MiniSector -> MiniSectorSpec
+leMansSpecFor mini =
+    leMansMiniSectorSpecs
+        |> List.Extra.find (\spec -> spec.mini == mini)
+        |> Maybe.withDefault
+            { mini = mini
+            , defaultUnits = 0
+            , getFastest = \_ -> 0
+            }
+
+
+leMansDefaultUnits : Float
+leMansDefaultUnits =
+    leMansMiniSectorSpecs
+        |> List.map .defaultUnits
+        |> List.sum
+
+
+leMansMiniSectorSpecs : List MiniSectorSpec
+leMansMiniSectorSpecs =
+    let
+        spec mini units accessor =
+            { mini = mini
+            , defaultUnits = units
+            , getFastest = accessor >> toFloat
+            }
+    in
+    [ spec SCL2 7.5 .scl2
+    , spec Z4 7.5 .z4
+    , spec IP1 12 .ip1
+    , spec Z12 24 .z12
+    , spec SCLC 3 .sclc
+    , spec A7_1 15 .a7_1
+    , spec IP2 13 .ip2
+    , spec A8_1 5.5 .a8_1
+    , spec SCLB 26 .sclb
+    , spec PORIN 12.5 .porin
+    , spec POROUT 11 .porout
+    , spec PITREF 6 .pitref
+    , spec SCL1 2 .scl1
+    , spec FORDOUT 3 .fordout
+    , spec FL 2 .fl
+    ]
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
 calcSectorProgress config car =
-    case config of
-        Sectors ratio ->
-            calcBasicSectorProgress ratio car
+    let
+        fallback =
+            calcBasicSectorProgress config car
+    in
+    calcMiniSectorProgress config car fallback
 
-        MiniSectors ratio ->
-            calcMiniSectorProgress ratio car
 
-
-calcBasicSectorProgress : { s1 : Float, s2 : Float, s3 : Float } -> ViewModelItem -> Float
-calcBasicSectorProgress ratio car =
+calcBasicSectorProgress : TrackConfig -> ViewModelItem -> Float
+calcBasicSectorProgress config car =
     case car.timing.sector of
-        Just ( S1, progress ) ->
-            (progress / 100) * ratio.s1
+        Just ( sector, progressPercent ) ->
+            let
+                start =
+                    sectorStart config sector
 
-        Just ( S2, progress ) ->
-            ratio.s1 + (progress / 100) * ratio.s2
-
-        Just ( S3, progress ) ->
-            ratio.s1 + ratio.s2 + (progress / 100) * ratio.s3
+                share =
+                    sectorShare config sector
+            in
+            start + (progressPercent / 100) * share
 
         Nothing ->
-            case car.currentLap of
-                Nothing ->
-                    0
-
-                Just currentLap ->
-                    min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+            progressFromElapsed car
 
 
-calcMiniSectorProgress : { scl2 : Float, z4 : Float, ip1 : Float, z12 : Float, sclc : Float, a7_1 : Float, ip2 : Float, a8_1 : Float, sclb : Float, porin : Float, porout : Float, pitref : Float, scl1 : Float, fordout : Float, fl : Float } -> ViewModelItem -> Float
-calcMiniSectorProgress ratio car =
+calcMiniSectorProgress : TrackConfig -> ViewModelItem -> Float -> Float
+calcMiniSectorProgress config car fallback =
     case car.timing.miniSector of
-        Just ( SCL2, progress ) ->
-            progress * ratio.scl2
-
-        Just ( Z4, progress ) ->
-            ratio.scl2 + progress * ratio.z4
-
-        Just ( IP1, progress ) ->
-            ratio.scl2 + ratio.z4 + progress * ratio.ip1
-
-        Just ( Z12, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + progress * ratio.z12
-
-        Just ( SCLC, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + progress * ratio.sclc
-
-        Just ( A7_1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + progress * ratio.a7_1
-
-        Just ( IP2, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + progress * ratio.ip2
-
-        Just ( A8_1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + progress * ratio.a8_1
-
-        Just ( SCLB, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + progress * ratio.sclb
-
-        Just ( PORIN, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + progress * ratio.porin
-
-        Just ( POROUT, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + progress * ratio.porout
-
-        Just ( PITREF, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + progress * ratio.pitref
-
-        Just ( SCL1, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + progress * ratio.scl1
-
-        Just ( FORDOUT, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + progress * ratio.fordout
-
-        Just ( FL, progress ) ->
-            ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2 + ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + ratio.fordout + progress * ratio.fl
+        Just ( miniSector, progress ) ->
+            findMiniSectorSegment config miniSector
+                |> Maybe.map (\segment -> segment.start + progress * segment.share)
+                |> Maybe.withDefault fallback
 
         Nothing ->
-            -- Fallback to sector-based calculation
-            case car.timing.sector of
-                Just ( S1, progress ) ->
-                    (progress / 100) * (ratio.scl2 + ratio.z4 + ratio.ip1)
+            fallback
 
-                Just ( S2, progress ) ->
-                    (ratio.scl2 + ratio.z4 + ratio.ip1) + (progress / 100) * (ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2)
 
-                Just ( S3, progress ) ->
-                    (ratio.scl2 + ratio.z4 + ratio.ip1 + ratio.z12 + ratio.sclc + ratio.a7_1 + ratio.ip2) + (progress / 100) * (ratio.a8_1 + ratio.sclb + ratio.porin + ratio.porout + ratio.pitref + ratio.scl1 + ratio.fordout + ratio.fl)
+progressFromElapsed : ViewModelItem -> Float
+progressFromElapsed car =
+    case car.currentLap of
+        Nothing ->
+            0
 
-                Nothing ->
-                    case car.currentLap of
-                        Nothing ->
-                            0
-
-                        Just currentLap ->
-                            min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+        Just currentLap ->
+            min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
 
 
 calcSectorBoundaries : TrackConfig -> List Float
 calcSectorBoundaries config =
-    case config of
-        Sectors { s1, s2 } ->
-            [ s1
-            , s1 + s2
-            ]
+    let
+        ( _, boundariesRev ) =
+            [ config.s1, config.s2, config.s3 ]
+                |> List.foldl accumulateBoundaries ( 0, [] )
+    in
+    boundariesRev
+        |> List.filter (\boundary -> boundary > 0 && boundary < 1)
+        |> List.reverse
 
-        MiniSectors ratio ->
+
+type alias MiniSectorSegment =
+    { sector : Sector
+    , mini : MiniSector
+    , start : Float
+    , share : Float
+    }
+
+
+findMiniSectorSegment : TrackConfig -> MiniSector -> Maybe MiniSectorSegment
+findMiniSectorSegment config targetMini =
+    [ config.s1, config.s2, config.s3 ]
+        |> List.Extra.findMap
+            (\sectorConfig ->
+                findMiniInSector targetMini sectorConfig (sectorStart config sectorConfig.sector)
+                    |> Tuple.first
+            )
+
+
+findMiniInSector : MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
+findMiniInSector targetMini sectorConfig start =
+    sectorConfig.miniSectors
+        |> List.foldl
+            (\miniShare ( result, current ) ->
+                let
+                    segment =
+                        { sector = sectorConfig.sector
+                        , mini = miniShare.mini
+                        , start = current
+                        , share = miniShare.share
+                        }
+
+                    next =
+                        current + miniShare.share
+                in
+                case result of
+                    Just _ ->
+                        ( result, next )
+
+                    Nothing ->
+                        if miniShare.mini == targetMini then
+                            ( Just segment, next )
+
+                        else
+                            ( Nothing, next )
+            )
+            ( Nothing, start )
+
+
+accumulateBoundaries : SectorConfig -> ( Float, List Float ) -> ( Float, List Float )
+accumulateBoundaries sectorConfig ( currentStart, acc ) =
+    case sectorConfig.miniSectors of
+        [] ->
             let
-                ratios =
-                    [ ratio.scl2
-                    , ratio.z4
-                    , ratio.ip1
-                    , ratio.z12
-                    , ratio.sclc
-                    , ratio.a7_1
-                    , ratio.ip2
-                    , ratio.a8_1
-                    , ratio.sclb
-                    , ratio.porin
-                    , ratio.porout
-                    , ratio.pitref
-                    , ratio.scl1
-                    , ratio.fordout
+                end =
+                    currentStart + sectorConfig.share
 
-                    -- , miniSectorRatio.fl 別途 startFinishLine を描画するので不要
-                    ]
+                updatedAcc =
+                    if sectorConfig.share <= 0 then
+                        acc
+
+                    else
+                        end :: acc
             in
-            List.foldl
-                (\ratioValue acc ->
-                    let
-                        previousProgress =
-                            Maybe.withDefault 0 (List.head acc)
+            ( end, updatedAcc )
 
-                        newProgress =
-                            previousProgress + ratioValue
-                    in
-                    newProgress :: acc
-                )
-                []
-                ratios
-                |> List.reverse
+        minis ->
+            minis
+                |> List.foldl
+                    (\miniShare ( runningTotal, accInner ) ->
+                        let
+                            nextTotal =
+                                runningTotal + miniShare.share
+
+                            updatedAcc =
+                                if miniShare.share <= 0 then
+                                    accInner
+
+                                else
+                                    nextTotal :: accInner
+                        in
+                        ( nextTotal, updatedAcc )
+                    )
+                    ( currentStart, acc )
+
+
+sectorShare : TrackConfig -> Sector -> Float
+sectorShare config sector =
+    case sector of
+        S1 ->
+            config.s1.share
+
+        S2 ->
+            config.s2.share
+
+        S3 ->
+            config.s3.share
+
+
+sectorStart : TrackConfig -> Sector -> Float
+sectorStart config sector =
+    case sector of
+        S1 ->
+            0
+
+        S2 ->
+            config.s1.share
+
+        S3 ->
+            config.s1.share + config.s2.share

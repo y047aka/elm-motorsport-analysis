@@ -189,7 +189,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view analysis viewModel
+                    TrackerChart.view False analysis viewModel
             ]
         }
 
