@@ -112,15 +112,6 @@ leMansSpecFor mini =
             }
 
 
-calculateRatio : Float -> Float -> Float -> Float
-calculateRatio totalTime defaultRatio value =
-    if totalTime == 0 then
-        defaultRatio
-
-    else
-        value / totalTime
-
-
 fromSpec : TrackSpec -> Analysis -> TrackConfig
 fromSpec spec analysis =
     let
@@ -135,7 +126,11 @@ fromSpec spec analysis =
                 defaultRatio =
                     spec.getMiniDefault miniSector / spec.getDefaultTotal
             in
-            calculateRatio totalTime defaultRatio value
+            if totalTime == 0 then
+                defaultRatio
+
+            else
+                value / totalTime
 
         sectorRatio sector =
             let
@@ -145,14 +140,12 @@ fromSpec spec analysis =
                 defaultRatio =
                     1 / 3
             in
-            calculateRatio totalTime defaultRatio value
-    in
-    buildTrackConfig spec.layout miniRatio sectorRatio
+            if totalTime == 0 then
+                defaultRatio
 
+            else
+                value / totalTime
 
-buildTrackConfig : List ( Sector, List MiniSector ) -> (MiniSector -> Float) -> (Sector -> Float) -> TrackConfig
-buildTrackConfig layout miniRatio sectorRatio =
-    let
         sectorConfig ( sector, miniSectors ) =
             let
                 miniShares =
@@ -164,12 +157,12 @@ buildTrackConfig layout miniRatio sectorRatio =
                         sectorRatio sector
 
                     else
-                        sumMiniSectorShares miniShares
+                        List.foldl (\miniShare acc -> acc + miniShare.share) 0 miniShares
             in
             SectorConfig sector share miniShares
 
         sectors =
-            layout
+            spec.layout
                 |> List.map sectorConfig
 
         lookup targetSector =
@@ -430,8 +423,3 @@ sectorStart config sector =
 
         S3 ->
             config.s1.share + config.s2.share
-
-
-sumMiniSectorShares : List MiniSectorShare -> Float
-sumMiniSectorShares minis =
-    List.foldl (\miniShare acc -> acc + miniShare.share) 0 minis
