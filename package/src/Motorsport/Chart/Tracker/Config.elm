@@ -76,26 +76,14 @@ leMansMiniSectorSpecs =
 leMansDefaultUnits : Float
 leMansDefaultUnits =
     leMansMiniSectorSpecs
-        |> List.foldl (\spec acc -> acc + spec.defaultUnits) 0
+        |> List.map .defaultUnits
+        |> List.sum
 
 
 leMansSpecFor : MiniSector -> MiniSectorSpec
 leMansSpecFor mini =
     leMansMiniSectorSpecs
-        |> List.foldl
-            (\spec acc ->
-                case acc of
-                    Just _ ->
-                        acc
-
-                    Nothing ->
-                        if spec.mini == mini then
-                            Just spec
-
-                        else
-                            Nothing
-            )
-            Nothing
+        |> List.Extra.find (\spec -> spec.mini == mini)
         |> Maybe.withDefault
             { mini = mini
             , defaultUnits = 0
@@ -109,7 +97,8 @@ buildConfig isLeMans2025 analysis =
         totalTime =
             if isLeMans2025 then
                 leMansMiniSectorSpecs
-                    |> List.foldl (\spec acc -> acc + spec.getFastest analysis.miniSectorFastest) 0
+                    |> List.map (\spec -> spec.getFastest analysis.miniSectorFastest)
+                    |> List.sum
 
             else
                 toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
@@ -174,7 +163,9 @@ buildConfig isLeMans2025 analysis =
                         sectorRatio sector
 
                     else
-                        List.foldl (\miniShare acc -> acc + miniShare.share) 0 miniShares
+                        miniShares
+                            |> List.map .share
+                            |> List.sum
             in
             SectorConfig sector share miniShares
 
@@ -264,28 +255,11 @@ type alias MiniSectorSegment =
 findMiniSectorSegment : TrackConfig -> MiniSector -> Maybe MiniSectorSegment
 findMiniSectorSegment config targetMini =
     [ config.s1, config.s2, config.s3 ]
-        |> List.foldl
-            (\sectorConfig ( result, total ) ->
-                case result of
-                    Just segment ->
-                        ( Just segment, total + sectorConfig.share )
-
-                    Nothing ->
-                        let
-                            ( found, nextTotal ) =
-                                findMiniInSector targetMini sectorConfig total
-
-                            resolvedTotal =
-                                if List.isEmpty sectorConfig.miniSectors then
-                                    total + sectorConfig.share
-
-                                else
-                                    nextTotal
-                        in
-                        ( found, resolvedTotal )
+        |> List.Extra.findMap
+            (\sectorConfig ->
+                findMiniInSector targetMini sectorConfig (sectorStart config sectorConfig.sector)
+                    |> Tuple.first
             )
-            ( Nothing, 0 )
-        |> Tuple.first
 
 
 findMiniInSector : MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
