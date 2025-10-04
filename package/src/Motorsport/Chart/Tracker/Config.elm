@@ -28,8 +28,7 @@ type alias TrackConfig =
 
 
 type alias SectorConfig =
-    { sector : Sector
-    , share : Float
+    { share : Float
     , miniSectors : List MiniSectorShare
     }
 
@@ -72,29 +71,7 @@ buildConfig layout analysis =
             else
                 value / totalTime
 
-        getSectorValue sector =
-            case sector of
-                S1 ->
-                    toFloat analysis.sector_1_fastest
-
-                S2 ->
-                    toFloat analysis.sector_2_fastest
-
-                S3 ->
-                    toFloat analysis.sector_3_fastest
-
-        sectorRatio sector =
-            let
-                value =
-                    getSectorValue sector
-            in
-            if totalTime == 0 then
-                Circuit.sectorDefaultRatio
-
-            else
-                value / totalTime
-
-        sectorConfig sector miniSectors =
+        sectorConfig fastestTime miniSectors =
             let
                 miniShares =
                     miniSectors
@@ -102,18 +79,26 @@ buildConfig layout analysis =
 
                 share =
                     if List.isEmpty miniSectors then
-                        sectorRatio sector
+                        let
+                            value =
+                                toFloat fastestTime
+                        in
+                        if totalTime == 0 then
+                            Circuit.sectorDefaultRatio
+
+                        else
+                            value / totalTime
 
                     else
                         miniShares
                             |> List.map .share
                             |> List.sum
             in
-            SectorConfig sector share miniShares
+            { share = share, miniSectors = miniShares }
     in
-    { s1 = sectorConfig S1 layout.s1
-    , s2 = sectorConfig S2 layout.s2
-    , s3 = sectorConfig S3 layout.s3
+    { s1 = sectorConfig analysis.sector_1_fastest layout.s1
+    , s2 = sectorConfig analysis.sector_2_fastest layout.s2
+    , s3 = sectorConfig analysis.sector_3_fastest layout.s3
     }
 
 
@@ -131,11 +116,16 @@ calcBasicSectorProgress config car =
     case car.timing.sector of
         Just ( sector, progressPercent ) ->
             let
-                start =
-                    sectorStart config sector
+                ( start, share ) =
+                    case sector of
+                        S1 ->
+                            ( 0, config.s1.share )
 
-                share =
-                    sectorShare config sector
+                        S2 ->
+                            ( config.s1.share, config.s2.share )
+
+                        S3 ->
+                            ( config.s1.share + config.s2.share, config.s3.share )
             in
             start + (progressPercent / 100) * share
 
@@ -178,8 +168,7 @@ calcSectorBoundaries config =
 
 
 type alias MiniSectorSegment =
-    { sector : Sector
-    , mini : LeMans2025MiniSector
+    { mini : LeMans2025MiniSector
     , start : Float
     , share : Float
     }
@@ -187,10 +176,13 @@ type alias MiniSectorSegment =
 
 findMiniSectorSegment : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorSegment
 findMiniSectorSegment config targetMini =
-    [ config.s1, config.s2, config.s3 ]
+    [ ( config.s1, 0 )
+    , ( config.s2, config.s1.share )
+    , ( config.s3, config.s1.share + config.s2.share )
+    ]
         |> List.Extra.findMap
-            (\sectorConfig ->
-                findMiniInSector targetMini sectorConfig (sectorStart config sectorConfig.sector)
+            (\( sectorConfig, start ) ->
+                findMiniInSector targetMini sectorConfig start
                     |> Tuple.first
             )
 
@@ -202,8 +194,7 @@ findMiniInSector targetMini sectorConfig start =
             (\miniShare ( result, current ) ->
                 let
                     segment =
-                        { sector = sectorConfig.sector
-                        , mini = miniShare.mini
+                        { mini = miniShare.mini
                         , start = current
                         , share = miniShare.share
                         }
@@ -260,29 +251,3 @@ accumulateBoundaries sectorConfig ( currentStart, acc ) =
                         ( nextTotal, updatedAcc )
                     )
                     ( currentStart, acc )
-
-
-sectorShare : TrackConfig -> Sector -> Float
-sectorShare config sector =
-    case sector of
-        S1 ->
-            config.s1.share
-
-        S2 ->
-            config.s2.share
-
-        S3 ->
-            config.s3.share
-
-
-sectorStart : TrackConfig -> Sector -> Float
-sectorStart config sector =
-    case sector of
-        S1 ->
-            0
-
-        S2 ->
-            config.s1.share
-
-        S3 ->
-            config.s1.share + config.s2.share
