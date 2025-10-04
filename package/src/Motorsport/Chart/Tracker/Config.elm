@@ -15,8 +15,7 @@ module Motorsport.Chart.Tracker.Config exposing
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
 import Motorsport.Sector exposing (Sector(..))
 
@@ -41,12 +40,6 @@ type alias MiniSectorShare =
     }
 
 
-type alias MiniSectorSpec =
-    { mini : LeMans2025MiniSector
-    , getFastest : LeMans2025MiniSectorFastest -> Float
-    }
-
-
 buildConfig : Layout LeMans2025MiniSector -> Analysis -> TrackConfig
 buildConfig layout analysis =
     let
@@ -55,20 +48,19 @@ buildConfig layout analysis =
 
         totalTime =
             if isLeMans2025 then
-                leMansMiniSectorSpecs
-                    |> List.map (\spec -> spec.getFastest analysis.miniSectorFastest)
+                LeMans.miniSectorOrder
+                    |> List.map (\mini -> LeMans.miniSectorAccessor mini analysis.miniSectorFastest)
                     |> List.sum
+                    |> toFloat
 
             else
                 toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
 
         miniRatio miniSector =
             let
-                spec =
-                    leMansSpecFor miniSector
-
                 value =
-                    spec.getFastest analysis.miniSectorFastest
+                    LeMans.miniSectorAccessor miniSector analysis.miniSectorFastest
+                        |> toFloat
 
                 defaultRatio =
                     LeMans.miniSectorDefaultRatio miniSector
@@ -132,42 +124,6 @@ buildConfig layout analysis =
     , s2 = lookup S2
     , s3 = lookup S3
     }
-
-
-leMansSpecFor : LeMans2025MiniSector -> MiniSectorSpec
-leMansSpecFor mini =
-    leMansMiniSectorSpecs
-        |> List.Extra.find (\spec -> spec.mini == mini)
-        |> Maybe.withDefault
-            { mini = mini
-            , getFastest = \_ -> 0
-            }
-
-
-leMansMiniSectorSpecs : List MiniSectorSpec
-leMansMiniSectorSpecs =
-    let
-        spec mini accessor =
-            { mini = mini
-            , getFastest = accessor >> toFloat
-            }
-    in
-    [ spec SCL2 .scl2
-    , spec Z4 .z4
-    , spec IP1 .ip1
-    , spec Z12 .z12
-    , spec SCLC .sclc
-    , spec A7_1 .a7_1
-    , spec IP2 .ip2
-    , spec A8_1 .a8_1
-    , spec SCLB .sclb
-    , spec PORIN .porin
-    , spec POROUT .porout
-    , spec PITREF .pitref
-    , spec SCL1 .scl1
-    , spec FORDOUT .fordout
-    , spec FL .fl
-    ]
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
