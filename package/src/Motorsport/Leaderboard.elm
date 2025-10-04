@@ -62,12 +62,14 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Chart.Histogram as Histogram
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSector(..), Sector(..))
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
+import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import SortedList
 
@@ -512,74 +514,27 @@ viewCurrentLapColumn_LeMans24h analysis { status, timing, currentLap } =
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                         [ lapTime { time = timing.time, personalBest = best }
                         , let
-                            { scl2_progress, z4_progress, ip1_progress, z12_progress, sclc_progress, a7_1_progress, ip2_progress, a8_1_progress, sclb_progress, porin_progress, porout_progress, pitref_progress, scl1_progress, fordout_progress, fl_progress } =
-                                case timing.miniSector of
-                                    Just ( SCL2, progress ) ->
-                                        { scl2_progress = progress, z4_progress = 0, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( Z4, progress ) ->
-                                        { scl2_progress = 1, z4_progress = progress, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( IP1, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = progress, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( Z12, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = progress, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( SCLC, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = progress, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( A7_1, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = progress, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( IP2, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = progress, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( A8_1, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = progress, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( SCLB, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = progress, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( PORIN, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = progress, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( POROUT, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = progress, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( PITREF, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = progress, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( SCL1, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = progress, fordout_progress = 0, fl_progress = 0 }
-
-                                    Just ( FORDOUT, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = 1, fordout_progress = progress, fl_progress = 0 }
-
-                                    Just ( FL, progress ) ->
-                                        { scl2_progress = 1, z4_progress = 1, ip1_progress = 1, z12_progress = 1, sclc_progress = 1, a7_1_progress = 1, ip2_progress = 1, a8_1_progress = 1, sclb_progress = 1, porin_progress = 1, porout_progress = 1, pitref_progress = 1, scl1_progress = 1, fordout_progress = 1, fl_progress = progress }
-
-                                    _ ->
-                                        { scl2_progress = 0, z4_progress = 0, ip1_progress = 0, z12_progress = 0, sclc_progress = 0, a7_1_progress = 0, ip2_progress = 0, a8_1_progress = 0, sclb_progress = 0, porin_progress = 0, porout_progress = 0, pitref_progress = 0, scl1_progress = 0, fordout_progress = 0, fl_progress = 0 }
+                            progressMap =
+                                LeMans.calculateMiniSectorProgress timing.miniSector
                           in
                           div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                            [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl2, progress = scl2_progress }
-                            , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z4, progress = z4_progress }
-                            , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip1, progress = ip1_progress }
+                            [ sector { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl2, progress = progressMap.scl2 }
+                            , sector { time = Maybe.andThen (.z4 >> .time) miniSectors, personalBest = Maybe.andThen (.z4 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z4, progress = progressMap.z4 }
+                            , sector { time = Maybe.andThen (.ip1 >> .time) miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip1, progress = progressMap.ip1 }
                             , div [] [] -- spacer
-                            , sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z12, progress = z12_progress }
-                            , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclc, progress = sclc_progress }
-                            , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a7_1, progress = a7_1_progress }
-                            , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip2, progress = ip2_progress }
+                            , sector { time = Maybe.andThen (.z12 >> .time) miniSectors, personalBest = Maybe.andThen (.z12 >> .best) miniSectors, fastest = analysis.miniSectorFastest.z12, progress = progressMap.z12 }
+                            , sector { time = Maybe.andThen (.sclc >> .time) miniSectors, personalBest = Maybe.andThen (.sclc >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclc, progress = progressMap.sclc }
+                            , sector { time = Maybe.andThen (.a7_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a7_1, progress = progressMap.a7_1 }
+                            , sector { time = Maybe.andThen (.ip2 >> .time) miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.ip2, progress = progressMap.ip2 }
                             , div [] [] -- spacer
-                            , sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a8_1, progress = a8_1_progress }
-                            , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclb, progress = sclb_progress }
-                            , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, fastest = analysis.miniSectorFastest.porin, progress = porin_progress }
-                            , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, fastest = analysis.miniSectorFastest.porout, progress = porout_progress }
-                            , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, fastest = analysis.miniSectorFastest.pitref, progress = pitref_progress }
-                            , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl1, progress = scl1_progress }
-                            , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, fastest = analysis.miniSectorFastest.fordout, progress = fordout_progress }
-                            , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, fastest = analysis.miniSectorFastest.fl, progress = fl_progress }
+                            , sector { time = Maybe.andThen (.a8_1 >> .time) miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.a8_1, progress = progressMap.a8_1 }
+                            , sector { time = Maybe.andThen (.sclb >> .time) miniSectors, personalBest = Maybe.andThen (.sclb >> .best) miniSectors, fastest = analysis.miniSectorFastest.sclb, progress = progressMap.sclb }
+                            , sector { time = Maybe.andThen (.porin >> .time) miniSectors, personalBest = Maybe.andThen (.porin >> .best) miniSectors, fastest = analysis.miniSectorFastest.porin, progress = progressMap.porin }
+                            , sector { time = Maybe.andThen (.porout >> .time) miniSectors, personalBest = Maybe.andThen (.porout >> .best) miniSectors, fastest = analysis.miniSectorFastest.porout, progress = progressMap.porout }
+                            , sector { time = Maybe.andThen (.pitref >> .time) miniSectors, personalBest = Maybe.andThen (.pitref >> .best) miniSectors, fastest = analysis.miniSectorFastest.pitref, progress = progressMap.pitref }
+                            , sector { time = Maybe.andThen (.scl1 >> .time) miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl1, progress = progressMap.scl1 }
+                            , sector { time = Maybe.andThen (.fordout >> .time) miniSectors, personalBest = Maybe.andThen (.fordout >> .best) miniSectors, fastest = analysis.miniSectorFastest.fordout, progress = progressMap.fordout }
+                            , sector { time = Maybe.andThen (.fl >> .time) miniSectors, personalBest = Maybe.andThen (.fl >> .best) miniSectors, fastest = analysis.miniSectorFastest.fl, progress = progressMap.fl }
                             ]
                         ]
                 )

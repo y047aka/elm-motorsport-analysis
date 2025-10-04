@@ -21,14 +21,16 @@ import Dict exposing (Dict)
 import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, Status)
+import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSector(..), Sector(..), completedLapsAt)
+import Motorsport.Lap as Lap exposing (Lap, completedLapsAt)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.Sector exposing (Sector(..))
 import SortedList exposing (SortedList)
 
 
@@ -56,7 +58,7 @@ type alias ViewModelItem =
 type alias Timing =
     { time : Duration
     , sector : Maybe ( Sector, Float )
-    , miniSector : Maybe ( MiniSector, Float )
+    , miniSector : Maybe ( LeMans2025MiniSector, Float )
     , gap : Gap
     , interval : Gap
     }

@@ -2,9 +2,8 @@ module Motorsport.Lap exposing
     ( Lap, empty
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , Sector(..), currentSector
-    , MiniSector(..), currentMiniSector, miniSectorProgressAt
-    , miniSectorLayout
+    , currentSector
+    , currentMiniSector, miniSectorProgressAt
     , sectorToElapsed
     )
 
@@ -14,15 +13,16 @@ module Motorsport.Lap exposing
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
-@docs Sector, currentSector
-@docs MiniSector, currentMiniSector, miniSectorProgressAt
-@docs miniSectorLayout
+@docs currentSector
+@docs currentMiniSector, miniSectorProgressAt
 
 -}
 
 import List.Extra
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Sector as Sector exposing (Sector(..))
 
 
 type alias Lap =
@@ -114,7 +114,7 @@ compareLapsInSameLap clock a b =
         currentSector_b =
             currentSector clock b
     in
-    case Basics.compare (sectorToString currentSector_a) (sectorToString currentSector_b) of
+    case Basics.compare (Sector.toString currentSector_a) (Sector.toString currentSector_b) of
         LT ->
             GT
 
@@ -192,12 +192,6 @@ findCurrentLap clock =
 -- SECTOR
 
 
-type Sector
-    = S1
-    | S2
-    | S3
-
-
 currentSector : Clock -> Lap -> Sector
 currentSector clock lap =
     let
@@ -212,19 +206,6 @@ currentSector clock lap =
 
     else
         S3
-
-
-sectorToString : Sector -> String
-sectorToString sector =
-    case sector of
-        S1 ->
-            "S1"
-
-        S2 ->
-            "S2"
-
-        S3 ->
-            "S3"
 
 
 sectorToElapsed : Lap -> Sector -> Duration
@@ -244,39 +225,12 @@ sectorToElapsed lap sector =
             elapsed_lastLap + lap.sector_1 + lap.sector_2
 
 
-type MiniSector
-    = SCL2
-    | Z4
-    | IP1
-    | Z12
-    | SCLC
-    | A7_1
-    | IP2
-    | A8_1
-    | SCLB
-    | PORIN
-    | POROUT
-    | PITREF
-    | SCL1
-    | FORDOUT
-    | FL
-
-
-miniSectorLayout : List ( Sector, List MiniSector )
-miniSectorLayout =
-    [ ( S1, [ SCL2, Z4, IP1 ] )
-    , ( S2, [ Z12, SCLC, A7_1, IP2 ] )
-    , ( S3, [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ] )
-    ]
-
-
-miniSectorOrder : List MiniSector
+miniSectorOrder : List LeMans2025MiniSector
 miniSectorOrder =
-    miniSectorLayout
-        |> List.concatMap (\( _, minis ) -> minis)
+    LeMans.miniSectorOrder
 
 
-currentMiniSector : Clock -> Lap -> Maybe MiniSector
+currentMiniSector : Clock -> Lap -> Maybe LeMans2025MiniSector
 currentMiniSector clock lap =
     lap.miniSectors
         |> Maybe.andThen
@@ -317,7 +271,7 @@ currentMiniSector clock lap =
             )
 
 
-miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( MiniSector, Float )
+miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( LeMans2025MiniSector, Float )
 miniSectorProgressAt clock ( currentLap, lastLap ) =
     case currentMiniSector clock currentLap of
         Just miniSector ->
@@ -359,14 +313,14 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
             Nothing
 
 
-miniSectorToIndex : MiniSector -> Int
+miniSectorToIndex : LeMans2025MiniSector -> Int
 miniSectorToIndex miniSector =
     miniSectorOrder
         |> List.Extra.elemIndex miniSector
         |> Maybe.withDefault 0
 
 
-miniSectorToElapsed : Lap -> MiniSector -> Duration
+miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Duration
 miniSectorToElapsed lap miniSector =
     let
         elapsed_lastLap =
@@ -379,7 +333,7 @@ miniSectorToElapsed lap miniSector =
           )
 
 
-miniSectorData : MiniSectors -> MiniSector -> MiniSectorData
+miniSectorData : MiniSectors -> LeMans2025MiniSector -> MiniSectorData
 miniSectorData miniSectors mini =
     case mini of
         SCL2 ->
@@ -428,17 +382,17 @@ miniSectorData miniSectors mini =
             miniSectors.fl
 
 
-miniSectorElapsed : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorElapsed miniSectors mini =
     miniSectorData miniSectors mini |> .elapsed
 
 
-miniSectorTime : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorTime : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorTime miniSectors mini =
     miniSectorData miniSectors mini |> .time
 
 
-miniSectorStartElapsed : MiniSectors -> MiniSector -> Maybe Duration
+miniSectorStartElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorStartElapsed miniSectors mini =
     case mini of
         SCL2 ->
@@ -449,7 +403,7 @@ miniSectorStartElapsed miniSectors mini =
                 |> Maybe.andThen (miniSectorElapsed miniSectors)
 
 
-miniSectorPrevious : MiniSector -> Maybe MiniSector
+miniSectorPrevious : LeMans2025MiniSector -> Maybe LeMans2025MiniSector
 miniSectorPrevious mini =
     miniSectorOrder
         |> List.Extra.elemIndex mini

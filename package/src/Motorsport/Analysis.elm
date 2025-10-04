@@ -5,7 +5,7 @@ import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt)
-import Motorsport.Lap.Performance exposing (MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
 
 
 type alias Analysis =
@@ -14,7 +14,7 @@ type alias Analysis =
     , sector_1_fastest : Duration
     , sector_2_fastest : Duration
     , sector_3_fastest : Duration
-    , miniSectorFastest : MiniSectorFastest
+    , miniSectorFastest : LeMans2025MiniSectorFastest
     }
 
 

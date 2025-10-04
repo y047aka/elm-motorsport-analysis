@@ -14,9 +14,10 @@ module Motorsport.Chart.Tracker.Config exposing
 
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Lap exposing (MiniSector(..), Sector(..))
-import Motorsport.Lap.Performance exposing (MiniSectorFastest)
+import Motorsport.Circuit as Circuit exposing (Layout)
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Sector exposing (Sector(..))
 
 
 type alias TrackConfig =
@@ -34,47 +35,36 @@ type alias SectorConfig =
 
 
 type alias MiniSectorShare =
-    { mini : MiniSector
+    { mini : LeMans2025MiniSector
     , share : Float
     }
 
 
-type alias MiniSectorSpec =
-    { mini : MiniSector
-    , defaultUnits : Float
-    , getFastest : MiniSectorFastest -> Float
-    }
-
-
-buildConfig : Bool -> Analysis -> TrackConfig
-buildConfig isLeMans2025 analysis =
+buildConfig : Layout LeMans2025MiniSector -> Analysis -> TrackConfig
+buildConfig layout analysis =
     let
+        isLeMans2025 =
+            Circuit.hasMiniSectors layout
+
         totalTime =
             if isLeMans2025 then
-                leMansMiniSectorSpecs
-                    |> List.map (\spec -> spec.getFastest analysis.miniSectorFastest)
+                LeMans.miniSectorOrder
+                    |> List.map (\mini -> LeMans.miniSectorAccessor mini analysis.miniSectorFastest)
                     |> List.sum
+                    |> toFloat
 
             else
                 toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
 
-        layout =
-            if isLeMans2025 then
-                Motorsport.Lap.miniSectorLayout
-
-            else
-                [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
-
         miniRatio miniSector =
             let
-                spec =
-                    leMansSpecFor miniSector
-
                 value =
-                    spec.getFastest analysis.miniSectorFastest
+                    LeMans.miniSectorAccessor miniSector analysis.miniSectorFastest
+                        |> toFloat
 
                 defaultRatio =
-                    spec.defaultUnits / leMansDefaultUnits
+                    LeMans.miniSectorDefaultRatio miniSector
+                        |> Maybe.withDefault 0
             in
             if totalTime == 0 then
                 defaultRatio
@@ -97,12 +87,9 @@ buildConfig isLeMans2025 analysis =
             let
                 value =
                     getSectorValue sector
-
-                defaultRatio =
-                    1 / 3
             in
             if totalTime == 0 then
-                defaultRatio
+                Circuit.sectorDefaultRatio
 
             else
                 value / totalTime
@@ -137,51 +124,6 @@ buildConfig isLeMans2025 analysis =
     , s2 = lookup S2
     , s3 = lookup S3
     }
-
-
-leMansSpecFor : MiniSector -> MiniSectorSpec
-leMansSpecFor mini =
-    leMansMiniSectorSpecs
-        |> List.Extra.find (\spec -> spec.mini == mini)
-        |> Maybe.withDefault
-            { mini = mini
-            , defaultUnits = 0
-            , getFastest = \_ -> 0
-            }
-
-
-leMansDefaultUnits : Float
-leMansDefaultUnits =
-    leMansMiniSectorSpecs
-        |> List.map .defaultUnits
-        |> List.sum
-
-
-leMansMiniSectorSpecs : List MiniSectorSpec
-leMansMiniSectorSpecs =
-    let
-        spec mini units accessor =
-            { mini = mini
-            , defaultUnits = units
-            , getFastest = accessor >> toFloat
-            }
-    in
-    [ spec SCL2 7.5 .scl2
-    , spec Z4 7.5 .z4
-    , spec IP1 12 .ip1
-    , spec Z12 24 .z12
-    , spec SCLC 3 .sclc
-    , spec A7_1 15 .a7_1
-    , spec IP2 13 .ip2
-    , spec A8_1 5.5 .a8_1
-    , spec SCLB 26 .sclb
-    , spec PORIN 12.5 .porin
-    , spec POROUT 11 .porout
-    , spec PITREF 6 .pitref
-    , spec SCL1 2 .scl1
-    , spec FORDOUT 3 .fordout
-    , spec FL 2 .fl
-    ]
 
 
 calcSectorProgress : TrackConfig -> ViewModelItem -> Float
@@ -246,13 +188,13 @@ calcSectorBoundaries config =
 
 type alias MiniSectorSegment =
     { sector : Sector
-    , mini : MiniSector
+    , mini : LeMans2025MiniSector
     , start : Float
     , share : Float
     }
 
 
-findMiniSectorSegment : TrackConfig -> MiniSector -> Maybe MiniSectorSegment
+findMiniSectorSegment : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorSegment
 findMiniSectorSegment config targetMini =
     [ config.s1, config.s2, config.s3 ]
         |> List.Extra.findMap
@@ -262,7 +204,7 @@ findMiniSectorSegment config targetMini =
             )
 
 
-findMiniInSector : MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
+findMiniInSector : LeMans2025MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
 findMiniInSector targetMini sectorConfig start =
     sectorConfig.miniSectors
         |> List.foldl
