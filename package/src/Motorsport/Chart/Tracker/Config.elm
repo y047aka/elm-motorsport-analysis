@@ -94,7 +94,7 @@ buildConfig layout analysis =
             else
                 value / totalTime
 
-        sectorConfig ( sector, miniSectors ) =
+        sectorConfig sector miniSectors =
             let
                 miniShares =
                     miniSectors
@@ -110,19 +110,10 @@ buildConfig layout analysis =
                             |> List.sum
             in
             SectorConfig sector share miniShares
-
-        sectors =
-            layout
-                |> List.map sectorConfig
-
-        lookup targetSector =
-            sectors
-                |> List.Extra.find (\sectorConfig_ -> sectorConfig_.sector == targetSector)
-                |> Maybe.withDefault (SectorConfig targetSector (1 / 3) [])
     in
-    { s1 = lookup S1
-    , s2 = lookup S2
-    , s3 = lookup S3
+    { s1 = sectorConfig S1 layout.s1
+    , s2 = sectorConfig S2 layout.s2
+    , s3 = sectorConfig S3 layout.s3
     }
 
 
