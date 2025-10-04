@@ -3,7 +3,6 @@ module Motorsport.Circuit exposing
     , standard, leMans2025
     , hasMiniSectors
     , sectorDefaultRatio
-    , Direction(..)
     )
 
 {-|
@@ -24,16 +23,8 @@ import Motorsport.Sector exposing (Sector(..))
 -}
 type alias Circuit miniSector =
     { name : String
-    , direction : Direction
     , layout : Layout miniSector
     }
-
-
-{-| Circuit direction
--}
-type Direction
-    = Clockwise
-    | Counterclockwise
 
 
 {-| Circuit sector layout
