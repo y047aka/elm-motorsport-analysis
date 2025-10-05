@@ -1,14 +1,14 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig
     , buildConfig
-    , calcSectorProgress, calcSectorBoundaries
+    , computeProgress, calcSectorBoundaries
     )
 
 {-|
 
 @docs TrackConfig
 @docs buildConfig
-@docs calcSectorProgress, calcSectorBoundaries
+@docs computeProgress, calcSectorBoundaries
 
 -}
 
@@ -16,7 +16,8 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Lap exposing (Lap)
+import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModelItem)
 import Motorsport.Sector exposing (Sector(..))
 
 
@@ -102,57 +103,50 @@ buildConfig layout analysis =
     }
 
 
-calcSectorProgress : TrackConfig -> ViewModelItem -> Float
-calcSectorProgress config car =
-    let
-        fallback =
-            calcBasicSectorProgress config car
-    in
-    calcMiniSectorProgress config car fallback
+computeProgress : TrackConfig -> ViewModelItem -> Float
+computeProgress config car =
+    case ( car.currentLap, car.timing.sector, car.timing.miniSector ) of
+        ( Just currentLap, _, _ ) ->
+            progressFromElapsed currentLap car.timing
 
+        ( _, Just sectorProgress, Nothing ) ->
+            progressFromSector config sectorProgress
 
-calcBasicSectorProgress : TrackConfig -> ViewModelItem -> Float
-calcBasicSectorProgress config car =
-    case car.timing.sector of
-        Just ( sector, progressPercent ) ->
-            let
-                ( start, share ) =
-                    case sector of
-                        S1 ->
-                            ( 0, config.s1.share )
+        ( _, _, Just miniSectorProgress ) ->
+            progressFromMiniSector config miniSectorProgress
 
-                        S2 ->
-                            ( config.s1.share, config.s2.share )
-
-                        S3 ->
-                            ( config.s1.share + config.s2.share, config.s3.share )
-            in
-            start + (progressPercent / 100) * share
-
-        Nothing ->
-            progressFromElapsed car
-
-
-calcMiniSectorProgress : TrackConfig -> ViewModelItem -> Float -> Float
-calcMiniSectorProgress config car fallback =
-    case car.timing.miniSector of
-        Just ( miniSector, progress ) ->
-            findMiniSectorSegment config miniSector
-                |> Maybe.map (\segment -> segment.start + progress * segment.share)
-                |> Maybe.withDefault fallback
-
-        Nothing ->
-            fallback
-
-
-progressFromElapsed : ViewModelItem -> Float
-progressFromElapsed car =
-    case car.currentLap of
-        Nothing ->
+        ( Nothing, Nothing, Nothing ) ->
             0
 
-        Just currentLap ->
-            min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+
+progressFromSector : TrackConfig -> ( Sector, Float ) -> Float
+progressFromSector config ( sector, progress ) =
+    let
+        ( start, share ) =
+            case sector of
+                S1 ->
+                    ( 0, config.s1.share )
+
+                S2 ->
+                    ( config.s1.share, config.s2.share )
+
+                S3 ->
+                    ( config.s1.share + config.s2.share, config.s3.share )
+    in
+    start + (progress / 100) * share
+
+
+progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
+progressFromMiniSector config ( miniSector, progress ) =
+    findMiniSectorSegment config miniSector
+        |> Maybe.map (\segment -> segment.start + progress * segment.share)
+        |> Maybe.withDefault 0
+
+
+progressFromElapsed : Lap -> Timing -> Float
+progressFromElapsed currentLap timing =
+    (toFloat timing.time / toFloat currentLap.time)
+        |> min 1.0
 
 
 calcSectorBoundaries : TrackConfig -> List Float

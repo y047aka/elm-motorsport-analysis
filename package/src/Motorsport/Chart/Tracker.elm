@@ -179,7 +179,7 @@ coordinatesOnTrack config car =
             constants.track
 
         progress =
-            Config.calcSectorProgress config car
+            Config.computeProgress config car
 
         angle =
             Scale.convert progressToAngleScale progress
