@@ -22,14 +22,13 @@ import Motorsport.Sector exposing (Sector(..))
 
 
 type alias TrackConfig =
-    { s1 : SectorConfig
-    , s2 : SectorConfig
-    , s3 : SectorConfig
-    }
+    List SectorConfig
 
 
 type alias SectorConfig =
-    { share : Float
+    { sector : Sector
+    , start : Float
+    , share : Float
     , miniSectors : List MiniSectorShare
     }
 
@@ -76,19 +75,22 @@ buildConfig layout analysis =
         shares =
             computeSectorShares layout analysis totalTime miniRatio
     in
-    { s1 =
-        { share = shares.s1
-        , miniSectors = buildMiniSectors layout.s1 0 miniRatio
-        }
-    , s2 =
-        { share = shares.s2
-        , miniSectors = buildMiniSectors layout.s2 shares.s1 miniRatio
-        }
-    , s3 =
-        { share = shares.s3
-        , miniSectors = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
-        }
-    }
+    [ { sector = S1
+      , start = 0
+      , share = shares.s1
+      , miniSectors = buildMiniSectors layout.s1 0 miniRatio
+      }
+    , { sector = S2
+      , start = shares.s1
+      , share = shares.s2
+      , miniSectors = buildMiniSectors layout.s2 shares.s1 miniRatio
+      }
+    , { sector = S3
+      , start = shares.s1 + shares.s2
+      , share = shares.s3
+      , miniSectors = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
+      }
+    ]
 
 
 computeSectorShares :
@@ -157,21 +159,12 @@ computeProgress config car =
             0
 
 
-progressFromSector : TrackConfig -> ( Sector, Float ) -> Float
-progressFromSector config ( sector, progress ) =
-    let
-        ( start, share ) =
-            case sector of
-                S1 ->
-                    ( 0, config.s1.share )
-
-                S2 ->
-                    ( config.s1.share, config.s2.share )
-
-                S3 ->
-                    ( config.s1.share + config.s2.share, config.s3.share )
-    in
-    start + (progress / 100) * share
+progressFromSector : List SectorConfig -> ( Sector, Float ) -> Float
+progressFromSector sectors ( targetSector, progress ) =
+    sectors
+        |> List.Extra.find (\{ sector } -> sector == targetSector)
+        |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
+        |> Maybe.withDefault 0
 
 
 progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
@@ -184,9 +177,9 @@ progressFromMiniSector config ( miniSector, progress ) =
             0
 
 
-findMiniSectorShare : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
-findMiniSectorShare config targetMini =
-    [ config.s1, config.s2, config.s3 ]
+findMiniSectorShare : List SectorConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
+findMiniSectorShare sectors targetMini =
+    sectors
         |> List.concatMap .miniSectors
         |> List.Extra.find (\{ mini } -> mini == targetMini)
 
@@ -197,11 +190,11 @@ progressFromElapsed currentLap timing =
         |> min 1.0
 
 
-calcSectorBoundaries : TrackConfig -> List Float
-calcSectorBoundaries config =
+calcSectorBoundaries : List SectorConfig -> List Float
+calcSectorBoundaries sectors =
     let
         ( _, boundariesRev ) =
-            [ config.s1, config.s2, config.s3 ]
+            sectors
                 |> List.foldl accumulateBoundaries ( 0, [] )
     in
     boundariesRev
