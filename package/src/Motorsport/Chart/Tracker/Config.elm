@@ -176,9 +176,12 @@ progressFromSector config ( sector, progress ) =
 
 progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
 progressFromMiniSector config ( miniSector, progress ) =
-    findMiniSectorShare config miniSector
-        |> Maybe.map (\{ start, share } -> start + progress * share)
-        |> Maybe.withDefault 0
+    case findMiniSectorShare config miniSector of
+        Just { start, share } ->
+            start + progress * share
+
+        Nothing ->
+            0
 
 
 findMiniSectorShare : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
