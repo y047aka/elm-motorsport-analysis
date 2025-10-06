@@ -29,8 +29,13 @@ type alias SectorConfig =
     { sector : Sector
     , start : Float
     , share : Float
-    , miniSectors : List MiniSectorShare
+    , miniSectorData : MiniSectorData
     }
+
+
+type MiniSectorData
+    = WithMiniSectors (List MiniSectorShare)
+    | NoMiniSectors
 
 
 type alias MiniSectorShare =
@@ -78,17 +83,17 @@ buildConfig layout analysis =
     [ { sector = S1
       , start = 0
       , share = shares.s1
-      , miniSectors = buildMiniSectors layout.s1 0 miniRatio
+      , miniSectorData = buildMiniSectors layout.s1 0 miniRatio
       }
     , { sector = S2
       , start = shares.s1
       , share = shares.s2
-      , miniSectors = buildMiniSectors layout.s2 shares.s1 miniRatio
+      , miniSectorData = buildMiniSectors layout.s2 shares.s1 miniRatio
       }
     , { sector = S3
       , start = shares.s1 + shares.s2
       , share = shares.s3
-      , miniSectors = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
+      , miniSectorData = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
       }
     ]
 
@@ -125,22 +130,28 @@ computeSectorShares layout analysis totalTime miniRatio =
     }
 
 
-buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> List MiniSectorShare
+buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData
 buildMiniSectors miniSectors sectorStart miniRatio =
-    miniSectors
-        |> List.foldl
-            (\mini ( acc, current ) ->
-                let
-                    ratio =
-                        miniRatio mini
-                in
-                ( { mini = mini, share = ratio, start = current } :: acc
-                , current + ratio
-                )
-            )
-            ( [], sectorStart )
-        |> Tuple.first
-        |> List.reverse
+    case miniSectors of
+        [] ->
+            NoMiniSectors
+
+        _ ->
+            miniSectors
+                |> List.foldl
+                    (\mini ( acc, current ) ->
+                        let
+                            ratio =
+                                miniRatio mini
+                        in
+                        ( { mini = mini, share = ratio, start = current } :: acc
+                        , current + ratio
+                        )
+                    )
+                    ( [], sectorStart )
+                |> Tuple.first
+                |> List.reverse
+                |> WithMiniSectors
 
 
 computeProgress : TrackConfig -> ViewModelItem -> Float
@@ -180,7 +191,15 @@ progressFromMiniSector config ( miniSector, progress ) =
 findMiniSectorShare : List SectorConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
 findMiniSectorShare sectors targetMini =
     sectors
-        |> List.concatMap .miniSectors
+        |> List.concatMap
+            (\sector ->
+                case sector.miniSectorData of
+                    NoMiniSectors ->
+                        []
+
+                    WithMiniSectors minis ->
+                        minis
+            )
         |> List.Extra.find (\{ mini } -> mini == targetMini)
 
 
@@ -204,8 +223,8 @@ calcSectorBoundaries sectors =
 
 accumulateBoundaries : SectorConfig -> ( Float, List Float ) -> ( Float, List Float )
 accumulateBoundaries sectorConfig ( currentStart, acc ) =
-    case sectorConfig.miniSectors of
-        [] ->
+    case sectorConfig.miniSectorData of
+        NoMiniSectors ->
             let
                 end =
                     currentStart + sectorConfig.share
@@ -219,7 +238,7 @@ accumulateBoundaries sectorConfig ( currentStart, acc ) =
             in
             ( end, updatedAcc )
 
-        minis ->
+        WithMiniSectors minis ->
             minis
                 |> List.foldl
                     (\miniShare ( runningTotal, accInner ) ->
