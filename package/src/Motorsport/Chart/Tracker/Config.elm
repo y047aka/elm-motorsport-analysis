@@ -1,14 +1,14 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig
     , buildConfig
-    , calcSectorProgress, calcSectorBoundaries
+    , computeProgress, calcSectorBoundaries
     )
 
 {-|
 
 @docs TrackConfig
 @docs buildConfig
-@docs calcSectorProgress, calcSectorBoundaries
+@docs computeProgress, calcSectorBoundaries
 
 -}
 
@@ -16,26 +16,31 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Lap exposing (Lap)
+import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModelItem)
 import Motorsport.Sector exposing (Sector(..))
 
 
 type alias TrackConfig =
-    { s1 : SectorConfig
-    , s2 : SectorConfig
-    , s3 : SectorConfig
-    }
+    List SectorConfig
 
 
 type alias SectorConfig =
     { sector : Sector
+    , start : Float
     , share : Float
-    , miniSectors : List MiniSectorShare
+    , miniSectorData : MiniSectorData
     }
+
+
+type MiniSectorData
+    = WithMiniSectors (List MiniSectorShare)
+    | NoMiniSectors
 
 
 type alias MiniSectorShare =
     { mini : LeMans2025MiniSector
+    , start : Float
     , share : Float
     }
 
@@ -72,113 +77,143 @@ buildConfig layout analysis =
             else
                 value / totalTime
 
-        getSectorValue sector =
-            case sector of
-                S1 ->
-                    toFloat analysis.sector_1_fastest
+        shares =
+            computeSectorShares layout analysis totalTime miniRatio
+    in
+    [ { sector = S1
+      , start = 0
+      , share = shares.s1
+      , miniSectorData = buildMiniSectors layout.s1 0 miniRatio
+      }
+    , { sector = S2
+      , start = shares.s1
+      , share = shares.s2
+      , miniSectorData = buildMiniSectors layout.s2 shares.s1 miniRatio
+      }
+    , { sector = S3
+      , start = shares.s1 + shares.s2
+      , share = shares.s3
+      , miniSectorData = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
+      }
+    ]
 
-                S2 ->
-                    toFloat analysis.sector_2_fastest
 
-                S3 ->
-                    toFloat analysis.sector_3_fastest
-
-        sectorRatio sector =
-            let
-                value =
-                    getSectorValue sector
-            in
-            if totalTime == 0 then
-                Circuit.sectorDefaultRatio
-
-            else
-                value / totalTime
-
-        sectorConfig ( sector, miniSectors ) =
-            let
-                miniShares =
-                    miniSectors
-                        |> List.map (\mini -> { mini = mini, share = miniRatio mini })
-
-                share =
-                    if List.isEmpty miniSectors then
-                        sectorRatio sector
+computeSectorShares :
+    Layout LeMans2025MiniSector
+    -> Analysis
+    -> Float
+    -> (LeMans2025MiniSector -> Float)
+    -> { s1 : Float, s2 : Float, s3 : Float }
+computeSectorShares layout analysis totalTime miniRatio =
+    let
+        sectorShare fastestTime miniSectors =
+            case miniSectors of
+                [] ->
+                    let
+                        value =
+                            toFloat fastestTime
+                    in
+                    if totalTime == 0 then
+                        Circuit.sectorDefaultRatio
 
                     else
-                        miniShares
-                            |> List.map .share
-                            |> List.sum
-            in
-            SectorConfig sector share miniShares
+                        value / totalTime
 
-        sectors =
-            layout
-                |> List.map sectorConfig
-
-        lookup targetSector =
-            sectors
-                |> List.Extra.find (\sectorConfig_ -> sectorConfig_.sector == targetSector)
-                |> Maybe.withDefault (SectorConfig targetSector (1 / 3) [])
+                _ ->
+                    miniSectors
+                        |> List.map miniRatio
+                        |> List.sum
     in
-    { s1 = lookup S1
-    , s2 = lookup S2
-    , s3 = lookup S3
+    { s1 = sectorShare analysis.sector_1_fastest layout.s1
+    , s2 = sectorShare analysis.sector_2_fastest layout.s2
+    , s3 = sectorShare analysis.sector_3_fastest layout.s3
     }
 
 
-calcSectorProgress : TrackConfig -> ViewModelItem -> Float
-calcSectorProgress config car =
-    let
-        fallback =
-            calcBasicSectorProgress config car
-    in
-    calcMiniSectorProgress config car fallback
+buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData
+buildMiniSectors miniSectors sectorStart miniRatio =
+    case miniSectors of
+        [] ->
+            NoMiniSectors
+
+        _ ->
+            miniSectors
+                |> List.foldl
+                    (\mini ( acc, current ) ->
+                        let
+                            ratio =
+                                miniRatio mini
+                        in
+                        ( { mini = mini, share = ratio, start = current } :: acc
+                        , current + ratio
+                        )
+                    )
+                    ( [], sectorStart )
+                |> Tuple.first
+                |> List.reverse
+                |> WithMiniSectors
 
 
-calcBasicSectorProgress : TrackConfig -> ViewModelItem -> Float
-calcBasicSectorProgress config car =
-    case car.timing.sector of
-        Just ( sector, progressPercent ) ->
-            let
-                start =
-                    sectorStart config sector
+computeProgress : TrackConfig -> ViewModelItem -> Float
+computeProgress config car =
+    case ( car.currentLap, car.timing.sector, car.timing.miniSector ) of
+        ( Just currentLap, _, _ ) ->
+            progressFromElapsed currentLap car.timing
 
-                share =
-                    sectorShare config sector
-            in
-            start + (progressPercent / 100) * share
+        ( _, Just sectorProgress, Nothing ) ->
+            progressFromSector config sectorProgress
 
-        Nothing ->
-            progressFromElapsed car
+        ( _, _, Just miniSectorProgress ) ->
+            progressFromMiniSector config miniSectorProgress
 
-
-calcMiniSectorProgress : TrackConfig -> ViewModelItem -> Float -> Float
-calcMiniSectorProgress config car fallback =
-    case car.timing.miniSector of
-        Just ( miniSector, progress ) ->
-            findMiniSectorSegment config miniSector
-                |> Maybe.map (\segment -> segment.start + progress * segment.share)
-                |> Maybe.withDefault fallback
-
-        Nothing ->
-            fallback
+        ( Nothing, Nothing, Nothing ) ->
+            0
 
 
-progressFromElapsed : ViewModelItem -> Float
-progressFromElapsed car =
-    case car.currentLap of
+progressFromSector : List SectorConfig -> ( Sector, Float ) -> Float
+progressFromSector sectors ( targetSector, progress ) =
+    sectors
+        |> List.Extra.find (\{ sector } -> sector == targetSector)
+        |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
+        |> Maybe.withDefault 0
+
+
+progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
+progressFromMiniSector config ( miniSector, progress ) =
+    case findMiniSectorShare config miniSector of
+        Just { start, share } ->
+            start + progress * share
+
         Nothing ->
             0
 
-        Just currentLap ->
-            min 1.0 (toFloat car.timing.time / toFloat currentLap.time)
+
+findMiniSectorShare : List SectorConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
+findMiniSectorShare sectors targetMini =
+    sectors
+        |> List.concatMap
+            (\sector ->
+                case sector.miniSectorData of
+                    NoMiniSectors ->
+                        []
+
+                    WithMiniSectors minis ->
+                        minis
+            )
+        |> List.Extra.find (\{ mini } -> mini == targetMini)
 
 
-calcSectorBoundaries : TrackConfig -> List Float
-calcSectorBoundaries config =
+progressFromElapsed : Lap -> Timing -> Float
+progressFromElapsed currentLap timing =
+    (toFloat timing.time / toFloat currentLap.time)
+        |> min 1.0
+
+
+calcSectorBoundaries : List SectorConfig -> List Float
+calcSectorBoundaries sectors =
     let
         ( _, boundariesRev ) =
-            [ config.s1, config.s2, config.s3 ]
+            sectors
                 |> List.foldl accumulateBoundaries ( 0, [] )
     in
     boundariesRev
@@ -186,58 +221,10 @@ calcSectorBoundaries config =
         |> List.reverse
 
 
-type alias MiniSectorSegment =
-    { sector : Sector
-    , mini : LeMans2025MiniSector
-    , start : Float
-    , share : Float
-    }
-
-
-findMiniSectorSegment : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorSegment
-findMiniSectorSegment config targetMini =
-    [ config.s1, config.s2, config.s3 ]
-        |> List.Extra.findMap
-            (\sectorConfig ->
-                findMiniInSector targetMini sectorConfig (sectorStart config sectorConfig.sector)
-                    |> Tuple.first
-            )
-
-
-findMiniInSector : LeMans2025MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
-findMiniInSector targetMini sectorConfig start =
-    sectorConfig.miniSectors
-        |> List.foldl
-            (\miniShare ( result, current ) ->
-                let
-                    segment =
-                        { sector = sectorConfig.sector
-                        , mini = miniShare.mini
-                        , start = current
-                        , share = miniShare.share
-                        }
-
-                    next =
-                        current + miniShare.share
-                in
-                case result of
-                    Just _ ->
-                        ( result, next )
-
-                    Nothing ->
-                        if miniShare.mini == targetMini then
-                            ( Just segment, next )
-
-                        else
-                            ( Nothing, next )
-            )
-            ( Nothing, start )
-
-
 accumulateBoundaries : SectorConfig -> ( Float, List Float ) -> ( Float, List Float )
 accumulateBoundaries sectorConfig ( currentStart, acc ) =
-    case sectorConfig.miniSectors of
-        [] ->
+    case sectorConfig.miniSectorData of
+        NoMiniSectors ->
             let
                 end =
                     currentStart + sectorConfig.share
@@ -251,7 +238,7 @@ accumulateBoundaries sectorConfig ( currentStart, acc ) =
             in
             ( end, updatedAcc )
 
-        minis ->
+        WithMiniSectors minis ->
             minis
                 |> List.foldl
                     (\miniShare ( runningTotal, accInner ) ->
@@ -269,29 +256,3 @@ accumulateBoundaries sectorConfig ( currentStart, acc ) =
                         ( nextTotal, updatedAcc )
                     )
                     ( currentStart, acc )
-
-
-sectorShare : TrackConfig -> Sector -> Float
-sectorShare config sector =
-    case sector of
-        S1 ->
-            config.s1.share
-
-        S2 ->
-            config.s2.share
-
-        S3 ->
-            config.s3.share
-
-
-sectorStart : TrackConfig -> Sector -> Float
-sectorStart config sector =
-    case sector of
-        S1 ->
-            0
-
-        S2 ->
-            config.s1.share
-
-        S3 ->
-            config.s1.share + config.s2.share

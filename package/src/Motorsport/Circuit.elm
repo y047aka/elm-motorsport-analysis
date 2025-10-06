@@ -16,7 +16,6 @@ module Motorsport.Circuit exposing
 -}
 
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Sector exposing (Sector(..))
 
 
 {-| Circuit information
@@ -32,14 +31,17 @@ Generic layout type that can represent any circuit configuration
 The miniSector type parameter allows different circuits to use their specific mini sector types
 -}
 type alias Layout miniSector =
-    List ( Sector, List miniSector )
+    { s1 : List miniSector
+    , s2 : List miniSector
+    , s3 : List miniSector
+    }
 
 
 {-| Standard 3-sector layout (no mini sectors)
 -}
 standard : Layout miniSector
 standard =
-    [ ( S1, [] ), ( S2, [] ), ( S3, [] ) ]
+    { s1 = [], s2 = [], s3 = [] }
 
 
 {-| Le Mans 2025 layout (with mini sectors)
@@ -52,9 +54,8 @@ leMans2025 =
 {-| Check if a layout contains mini sectors
 -}
 hasMiniSectors : Layout miniSector -> Bool
-hasMiniSectors layout =
-    layout
-        |> List.all (\( _, miniSectors ) -> not (List.isEmpty miniSectors))
+hasMiniSectors { s1, s2, s3 } =
+    not (List.isEmpty s1) && not (List.isEmpty s2) && not (List.isEmpty s3)
 
 
 {-| Get the default ratio for a specific sector

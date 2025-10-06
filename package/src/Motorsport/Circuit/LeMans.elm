@@ -16,7 +16,6 @@ module Motorsport.Circuit.LeMans exposing
 
 import List.Extra
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Sector exposing (Sector(..))
 
 
 {-| Le Mans 2025 specific mini sectors
@@ -41,20 +40,23 @@ type LeMans2025MiniSector
 
 {-| Le Mans 2025 layout (sectors with their mini sectors)
 -}
-layout : List ( Sector, List LeMans2025MiniSector )
+layout :
+    { s1 : List LeMans2025MiniSector
+    , s2 : List LeMans2025MiniSector
+    , s3 : List LeMans2025MiniSector
+    }
 layout =
-    [ ( S1, [ SCL2, Z4, IP1 ] )
-    , ( S2, [ Z12, SCLC, A7_1, IP2 ] )
-    , ( S3, [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ] )
-    ]
+    { s1 = [ SCL2, Z4, IP1 ]
+    , s2 = [ Z12, SCLC, A7_1, IP2 ]
+    , s3 = [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ]
+    }
 
 
 {-| Ordered list of all mini sectors in track order
 -}
 miniSectorOrder : List LeMans2025MiniSector
 miniSectorOrder =
-    layout
-        |> List.concatMap (\( _, minis ) -> minis)
+    layout.s1 ++ layout.s2 ++ layout.s3
 
 
 {-| Mini sector ratio information
