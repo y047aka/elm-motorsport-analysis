@@ -170,44 +170,30 @@ type alias MiniSectorSegment =
 
 findMiniSectorSegment : TrackConfig -> LeMans2025MiniSector -> Maybe MiniSectorSegment
 findMiniSectorSegment config targetMini =
-    [ ( config.s1, 0 )
-    , ( config.s2, config.s1.share )
-    , ( config.s3, config.s1.share + config.s2.share )
+    [ ( config.s1.miniSectors, 0 )
+    , ( config.s2.miniSectors, config.s1.share )
+    , ( config.s3.miniSectors, config.s1.share + config.s2.share )
     ]
         |> List.Extra.findMap
-            (\( sectorConfig, start ) ->
-                findMiniInSector targetMini sectorConfig start
-                    |> Tuple.first
-            )
+            (\( miniSectors, sectorStart ) -> findInMiniSectors targetMini miniSectors sectorStart)
 
 
-findMiniInSector : LeMans2025MiniSector -> SectorConfig -> Float -> ( Maybe MiniSectorSegment, Float )
-findMiniInSector targetMini sectorConfig start =
-    sectorConfig.miniSectors
-        |> List.foldl
-            (\miniShare ( result, current ) ->
-                let
-                    segment =
-                        { mini = miniShare.mini
-                        , start = current
-                        , share = miniShare.share
-                        }
+findInMiniSectors : LeMans2025MiniSector -> List MiniSectorShare -> Float -> Maybe MiniSectorSegment
+findInMiniSectors targetMini miniSectors current =
+    case miniSectors of
+        [] ->
+            Nothing
 
-                    next =
-                        current + miniShare.share
-                in
-                case result of
-                    Just _ ->
-                        ( result, next )
+        miniSector :: rest ->
+            if miniSector.mini == targetMini then
+                Just
+                    { mini = miniSector.mini
+                    , start = current
+                    , share = miniSector.share
+                    }
 
-                    Nothing ->
-                        if miniShare.mini == targetMini then
-                            ( Just segment, next )
-
-                        else
-                            ( Nothing, next )
-            )
-            ( Nothing, start )
+            else
+                findInMiniSectors targetMini rest (current + miniSector.share)
 
 
 accumulateBoundaries : SectorConfig -> ( Float, List Float ) -> ( Float, List Float )
