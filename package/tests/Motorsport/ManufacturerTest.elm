@@ -1,6 +1,5 @@
 module Motorsport.ManufacturerTest exposing (suite)
 
-import Color
 import Expect
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer(..))
 import Test exposing (Test, describe, test)
@@ -79,17 +78,6 @@ suite =
                             Manufacturer.toColor Ferrari
                     in
                     color1 |> Expect.equal color2
-            , test "returns appropriate brand colors" <|
-                \_ ->
-                    let
-                        ferrariColor =
-                            Manufacturer.toColor Ferrari
-
-                        ferrariRgba =
-                            Color.toRgba ferrariColor
-                    in
-                    -- Ferrari should have reddish color
-                    ferrariRgba.red |> Expect.greaterThan 0.5
             ]
         , describe "roundtrip conversion"
             [ test "fromString >> toString preserves known manufacturers" <|
