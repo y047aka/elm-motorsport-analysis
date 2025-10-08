@@ -15,6 +15,7 @@ module Motorsport.Circuit.LeMans exposing
 -}
 
 import List.Extra
+import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Duration exposing (Duration)
 
 
@@ -44,11 +45,13 @@ layout :
     { s1 : List LeMans2025MiniSector
     , s2 : List LeMans2025MiniSector
     , s3 : List LeMans2025MiniSector
+    , direction : Direction
     }
 layout =
     { s1 = [ SCL2, Z4, IP1 ]
     , s2 = [ Z12, SCLC, A7_1, IP2 ]
     , s3 = [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ]
+    , direction = Clockwise
     }
 
 

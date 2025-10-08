@@ -5,6 +5,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Direction exposing (Direction(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Scale exposing (ContinuousScale)
 import SortedList
@@ -54,35 +55,56 @@ constants =
 
 
 {-| トラック上の進捗値（0-1）を角度（ラジアン）に変換するスケール関数
-12時の位置から時計回りに0-2πの範囲で変換
+回転方向に応じて12時の位置から時計回り、または反時計回りに0-2πの範囲で変換
 -}
-progressToAngleScale : ContinuousScale Float
-progressToAngleScale =
+progressToAngleScale : Direction -> ContinuousScale Float
+progressToAngleScale direction =
     let
         quarterTurn =
             pi / 2
     in
-    Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
+    case direction of
+        Clockwise ->
+            -- 12時の位置から時計回りに0-2πの範囲で変換
+            Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
+
+        CounterClockwise ->
+            -- 12時の位置から反時計回りに0-2πの範囲で変換
+            Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view : Bool -> Analysis -> ViewModel -> Svg msg
-view isLeMans2025 analysis vm =
+view : { season : Int, eventName : String } -> Analysis -> ViewModel -> Svg msg
+view { season, eventName } analysis vm =
     let
         layout =
-            if isLeMans2025 then
+            if season == 2025 && eventName == "24 Hours of Le Mans" then
                 Circuit.leMans2025
 
+            else if isCounterClockwiseCircuit eventName then
+                Circuit.counterClockwise
+
             else
-                Circuit.standard
+                Circuit.clockwise
 
         config =
             Config.buildConfig layout analysis
     in
-    viewWithConfig config vm
+    viewWithConfig layout.direction config vm
 
 
-viewWithConfig : TrackConfig -> ViewModel -> Svg msg
-viewWithConfig config vm =
+{-| Check if a circuit runs counter-clockwise
+-}
+isCounterClockwiseCircuit : String -> Bool
+isCounterClockwiseCircuit eventName =
+    List.member eventName
+        [ "Lone Star Le Mans"
+        , "6 Hours of Imola"
+        , "6 Hours of São Paulo"
+        ]
+
+
+viewWithConfig : Direction -> TrackConfig -> ViewModel -> Svg msg
+viewWithConfig direction config vm =
     let
         { w, h } =
             constants.svg
@@ -93,13 +115,13 @@ viewWithConfig config vm =
         , viewBox 0 0 w h
         , css [ maxWidth (pct 100) ]
         ]
-        [ Lazy.lazy track config
-        , renderCars config vm
+        [ Lazy.lazy2 track direction config
+        , renderCars direction config vm
         ]
 
 
-track : TrackConfig -> Svg msg
-track config =
+track : Direction -> TrackConfig -> Svg msg
+track direction config =
     let
         { cx, cy, r, trackWidth } =
             constants.track
@@ -145,14 +167,14 @@ track config =
 
         boundaries =
             Config.calcSectorBoundaries config
-                |> List.map (Scale.convert progressToAngleScale)
+                |> List.map (Scale.convert (progressToAngleScale direction))
                 |> List.map (\angle -> makeBoundary angle)
     in
     g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries)
 
 
-renderCars : TrackConfig -> ViewModel -> Svg msg
-renderCars config viewModel =
+renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg
+renderCars direction config viewModel =
     Keyed.node "g"
         []
         (SortedList.toList viewModel.items
@@ -160,20 +182,20 @@ renderCars config viewModel =
             |> List.map
                 (\car ->
                     ( car.metadata.carNumber
-                    , Lazy.lazy2 renderCarOnTrack config car
+                    , Lazy.lazy3 renderCarOnTrack direction config car
                     )
                 )
         )
 
 
-renderCarOnTrack : TrackConfig -> ViewModelItem -> Svg msg
-renderCarOnTrack config car =
-    coordinatesOnTrack config car
+renderCarOnTrack : Direction -> TrackConfig -> ViewModelItem -> Svg msg
+renderCarOnTrack direction config car =
+    coordinatesOnTrack direction config car
         |> renderCar car
 
 
-coordinatesOnTrack : TrackConfig -> ViewModelItem -> { x : Float, y : Float }
-coordinatesOnTrack config car =
+coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { x : Float, y : Float }
+coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
             constants.track
@@ -182,7 +204,7 @@ coordinatesOnTrack config car =
             Config.computeProgress config car
 
         angle =
-            Scale.convert progressToAngleScale progress
+            Scale.convert (progressToAngleScale direction) progress
     in
     { x = cx + r * cos angle
     , y = cy + r * sin angle
