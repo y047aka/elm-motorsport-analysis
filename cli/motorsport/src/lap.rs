@@ -17,6 +17,27 @@ where
     duration::from_string(&s).ok_or_else(|| serde::de::Error::custom("Invalid duration format"))
 }
 
+fn serialize_optional_duration<S>(duration: &Option<Duration>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    match duration {
+        Some(d) => {
+            let formatted_duration = duration::to_string(*d);
+            serializer.serialize_some(&formatted_duration)
+        }
+        None => serializer.serialize_none(),
+    }
+}
+
+fn deserialize_optional_duration<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    Ok(opt.and_then(|s| duration::from_string(&s)))
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Lap {
     pub car_number: String,
@@ -68,6 +89,12 @@ pub struct Lap {
         deserialize_with = "deserialize_duration"
     )]
     pub elapsed: Duration,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[serde(
+        serialize_with = "serialize_optional_duration",
+        deserialize_with = "deserialize_optional_duration"
+    )]
+    pub pit_time: Option<Duration>,
     #[serde(skip_serializing_if = "Option::is_none")]
     #[serde(rename = "miniSectors")]
     pub mini_sectors: Option<MiniSectors>,
@@ -104,11 +131,12 @@ impl Lap {
             s2_best,
             s3_best,
             elapsed,
+            pit_time: None,
             mini_sectors: None,
         }
     }
 
-    /// ミニセクター情報を設定した新しいLapを作成
+    /// ミニセクター情報とピット時間を設定した新しいLapを作成
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_mini_sectors(
         car_number: String,
@@ -124,6 +152,7 @@ impl Lap {
         s2_best: Duration,
         s3_best: Duration,
         elapsed: Duration,
+        pit_time: Option<Duration>,
         mini_sectors: Option<MiniSectors>,
     ) -> Self {
         Lap {
@@ -140,6 +169,7 @@ impl Lap {
             s2_best,
             s3_best,
             elapsed,
+            pit_time,
             mini_sectors,
         }
     }
