@@ -2,8 +2,9 @@ module Motorsport.Chart.Tracker exposing (view)
 
 import Css exposing (maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
+import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorData(..), TrackConfig)
 import Motorsport.Circuit as Circuit
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -31,6 +32,8 @@ type alias Constants =
         , sectorBoundaryStrokeWidth : Float
         , sectorLabelRadius : Float
         , sectorLabelFontSize : Float
+        , miniSectorLabelRadius : Float
+        , miniSectorLabelFontSize : Float
         }
     , car : { size : Float }
     }
@@ -54,6 +57,8 @@ constants =
         , sectorBoundaryStrokeWidth = 4
         , sectorLabelRadius = 480
         , sectorLabelFontSize = 20
+        , miniSectorLabelRadius = 420
+        , miniSectorLabelFontSize = 12
         }
     , car = { size = 15 }
     }
@@ -202,8 +207,45 @@ track direction config =
                             ]
                             [ text (Sector.toString sectorConfig.sector) ]
                     )
+
+        miniSectorLabels =
+            config
+                |> List.concatMap
+                    (\sectorConfig ->
+                        case sectorConfig.miniSectorData of
+                            Config.NoMiniSectors ->
+                                []
+
+                            Config.WithMiniSectors minis ->
+                                minis
+                                    |> List.map
+                                        (\miniShare ->
+                                            let
+                                                endProgress =
+                                                    miniShare.start + miniShare.share
+
+                                                angle =
+                                                    Scale.convert (progressToAngleScale direction) endProgress
+
+                                                labelX =
+                                                    cx + constants.track.miniSectorLabelRadius * cos angle
+
+                                                labelY =
+                                                    cy + constants.track.miniSectorLabelRadius * sin angle
+                                            in
+                                            text_
+                                                [ Attributes.x (px labelX)
+                                                , Attributes.y (px labelY)
+                                                , fontSize (px constants.track.miniSectorLabelFontSize)
+                                                , textAnchor "middle"
+                                                , dominantBaseline "central"
+                                                , fill "oklch(0.5 0 0)"
+                                                ]
+                                                [ text (LeMans.miniSectorToString miniShare.mini) ]
+                                        )
+                    )
     in
-    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels)
+    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
 
 
 renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg

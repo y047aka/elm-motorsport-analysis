@@ -3,6 +3,7 @@ module Motorsport.Circuit.LeMans exposing
     , miniSectorAccessor
     , calculateMiniSectorProgress
     , layout, miniSectorDefaultRatio, miniSectorOrder
+    , miniSectorToString
     )
 
 {-|
@@ -60,6 +61,57 @@ layout =
 miniSectorOrder : List LeMans2025MiniSector
 miniSectorOrder =
     layout.s1 ++ layout.s2 ++ layout.s3
+
+
+{-| Convert a mini sector to its string representation
+-}
+miniSectorToString : LeMans2025MiniSector -> String
+miniSectorToString mini =
+    case mini of
+        SCL2 ->
+            "SCL2"
+
+        Z4 ->
+            "Z4"
+
+        IP1 ->
+            "IP1"
+
+        Z12 ->
+            "Z12"
+
+        SCLC ->
+            "SCLC"
+
+        A7_1 ->
+            "A7-1"
+
+        IP2 ->
+            "IP2"
+
+        A8_1 ->
+            "A8-1"
+
+        SCLB ->
+            "SCLB"
+
+        PORIN ->
+            "PORIN"
+
+        POROUT ->
+            "POROUT"
+
+        PITREF ->
+            "PITREF"
+
+        SCL1 ->
+            "SCL1"
+
+        FORDOUT ->
+            "FORDOUT"
+
+        FL ->
+            "FL"
 
 
 {-| Mini sector ratio information
