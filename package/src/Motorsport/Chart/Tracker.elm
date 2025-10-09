@@ -181,71 +181,100 @@ track direction config =
                 |> List.map (\angle -> makeBoundary angle)
 
         sectorLabels =
-            config
-                |> List.map
-                    (\sectorConfig ->
-                        let
-                            midProgress =
-                                sectorConfig.start + (sectorConfig.share / 2)
-
-                            angle =
-                                Scale.convert (progressToAngleScale direction) midProgress
-
-                            labelX =
-                                cx + constants.track.sectorLabelRadius * cos angle
-
-                            labelY =
-                                cy + constants.track.sectorLabelRadius * sin angle
-                        in
-                        text_
-                            [ Attributes.x (px labelX)
-                            , Attributes.y (px labelY)
-                            , fontSize (px constants.track.sectorLabelFontSize)
-                            , textAnchor "middle"
-                            , dominantBaseline "central"
-                            , fill "oklch(1 0 0)"
-                            ]
-                            [ text (Sector.toString sectorConfig.sector) ]
-                    )
+            renderSectorLabels direction config
 
         miniSectorLabels =
-            config
-                |> List.concatMap
-                    (\sectorConfig ->
-                        case sectorConfig.miniSectorData of
-                            Config.NoMiniSectors ->
-                                []
-
-                            Config.WithMiniSectors minis ->
-                                minis
-                                    |> List.map
-                                        (\miniShare ->
-                                            let
-                                                endProgress =
-                                                    miniShare.start + miniShare.share
-
-                                                angle =
-                                                    Scale.convert (progressToAngleScale direction) endProgress
-
-                                                labelX =
-                                                    cx + constants.track.miniSectorLabelRadius * cos angle
-
-                                                labelY =
-                                                    cy + constants.track.miniSectorLabelRadius * sin angle
-                                            in
-                                            text_
-                                                [ Attributes.x (px labelX)
-                                                , Attributes.y (px labelY)
-                                                , fontSize (px constants.track.miniSectorLabelFontSize)
-                                                , textAnchor "middle"
-                                                , dominantBaseline "central"
-                                                , fill "oklch(0.5 0 0)"
-                                                ]
-                                                [ text (LeMans.miniSectorToString miniShare.mini) ]
-                                        )
-                    )
+            renderMiniSectorLabels direction config
     in
     g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+
+
+renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
+renderSectorLabels direction config =
+    config
+        |> List.map
+            (\sectorConfig ->
+                let
+                    progress =
+                        sectorConfig.start + (sectorConfig.share / 2)
+
+                    label =
+                        Sector.toString sectorConfig.sector
+                in
+                makeLabel direction
+                    { progress = progress
+                    , radius = constants.track.sectorLabelRadius
+                    , fontSize = constants.track.sectorLabelFontSize
+                    , color = "oklch(1 0 0)"
+                    , label = label
+                    }
+            )
+
+
+renderMiniSectorLabels : Direction -> TrackConfig -> List (Svg msg)
+renderMiniSectorLabels direction config =
+    config
+        |> List.concatMap
+            (\sectorConfig ->
+                case sectorConfig.miniSectorData of
+                    Config.NoMiniSectors ->
+                        []
+
+                    Config.WithMiniSectors minis ->
+                        minis
+                            |> List.map
+                                (\miniShare ->
+                                    let
+                                        progress =
+                                            miniShare.start + miniShare.share
+
+                                        label =
+                                            LeMans.miniSectorToString miniShare.mini
+                                    in
+                                    makeLabel direction
+                                        { progress = progress
+                                        , radius = constants.track.miniSectorLabelRadius
+                                        , fontSize = constants.track.miniSectorLabelFontSize
+                                        , color = "oklch(0.5 0 0)"
+                                        , label = label
+                                        }
+                                )
+            )
+
+
+makeLabel :
+    Direction
+    ->
+        { progress : Float
+        , radius : Float
+        , fontSize : Float
+        , color : String
+        , label : String
+        }
+    -> Svg msg
+makeLabel direction { progress, radius, fontSize, color, label } =
+    let
+        { cx, cy } =
+            constants.track
+
+        angle =
+            Scale.convert (progressToAngleScale direction) progress
+
+        labelX =
+            cx + radius * cos angle
+
+        labelY =
+            cy + radius * sin angle
+    in
+    text_
+        [ Attributes.x (px labelX)
+        , Attributes.y (px labelY)
+        , Attributes.fontSize (px fontSize)
+        , textAnchor "middle"
+        , dominantBaseline "central"
+        , fill color
+        ]
+        [ text label ]
 
 
 renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg
