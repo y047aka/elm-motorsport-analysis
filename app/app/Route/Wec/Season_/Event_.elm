@@ -290,11 +290,7 @@ view app { eventSummary, analysis, raceControl } m =
                                         , property "place-items" "center"
                                         ]
                                     ]
-                                    [ let
-                                        isLeMans2025 =
-                                            eventSummary.season == 2025 && eventSummary.name == "24 Hours of Le Mans"
-                                      in
-                                      TrackerChart.view isLeMans2025 analysis viewModel
+                                    [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel
                                     , div
                                         [ css
                                             [ property "position" "relative"

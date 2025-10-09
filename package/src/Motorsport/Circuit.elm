@@ -1,6 +1,6 @@
 module Motorsport.Circuit exposing
     ( Circuit, Layout
-    , standard, leMans2025
+    , clockwise, counterClockwise, leMans2025
     , hasMiniSectors
     , sectorDefaultRatio
     )
@@ -8,14 +8,14 @@ module Motorsport.Circuit exposing
 {-|
 
 @docs Circuit, Layout
-@docs standard, leMans2025
+@docs clockwise, counterClockwise, leMans2025
 @docs hasMiniSectors
-
 @docs sectorDefaultRatio
 
 -}
 
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Direction exposing (Direction(..))
 
 
 {-| Circuit information
@@ -31,17 +31,33 @@ Generic layout type that can represent any circuit configuration
 The miniSector type parameter allows different circuits to use their specific mini sector types
 -}
 type alias Layout miniSector =
-    { s1 : List miniSector
+    { direction : Direction
+    , s1 : List miniSector
     , s2 : List miniSector
     , s3 : List miniSector
     }
 
 
-{-| Standard 3-sector layout (no mini sectors)
+{-| Clockwise 3-sector layout (no mini sectors)
 -}
-standard : Layout miniSector
-standard =
-    { s1 = [], s2 = [], s3 = [] }
+clockwise : Layout miniSector
+clockwise =
+    { direction = Clockwise
+    , s1 = []
+    , s2 = []
+    , s3 = []
+    }
+
+
+{-| Counter-clockwise 3-sector layout (no mini sectors)
+-}
+counterClockwise : Layout miniSector
+counterClockwise =
+    { direction = CounterClockwise
+    , s1 = []
+    , s2 = []
+    , s3 = []
+    }
 
 
 {-| Le Mans 2025 layout (with mini sectors)

@@ -1,5 +1,6 @@
 module Motorsport.Chart.Tracker.Config exposing
     ( TrackConfig
+    , MiniSectorData(..)
     , buildConfig
     , computeProgress, calcSectorBoundaries
     )
@@ -7,6 +8,7 @@ module Motorsport.Chart.Tracker.Config exposing
 {-|
 
 @docs TrackConfig
+@docs MiniSectorData
 @docs buildConfig
 @docs computeProgress, calcSectorBoundaries
 
