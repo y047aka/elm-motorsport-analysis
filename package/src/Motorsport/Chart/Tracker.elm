@@ -7,6 +7,7 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
 import SortedList
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
@@ -28,6 +29,8 @@ type alias Constants =
         , startFinishLineStrokeWidth : Float
         , sectorBoundaryOffset : Float
         , sectorBoundaryStrokeWidth : Float
+        , sectorLabelRadius : Float
+        , sectorLabelFontSize : Float
         }
     , car : { size : Float }
     }
@@ -49,6 +52,8 @@ constants =
         , startFinishLineStrokeWidth = 4
         , sectorBoundaryOffset = 10
         , sectorBoundaryStrokeWidth = 4
+        , sectorLabelRadius = 480
+        , sectorLabelFontSize = 20
         }
     , car = { size = 15 }
     }
@@ -169,8 +174,36 @@ track direction config =
             Config.calcSectorBoundaries config
                 |> List.map (Scale.convert (progressToAngleScale direction))
                 |> List.map (\angle -> makeBoundary angle)
+
+        sectorLabels =
+            config
+                |> List.map
+                    (\sectorConfig ->
+                        let
+                            midProgress =
+                                sectorConfig.start + (sectorConfig.share / 2)
+
+                            angle =
+                                Scale.convert (progressToAngleScale direction) midProgress
+
+                            labelX =
+                                cx + constants.track.sectorLabelRadius * cos angle
+
+                            labelY =
+                                cy + constants.track.sectorLabelRadius * sin angle
+                        in
+                        text_
+                            [ Attributes.x (px labelX)
+                            , Attributes.y (px labelY)
+                            , fontSize (px constants.track.sectorLabelFontSize)
+                            , textAnchor "middle"
+                            , dominantBaseline "central"
+                            , fill "oklch(1 0 0)"
+                            ]
+                            [ text (Sector.toString sectorConfig.sector) ]
+                    )
     in
-    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries)
+    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels)
 
 
 renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg
