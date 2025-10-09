@@ -6758,6 +6758,20 @@
       }
     },
     {
+      "event_time": "17:04.606",
+      "event_type": {
+        "CarEvent": [
+          "87",
+          {
+            "PitStop": {
+              "lap_number": 5,
+              "pit_duration": "1:07.461"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "18:37.908",
       "event_type": {
         "CarEvent": [
@@ -7732,6 +7746,20 @@
                 "s3_best": "1:01.609",
                 "elapsed": "22:19.566"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "19:22.472",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 6,
+              "pit_duration": "39.401"
             }
           }
         ]
@@ -8746,6 +8774,20 @@
       }
     },
     {
+      "event_time": "22:30.895",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 7,
+              "pit_duration": "38.297"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "22:31.248",
       "event_type": {
         "CarEvent": [
@@ -8768,6 +8810,20 @@
                 "s3_best": "1:00.598",
                 "elapsed": "25:21.366"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "22:31.248",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 7,
+              "pit_duration": "40.243"
             }
           }
         ]
@@ -9782,6 +9838,20 @@
       }
     },
     {
+      "event_time": "25:27.703",
+      "event_type": {
+        "CarEvent": [
+          "81",
+          {
+            "PitStop": {
+              "lap_number": 8,
+              "pit_duration": "41.121"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "27:33.773",
       "event_type": {
         "CarEvent": [
@@ -10734,6 +10804,20 @@
       }
     },
     {
+      "event_time": "28:18.066",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 9,
+              "pit_duration": "36.541"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "28:26.547",
       "event_type": {
         "CarEvent": [
@@ -10762,6 +10846,20 @@
       }
     },
     {
+      "event_time": "28:26.547",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 9,
+              "pit_duration": "40.516"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "29:15.588",
       "event_type": {
         "CarEvent": [
@@ -10784,6 +10882,20 @@
                 "s3_best": "1:01.719",
                 "elapsed": "46:12.443"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "29:15.588",
+      "event_type": {
+        "CarEvent": [
+          "87",
+          {
+            "PitStop": {
+              "lap_number": 9,
+              "pit_duration": "1:27.503"
             }
           }
         ]
@@ -11770,6 +11882,20 @@
       }
     },
     {
+      "event_time": "31:23.389",
+      "event_type": {
+        "CarEvent": [
+          "60",
+          {
+            "PitStop": {
+              "lap_number": 10,
+              "pit_duration": "43.806"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "33:29.757",
       "event_type": {
         "CarEvent": [
@@ -12722,6 +12848,20 @@
       }
     },
     {
+      "event_time": "34:17.014",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 11,
+              "pit_duration": "41.668"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "34:21.129",
       "event_type": {
         "CarEvent": [
@@ -12744,6 +12884,20 @@
                 "s3_best": "1:00.520",
                 "elapsed": "37:11.062"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "34:21.129",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 11,
+              "pit_duration": "46.204"
             }
           }
         ]
@@ -13646,6 +13800,20 @@
       }
     },
     {
+      "event_time": "37:11.482",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 12,
+              "pit_duration": "44.256"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "37:13.825",
       "event_type": {
         "CarEvent": [
@@ -13668,6 +13836,20 @@
                 "s3_best": "1:01.609",
                 "elapsed": "40:02.649"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "37:13.825",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 12,
+              "pit_duration": "39.213"
             }
           }
         ]
@@ -13702,6 +13884,20 @@
       }
     },
     {
+      "event_time": "37:14.243",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 12,
+              "pit_duration": "38.904"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "37:39.673",
       "event_type": {
         "CarEvent": [
@@ -13724,6 +13920,20 @@
                 "s3_best": "1:00.029",
                 "elapsed": "40:11.423"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "37:39.673",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 12,
+              "pit_duration": "1:15.660"
             }
           }
         ]
@@ -14607,6 +14817,20 @@
       }
     },
     {
+      "event_time": "40:10.932",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 13,
+              "pit_duration": "38.962"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "40:11.423",
       "event_type": {
         "CarEvent": [
@@ -14663,6 +14887,20 @@
       }
     },
     {
+      "event_time": "40:12.093",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 13,
+              "pit_duration": "50.316"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "40:14.495",
       "event_type": {
         "CarEvent": [
@@ -14685,6 +14923,20 @@
                 "s3_best": "59.368",
                 "elapsed": "43:08.662"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "40:14.495",
+      "event_type": {
+        "CarEvent": [
+          "31",
+          {
+            "PitStop": {
+              "lap_number": 13,
+              "pit_duration": "49.460"
             }
           }
         ]
@@ -15643,6 +15895,20 @@
       }
     },
     {
+      "event_time": "43:09.831",
+      "event_type": {
+        "CarEvent": [
+          "59",
+          {
+            "PitStop": {
+              "lap_number": 14,
+              "pit_duration": "45.682"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "45:36.732",
       "event_type": {
         "CarEvent": [
@@ -16595,6 +16861,20 @@
       }
     },
     {
+      "event_time": "46:12.443",
+      "event_type": {
+        "CarEvent": [
+          "87",
+          {
+            "PitStop": {
+              "lap_number": 10,
+              "pit_duration": "14:16.450"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "46:13.620",
       "event_type": {
         "CarEvent": [
@@ -16617,6 +16897,20 @@
                 "s3_best": "1:01.966",
                 "elapsed": "49:33.969"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "46:13.620",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 15,
+              "pit_duration": "35.726"
             }
           }
         ]
@@ -17547,6 +17841,20 @@
       }
     },
     {
+      "event_time": "49:36.321",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 16,
+              "pit_duration": "44.116"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "49:37.119",
       "event_type": {
         "CarEvent": [
@@ -17569,6 +17877,20 @@
                 "s3_best": "1:02.658",
                 "elapsed": "52:59.241"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "49:37.119",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 16,
+              "pit_duration": "41.247"
             }
           }
         ]
@@ -18527,6 +18849,20 @@
       }
     },
     {
+      "event_time": "53:00.861",
+      "event_type": {
+        "CarEvent": [
+          "77",
+          {
+            "PitStop": {
+              "lap_number": 17,
+              "pit_duration": "55.128"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "53:01.732",
       "event_type": {
         "CarEvent": [
@@ -18555,6 +18891,20 @@
       }
     },
     {
+      "event_time": "53:01.732",
+      "event_type": {
+        "CarEvent": [
+          "92",
+          {
+            "PitStop": {
+              "lap_number": 17,
+              "pit_duration": "51.739"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "54:01.565",
       "event_type": {
         "CarEvent": [
@@ -18577,6 +18927,20 @@
                 "s3_best": "59.739",
                 "elapsed": "56:59.223"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "54:01.565",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 17,
+              "pit_duration": "1:37.648"
             }
           }
         ]
@@ -18639,6 +19003,20 @@
       }
     },
     {
+      "event_time": "56:22.362",
+      "event_type": {
+        "CarEvent": [
+          "83",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "27.085"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:24.050",
       "event_type": {
         "CarEvent": [
@@ -18695,6 +19073,20 @@
       }
     },
     {
+      "event_time": "56:25.317",
+      "event_type": {
+        "CarEvent": [
+          "51",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "28.913"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:26.248",
       "event_type": {
         "CarEvent": [
@@ -18723,6 +19115,20 @@
       }
     },
     {
+      "event_time": "56:26.248",
+      "event_type": {
+        "CarEvent": [
+          "6",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "28.686"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:27.422",
       "event_type": {
         "CarEvent": [
@@ -18745,6 +19151,20 @@
                 "s3_best": "1:06.824",
                 "elapsed": "1:00:32.624"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "56:27.422",
+      "event_type": {
+        "CarEvent": [
+          "50",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "28.832"
             }
           }
         ]
@@ -18919,6 +19339,20 @@
       }
     },
     {
+      "event_time": "56:33.898",
+      "event_type": {
+        "CarEvent": [
+          "99",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "31.531"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:35.203",
       "event_type": {
         "CarEvent": [
@@ -18941,6 +19375,20 @@
                 "s3_best": "1:05.451",
                 "elapsed": "1:00:51.245"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "56:35.203",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "30.533"
             }
           }
         ]
@@ -19087,6 +19535,20 @@
       }
     },
     {
+      "event_time": "56:40.278",
+      "event_type": {
+        "CarEvent": [
+          "8",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "31.391"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:41.123",
       "event_type": {
         "CarEvent": [
@@ -19115,6 +19577,20 @@
       }
     },
     {
+      "event_time": "56:41.123",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "30.469"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:42.296",
       "event_type": {
         "CarEvent": [
@@ -19137,6 +19613,20 @@
                 "s3_best": "1:06.107",
                 "elapsed": "1:01:14.436"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "56:42.296",
+      "event_type": {
+        "CarEvent": [
+          "009",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "29.953"
             }
           }
         ]
@@ -19221,6 +19711,20 @@
                 "s3_best": "1:05.557",
                 "elapsed": "1:01:23.702"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "56:45.237",
+      "event_type": {
+        "CarEvent": [
+          "94",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "29.478"
             }
           }
         ]
@@ -19367,6 +19871,20 @@
       }
     },
     {
+      "event_time": "56:50.769",
+      "event_type": {
+        "CarEvent": [
+          "38",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "25.542"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "56:51.569",
       "event_type": {
         "CarEvent": [
@@ -19473,6 +19991,20 @@
                 "s3_best": "1:02.573",
                 "elapsed": "1:02:29.957"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "56:56.133",
+      "event_type": {
+        "CarEvent": [
+          "7",
+          {
+            "PitStop": {
+              "lap_number": 18,
+              "pit_duration": "25.366"
             }
           }
         ]
@@ -20537,6 +21069,20 @@
                 "s3_best": "59.739",
                 "elapsed": "1:44:37.930"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "1:39:05.885",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 19,
+              "pit_duration": "38:15.671"
             }
           }
         ]
@@ -28355,6 +28901,20 @@
       }
     },
     {
+      "event_time": "2:05:09.928",
+      "event_type": {
+        "CarEvent": [
+          "36",
+          {
+            "PitStop": {
+              "lap_number": 26,
+              "pit_duration": "4:53.028"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:07:59.770",
       "event_type": {
         "CarEvent": [
@@ -30259,6 +30819,20 @@
       }
     },
     {
+      "event_time": "2:11:44.296",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 29,
+              "pit_duration": "50.316"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:11:54.329",
       "event_type": {
         "CarEvent": [
@@ -30287,6 +30861,20 @@
       }
     },
     {
+      "event_time": "2:11:54.329",
+      "event_type": {
+        "CarEvent": [
+          "12",
+          {
+            "PitStop": {
+              "lap_number": 29,
+              "pit_duration": "1:00.924"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:12:45.815",
       "event_type": {
         "CarEvent": [
@@ -30309,6 +30897,20 @@
                 "s3_best": "54.614",
                 "elapsed": "2:14:59.569"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:12:45.815",
+      "event_type": {
+        "CarEvent": [
+          "007",
+          {
+            "PitStop": {
+              "lap_number": 29,
+              "pit_duration": "1:41.031"
             }
           }
         ]
@@ -31261,6 +31863,20 @@
                 "s3_best": "56.213",
                 "elapsed": "2:16:47.121"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:14:30.454",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 30,
+              "pit_duration": "57.136"
             }
           }
         ]
@@ -32975,6 +33591,20 @@
       }
     },
     {
+      "event_time": "2:19:18.306",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "25.425"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:19:19.142",
       "event_type": {
         "CarEvent": [
@@ -33059,6 +33689,20 @@
       }
     },
     {
+      "event_time": "2:19:45.186",
+      "event_type": {
+        "CarEvent": [
+          "95",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "58.605"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:19:49.417",
       "event_type": {
         "CarEvent": [
@@ -33081,6 +33725,20 @@
                 "s3_best": "56.995",
                 "elapsed": "2:22:11.769"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:19:49.417",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "55.967"
             }
           }
         ]
@@ -33115,6 +33773,20 @@
       }
     },
     {
+      "event_time": "2:19:49.774",
+      "event_type": {
+        "CarEvent": [
+          "59",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "54.495"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:19:52.092",
       "event_type": {
         "CarEvent": [
@@ -33137,6 +33809,20 @@
                 "s3_best": "57.397",
                 "elapsed": "2:22:13.882"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:19:52.092",
+      "event_type": {
+        "CarEvent": [
+          "27",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "1:02.743"
             }
           }
         ]
@@ -33171,6 +33857,20 @@
       }
     },
     {
+      "event_time": "2:19:53.242",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "59.594"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:19:57.633",
       "event_type": {
         "CarEvent": [
@@ -33199,6 +33899,20 @@
       }
     },
     {
+      "event_time": "2:19:57.633",
+      "event_type": {
+        "CarEvent": [
+          "31",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "59.714"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:20:09.172",
       "event_type": {
         "CarEvent": [
@@ -33221,6 +33935,20 @@
                 "s3_best": "57.779",
                 "elapsed": "2:22:32.556"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:20:09.172",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "1:01.911"
             }
           }
         ]
@@ -33731,6 +34459,20 @@
       }
     },
     {
+      "event_time": "2:21:25.935",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 32,
+              "pit_duration": "2:31.982"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:21:29.354",
       "event_type": {
         "CarEvent": [
@@ -34067,6 +34809,20 @@
       }
     },
     {
+      "event_time": "2:22:16.897",
+      "event_type": {
+        "CarEvent": [
+          "92",
+          {
+            "PitStop": {
+              "lap_number": 33,
+              "pit_duration": "49.095"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:22:19.736",
       "event_type": {
         "CarEvent": [
@@ -34117,6 +34873,20 @@
                 "s3_best": "58.346",
                 "elapsed": "2:24:55.613"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:22:32.119",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 33,
+              "pit_duration": "1:04.374"
             }
           }
         ]
@@ -34201,6 +34971,20 @@
                 "s3_best": "57.932",
                 "elapsed": "2:24:56.597"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:22:33.463",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 33,
+              "pit_duration": "1:05.127"
             }
           }
         ]
@@ -34369,6 +35153,20 @@
                 "s3_best": "57.395",
                 "elapsed": "2:25:11.735"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:22:49.035",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 33,
+              "pit_duration": "1:07.946"
             }
           }
         ]
@@ -36111,6 +36909,20 @@
       }
     },
     {
+      "event_time": "2:27:03.139",
+      "event_type": {
+        "CarEvent": [
+          "60",
+          {
+            "PitStop": {
+              "lap_number": 35,
+              "pit_duration": "59.229"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:27:05.038",
       "event_type": {
         "CarEvent": [
@@ -36189,6 +37001,20 @@
                 "s3_best": "57.723",
                 "elapsed": "2:29:31.763"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:27:09.325",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 35,
+              "pit_duration": "1:00.087"
             }
           }
         ]
@@ -38345,6 +39171,20 @@
                 "s3_best": "57.519",
                 "elapsed": "2:34:20.563"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:31:58.375",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 37,
+              "pit_duration": "55.074"
             }
           }
         ]
@@ -43643,6 +44483,20 @@
       }
     },
     {
+      "event_time": "2:47:22.764",
+      "event_type": {
+        "CarEvent": [
+          "50",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:11.828"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:47:27.823",
       "event_type": {
         "CarEvent": [
@@ -43665,6 +44519,20 @@
                 "s3_best": "53.542",
                 "elapsed": "2:51:16.026"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:47:27.823",
+      "event_type": {
+        "CarEvent": [
+          "5",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "59.989"
             }
           }
         ]
@@ -43783,6 +44651,20 @@
       }
     },
     {
+      "event_time": "2:48:06.239",
+      "event_type": {
+        "CarEvent": [
+          "7",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:11.284"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:48:17.925",
       "event_type": {
         "CarEvent": [
@@ -43805,6 +44687,20 @@
                 "s3_best": "57.122",
                 "elapsed": "2:52:18.313"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:48:17.925",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 42,
+              "pit_duration": "1:22.554"
             }
           }
         ]
@@ -43895,6 +44791,20 @@
       }
     },
     {
+      "event_time": "2:48:49.937",
+      "event_type": {
+        "CarEvent": [
+          "009",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:15.206"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:48:59.838",
       "event_type": {
         "CarEvent": [
@@ -43917,6 +44827,20 @@
                 "s3_best": "54.188",
                 "elapsed": "2:52:12.706"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:48:59.838",
+      "event_type": {
+        "CarEvent": [
+          "8",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:16.947"
             }
           }
         ]
@@ -44007,6 +44931,20 @@
       }
     },
     {
+      "event_time": "2:49:12.169",
+      "event_type": {
+        "CarEvent": [
+          "12",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:09.230"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:49:17.635",
       "event_type": {
         "CarEvent": [
@@ -44029,6 +44967,20 @@
                 "s3_best": "52.911",
                 "elapsed": "2:52:24.780"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:49:17.635",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "56.754"
             }
           }
         ]
@@ -44063,6 +45015,20 @@
       }
     },
     {
+      "event_time": "2:49:20.054",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "47.514"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:49:22.294",
       "event_type": {
         "CarEvent": [
@@ -44085,6 +45051,20 @@
                 "s3_best": "56.783",
                 "elapsed": "2:52:27.215"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:49:22.294",
+      "event_type": {
+        "CarEvent": [
+          "92",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "46.543"
             }
           }
         ]
@@ -44119,6 +45099,20 @@
       }
     },
     {
+      "event_time": "2:49:28.449",
+      "event_type": {
+        "CarEvent": [
+          "007",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "48.666"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:49:31.433",
       "event_type": {
         "CarEvent": [
@@ -44147,6 +45141,20 @@
       }
     },
     {
+      "event_time": "2:49:31.433",
+      "event_type": {
+        "CarEvent": [
+          "95",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "59.667"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:49:34.160",
       "event_type": {
         "CarEvent": [
@@ -44169,6 +45177,20 @@
                 "s3_best": "57.397",
                 "elapsed": "2:52:41.723"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:49:34.160",
+      "event_type": {
+        "CarEvent": [
+          "27",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "47.572"
             }
           }
         ]
@@ -44231,6 +45253,20 @@
       }
     },
     {
+      "event_time": "2:49:41.882",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "42.063"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:49:45.081",
       "event_type": {
         "CarEvent": [
@@ -44253,6 +45289,20 @@
                 "s3_best": "57.672",
                 "elapsed": "2:52:44.266"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:49:45.081",
+      "event_type": {
+        "CarEvent": [
+          "31",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "47.846"
             }
           }
         ]
@@ -44287,6 +45337,20 @@
       }
     },
     {
+      "event_time": "2:50:02.935",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "41.125"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:50:03.432",
       "event_type": {
         "CarEvent": [
@@ -44309,6 +45373,20 @@
                 "s3_best": "54.144",
                 "elapsed": "2:52:54.758"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:50:03.432",
+      "event_type": {
+        "CarEvent": [
+          "36",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "1:30.846"
             }
           }
         ]
@@ -44343,6 +45421,20 @@
       }
     },
     {
+      "event_time": "2:50:17.995",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "1:00.071"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:50:29.816",
       "event_type": {
         "CarEvent": [
@@ -44365,6 +45457,20 @@
                 "s3_best": "56.978",
                 "elapsed": "2:53:11.013"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:50:29.816",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "46.409"
             }
           }
         ]
@@ -44399,6 +45505,20 @@
       }
     },
     {
+      "event_time": "2:50:34.011",
+      "event_type": {
+        "CarEvent": [
+          "99",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "1:15.912"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:50:49.482",
       "event_type": {
         "CarEvent": [
@@ -44421,6 +45541,20 @@
                 "s3_best": "57.529",
                 "elapsed": "2:53:21.794"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:50:49.482",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "49.914"
             }
           }
         ]
@@ -44455,6 +45589,20 @@
       }
     },
     {
+      "event_time": "2:51:07.274",
+      "event_type": {
+        "CarEvent": [
+          "51",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:11.843"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:51:10.285",
       "event_type": {
         "CarEvent": [
@@ -44483,6 +45631,20 @@
       }
     },
     {
+      "event_time": "2:51:10.285",
+      "event_type": {
+        "CarEvent": [
+          "81",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "3:50.050"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:51:10.973",
       "event_type": {
         "CarEvent": [
@@ -44505,6 +45667,20 @@
                 "s3_best": "52.758",
                 "elapsed": "2:55:24.916"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:51:10.973",
+      "event_type": {
+        "CarEvent": [
+          "6",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:13.961"
             }
           }
         ]
@@ -44595,6 +45771,20 @@
       }
     },
     {
+      "event_time": "2:51:28.165",
+      "event_type": {
+        "CarEvent": [
+          "83",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:48.199"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:51:33.286",
       "event_type": {
         "CarEvent": [
@@ -44623,6 +45813,20 @@
       }
     },
     {
+      "event_time": "2:51:33.286",
+      "event_type": {
+        "CarEvent": [
+          "38",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:22.598"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:51:41.254",
       "event_type": {
         "CarEvent": [
@@ -44645,6 +45849,20 @@
                 "s3_best": "53.073",
                 "elapsed": "2:55:29.692"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:51:41.254",
+      "event_type": {
+        "CarEvent": [
+          "94",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:13.724"
             }
           }
         ]
@@ -44707,6 +45925,20 @@
       }
     },
     {
+      "event_time": "2:52:00.278",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:11.502"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:52:01.537",
       "event_type": {
         "CarEvent": [
@@ -44729,6 +45961,20 @@
                 "s3_best": "57.009",
                 "elapsed": "2:55:34.279"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:52:01.537",
+      "event_type": {
+        "CarEvent": [
+          "77",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:16.772"
             }
           }
         ]
@@ -44819,6 +46065,20 @@
       }
     },
     {
+      "event_time": "2:52:18.313",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 43,
+              "pit_duration": "1:01.295"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:52:19.017",
       "event_type": {
         "CarEvent": [
@@ -44841,6 +46101,20 @@
                 "s3_best": "56.995",
                 "elapsed": "2:55:38.663"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:52:19.017",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "46.046"
             }
           }
         ]
@@ -44987,6 +46261,20 @@
       }
     },
     {
+      "event_time": "2:52:28.342",
+      "event_type": {
+        "CarEvent": [
+          "59",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "59.413"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:52:37.858",
       "event_type": {
         "CarEvent": [
@@ -45071,6 +46359,20 @@
       }
     },
     {
+      "event_time": "2:52:40.537",
+      "event_type": {
+        "CarEvent": [
+          "87",
+          {
+            "PitStop": {
+              "lap_number": 39,
+              "pit_duration": "1:55.194"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "2:52:41.194",
       "event_type": {
         "CarEvent": [
@@ -45093,6 +46395,20 @@
                 "s3_best": "57.110",
                 "elapsed": "2:55:47.137"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:52:41.194",
+      "event_type": {
+        "CarEvent": [
+          "60",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "43.330"
             }
           }
         ]
@@ -45205,6 +46521,20 @@
                 "s3_best": "53.936",
                 "elapsed": "2:55:50.774"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:52:45.702",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 45,
+              "pit_duration": "1:02.391"
             }
           }
         ]
@@ -45401,6 +46731,20 @@
                 "s3_best": "57.278",
                 "elapsed": "2:56:01.747"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "2:53:32.719",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 44,
+              "pit_duration": "1:31.582"
             }
           }
         ]
@@ -52289,6 +53633,20 @@
                 "s3_best": "57.243",
                 "elapsed": "3:15:54.387"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "3:13:29.034",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 51,
+              "pit_duration": "25.322"
             }
           }
         ]
@@ -65343,6 +66701,20 @@
       }
     },
     {
+      "event_time": "3:45:03.344",
+      "event_type": {
+        "CarEvent": [
+          "36",
+          {
+            "PitStop": {
+              "lap_number": 64,
+              "pit_duration": "1:01.554"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "3:45:11.368",
       "event_type": {
         "CarEvent": [
@@ -69095,6 +70467,20 @@
       }
     },
     {
+      "event_time": "3:54:01.105",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 67,
+              "pit_duration": "25.737"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "3:54:07.671",
       "event_type": {
         "CarEvent": [
@@ -69565,6 +70951,20 @@
                 "s3_best": "57.397",
                 "elapsed": "4:00:11.543"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "3:56:00.208",
+      "event_type": {
+        "CarEvent": [
+          "27",
+          {
+            "PitStop": {
+              "lap_number": 68,
+              "pit_duration": "1:23.704"
             }
           }
         ]
@@ -70579,6 +71979,20 @@
       }
     },
     {
+      "event_time": "4:00:29.399",
+      "event_type": {
+        "CarEvent": [
+          "5",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:12.368"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:00:34.840",
       "event_type": {
         "CarEvent": [
@@ -70719,6 +72133,20 @@
       }
     },
     {
+      "event_time": "4:01:04.776",
+      "event_type": {
+        "CarEvent": [
+          "12",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:10.439"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:01:13.638",
       "event_type": {
         "CarEvent": [
@@ -70769,6 +72197,20 @@
                 "s3_best": "54.231",
                 "elapsed": "4:05:00.859"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:01:21.966",
+      "event_type": {
+        "CarEvent": [
+          "009",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:09.784"
             }
           }
         ]
@@ -70831,6 +72273,20 @@
       }
     },
     {
+      "event_time": "4:01:34.382",
+      "event_type": {
+        "CarEvent": [
+          "92",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:19.073"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:01:38.900",
       "event_type": {
         "CarEvent": [
@@ -70853,6 +72309,20 @@
                 "s3_best": "56.938",
                 "elapsed": "4:05:06.826"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:01:38.900",
+      "event_type": {
+        "CarEvent": [
+          "59",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:22.930"
             }
           }
         ]
@@ -70887,6 +72357,20 @@
       }
     },
     {
+      "event_time": "4:01:58.077",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:20.214"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:02:05.029",
       "event_type": {
         "CarEvent": [
@@ -70909,6 +72393,20 @@
                 "s3_best": "52.911",
                 "elapsed": "4:05:16.681"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:02:05.029",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:09.774"
             }
           }
         ]
@@ -70943,6 +72441,20 @@
       }
     },
     {
+      "event_time": "4:02:26.783",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:22.033"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:02:31.399",
       "event_type": {
         "CarEvent": [
@@ -70965,6 +72477,20 @@
                 "s3_best": "57.250",
                 "elapsed": "4:05:30.781"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:02:31.399",
+      "event_type": {
+        "CarEvent": [
+          "61",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:28.878"
             }
           }
         ]
@@ -70999,6 +72525,20 @@
       }
     },
     {
+      "event_time": "4:02:33.289",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:23.573"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:02:37.309",
       "event_type": {
         "CarEvent": [
@@ -71021,6 +72561,20 @@
                 "s3_best": "54.188",
                 "elapsed": "4:05:38.350"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:02:37.309",
+      "event_type": {
+        "CarEvent": [
+          "8",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:12.002"
             }
           }
         ]
@@ -71055,6 +72609,20 @@
       }
     },
     {
+      "event_time": "4:02:45.180",
+      "event_type": {
+        "CarEvent": [
+          "99",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:12.762"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:02:55.447",
       "event_type": {
         "CarEvent": [
@@ -71077,6 +72645,20 @@
                 "s3_best": "57.672",
                 "elapsed": "4:05:44.986"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:02:55.447",
+      "event_type": {
+        "CarEvent": [
+          "31",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:26.633"
             }
           }
         ]
@@ -71111,6 +72693,20 @@
       }
     },
     {
+      "event_time": "4:02:58.976",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:21.292"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:02:59.880",
       "event_type": {
         "CarEvent": [
@@ -71133,6 +72729,20 @@
                 "s3_best": "54.144",
                 "elapsed": "4:05:50.485"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:02:59.880",
+      "event_type": {
+        "CarEvent": [
+          "36",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "55.414"
             }
           }
         ]
@@ -71167,6 +72777,20 @@
       }
     },
     {
+      "event_time": "4:03:03.244",
+      "event_type": {
+        "CarEvent": [
+          "38",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:10.872"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:03:12.458",
       "event_type": {
         "CarEvent": [
@@ -71189,6 +72813,20 @@
                 "s3_best": "57.414",
                 "elapsed": "4:05:54.948"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:03:12.458",
+      "event_type": {
+        "CarEvent": [
+          "81",
+          {
+            "PitStop": {
+              "lap_number": 70,
+              "pit_duration": "1:22.666"
             }
           }
         ]
@@ -71223,6 +72861,20 @@
       }
     },
     {
+      "event_time": "4:03:24.003",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:14.304"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:03:36.618",
       "event_type": {
         "CarEvent": [
@@ -71245,6 +72897,20 @@
                 "s3_best": "53.969",
                 "elapsed": "4:06:04.382"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:03:36.618",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 72,
+              "pit_duration": "1:10.218"
             }
           }
         ]
@@ -71279,6 +72945,20 @@
       }
     },
     {
+      "event_time": "4:03:55.513",
+      "event_type": {
+        "CarEvent": [
+          "51",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "1:11.519"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:03:56.338",
       "event_type": {
         "CarEvent": [
@@ -71307,6 +72987,20 @@
       }
     },
     {
+      "event_time": "4:03:56.338",
+      "event_type": {
+        "CarEvent": [
+          "6",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "1:08.305"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:04:03.435",
       "event_type": {
         "CarEvent": [
@@ -71329,6 +73023,20 @@
                 "s3_best": "52.200",
                 "elapsed": "4:08:01.503"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:04:03.435",
+      "event_type": {
+        "CarEvent": [
+          "50",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "1:12.208"
             }
           }
         ]
@@ -71419,6 +73127,20 @@
       }
     },
     {
+      "event_time": "4:04:34.933",
+      "event_type": {
+        "CarEvent": [
+          "83",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "1:10.628"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:04:35.571",
       "event_type": {
         "CarEvent": [
@@ -71441,6 +73163,20 @@
                 "s3_best": "57.009",
                 "elapsed": "4:08:06.114"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:04:35.571",
+      "event_type": {
+        "CarEvent": [
+          "77",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:08.203"
             }
           }
         ]
@@ -71475,6 +73211,20 @@
       }
     },
     {
+      "event_time": "4:04:37.033",
+      "event_type": {
+        "CarEvent": [
+          "7",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:11.239"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:04:42.335",
       "event_type": {
         "CarEvent": [
@@ -71497,6 +73247,20 @@
                 "s3_best": "53.073",
                 "elapsed": "4:08:08.919"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:04:42.335",
+      "event_type": {
+        "CarEvent": [
+          "94",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "1:08.985"
             }
           }
         ]
@@ -71559,6 +73323,20 @@
       }
     },
     {
+      "event_time": "4:04:48.492",
+      "event_type": {
+        "CarEvent": [
+          "95",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:20.348"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:04:57.297",
       "event_type": {
         "CarEvent": [
@@ -71587,6 +73365,20 @@
       }
     },
     {
+      "event_time": "4:04:57.297",
+      "event_type": {
+        "CarEvent": [
+          "33",
+          {
+            "PitStop": {
+              "lap_number": 69,
+              "pit_duration": "1:29.170"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:04:58.192",
       "event_type": {
         "CarEvent": [
@@ -71609,6 +73401,20 @@
                 "s3_best": "53.221",
                 "elapsed": "4:08:13.735"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:04:58.192",
+      "event_type": {
+        "CarEvent": [
+          "007",
+          {
+            "PitStop": {
+              "lap_number": 73,
+              "pit_duration": "59.270"
             }
           }
         ]
@@ -71727,6 +73533,20 @@
       }
     },
     {
+      "event_time": "4:05:08.091",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:21.380"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:05:09.045",
       "event_type": {
         "CarEvent": [
@@ -71749,6 +73569,20 @@
                 "s3_best": "57.110",
                 "elapsed": "4:08:19.500"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:05:09.045",
+      "event_type": {
+        "CarEvent": [
+          "60",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:22.217"
             }
           }
         ]
@@ -71811,6 +73645,20 @@
       }
     },
     {
+      "event_time": "4:05:14.684",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:22.311"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:05:16.681",
       "event_type": {
         "CarEvent": [
@@ -71867,6 +73715,20 @@
       }
     },
     {
+      "event_time": "4:05:19.390",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 71,
+              "pit_duration": "1:21.605"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:05:26.883",
       "event_type": {
         "CarEvent": [
@@ -71917,6 +73779,20 @@
                 "s3_best": "57.448",
                 "elapsed": "4:08:27.628"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:05:27.958",
+      "event_type": {
+        "CarEvent": [
+          "87",
+          {
+            "PitStop": {
+              "lap_number": 66,
+              "pit_duration": "1:26.944"
             }
           }
         ]
@@ -76179,6 +78055,20 @@
       }
     },
     {
+      "event_time": "4:18:25.600",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 77,
+              "pit_duration": "41.823"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:19:31.427",
       "event_type": {
         "CarEvent": [
@@ -77103,6 +78993,20 @@
       }
     },
     {
+      "event_time": "4:20:35.364",
+      "event_type": {
+        "CarEvent": [
+          "51",
+          {
+            "PitStop": {
+              "lap_number": 78,
+              "pit_duration": "39.827"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:20:39.696",
       "event_type": {
         "CarEvent": [
@@ -77153,6 +79057,20 @@
                 "s3_best": "53.969",
                 "elapsed": "4:23:19.918"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:21:03.092",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 78,
+              "pit_duration": "25.351"
             }
           }
         ]
@@ -79977,6 +81895,20 @@
       }
     },
     {
+      "event_time": "4:28:11.793",
+      "event_type": {
+        "CarEvent": [
+          "38",
+          {
+            "PitStop": {
+              "lap_number": 81,
+              "pit_duration": "45.218"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:30:22.995",
       "event_type": {
         "CarEvent": [
@@ -82693,6 +84625,20 @@
       }
     },
     {
+      "event_time": "4:39:01.600",
+      "event_type": {
+        "CarEvent": [
+          "36",
+          {
+            "PitStop": {
+              "lap_number": 80,
+              "pit_duration": "7:44.887"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:41:46.929",
       "event_type": {
         "CarEvent": [
@@ -84513,6 +86459,20 @@
       }
     },
     {
+      "event_time": "4:45:09.891",
+      "event_type": {
+        "CarEvent": [
+          "99",
+          {
+            "PitStop": {
+              "lap_number": 85,
+              "pit_duration": "57.680"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:45:23.525",
       "event_type": {
         "CarEvent": [
@@ -84535,6 +86495,20 @@
                 "s3_best": "57.414",
                 "elapsed": "4:47:45.945"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:45:23.525",
+      "event_type": {
+        "CarEvent": [
+          "81",
+          {
+            "PitStop": {
+              "lap_number": 84,
+              "pit_duration": "56.241"
             }
           }
         ]
@@ -85418,6 +87392,20 @@
       }
     },
     {
+      "event_time": "4:47:31.440",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 85,
+              "pit_duration": "47.100"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:47:45.945",
       "event_type": {
         "CarEvent": [
@@ -86286,6 +88274,20 @@
       }
     },
     {
+      "event_time": "4:49:43.920",
+      "event_type": {
+        "CarEvent": [
+          "35",
+          {
+            "PitStop": {
+              "lap_number": 88,
+              "pit_duration": "57.245"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "4:50:14.855",
       "event_type": {
         "CarEvent": [
@@ -86588,6 +88590,20 @@
                 "s3_best": "57.255",
                 "elapsed": "4:55:14.839"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "4:51:00.406",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 86,
+              "pit_duration": "50.028"
             }
           }
         ]
@@ -89416,6 +91432,20 @@
                 "s3_best": "52.241",
                 "elapsed": "5:02:29.491"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:00:21.896",
+      "event_type": {
+        "CarEvent": [
+          "83",
+          {
+            "PitStop": {
+              "lap_number": 92,
+              "pit_duration": "25.557"
             }
           }
         ]
@@ -95638,6 +97668,20 @@
       }
     },
     {
+      "event_time": "5:16:01.288",
+      "event_type": {
+        "CarEvent": [
+          "009",
+          {
+            "PitStop": {
+              "lap_number": 99,
+              "pit_duration": "1:08.530"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:16:18.811",
       "event_type": {
         "CarEvent": [
@@ -95968,6 +98012,20 @@
                 "s3_best": "53.874",
                 "elapsed": "5:20:00.489"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:17:12.622",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 99,
+              "pit_duration": "1:02.521"
             }
           }
         ]
@@ -97178,6 +99236,20 @@
       }
     },
     {
+      "event_time": "5:19:50.961",
+      "event_type": {
+        "CarEvent": [
+          "12",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "57.951"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:19:50.994",
       "event_type": {
         "CarEvent": [
@@ -97424,6 +99496,20 @@
                 "s3_best": "56.616",
                 "elapsed": "5:22:51.898"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:20:31.555",
+      "event_type": {
+        "CarEvent": [
+          "77",
+          {
+            "PitStop": {
+              "lap_number": 98,
+              "pit_duration": "1:02.878"
             }
           }
         ]
@@ -98279,6 +100365,20 @@
       }
     },
     {
+      "event_time": "5:22:46.122",
+      "event_type": {
+        "CarEvent": [
+          "15",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "42.038"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:22:50.012",
       "event_type": {
         "CarEvent": [
@@ -98609,6 +100709,20 @@
                 "s3_best": "56.841",
                 "elapsed": "5:26:04.247"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:23:39.815",
+      "event_type": {
+        "CarEvent": [
+          "27",
+          {
+            "PitStop": {
+              "lap_number": 99,
+              "pit_duration": "1:17.550"
             }
           }
         ]
@@ -99203,6 +101317,20 @@
       }
     },
     {
+      "event_time": "5:25:21.578",
+      "event_type": {
+        "CarEvent": [
+          "88",
+          {
+            "PitStop": {
+              "lap_number": 100,
+              "pit_duration": "59.427"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:25:22.867",
       "event_type": {
         "CarEvent": [
@@ -99287,6 +101415,20 @@
       }
     },
     {
+      "event_time": "5:25:33.643",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 100,
+              "pit_duration": "1:09.069"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:25:39.295",
       "event_type": {
         "CarEvent": [
@@ -99365,6 +101507,20 @@
                 "s3_best": "56.615",
                 "elapsed": "5:28:15.771"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:25:50.403",
+      "event_type": {
+        "CarEvent": [
+          "31",
+          {
+            "PitStop": {
+              "lap_number": 100,
+              "pit_duration": "1:07.473"
             }
           }
         ]
@@ -99533,6 +101689,20 @@
                 "s3_best": "57.061",
                 "elapsed": "5:28:36.344"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:26:10.201",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 100,
+              "pit_duration": "1:11.381"
             }
           }
         ]
@@ -100043,6 +102213,20 @@
       }
     },
     {
+      "event_time": "5:27:48.195",
+      "event_type": {
+        "CarEvent": [
+          "54",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "1:09.856"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:27:52.403",
       "event_type": {
         "CarEvent": [
@@ -100183,6 +102367,20 @@
       }
     },
     {
+      "event_time": "5:28:07.220",
+      "event_type": {
+        "CarEvent": [
+          "59",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "1:09.297"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:28:09.041",
       "event_type": {
         "CarEvent": [
@@ -100205,6 +102403,20 @@
                 "s3_best": "56.597",
                 "elapsed": "5:31:48.675"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:28:09.041",
+      "event_type": {
+        "CarEvent": [
+          "85",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "1:08.908"
             }
           }
         ]
@@ -100289,6 +102501,20 @@
                 "s3_best": "56.920",
                 "elapsed": "5:32:00.156"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:28:16.380",
+      "event_type": {
+        "CarEvent": [
+          "46",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "1:18.734"
             }
           }
         ]
@@ -100429,6 +102655,20 @@
                 "s3_best": "56.619",
                 "elapsed": "5:32:49.479"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:28:38.426",
+      "event_type": {
+        "CarEvent": [
+          "60",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "1:28.791"
             }
           }
         ]
@@ -100597,6 +102837,20 @@
                 "s3_best": "57.146",
                 "elapsed": "5:33:49.871"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:29:43.278",
+      "event_type": {
+        "CarEvent": [
+          "81",
+          {
+            "PitStop": {
+              "lap_number": 101,
+              "pit_duration": "57.102"
             }
           }
         ]
@@ -100799,6 +103053,20 @@
       }
     },
     {
+      "event_time": "5:30:50.192",
+      "event_type": {
+        "CarEvent": [
+          "92",
+          {
+            "PitStop": {
+              "lap_number": 102,
+              "pit_duration": "59.279"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:30:56.080",
       "event_type": {
         "CarEvent": [
@@ -100933,6 +103201,20 @@
                 "s3_best": "56.536",
                 "elapsed": "5:34:48.406"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:31:21.061",
+      "event_type": {
+        "CarEvent": [
+          "95",
+          {
+            "PitStop": {
+              "lap_number": 102,
+              "pit_duration": "1:08.966"
             }
           }
         ]
@@ -102124,6 +104406,20 @@
       }
     },
     {
+      "event_time": "5:35:25.703",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 103,
+              "pit_duration": "1:02.478"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:35:28.225",
       "event_type": {
         "CarEvent": [
@@ -103160,6 +105456,20 @@
       }
     },
     {
+      "event_time": "5:38:03.077",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 104,
+              "pit_duration": "26.008"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:38:05.249",
       "event_type": {
         "CarEvent": [
@@ -103238,6 +105548,20 @@
                 "s3_best": "53.297",
                 "elapsed": "5:41:18.700"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:38:27.112",
+      "event_type": {
+        "CarEvent": [
+          "7",
+          {
+            "PitStop": {
+              "lap_number": 106,
+              "pit_duration": "56.693"
             }
           }
         ]
@@ -104924,6 +107248,20 @@
       }
     },
     {
+      "event_time": "5:42:52.088",
+      "event_type": {
+        "CarEvent": [
+          "93",
+          {
+            "PitStop": {
+              "lap_number": 111,
+              "pit_duration": "40.825"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:42:52.815",
       "event_type": {
         "CarEvent": [
@@ -105652,6 +107990,20 @@
       }
     },
     {
+      "event_time": "5:44:50.301",
+      "event_type": {
+        "CarEvent": [
+          "94",
+          {
+            "PitStop": {
+              "lap_number": 112,
+              "pit_duration": "40.432"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:44:55.961",
       "event_type": {
         "CarEvent": [
@@ -105876,6 +108228,20 @@
       }
     },
     {
+      "event_time": "5:45:48.343",
+      "event_type": {
+        "CarEvent": [
+          "8",
+          {
+            "PitStop": {
+              "lap_number": 112,
+              "pit_duration": "41.418"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:45:55.465",
       "event_type": {
         "CarEvent": [
@@ -105898,6 +108264,20 @@
                 "s3_best": "51.578",
                 "elapsed": "5:48:00.956"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:45:55.465",
+      "event_type": {
+        "CarEvent": [
+          "5",
+          {
+            "PitStop": {
+              "lap_number": 112,
+              "pit_duration": "1:02.257"
             }
           }
         ]
@@ -106464,6 +108844,20 @@
       }
     },
     {
+      "event_time": "5:46:55.397",
+      "event_type": {
+        "CarEvent": [
+          "50",
+          {
+            "PitStop": {
+              "lap_number": 113,
+              "pit_duration": "41.529"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:47:02.879",
       "event_type": {
         "CarEvent": [
@@ -106604,6 +108998,20 @@
       }
     },
     {
+      "event_time": "5:47:24.668",
+      "event_type": {
+        "CarEvent": [
+          "10",
+          {
+            "PitStop": {
+              "lap_number": 108,
+              "pit_duration": "36.912"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:47:27.958",
       "event_type": {
         "CarEvent": [
@@ -106654,6 +109062,20 @@
                 "s3_best": "50.828",
                 "elapsed": "5:49:53.743"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:47:49.513",
+      "event_type": {
+        "CarEvent": [
+          "83",
+          {
+            "PitStop": {
+              "lap_number": 113,
+              "pit_duration": "47.601"
             }
           }
         ]
@@ -107242,6 +109664,20 @@
                 "s3_best": "50.634",
                 "elapsed": "5:50:55.184"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:48:50.678",
+      "event_type": {
+        "CarEvent": [
+          "6",
+          {
+            "PitStop": {
+              "lap_number": 114,
+              "pit_duration": "39.806"
             }
           }
         ]
@@ -108200,6 +110636,20 @@
       }
     },
     {
+      "event_time": "5:51:22.345",
+      "event_type": {
+        "CarEvent": [
+          "51",
+          {
+            "PitStop": {
+              "lap_number": 115,
+              "pit_duration": "37.432"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:51:35.482",
       "event_type": {
         "CarEvent": [
@@ -108418,6 +110868,20 @@
                 "s3_best": "55.005",
                 "elapsed": "5:54:42.906"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:52:27.074",
+      "event_type": {
+        "CarEvent": [
+          "78",
+          {
+            "PitStop": {
+              "lap_number": 110,
+              "pit_duration": "42.597"
             }
           }
         ]
@@ -109090,6 +111554,20 @@
                 "s3_best": "53.621",
                 "elapsed": "5:56:12.953"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:53:57.321",
+      "event_type": {
+        "CarEvent": [
+          "21",
+          {
+            "PitStop": {
+              "lap_number": 111,
+              "pit_duration": "42.652"
             }
           }
         ]
@@ -110020,6 +112498,20 @@
       }
     },
     {
+      "event_time": "5:56:21.356",
+      "event_type": {
+        "CarEvent": [
+          "12",
+          {
+            "PitStop": {
+              "lap_number": 117,
+              "pit_duration": "37.314"
+            }
+          }
+        ]
+      }
+    },
+    {
       "event_time": "5:56:24.039",
       "event_type": {
         "CarEvent": [
@@ -110667,6 +113159,20 @@
                 "s3_best": "50.607",
                 "elapsed": "6:00:00.436"
               }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "event_time": "5:57:56.245",
+      "event_type": {
+        "CarEvent": [
+          "38",
+          {
+            "PitStop": {
+              "lap_number": 118,
+              "pit_duration": "33.331"
             }
           }
         ]
