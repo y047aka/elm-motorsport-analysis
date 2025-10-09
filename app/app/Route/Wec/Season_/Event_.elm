@@ -443,8 +443,11 @@ eventTypeToString eventType =
         CarEvent _ (LapCompleted lap _) ->
             "Lap " ++ String.fromInt lap ++ " Completed"
 
-        CarEvent _ (PitStop _) ->
-            "Pit Stop"
+        CarEvent _ (PitIn _) ->
+            "Pit In"
+
+        CarEvent _ (PitOut _) ->
+            "Pit Out"
 
         CarEvent _ Retirement ->
             "Retirement"
