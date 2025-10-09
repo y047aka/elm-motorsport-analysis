@@ -31,6 +31,7 @@ type EventType
 type CarEventType
     = Start { currentLap : Lap }
     | LapCompleted Int { nextLap : Lap }
+    | PitStop { lapNumber : Int, pitDuration : Duration }
     | Retirement
     | Checkered
 
@@ -177,6 +178,13 @@ carEventTypeDecoder =
             (field "LapCompleted"
                 (Decode.map (\nextLap -> { nextLap = nextLap })
                     (field "next_lap" lapDecoder)
+                )
+            )
+        , Decode.map PitStop
+            (field "PitStop"
+                (Decode.map2 (\lapNumber pitDuration -> { lapNumber = lapNumber, pitDuration = pitDuration })
+                    (field "lap_number" int)
+                    (field "pit_duration" durationDecoder)
                 )
             )
         , Decode.map (\_ -> Retirement)

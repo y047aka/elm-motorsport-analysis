@@ -310,6 +310,9 @@ applyEventToCar event car =
                 , status = Racing
             }
 
+        CarEvent _ (TimelineEvent.PitStop { lapNumber, pitDuration }) ->
+            Car.setStatus InPit car
+
         CarEvent _ TimelineEvent.Retirement ->
             Car.setStatus Retired car
 
@@ -325,6 +328,7 @@ applyEventToCar event car =
                 | currentLap = currentLap
                 , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
                 , currentDriver = currentLap |> Maybe.map .driver
+                , status = Racing
             }
 
 
