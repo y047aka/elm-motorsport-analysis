@@ -16,9 +16,11 @@ import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
+import Json.Decode as Decode
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.LapExtractor as LapExtractor
+import Motorsport.LiveTiming as LiveTiming exposing (ConnectionStatus(..), LiveTimingMessage(..))
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
@@ -53,6 +55,8 @@ type alias Model =
     , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
+    , liveTimingConnection : ConnectionStatus
+    , liveTimingEnabled : Bool
     }
 
 
@@ -75,6 +79,8 @@ init flags maybePagePath =
       , raceControl = RaceControl.placeholder
       , analysis_F1 = Analysis.finished RaceControl.placeholder
       , analysis = Analysis.finished RaceControl.placeholder
+      , liveTimingConnection = Disconnected
+      , liveTimingEnabled = False
       }
     , Effect.none
     )
@@ -93,6 +99,10 @@ type Msg
     | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg RaceControl.Msg
+    | ConnectLiveTiming String
+    | DisconnectLiveTiming
+    | LiveTimingMessageReceived Decode.Value
+    | ToggleLiveTiming
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
@@ -226,6 +236,50 @@ update msg m =
             , Effect.none
             )
 
+        ConnectLiveTiming url ->
+            ( { m | liveTimingConnection = Connecting }
+            , Effect.fromCmd (connectLiveTiming url)
+            )
+
+        DisconnectLiveTiming ->
+            ( { m | liveTimingConnection = Disconnected, liveTimingEnabled = False }
+            , Effect.fromCmd (disconnectLiveTiming ())
+            )
+
+        LiveTimingMessageReceived value ->
+            case Decode.decodeValue LiveTiming.liveTimingMessageDecoder value of
+                Ok (ConnectionStatusChanged status) ->
+                    ( { m | liveTimingConnection = status }
+                    , Effect.none
+                    )
+
+                Ok (LiveUpdate liveData) ->
+                    let
+                        rcNew =
+                            RaceControl.applyLiveUpdate liveData m.raceControl
+                    in
+                    ( { m
+                        | raceControl = rcNew
+                        , analysis = Analysis.fromRaceControl rcNew
+                      }
+                    , Effect.none
+                    )
+
+                Ok (ParseError error) ->
+                    ( { m | liveTimingConnection = Error ("Parse error: " ++ error) }
+                    , Effect.none
+                    )
+
+                Err decodeError ->
+                    ( { m | liveTimingConnection = Error (Decode.errorToString decodeError) }
+                    , Effect.none
+                    )
+
+        ToggleLiveTiming ->
+            ( { m | liveTimingEnabled = not m.liveTimingEnabled }
+            , Effect.none
+            )
+
 
 {-| StartingGridItemからCar型に変換する
 -}
@@ -246,8 +300,12 @@ startingGridItemToCar item =
 
 
 subscriptions : UrlPath -> Model -> Sub Msg
-subscriptions _ _ =
-    Sub.none
+subscriptions _ model =
+    if model.liveTimingEnabled then
+        liveTimingMessage LiveTimingMessageReceived
+
+    else
+        Sub.none
 
 
 data : BackendTask FatalError Data
@@ -282,3 +340,17 @@ view sharedData page model toMsg pageView =
         List.map Html.Styled.toUnstyled
             (globalReset :: pageView.body)
     }
+
+
+
+-- PORTS
+
+
+port connectLiveTiming : String -> Cmd msg
+
+
+port disconnectLiveTiming : () -> Cmd msg
+
+
+port liveTimingMessage : (Decode.Value -> msg) -> Sub msg
+

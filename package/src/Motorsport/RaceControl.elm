@@ -1,4 +1,4 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, fromCars, placeholder, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, applyLiveUpdate, fromCars, placeholder, update)
 
 import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
@@ -7,6 +7,7 @@ import Motorsport.Class as Class
 import Motorsport.Clock as Clock exposing (Model(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
+import Motorsport.LiveTiming exposing (LiveUpdateData, CarUpdate)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
 import Time exposing (Posix, millisToPosix)
@@ -93,6 +94,7 @@ type Msg
     | SetCount Int
     | NextLap
     | PreviousLap
+    | ApplyLiveUpdate LiveUpdateData
 
 
 update : Msg -> Model -> Model
@@ -220,6 +222,9 @@ update msg m =
                         |> updateCars { elapsed = elapsed }
                         |> applyEvents elapsed m.timelineEvents
             }
+
+        ApplyLiveUpdate liveData ->
+            applyLiveUpdate liveData m
 
 
 type alias Clock =
@@ -367,3 +372,65 @@ elapsedAt lapCount lapTimes =
         |> List.minimum
         |> Maybe.map (\elapsed -> elapsed - 1)
         |> Maybe.withDefault 0
+
+
+
+-- LIVE UPDATE
+
+
+{-| Apply live timing update to the race control model
+-}
+applyLiveUpdate : LiveUpdateData -> Model -> Model
+applyLiveUpdate liveData model =
+    let
+        -- Append new timeline events
+        updatedTimelineEvents =
+            model.timelineEvents ++ liveData.newEvents
+
+        -- Update cars with live data
+        updatedCars =
+            NonEmpty.map (applyCarUpdate liveData.updatedCars) model.cars
+                |> applyEvents liveData.raceTime updatedTimelineEvents
+                |> NonEmpty.sortWith
+                    (\a b ->
+                        Maybe.map2 (Lap.compareAt { elapsed = liveData.raceTime }) a.currentLap b.currentLap
+                            |> Maybe.withDefault EQ
+                    )
+
+        -- Calculate new lap count
+        newLapCount =
+            lapAt liveData.raceTime (NonEmpty.map .laps updatedCars)
+    in
+    { model
+        | cars = updatedCars
+        | timelineEvents = updatedTimelineEvents
+        | lapCount = newLapCount
+    }
+
+
+{-| Apply car update to a single car
+-}
+applyCarUpdate : List CarUpdate -> Car -> Car
+applyCarUpdate updates car =
+    case List.Extra.find (\u -> u.carNumber == car.metadata.carNumber) updates of
+        Just update ->
+            { car
+                | currentLap =
+                    case update.currentLap of
+                        Just lap ->
+                            Just lap
+
+                        Nothing ->
+                            car.currentLap
+                , lastLap =
+                    case update.lastCompletedLap of
+                        Just lap ->
+                            Just lap
+
+                        Nothing ->
+                            car.lastLap
+            }
+
+        Nothing ->
+            car
+

@@ -1,12 +1,14 @@
 module Motorsport.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
+    , lapDecoder, durationDecoder
     )
 
 {-|
 
 @docs TimelineEvent, EventType, CarEventType
 @docs decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
+@docs lapDecoder, durationDecoder
 
 -}
 

@@ -21,6 +21,7 @@ import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), Timel
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
+import Motorsport.Widget.LiveTimingControl as LiveTimingControl
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -218,7 +219,17 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { eventSummary, analysis, raceControl } m =
+view app shared m =
+    let
+        eventSummary =
+            shared.eventSummary
+
+        analysis =
+            shared.analysis
+
+        raceControl =
+            shared.raceControl
+    in
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -242,7 +253,7 @@ view app { eventSummary, analysis, raceControl } m =
                     , property "grid-template-rows" "auto auto 1fr"
                     ]
                 ]
-                [ navigation raceControl
+                [ navigation shared raceControl
                 , let
                     viewModel =
                         ViewModel.init raceControl
@@ -318,12 +329,23 @@ view app { eventSummary, analysis, raceControl } m =
         }
 
 
-navigation : RaceControl.Model -> Html Msg
-navigation raceControl =
-    nav
-        [ class "navbar" ]
-        [ div [ class "navbar-start" ]
-            [ ul [ class "menu menu-horizontal px-1" ] <|
+navigation : Shared.Model -> RaceControl.Model -> Html Msg
+navigation shared raceControl =
+    div []
+        [ Html.map SharedMsg
+            (LiveTimingControl.view
+                { connectionStatus = shared.liveTimingConnection
+                , liveTimingEnabled = shared.liveTimingEnabled
+                , onConnect = Shared.ConnectLiveTiming
+                , onDisconnect = Shared.DisconnectLiveTiming
+                , onToggle = Shared.ToggleLiveTiming
+                , websocketUrl = "ws://localhost:8080"
+                }
+            )
+        , nav
+            [ class "navbar" ]
+            [ div [ class "navbar-start" ]
+                [ ul [ class "menu menu-horizontal px-1" ] <|
                 (case raceControl.clock of
                     Initial ->
                         li [] [ button [ class "btn", onClick StartRace ] [ text "Start" ] ]
@@ -346,12 +368,13 @@ navigation raceControl =
                                 , li [] [ button [ class "btn", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ] ]
                                 ]
                        )
-            ]
-        , div [ class "navbar-center" ] [ statusBar raceControl ]
-        , div [ class "navbar-end" ]
-            [ ul [ class "menu menu-horizontal px-1" ]
-                [ li [] [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ] ]
-                , li [] [ button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ] ]
+                ]
+            , div [ class "navbar-center" ] [ statusBar raceControl ]
+            , div [ class "navbar-end" ]
+                [ ul [ class "menu menu-horizontal px-1" ]
+                    [ li [] [ button [ class "btn", onClick (ModeChange Tracker) ] [ text "Tracker" ] ]
+                    , li [] [ button [ class "btn", onClick (ModeChange Events) ] [ text "Events" ] ]
+                    ]
                 ]
             ]
         ]

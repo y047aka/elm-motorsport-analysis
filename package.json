@@ -1,15 +1,21 @@
 {
   "type": "module",
-  "workspaces": ["app", "package", "review"],
+  "workspaces": [
+    "app",
+    "package",
+    "review"
+  ],
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
     "test": "npm run -w package test",
-    "benchmark": "npm run -w cli benchmark"
+    "benchmark": "npm run -w cli benchmark",
+    "mock:live-timing": "node tools/mock-live-timing-server.js --file app/static/wec/2025/fuji_6h.json --laps-file app/static/wec/2025/fuji_6h_laps.json --speed 20"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "elm": "^0.19.1-6",
-    "elm-format": "^0.8.7"
+    "elm-format": "^0.8.7",
+    "ws": "^8.18.3"
   }
 }
