@@ -6,8 +6,8 @@ import { useState, useEffect } from 'react';
 
 // GraphQL Subscription - MATCHED TO OFFICIAL WEC API
 const SESSION_SUBSCRIPTION = gql`
-  subscription SessionUpdated($sessionId: ID!) {
-    sessionUpdated(sessionId: $sessionId) {
+  subscription Session($sessionId: ID!) {
+    session(sessionId: $sessionId) {
       id
       chronoType
       closed
@@ -133,7 +133,9 @@ const getTimingStateClass = (state: string): string => {
 
 export default function TimingTable({ sessionId }: TimingTableProps) {
   const { data, loading, error } = useSubscription(SESSION_SUBSCRIPTION, {
-    variables: { sessionId },
+    variables: {
+      sessionId
+    },
   });
 
   const [elapsedTime, setElapsedTime] = useState('0:00:00');
@@ -142,23 +144,23 @@ export default function TimingTable({ sessionId }: TimingTableProps) {
 
   // Update time displays every second
   useEffect(() => {
-    if (data?.sessionUpdated?.liveStatus) {
-      const { sessionStartTime, finalDurationSeconds } = data.sessionUpdated.liveStatus;
+    if (data?.session?.liveStatus) {
+      const { sessionStartTime, finalDurationSeconds } = data.session.liveStatus;
       const interval = setInterval(() => {
         setElapsedTime(formatElapsedTime(sessionStartTime));
         setRemainingTime(formatRemainingTime(sessionStartTime, finalDurationSeconds));
       }, 1000);
       return () => clearInterval(interval);
     }
-  }, [data?.sessionUpdated?.liveStatus]);
+  }, [data?.session?.liveStatus]);
 
   // Calculate current lap from participants
   useEffect(() => {
-    if (data?.sessionUpdated?.participants && data.sessionUpdated.participants.length > 0) {
-      const maxLaps = Math.max(...data.sessionUpdated.participants.map((p: any) => p.completeLapsCount || 0));
+    if (data?.session?.participants && data.session.participants.length > 0) {
+      const maxLaps = Math.max(...data.session.participants.map((p: any) => p.completeLapsCount || 0));
       setCurrentLap(maxLaps);
     }
-  }, [data?.sessionUpdated?.participants]);
+  }, [data?.session?.participants]);
 
   if (loading) {
     return (
@@ -176,7 +178,7 @@ export default function TimingTable({ sessionId }: TimingTableProps) {
     );
   }
 
-  const session = data?.sessionUpdated;
+  const session = data?.session;
   const weather = session?.weather;
   const liveStatus = session?.liveStatus;
 

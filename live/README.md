@@ -95,34 +95,61 @@ npm run dev:all
 
 ## GraphQL API
 
+### API切り替え（モック ⇔ 公式）
+
+`.env.local` ファイルでエンドポイントを切り替えられます（Git管理対象外）：
+
+#### モックAPIを使用する場合（デフォルト）
+```bash
+NEXT_PUBLIC_GRAPHQL_ENDPOINT=http://localhost:4000/graphql
+NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT=ws://localhost:4000/graphql
+```
+
+#### 公式WEC APIを使用する場合
+```bash
+NEXT_PUBLIC_GRAPHQL_ENDPOINT=https://live-timing-api.sportall.tv/graphql
+NEXT_PUBLIC_GRAPHQL_WS_ENDPOINT=wss://live-timing-api.sportall.tv/graphql
+```
+
+**注意**: 環境変数を変更後は、Next.js開発サーバーの再起動が必要です。
+
 ### エンドポイント
 
+#### モックAPI
 - HTTP: `http://localhost:4000/graphql`
 - WebSocket: `ws://localhost:4000/graphql`
+
+#### 公式WEC API
+- HTTP: `https://live-timing-api.sportall.tv/graphql`
+- WebSocket: `wss://live-timing-api.sportall.tv/graphql`
 
 ### サブスクリプション例
 
 ```graphql
-subscription TimingUpdated($raceId: ID!) {
-  timingUpdated(raceId: $raceId) {
-    raceId
-    laps
-    timeElapsed
-    timeRemaining
-    flagStatus
-    positions {
-      position
+subscription Session($sessionId: ID!) {
+  session(sessionId: $sessionId) {
+    id
+    chronoType
+    participants {
+      id
       number
-      team
-      currentDriver {
+      position
+      driver {
         firstName
         lastName
-        countryCode
       }
-      lastLapTime
-      bestLapTime
-      gapToLeader
-      inPit
+      category {
+        id
+        color
+      }
+      lastLap {
+        timeMilliseconds
+        state
+      }
+      bestLap {
+        timeMilliseconds
+        state
+      }
     }
   }
 }
@@ -131,7 +158,7 @@ subscription TimingUpdated($raceId: ID!) {
 変数：
 ```json
 {
-  "raceId": "qatar-2025"
+  "sessionId": "7606"
 }
 ```
 

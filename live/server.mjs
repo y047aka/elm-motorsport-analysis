@@ -136,7 +136,7 @@ const typeDefs = `
   }
 
   type Subscription {
-    sessionUpdated(sessionId: ID!): Session!
+    session(sessionId: ID!): Session!
   }
 
   type Session {
@@ -262,7 +262,7 @@ const resolvers = {
     }),
   },
   Subscription: {
-    sessionUpdated: {
+    session: {
       subscribe: async function* (_, { sessionId }) {
         while (true) {
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -343,7 +343,7 @@ const resolvers = {
           const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
 
           yield {
-            sessionUpdated: {
+            session: {
               id: sessionId,
               __typename: 'Session',
               chronoType: 'RACE',
