@@ -27,7 +27,7 @@ export default function Home() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-6">
         <div className="bg-gray-900 rounded-lg overflow-hidden shadow-xl">
-          <TimingTable raceId="qatar-2025" />
+          <TimingTable sessionId="7606" />
         </div>
       </main>
 

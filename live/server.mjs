@@ -1,5 +1,6 @@
 /**
  * Standalone GraphQL Mock Server for WEC Live Timing
+ * FULLY MATCHED TO OFFICIAL WEC API STRUCTURE
  * Run with: node server.mjs
  */
 
@@ -9,245 +10,375 @@ import { useServer } from 'graphql-ws/use/ws';
 import { createYoga } from 'graphql-yoga';
 import { makeExecutableSchema } from '@graphql-tools/schema';
 
-// Mock data
+// Mock data - Drivers
 const mockDrivers = [
-  { id: 'd1', firstName: 'Antonio', lastName: 'Fuoco', shortName: 'FUO', countryCode: 'IT', category: 'PLATINUM' },
-  { id: 'd2', firstName: 'Miguel', lastName: 'Molina', shortName: 'MOL', countryCode: 'ES', category: 'GOLD' },
-  { id: 'd3', firstName: 'Nicklas', lastName: 'Nielsen', shortName: 'NIE', countryCode: 'DK', category: 'GOLD' },
-  { id: 'd4', firstName: 'Kamui', lastName: 'Kobayashi', shortName: 'KOB', countryCode: 'JP', category: 'PLATINUM' },
-  { id: 'd5', firstName: 'Nyck', lastName: 'de Vries', shortName: 'DEV', countryCode: 'NL', category: 'PLATINUM' },
-  { id: 'd6', firstName: 'Jose Maria', lastName: 'Lopez', shortName: 'LOP', countryCode: 'AR', category: 'PLATINUM' },
-  { id: 'd7', firstName: 'Kevin', lastName: 'Estre', shortName: 'EST', countryCode: 'FR', category: 'PLATINUM' },
-  { id: 'd8', firstName: 'Andre', lastName: 'Lotterer', shortName: 'LOT', countryCode: 'DE', category: 'PLATINUM' },
-  { id: 'd9', firstName: 'Laurens', lastName: 'Vanthoor', shortName: 'VAN', countryCode: 'BE', category: 'PLATINUM' },
-  { id: 'd10', firstName: 'Paul-Loup', lastName: 'Chatin', shortName: 'CHA', countryCode: 'FR', category: 'GOLD' },
-  { id: 'd11', firstName: 'Ferdinand', lastName: 'Habsburg', shortName: 'HAB', countryCode: 'AT', category: 'GOLD' },
-  { id: 'd12', firstName: 'Charles', lastName: 'Milesi', shortName: 'MIL', countryCode: 'FR', category: 'PLATINUM' },
+  { firstName: 'Antonio', lastName: 'Fuoco' },
+  { firstName: 'Miguel', lastName: 'Molina' },
+  { firstName: 'Nicklas', lastName: 'Nielsen' },
+  { firstName: 'Kamui', lastName: 'Kobayashi' },
+  { firstName: 'Nyck', lastName: 'de Vries' },
+  { firstName: 'Jose Maria', lastName: 'Lopez' },
+  { firstName: 'Kevin', lastName: 'Estre' },
+  { firstName: 'Andre', lastName: 'Lotterer' },
+  { firstName: 'Laurens', lastName: 'Vanthoor' },
+  { firstName: 'Paul-Loup', lastName: 'Chatin' },
+  { firstName: 'Ferdinand', lastName: 'Habsburg' },
+  { firstName: 'Charles', lastName: 'Milesi' },
+  { firstName: 'James', lastName: 'Calado' },
+  { firstName: 'Ross', lastName: 'Gunn' },
 ];
 
-const basePositions = [
-  {
-    position: 1,
-    entryId: 'e50',
-    number: '50',
-    class: 'HYPERCAR',
-    team: 'Ferrari AF Corse',
-    currentDriver: mockDrivers[0],
-    lapsCompleted: 58,
-    lastLapTime: '1:48.234',
-    bestLapTime: '1:47.892',
-    sector1: '32.456',
-    sector2: '41.234',
-    sector3: '34.544',
-    gapToLeader: '-',
-    gapToAhead: '-',
-    intervalToAhead: '-',
-    pitStops: 2,
-    inPit: false,
-    crossing: 'NONE',
-    lastPitTime: '1:23:45',
-    lastPitDuration: '56.2',
-    stintLaps: 18,
-    tireCompound: 'SOFT',
-  },
-  {
-    position: 2,
-    entryId: 'e7',
-    number: '7',
-    class: 'HYPERCAR',
-    team: 'Toyota Gazoo Racing',
-    currentDriver: mockDrivers[3],
-    lapsCompleted: 58,
-    lastLapTime: '1:48.567',
-    bestLapTime: '1:47.945',
-    sector1: '32.567',
-    sector2: '41.345',
-    sector3: '34.655',
-    gapToLeader: '+12.345',
-    gapToAhead: '+12.345',
-    intervalToAhead: '+12.345',
-    pitStops: 2,
-    inPit: false,
-    crossing: 'NONE',
-    lastPitTime: '1:25:12',
-    lastPitDuration: '54.8',
-    stintLaps: 17,
-    tireCompound: 'SOFT',
-  },
-  {
-    position: 3,
-    entryId: 'e6',
-    number: '6',
-    class: 'HYPERCAR',
-    team: 'Porsche Penske Motorsport',
-    currentDriver: mockDrivers[6],
-    lapsCompleted: 58,
-    lastLapTime: '1:48.891',
-    bestLapTime: '1:48.012',
-    sector1: '32.678',
-    sector2: '41.456',
-    sector3: '34.757',
-    gapToLeader: '+28.789',
-    gapToAhead: '+16.444',
-    intervalToAhead: '+16.444',
-    pitStops: 2,
-    inPit: false,
-    crossing: 'NONE',
-    lastPitTime: '1:26:34',
-    lastPitDuration: '57.1',
-    stintLaps: 16,
-    tireCompound: 'MEDIUM',
-  },
-  {
-    position: 4,
-    entryId: 'e35',
-    number: '35',
-    class: 'HYPERCAR',
-    team: 'Alpine Endurance Team',
-    currentDriver: mockDrivers[9],
-    lapsCompleted: 57,
-    lastLapTime: '1:49.234',
-    bestLapTime: '1:48.567',
-    sector1: '32.890',
-    sector2: '41.678',
-    sector3: '34.890',
-    gapToLeader: '+1 LAP',
-    gapToAhead: '+1 LAP',
-    intervalToAhead: '+1 LAP',
-    pitStops: 3,
-    inPit: false,
-    crossing: 'NONE',
-    lastPitTime: '0:45:23',
-    lastPitDuration: '1:12.4',
-    stintLaps: 12,
-    tireCompound: 'SOFT',
-  },
-];
+// Mock data - Categories
+const hypercarCategory = { id: '4167', color: '#e21e19', __typename: 'Category' };
+const lmgt3Category = { id: '4183', color: '#009639', __typename: 'Category' };
 
-let currentLap = 58;
-let raceTime = 12255;
+// Helper: Convert MM:SS.mmm to milliseconds
+const timeToMs = (timeStr) => {
+  const [mins, secs] = timeStr.split(':');
+  return parseInt(mins) * 60000 + parseFloat(secs) * 1000;
+};
 
-const typeDefs = `
-  type Query {
-    liveRace: Race
-  }
-
-  type Subscription {
-    timingUpdated(raceId: ID!): TimingData!
-  }
-
-  type Race {
-    id: ID!
-    name: String!
-    status: String!
-  }
-
-  type TimingData {
-    raceId: ID!
-    laps: Int!
-    timeElapsed: String
-    timeRemaining: String
-    flagStatus: String!
-    positions: [Position!]!
-  }
-
-  type Position {
-    position: Int!
-    entryId: ID!
-    number: String!
-    class: String!
-    team: String!
-    currentDriver: Driver!
-    lapsCompleted: Int!
-    lastLapTime: String
-    bestLapTime: String
-    sector1: String
-    sector2: String
-    sector3: String
-    gapToLeader: String
-    gapToAhead: String
-    intervalToAhead: String
-    pitStops: Int!
-    inPit: Boolean!
-    crossing: String
-    lastPitTime: String
-    lastPitDuration: String
-    stintLaps: Int
-    tireCompound: String
-  }
-
-  type Driver {
-    id: ID!
-    firstName: String!
-    lastName: String!
-    shortName: String
-    countryCode: String!
-    category: String!
-  }
-`;
-
-const formatTime = (seconds) => {
-  const mins = Math.floor(seconds / 60);
-  const secs = (seconds % 60).toFixed(3);
+// Helper: Convert milliseconds to MM:SS.mmm
+const msToTime = (ms) => {
+  const mins = Math.floor(ms / 60000);
+  const secs = ((ms % 60000) / 1000).toFixed(3);
   return `${mins}:${secs.padStart(6, '0')}`;
 };
 
-const formatRaceTime = (seconds) => {
-  const hours = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-};
+// Base participants data
+const baseParticipants = [
+  {
+    id: '105427',
+    number: '7',
+    position: 1,
+    positionInCategory: 1,
+    completeLapsCount: 152,
+    pitStopCount: 5,
+    bestTopSpeedKMH: 282.92,
+    driver: mockDrivers[3],
+    category: hypercarCategory,
+    status: 'OnTrack',
+    isOut: false,
+    hasSeenCheckeredFlag: false,
+    bestLapMs: timeToMs('1:51.517'),
+    lastLapMs: timeToMs('1:54.225'),
+    sector1Ms: timeToMs('0:36.156'),
+    sector2Ms: timeToMs('0:42.475'),
+    sector3Ms: timeToMs('0:35.594'),
+  },
+  {
+    id: '105443',
+    number: '51',
+    position: 2,
+    positionInCategory: 2,
+    completeLapsCount: 152,
+    pitStopCount: 5,
+    bestTopSpeedKMH: 282.19,
+    driver: mockDrivers[12],
+    category: hypercarCategory,
+    status: 'OnTrack',
+    isOut: false,
+    hasSeenCheckeredFlag: false,
+    bestLapMs: timeToMs('1:52.612'),
+    lastLapMs: timeToMs('1:52.783'),
+    sector1Ms: timeToMs('0:35.748'),
+    sector2Ms: timeToMs('0:41.866'),
+    sector3Ms: timeToMs('0:35.169'),
+  },
+  {
+    id: '105426',
+    number: '007',
+    position: 3,
+    positionInCategory: 3,
+    completeLapsCount: 152,
+    pitStopCount: 4,
+    bestTopSpeedKMH: 279.28,
+    driver: mockDrivers[13],
+    category: hypercarCategory,
+    status: 'OnTrack',
+    isOut: false,
+    hasSeenCheckeredFlag: false,
+    bestLapMs: timeToMs('1:52.176'),
+    lastLapMs: timeToMs('1:54.407'),
+    sector1Ms: timeToMs('0:35.958'),
+    sector2Ms: timeToMs('0:42.621'),
+    sector3Ms: timeToMs('0:35.828'),
+  },
+  {
+    id: '105442',
+    number: '50',
+    position: 4,
+    positionInCategory: 4,
+    completeLapsCount: 151,
+    pitStopCount: 6,
+    bestTopSpeedKMH: 280.00,
+    driver: mockDrivers[0],
+    category: hypercarCategory,
+    status: 'OnTrack',
+    isOut: false,
+    hasSeenCheckeredFlag: false,
+    bestLapMs: timeToMs('1:52.164'),
+    lastLapMs: timeToMs('1:54.312'),
+    sector1Ms: timeToMs('0:35.650'),
+    sector2Ms: timeToMs('0:42.150'),
+    sector3Ms: timeToMs('0:34.512'),
+  },
+];
 
+let currentLap = 152;
+let sessionStartTime = Date.now() - (152 * 115000); // Approx 152 laps at ~115s each
+const sessionDuration = 28800; // 8 hours in seconds
+
+// GraphQL Type Definitions - MATCHED TO OFFICIAL WEC API
+const typeDefs = `
+  type Query {
+    session(id: ID!): Session
+  }
+
+  type Subscription {
+    sessionUpdated(sessionId: ID!): Session!
+  }
+
+  type Session {
+    id: ID!
+    chronoType: String!
+    participants: [SessionParticipant!]!
+    weather: Weather!
+    closed: Boolean!
+    liveStatus: SessionStatus!
+    sectorFlags: [SectorFlagDetail!]!
+    startsAt: String!
+    duration: Int!
+  }
+
+  type SessionParticipant {
+    id: ID!
+    number: String!
+    position: Int!
+    positionInCategory: Int!
+    completeLapsCount: Int!
+    pitStopCount: Int!
+    bestTopSpeedKMH: Float!
+    driver: Driver!
+    category: Category!
+    status: ParticipantStatus!
+    isOut: Boolean!
+    hasSeenCheckeredFlag: Boolean!
+    bestLap: Timing!
+    lastLap: Timing!
+    lastCompletedSectors: [CompleteSector!]!
+    previousParticipantGap: DiffGap!
+  }
+
+  type Driver {
+    firstName: String!
+    lastName: String!
+  }
+
+  type Category {
+    id: ID!
+    color: String!
+  }
+
+  enum ParticipantStatus {
+    OnTrack
+    InBox
+    StoppedOnTrack
+  }
+
+  type Timing {
+    timeMilliseconds: Int!
+    state: TimingState!
+  }
+
+  enum TimingState {
+    Neutral
+    PersonalBest
+    OverallBest
+    Invalid
+  }
+
+  type CompleteSector {
+    lapTime: Int!
+    state: TimingState!
+  }
+
+  type DiffGap {
+    type: GapType!
+    lapDifference: Int
+    timeMilliseconds: Int
+  }
+
+  enum GapType {
+    InLapTiming
+    Laps
+  }
+
+  type Weather {
+    ambientTemperatureEx: Temperature!
+    trackTemperatureEx: Temperature!
+    humidityPercent: Int!
+  }
+
+  type Temperature {
+    celsiusDegrees: Float!
+  }
+
+  type SessionStatus {
+    currentFlag: Flag!
+    isSessionRunning: Boolean!
+    stoppedSeconds: Int!
+    sessionStartTime: Float!
+    finalDurationSeconds: Int!
+  }
+
+  type Flag {
+    type: FlagType!
+  }
+
+  enum FlagType {
+    Green
+    Yellow
+    Red
+    SafetyCar
+    VirtualSafetyCar
+  }
+
+  type SectorFlagDetail {
+    sector: Int!
+    type: FlagType!
+  }
+`;
+
+// GraphQL Resolvers
 const resolvers = {
   Query: {
-    liveRace: () => ({
-      id: 'qatar-2025',
-      name: '1812km of Qatar',
-      status: 'RACING',
+    session: (_, { id }) => ({
+      id,
+      chronoType: 'RACE',
+      closed: false,
+      startsAt: new Date(sessionStartTime).toISOString(),
+      duration: sessionDuration,
     }),
   },
   Subscription: {
-    timingUpdated: {
-      subscribe: async function* (_, { raceId }) {
+    sessionUpdated: {
+      subscribe: async function* (_, { sessionId }) {
         while (true) {
           await new Promise(resolve => setTimeout(resolve, 1000));
 
-          raceTime += 1;
+          // Update participants with small variations
+          const participants = baseParticipants.map((p, idx) => {
+            const variation = (Math.random() - 0.5) * 2000; // ±2 seconds
+            const newLastLapMs = p.lastLapMs + variation;
 
-          const positions = basePositions.map((pos, idx) => {
-            const baseTime = 108.5 + (idx * 0.3);
-            const variation = (Math.random() - 0.5) * 0.5;
-            const newLapTime = baseTime + variation;
+            // Randomly update sector times
+            const s1 = p.sector1Ms + (Math.random() - 0.5) * 500;
+            const s2 = p.sector2Ms + (Math.random() - 0.5) * 500;
+            const s3 = p.sector3Ms + (Math.random() - 0.5) * 500;
 
-            const enteringPit = Math.random() < 0.01;
-            const isCurrentlyInPit = pos.inPit;
-            const newInPit = isCurrentlyInPit ? Math.random() > 0.3 : enteringPit;
+            // Determine timing states
+            const lastLapState = newLastLapMs < p.bestLapMs ? 'PersonalBest' : 'Neutral';
+            const isOverallBest = idx === 0 && newLastLapMs < 111000;
+
+            // Calculate gap to previous participant
+            let previousGap;
+            if (idx === 0) {
+              previousGap = {
+                type: 'InLapTiming',
+                lapDifference: null,
+                timeMilliseconds: 0,
+                __typename: 'DiffGap'
+              };
+            } else {
+              const lapDiff = baseParticipants[0].completeLapsCount - p.completeLapsCount;
+              if (lapDiff > 0) {
+                previousGap = {
+                  type: 'Laps',
+                  lapDifference: lapDiff,
+                  timeMilliseconds: null,
+                  __typename: 'DiffGap'
+                };
+              } else {
+                previousGap = {
+                  type: 'InLapTiming',
+                  lapDifference: null,
+                  timeMilliseconds: Math.floor((idx + 1) * 25000 + Math.random() * 5000),
+                  __typename: 'DiffGap'
+                };
+              }
+            }
 
             return {
-              ...pos,
-              lastLapTime: formatTime(newLapTime),
-              sector1: formatTime(newLapTime * 0.3),
-              sector2: formatTime(newLapTime * 0.38),
-              sector3: formatTime(newLapTime * 0.32),
-              inPit: newInPit,
-              crossing: newInPit ? 'CROSSING_FINISH_LINE_IN_PIT' : 'NONE',
-              stintLaps: newInPit ? 0 : (pos.stintLaps || 0) + 1,
+              ...p,
+              __typename: 'SessionParticipant',
+              driver: {
+                ...p.driver,
+                __typename: 'Driver'
+              },
+              bestLap: {
+                timeMilliseconds: Math.floor(p.bestLapMs),
+                state: isOverallBest ? 'OverallBest' : 'Neutral',
+                __typename: 'Timing'
+              },
+              lastLap: {
+                timeMilliseconds: Math.floor(newLastLapMs),
+                state: lastLapState,
+                __typename: 'Timing'
+              },
+              lastCompletedSectors: [
+                { lapTime: Math.floor(s1), state: 'Neutral', __typename: 'CompleteSector' },
+                { lapTime: Math.floor(s2), state: 'Neutral', __typename: 'CompleteSector' },
+                { lapTime: Math.floor(s3), state: s3 < p.sector3Ms ? 'PersonalBest' : 'Neutral', __typename: 'CompleteSector' },
+              ],
+              previousParticipantGap: previousGap,
             };
           });
 
-          if (raceTime % 110 === 0) {
+          // Increment lap occasionally
+          if (Math.random() < 0.05) {
             currentLap++;
           }
 
+          const elapsedSeconds = Math.floor((Date.now() - sessionStartTime) / 1000);
+
           yield {
-            timingUpdated: {
-              raceId,
-              laps: currentLap,
-              timeElapsed: formatRaceTime(raceTime),
-              timeRemaining: formatRaceTime(21600 - raceTime),
-              flagStatus: 'RACING',
-              positions,
+            sessionUpdated: {
+              id: sessionId,
+              __typename: 'Session',
+              chronoType: 'RACE',
+              participants,
+              weather: {
+                ambientTemperatureEx: {
+                  celsiusDegrees: 25.9,
+                  __typename: 'Temperature'
+                },
+                trackTemperatureEx: {
+                  celsiusDegrees: 27.0,
+                  __typename: 'Temperature'
+                },
+                humidityPercent: 61,
+                __typename: 'Weather'
+              },
+              closed: false,
+              liveStatus: {
+                currentFlag: {
+                  type: 'Green',
+                  __typename: 'Flag'
+                },
+                isSessionRunning: true,
+                stoppedSeconds: 0,
+                sessionStartTime: sessionStartTime,
+                finalDurationSeconds: sessionDuration,
+                __typename: 'SessionStatus'
+              },
+              sectorFlags: [
+                { sector: 1, type: 'Green', __typename: 'SectorFlagDetail' },
+                { sector: 2, type: 'Green', __typename: 'SectorFlagDetail' },
+                { sector: 3, type: 'Green', __typename: 'SectorFlagDetail' },
+              ],
+              startsAt: new Date(sessionStartTime).toISOString(),
+              duration: sessionDuration,
             },
           };
         }
@@ -280,6 +411,8 @@ useServer({ schema }, wsServer);
 const port = 4000;
 httpServer.listen(port, () => {
   console.log(`🏁 WEC Mock GraphQL Server running on http://localhost:${port}/graphql`);
-  console.log(`🔴 Live timing updates available via WebSocket subscriptions`);
+  console.log(`🔴 Official API structure - FULLY MATCHED`);
   console.log(`   WebSocket endpoint: ws://localhost:${port}/graphql`);
+  console.log(`\n📋 Use this subscription:`);
+  console.log(`   subscription { sessionUpdated(sessionId: "7606") { id participants { number position driver { firstName lastName } } } }`);
 });
