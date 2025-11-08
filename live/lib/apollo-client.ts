@@ -50,13 +50,16 @@ export function createApolloClient() {
       typePolicies: {
         Query: {
           fields: {
-            liveRace: {
+            session: {
               merge: true,
             },
           },
         },
-        TimingData: {
+        Session: {
           merge: true,
+        },
+        SessionParticipant: {
+          keyFields: ['id'],
         },
       },
     }),

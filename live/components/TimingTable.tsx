@@ -4,75 +4,161 @@ import { useSubscription } from '@apollo/client/react';
 import { gql } from '@apollo/client';
 import { useState, useEffect } from 'react';
 
-const TIMING_SUBSCRIPTION = gql`
-  subscription TimingUpdated($raceId: ID!) {
-    timingUpdated(raceId: $raceId) {
-      raceId
-      laps
-      timeElapsed
-      timeRemaining
-      flagStatus
-      positions {
-        position
-        entryId
+// GraphQL Subscription - MATCHED TO OFFICIAL WEC API
+const SESSION_SUBSCRIPTION = gql`
+  subscription SessionUpdated($sessionId: ID!) {
+    sessionUpdated(sessionId: $sessionId) {
+      id
+      chronoType
+      closed
+      startsAt
+      duration
+      weather {
+        ambientTemperatureEx {
+          celsiusDegrees
+        }
+        trackTemperatureEx {
+          celsiusDegrees
+        }
+        humidityPercent
+      }
+      liveStatus {
+        currentFlag {
+          type
+        }
+        isSessionRunning
+        stoppedSeconds
+        sessionStartTime
+        finalDurationSeconds
+      }
+      sectorFlags {
+        sector
+        type
+      }
+      participants {
+        id
         number
-        class
-        team
-        currentDriver {
+        position
+        positionInCategory
+        completeLapsCount
+        pitStopCount
+        bestTopSpeedKMH
+        driver {
           firstName
           lastName
-          shortName
-          countryCode
         }
-        lapsCompleted
-        lastLapTime
-        bestLapTime
-        sector1
-        sector2
-        sector3
-        gapToLeader
-        gapToAhead
-        intervalToAhead
-        pitStops
-        inPit
-        crossing
-        lastPitTime
-        lastPitDuration
-        stintLaps
-        tireCompound
+        category {
+          id
+          color
+        }
+        status
+        isOut
+        hasSeenCheckeredFlag
+        bestLap {
+          timeMilliseconds
+          state
+        }
+        lastLap {
+          timeMilliseconds
+          state
+        }
+        lastCompletedSectors {
+          lapTime
+          state
+        }
+        previousParticipantGap {
+          type
+          lapDifference
+          timeMilliseconds
+        }
       }
     }
   }
 `;
 
 interface TimingTableProps {
-  raceId: string;
+  sessionId: string;
 }
 
-export default function TimingTable({ raceId }: TimingTableProps) {
-  const { data, loading, error } = useSubscription(TIMING_SUBSCRIPTION, {
-    variables: { raceId },
+// Helper: Convert milliseconds to MM:SS.mmm
+const msToTime = (ms: number): string => {
+  const mins = Math.floor(ms / 60000);
+  const secs = ((ms % 60000) / 1000).toFixed(3);
+  return `${mins}:${secs.padStart(6, '0')}`;
+};
+
+// Helper: Format gap display
+const formatGap = (gap: any): string => {
+  if (gap.type === 'Laps') {
+    return gap.lapDifference === 1 ? '+1 LAP' : `+${gap.lapDifference} LAPS`;
+  } else if (gap.type === 'InLapTiming') {
+    if (gap.timeMilliseconds === 0) return '-';
+    return `+${msToTime(gap.timeMilliseconds)}`;
+  }
+  return '-';
+};
+
+// Helper: Format elapsed time from timestamp
+const formatElapsedTime = (startTime: number): string => {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const hours = Math.floor(elapsed / 3600);
+  const mins = Math.floor((elapsed % 3600) / 60);
+  const secs = elapsed % 60;
+  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Helper: Format remaining time
+const formatRemainingTime = (startTime: number, duration: number): string => {
+  const elapsed = Math.floor((Date.now() - startTime) / 1000);
+  const remaining = Math.max(0, duration - elapsed);
+  const hours = Math.floor(remaining / 3600);
+  const mins = Math.floor((remaining % 3600) / 60);
+  const secs = remaining % 60;
+  return `${hours}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
+
+// Helper: Get timing state color class
+const getTimingStateClass = (state: string): string => {
+  switch (state) {
+    case 'OverallBest':
+      return 'text-purple-400 font-bold';
+    case 'PersonalBest':
+      return 'text-green-400 font-bold';
+    case 'Invalid':
+      return 'text-gray-600';
+    default:
+      return 'text-gray-300';
+  }
+};
+
+export default function TimingTable({ sessionId }: TimingTableProps) {
+  const { data, loading, error } = useSubscription(SESSION_SUBSCRIPTION, {
+    variables: { sessionId },
   });
 
-  const [highlightedRows, setHighlightedRows] = useState<Set<string>>(new Set());
+  const [elapsedTime, setElapsedTime] = useState('0:00:00');
+  const [remainingTime, setRemainingTime] = useState('0:00:00');
+  const [currentLap, setCurrentLap] = useState(0);
 
-  // Highlight rows when position changes
+  // Update time displays every second
   useEffect(() => {
-    if (data?.timingUpdated?.positions) {
-      const newHighlights = new Set<string>();
-      data.timingUpdated.positions.forEach((pos: any) => {
-        if (pos.crossing !== 'NONE') {
-          newHighlights.add(pos.entryId);
-        }
-      });
-      setHighlightedRows(newHighlights);
-
-      // Clear highlights after 2 seconds
-      if (newHighlights.size > 0) {
-        setTimeout(() => setHighlightedRows(new Set()), 2000);
-      }
+    if (data?.sessionUpdated?.liveStatus) {
+      const { sessionStartTime, finalDurationSeconds } = data.sessionUpdated.liveStatus;
+      const interval = setInterval(() => {
+        setElapsedTime(formatElapsedTime(sessionStartTime));
+        setRemainingTime(formatRemainingTime(sessionStartTime, finalDurationSeconds));
+      }, 1000);
+      return () => clearInterval(interval);
     }
-  }, [data]);
+  }, [data?.sessionUpdated?.liveStatus]);
+
+  // Calculate current lap from participants
+  useEffect(() => {
+    if (data?.sessionUpdated?.participants && data.sessionUpdated.participants.length > 0) {
+      const maxLaps = Math.max(...data.sessionUpdated.participants.map((p: any) => p.completeLapsCount || 0));
+      setCurrentLap(maxLaps);
+    }
+  }, [data?.sessionUpdated?.participants]);
 
   if (loading) {
     return (
@@ -90,7 +176,9 @@ export default function TimingTable({ raceId }: TimingTableProps) {
     );
   }
 
-  const timingData = data?.timingUpdated;
+  const session = data?.sessionUpdated;
+  const weather = session?.weather;
+  const liveStatus = session?.liveStatus;
 
   return (
     <div className="timing-table">
@@ -98,28 +186,44 @@ export default function TimingTable({ raceId }: TimingTableProps) {
       <div className="bg-gray-900 border-b border-gray-800 p-4 flex justify-between items-center sticky top-0 z-10">
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2">
-            <span className="live-indicator w-3 h-3 bg-red-600 rounded-full"></span>
-            <span className="text-red-600 font-bold uppercase text-sm">Live</span>
+            {liveStatus?.isSessionRunning && (
+              <>
+                <span className="live-indicator w-3 h-3 bg-red-600 rounded-full"></span>
+                <span className="text-red-600 font-bold uppercase text-sm">Live</span>
+              </>
+            )}
           </div>
           <div className="text-sm text-gray-400">
-            Lap <span className="text-white font-bold">{timingData?.laps || 0}</span>
+            Lap <span className="text-white font-bold">{currentLap}</span>
           </div>
           <div className="text-sm text-gray-400">
-            Elapsed: <span className="text-white font-mono">{timingData?.timeElapsed || '0:00:00'}</span>
+            Elapsed: <span className="text-white font-mono">{elapsedTime}</span>
           </div>
           <div className="text-sm text-gray-400">
-            Remaining: <span className="text-white font-mono">{timingData?.timeRemaining || '0:00:00'}</span>
+            Remaining: <span className="text-white font-mono">{remainingTime}</span>
           </div>
+          {weather && (
+            <>
+              <div className="text-sm text-gray-400">
+                Air: <span className="text-white">{weather.ambientTemperatureEx.celsiusDegrees.toFixed(1)}°C</span>
+              </div>
+              <div className="text-sm text-gray-400">
+                Track: <span className="text-white">{weather.trackTemperatureEx.celsiusDegrees.toFixed(1)}°C</span>
+              </div>
+            </>
+          )}
         </div>
         <div className="flex items-center space-x-2">
-          <div className={`px-3 py-1 rounded text-sm font-bold ${
-            timingData?.flagStatus === 'RACING' ? 'bg-green-600' :
-            timingData?.flagStatus === 'YELLOW_FLAG' ? 'bg-yellow-500 text-black' :
-            timingData?.flagStatus === 'RED_FLAG' ? 'bg-red-600' :
-            'bg-gray-600'
-          }`}>
-            {timingData?.flagStatus?.replace(/_/g, ' ') || 'UNKNOWN'}
-          </div>
+          {liveStatus?.currentFlag && (
+            <div className={`px-3 py-1 rounded text-sm font-bold ${
+              liveStatus.currentFlag.type === 'Green' ? 'bg-green-600' :
+              liveStatus.currentFlag.type === 'Yellow' ? 'bg-yellow-500 text-black' :
+              liveStatus.currentFlag.type === 'Red' ? 'bg-red-600' :
+              'bg-gray-600'
+            }`}>
+              {liveStatus.currentFlag.type.replace(/_/g, ' ')}
+            </div>
+          )}
         </div>
       </div>
 
@@ -129,9 +233,8 @@ export default function TimingTable({ raceId }: TimingTableProps) {
           <thead className="bg-gray-900 border-b border-gray-800 sticky top-16 z-10">
             <tr className="text-left text-gray-400 uppercase text-xs">
               <th className="p-3 font-semibold">Pos</th>
+              <th className="p-3 font-semibold">PiC</th>
               <th className="p-3 font-semibold">No</th>
-              <th className="p-3 font-semibold">Class</th>
-              <th className="p-3 font-semibold">Team</th>
               <th className="p-3 font-semibold">Driver</th>
               <th className="p-3 font-semibold text-right">Laps</th>
               <th className="p-3 font-semibold text-right">Last Lap</th>
@@ -140,71 +243,77 @@ export default function TimingTable({ raceId }: TimingTableProps) {
               <th className="p-3 font-semibold text-right">S2</th>
               <th className="p-3 font-semibold text-right">S3</th>
               <th className="p-3 font-semibold text-right">Gap</th>
-              <th className="p-3 font-semibold text-right">Int</th>
               <th className="p-3 font-semibold text-center">Pits</th>
+              <th className="p-3 font-semibold text-right">Top Speed</th>
               <th className="p-3 font-semibold text-center">Status</th>
             </tr>
           </thead>
           <tbody>
-            {timingData?.positions?.map((position: any) => (
+            {session?.participants?.map((participant: any) => (
               <tr
-                key={position.entryId}
+                key={participant.id}
                 className={`timing-row border-b border-gray-800 ${
-                  highlightedRows.has(position.entryId) ? 'bg-blue-900/30' : ''
-                } ${position.inPit ? 'bg-yellow-900/20' : ''}`}
+                  participant.status === 'InBox' ? 'bg-yellow-900/20' : ''
+                } ${participant.isOut ? 'opacity-60' : ''}`}
               >
-                <td className="p-3 font-bold text-lg">{position.position}</td>
+                <td className="p-3 font-bold text-lg">{participant.position}</td>
+                <td className="p-3 text-gray-400">{participant.positionInCategory}</td>
                 <td className="p-3">
-                  <div className="flex items-center space-x-2">
-                    <span className={`font-bold text-lg ${
-                      position.class === 'HYPERCAR' ? 'text-red-500' :
-                      position.class === 'LMP2' ? 'text-blue-500' :
-                      position.class === 'LMGT3' ? 'text-green-500' :
-                      'text-gray-400'
-                    }`}>
-                      {position.number}
-                    </span>
-                  </div>
-                </td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded text-xs font-bold ${
-                    position.class === 'HYPERCAR' ? 'bg-red-900 text-red-200' :
-                    position.class === 'LMP2' ? 'bg-blue-900 text-blue-200' :
-                    position.class === 'LMGT3' ? 'bg-green-900 text-green-200' :
-                    'bg-gray-700 text-gray-300'
-                  }`}>
-                    {position.class}
+                  <span
+                    className="font-bold text-lg"
+                    style={{ color: participant.category.color }}
+                  >
+                    {participant.number}
                   </span>
                 </td>
-                <td className="p-3 text-gray-300">{position.team}</td>
                 <td className="p-3">
-                  <div className="flex items-center space-x-2">
-                    <img
-                      src={`https://flagsapi.com/${position.currentDriver.countryCode}/flat/24.png`}
-                      alt={position.currentDriver.countryCode}
-                      className="w-6 h-4 object-cover rounded"
-                    />
-                    <span className="font-medium">
-                      {position.currentDriver.shortName ||
-                       `${position.currentDriver.firstName[0]}. ${position.currentDriver.lastName}`}
-                    </span>
+                  <div className="font-medium">
+                    {participant.driver.firstName} {participant.driver.lastName}
                   </div>
                 </td>
-                <td className="p-3 text-right font-mono">{position.lapsCompleted}</td>
-                <td className="p-3 text-right font-mono text-gray-300">{position.lastLapTime || '-'}</td>
-                <td className="p-3 text-right font-mono text-purple-400 font-bold">
-                  {position.bestLapTime || '-'}
+                <td className="p-3 text-right font-mono">{participant.completeLapsCount}</td>
+                <td className={`p-3 text-right font-mono ${getTimingStateClass(participant.lastLap.state)}`}>
+                  {msToTime(participant.lastLap.timeMilliseconds)}
                 </td>
-                <td className="p-3 text-right font-mono text-sm text-gray-400">{position.sector1 || '-'}</td>
-                <td className="p-3 text-right font-mono text-sm text-gray-400">{position.sector2 || '-'}</td>
-                <td className="p-3 text-right font-mono text-sm text-gray-400">{position.sector3 || '-'}</td>
-                <td className="p-3 text-right font-mono text-gray-300">{position.gapToLeader || '-'}</td>
-                <td className="p-3 text-right font-mono text-gray-400">{position.intervalToAhead || '-'}</td>
-                <td className="p-3 text-center font-mono">{position.pitStops}</td>
+                <td className={`p-3 text-right font-mono ${getTimingStateClass(participant.bestLap.state)}`}>
+                  {msToTime(participant.bestLap.timeMilliseconds)}
+                </td>
+                <td className={`p-3 text-right font-mono text-sm ${
+                  participant.lastCompletedSectors[0] ? getTimingStateClass(participant.lastCompletedSectors[0].state) : 'text-gray-400'
+                }`}>
+                  {participant.lastCompletedSectors[0] ? msToTime(participant.lastCompletedSectors[0].lapTime) : '-'}
+                </td>
+                <td className={`p-3 text-right font-mono text-sm ${
+                  participant.lastCompletedSectors[1] ? getTimingStateClass(participant.lastCompletedSectors[1].state) : 'text-gray-400'
+                }`}>
+                  {participant.lastCompletedSectors[1] ? msToTime(participant.lastCompletedSectors[1].lapTime) : '-'}
+                </td>
+                <td className={`p-3 text-right font-mono text-sm ${
+                  participant.lastCompletedSectors[2] ? getTimingStateClass(participant.lastCompletedSectors[2].state) : 'text-gray-400'
+                }`}>
+                  {participant.lastCompletedSectors[2] ? msToTime(participant.lastCompletedSectors[2].lapTime) : '-'}
+                </td>
+                <td className="p-3 text-right font-mono text-gray-300">
+                  {formatGap(participant.previousParticipantGap)}
+                </td>
+                <td className="p-3 text-center font-mono">{participant.pitStopCount}</td>
+                <td className="p-3 text-right font-mono text-sm text-gray-400">
+                  {participant.bestTopSpeedKMH.toFixed(1)}
+                </td>
                 <td className="p-3 text-center">
-                  {position.inPit && (
+                  {participant.status === 'InBox' && (
                     <span className="px-2 py-1 bg-yellow-600 text-black rounded text-xs font-bold">
                       PIT
+                    </span>
+                  )}
+                  {participant.status === 'StoppedOnTrack' && (
+                    <span className="px-2 py-1 bg-red-600 text-white rounded text-xs font-bold">
+                      OUT
+                    </span>
+                  )}
+                  {participant.isOut && (
+                    <span className="px-2 py-1 bg-gray-700 text-gray-300 rounded text-xs font-bold">
+                      DNF
                     </span>
                   )}
                 </td>
