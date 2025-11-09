@@ -2,7 +2,7 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, width, zero)
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, zero)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -27,7 +27,6 @@ import Shared
 import String exposing (dropRight)
 import Task
 import Time
-import UI.HalfModal as HalfModal
 import UrlPath exposing (UrlPath)
 import View exposing (View)
 
@@ -76,7 +75,6 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , eventsState : DataView.Model
     , query : String
-    , isLeaderboardModalOpen : Bool
     , compare : CompareWidget.Model
     }
 
@@ -104,7 +102,6 @@ init app shared =
                        )
                 )
       , query = ""
-      , isLeaderboardModalOpen = False
       , compare = CompareWidget.init
       }
     , Effect.fromCmd
@@ -126,7 +123,6 @@ type Msg
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
-    | ToggleLeaderboardModal
     | CompareWidgetMsg CompareWidget.Msg
 
 
@@ -161,12 +157,6 @@ update app shared msg m =
 
         EventsMsg eventsMsg ->
             ( { m | eventsState = DataView.update eventsMsg m.eventsState }
-            , Effect.none
-            , Nothing
-            )
-
-        ToggleLeaderboardModal ->
-            ( { m | isLeaderboardModalOpen = not m.isLeaderboardModalOpen }
             , Effect.none
             , Nothing
             )
@@ -286,26 +276,28 @@ view app { eventSummary, analysis, raceControl } m =
                                 , div
                                     [ css
                                         [ property "display" "grid"
-                                        , property "grid-template-rows" "1fr 350px"
-                                        , property "place-items" "center"
+                                        , property "grid-template-rows" "1fr auto"
+                                        , property "height" "100%"
+                                        , property "overflow" "hidden"
                                         ]
                                     ]
-                                    [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel
-                                    , div
+                                    [ div
                                         [ css
-                                            [ property "position" "relative"
-                                            , width (pct 100)
-                                            , height (pct 100)
+                                            [ property "display" "grid"
+                                            , property "place-items" "center"
+                                            , property "overflow" "hidden"
                                             ]
                                         ]
-                                        [ HalfModal.view
-                                            { isOpen = m.isLeaderboardModalOpen
-                                            , onToggle = ToggleLeaderboardModal
-                                            , children =
-                                                [ Html.map CompareWidgetMsg <|
-                                                    Lazy.lazy2 CompareWidget.view compareProps m.compare
-                                                ]
-                                            }
+                                        [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
+                                    , div
+                                        [ class "card card-sm"
+                                        , css [ property "background-color" "var(--widget-bg)" ]
+                                        ]
+                                        [ div
+                                            [ class "card-body" ]
+                                            [ Html.map CompareWidgetMsg <|
+                                                Lazy.lazy2 CompareWidget.view compareProps m.compare
+                                            ]
                                         ]
                                     ]
                                 ]

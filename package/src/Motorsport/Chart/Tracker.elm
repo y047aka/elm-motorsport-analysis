@@ -49,15 +49,15 @@ constants =
     , track =
         { cx = size / 2
         , cy = size / 2
-        , r = 450
+        , r = 400
         , trackWidth = 8
         , startFinishLineExtension = 20
         , startFinishLineStrokeWidth = 4
         , sectorBoundaryOffset = 10
         , sectorBoundaryStrokeWidth = 4
-        , sectorLabelRadius = 480
+        , sectorLabelRadius = 430
         , sectorLabelFontSize = 20
-        , miniSectorLabelRadius = 420
+        , miniSectorLabelRadius = 370
         , miniSectorLabelFontSize = 12
         }
     , car = { size = 15 }

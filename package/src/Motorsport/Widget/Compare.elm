@@ -105,59 +105,69 @@ view props model =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr 1fr"
+            , property "grid-template-rows" "auto auto"
+            , property "row-gap" "16px"
+            ]
+        ]
+        [ carInfoRow props carA carB
+        , chartsRow props carA carB
+        ]
+
+
+carInfoRow : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html Msg
+carInfoRow props carA carB =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "1fr 1fr"
             , property "column-gap" "16px"
             ]
         ]
-        [ div [ css [ property "grid-column" "1" ] ]
-            [ detailColumn "Car A" ClearCarA props carA ]
-        , div
-            [ css
-                [ property "grid-column" "2"
-                , property "display" "grid"
-                , property "align-items" "start"
-                , property "row-gap" "16px"
-                ]
-            ]
-            (middleColumnContents props carA carB)
-        , div [ css [ property "grid-column" "3" ] ]
-            [ detailColumn "Car B" ClearCarB props carB ]
+        [ detailColumn "Car A" ClearCarA props carA
+        , detailColumn "Car B" ClearCarB props carB
         ]
 
 
-middleColumnContents : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> List (Html Msg)
-middleColumnContents props carA carB =
-    [ PositionProgression.view
-        props.clock
-        props.viewModel
-        carA
-        carB
-    , LapTimeProgression.view
-        props.clock
-        props.viewModel
-        carA
-        carB
-    , case ( carA, carB ) of
-        ( Just itemA, Just itemB ) ->
-            [ itemA, itemB ]
-                |> List.sortBy .position
-                |> NonEmpty.fromList
-                |> Maybe.map
-                    (\cars ->
-                        let
-                            leader =
-                                NonEmpty.head cars
-                        in
-                        CloseBattles.closeBattleItem
-                            { cars = cars
-                            , position = leader.position
-                            }
-                    )
-                |> Maybe.withDefault (text "")
+chartsRow : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html Msg
+chartsRow props carA carB =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "1fr 1fr 1fr"
+            , property "column-gap" "12px"
+            ]
+        ]
+        [ PositionProgression.view
+            props.clock
+            props.viewModel
+            carA
+            carB
+        , LapTimeProgression.view
+            props.clock
+            props.viewModel
+            carA
+            carB
+        , case ( carA, carB ) of
+            ( Just itemA, Just itemB ) ->
+                [ itemA, itemB ]
+                    |> List.sortBy .position
+                    |> NonEmpty.fromList
+                    |> Maybe.map
+                        (\cars ->
+                            let
+                                leader =
+                                    NonEmpty.head cars
+                            in
+                            CloseBattles.closeBattleItem
+                                { cars = cars
+                                , position = leader.position
+                                }
+                        )
+                    |> Maybe.withDefault (text "")
 
-        _ ->
-            text ""
-    ]
+            _ ->
+                text ""
+        ]
 
 
 detailColumn : String -> Msg -> Props -> Maybe ViewModelItem -> Html Msg
