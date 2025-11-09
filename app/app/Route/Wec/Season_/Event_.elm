@@ -267,7 +267,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ css
                                     [ height (pct 100)
                                     , property "display" "grid"
-                                    , property "grid-template-columns" "370px 1fr"
+                                    , property "grid-template-columns" "390px 1fr"
                                     ]
                                 ]
                                 [ div
@@ -442,6 +442,12 @@ eventTypeToString eventType =
 
         CarEvent _ (LapCompleted lap _) ->
             "Lap " ++ String.fromInt lap ++ " Completed"
+
+        CarEvent _ (PitIn _) ->
+            "Pit In"
+
+        CarEvent _ (PitOut _) ->
+            "Pit Out"
 
         CarEvent _ Retirement ->
             "Retirement"

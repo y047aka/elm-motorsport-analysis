@@ -7,6 +7,7 @@ import Html.Styled.Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
+import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -45,7 +46,7 @@ carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
 carRow season onSelect item =
     li
         [ onClick (onSelect item)
-        , class "list-row p-2 grid-cols-[20px_30px_1fr_auto] items-center gap-2"
+        , class "list-row p-2 grid-cols-[20px_30px_1fr_auto_24px] items-center gap-2"
         , css
             [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ]
             , property "cursor" "pointer"
@@ -66,4 +67,11 @@ carRow season onSelect item =
             ]
         , div [ class "text-xs text-right" ]
             [ text (Gap.toString item.timing.interval) ]
+        , if item.status == Car.InPit then
+            div
+                [ class "w-5 h-5 rounded-full border border-white-500 flex items-center justify-center text-white text-[10px] font-bold" ]
+                [ text "P" ]
+
+          else
+            text ""
         ]

@@ -784,7 +784,7 @@ fn process_laps(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
         // ミニセクター情報を作成（ベストタイム付き）
         let mini_sectors = build_mini_sectors_with_bests(csv_row, &mini_sector_bests);
 
-        // 新しいLapを作成（ベストタイムとミニセクター情報を設定）
+        // 新しいLapを作成（ベストタイムとミニセクター情報とピット時間を設定）
         let processed_lap = Lap::new_with_mini_sectors(
             lap.car_number.clone(),
             lap.driver.clone(),
@@ -799,6 +799,7 @@ fn process_laps(mut laps_with_metadata: Vec<LapWithMetadata>) -> Vec<Lap> {
             best_s2.unwrap_or(0), // s2_best field
             best_s3.unwrap_or(0), // s3_best field
             lap.elapsed,
+            csv_row.pit_time, // ピット時間を追加
             mini_sectors,
         );
 

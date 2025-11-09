@@ -310,6 +310,12 @@ applyEventToCar event car =
                 , status = Racing
             }
 
+        CarEvent _ (TimelineEvent.PitIn { lapNumber, duration }) ->
+            Car.setStatus InPit car
+
+        CarEvent _ (TimelineEvent.PitOut { lapNumber, duration }) ->
+            Car.setStatus Racing car
+
         CarEvent _ TimelineEvent.Retirement ->
             Car.setStatus Retired car
 

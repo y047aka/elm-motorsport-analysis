@@ -20,6 +20,15 @@ where
     serializer.serialize_str(&formatted_time)
 }
 
+/// durationをduration::to_stringを使って整形してシリアライズする
+fn serialize_duration<S>(duration: &Duration, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let formatted_duration = duration::to_string(*duration);
+    serializer.serialize_str(&formatted_duration)
+}
+
 /// イベントタイプ
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum EventType {
@@ -27,11 +36,29 @@ pub enum EventType {
     CarEvent(CarNumber, CarEventType),
 }
 
+/// ピットインイベントの詳細データ
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct PitInEvent {
+    pub lap_number: u32,
+    #[serde(serialize_with = "serialize_duration")]
+    pub duration: Duration,
+}
+
+/// ピットアウトイベントの詳細データ
+#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+pub struct PitOutEvent {
+    pub lap_number: u32,
+    #[serde(serialize_with = "serialize_duration")]
+    pub duration: Duration,
+}
+
 /// 車両イベントタイプ
 #[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
 pub enum CarEventType {
     Start { current_lap: Lap },
     LapCompleted { lap_number: u32, next_lap: Lap },
+    PitIn(PitInEvent),
+    PitOut(PitOutEvent),
     Retirement,
     Checkered,
 }
@@ -64,12 +91,15 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
     // 各車の1周目開始（Startイベント）
     for car in cars {
         if let Some(first_lap) = car.laps.first() {
+            let mut current_lap = first_lap.clone();
+            // Startイベントではpit_timeを出力しない
+            current_lap.pit_time = None;
             events.push(TimelineEvent {
                 event_time: 0,
                 event_type: EventType::CarEvent(
                     car.meta_data.car_number.clone(),
                     CarEventType::Start {
-                        current_lap: first_lap.clone(),
+                        current_lap,
                     },
                 ),
             });
@@ -81,7 +111,9 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
         for (i, lap) in car.laps.iter().enumerate() {
             // 最終周でない場合のみLapCompletedイベントを生成
             if i + 1 < car.laps.len() {
-                let next_lap = car.laps[i + 1].clone();
+                let mut next_lap = car.laps[i + 1].clone();
+                // LapCompletedイベントではpit_timeを出力しない
+                next_lap.pit_time = None;
                 events.push(TimelineEvent {
                     event_time: lap.elapsed,
                     event_type: EventType::CarEvent(
@@ -90,6 +122,40 @@ pub fn calc_timeline_events(time_limit: Duration, cars: &[Car]) -> Vec<TimelineE
                             lap_number: lap.lap,
                             next_lap,
                         },
+                    ),
+                });
+            }
+        }
+    }
+
+    // ピットイン・ピットアウトイベント（pit_timeが存在するラップのみ）
+    for car in cars {
+        for lap in &car.laps {
+            if let Some(pit_duration) = lap.pit_time {
+                // ピットイン時刻 = ラップ完了時刻 - ピット滞在時間
+                let pit_in_time = lap.elapsed.saturating_sub(pit_duration);
+
+                // ピットインイベント
+                events.push(TimelineEvent {
+                    event_time: pit_in_time,
+                    event_type: EventType::CarEvent(
+                        car.meta_data.car_number.clone(),
+                        CarEventType::PitIn(PitInEvent {
+                            lap_number: lap.lap,
+                            duration: pit_duration,
+                        }),
+                    ),
+                });
+
+                // ピットアウトイベント
+                events.push(TimelineEvent {
+                    event_time: lap.elapsed,
+                    event_type: EventType::CarEvent(
+                        car.meta_data.car_number.clone(),
+                        CarEventType::PitOut(PitOutEvent {
+                            lap_number: lap.lap,
+                            duration: pit_duration,
+                        }),
                     ),
                 });
             }
@@ -156,7 +222,6 @@ mod tests {
 
     #[test]
     fn test_car_event_type_variants() {
-        // Red: CarEventType enumがまだ存在しないため、このテストは失敗する
         let retirement = CarEventType::Retirement;
         let checkered = CarEventType::Checkered;
         let test_lap = Lap::new(
@@ -178,6 +243,14 @@ mod tests {
             lap_number: 5,
             next_lap: test_lap.clone(),
         };
+        let pit_in = CarEventType::PitIn(PitInEvent {
+            lap_number: 6,
+            duration: 69953, // 1:09.953
+        });
+        let pit_out = CarEventType::PitOut(PitOutEvent {
+            lap_number: 6,
+            duration: 69953, // 1:09.953
+        });
 
         assert_eq!(retirement, CarEventType::Retirement);
         assert_eq!(checkered, CarEventType::Checkered);
@@ -187,6 +260,20 @@ mod tests {
                 lap_number: 5,
                 next_lap: test_lap
             }
+        );
+        assert_eq!(
+            pit_in,
+            CarEventType::PitIn(PitInEvent {
+                lap_number: 6,
+                duration: 69953
+            })
+        );
+        assert_eq!(
+            pit_out,
+            CarEventType::PitOut(PitOutEvent {
+                lap_number: 6,
+                duration: 69953
+            })
         );
     }
 
@@ -294,6 +381,116 @@ mod tests {
         // event_timeが文字列形式で出力されることを確認
         assert!(json.contains("\"event_time\":\"1:35.365\""));
         assert!(json.contains("\"event_type\":\"RaceStart\""));
+    }
+
+    #[test]
+    fn test_calc_timeline_events_with_pit_in_out() {
+        use crate::{
+            Class, Driver,
+            car::{Car, MetaData},
+            lap::Lap,
+        };
+
+        let drivers = vec![Driver::new("Test Driver".to_string(), false)];
+        let metadata = MetaData::new(
+            "1".to_string(),
+            drivers,
+            Class::HYPERCAR,
+            "H".to_string(),
+            "Test Team".to_string(),
+            "Test Manufacturer".to_string(),
+        );
+
+        // ピット時間を含むラップを作成
+        let laps = vec![
+            Lap::new_with_mini_sectors(
+                "1".to_string(),
+                "Test Driver".to_string(),
+                1,
+                Some(1),
+                95365,
+                95365,
+                23155,
+                29928,
+                42282,
+                23155,
+                29928,
+                42282,
+                95365,
+                None, // ピットなし
+                None,
+            ),
+            Lap::new_with_mini_sectors(
+                "1".to_string(),
+                "Test Driver".to_string(),
+                2,
+                Some(1),
+                94210,
+                94210,
+                23000,
+                29000,
+                42210,
+                23000,
+                29000,
+                42210,
+                189575,
+                Some(69953), // ピット時間: 1:09.953
+                None,
+            ),
+        ];
+
+        let car = Car::new(metadata, 1, laps);
+        let cars = vec![car];
+        let time_limit = calc_time_limit(&cars);
+
+        let events = calc_timeline_events(time_limit, &cars);
+
+        // ピットインイベントが含まれているか確認
+        let pit_in_events: Vec<&TimelineEvent> = events
+            .iter()
+            .filter(|e| matches!(e.event_type, EventType::CarEvent(_, CarEventType::PitIn { .. })))
+            .collect();
+
+        assert_eq!(pit_in_events.len(), 1);
+
+        // ピットアウトイベントが含まれているか確認
+        let pit_out_events: Vec<&TimelineEvent> = events
+            .iter()
+            .filter(|e| matches!(e.event_type, EventType::CarEvent(_, CarEventType::PitOut { .. })))
+            .collect();
+
+        assert_eq!(pit_out_events.len(), 1);
+
+        // ピットインイベントの詳細を確認
+        if let EventType::CarEvent(car_number, CarEventType::PitIn(pit_in)) =
+            &pit_in_events[0].event_type
+        {
+            assert_eq!(car_number, "1");
+            assert_eq!(pit_in.lap_number, 2);
+            assert_eq!(pit_in.duration, 69953);
+            // ピットイン時刻 = ラップ完了時刻 - ピット時間
+            assert_eq!(pit_in_events[0].event_time, 189575 - 69953); // 119622
+        } else {
+            panic!("Expected PitIn event");
+        }
+
+        // ピットアウトイベントの詳細を確認
+        if let EventType::CarEvent(car_number, CarEventType::PitOut(pit_out)) =
+            &pit_out_events[0].event_type
+        {
+            assert_eq!(car_number, "1");
+            assert_eq!(pit_out.lap_number, 2);
+            assert_eq!(pit_out.duration, 69953);
+            assert_eq!(pit_out_events[0].event_time, 189575); // 2周目完了時点（ピットアウト時刻）
+        } else {
+            panic!("Expected PitOut event");
+        }
+
+        // PitIn時刻 + duration = PitOut時刻の整合性確認
+        assert_eq!(
+            pit_in_events[0].event_time + 69953,
+            pit_out_events[0].event_time
+        );
     }
 
     // テストヘルパー関数

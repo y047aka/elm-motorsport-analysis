@@ -50,6 +50,7 @@ type alias CarNumber =
 type Status
     = PreRace
     | Racing
+    | InPit
     | Checkered
     | Retired
 
@@ -67,6 +68,9 @@ statusToString status =
 
         Racing ->
             "Racing"
+
+        InPit ->
+            "In Pit"
 
         Checkered ->
             "Checkered"
