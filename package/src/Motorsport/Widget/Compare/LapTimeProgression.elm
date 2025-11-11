@@ -65,11 +65,11 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
-view clock viewModel carA carB =
+view : Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view clock viewModel selectedCars =
     let
         body =
-            case buildClassProgressionData clock viewModel carA carB of
+            case buildClassProgressionData clock viewModel selectedCars of
                 Err message ->
                     Widget.emptyState message
 
@@ -89,13 +89,16 @@ view clock viewModel carA carB =
         ]
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Result String ClassProgressionData
-buildClassProgressionData clock viewModel carA carB =
+buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String ClassProgressionData
+buildClassProgressionData clock viewModel selectedCars =
     let
+        selectedCarNumbers =
+            selectedCars |> List.map (.metadata >> .carNumber)
+
         carsInClass : List ViewModelItem
         carsInClass =
             viewModel.itemsByClass
-                |> List.Extra.find (\( class_, _ ) -> Just class_ == Maybe.map (.metadata >> .class) carA)
+                |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []
 
@@ -111,9 +114,7 @@ buildClassProgressionData clock viewModel carA carB =
                         { carNumber = carNumber
                         , laps = extractLapDataForCar clock item.history
                         , color = Manufacturer.toColorWithFallback item.metadata
-                        , isSelected =
-                            (Just carNumber == Maybe.map (.metadata >> .carNumber) carA)
-                                || (Just carNumber == Maybe.map (.metadata >> .carNumber) carB)
+                        , isSelected = List.member carNumber selectedCarNumbers
                         }
                     )
                 |> List.filter (\item -> List.length item.laps >= 2)
@@ -315,24 +316,26 @@ renderLapSeries allLaps series =
                 |> List.map Just
                 |> Shape.line Shape.linearCurve
 
-        baseAttributes =
-            [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth
-                (if series.isSelected then
-                    "1.5"
-
-                 else
-                    "1"
-                )
-            , SvgAttr.fill "none"
-            ]
-
-        lineAttributes =
+        strokeWidth =
             if series.isSelected then
-                baseAttributes
+                "1.5"
 
             else
-                SvgAttr.strokeOpacity "0.4" :: baseAttributes
+                "1"
+
+        opacity =
+            if series.isSelected then
+                "1"
+
+            else
+                "0.4"
+
+        lineAttributes =
+            [ SvgAttr.stroke series.color.value
+            , SvgAttr.strokeWidth strokeWidth
+            , SvgAttr.strokeOpacity opacity
+            , SvgAttr.fill "none"
+            ]
 
         pointElements =
             dataPoints
@@ -356,11 +359,13 @@ renderLapSeries allLaps series =
                             , InPx.r radius
                             , SvgAttr.css
                                 [ Css.fill series.color
-                                , if series.isSelected then
-                                    Css.batch []
+                                , Css.opacity
+                                    (if series.isSelected then
+                                        num 1
 
-                                  else
-                                    Css.opacity (num 0.4)
+                                     else
+                                        num 0.4
+                                    )
                                 ]
                             ]
                             []

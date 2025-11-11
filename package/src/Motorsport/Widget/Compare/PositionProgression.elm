@@ -22,11 +22,11 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-view : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html msg
-view clock viewModel carA carB =
+view : Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view clock viewModel selectedCars =
     let
         body =
-            case buildClassProgressionData clock viewModel carA carB of
+            case buildClassProgressionData clock viewModel selectedCars of
                 Ok series ->
                     positionProgressionChart series
 
@@ -46,16 +46,19 @@ view clock viewModel carA carB =
         ]
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> Maybe ViewModelItem -> Maybe ViewModelItem -> Result String (List PositionSeries)
-buildClassProgressionData clock viewModel carA carB =
+buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String (List PositionSeries)
+buildClassProgressionData clock viewModel selectedCars =
     let
         lapThreshold =
             calculateLapThreshold clock viewModel
 
+        selectedCarNumbers =
+            selectedCars |> List.map (.metadata >> .carNumber)
+
         classCars : List ViewModelItem
         classCars =
             viewModel.itemsByClass
-                |> List.Extra.find (\( class_, _ ) -> Just class_ == Maybe.map (.metadata >> .class) carA)
+                |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []
 
@@ -69,9 +72,7 @@ buildClassProgressionData clock viewModel carA carB =
                         in
                         { points = buildPositionPoints lapThreshold item
                         , color = Manufacturer.toColorWithFallback item.metadata
-                        , isSelected =
-                            (Just carNumber == Maybe.map (.metadata >> .carNumber) carA)
-                                || (Just carNumber == Maybe.map (.metadata >> .carNumber) carB)
+                        , isSelected = List.member carNumber selectedCarNumbers
                         }
                     )
                 |> List.filter (\item -> List.length item.points >= 2)
@@ -316,18 +317,19 @@ renderPositionLine allPoints series =
             else
                 "1"
 
-        baseAttributes =
-            [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth strokeWidth
-            , SvgAttr.fill "none"
-            ]
-
-        lineAttributes =
+        opacity =
             if series.isSelected then
-                baseAttributes
+                "1"
 
             else
-                SvgAttr.strokeOpacity "0.4" :: baseAttributes
+                "0.4"
+
+        lineAttributes =
+            [ SvgAttr.stroke series.color.value
+            , SvgAttr.strokeWidth strokeWidth
+            , SvgAttr.strokeOpacity opacity
+            , SvgAttr.fill "none"
+            ]
 
         pointElements =
             dataPoints
@@ -335,15 +337,15 @@ renderPositionLine allPoints series =
                     (\index ( x, y ) ->
                         let
                             radius =
-                                case ( series.isSelected, index == totalPoints - 1 ) of
-                                    ( True, True ) ->
+                                if series.isSelected then
+                                    if index == totalPoints - 1 then
                                         2.5
 
-                                    ( True, False ) ->
+                                    else
                                         1.5
 
-                                    _ ->
-                                        0.8
+                                else
+                                    0.8
                         in
                         circle
                             [ InPx.cx x
@@ -351,11 +353,7 @@ renderPositionLine allPoints series =
                             , InPx.r radius
                             , SvgAttr.css
                                 [ Css.fill series.color
-                                , if series.isSelected then
-                                    Css.batch []
-
-                                  else
-                                    Css.opacity (num 0.4)
+                                , Css.opacity (num (if series.isSelected then 1 else 0.4))
                                 ]
                             ]
                             []

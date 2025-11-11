@@ -10,6 +10,7 @@ import List.Extra
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.BoxPlot as BoxPlot
+import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -24,58 +25,31 @@ import SortedList
 
 
 type alias Model =
-    { carA : Maybe String
-    , carB : Maybe String
-    }
+    { selectedCars : List String }
 
 
 init : Model
 init =
-    { carA = Nothing
-    , carB = Nothing
-    }
+    { selectedCars = [] }
 
 
 type Msg
-    = SelectCar String
-    | ClearCarA
-    | ClearCarB
+    = ToggleCar String
+    | RemoveCar String
 
 
 update : Msg -> Model -> Model
 update msg model =
     case msg of
-        SelectCar carNumber ->
-            case ( model.carA, model.carB ) of
-                ( Nothing, Nothing ) ->
-                    { model | carA = Just carNumber }
+        ToggleCar carNumber ->
+            if List.member carNumber model.selectedCars then
+                { selectedCars = List.filter ((/=) carNumber) model.selectedCars }
 
-                ( Nothing, Just b ) ->
-                    if b /= carNumber then
-                        { model | carA = Just carNumber }
+            else
+                { selectedCars = model.selectedCars ++ [ carNumber ] }
 
-                    else
-                        { carA = Just carNumber, carB = Nothing }
-
-                ( Just a, Nothing ) ->
-                    if a /= carNumber then
-                        { model | carB = Just carNumber }
-
-                    else
-                        model
-
-                ( Just a, Just b ) ->
-                    if carNumber == a || carNumber == b then
-                        model
-
-                    else
-                        { model | carB = Just carNumber }
-
-        ClearCarA ->
-            { model | carA = Nothing }
-
-        ClearCarB ->
-            { model | carB = Nothing }
+        RemoveCar carNumber ->
+            { selectedCars = List.filter ((/=) carNumber) model.selectedCars }
 
 
 
@@ -97,39 +71,68 @@ type alias Props =
 view : Props -> Model -> Html Msg
 view props model =
     let
-        ( carA, carB ) =
-            ( resolveCar model.carA props.viewModel
-            , resolveCar model.carB props.viewModel
-            )
+        selectedCars =
+            resolveCars model.selectedCars props.viewModel
+                |> List.sortBy .position
     in
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-rows" "auto auto"
+            , property "grid-template-rows" "auto auto auto"
             , property "row-gap" "16px"
             ]
         ]
-        [ carInfoRow props carA carB
-        , chartsRow props carA carB
+        [ carInfoRow props selectedCars
+        , chartsRow props selectedCars
+        , carSelectorRow props model
         ]
 
 
-carInfoRow : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html Msg
-carInfoRow props carA carB =
+carInfoRow : Props -> List ViewModelItem -> Html Msg
+carInfoRow props selectedCars =
+    if List.isEmpty selectedCars then
+        div
+            [ css
+                [ property "display" "flex"
+                , property "justify-content" "center"
+                , property "padding" "40px"
+                ]
+            ]
+            [ Html.div [ class "text-sm opacity-40" ]
+                [ text "Select cars from below to compare" ]
+            ]
+
+    else
+        div
+            [ css
+                [ property "display" "flex"
+                , property "gap" "16px"
+                , property "overflow-x" "auto"
+                , property "padding" "8px 0"
+                ]
+            ]
+            (selectedCars |> List.map (detailColumn props))
+
+
+detailColumn : Props -> ViewModelItem -> Html Msg
+detailColumn props item =
     div
         [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr"
-            , property "column-gap" "16px"
+            [ property "min-width" "320px"
+            , property "flex-shrink" "0"
             ]
         ]
-        [ detailColumn "Car A" ClearCarA props carA
-        , detailColumn "Car B" ClearCarB props carB
+        [ detailBody
+            { eventSummary = props.eventSummary
+            , analysis = props.analysis
+            , onClear = RemoveCar item.metadata.carNumber
+            }
+            item
         ]
 
 
-chartsRow : Props -> Maybe ViewModelItem -> Maybe ViewModelItem -> Html Msg
-chartsRow props carA carB =
+chartsRow : Props -> List ViewModelItem -> Html Msg
+chartsRow props selectedCars =
     div
         [ css
             [ property "display" "grid"
@@ -140,49 +143,27 @@ chartsRow props carA carB =
         [ PositionProgression.view
             props.clock
             props.viewModel
-            carA
-            carB
+            selectedCars
         , LapTimeProgression.view
             props.clock
             props.viewModel
-            carA
-            carB
-        , case ( carA, carB ) of
-            ( Just itemA, Just itemB ) ->
-                [ itemA, itemB ]
-                    |> List.sortBy .position
-                    |> NonEmpty.fromList
-                    |> Maybe.map
-                        (\cars ->
-                            let
-                                leader =
-                                    NonEmpty.head cars
-                            in
-                            CloseBattles.closeBattleItem
-                                { cars = cars
-                                , position = leader.position
-                                }
-                        )
-                    |> Maybe.withDefault (text "")
-
-            _ ->
-                text ""
+            selectedCars
+        , selectedCars
+            |> List.sortBy .position
+            |> NonEmpty.fromList
+            |> Maybe.map
+                (\cars ->
+                    let
+                        leader =
+                            NonEmpty.head cars
+                    in
+                    CloseBattles.closeBattleItem
+                        { cars = cars
+                        , position = leader.position
+                        }
+                )
+            |> Maybe.withDefault (text "")
         ]
-
-
-detailColumn : String -> Msg -> Props -> Maybe ViewModelItem -> Html Msg
-detailColumn label clearMsg props maybeItem =
-    case maybeItem of
-        Just item ->
-            detailBody
-                { eventSummary = props.eventSummary
-                , analysis = props.analysis
-                , onClear = clearMsg
-                }
-                item
-
-        Nothing ->
-            emptyState label
 
 
 type alias DetailProps =
@@ -268,32 +249,88 @@ carImage season carNumber =
             text ""
 
 
-emptyState : String -> Html msg
-emptyState label =
+resolveCars : List String -> ViewModel -> List ViewModelItem
+resolveCars carNumbers viewModel =
+    carNumbers
+        |> List.filterMap
+            (\carNumber ->
+                viewModel.items
+                    |> SortedList.toList
+                    |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
+            )
+
+
+carSelectorRow : Props -> Model -> Html Msg
+carSelectorRow props model =
+    div
+        [ css
+            [ property "display" "flex"
+            , property "gap" "8px"
+            , property "overflow-x" "auto"
+            , property "padding" "8px 0"
+            ]
+        ]
+        (props.viewModel.items
+            |> SortedList.toList
+            |> List.map (carSelectorItem props.eventSummary.season model)
+        )
+
+
+carSelectorItem : Int -> Model -> ViewModelItem -> Html Msg
+carSelectorItem season model item =
+    let
+        isSelected =
+            List.member item.metadata.carNumber model.selectedCars
+
+        borderColor =
+            if isSelected then
+                "hsl(200 100% 50%)"
+
+            else
+                "hsl(0 0% 100% / 0.2)"
+
+        backgroundColor =
+            if isSelected then
+                "hsl(0 0% 100% / 0.1)"
+
+            else
+                "transparent"
+
+        classColor =
+            Motorsport.Class.toHexColor season item.metadata.class
+    in
     div
         [ css
             [ property "display" "flex"
             , property "flex-direction" "column"
             , property "align-items" "center"
             , property "justify-content" "center"
-            , property "row-gap" "8px"
-            , property "padding" "12px"
-            , property "border" "1px dashed hsl(0 0% 100% / 0.2)"
-            , property "border-radius" "8px"
-            , property "min-height" "140px"
+            , property "min-width" "60px"
+            , property "height" "70px"
+            , property "padding" "8px"
+            , property "border" ("2px solid " ++ borderColor)
+            , property "border-radius" "6px"
+            , property "background-color" backgroundColor
+            , property "cursor" "pointer"
+            , property "transition" "all 0.2s"
             ]
+        , onClick (ToggleCar item.metadata.carNumber)
         ]
-        [ Html.div [ class "text-sm opacity-60" ] [ text label ]
-        , Html.div [ class "text-xs opacity-40" ] [ text "Select a car to compare" ]
+        [ div
+            [ css
+                [ property "width" "24px"
+                , property "height" "4px"
+                , Css.backgroundColor classColor
+                , property "border-radius" "2px"
+                , property "margin-bottom" "6px"
+                ]
+            ]
+            []
+        , div
+            [ css
+                [ property "font-size" "18px"
+                , property "font-weight" "700"
+                ]
+            ]
+            [ text item.metadata.carNumber ]
         ]
-
-
-resolveCar : Maybe String -> ViewModel -> Maybe ViewModelItem
-resolveCar maybeCarNumber viewModel =
-    maybeCarNumber
-        |> Maybe.andThen
-            (\carNumber ->
-                viewModel.items
-                    |> SortedList.toList
-                    |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
-            )

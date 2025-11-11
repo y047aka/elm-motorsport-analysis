@@ -267,7 +267,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ LiveStandingsWidget.view
                                     { eventSummary = eventSummary
                                     , viewModel = viewModel
-                                    , onSelectCar = (\item -> CompareWidget.SelectCar item.metadata.carNumber) >> CompareWidgetMsg
+                                    , onSelectCar = (\item -> CompareWidget.ToggleCar item.metadata.carNumber) >> CompareWidgetMsg
                                     }
                                 ]
                             , div
