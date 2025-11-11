@@ -2,7 +2,7 @@ module Route.Wec.Season_.Event_ exposing (ActionData, Data, Model, Msg, route)
 
 import BackendTask exposing (BackendTask)
 import Browser.Events
-import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding2, pct, property, px, right, scroll, textAlign, zero)
+import Css exposing (alignItems, center, displayFlex, height, hidden, overflowY, padding, pct, property, px, right, scroll, textAlign)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -229,7 +229,7 @@ view app { eventSummary, analysis, raceControl } m =
                 , css
                     [ height (pct 100)
                     , property "display" "grid"
-                    , property "grid-template-rows" "auto auto 1fr"
+                    , property "grid-template-rows" "auto 1fr"
                     ]
                 ]
                 [ navigation raceControl
@@ -250,54 +250,49 @@ view app { eventSummary, analysis, raceControl } m =
                             [ css
                                 [ height (pct 100)
                                 , overflowY hidden
-                                , property "position" "relative"
+                                , padding (px 10)
+                                , property "display" "grid"
+                                , property "grid-template-columns" "390px 1fr"
+                                , property "grid-template-rows" "1fr auto"
+                                , property "row-gap" "10px"
                                 ]
                             ]
                             [ div
                                 [ css
-                                    [ height (pct 100)
+                                    [ property "grid-row" "1 / -1"
+                                    , property "grid-column" "1"
+                                    , overflowY scroll
+                                    ]
+                                ]
+                                [ LiveStandingsWidget.view
+                                    { eventSummary = eventSummary
+                                    , viewModel = viewModel
+                                    , onSelectCar = (\item -> CompareWidget.SelectCar item.metadata.carNumber) >> CompareWidgetMsg
+                                    }
+                                ]
+                            , div
+                                [ css
+                                    [ property "grid-row" "1"
+                                    , property "grid-column" "2"
                                     , property "display" "grid"
-                                    , property "grid-template-columns" "390px 1fr"
+                                    , property "place-items" "center"
+                                    ]
+                                ]
+                                [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
+                            , div
+                                [ css
+                                    [ property "grid-row" "2"
+                                    , property "grid-column" "2"
                                     ]
                                 ]
                                 [ div
-                                    [ css
-                                        [ height (pct 100)
-                                        , overflowY scroll
-                                        , padding2 zero (px 10)
-                                        ]
-                                    ]
-                                    [ LiveStandingsWidget.view
-                                        { eventSummary = eventSummary
-                                        , viewModel = viewModel
-                                        , onSelectCar = (\item -> CompareWidget.SelectCar item.metadata.carNumber) >> CompareWidgetMsg
-                                        }
-                                    ]
-                                , div
-                                    [ css
-                                        [ property "display" "grid"
-                                        , property "grid-template-rows" "1fr auto"
-                                        , property "height" "100%"
-                                        , property "overflow" "hidden"
-                                        ]
+                                    [ class "card card-sm"
+                                    , css [ property "background-color" "var(--widget-bg)" ]
                                     ]
                                     [ div
-                                        [ css
-                                            [ property "display" "grid"
-                                            , property "place-items" "center"
-                                            , property "overflow" "hidden"
-                                            ]
-                                        ]
-                                        [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
-                                    , div
-                                        [ class "card card-sm"
-                                        , css [ property "background-color" "var(--widget-bg)" ]
-                                        ]
-                                        [ div
-                                            [ class "card-body" ]
-                                            [ Html.map CompareWidgetMsg <|
-                                                Lazy.lazy2 CompareWidget.view compareProps m.compare
-                                            ]
+                                        [ class "card-body" ]
+                                        [ Html.map CompareWidgetMsg <|
+                                            Lazy.lazy2 CompareWidget.view compareProps m.compare
                                         ]
                                     ]
                                 ]
