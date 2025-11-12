@@ -103,32 +103,7 @@ carInfoRow props selectedCars =
             ]
 
     else
-        div
-            [ css
-                [ property "display" "flex"
-                , property "gap" "16px"
-                , property "overflow-x" "auto"
-                , property "padding" "8px 0"
-                ]
-            ]
-            (selectedCars |> List.map (detailColumn props))
-
-
-detailColumn : Props -> ViewModelItem -> Html Msg
-detailColumn props item =
-    div
-        [ css
-            [ property "min-width" "320px"
-            , property "flex-shrink" "0"
-            ]
-        ]
-        [ detailBody
-            { eventSummary = props.eventSummary
-            , analysis = props.analysis
-            , onClear = RemoveCar item.metadata.carNumber
-            }
-            item
-        ]
+        comparisonTable props selectedCars
 
 
 chartsRow : Props -> List ViewModelItem -> Html Msg
@@ -136,7 +111,7 @@ chartsRow props selectedCars =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr 1fr"
+            , property "grid-template-columns" "1fr 1fr 1fr 1fr"
             , property "column-gap" "12px"
             ]
         ]
@@ -163,22 +138,53 @@ chartsRow props selectedCars =
                         }
                 )
             |> Maybe.withDefault (text "")
+        , BoxPlot.view props.analysis selectedCars
         ]
 
 
-type alias DetailProps =
-    { eventSummary : EventSummary
-    , analysis : Analysis
-    , onClear : Msg
-    }
-
-
-detailBody : DetailProps -> ViewModelItem -> Html Msg
-detailBody { eventSummary, analysis, onClear } item =
+comparisonTable : Props -> List ViewModelItem -> Html Msg
+comparisonTable props selectedCars =
     let
         isLeMans2025 =
-            ( eventSummary.season, eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
+            ( props.eventSummary.season, props.eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
+    in
+    div
+        [ css
+            [ property "border" "1px solid hsl(0 0% 100% / 0.1)"
+            , property "border-radius" "8px"
+            , property "overflow" "hidden"
+            ]
+        ]
+        [ tableHeader
+        , div [] (selectedCars |> List.map (tableRow props.eventSummary.season props.analysis isLeMans2025))
+        ]
 
+
+tableHeader : Html Msg
+tableHeader =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "50px 60px 100px 1fr 120px 120px 60px"
+            , property "gap" "8px"
+            , property "padding" "8px 12px"
+            , property "background-color" "hsl(0 0% 100% / 0.05)"
+            , property "border-bottom" "1px solid hsl(0 0% 100% / 0.1)"
+            ]
+        ]
+        [ Html.div [ class "text-xs opacity-60 text-center" ] [ text "Pos" ]
+        , Html.div [ class "text-xs opacity-60 text-center" ] [ text "Car" ]
+        , Html.div [] []
+        , Html.div [ class "text-xs opacity-60" ] [ text "Driver / Team" ]
+        , Html.div [ class "text-xs opacity-60 text-center" ] [ text "Current Lap" ]
+        , Html.div [ class "text-xs opacity-60 text-center" ] [ text "Last Lap" ]
+        , Html.div [] []
+        ]
+
+
+tableRow : Int -> Analysis -> Bool -> ViewModelItem -> Html Msg
+tableRow season analysis isLeMans2025 item =
+    let
         ( currentLapView, lastLapView ) =
             if isLeMans2025 then
                 ( Leaderboard.viewCurrentLapColumn_LeMans24h
@@ -193,49 +199,24 @@ detailBody { eventSummary, analysis, onClear } item =
     div
         [ css
             [ property "display" "grid"
-            , property "row-gap" "20px"
-            ]
-        ]
-        [ metadataBlock item eventSummary.season
-        , div
-            [ css
-                [ property "display" "grid"
-                , property "grid-template-columns" "1fr 1fr"
-                , property "column-gap" "12px"
-                , property "row-gap" "12px"
-                ]
-            ]
-            [ div []
-                [ Html.div [ class "text-xs opacity-60" ] [ text "Current Lap" ]
-                , currentLapView analysis item
-                ]
-            , div []
-                [ Html.div [ class "text-xs opacity-60" ] [ text "Last Lap" ]
-                , lastLapView analysis item.lastLap
-                ]
-            , div [ css [ property "grid-column" "1 / -1" ] ]
-                [ Html.div [ class "text-xs opacity-60" ] [ text "Histogram" ]
-                , BoxPlot.view analysis 1.07 item.history
-                ]
-            ]
-        , Html.button [ class "btn btn-xs", onClick onClear ] [ text "Clear" ]
-        ]
-
-
-metadataBlock : ViewModelItem -> Int -> Html msg
-metadataBlock item season =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto auto 1fr"
-            , property "column-gap" "15px"
-            , property "justify-content" "center"
+            , property "grid-template-columns" "50px 60px 100px 1fr 120px 120px 60px"
+            , property "gap" "8px"
+            , property "padding" "8px 12px"
             , property "align-items" "center"
+            , property "border-bottom" "1px solid hsl(0 0% 100% / 0.08)"
             ]
         ]
-        [ Leaderboard.viewCarNumberColumn_Wec season item.metadata
+        [ Html.div [ class "text-sm text-center" ] [ text (String.fromInt item.position) ]
+        , Leaderboard.viewCarNumberColumn_Wec season item.metadata
         , carImage season item.metadata.carNumber
         , Leaderboard.viewDriverAndTeamColumn_Wec item
+        , currentLapView analysis item
+        , lastLapView analysis item.lastLap
+        , Html.button
+            [ class "btn btn-xs"
+            , onClick (RemoveCar item.metadata.carNumber)
+            ]
+            [ text "Clear" ]
         ]
 
 

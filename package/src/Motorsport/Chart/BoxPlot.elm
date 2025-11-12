@@ -1,18 +1,18 @@
 module Motorsport.Chart.BoxPlot exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Css exposing (height, width)
+import Css exposing (Color, height, width)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Dict exposing (Dict)
 import Html.Styled exposing (Html)
 import List.Extra as ListExtra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
-import Scale exposing (ContinuousScale)
+import Motorsport.Lap.Performance as Performance
+import Motorsport.Manufacturer as Manufacturer
+import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Scale exposing (BandScale, ContinuousScale)
 import Statistics
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg)
 import Svg.Styled.Attributes as SvgAttributes
@@ -23,53 +23,27 @@ import TypedSvg.Types exposing (Transform(..), px)
 
 chartWidth : Float
 chartWidth =
-    220
+    300
 
 
 chartHeight : Float
 chartHeight =
-    100
-
-
-segmentWidthFor : Int -> Float
-segmentWidthFor stintCount =
-    let
-        actualCount =
-            Basics.max 1 stintCount
-
-        totalGapWidth =
-            gapsWidthFor stintCount
-
-        availableWidth =
-            chartWidth - (axisOffset + padding) - padding - totalGapWidth
-    in
-    if availableWidth <= 0 then
-        0
-
-    else
-        availableWidth / toFloat actualCount
-
-
-segmentGap : Float
-segmentGap =
-    6
-
-
-axisOffset : Float
-axisOffset =
-    50
+    180
 
 
 padding : Float
 padding =
-    1
+    15
 
 
-type alias HistogramStint =
-    { driver : Driver
-    , stintNumber : Int
-    , laps : List Lap
-    }
+paddingLeft : Float
+paddingLeft =
+    padding + 35
+
+
+paddingBottom : Float
+paddingBottom =
+    padding + 20
 
 
 type alias BoxStats =
@@ -82,91 +56,94 @@ type alias BoxStats =
     }
 
 
-yScale : ( Float, Float ) -> ContinuousScale Float
-yScale ( min, max ) =
-    ( min, max ) |> Scale.linear ( chartHeight - padding, padding )
+xScale : List String -> BandScale String
+xScale carNumbers =
+    Scale.band
+        { defaultBandConfig | paddingInner = 0.2, paddingOuter = 0.1 }
+        ( paddingLeft, chartWidth - padding )
+        carNumbers
 
 
-xScale : { stintCount : Int, segmentWidth : Float } -> ContinuousScale Float
-xScale { stintCount, segmentWidth } =
+defaultBandConfig : Scale.BandConfig
+defaultBandConfig =
+    { paddingInner = 0
+    , paddingOuter = 0
+    , align = 0.5
+    }
+
+
+type alias CarBoxPlot =
+    { carNumber : String
+    , stats : BoxStats
+    , color : Color
+    , currentLap : Maybe Lap
+    }
+
+
+view : Analysis -> List ViewModelItem -> Html msg
+view analysis selectedCars =
     let
-        domainUpper =
-            if stintCount <= 1 then
-                1
-
-            else
-                stintCount - 1
-
-        rangeStart =
-            axisOffset + padding + (segmentGap / 2)
-
-        rangeEnd =
-            (chartWidth - padding - (segmentGap / 2) - segmentWidth)
-                |> Basics.max rangeStart
-    in
-    Scale.linear ( rangeStart, rangeEnd ) ( 0, toFloat domainUpper )
-
-
-{-| Small histogram for a list of `Lap`s.
-
-Takes an `Analysis` context, a coefficient to clamp the x-axis upper bound
-relative to the fastest lap time, and the laps to render.
-
--}
-view : Analysis -> Float -> List Lap -> Html msg
-view { fastestLapTime, slowestLapTime } coefficient laps =
-    let
-        stints =
-            splitIntoStints laps
-
-        stintCount =
-            List.length stints
-
-        segmentWidth =
-            segmentWidthFor stintCount
-
-        xScale_ =
-            xScale { stintCount = stintCount, segmentWidth = segmentWidth }
-
-        yScale_ =
-            yScale
-                ( toFloat fastestLapTime
-                , min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime)
-                )
-
-        positionedStints =
-            stints
-                |> List.indexedMap
-                    (\index stint ->
-                        { offset = Scale.convert xScale_ (toFloat index)
-                        , stint = stint
+        carBoxPlots =
+            selectedCars
+                |> List.map
+                    (\item ->
+                        { carNumber = item.metadata.carNumber
+                        , stats = computeStatistics item.history
+                        , color = Manufacturer.toColorWithFallback item.metadata
+                        , currentLap = item.currentLap
                         }
                     )
 
-        color lap =
-            if isCurrentLap lap then
-                performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
-                    |> Performance.toColorVariable
+        carNumbers =
+            selectedCars |> List.map (.metadata >> .carNumber)
 
-            else
-                "oklch(1 0 0 / 0.2)"
+        yScale_ =
+            computeGlobalYScale analysis carBoxPlots
 
-        isCurrentLap { lap } =
-            List.length laps == lap
+        xScale_ =
+            xScale carNumbers
     in
     svg
         [ TypedSvgAttributes.viewBox 0 0 chartWidth chartHeight
         , SvgAttributes.css [ width (Css.px chartWidth), height (Css.px chartHeight) ]
         ]
         [ yAxis yScale_
-        , boxPlotColumns
-            { stints = positionedStints
-            , segmentWidth = segmentWidth
-            , yScale = yScale_
-            , colorForCurrent = color
-            , isCurrentLap = isCurrentLap
-            }
+        , xAxis xScale_
+        , g []
+            (carBoxPlots |> List.map (renderCarBoxPlot xScale_ yScale_ analysis))
         ]
+
+
+xAxis : BandScale String -> Svg msg
+xAxis scale =
+    let
+        axis =
+            fromUnstyled <|
+                Axis.bottom
+                    [ tickSizeOuter 0
+                    , tickSizeInner 3
+                    ]
+                    (Scale.toRenderable identity scale)
+    in
+    g
+        [ TypedSvgAttributes.transform [ Translate 0 (chartHeight - paddingBottom) ]
+        , SvgAttributes.css
+            [ descendants
+                [ Css.Global.typeSelector "text"
+                    [ Css.fill (Css.hsl 0 0 0.7)
+                    , Css.fontSize (Css.px 10)
+                    ]
+                , each
+                    [ Css.Global.typeSelector "line"
+                    , Css.Global.typeSelector "path"
+                    ]
+                    [ Css.Extra.strokeWidth 1
+                    , Css.property "stroke" "#555"
+                    ]
+                ]
+            ]
+        ]
+        [ axis ]
 
 
 yAxis : ContinuousScale Float -> Svg msg
@@ -183,7 +160,7 @@ yAxis scale =
                     scale
     in
     g
-        [ TypedSvgAttributes.transform [ Translate axisOffset 0 ]
+        [ TypedSvgAttributes.transform [ Translate paddingLeft 0 ]
         , SvgAttributes.css
             [ descendants
                 [ Css.Global.typeSelector "text"
@@ -201,41 +178,6 @@ yAxis scale =
             ]
         ]
         [ axis ]
-
-
-boxPlotColumns :
-    { stints : List { offset : Float, stint : HistogramStint }
-    , segmentWidth : Float
-    , yScale : ContinuousScale Float
-    , colorForCurrent : Lap -> String
-    , isCurrentLap : Lap -> Bool
-    }
-    -> Svg msg
-boxPlotColumns ({ stints, segmentWidth, colorForCurrent, isCurrentLap } as props) =
-    if segmentWidth <= 0 then
-        g [] []
-
-    else
-        stints
-            |> List.filterMap
-                (\{ offset, stint } ->
-                    computeStatistics stint.laps
-                        |> Just
-                        |> Maybe.map
-                            (\stats ->
-                                { offset = offset
-                                , width = segmentWidth
-                                , stats = stats
-                                , fill = "oklch(0.82 0.02 260 / 0.38)"
-                                , currentLap =
-                                    stint.laps
-                                        |> List.filter isCurrentLap
-                                        |> List.head
-                                }
-                            )
-                )
-            |> List.map (column props.yScale colorForCurrent)
-            |> g []
 
 
 computeStatistics : List Lap -> BoxStats
@@ -295,81 +237,42 @@ computeStatistics laps =
     }
 
 
-gapsWidthFor : Int -> Float
-gapsWidthFor stintCount =
-    toFloat (Basics.max 0 (stintCount - 1)) * segmentGap
-
-
-splitIntoStints : List Lap -> List HistogramStint
-splitIntoStints laps =
+computeGlobalYScale : Analysis -> List CarBoxPlot -> ContinuousScale Float
+computeGlobalYScale { fastestLapTime, slowestLapTime } carBoxPlots =
     let
-        finalize : Driver -> List Lap -> Dict String Int -> List HistogramStint -> ( List HistogramStint, Dict String Int )
-        finalize driver collectedLaps driverCounts stintsAccum =
-            let
-                key =
-                    driver.name
+        allValues =
+            carBoxPlots
+                |> List.concatMap (\car -> [ car.stats.min, car.stats.max ])
 
-                previous =
-                    Dict.get key driverCounts |> Maybe.withDefault 0
+        minValue =
+            allValues
+                |> List.minimum
+                |> Maybe.withDefault (toFloat fastestLapTime)
+                |> min (toFloat fastestLapTime)
 
-                stintNumber =
-                    previous + 1
-
-                countsNext =
-                    Dict.insert key stintNumber driverCounts
-
-                stint =
-                    { driver = driver
-                    , stintNumber = stintNumber
-                    , laps = List.reverse collectedLaps
-                    }
-            in
-            ( stint :: stintsAccum, countsNext )
-
-        step lap ( currentStint, driverCounts, stintsSoFar ) =
-            case currentStint of
-                Nothing ->
-                    ( Just ( lap.driver, [ lap ] ), driverCounts, stintsSoFar )
-
-                Just ( currentDriver, currentLaps ) ->
-                    if currentDriver == lap.driver then
-                        ( Just ( currentDriver, lap :: currentLaps ), driverCounts, stintsSoFar )
-
-                    else
-                        let
-                            ( stintsAccumAfter, countsAfter ) =
-                                finalize currentDriver currentLaps driverCounts stintsSoFar
-                        in
-                        ( Just ( lap.driver, [ lap ] ), countsAfter, stintsAccumAfter )
-
-        finish ( currentStint, driverCounts, stintsSoFar ) =
-            case currentStint of
-                Nothing ->
-                    ( stintsSoFar, driverCounts )
-
-                Just ( driver, currentLaps ) ->
-                    finalize driver currentLaps driverCounts stintsSoFar
-
-        ( foldedCurrent, foldedCounts, foldedStints ) =
-            List.foldl step ( Nothing, Dict.empty, [] ) laps
-
-        ( finalized, _ ) =
-            finish ( foldedCurrent, foldedCounts, foldedStints )
+        maxValue =
+            allValues
+                |> List.maximum
+                |> Maybe.withDefault (toFloat slowestLapTime)
+                |> max (toFloat fastestLapTime * 1.07)
     in
-    finalized |> List.reverse
+    Scale.linear ( chartHeight - paddingBottom, padding ) ( minValue, maxValue )
 
 
-column : ContinuousScale Float -> (Lap -> String) -> { offset : Float, width : Float, stats : BoxStats, fill : String, currentLap : Maybe Lap } -> Svg msg
-column yScale_ colorForCurrent { offset, width, stats, fill, currentLap } =
+renderCarBoxPlot : BandScale String -> ContinuousScale Float -> Analysis -> CarBoxPlot -> Svg msg
+renderCarBoxPlot xScale_ yScale_ analysis { carNumber, stats, color, currentLap } =
     let
-        boxWidth =
-            Basics.max 1 width
+        xPosition =
+            Scale.convert xScale_ carNumber
+
+        bandwidth =
+            Scale.bandwidth xScale_
 
         left =
-            offset
+            xPosition
 
         center =
-            left + (boxWidth / 2)
+            left + (bandwidth / 2)
 
         firstQuartileY =
             Scale.convert yScale_ stats.firstQuartile
@@ -387,6 +290,14 @@ column yScale_ colorForCurrent { offset, width, stats, fill, currentLap } =
             stats.outliers
                 |> List.map (Scale.convert yScale_ >> outlierCircle "#c44b4b" center)
 
+        colorForCurrent lap =
+            { time = lap.time
+            , personalBest = stats.min |> round
+            , fastest = analysis.fastestLapTime
+            }
+                |> Performance.performanceLevel
+                |> Performance.toColorVariable
+
         currentLapMarker =
             currentLap
                 |> Maybe.map (\lap -> currentLapCircle (colorForCurrent lap) yScale_ center lap)
@@ -395,9 +306,9 @@ column yScale_ colorForCurrent { offset, width, stats, fill, currentLap } =
     in
     g []
         ([ whisker
-            { color = "#5a5a5a"
+            { color = color
             , center = center
-            , width = boxWidth * 0.3
+            , width = bandwidth * 0.3
             , upperWhiskerY = Scale.convert yScale_ stats.max
             , boxTop = boxTop
             , boxBottom = boxBottom
@@ -406,16 +317,15 @@ column yScale_ colorForCurrent { offset, width, stats, fill, currentLap } =
          , box
             { top = boxTop
             , left = left
-            , width = boxWidth
+            , width = bandwidth
             , height = Basics.max 1 (boxBottom - boxTop)
-            , fill = fill
-            , strokeColor = "#2e2e2e"
+            , color = color
             }
          , medianLine
             { left = left
-            , width = boxWidth
+            , width = bandwidth
             , medianY = Scale.convert yScale_ stats.median
-            , color = "#f59f42"
+            , color = color
             }
          ]
             ++ outlierDots
@@ -428,25 +338,25 @@ box :
     , left : Float
     , width : Float
     , height : Float
-    , fill : String
-    , strokeColor : String
+    , color : Color
     }
     -> Svg msg
-box { top, left, width, height, fill, strokeColor } =
+box { top, left, width, height, color } =
     rect
         [ InPx.x left
         , InPx.y top
         , InPx.width width
         , InPx.height height
-        , SvgAttributes.fill fill
-        , SvgAttributes.stroke strokeColor
+        , SvgAttributes.css [ Css.opacity (Css.num 0.5) ]
+        , SvgAttributes.fill color.value
+        , SvgAttributes.stroke "#2e2e2e"
         , SvgAttributes.strokeWidth "1"
         ]
         []
 
 
 whisker :
-    { color : String
+    { color : Color
     , center : Float
     , width : Float
     , upperWhiskerY : Float
@@ -458,7 +368,7 @@ whisker :
 whisker { color, center, width, upperWhiskerY, boxTop, boxBottom, lowerWhiskerY } =
     g
         [ SvgAttributes.strokeWidth "1"
-        , SvgAttributes.stroke color
+        , SvgAttributes.stroke color.value
         ]
         [ line
             [ TypedSvgAttributes.x1 (px center)
@@ -495,7 +405,7 @@ medianLine :
     { left : Float
     , width : Float
     , medianY : Float
-    , color : String
+    , color : Color
     }
     -> Svg msg
 medianLine { left, width, medianY, color } =
@@ -505,7 +415,7 @@ medianLine { left, width, medianY, color } =
         , TypedSvgAttributes.x2 (px (left + width))
         , TypedSvgAttributes.y2 (px medianY)
         , SvgAttributes.strokeWidth "1"
-        , SvgAttributes.stroke color
+        , SvgAttributes.stroke color.value
         ]
         []
 
@@ -528,7 +438,6 @@ currentLapCircle color yScale_ center lap =
         , InPx.cy (Scale.convert yScale_ (toFloat lap.time))
         , InPx.r 2.5
         , SvgAttributes.fill color
-        , SvgAttributes.stroke "#1c1c1c"
         , SvgAttributes.strokeWidth "0.6"
         ]
         []
