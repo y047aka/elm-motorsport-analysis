@@ -259,7 +259,7 @@ view app { eventSummary, analysis, raceControl } m =
                             ]
                             [ div
                                 [ css
-                                    [ property "grid-row" "1 / -1"
+                                    [ property "grid-row" "1"
                                     , property "grid-column" "1"
                                     , overflowY scroll
                                     ]
@@ -282,7 +282,7 @@ view app { eventSummary, analysis, raceControl } m =
                             , div
                                 [ css
                                     [ property "grid-row" "2"
-                                    , property "grid-column" "2"
+                                    , property "grid-column" "1 / -1"
                                     ]
                                 ]
                                 [ div
