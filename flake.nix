@@ -16,7 +16,10 @@
             ];
 
             shellHook = ''
-              exec nu
+              # Only launch nushell if running interactively
+              if [ -t 0 ]; then
+                exec nu
+              fi
             '';
           };
       });
