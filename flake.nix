@@ -13,6 +13,8 @@
             buildInputs = [
               nushell
               nodejs_24
+              rustc
+              cargo
             ];
 
             shellHook = ''
