@@ -11,18 +11,10 @@
         devShells.default = with pkgs;
           mkShell {
             buildInputs = [
-              nushell
               nodejs_24
               rustc
               cargo
             ];
-
-            shellHook = ''
-              # Only launch nushell if running interactively
-              if [ -t 0 ]; then
-                exec nu
-              fi
-            '';
           };
       });
 }
