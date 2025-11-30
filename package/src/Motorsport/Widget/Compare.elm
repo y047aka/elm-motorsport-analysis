@@ -1,10 +1,10 @@
-module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, view)
+module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
 
 import Css exposing (property)
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (css, src)
+import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import List.NonEmpty as NonEmpty
@@ -63,8 +63,8 @@ type alias Props =
 -- VIEW
 
 
-view : Props -> Model -> Html Msg
-view props model =
+viewCharts : Props -> Model -> Html Msg
+viewCharts props model =
     let
         selectedCars =
             resolveCars model.selectedCars props.viewModel
@@ -72,23 +72,9 @@ view props model =
     in
     div
         [ css
-            [ property "display" "grid"
-            , property "grid-template-rows" "auto auto"
-            , property "row-gap" "16px"
-            ]
-        ]
-        [ chartsRow props selectedCars
-        , carSelectorRow props model
-        ]
-
-
-chartsRow : Props -> List ViewModelItem -> Html Msg
-chartsRow props selectedCars =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr 1fr 1fr"
-            , property "column-gap" "12px"
+            [ property "display" "flex"
+            , property "flex-direction" "column"
+            , property "gap" "12px"
             ]
         ]
         [ PositionProgression.view
@@ -129,54 +115,21 @@ resolveCars carNumbers viewModel =
             )
 
 
-carSelectorRow : Props -> Model -> Html Msg
-carSelectorRow props model =
-    let
-        groupedByClass =
-            props.viewModel.items
-                |> SortedList.toList
-                |> List.Extra.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> first :: rest)
-    in
+viewCarSelector : Props -> Model -> Html Msg
+viewCarSelector props model =
     div
         [ css
             [ property "display" "flex"
-            , property "flex-direction" "column"
-            , property "gap" "12px"
+            , property "flex-wrap" "wrap"
+            , property "gap" "8px"
             , property "min-width" "0"
             , property "width" "100%"
             ]
         ]
-        (groupedByClass
-            |> List.map (viewClassGroup props.eventSummary.season model props)
+        (props.viewModel.items
+            |> SortedList.toList
+            |> List.map (carSelectorItem props.eventSummary.season model props)
         )
-
-
-viewClassGroup : Int -> Model -> Props -> List ViewModelItem -> Html Msg
-viewClassGroup season model props items =
-    case items of
-        [] ->
-            text ""
-
-        first :: _ ->
-            div
-                [ css
-                    [ property "display" "flex"
-                    , property "flex-direction" "column"
-                    , property "gap" "8px"
-                    ]
-                ]
-                [ div
-                    [ css
-                        [ property "display" "flex"
-                        , property "gap" "8px"
-                        , property "overflow-x" "auto"
-                        , property "padding-bottom" "4px"
-                        , property "min-width" "0"
-                        ]
-                    ]
-                    (items |> List.map (carSelectorItem season model props))
-                ]
 
 
 carSelectorItem : Int -> Model -> Props -> ViewModelItem -> Html Msg
@@ -190,14 +143,14 @@ carSelectorItem season model props item =
                 "hsl(0 0% 80%)"
 
             else
-                "hsl(0 0% 100% / 0.2)"
+                "hsl(0 0% 100% / 0)"
 
         backgroundColor =
             if isSelected then
                 "hsl(0 0% 100% / 0.1)"
 
             else
-                "transparent"
+                "var(--widget-bg)"
 
         isLeMans2025 =
             ( props.eventSummary.season, props.eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
@@ -210,43 +163,94 @@ carSelectorItem season model props item =
                 Leaderboard.viewCurrentLapColumn_Wec
     in
     div
-        [ css
-            [ property "display" "flex"
-            , property "flex-direction" "column"
-            , property "min-width" "110px"
-            , property "width" "110px"
-            , property "height" "140px"
-            , property "padding" "8px"
+        [ class "card card-sm"
+        , css
+            [ property "min-width" "240px"
+            , property "width" "240px"
             , property "border" ("2px solid " ++ borderColor)
-            , property "border-radius" "8px"
             , property "background-color" backgroundColor
             , property "cursor" "pointer"
             , property "transition" "all 0.2s"
             ]
         , onClick (ToggleCar item.metadata.carNumber)
         ]
-        [ -- Top row: Position and car number
-          div
-            [ css
-                [ property "display" "flex"
-                , property "justify-content" "space-between"
+        [ div
+            [ class "card-body"
+            , css
+                [ property "padding" "8px"
+                , property "display" "grid"
+                , property "grid-template-columns" "auto auto 1fr"
+                , property "grid-template-rows" "auto auto"
                 , property "align-items" "center"
-                , property "margin-bottom" "4px"
+                , property "column-gap" "10px"
+                , property "row-gap" "4px"
                 ]
             ]
-            [ div
+            [ -- Row 1, Col 1: Position
+              div
                 [ css
-                    [ property "font-size" "11px"
+                    [ property "font-size" "12px"
                     , property "font-weight" "600"
                     , property "opacity" "0.7"
+                    , property "grid-row" "1"
+                    , property "grid-column" "1"
                     ]
                 ]
                 [ text ("P" ++ String.fromInt item.position) ]
-            , Leaderboard.viewCarNumberColumn_Wec season item.metadata
+            , -- Row 1, Col 2: Car number
+              div
+                [ css
+                    [ property "grid-row" "1"
+                    , property "grid-column" "2"
+                    ]
+                ]
+                [ Leaderboard.viewCarNumberColumn_Wec season item.metadata ]
+            , -- Row 1, Col 3: Team and Driver name
+              div
+                [ css
+                    [ property "grid-row" "1"
+                    , property "grid-column" "3"
+                    , property "display" "grid"
+                    , property "gap" "2px"
+                    ]
+                ]
+                [ div
+                    [ css
+                        [ property "font-size" "10px"
+                        , property "max-width" "100%"
+                        ]
+                    ]
+                    [ text item.metadata.team ]
+                , div
+                    [ css
+                        [ property "font-size" "10px"
+                        , property "opacity" "0.6"
+                        ]
+                    ]
+                    [ item.currentDriver
+                        |> Maybe.map (\driver -> text driver.name)
+                        |> Maybe.withDefault (text "-")
+                    ]
+                ]
+            , -- Row 2, Col 1-2: Car image
+              div
+                [ css
+                    [ property "grid-row" "2"
+                    , property "grid-column" "1 / 3"
+                    , property "display" "grid"
+                    , property "place-items" "center"
+                    ]
+                ]
+                [ carImage season item.metadata.carNumber ]
+            , -- Row 2, Col 3: Lap info
+              div
+                [ css
+                    [ property "grid-row" "2"
+                    , property "grid-column" "3"
+                    ]
+                ]
+                [ currentLapView props.analysis item ]
             ]
-        , carImage season item.metadata.carNumber
-        , viewCurrentDriver item
-        , currentLapView props.analysis item
         ]
 
 
@@ -254,10 +258,10 @@ carImage : Int -> String -> Html msg
 carImage season carNumber =
     div
         [ css
-            [ property "flex" "1"
-            , property "display" "flex"
-            , property "align-items" "center"
-            , property "justify-content" "center"
+            [ property "width" "60px"
+            , property "height" "40px"
+            , property "display" "grid"
+            , property "place-items" "center"
             ]
         ]
         [ case Series.carImageUrl_Wec season carNumber of
@@ -266,6 +270,7 @@ carImage season carNumber =
                     [ src url
                     , css
                         [ property "width" "100%"
+                        , property "height" "100%"
                         , property "object-fit" "contain"
                         ]
                     ]
@@ -275,33 +280,15 @@ carImage season carNumber =
                 div
                     [ css
                         [ property "width" "100%"
+                        , property "height" "100%"
                         , property "display" "flex"
                         , property "align-items" "center"
                         , property "justify-content" "center"
                         , property "background-color" "hsl(0 0% 100% / 0.05)"
-                        , property "font-size" "24px"
+                        , property "font-size" "20px"
                         , property "font-weight" "700"
                         , property "opacity" "0.3"
                         ]
                     ]
                     [ text carNumber ]
-        ]
-
-
-viewCurrentDriver : ViewModelItem -> Html msg
-viewCurrentDriver item =
-    div
-        [ css
-            [ property "text-align" "center"
-            , property "font-size" "10px"
-            , property "opacity" "0.7"
-            , property "margin-bottom" "4px"
-            , property "white-space" "nowrap"
-            , property "overflow" "hidden"
-            , property "text-overflow" "ellipsis"
-            ]
-        ]
-        [ item.currentDriver
-            |> Maybe.map (\driver -> text driver.name)
-            |> Maybe.withDefault (text "-")
         ]

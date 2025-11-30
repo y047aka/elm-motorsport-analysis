@@ -252,7 +252,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 , overflowY hidden
                                 , padding (px 10)
                                 , property "display" "grid"
-                                , property "grid-template-columns" "390px 1fr"
+                                , property "grid-template-columns" "390px 1fr 390px"
                                 , property "grid-template-rows" "1fr auto"
                                 , property "row-gap" "10px"
                                 ]
@@ -281,19 +281,28 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
                             , div
                                 [ css
+                                    [ property "grid-row" "1"
+                                    , property "grid-column" "3"
+                                    , overflowY scroll
+                                    ]
+                                ]
+                                [ Html.map CompareWidgetMsg <|
+                                    Lazy.lazy2 CompareWidget.viewCharts compareProps m.compare
+                                ]
+                            , div
+                                [ css
                                     [ property "grid-row" "2"
                                     , property "grid-column" "1 / -1"
                                     ]
                                 ]
                                 [ div
-                                    [ class "card card-sm"
-                                    , css [ property "background-color" "var(--widget-bg)" ]
-                                    ]
-                                    [ div
-                                        [ class "card-body" ]
-                                        [ Html.map CompareWidgetMsg <|
-                                            Lazy.lazy2 CompareWidget.view compareProps m.compare
+                                    [ css
+                                        [ property "padding-top" "12px"
+                                        , property "border-top" "3px solid hsl(0 0% 100% / 0.1)"
                                         ]
+                                    ]
+                                    [ Html.map CompareWidgetMsg <|
+                                        Lazy.lazy2 CompareWidget.viewCarSelector compareProps m.compare
                                     ]
                                 ]
                             ]
