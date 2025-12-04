@@ -1,15 +1,16 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, backgroundColor, hover, property)
+import Css exposing (after, backgroundColor, before, hover, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, li, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html.Styled as Html exposing (Html, div, img, li, text)
+import Html.Styled.Attributes exposing (alt, class, css, src)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import SortedList
@@ -38,15 +39,66 @@ view props =
                         )
                     )
     in
-    Widget.container headerTitle <|
-        Keyed.node "ul" [ class "list" ] carList
+    div
+        [ css
+            [ property "height" "100%"
+            , property "display" "grid"
+            , property "grid-template-rows" "repeat(3, 330px)"
+            ]
+        ]
+        (List.map
+            (\( class_, cars ) ->
+                div
+                    [ css
+                        [ property "height" "100%"
+                        , property "display" "grid"
+                        , property "grid-template-rows" "auto 1fr"
+                        ]
+                    ]
+                    [ div
+                        [ css
+                            [ property "padding-block" "0.25rem"
+                            , property "display" "flex"
+                            , property "align-items" "center"
+                            , property "column-gap" "0.5em"
+                            , property "font-weight" "bold"
+                            , property "font-size" "0.875rem"
+                            , before
+                                [ property "display" "block"
+                                , property "content" (qt "")
+                                , property "width" "1em"
+                                , property "height" "1em"
+                                , property "border-radius" "2px"
+                                , backgroundColor (Class.toHexColor props.eventSummary.season class_)
+                                ]
+                            ]
+                        ]
+                        [ text (Class.toString class_) ]
+                    , Keyed.node "ul"
+                        [ class "list"
+                        , css
+                            [ property "overflow" "scroll" ]
+                        ]
+                        (cars
+                            |> SortedList.toList
+                            |> List.map
+                                (\item ->
+                                    ( item.metadata.carNumber
+                                    , Lazy.lazy3 carRow props.eventSummary.season props.onSelectCar item
+                                    )
+                                )
+                        )
+                    ]
+            )
+            props.viewModel.itemsByClass
+        )
 
 
 carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
 carRow season onSelect item =
     li
         [ onClick (onSelect item)
-        , class "list-row p-2 grid-cols-[20px_30px_1fr_auto_24px] items-center gap-2"
+        , class "list-row p-2 grid-cols-[20px_60px_1fr_auto_24px] items-center gap-2"
         , css
             [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ]
             , property "cursor" "pointer"
@@ -56,10 +108,27 @@ carRow season onSelect item =
         ]
         [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
         , div
-            [ class "py-1 text-center text-xs font-bold rounded"
-            , css [ backgroundColor (Class.toHexColor season item.metadata.class) ]
+            [ class "flex items-center justify-center gap-1 py-1 px-1.5 text-xs font-bold rounded"
+            , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
             ]
-            [ text item.metadata.carNumber ]
+            (case Manufacturer.toLogoUrl item.metadata.manufacturer of
+                Just logoUrl ->
+                    [ img
+                        [ src logoUrl
+                        , alt (Manufacturer.toString item.metadata.manufacturer)
+                        , class "object-contain"
+                        , css
+                            [ property "max-width" "18px"
+                            , property "max-height" "18px"
+                            ]
+                        ]
+                        []
+                    , text item.metadata.carNumber
+                    ]
+
+                Nothing ->
+                    [ text item.metadata.carNumber ]
+            )
         , div []
             [ div [ class "text-xs" ] [ text item.metadata.team ]
             , div [ class "text-xs opacity-60" ]

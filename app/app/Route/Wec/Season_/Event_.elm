@@ -261,7 +261,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ css
                                     [ property "grid-row" "1"
                                     , property "grid-column" "1"
-                                    , overflowY scroll
+                                    , height (px 1000)
                                     ]
                                 ]
                                 [ LiveStandingsWidget.view
