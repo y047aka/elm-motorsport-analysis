@@ -55,8 +55,8 @@ import Css.Color exposing (oklch)
 import Css.Extra exposing (when)
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
-import Html.Styled exposing (Html, div, span, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled exposing (Html, div, img, span, text)
+import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
@@ -68,6 +68,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
@@ -233,7 +234,7 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
-carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class } } -> Column data msg
+carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer.Manufacturer } } -> Column data msg
 carNumberColumn_Wec season { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec season
@@ -242,20 +243,41 @@ carNumberColumn_Wec season { getter } =
     }
 
 
-viewCarNumberColumn_Wec : Int -> { a | carNumber : String, class : Class } -> Html msg
-viewCarNumberColumn_Wec season { carNumber, class } =
+viewCarNumberColumn_Wec : Int -> { a | carNumber : String, class : Class, manufacturer : Manufacturer.Manufacturer } -> Html msg
+viewCarNumberColumn_Wec season { carNumber, class, manufacturer } =
     div
         [ css
             [ width (em 2.5)
-            , property "padding-block" "5px"
+            , property "padding" "4px"
+            , displayFlex
+            , flexDirection column
+            , property "gap" "4px"
+            , property "place-items" "center"
             , textAlign center
-            , fontSize (px 14)
+            , fontSize (px 12)
             , fontWeight bold
-            , backgroundColor (Class.toHexColor season class)
+            , backgroundColor (Manufacturer.toColor manufacturer)
             , borderRadius (px 5)
+            , property "line-height" "1"
             ]
         ]
-        [ text carNumber ]
+        (case Manufacturer.toLogoUrl manufacturer of
+            Just logoUrl ->
+                [ img
+                    [ src logoUrl
+                    , alt (Manufacturer.toString manufacturer)
+                    , css
+                        [ property "object-fit" "contain"
+                        , height (px 14)
+                        ]
+                    ]
+                    []
+                , text carNumber
+                ]
+
+            Nothing ->
+                [ text carNumber ]
+        )
 
 
 driverNameColumn_F1 : { label : String, getter : data -> String } -> Column data msg

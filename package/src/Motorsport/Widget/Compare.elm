@@ -1,6 +1,6 @@
 module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
 
-import Css exposing (property)
+import Css exposing (backgroundColor, property)
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
@@ -10,6 +10,7 @@ import List.Extra
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.BoxPlot as BoxPlot
+import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
@@ -145,7 +146,7 @@ carSelectorItem season model props item =
             else
                 "hsl(0 0% 100% / 0)"
 
-        backgroundColor =
+        backgroundColorValue =
             if isSelected then
                 "hsl(0 0% 100% / 0.1)"
 
@@ -168,7 +169,7 @@ carSelectorItem season model props item =
             [ property "min-width" "240px"
             , property "width" "240px"
             , property "border" ("2px solid " ++ borderColor)
-            , property "background-color" backgroundColor
+            , property "background-color" backgroundColorValue
             , property "cursor" "pointer"
             , property "transition" "all 0.2s"
             ]
@@ -186,17 +187,34 @@ carSelectorItem season model props item =
                 , property "row-gap" "4px"
                 ]
             ]
-            [ -- Row 1, Col 1: Position
+            [ -- Row 1, Col 1: Position and class
               div
                 [ css
-                    [ property "font-size" "12px"
-                    , property "font-weight" "600"
-                    , property "opacity" "0.7"
+                    [ property "display" "flex"
+                    , property "flex-direction" "column"
+                    , property "gap" "2px"
                     , property "grid-row" "1"
                     , property "grid-column" "1"
                     ]
                 ]
-                [ text ("P" ++ String.fromInt item.position) ]
+                [ div
+                    [ css
+                        [ property "font-size" "12px"
+                        , property "font-weight" "600"
+                        , property "opacity" "0.7"
+                        ]
+                    ]
+                    [ text ("P" ++ String.fromInt item.position) ]
+                , div
+                    [ css
+                        [ property "font-size" "8px"
+                        , property "font-weight" "500"
+                        , property "opacity" "0.5"
+                        , property "line-height" "1"
+                        ]
+                    ]
+                    [ text (Class.toString item.metadata.class) ]
+                ]
             , -- Row 1, Col 2: Car number
               div
                 [ css
@@ -252,7 +270,6 @@ carSelectorItem season model props item =
                 [ currentLapView props.analysis item ]
             ]
         ]
-
 
 carImage : Int -> String -> Html msg
 carImage season carNumber =
