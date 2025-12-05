@@ -98,7 +98,7 @@ carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
 carRow season onSelect item =
     li
         [ onClick (onSelect item)
-        , class "list-row p-2 grid-cols-[20px_60px_1fr_auto_24px] items-center gap-2"
+        , class "list-row p-2 grid-cols-[20px_40px_1fr_auto_24px] items-center gap-2"
         , css
             [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ]
             , property "cursor" "pointer"
@@ -108,7 +108,7 @@ carRow season onSelect item =
         ]
         [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
         , div
-            [ class "flex items-center justify-center gap-1 py-1 px-1.5 text-xs font-bold rounded"
+            [ class "p-1 grid gap-1 place-items-center text-xs font-bold rounded text-center leading-none"
             , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
             ]
             (case Manufacturer.toLogoUrl item.metadata.manufacturer of
@@ -117,10 +117,7 @@ carRow season onSelect item =
                         [ src logoUrl
                         , alt (Manufacturer.toString item.metadata.manufacturer)
                         , class "object-contain"
-                        , css
-                            [ property "max-width" "18px"
-                            , property "max-height" "18px"
-                            ]
+                        , css [ property "height" "14px" ]
                         ]
                         []
                     , text item.metadata.carNumber
