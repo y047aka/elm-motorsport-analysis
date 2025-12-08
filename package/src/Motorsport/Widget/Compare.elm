@@ -118,17 +118,61 @@ resolveCars carNumbers viewModel =
 
 viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
+    let
+        groupedByClass =
+            props.viewModel.items
+                |> SortedList.toList
+                |> List.Extra.gatherEqualsBy (.metadata >> .class)
+                |> List.map (\( first, rest ) -> first :: rest)
+    in
     div
         [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "repeat(auto-fit, minmax(55px, 1fr))"
-            , property "gap" "8px"
+            [ property "display" "flex"
+            , property "gap" "16px"
+            , property "flex-wrap" "wrap"
             ]
         ]
-        (props.viewModel.items
-            |> SortedList.toList
-            |> List.map (carSelectorItem model)
-        )
+        (List.map (viewClassGroup model) groupedByClass)
+
+
+viewClassGroup : Model -> List ViewModelItem -> Html Msg
+viewClassGroup model cars =
+    case List.head cars of
+        Nothing ->
+            text ""
+
+        Just firstCar ->
+            div
+                [ css
+                    [ property "display" "flex"
+                    , property "flex-direction" "column"
+                    , property "gap" "8px"
+                    , property "flex" "1"
+                    , property "min-width" "200px"
+                    ]
+                ]
+                [ -- Class header
+                  div
+                    [ css
+                        [ property "font-size" "12px"
+                        , property "font-weight" "700"
+                        , property "text-transform" "uppercase"
+                        , property "color" "hsl(0 0% 100% / 0.7)"
+                        , property "padding-bottom" "4px"
+                        , property "border-bottom" "1px solid hsl(0 0% 100% / 0.2)"
+                        ]
+                    ]
+                    [ text (Class.toString firstCar.metadata.class) ]
+                , -- Car grid
+                  div
+                    [ css
+                        [ property "display" "grid"
+                        , property "grid-template-columns" "repeat(auto-fill, minmax(55px, 1fr))"
+                        , property "gap" "8px"
+                        ]
+                    ]
+                    (List.map (carSelectorItem model) cars)
+                ]
 
 
 carSelectorItem : Model -> ViewModelItem -> Html Msg
