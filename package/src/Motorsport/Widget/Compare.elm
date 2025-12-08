@@ -1,7 +1,6 @@
 module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
 
 import Css exposing (backgroundColor, property)
-import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
@@ -13,6 +12,7 @@ import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Leaderboard as Leaderboard
+import Motorsport.Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
@@ -129,183 +129,128 @@ viewCarSelector props model =
         ]
         (props.viewModel.items
             |> SortedList.toList
-            |> List.map (carSelectorItem props.eventSummary.season model props)
+            |> List.map (carSelectorItem model)
         )
 
 
-carSelectorItem : Int -> Model -> Props -> ViewModelItem -> Html Msg
-carSelectorItem season model props item =
+carSelectorItem : Model -> ViewModelItem -> Html Msg
+carSelectorItem model item =
     let
         isSelected =
             List.member item.metadata.carNumber model.selectedCars
 
-        borderColor =
+        manufacturerColor =
+            Motorsport.Manufacturer.toColor item.metadata.manufacturer
+
+        borderStyle =
             if isSelected then
-                "hsl(0 0% 80%)"
+                "2px solid hsl(0 0% 100% / 0.5)"
 
             else
-                "hsl(0 0% 100% / 0)"
+                "2px solid transparent"
 
-        backgroundColorValue =
+        overlayOpacity =
             if isSelected then
-                "hsl(0 0% 100% / 0.1)"
+                "0"
 
             else
-                "var(--widget-bg)"
-
-        isLeMans2025 =
-            ( props.eventSummary.season, props.eventSummary.name ) == ( 2025, "24 Hours of Le Mans" )
-
-        currentLapView =
-            if isLeMans2025 then
-                Leaderboard.viewCurrentLapColumn_LeMans24h
-
-            else
-                Leaderboard.viewCurrentLapColumn_Wec
+                "0.3"
     in
     div
-        [ class "card card-sm"
-        , css
-            [ property "min-width" "240px"
-            , property "width" "240px"
-            , property "border" ("2px solid " ++ borderColor)
-            , property "background-color" backgroundColorValue
+        [ css
+            [ property "min-width" "70px"
+            , property "width" "70px"
+            , property "border" borderStyle
+            , property "border-radius" "8px"
+            , Css.backgroundColor manufacturerColor
             , property "cursor" "pointer"
             , property "transition" "all 0.2s"
+            , property "position" "relative"
+            , property "overflow" "hidden"
             ]
         , onClick (ToggleCar item.metadata.carNumber)
         ]
-        [ div
-            [ class "card-body"
-            , css
+        [ -- Dark overlay for unselected items
+          div
+            [ css
+                [ property "position" "absolute"
+                , property "inset" "0"
+                , property "background-color" "hsl(0 0% 0%)"
+                , property "opacity" overlayOpacity
+                , property "transition" "opacity 0.2s"
+                , property "pointer-events" "none"
+                ]
+            ]
+            []
+        , div
+            [ css
                 [ property "padding" "8px"
-                , property "display" "grid"
-                , property "grid-template-columns" "auto auto 1fr"
-                , property "grid-template-rows" "auto auto"
+                , property "display" "flex"
+                , property "flex-direction" "column"
                 , property "align-items" "center"
-                , property "column-gap" "10px"
-                , property "row-gap" "4px"
+                , property "gap" "6px"
+                , property "position" "relative"
                 ]
             ]
-            [ -- Row 1, Col 1: Position and class
+            [ -- Position
               div
                 [ css
-                    [ property "display" "flex"
-                    , property "flex-direction" "column"
-                    , property "gap" "2px"
-                    , property "grid-row" "1"
-                    , property "grid-column" "1"
+                    [ property "font-size" "10px"
+                    , property "font-weight" "700"
+                    , property "line-height" "1"
+                    , property "color" "hsl(0 0% 100%)"
+                    , property "opacity" "0.8"
                     ]
                 ]
-                [ div
-                    [ css
-                        [ property "font-size" "12px"
-                        , property "font-weight" "600"
-                        , property "opacity" "0.7"
-                        ]
-                    ]
-                    [ text ("P" ++ String.fromInt item.position) ]
-                , div
-                    [ css
-                        [ property "font-size" "8px"
-                        , property "font-weight" "500"
-                        , property "opacity" "0.5"
-                        , property "line-height" "1"
-                        ]
-                    ]
-                    [ text (Class.toString item.metadata.class) ]
-                ]
-            , -- Row 1, Col 2: Car number
+                [ text ("P" ++ String.fromInt item.position) ]
+            , -- Manufacturer logo
+              manufacturerLogo item.metadata.manufacturer
+            , -- Car number
               div
                 [ css
-                    [ property "grid-row" "1"
-                    , property "grid-column" "2"
+                    [ property "font-size" "22px"
+                    , property "font-weight" "700"
+                    , property "line-height" "1"
+                    , property "color" "hsl(0 0% 100%)"
                     ]
                 ]
-                [ Leaderboard.viewCarNumberColumn_Wec season item.metadata ]
-            , -- Row 1, Col 3: Team and Driver name
+                [ text item.metadata.carNumber ]
+            , -- Class indicator
               div
                 [ css
-                    [ property "grid-row" "1"
-                    , property "grid-column" "3"
-                    , property "display" "grid"
-                    , property "gap" "2px"
+                    [ property "font-size" "8px"
+                    , property "font-weight" "600"
+                    , property "line-height" "1"
+                    , property "text-transform" "uppercase"
+                    , property "color" "hsl(0 0% 100%)"
+                    , property "opacity" "0.8"
                     ]
                 ]
-                [ div
-                    [ css
-                        [ property "font-size" "10px"
-                        , property "max-width" "100%"
-                        ]
-                    ]
-                    [ text item.metadata.team ]
-                , div
-                    [ css
-                        [ property "font-size" "10px"
-                        , property "opacity" "0.6"
-                        ]
-                    ]
-                    [ item.currentDriver
-                        |> Maybe.map (\driver -> text driver.name)
-                        |> Maybe.withDefault (text "-")
-                    ]
-                ]
-            , -- Row 2, Col 1-2: Car image
-              div
-                [ css
-                    [ property "grid-row" "2"
-                    , property "grid-column" "1 / 3"
-                    , property "display" "grid"
-                    , property "place-items" "center"
-                    ]
-                ]
-                [ carImage season item.metadata.carNumber ]
-            , -- Row 2, Col 3: Lap info
-              div
-                [ css
-                    [ property "grid-row" "2"
-                    , property "grid-column" "3"
-                    ]
-                ]
-                [ currentLapView props.analysis item ]
+                [ text (Class.toString item.metadata.class) ]
             ]
         ]
 
-carImage : Int -> String -> Html msg
-carImage season carNumber =
-    div
-        [ css
-            [ property "width" "60px"
-            , property "height" "40px"
-            , property "display" "grid"
-            , property "place-items" "center"
-            ]
-        ]
-        [ case Series.carImageUrl_Wec season carNumber of
-            Just url ->
-                img
-                    [ src url
-                    , css
-                        [ property "width" "100%"
-                        , property "height" "100%"
-                        , property "object-fit" "contain"
-                        ]
-                    ]
-                    []
 
-            Nothing ->
-                div
-                    [ css
-                        [ property "width" "100%"
-                        , property "height" "100%"
-                        , property "display" "flex"
-                        , property "align-items" "center"
-                        , property "justify-content" "center"
-                        , property "background-color" "hsl(0 0% 100% / 0.05)"
-                        , property "font-size" "20px"
-                        , property "font-weight" "700"
-                        , property "opacity" "0.3"
-                        ]
+manufacturerLogo : Motorsport.Manufacturer.Manufacturer -> Html msg
+manufacturerLogo manufacturer =
+    case Motorsport.Manufacturer.toLogoUrl manufacturer of
+        Just url ->
+            img
+                [ src url
+                , css
+                    [ property "max-width" "40px"
+                    , property "height" "24px"
+                    , property "object-fit" "contain"
+                    , property "opacity" "0.9"
                     ]
-                    [ text carNumber ]
-        ]
+                ]
+                []
+
+        Nothing ->
+            div
+                [ css
+                    [ property "width" "36px"
+                    , property "height" "24px"
+                    ]
+                ]
+                []
