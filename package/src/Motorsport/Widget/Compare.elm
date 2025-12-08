@@ -120,11 +120,9 @@ viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
     div
         [ css
-            [ property "display" "flex"
-            , property "flex-wrap" "wrap"
+            [ property "display" "grid"
+            , property "grid-template-columns" "repeat(auto-fit, minmax(55px, 1fr))"
             , property "gap" "8px"
-            , property "min-width" "0"
-            , property "width" "100%"
             ]
         ]
         (props.viewModel.items
@@ -149,85 +147,64 @@ carSelectorItem model item =
             else
                 "2px solid transparent"
 
-        overlayOpacity =
+        opacity =
             if isSelected then
-                "0"
+                "1.0"
 
             else
-                "0.3"
+                "0.5"
     in
     div
         [ css
-            [ property "min-width" "70px"
-            , property "width" "70px"
+            [ property "padding" "4px"
             , property "border" borderStyle
             , property "border-radius" "8px"
-            , Css.backgroundColor manufacturerColor
+            , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / " ++ opacity ++ ")")
+            , property "display" "flex"
+            , property "flex-direction" "column"
+            , property "align-items" "center"
+            , property "justify-content" "space-between"
+            , property "gap" "6px"
             , property "cursor" "pointer"
             , property "transition" "all 0.2s"
-            , property "position" "relative"
-            , property "overflow" "hidden"
             ]
         , onClick (ToggleCar item.metadata.carNumber)
         ]
-        [ -- Dark overlay for unselected items
+        [ -- Position
           div
             [ css
-                [ property "position" "absolute"
-                , property "inset" "0"
-                , property "background-color" "hsl(0 0% 0%)"
-                , property "opacity" overlayOpacity
-                , property "transition" "opacity 0.2s"
-                , property "pointer-events" "none"
+                [ property "font-size" "10px"
+                , property "font-weight" "700"
+                , property "line-height" "1"
+                , property "color" "hsl(0 0% 100%)"
+                , property "opacity" "0.8"
                 ]
             ]
-            []
-        , div
+            [ text ("P" ++ String.fromInt item.position) ]
+        , -- Manufacturer logo
+          manufacturerLogo item.metadata.manufacturer
+        , -- Car number
+          div
             [ css
-                [ property "padding" "8px"
-                , property "display" "flex"
-                , property "flex-direction" "column"
-                , property "align-items" "center"
-                , property "gap" "6px"
-                , property "position" "relative"
+                [ property "font-size" "16px"
+                , property "font-weight" "700"
+                , property "line-height" "1"
+                , property "color" "hsl(0 0% 100%)"
                 ]
             ]
-            [ -- Position
-              div
-                [ css
-                    [ property "font-size" "10px"
-                    , property "font-weight" "700"
-                    , property "line-height" "1"
-                    , property "color" "hsl(0 0% 100%)"
-                    , property "opacity" "0.8"
-                    ]
+            [ text item.metadata.carNumber ]
+        , -- Class indicator
+          div
+            [ css
+                [ property "font-size" "8px"
+                , property "font-weight" "600"
+                , property "line-height" "1"
+                , property "text-transform" "uppercase"
+                , property "color" "hsl(0 0% 100%)"
+                , property "opacity" "0.8"
                 ]
-                [ text ("P" ++ String.fromInt item.position) ]
-            , -- Manufacturer logo
-              manufacturerLogo item.metadata.manufacturer
-            , -- Car number
-              div
-                [ css
-                    [ property "font-size" "22px"
-                    , property "font-weight" "700"
-                    , property "line-height" "1"
-                    , property "color" "hsl(0 0% 100%)"
-                    ]
-                ]
-                [ text item.metadata.carNumber ]
-            , -- Class indicator
-              div
-                [ css
-                    [ property "font-size" "8px"
-                    , property "font-weight" "600"
-                    , property "line-height" "1"
-                    , property "text-transform" "uppercase"
-                    , property "color" "hsl(0 0% 100%)"
-                    , property "opacity" "0.8"
-                    ]
-                ]
-                [ text (Class.toString item.metadata.class) ]
             ]
+            [ text (Class.toString item.metadata.class) ]
         ]
 
 
@@ -238,8 +215,8 @@ manufacturerLogo manufacturer =
             img
                 [ src url
                 , css
-                    [ property "max-width" "40px"
-                    , property "height" "24px"
+                    [ property "max-width" "35px"
+                    , property "height" "18px"
                     , property "object-fit" "contain"
                     , property "opacity" "0.9"
                     ]
@@ -247,10 +224,4 @@ manufacturerLogo manufacturer =
                 []
 
         Nothing ->
-            div
-                [ css
-                    [ property "width" "36px"
-                    , property "height" "24px"
-                    ]
-                ]
-                []
+            text ""
