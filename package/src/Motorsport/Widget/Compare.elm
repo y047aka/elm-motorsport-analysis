@@ -128,7 +128,7 @@ viewCarSelector props model =
     div
         [ css
             [ property "display" "flex"
-            , property "gap" "16px"
+            , property "column-gap" "20px"
             , property "flex-wrap" "wrap"
             ]
         ]
@@ -159,7 +159,8 @@ viewClassGroup model cars =
                         , property "text-transform" "uppercase"
                         , property "color" "hsl(0 0% 100% / 0.7)"
                         , property "padding-bottom" "4px"
-                        , property "border-bottom" "1px solid hsl(0 0% 100% / 0.2)"
+
+                        -- , property "border-bottom" "1px solid hsl(0 0% 100% / 0.2)"
                         ]
                     ]
                     [ text (Class.toString firstCar.metadata.class) ]
@@ -168,7 +169,7 @@ viewClassGroup model cars =
                     [ css
                         [ property "display" "grid"
                         , property "grid-template-columns" "repeat(auto-fill, minmax(55px, 1fr))"
-                        , property "gap" "8px"
+                        , property "gap" "4px"
                         ]
                     ]
                     (List.map (carSelectorItem model) cars)
@@ -237,18 +238,6 @@ carSelectorItem model item =
                 ]
             ]
             [ text item.metadata.carNumber ]
-        , -- Class indicator
-          div
-            [ css
-                [ property "font-size" "8px"
-                , property "font-weight" "600"
-                , property "line-height" "1"
-                , property "text-transform" "uppercase"
-                , property "color" "hsl(0 0% 100%)"
-                , property "opacity" "0.8"
-                ]
-            ]
-            [ text (Class.toString item.metadata.class) ]
         ]
 
 
@@ -268,4 +257,10 @@ manufacturerLogo manufacturer =
                 []
 
         Nothing ->
-            text ""
+            div
+                [ css
+                    [ property "max-width" "35px"
+                    , property "height" "18px"
+                    ]
+                ]
+                []
