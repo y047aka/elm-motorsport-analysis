@@ -1,9 +1,9 @@
 module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
 
-import Css exposing (backgroundColor, property)
+import Css exposing (backgroundColor, before, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (class, css, src)
+import Html.Styled.Attributes exposing (css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import List.NonEmpty as NonEmpty
@@ -11,7 +11,6 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
-import Motorsport.Leaderboard as Leaderboard
 import Motorsport.Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget.CloseBattles as CloseBattles
@@ -146,7 +145,7 @@ viewClassGroup model cars =
                 [ css
                     [ property "display" "flex"
                     , property "flex-direction" "column"
-                    , property "gap" "8px"
+                    , property "gap" "4px"
                     , property "flex" "1"
                     , property "min-width" "200px"
                     ]
@@ -154,13 +153,20 @@ viewClassGroup model cars =
                 [ -- Class header
                   div
                     [ css
-                        [ property "font-size" "12px"
+                        [ property "display" "flex"
+                        , property "align-items" "center"
+                        , property "column-gap" "0.5em"
+                        , property "font-size" "10px"
                         , property "font-weight" "700"
-                        , property "text-transform" "uppercase"
-                        , property "color" "hsl(0 0% 100% / 0.7)"
-                        , property "padding-bottom" "4px"
-
-                        -- , property "border-bottom" "1px solid hsl(0 0% 100% / 0.2)"
+                        , property "color" "hsl(0 0% 100% / 0.8)"
+                        , before
+                            [ property "display" "block"
+                            , property "content" (qt "")
+                            , property "width" "0.2em"
+                            , property "height" "1.2em"
+                            , property "border-radius" "2px"
+                            , backgroundColor (Class.toHexColor 2025 firstCar.metadata.class)
+                            ]
                         ]
                     ]
                     [ text (Class.toString firstCar.metadata.class) ]
@@ -168,8 +174,8 @@ viewClassGroup model cars =
                   div
                     [ css
                         [ property "display" "grid"
-                        , property "grid-template-columns" "repeat(auto-fill, minmax(55px, 1fr))"
-                        , property "gap" "4px"
+                        , property "grid-template-columns" "repeat(auto-fill, minmax(35px, 1fr))"
+                        , property "gap" "2px"
                         ]
                     ]
                     (List.map (carSelectorItem model) cars)
@@ -203,13 +209,13 @@ carSelectorItem model item =
         [ css
             [ property "padding" "4px"
             , property "border" borderStyle
-            , property "border-radius" "8px"
+            , property "border-radius" "4px"
             , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / " ++ opacity ++ ")")
             , property "display" "flex"
             , property "flex-direction" "column"
             , property "align-items" "center"
             , property "justify-content" "space-between"
-            , property "gap" "6px"
+            , property "gap" "4px"
             , property "cursor" "pointer"
             , property "transition" "all 0.2s"
             ]
@@ -218,7 +224,7 @@ carSelectorItem model item =
         [ -- Position
           div
             [ css
-                [ property "font-size" "10px"
+                [ property "font-size" "9px"
                 , property "font-weight" "700"
                 , property "line-height" "1"
                 , property "color" "hsl(0 0% 100%)"
@@ -231,7 +237,7 @@ carSelectorItem model item =
         , -- Car number
           div
             [ css
-                [ property "font-size" "16px"
+                [ property "font-size" "12px"
                 , property "font-weight" "700"
                 , property "line-height" "1"
                 , property "color" "hsl(0 0% 100%)"
@@ -248,8 +254,8 @@ manufacturerLogo manufacturer =
             img
                 [ src url
                 , css
-                    [ property "max-width" "35px"
-                    , property "height" "18px"
+                    [ property "max-width" "30px"
+                    , property "height" "16px"
                     , property "object-fit" "contain"
                     , property "opacity" "0.9"
                     ]
@@ -259,8 +265,8 @@ manufacturerLogo manufacturer =
         Nothing ->
             div
                 [ css
-                    [ property "max-width" "35px"
-                    , property "height" "18px"
+                    [ property "max-width" "30px"
+                    , property "height" "16px"
                     ]
                 ]
                 []

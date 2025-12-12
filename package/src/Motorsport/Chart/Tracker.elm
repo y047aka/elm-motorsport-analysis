@@ -1,6 +1,6 @@
 module Motorsport.Chart.Tracker exposing (view)
 
-import Css exposing (maxWidth, pct)
+import Css exposing (maxHeight, maxWidth, pct)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorData(..), TrackConfig)
 import Motorsport.Circuit as Circuit
@@ -43,24 +43,24 @@ constants : Constants
 constants =
     let
         size =
-            1000
+            550
     in
     { svg = { w = size, h = size }
     , track =
         { cx = size / 2
         , cy = size / 2
-        , r = 400
-        , trackWidth = 8
-        , startFinishLineExtension = 20
-        , startFinishLineStrokeWidth = 4
+        , r = 200
+        , trackWidth = 4
+        , startFinishLineExtension = 15
+        , startFinishLineStrokeWidth = 2
         , sectorBoundaryOffset = 10
-        , sectorBoundaryStrokeWidth = 4
-        , sectorLabelRadius = 430
-        , sectorLabelFontSize = 20
-        , miniSectorLabelRadius = 370
-        , miniSectorLabelFontSize = 12
+        , sectorBoundaryStrokeWidth = 3
+        , sectorLabelRadius = 230
+        , sectorLabelFontSize = 16
+        , miniSectorLabelRadius = 170
+        , miniSectorLabelFontSize = 10
         }
-    , car = { size = 15 }
+    , car = { size = 12 }
     }
 
 
@@ -148,7 +148,7 @@ track direction config =
                 []
 
         outerTrackCircle =
-            trackCircle "#eee" (trackWidth + 8)
+            trackCircle "#eee" (trackWidth + 4)
 
         innerTrackCircle =
             trackCircle "oklch(0.2 0 0)" trackWidth

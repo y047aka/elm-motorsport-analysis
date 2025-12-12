@@ -252,8 +252,8 @@ view app { eventSummary, analysis, raceControl } m =
                                 , overflowY hidden
                                 , padding (px 10)
                                 , property "display" "grid"
-                                , property "grid-template-columns" "390px 1fr 390px"
-                                , property "grid-template-rows" "1fr auto"
+                                , property "grid-template-columns" "350px 1fr 350px"
+                                , property "grid-template-rows" "1fr 135px"
                                 , property "row-gap" "10px"
                                 ]
                             ]
@@ -261,7 +261,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ css
                                     [ property "grid-row" "1"
                                     , property "grid-column" "1"
-                                    , height (px 1000)
+                                    , property "height" "100%"
                                     ]
                                 ]
                                 [ LiveStandingsWidget.view
@@ -295,15 +295,8 @@ view app { eventSummary, analysis, raceControl } m =
                                     , property "grid-column" "1 / -1"
                                     ]
                                 ]
-                                [ div
-                                    [ css
-                                        [ property "padding-top" "12px"
-                                        , property "border-top" "3px solid hsl(0 0% 100% / 0.1)"
-                                        ]
-                                    ]
-                                    [ Html.map CompareWidgetMsg <|
-                                        Lazy.lazy2 CompareWidget.viewCarSelector compareProps m.compare
-                                    ]
+                                [ Html.map CompareWidgetMsg <|
+                                    Lazy.lazy2 CompareWidget.viewCarSelector compareProps m.compare
                                 ]
                             ]
 

@@ -12,7 +12,6 @@ import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
-import Motorsport.Widget as Widget
 import SortedList
 
 
@@ -35,7 +34,7 @@ view props =
                 |> List.map
                     (\item ->
                         ( item.metadata.carNumber
-                        , Lazy.lazy3 carRow props.eventSummary.season props.onSelectCar item
+                        , Lazy.lazy2 carRow props.onSelectCar item
                         )
                     )
     in
@@ -43,7 +42,8 @@ view props =
         [ css
             [ property "height" "100%"
             , property "display" "grid"
-            , property "grid-template-rows" "repeat(3, 330px)"
+            , property "grid-template-rows" "repeat(3, 195px)"
+            , property "row-gap" "15px"
             ]
         ]
         (List.map
@@ -53,21 +53,21 @@ view props =
                         [ property "height" "100%"
                         , property "display" "grid"
                         , property "grid-template-rows" "auto 1fr"
+                        , property "row-gap" "4px"
                         ]
                     ]
                     [ div
                         [ css
-                            [ property "padding-block" "0.25rem"
-                            , property "display" "flex"
+                            [ property "display" "flex"
                             , property "align-items" "center"
                             , property "column-gap" "0.5em"
+                            , property "font-size" "10px"
                             , property "font-weight" "bold"
-                            , property "font-size" "0.875rem"
                             , before
                                 [ property "display" "block"
                                 , property "content" (qt "")
-                                , property "width" "1em"
-                                , property "height" "1em"
+                                , property "width" "0.2em"
+                                , property "height" "1.2em"
                                 , property "border-radius" "2px"
                                 , backgroundColor (Class.toHexColor props.eventSummary.season class_)
                                 ]
@@ -77,14 +77,14 @@ view props =
                     , Keyed.node "ul"
                         [ class "list"
                         , css
-                            [ property "overflow" "scroll" ]
+                            [ property "overflow-y" "scroll" ]
                         ]
                         (cars
                             |> SortedList.toList
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy3 carRow props.eventSummary.season props.onSelectCar item
+                                    , Lazy.lazy2 carRow props.onSelectCar item
                                     )
                                 )
                         )
@@ -94,48 +94,45 @@ view props =
         )
 
 
-carRow : Int -> (ViewModelItem -> msg) -> ViewModelItem -> Html msg
-carRow season onSelect item =
+carRow : (ViewModelItem -> msg) -> ViewModelItem -> Html msg
+carRow onSelect item =
     li
         [ onClick (onSelect item)
-        , class "list-row p-2 grid-cols-[20px_40px_1fr_auto_24px] items-center gap-2"
+        , class "list-row p-0.5 grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2"
         , css
-            [ after [ property "border-color" "hsl(0 0% 100% / 0.1)" ]
-            , property "cursor" "pointer"
+            [ property "cursor" "pointer"
             , property "transition" "background-color 0.2s ease"
+            , after [ property "border" "none" ]
             , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
             ]
         ]
         [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
         , div
-            [ class "p-1 grid gap-1 place-items-center text-xs font-bold rounded text-center leading-none"
+            [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
             , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
             ]
-            (case Manufacturer.toLogoUrl item.metadata.manufacturer of
+            [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
                 Just logoUrl ->
-                    [ img
+                    img
                         [ src logoUrl
                         , alt (Manufacturer.toString item.metadata.manufacturer)
                         , class "object-contain"
                         , css [ property "height" "14px" ]
                         ]
                         []
-                    , text item.metadata.carNumber
-                    ]
 
                 Nothing ->
-                    [ text item.metadata.carNumber ]
-            )
-        , div []
-            [ div [ class "text-xs" ] [ text item.metadata.team ]
-            , div [ class "text-xs opacity-60" ]
-                [ text (item.currentDriver |> Maybe.map .name |> Maybe.withDefault "") ]
+                    div [] [ text "" ]
+            , div [ class "text-center leading-none text-xs font-bold" ]
+                [ text item.metadata.carNumber ]
             ]
+        , div [ class "text-xs opacity-70" ]
+            [ text (item.currentDriver |> Maybe.map .name |> Maybe.withDefault "") ]
         , div [ class "text-xs text-right" ]
             [ text (Gap.toString item.timing.interval) ]
         , if item.status == Car.InPit then
             div
-                [ class "w-5 h-5 rounded-full border border-white-500 flex items-center justify-center text-white text-[10px] font-bold" ]
+                [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
                 [ text "P" ]
 
           else
