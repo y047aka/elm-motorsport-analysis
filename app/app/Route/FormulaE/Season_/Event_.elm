@@ -12,7 +12,7 @@ import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Clock as Clock exposing (Model(..))
+import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
@@ -138,7 +138,7 @@ update app shared msg m =
 
 subscriptions : RouteParams -> UrlPath -> Shared.Model -> Model -> Sub Msg
 subscriptions routeParams path shared model =
-    case shared.raceControl.clock of
+    case shared.raceControl.clock.state of
         Started _ _ ->
             Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
 
@@ -200,7 +200,7 @@ header { eventSummary, raceControl } =
         [ h1 [ css [ fontSize (em 1) ] ] [ text eventSummary.name ]
         , div [ css [ displayFlex, justifyContent spaceBetween ] ]
             [ nav []
-                [ case raceControl.clock of
+                [ case raceControl.clock.state of
                     Initial ->
                         button [ onClick StartRace ] [ text "Start" ]
 
@@ -212,13 +212,13 @@ header { eventSummary, raceControl } =
 
                     _ ->
                         text ""
-                , case raceControl.clock of
+                , case raceControl.clock.state of
                     Started _ _ ->
                         text ""
 
                     _ ->
                         labeledButton []
-                            [ button [ onClick (RaceControlMsg RaceControl.Add10seconds) ] [ text "+10s" ]
+                            [ button [ onClick (RaceControlMsg (RaceControl.SkipTime (10 * 1000))) ] [ text "+10s" ]
                             , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                             ]
                 ]

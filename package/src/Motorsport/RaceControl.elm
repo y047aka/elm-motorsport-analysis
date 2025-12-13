@@ -4,7 +4,7 @@ import List.Extra
 import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Class as Class
-import Motorsport.Clock as Clock exposing (Model(..))
+import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer as Manufacturer
@@ -56,7 +56,7 @@ init timelineEvents cars =
         timeLimit =
             calcTimeLimit carsList
     in
-    { clock = Initial
+    { clock = Clock.init
     , lapCount = 0
     , lapTotal = calcLapTotal cars
     , timeLimit = timeLimit
@@ -89,10 +89,11 @@ type Msg
     | Pause Posix
     | Finish Posix
     | Tick Posix
-    | Add10seconds
+    | SkipTime Duration
     | SetCount Int
     | NextLap
     | PreviousLap
+    | SetPlaybackSpeed Clock.PlaybackSpeed
 
 
 update : Msg -> Model -> Model
@@ -102,12 +103,12 @@ update msg m =
             { m | clock = Clock.update now Clock.Start m.clock }
 
         Tick now ->
-            case m.clock of
-                Started splitTime { startedAt } ->
-                    if Clock.calcElapsed startedAt now splitTime < m.timeLimit then
+            case m.clock.state of
+                Clock.Started splitTime { startedAt } ->
+                    if Clock.calcElapsed startedAt now splitTime m.clock.playbackSpeed < m.timeLimit then
                         let
                             newElapsed =
-                                Clock.calcElapsed startedAt now splitTime
+                                Clock.calcElapsed startedAt now splitTime m.clock.playbackSpeed
 
                             newClock =
                                 { lapCount = lapAt newElapsed (NonEmpty.map .laps m.cars)
@@ -139,6 +140,9 @@ update msg m =
         Finish now ->
             { m | clock = Clock.update now Clock.Finish m.clock }
 
+        SetPlaybackSpeed speed ->
+            { m | clock = Clock.update (getCurrentTime m.clock) (Clock.SetPlaybackSpeed speed) m.clock }
+
         _ ->
             let
                 dummyPosix =
@@ -153,11 +157,11 @@ update msg m =
                             NonEmpty.toList m.cars |> List.map .laps
                     in
                     case msg of
-                        Add10seconds ->
+                        SkipTime duration ->
                             if elapsed_ < m.timeLimit then
                                 let
                                     newElapsed =
-                                        elapsed_ + (10 * 1000)
+                                        elapsed_ + duration
                                 in
                                 { lapCount = lapAt newElapsed (NonEmpty.map .laps m.cars)
                                 , elapsed = newElapsed
@@ -220,6 +224,16 @@ update msg m =
                         |> updateCars { elapsed = elapsed }
                         |> applyEvents elapsed m.timelineEvents
             }
+
+
+getCurrentTime : Clock.Model -> Posix
+getCurrentTime clock =
+    case clock.state of
+        Clock.Started _ { now } ->
+            now
+
+        _ ->
+            millisToPosix 0
 
 
 type alias Clock =

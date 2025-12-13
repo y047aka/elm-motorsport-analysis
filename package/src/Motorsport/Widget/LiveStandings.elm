@@ -25,9 +25,6 @@ type alias Props msg =
 view : Props msg -> Html msg
 view props =
     let
-        headerTitle =
-            props.eventSummary.name ++ " (" ++ String.fromInt props.eventSummary.season ++ ")"
-
         carList =
             props.viewModel.items
                 |> SortedList.toList
