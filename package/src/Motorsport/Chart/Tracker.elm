@@ -1,6 +1,6 @@
 module Motorsport.Chart.Tracker exposing (view)
 
-import Css exposing (maxHeight, maxWidth, pct)
+import Css
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorData(..), TrackConfig)
 import Motorsport.Circuit as Circuit
@@ -16,11 +16,11 @@ import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, text
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
-import TypedSvg.Types exposing (Transform(..), px)
+import TypedSvg.Types exposing (Transform(..), num, px)
 
 
 type alias Constants =
-    { svg : { w : Float, h : Float }
+    { viewBox : { w : Float, h : Float }
     , track :
         { cx : Float
         , cy : Float
@@ -46,13 +46,16 @@ type alias Constants =
 constants : Constants
 constants =
     let
-        size =
-            550
+        viewBoxWidth =
+            800
+
+        viewBoxHeight =
+            600
     in
-    { svg = { w = size, h = size }
+    { viewBox = { w = viewBoxWidth, h = viewBoxHeight }
     , track =
-        { cx = size / 2
-        , cy = size / 2
+        { cx = viewBoxWidth / 2
+        , cy = viewBoxHeight / 2
         , r = 200
         , trackWidth = 4
         , startFinishLineExtension = 15
@@ -61,12 +64,12 @@ constants =
         , sectorBoundaryStrokeWidth = 3
         , sectorLabelRadius = 230
         , sectorLabelFontSize = 16
-        , miniSectorLabelRadius = 170
+        , miniSectorLabelRadius = 180
         , miniSectorLabelFontSize = 10
         }
     , car =
         { size = 5
-        , labelRadius = 225
+        , labelRadius = 240
         , labelFontSize = 11
         }
     }
@@ -125,20 +128,11 @@ viewWithConfig : Direction -> TrackConfig -> ViewModel -> Svg msg
 viewWithConfig direction config vm =
     let
         { w, h } =
-            constants.svg
-
-        -- ラベルが外側に配置されるため、viewBoxを拡張
-        viewBoxPadding =
-            50
-
-        viewBoxSize =
-            w + 2 * viewBoxPadding
+            constants.viewBox
     in
     svg
-        [ width (px w)
-        , height (px h)
-        , viewBox -viewBoxPadding -viewBoxPadding viewBoxSize viewBoxSize
-        , css [ maxWidth (pct 100) ]
+        [ viewBox 0 0 w h
+        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config vm
