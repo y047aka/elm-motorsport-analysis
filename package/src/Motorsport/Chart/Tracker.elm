@@ -35,7 +35,11 @@ type alias Constants =
         , miniSectorLabelRadius : Float
         , miniSectorLabelFontSize : Float
         }
-    , car : { size : Float }
+    , car :
+        { size : Float
+        , labelRadius : Float
+        , labelFontSize : Float
+        }
     }
 
 
@@ -60,7 +64,11 @@ constants =
         , miniSectorLabelRadius = 170
         , miniSectorLabelFontSize = 10
         }
-    , car = { size = 12 }
+    , car =
+        { size = 5
+        , labelRadius = 225
+        , labelFontSize = 11
+        }
     }
 
 
@@ -118,11 +126,18 @@ viewWithConfig direction config vm =
     let
         { w, h } =
             constants.svg
+
+        -- ラベルが外側に配置されるため、viewBoxを拡張
+        viewBoxPadding =
+            50
+
+        viewBoxSize =
+            w + 2 * viewBoxPadding
     in
     svg
         [ width (px w)
         , height (px h)
-        , viewBox 0 0 w h
+        , viewBox -viewBoxPadding -viewBoxPadding viewBoxSize viewBoxSize
         , css [ maxWidth (pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
@@ -294,11 +309,14 @@ renderCars direction config viewModel =
 
 renderCarOnTrack : Direction -> TrackConfig -> ViewModelItem -> Svg msg
 renderCarOnTrack direction config car =
-    coordinatesOnTrack direction config car
-        |> renderCar car
+    let
+        coords =
+            coordinatesOnTrack direction config car
+    in
+    renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -310,23 +328,39 @@ coordinatesOnTrack direction config car =
         angle =
             Scale.convert (progressToAngleScale direction) progress
     in
-    { x = cx + r * cos angle
+    { angle = angle
+    , x = cx + r * cos angle
     , y = cy + r * sin angle
     }
 
 
-renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
-renderCar car { x, y } =
+renderCar : Direction -> ViewModelItem -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar direction car { angle, x, y } =
     let
         { carNumber, class } =
             car.metadata
+
+        { cx, cy } =
+            constants.track
+
+        labelRadius =
+            constants.car.labelRadius
+
+        labelX =
+            cx + labelRadius * cos angle
+
+        labelY =
+            cy + labelRadius * sin angle
     in
-    g [ Attributes.transform [ Translate x y ] ]
-        [ Lazy.lazy2 carWithPositionInClass car.positionInClass { carNumber = carNumber, class = class } ]
+    g []
+        [ g [ Attributes.transform [ Translate x y ] ]
+            [ Lazy.lazy2 carMarker car.positionInClass class ]
+        , carLabel { x = labelX, y = labelY } { carNumber = carNumber }
+        ]
 
 
-carWithPositionInClass : Int -> { carNumber : String, class : Class } -> Svg msg
-carWithPositionInClass positionInClass d =
+carMarker : Int -> Class -> Svg msg
+carMarker positionInClass class =
     let
         ( carSize, saturation ) =
             let
@@ -340,26 +374,25 @@ carWithPositionInClass positionInClass d =
               else
                 "60%"
             )
-
-        carCircle =
-            circle
-                [ Attributes.cx (px 0)
-                , Attributes.cy (px 0)
-                , Attributes.r (px carSize)
-                , fill (Class.toHexColor 2025 d.class |> .value)
-                , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
-                ]
-                []
-
-        carNumber =
-            text_
-                [ Attributes.x (px 0)
-                , Attributes.y (px 0)
-                , fontSize (px carSize)
-                , textAnchor "middle"
-                , dominantBaseline "central"
-                , fill "#fff"
-                ]
-                [ text d.carNumber ]
     in
-    g [] [ carCircle, carNumber ]
+    circle
+        [ Attributes.cx (px 0)
+        , Attributes.cy (px 0)
+        , Attributes.r (px carSize)
+        , fill (Class.toHexColor 2025 class |> .value)
+        , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
+        ]
+        []
+
+
+carLabel : { x : Float, y : Float } -> { carNumber : String } -> Svg msg
+carLabel { x, y } { carNumber } =
+    text_
+        [ Attributes.x (px x)
+        , Attributes.y (px y)
+        , fontSize (px constants.car.labelFontSize)
+        , textAnchor "middle"
+        , dominantBaseline "central"
+        , fill "#fff"
+        ]
+        [ text carNumber ]
