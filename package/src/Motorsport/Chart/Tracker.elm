@@ -11,7 +11,7 @@ import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
 import SortedList
-import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
+import Svg.Styled exposing (Svg, circle, g, line, rect, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
@@ -25,7 +25,7 @@ type alias Constants =
         { cx : Float
         , cy : Float
         , r : Float
-        , trackWidth : Float
+        , bandWidth : Float
         , startFinishLineExtension : Float
         , startFinishLineStrokeWidth : Float
         , sectorBoundaryOffset : Float
@@ -36,7 +36,8 @@ type alias Constants =
         , miniSectorLabelFontSize : Float
         }
     , car :
-        { size : Float
+        { barLength : Float
+        , barWidth : Float
         , labelRadius : Float
         , labelFontSize : Float
         }
@@ -57,20 +58,21 @@ constants =
         { cx = viewBoxWidth / 2
         , cy = viewBoxHeight / 2
         , r = 250
-        , trackWidth = 4
+        , bandWidth = 20
         , startFinishLineExtension = 15
         , startFinishLineStrokeWidth = 2
         , sectorBoundaryOffset = 10
-        , sectorBoundaryStrokeWidth = 3
+        , sectorBoundaryStrokeWidth = 2
         , sectorLabelRadius = 300
         , sectorLabelFontSize = 16
-        , miniSectorLabelRadius = 230
+        , miniSectorLabelRadius = 220
         , miniSectorLabelFontSize = 10
         }
     , car =
-        { size = 5
-        , labelRadius = 270
-        , labelFontSize = 11
+        { barLength = 20
+        , barWidth = 3
+        , labelRadius = 275
+        , labelFontSize = 10
         }
     }
 
@@ -142,25 +144,19 @@ viewWithConfig direction config vm =
 track : Direction -> TrackConfig -> Svg msg
 track direction config =
     let
-        { cx, cy, r, trackWidth } =
+        { cx, cy, r, bandWidth } =
             constants.track
 
-        trackCircle color width =
+        trackBand =
             circle
                 [ Attributes.cx (px cx)
                 , Attributes.cy (px cy)
                 , Attributes.r (px r)
                 , fill "none"
-                , stroke color
-                , strokeWidth (px width)
+                , stroke "oklch(1 0 0 / 0.1)"
+                , strokeWidth (px bandWidth)
                 ]
                 []
-
-        outerTrackCircle =
-            trackCircle "oklch(1 0 0 / 0.2)" 1
-
-        innerTrackCircle =
-            trackCircle "oklch(0.2 0 0)" trackWidth
 
         startFinishLine =
             line
@@ -195,7 +191,7 @@ track direction config =
         miniSectorLabels =
             renderMiniSectorLabels direction config
     in
-    g [] ([ outerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+    g [] ([ trackBand, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
 
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
@@ -347,7 +343,7 @@ renderCar direction car { angle, x, y } =
             cy + labelRadius * sin angle
     in
     g []
-        [ g [ Attributes.transform [ Translate x y ] ]
+        [ g [ Attributes.transform [ Translate x y, Rotate (angle * 180 / pi + 90) 0 0 ] ]
             [ Lazy.lazy2 carMarker car.positionInClass class ]
         , carLabel { x = labelX, y = labelY } { carNumber = carNumber }
         ]
@@ -356,23 +352,27 @@ renderCar direction car { angle, x, y } =
 carMarker : Int -> Class -> Svg msg
 carMarker positionInClass class =
     let
-        ( carSize, saturation ) =
+        ( barWidth, saturation ) =
             let
                 scaleFactor =
                     max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
             in
-            ( constants.car.size * scaleFactor
+            ( constants.car.barWidth * scaleFactor
             , if positionInClass <= 3 then
                 "100%"
 
               else
                 "60%"
             )
+
+        barLength =
+            constants.car.barLength
     in
-    circle
-        [ Attributes.cx (px 0)
-        , Attributes.cy (px 0)
-        , Attributes.r (px carSize)
+    rect
+        [ Attributes.x (px (-barWidth / 2))
+        , Attributes.y (px (-barLength / 2))
+        , Attributes.width (px barWidth)
+        , Attributes.height (px barLength)
         , fill (Class.toHexColor 2025 class |> .value)
         , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
         ]
