@@ -254,7 +254,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 , overflowY hidden
                                 , padding (px 10)
                                 , property "display" "grid"
-                                , property "grid-template-columns" "350px 1fr 350px"
+                                , property "grid-template-columns" "300px 1fr 300px"
                                 , property "grid-template-rows" "1fr 135px"
                                 , property "row-gap" "10px"
                                 ]

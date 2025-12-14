@@ -91,6 +91,17 @@ view props =
         )
 
 
+formatDriverName : String -> String
+formatDriverName fullName =
+    case String.words fullName of
+        _ :: rest ->
+            -- 姓全体を大文字で表示
+            rest |> List.map String.toUpper |> String.join " "
+
+        [] ->
+            fullName
+
+
 carRow : (ViewModelItem -> msg) -> ViewModelItem -> Html msg
 carRow onSelect item =
     li
@@ -124,7 +135,7 @@ carRow onSelect item =
                 [ text item.metadata.carNumber ]
             ]
         , div [ class "text-xs opacity-70" ]
-            [ text (item.currentDriver |> Maybe.map .name |> Maybe.withDefault "") ]
+            [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
         , div [ class "text-xs text-right" ]
             [ text (Gap.toString item.timing.interval) ]
         , if item.status == Car.InPit then
