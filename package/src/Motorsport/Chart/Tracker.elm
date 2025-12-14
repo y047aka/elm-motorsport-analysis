@@ -56,20 +56,20 @@ constants =
     , track =
         { cx = viewBoxWidth / 2
         , cy = viewBoxHeight / 2
-        , r = 200
+        , r = 250
         , trackWidth = 4
         , startFinishLineExtension = 15
         , startFinishLineStrokeWidth = 2
         , sectorBoundaryOffset = 10
         , sectorBoundaryStrokeWidth = 3
-        , sectorLabelRadius = 230
+        , sectorLabelRadius = 300
         , sectorLabelFontSize = 16
-        , miniSectorLabelRadius = 180
+        , miniSectorLabelRadius = 230
         , miniSectorLabelFontSize = 10
         }
     , car =
         { size = 5
-        , labelRadius = 240
+        , labelRadius = 270
         , labelFontSize = 11
         }
     }
@@ -157,7 +157,7 @@ track direction config =
                 []
 
         outerTrackCircle =
-            trackCircle "#eee" (trackWidth + 4)
+            trackCircle "oklch(1 0 0 / 0.2)" 1
 
         innerTrackCircle =
             trackCircle "oklch(0.2 0 0)" trackWidth
@@ -195,7 +195,7 @@ track direction config =
         miniSectorLabels =
             renderMiniSectorLabels direction config
     in
-    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+    g [] ([ outerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
 
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
@@ -214,7 +214,7 @@ renderSectorLabels direction config =
                     { progress = progress
                     , radius = constants.track.sectorLabelRadius
                     , fontSize = constants.track.sectorLabelFontSize
-                    , color = "oklch(1 0 0)"
+                    , color = "oklch(1 0 0 / 0.5)"
                     , label = label
                     }
             )
@@ -387,6 +387,6 @@ carLabel { x, y } { carNumber } =
         , fontSize (px constants.car.labelFontSize)
         , textAnchor "middle"
         , dominantBaseline "central"
-        , fill "#fff"
+        , fill "oklch(1 0 0)"
         ]
         [ text carNumber ]
