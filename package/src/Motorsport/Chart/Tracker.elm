@@ -191,7 +191,7 @@ track direction config =
         miniSectorLabels =
             renderMiniSectorLabels direction config
     in
-    g [] ([ trackBand, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+    g [] ([ trackBand ] ++ boundaries ++ [ startFinishLine ] ++ sectorLabels ++ miniSectorLabels)
 
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
@@ -352,21 +352,34 @@ renderCar direction car { angle, x, y } =
 carMarker : Int -> Class -> Svg msg
 carMarker positionInClass class =
     let
-        ( barWidth, saturation ) =
-            let
-                scaleFactor =
-                    max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
-            in
-            ( constants.car.barWidth * scaleFactor
-            , if positionInClass <= 3 then
-                "100%"
+        -- 長さのスケール係数（より大きな差を付ける）
+        lengthScale =
+            max 0.5 (1 - (toFloat (positionInClass - 1) * 0.025))
 
-              else
-                "60%"
-            )
+        -- 幅のスケール係数（緩やかな変化）
+        widthScale =
+            max 0.5 (1 - (toFloat (positionInClass - 1) * 0.25))
 
         barLength =
-            constants.car.barLength
+            constants.car.barLength * lengthScale
+
+        barWidth =
+            constants.car.barWidth * widthScale
+
+        saturation =
+            if positionInClass <= 3 then
+                "100%"
+
+            else
+                "60%"
+
+        -- 順位による透明度の変化
+        opacity =
+            if positionInClass <= 5 then
+                1.0
+
+            else
+                max 0.7 (1 - (toFloat (positionInClass - 6) * 0.05))
     in
     rect
         [ Attributes.x (px (-barWidth / 2))
@@ -374,7 +387,10 @@ carMarker positionInClass class =
         , Attributes.width (px barWidth)
         , Attributes.height (px barLength)
         , fill (Class.toHexColor 2025 class |> .value)
-        , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
+        , css
+            [ Css.property "filter" ("saturate(" ++ saturation ++ ")")
+            , Css.opacity (Css.num opacity)
+            ]
         ]
         []
 
