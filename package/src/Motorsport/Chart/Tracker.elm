@@ -68,7 +68,7 @@ constants =
         , miniSectorLabelFontSize = 10
         }
     , car =
-        { size = 5
+        { size = 8
         , labelRadius = 270
         , labelFontSize = 11
         }
@@ -195,7 +195,7 @@ track direction config =
         miniSectorLabels =
             renderMiniSectorLabels direction config
     in
-    g [] ([ outerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+    g [] (outerTrackCircle :: boundaries ++ startFinishLine :: sectorLabels ++ miniSectorLabels)
 
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
@@ -356,18 +356,18 @@ renderCar direction car { angle, x, y } =
 carMarker : Int -> Class -> Svg msg
 carMarker positionInClass class =
     let
-        ( carSize, saturation ) =
-            let
-                scaleFactor =
-                    max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
-            in
-            ( constants.car.size * scaleFactor
-            , if positionInClass <= 3 then
+        scaleFactor =
+            max 0.4 (1 - (toFloat positionInClass * 0.1))
+
+        carSize =
+            constants.car.size * scaleFactor
+
+        saturation =
+            if positionInClass <= 3 then
                 "100%"
 
-              else
-                "60%"
-            )
+            else
+                "50%"
     in
     circle
         [ Attributes.cx (px 0)
