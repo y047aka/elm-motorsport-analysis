@@ -70,7 +70,7 @@ constants =
     , car =
         { size = 8
         , labelRadius = 270
-        , labelFontSize = 11
+        , labelFontSize = 12
         }
     }
 
@@ -349,7 +349,7 @@ renderCar direction car { angle, x, y } =
     g []
         [ g [ Attributes.transform [ Translate x y ] ]
             [ Lazy.lazy2 carMarker car.positionInClass class ]
-        , carLabel { x = labelX, y = labelY } { carNumber = carNumber }
+        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = carNumber }
         ]
 
 
@@ -379,14 +379,18 @@ carMarker positionInClass class =
         []
 
 
-carLabel : { x : Float, y : Float } -> { carNumber : String } -> Svg msg
-carLabel { x, y } { carNumber } =
+carLabel : Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
+carLabel positionInClass { x, y } { carNumber } =
+    let
+        scaleFactor =
+            max 0.75 (1 - (toFloat positionInClass * 0.02))
+    in
     text_
         [ Attributes.x (px x)
         , Attributes.y (px y)
-        , fontSize (px constants.car.labelFontSize)
+        , fontSize (px (constants.car.labelFontSize * scaleFactor))
         , textAnchor "middle"
         , dominantBaseline "central"
-        , fill "oklch(1 0 0)"
+        , fill "oklch(1 0 0 / 0.7)"
         ]
         [ text carNumber ]
