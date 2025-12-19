@@ -6,7 +6,9 @@
     "build": "elm-pages build"
   },
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "@tailwindcss/cli": "^4.1.12",
+    "@types/node": "^25.0.3",
     "elm-codegen": "^0.6.1",
     "elm-optimize-level-2": "^0.3.5",
     "elm-pages": "3.0.22",

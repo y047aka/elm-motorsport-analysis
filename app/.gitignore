@@ -4,3 +4,10 @@ dist/
 .elm-pages/
 functions/render/elm-pages-cli.mjs
 functions/server-render/elm-pages-cli.mjs
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/
