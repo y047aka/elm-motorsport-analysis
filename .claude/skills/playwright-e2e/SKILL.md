@@ -1,6 +1,6 @@
 ---
 name: playwright-e2e
-description: Run Playwright E2E tests
+description: Run Playwright E2E tests, update snapshots, or run visual regression tests
 ---
 
 # Playwright E2E Test Runner
@@ -9,7 +9,9 @@ Run Playwright E2E tests for this project.
 
 ## Usage
 - `/playwright-e2e` - Run all E2E tests
-- `/playwright-e2e <test-name>` - Run specific test file or test name
+- `/playwright-e2e --update-snapshots` - Update visual regression snapshots
+- `/playwright-e2e --ui` - Run with interactive UI mode
+- `/playwright-e2e example` - Run tests matching "example"
 
 ## Commands
 
@@ -18,20 +20,31 @@ Run Playwright E2E tests for this project.
 cd app && npx playwright test
 ```
 
-### Run specific test (when argument provided)
+### Update snapshots
 ```bash
-cd app && npx playwright test $ARGUMENTS
+cd app && npx playwright test --update-snapshots
 ```
 
-### Useful options
-- `--ui` - Run with UI mode for debugging
-- `--update-snapshots` - Update visual regression snapshots
-- `--headed` - Run tests in headed browser mode
+### Run with UI mode (for debugging)
+```bash
+cd app && npx playwright test --ui
+```
+
+### Run specific test file
+```bash
+cd app && npx playwright test example.spec.ts
+```
 
 ### Show test report
 ```bash
 cd app && npx playwright show-report
 ```
+
+## Options
+- `--update-snapshots` - Update visual regression snapshots
+- `--ui` - Run with interactive UI mode for debugging
+- `--headed` - Run tests in headed browser mode
+- `--debug` - Run tests with Playwright Inspector
 
 ## Notes
 - Tests run against `http://localhost:1234` (dev server auto-starts via webServer config)
