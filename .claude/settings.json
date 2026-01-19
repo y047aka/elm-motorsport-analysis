@@ -1,68 +1,32 @@
 {
   "includeCoAuthoredBy": false,
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".rs\"))' | xargs -I {} sh -c 'cd cli && cargo fmt -- {}'"
-          },
-          {
-            "type": "command",
-            "command": "jq -r '.tool_input.file_path | select(endswith(\".elm\"))' | xargs -r elm-format --yes"
-          }
-        ]
-      }
-    ]
-  },
   "permissions": {
-    "allow": [
-      "mcp__ide__getDiagnostics",
-      "Bash(cd:*)",
-      "Bash(find:*)",
-      "Bash(grep:*)",
-      "Bash(jq:*)",
-      "Bash(ls:*)",
-      "Bash(mkdir:*)",
-      "Bash(rg:*)",
-      "Bash(git:*)",
-      "Bash(npm:*)",
-      "Bash(elm:*)",
-      "Bash(cargo:*)",
-      "WebFetch(domain:docs.anthropic.com)",
-      "WebFetch(domain:github.com)",
-      "WebFetch(domain:package.elm-lang.org)"
+    "ask": [
+      "Bash(git push:*)",
+      "Bash(cargo install:*)",
+      "Bash(cargo add:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [
       "Read(.env*)",
+      "Read(*.key)",
+      "Read(*.pem)",
       "Bash(sudo:*)",
       "Bash(chmod:*)",
       "Bash(chown:*)",
       "Bash(rm:*)",
-      "Bash(rm -rf:*)",
-      "Bash(find * -delete:*)",
-      "Bash(find * -exec:*)",
-      "Bash(curl:*)",
-      "Bash(wget:*)",
-      "Bash(nc:*)",
-      "Bash(ssh:*)",
-      "Bash(docker:*)",
+      "Bash(find:* -delete:*)",
+      "Bash(find:* -exec:*)",
+      "Bash(git branch:*)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git push:*)",
+      "Bash(git push:*--force:*)",
+      "Bash(git push:*-f:*)",
       "Bash(git rebase:*)",
       "Bash(git reset:*)",
       "Bash(git rm:*)",
-      "Bash(npm config:*)",
-      "Bash(npm exec:*)",
-      "Bash(npm install:*)",
-      "Bash(npm login:*)",
-      "Bash(npm publish:*)",
-      "Bash(cargo install:*)",
-      "Bash(cargo login:*)",
-      "Bash(cargo publish:*)"
+      "Bash(cargo publish:*)",
+      "Bash(npm publish:*)"
     ]
   }
 }
