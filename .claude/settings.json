@@ -1,5 +1,6 @@
 {
   "includeCoAuthoredBy": false,
+  "language": "japanese",
   "permissions": {
     "ask": [
       "Bash(git push:*)",
