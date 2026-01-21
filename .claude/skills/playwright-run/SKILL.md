@@ -1,17 +1,17 @@
 ---
-name: playwright-e2e
-description: Run Playwright E2E tests, update snapshots, or run visual regression tests
+name: playwright-run
+description: Run this project's existing Playwright test suite in app/tests/. Use for running committed tests, updating snapshots, or CI validation. NOT for writing new tests or ad-hoc browser automation.
 ---
 
-# Playwright E2E Test Runner
+# Playwright Test Runner
 
 Run Playwright E2E tests for this project.
 
 ## Usage
-- `/playwright-e2e` - Run all E2E tests
-- `/playwright-e2e --update-snapshots` - Update visual regression snapshots
-- `/playwright-e2e --ui` - Run with interactive UI mode
-- `/playwright-e2e example` - Run tests matching "example"
+- `/playwright-run` - Run all E2E tests
+- `/playwright-run --update-snapshots` - Update visual regression snapshots
+- `/playwright-run --ui` - Run with interactive UI mode
+- `/playwright-run example` - Run tests matching "example"
 
 ## Commands
 
