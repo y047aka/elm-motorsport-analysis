@@ -29,3 +29,25 @@ test.describe('Top Page Visual Tests', () => {
     });
   });
 });
+
+test.describe('Le Mans 2025 Visual Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // load: DOMContentLoadedとすべてのリソース読み込み完了を待機
+    await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
+
+    // メインコンテンツの表示を確認
+    await page.locator('[data-theme="dark"]').waitFor({ state: 'visible' });
+
+    // ページタイトル「24 Hours of Le Mans」が表示されるまで待機
+    await page.locator('text=24 Hours of Le Mans').waitFor({ state: 'visible' });
+
+    // フォントの読み込み完了を待機（ビジュアル比較の安定性向上）
+    await page.evaluate(() => document.fonts.ready);
+  });
+
+  test('should render Le Mans 2025 page correctly', async ({ page }) => {
+    await expect(page).toHaveScreenshot('le-mans-2025.png', {
+      fullPage: true,
+    });
+  });
+});
