@@ -1,6 +1,6 @@
 module Motorsport.Chart.Tracker exposing (view)
 
-import Css exposing (maxHeight, maxWidth, pct)
+import Css
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorData(..), TrackConfig)
 import Motorsport.Circuit as Circuit
@@ -16,11 +16,11 @@ import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, text
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
 import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
-import TypedSvg.Types exposing (Transform(..), px)
+import TypedSvg.Types exposing (Transform(..), num, px)
 
 
 type alias Constants =
-    { svg : { w : Float, h : Float }
+    { viewBox : { w : Float, h : Float }
     , track :
         { cx : Float
         , cy : Float
@@ -35,32 +35,43 @@ type alias Constants =
         , miniSectorLabelRadius : Float
         , miniSectorLabelFontSize : Float
         }
-    , car : { size : Float }
+    , car :
+        { size : Float
+        , labelRadius : Float
+        , labelFontSize : Float
+        }
     }
 
 
 constants : Constants
 constants =
     let
-        size =
-            550
+        viewBoxWidth =
+            800
+
+        viewBoxHeight =
+            600
     in
-    { svg = { w = size, h = size }
+    { viewBox = { w = viewBoxWidth, h = viewBoxHeight }
     , track =
-        { cx = size / 2
-        , cy = size / 2
-        , r = 200
+        { cx = viewBoxWidth / 2
+        , cy = viewBoxHeight / 2
+        , r = 250
         , trackWidth = 4
         , startFinishLineExtension = 15
         , startFinishLineStrokeWidth = 2
         , sectorBoundaryOffset = 10
         , sectorBoundaryStrokeWidth = 3
-        , sectorLabelRadius = 230
+        , sectorLabelRadius = 300
         , sectorLabelFontSize = 16
-        , miniSectorLabelRadius = 170
+        , miniSectorLabelRadius = 230
         , miniSectorLabelFontSize = 10
         }
-    , car = { size = 12 }
+    , car =
+        { size = 8
+        , labelRadius = 270
+        , labelFontSize = 12
+        }
     }
 
 
@@ -117,13 +128,11 @@ viewWithConfig : Direction -> TrackConfig -> ViewModel -> Svg msg
 viewWithConfig direction config vm =
     let
         { w, h } =
-            constants.svg
+            constants.viewBox
     in
     svg
-        [ width (px w)
-        , height (px h)
-        , viewBox 0 0 w h
-        , css [ maxWidth (pct 100) ]
+        [ viewBox 0 0 w h
+        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config vm
@@ -148,7 +157,7 @@ track direction config =
                 []
 
         outerTrackCircle =
-            trackCircle "#eee" (trackWidth + 4)
+            trackCircle "oklch(1 0 0 / 0.2)" 1
 
         innerTrackCircle =
             trackCircle "oklch(0.2 0 0)" trackWidth
@@ -186,7 +195,7 @@ track direction config =
         miniSectorLabels =
             renderMiniSectorLabels direction config
     in
-    g [] ([ outerTrackCircle, innerTrackCircle, startFinishLine ] ++ boundaries ++ sectorLabels ++ miniSectorLabels)
+    g [] (outerTrackCircle :: boundaries ++ startFinishLine :: sectorLabels ++ miniSectorLabels)
 
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
@@ -205,7 +214,7 @@ renderSectorLabels direction config =
                     { progress = progress
                     , radius = constants.track.sectorLabelRadius
                     , fontSize = constants.track.sectorLabelFontSize
-                    , color = "oklch(1 0 0)"
+                    , color = "oklch(1 0 0 / 0.5)"
                     , label = label
                     }
             )
@@ -294,11 +303,14 @@ renderCars direction config viewModel =
 
 renderCarOnTrack : Direction -> TrackConfig -> ViewModelItem -> Svg msg
 renderCarOnTrack direction config car =
-    coordinatesOnTrack direction config car
-        |> renderCar car
+    let
+        coords =
+            coordinatesOnTrack direction config car
+    in
+    renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -310,56 +322,75 @@ coordinatesOnTrack direction config car =
         angle =
             Scale.convert (progressToAngleScale direction) progress
     in
-    { x = cx + r * cos angle
+    { angle = angle
+    , x = cx + r * cos angle
     , y = cy + r * sin angle
     }
 
 
-renderCar : ViewModelItem -> { x : Float, y : Float } -> Svg msg
-renderCar car { x, y } =
+renderCar : Direction -> ViewModelItem -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar direction car { angle, x, y } =
     let
         { carNumber, class } =
             car.metadata
+
+        { cx, cy } =
+            constants.track
+
+        labelRadius =
+            constants.car.labelRadius
+
+        labelX =
+            cx + labelRadius * cos angle
+
+        labelY =
+            cy + labelRadius * sin angle
     in
-    g [ Attributes.transform [ Translate x y ] ]
-        [ Lazy.lazy2 carWithPositionInClass car.positionInClass { carNumber = carNumber, class = class } ]
+    g []
+        [ g [ Attributes.transform [ Translate x y ] ]
+            [ Lazy.lazy2 carMarker car.positionInClass class ]
+        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = carNumber }
+        ]
 
 
-carWithPositionInClass : Int -> { carNumber : String, class : Class } -> Svg msg
-carWithPositionInClass positionInClass d =
+carMarker : Int -> Class -> Svg msg
+carMarker positionInClass class =
     let
-        ( carSize, saturation ) =
-            let
-                scaleFactor =
-                    max 0.75 (1 - (toFloat (positionInClass - 1) * 0.05))
-            in
-            ( constants.car.size * scaleFactor
-            , if positionInClass <= 3 then
+        scaleFactor =
+            max 0.4 (1 - (toFloat positionInClass * 0.1))
+
+        carSize =
+            constants.car.size * scaleFactor
+
+        saturation =
+            if positionInClass <= 3 then
                 "100%"
 
-              else
-                "60%"
-            )
-
-        carCircle =
-            circle
-                [ Attributes.cx (px 0)
-                , Attributes.cy (px 0)
-                , Attributes.r (px carSize)
-                , fill (Class.toHexColor 2025 d.class |> .value)
-                , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
-                ]
-                []
-
-        carNumber =
-            text_
-                [ Attributes.x (px 0)
-                , Attributes.y (px 0)
-                , fontSize (px carSize)
-                , textAnchor "middle"
-                , dominantBaseline "central"
-                , fill "#fff"
-                ]
-                [ text d.carNumber ]
+            else
+                "50%"
     in
-    g [] [ carCircle, carNumber ]
+    circle
+        [ Attributes.cx (px 0)
+        , Attributes.cy (px 0)
+        , Attributes.r (px carSize)
+        , fill (Class.toHexColor 2025 class |> .value)
+        , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
+        ]
+        []
+
+
+carLabel : Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
+carLabel positionInClass { x, y } { carNumber } =
+    let
+        scaleFactor =
+            max 0.75 (1 - (toFloat positionInClass * 0.02))
+    in
+    text_
+        [ Attributes.x (px x)
+        , Attributes.y (px y)
+        , fontSize (px (constants.car.labelFontSize * scaleFactor))
+        , textAnchor "middle"
+        , dominantBaseline "central"
+        , fill "oklch(1 0 0 / 0.7)"
+        ]
+        [ text carNumber ]
