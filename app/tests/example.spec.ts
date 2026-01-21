@@ -1,26 +1,22 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
-test('has title', async ({ page }) => {
-  await page.goto('https://playwright.dev/');
+const WAIT_TIMEOUT = 5000;
 
-  // Expect a title "to contain" a substring.
-  await expect(page).toHaveTitle(/Playwright/);
-});
+/**
+ * ページのレンダリング完了を待機するヘルパー関数
+ * @param page Playwrightのページオブジェクト
+ * @param contentSelector ページ固有のコンテンツを示すセレクター
+ */
+async function waitForPageReady(page: Page, contentSelector: string) {
+  await page.locator('[data-theme="dark"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  await page.locator(contentSelector).waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  await page.evaluate(() => document.fonts.ready);
+}
 
 test.describe('Top Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // load: DOMContentLoadedとすべてのリソース読み込み完了を待機
     await page.goto('/', { waitUntil: 'load' });
-
-    // メインコンテンツの表示を確認
-    await page.locator('[data-theme="dark"]').waitFor({ state: 'visible' });
-
-    // 最後のセクション（Formula E 2025）が表示されるまで待機
-    // これによりページ全体のレンダリング完了を確認
-    await page.locator('text=Formula E 2025').waitFor({ state: 'visible' });
-
-    // フォントの読み込み完了を待機（ビジュアル比較の安定性向上）
-    await page.evaluate(() => document.fonts.ready);
+    await waitForPageReady(page, 'text=Formula E 2025');
   });
 
   test('should render the main page correctly', async ({ page }) => {
@@ -32,17 +28,8 @@ test.describe('Top Page Visual Tests', () => {
 
 test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
-    // load: DOMContentLoadedとすべてのリソース読み込み完了を待機
     await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
-
-    // メインコンテンツの表示を確認
-    await page.locator('[data-theme="dark"]').waitFor({ state: 'visible' });
-
-    // ページタイトル「24 Hours of Le Mans」が表示されるまで待機
-    await page.locator('text=24 Hours of Le Mans').waitFor({ state: 'visible' });
-
-    // フォントの読み込み完了を待機（ビジュアル比較の安定性向上）
-    await page.evaluate(() => document.fonts.ready);
+    await waitForPageReady(page, 'text=24 Hours of Le Mans');
   });
 
   test('should render Le Mans 2025 page correctly', async ({ page }) => {
