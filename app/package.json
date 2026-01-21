@@ -5,8 +5,8 @@
     "start": "elm-pages dev",
     "build": "elm-pages build",
     "docker:build": "docker build --platform linux/amd64 -f ../Dockerfile -t elm-playwright ..",
-    "docker:run": "docker run --rm --platform linux/amd64 --network host -v \"$(pwd)/..:/work\" elm-playwright bash -c",
-    "test": "npm run docker:run 'cd app && CI=true npx playwright test'",
+    "docker:run": "docker run --rm --platform linux/amd64 --network host -e CI -v \"$(pwd)/..:/work\" elm-playwright bash -c",
+    "test": "npm run docker:run 'cd app && npx playwright test'",
     "test:update-snapshots": "npm run docker:run 'cd app && npx playwright test --update-snapshots'"
   },
   "devDependencies": {

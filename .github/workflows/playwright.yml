@@ -19,6 +19,8 @@ jobs:
         run: npm run -w app docker:build
       - name: Run Playwright tests in Docker
         run: npm run -w app test
+        env:
+          CI: true
       - uses: actions/upload-artifact@v4
         if: ${{ !cancelled() }}
         with:
