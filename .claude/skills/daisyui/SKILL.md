@@ -32,16 +32,18 @@ For installation instructions, see the official documentation: https://daisyui.c
 
 ## Component Categories
 
-daisyUI provides components across these categories:
+daisyUI provides components across these categories. Each has a reference file at `references/components/{name}.md`:
 
-- **Actions**: Buttons, dropdowns, modals, swap
-- **Data Display**: Cards, badges, tables, carousels, stats
-- **Data Input**: Input, textarea, select, checkbox, radio, toggle
-- **Navigation**: Navbar, menu, tabs, breadcrumbs, pagination
-- **Feedback**: Alert, progress, loading, toast, tooltip
-- **Layout**: Drawer, footer, hero, stack, divider
+| Category | Components |
+|----------|------------|
+| **Actions** | button, dropdown, modal, swap |
+| **Data Display** | card, badge, table, carousel, stats |
+| **Data Input** | input, textarea, select, checkbox, radio, toggle |
+| **Navigation** | navbar, menu, tabs, breadcrumbs |
+| **Feedback** | alert, progress, loading, toast, tooltip |
+| **Layout** | drawer, footer, hero |
 
-For component-specific guidance, consult the appropriate reference file.
+For component-specific guidance, read `references/components/{component}.md` (e.g., `references/components/button.md`).
 
 ## Quick Usage
 
@@ -137,7 +139,15 @@ daisyUI components work with Tailwind's responsive prefixes:
 
 ## When to Consult References
 
-- **Complete component list**: Read `references/components.md`
+### Component Documentation
+Each component has its own reference file at `references/components/{component}.md`:
+
+- alert, badge, breadcrumbs, button, card, carousel, checkbox
+- drawer, dropdown, footer, hero, input, loading, menu
+- modal, navbar, progress, radio, select, stats, swap
+- table, tabs, textarea, toast, toggle, tooltip
+
+### Other References
 - **Theming and customization**: Read `references/theming.md`
 - **Common patterns**: Read `references/patterns.md`
 
