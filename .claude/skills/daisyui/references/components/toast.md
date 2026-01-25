@@ -1,18 +1,18 @@
 # Toast
 
-Toast notification component for temporary messages.
+Container element that sticks to the corner of page for notification messages.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `toast` | Component | Toast container element |
-| `toast-start` | Position | Align to start (left) |
-| `toast-center` | Position | Align to center |
-| `toast-end` | Position | Align to end (right) |
-| `toast-top` | Position | Position at top |
-| `toast-middle` | Position | Position at middle |
-| `toast-bottom` | Position | Position at bottom |
+| `toast` | Component | Container element that sticks to the corner of page |
+| `toast-start` | Placement | Align horizontally to the left |
+| `toast-center` | Placement | Align horizontally to the center |
+| `toast-end` | Placement | Align horizontally to the right (Default) |
+| `toast-top` | Placement | Align vertically to top |
+| `toast-middle` | Placement | Align vertically to middle |
+| `toast-bottom` | Placement | Align vertically to bottom (Default) |
 
 ## Key Examples
 

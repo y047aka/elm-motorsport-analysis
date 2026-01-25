@@ -6,9 +6,11 @@ Footer component for page bottom navigation and information.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `footer` | Component | Footer container element |
-| `footer-title` | Element | Title for navigation section |
-| `footer-center` | Layout | Centered footer layout |
+| `footer` | Component | Container for footer content |
+| `footer-title` | Part | Styles section headings within footer columns |
+| `footer-center` | Placement | Centers all footer content |
+| `footer-horizontal` | direction | Arranges footer columns side-by-side horizontally |
+| `footer-vertical` | direction | Stacks footer columns vertically (default behavior) |
 
 ## Key Examples
 

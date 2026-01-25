@@ -1,26 +1,29 @@
 # Badge
 
-Small status indicator component for labels and counts.
+Small status indicator component for labels and counts. Badges are used to inform the user of the status of specific data.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `badge` | Base badge class |
-| `badge-neutral` | Neutral color |
-| `badge-primary` | Primary color |
-| `badge-secondary` | Secondary color |
-| `badge-accent` | Accent color |
-| `badge-ghost` | Ghost style |
-| `badge-info` | Info state color |
-| `badge-success` | Success state color |
-| `badge-warning` | Warning state color |
-| `badge-error` | Error state color |
-| `badge-outline` | Outlined style |
-| `badge-lg` | Large size |
-| `badge-md` | Medium size (default) |
-| `badge-sm` | Small size |
-| `badge-xs` | Extra small size |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `badge` | Component | Container element for badges |
+| `badge-outline` | Style | Outline style |
+| `badge-dash` | Style | Dash outline style |
+| `badge-soft` | Style | Soft style |
+| `badge-ghost` | Style | Ghost style |
+| `badge-neutral` | Color | Neutral color |
+| `badge-primary` | Color | Primary color |
+| `badge-secondary` | Color | Secondary color |
+| `badge-accent` | Color | Accent color |
+| `badge-info` | Color | Info state color |
+| `badge-success` | Color | Success state color |
+| `badge-warning` | Color | Warning state color |
+| `badge-error` | Color | Error state color |
+| `badge-xs` | Size | Extra small size |
+| `badge-sm` | Size | Small size |
+| `badge-md` | Size | Medium size (default) |
+| `badge-lg` | Size | Large size |
+| `badge-xl` | Size | Extra large size |
 
 ## Key Examples
 
@@ -28,6 +31,7 @@ Small status indicator component for labels and counts.
 
 ```html
 <div class="badge">Badge</div>
+<div class="badge badge-neutral">neutral</div>
 <div class="badge badge-primary">primary</div>
 <div class="badge badge-secondary">secondary</div>
 <div class="badge badge-accent">accent</div>
@@ -37,21 +41,26 @@ Small status indicator component for labels and counts.
 <div class="badge badge-error">error</div>
 ```
 
-### Outlined badges
+### Style variants
 
 ```html
 <div class="badge badge-outline">outline</div>
-<div class="badge badge-outline badge-primary">primary</div>
-<div class="badge badge-outline badge-secondary">secondary</div>
+<div class="badge badge-outline badge-primary">primary outline</div>
+<div class="badge badge-dash">dash</div>
+<div class="badge badge-dash badge-primary">primary dash</div>
+<div class="badge badge-soft">soft</div>
+<div class="badge badge-soft badge-primary">primary soft</div>
+<div class="badge badge-ghost">ghost</div>
 ```
 
 ### Badge sizes
 
 ```html
-<div class="badge badge-lg">Large</div>
-<div class="badge badge-md">Medium</div>
+<div class="badge badge-xs">Extra small</div>
 <div class="badge badge-sm">Small</div>
-<div class="badge badge-xs">Tiny</div>
+<div class="badge badge-md">Medium</div>
+<div class="badge badge-lg">Large</div>
+<div class="badge badge-xl">Extra large</div>
 ```
 
 ### Empty badge (dot indicator)
@@ -59,6 +68,7 @@ Small status indicator component for labels and counts.
 ```html
 <div class="badge badge-primary badge-xs"></div>
 <div class="badge badge-primary badge-sm"></div>
+<div class="badge badge-primary badge-md"></div>
 ```
 
 ### Badge in button
@@ -73,13 +83,4 @@ Small status indicator component for labels and counts.
   Inbox
   <div class="badge badge-secondary">+99</div>
 </button>
-```
-
-### Badge in card title
-
-```html
-<div class="card-title">
-  Card Title
-  <div class="badge badge-secondary">NEW</div>
-</div>
 ```

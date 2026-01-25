@@ -6,20 +6,21 @@ Tooltip component for showing additional information on hover.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `tooltip` | Component | Tooltip container element |
-| `tooltip-open` | State | Force tooltip to show |
-| `tooltip-top` | Position | Position at top (default) |
-| `tooltip-bottom` | Position | Position at bottom |
-| `tooltip-left` | Position | Position at left |
-| `tooltip-right` | Position | Position at right |
-| `tooltip-primary` | Color | Primary color |
-| `tooltip-secondary` | Color | Secondary color |
-| `tooltip-accent` | Color | Accent color |
-| `tooltip-neutral` | Color | Neutral color |
-| `tooltip-info` | Color | Info state color |
-| `tooltip-success` | Color | Success state color |
-| `tooltip-warning` | Color | Warning state color |
-| `tooltip-error` | Color | Error state color |
+| `tooltip` | Component | Container element for tooltip |
+| `tooltip-content` | Part | Optional div for custom tooltip content instead of `data-tip` |
+| `tooltip-top` | Placement | Positions tooltip above element (default) |
+| `tooltip-bottom` | Placement | Positions tooltip below element |
+| `tooltip-left` | Placement | Positions tooltip to the left |
+| `tooltip-right` | Placement | Positions tooltip to the right |
+| `tooltip-open` | Modifier | Forces tooltip to remain visible |
+| `tooltip-neutral` | Color | Applies neutral color scheme |
+| `tooltip-primary` | Color | Applies primary color scheme |
+| `tooltip-secondary` | Color | Applies secondary color scheme |
+| `tooltip-accent` | Color | Applies accent color scheme |
+| `tooltip-info` | Color | Applies info color scheme |
+| `tooltip-success` | Color | Applies success color scheme |
+| `tooltip-warning` | Color | Applies warning color scheme |
+| `tooltip-error` | Color | Applies error color scheme |
 
 ## Key Examples
 
@@ -27,6 +28,17 @@ Tooltip component for showing additional information on hover.
 
 ```html
 <div class="tooltip" data-tip="Hello">
+  <button class="btn">Hover me</button>
+</div>
+```
+
+### Custom content tooltip
+
+```html
+<div class="tooltip">
+  <div class="tooltip-content">
+    <strong>Bold text</strong> and <em>italic text</em>
+  </div>
   <button class="btn">Hover me</button>
 </div>
 ```

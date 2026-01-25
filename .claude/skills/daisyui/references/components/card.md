@@ -1,21 +1,24 @@
 # Card
 
-Container component for grouping related content and actions.
+Cards are used to group and display content in a way that is easily readable.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `card` | Container element |
-| `card-body` | Content container with padding |
-| `card-title` | Title element |
-| `card-actions` | Actions container |
-| `card-compact` | Reduced padding |
-| `card-normal` | Normal padding (default) |
-| `card-side` | Horizontal layout (image on side) |
-| `card-bordered` | Visible border |
-| `image-full` | Image as background overlay |
-| `glass` | Frosted glass effect |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `card` | Component | Container element for card |
+| `card-title` | Part | Title part of the card |
+| `card-body` | Part | Body part (content container with padding) |
+| `card-actions` | Part | Actions part (buttons, etc.) |
+| `card-border` | Style | Adds a visible border around the card |
+| `card-dash` | Style | Applies a dashed border style |
+| `card-side` | Modifier | Positions image from `<figure>` element to the side |
+| `image-full` | Modifier | Makes image in `<figure>` the background |
+| `card-xs` | Size | Extra small card dimensions |
+| `card-sm` | Size | Small card dimensions |
+| `card-md` | Size | Medium card (default) |
+| `card-lg` | Size | Large card dimensions |
+| `card-xl` | Size | Extra large card dimensions |
 
 ## Key Examples
 
@@ -36,30 +39,40 @@ Container component for grouping related content and actions.
 </div>
 ```
 
-### Card without image
+### Card with border styles
 
 ```html
-<div class="card bg-base-100 w-96 shadow-xl">
+<!-- Border style -->
+<div class="card card-border bg-base-100 w-96">
   <div class="card-body">
-    <h2 class="card-title">Card Title</h2>
-    <p>Content goes here</p>
+    <h2 class="card-title">Bordered Card</h2>
+    <p>Card with solid border</p>
+  </div>
+</div>
+
+<!-- Dash style -->
+<div class="card card-dash bg-base-100 w-96">
+  <div class="card-body">
+    <h2 class="card-title">Dashed Card</h2>
+    <p>Card with dashed border</p>
   </div>
 </div>
 ```
 
-### Horizontal card (card-side)
+### Card sizes
 
 ```html
-<div class="card card-side bg-base-100 shadow-xl">
-  <figure>
-    <img src="image.jpg" alt="Image" />
-  </figure>
+<!-- Extra small -->
+<div class="card card-xs bg-base-100 shadow-xl">
   <div class="card-body">
-    <h2 class="card-title">Side Card</h2>
-    <p>Image on the side</p>
-    <div class="card-actions justify-end">
-      <button class="btn btn-primary">Watch</button>
-    </div>
+    <h2 class="card-title">XS Card</h2>
+  </div>
+</div>
+
+<!-- Large -->
+<div class="card card-lg bg-base-100 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title">Large Card</h2>
   </div>
 </div>
 ```
@@ -115,6 +128,17 @@ Container component for grouping related content and actions.
     <div class="card-actions justify-end">
       <button class="btn btn-primary">Action</button>
     </div>
+  </div>
+</div>
+```
+
+### Card without image
+
+```html
+<div class="card bg-base-100 w-96 shadow-xl">
+  <div class="card-body">
+    <h2 class="card-title">Card Title</h2>
+    <p>Content goes here</p>
   </div>
 </div>
 ```

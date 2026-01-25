@@ -1,20 +1,20 @@
 # Table
 
-Component for displaying tabular data.
+Component for displaying tabular data with responsive features and styling options.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `table` | Component | Table base class |
-| `table-zebra` | Style | Alternating row colors |
-| `table-pin-rows` | Layout | Sticky header rows |
-| `table-pin-cols` | Layout | Sticky first/last columns |
-| `table-xs` | Size | Extra small size |
-| `table-sm` | Size | Small size |
-| `table-md` | Size | Medium size (default) |
-| `table-lg` | Size | Large size |
-| `hover` | State | Row hover effect (on tr) |
+| `table` | Component | Base class for `<table>` tag styling |
+| `table-zebra` | Modifier | Applies alternating row stripe styling |
+| `table-pin-rows` | Modifier | Makes rows in `<thead>` and `<tfoot>` sticky |
+| `table-pin-cols` | Modifier | Makes `<th>` columns sticky during horizontal scroll |
+| `table-xs` | Size | Extra small sizing |
+| `table-sm` | Size | Small sizing |
+| `table-md` | Size | Medium sizing (default) |
+| `table-lg` | Size | Large sizing |
+| `table-xl` | Size | Extra large sizing |
 
 ## Key Examples
 
@@ -89,6 +89,7 @@ Component for displaying tabular data.
 <table class="table table-sm"><!-- Small --></table>
 <table class="table table-md"><!-- Medium (default) --></table>
 <table class="table table-lg"><!-- Large --></table>
+<table class="table table-xl"><!-- Extra large --></table>
 ```
 
 ### Sticky header (pinned rows)
@@ -177,4 +178,62 @@ Component for displaying tabular data.
     </tr>
   </tbody>
 </table>
+```
+
+### Highlighted active row
+
+```html
+<table class="table">
+  <tbody>
+    <tr>
+      <td>Normal row</td>
+    </tr>
+    <tr class="bg-base-200">
+      <td>Active row</td>
+    </tr>
+    <tr>
+      <td>Normal row</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+### Row hover effect
+
+```html
+<table class="table">
+  <tbody>
+    <tr class="hover:bg-base-300">
+      <td>Hover over me</td>
+    </tr>
+    <tr class="hover:bg-base-300">
+      <td>Hover over me</td>
+    </tr>
+  </tbody>
+</table>
+```
+
+### Bordered card-style table
+
+```html
+<div class="overflow-x-auto">
+  <table class="table rounded-box border border-base-content/5 bg-base-100">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Job</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>John</td>
+        <td>Engineer</td>
+      </tr>
+      <tr>
+        <td>Jane</td>
+        <td>Designer</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 ```

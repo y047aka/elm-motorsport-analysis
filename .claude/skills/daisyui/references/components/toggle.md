@@ -1,24 +1,25 @@
 # Toggle
 
-Switch/toggle component for binary on/off states.
+Checkbox component styled to look like a switch button for binary on/off states.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `toggle` | Component | Toggle base class |
-| `toggle-primary` | Color | Primary color |
-| `toggle-secondary` | Color | Secondary color |
-| `toggle-accent` | Color | Accent color |
-| `toggle-neutral` | Color | Neutral color |
-| `toggle-info` | Color | Info state color |
-| `toggle-success` | Color | Success state color |
-| `toggle-warning` | Color | Warning state color |
-| `toggle-error` | Color | Error state color |
-| `toggle-xs` | Size | Extra small size |
-| `toggle-sm` | Size | Small size |
+| `toggle` | Component | Checkbox that is styled to look like a switch button |
+| `toggle-primary` | Color | Applies primary color styling |
+| `toggle-secondary` | Color | Applies secondary color styling |
+| `toggle-accent` | Color | Applies accent color styling |
+| `toggle-neutral` | Color | Applies neutral color styling |
+| `toggle-success` | Color | Applies success color styling |
+| `toggle-warning` | Color | Applies warning color styling |
+| `toggle-info` | Color | Applies info color styling |
+| `toggle-error` | Color | Applies error color styling |
+| `toggle-xs` | Size | Extra small variant |
+| `toggle-sm` | Size | Small variant |
 | `toggle-md` | Size | Medium size (default) |
-| `toggle-lg` | Size | Large size |
+| `toggle-lg` | Size | Large variant |
+| `toggle-xl` | Size | Extra large variant |
 
 ## Key Examples
 
@@ -37,16 +38,18 @@ Switch/toggle component for binary on/off states.
 <input type="checkbox" class="toggle toggle-accent" checked />
 <input type="checkbox" class="toggle toggle-success" checked />
 <input type="checkbox" class="toggle toggle-warning" checked />
+<input type="checkbox" class="toggle toggle-info" checked />
 <input type="checkbox" class="toggle toggle-error" checked />
 ```
 
 ### Toggle sizes
 
 ```html
-<input type="checkbox" class="toggle toggle-xs" />
-<input type="checkbox" class="toggle toggle-sm" />
-<input type="checkbox" class="toggle toggle-md" />
-<input type="checkbox" class="toggle toggle-lg" />
+<input type="checkbox" class="toggle toggle-xs" checked />
+<input type="checkbox" class="toggle toggle-sm" checked />
+<input type="checkbox" class="toggle toggle-md" checked />
+<input type="checkbox" class="toggle toggle-lg" checked />
+<input type="checkbox" class="toggle toggle-xl" checked />
 ```
 
 ### Toggle with label
@@ -85,6 +88,18 @@ Switch/toggle component for binary on/off states.
 </div>
 ```
 
+### Toggle with fieldset
+
+```html
+<fieldset class="fieldset">
+  <legend class="fieldset-legend">Login options</legend>
+  <label class="label">
+    <input type="checkbox" class="toggle" checked />
+    Remember me
+  </label>
+</fieldset>
+```
+
 ### Toggle group in card
 
 ```html
@@ -111,4 +126,11 @@ Switch/toggle component for binary on/off states.
     </div>
   </div>
 </div>
+```
+
+### Toggle with custom colors
+
+```html
+<input type="checkbox" class="toggle border-indigo-600 bg-indigo-500 
+  checked:border-orange-500 checked:bg-orange-400" checked />
 ```

@@ -1,20 +1,23 @@
 # Dropdown
 
-Dropdown menu component for displaying a list of options.
+Dropdown menu component for displaying a list of options. Supports multiple implementation methods including CSS focus, Popover API, and details/summary.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `dropdown` | Container element |
-| `dropdown-content` | Content container |
-| `dropdown-end` | Align to end |
-| `dropdown-top` | Open to top |
-| `dropdown-bottom` | Open to bottom (default) |
-| `dropdown-left` | Open to left |
-| `dropdown-right` | Open to right |
-| `dropdown-hover` | Open on hover instead of click |
-| `dropdown-open` | Force open (for testing) |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `dropdown` | Component | Container for dropdown button and content |
+| `dropdown-content` | Part | Content part that contains the dropdown menu |
+| `dropdown-start` | Placement | Align horizontally to start of button (default) |
+| `dropdown-center` | Placement | Align horizontally to center of button |
+| `dropdown-end` | Placement | Align horizontally to end of button |
+| `dropdown-top` | Placement | Open from top |
+| `dropdown-bottom` | Placement | Open from bottom (default) |
+| `dropdown-left` | Placement | Open from left |
+| `dropdown-right` | Placement | Open from right |
+| `dropdown-hover` | Behavior | Opens on hover too |
+| `dropdown-open` | Behavior | Force open |
+| `dropdown-close` | Behavior | Force close |
 
 ## Key Examples
 
@@ -50,6 +53,15 @@ Dropdown menu component for displaying a list of options.
     <li><a>Item 2</a></li>
   </ul>
 </div>
+
+<!-- Top + End combined -->
+<div class="dropdown dropdown-top dropdown-end">
+  <div tabindex="0" role="button" class="btn">Top End</div>
+  <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 w-52 p-2 shadow">
+    <li><a>Item 1</a></li>
+    <li><a>Item 2</a></li>
+  </ul>
+</div>
 ```
 
 ### Hover activation
@@ -76,6 +88,28 @@ Dropdown menu component for displaying a list of options.
     </div>
   </div>
 </div>
+```
+
+### Using details/summary
+
+```html
+<details class="dropdown">
+  <summary class="btn m-1">Open or close</summary>
+  <ul class="menu dropdown-content bg-base-100 rounded-box z-1 w-52 p-2 shadow">
+    <li><a>Item 1</a></li>
+    <li><a>Item 2</a></li>
+  </ul>
+</details>
+```
+
+### Using Popover API
+
+```html
+<button class="btn" popovertarget="popover-1" style="anchor-name:--anchor-1">Click</button>
+<ul class="dropdown menu bg-base-100 rounded-box z-1 w-52 p-2 shadow" popover id="popover-1" style="position-anchor:--anchor-1">
+  <li><a>Item 1</a></li>
+  <li><a>Item 2</a></li>
+</ul>
 ```
 
 ### In navbar

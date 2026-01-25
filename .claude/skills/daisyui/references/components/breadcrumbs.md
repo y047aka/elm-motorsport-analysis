@@ -4,11 +4,9 @@ Navigation component showing the current page's location in a hierarchy.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `breadcrumbs` | Container element |
-
-Note: Use Tailwind text utilities (`text-sm`, `text-xs`, etc.) for sizing.
+| Class name | Type | Description |
+|------------|------|-------------|
+| `breadcrumbs` | Component | Wrapper around a `<ul>` |
 
 ## Key Examples
 
@@ -48,52 +46,4 @@ Note: Use Tailwind text utilities (`text-sm`, `text-xs`, etc.) for sizing.
     <li>Add Document</li>
   </ul>
 </div>
-```
-
-### Different sizes
-
-```html
-<!-- Small -->
-<div class="breadcrumbs text-sm">
-  <ul>
-    <li><a>Home</a></li>
-    <li><a>Documents</a></li>
-    <li>Current</li>
-  </ul>
-</div>
-
-<!-- Large -->
-<div class="breadcrumbs text-lg">
-  <ul>
-    <li><a>Home</a></li>
-    <li><a>Documents</a></li>
-    <li>Current</li>
-  </ul>
-</div>
-```
-
-### In navbar
-
-```html
-<div class="navbar bg-base-100">
-  <div class="flex-1">
-    <div class="breadcrumbs text-sm">
-      <ul>
-        <li><a>Home</a></li>
-        <li><a>Products</a></li>
-        <li>Category</li>
-      </ul>
-    </div>
-  </div>
-</div>
-```
-
-## Customization
-
-### Custom separator (CSS)
-
-```css
-.breadcrumbs > ul > li + li:before {
-  content: "→";
-}
 ```

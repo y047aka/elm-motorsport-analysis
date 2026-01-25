@@ -1,22 +1,23 @@
 # Loading
 
-Loading indicator component for async operations.
+Loading indicator component for async operations with multiple animation styles.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `loading` | Component | Loading indicator base class |
-| `loading-spinner` | Type | Spinner animation |
-| `loading-dots` | Type | Dots animation |
-| `loading-ring` | Type | Ring animation |
-| `loading-ball` | Type | Ball animation |
-| `loading-bars` | Type | Bars animation |
-| `loading-infinity` | Type | Infinity animation |
+| `loading` | Component | Loading element base class |
+| `loading-spinner` | Style | Spinner animation |
+| `loading-dots` | Style | Dots animation |
+| `loading-ring` | Style | Ring animation |
+| `loading-ball` | Style | Ball animation |
+| `loading-bars` | Style | Bars animation |
+| `loading-infinity` | Style | Infinity animation |
 | `loading-xs` | Size | Extra small size |
 | `loading-sm` | Size | Small size |
 | `loading-md` | Size | Medium size (default) |
 | `loading-lg` | Size | Large size |
+| `loading-xl` | Size | Extra large size |
 
 ## Key Examples
 
@@ -38,6 +39,7 @@ Loading indicator component for async operations.
 <span class="loading loading-spinner loading-sm"></span>
 <span class="loading loading-spinner loading-md"></span>
 <span class="loading loading-spinner loading-lg"></span>
+<span class="loading loading-spinner loading-xl"></span>
 ```
 
 ### Loading with colors
@@ -46,6 +48,8 @@ Loading indicator component for async operations.
 <span class="loading loading-spinner text-primary"></span>
 <span class="loading loading-spinner text-secondary"></span>
 <span class="loading loading-spinner text-accent"></span>
+<span class="loading loading-spinner text-neutral"></span>
+<span class="loading loading-spinner text-info"></span>
 <span class="loading loading-spinner text-success"></span>
 <span class="loading loading-spinner text-warning"></span>
 <span class="loading loading-spinner text-error"></span>

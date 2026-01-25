@@ -6,17 +6,21 @@ Vertical or horizontal list of navigation links.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `menu` | Component | Menu container element |
-| `menu-title` | Element | Title/header item |
-| `menu-horizontal` | Layout | Horizontal layout |
-| `menu-vertical` | Layout | Vertical layout (default) |
+| `menu` | Component | Main component class for `<ul>` tag |
+| `menu-title` | Part | Styles a `<li>` as a title |
+| `menu-dropdown` | Part | For collapsible `<ul>` elements displayed via JavaScript |
+| `menu-dropdown-toggle` | Part | Toggle to show/hide the menu-dropdown using JS |
+| `menu-disabled` | Modifier | Makes an element inside `<li>` appear disabled |
+| `menu-active` | Modifier | Highlights an element inside `<li>` as active/selected |
+| `menu-focus` | Modifier | Applies focus styling to an element inside `<li>` |
+| `menu-dropdown-show` | Behavior | Shows the menu-dropdown-toggle and collapsible submenu via JS |
 | `menu-xs` | Size | Extra small size |
 | `menu-sm` | Size | Small size |
 | `menu-md` | Size | Medium size (default) |
 | `menu-lg` | Size | Large size |
-| `active` | State | Active state (on anchor) |
-| `focus` | State | Focus state (on anchor) |
-| `disabled` | State | Disabled state (on li) |
+| `menu-xl` | Size | Extra large size |
+| `menu-vertical` | direction | Vertical menu layout (default) |
+| `menu-horizontal` | direction | Horizontal menu layout |
 
 ## Key Examples
 
@@ -95,8 +99,8 @@ Vertical or horizontal list of navigation links.
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
   <li><a>Item 1</a></li>
-  <li><a class="active">Active Item</a></li>
-  <li class="disabled"><a>Disabled Item</a></li>
+  <li><a class="menu-active">Active Item</a></li>
+  <li class="menu-disabled"><a>Disabled Item</a></li>
 </ul>
 ```
 

@@ -1,20 +1,20 @@
 # Progress
 
-Progress bar component for showing completion status.
+Progress bar component for showing task completion or time passage.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `progress` | Component | Progress bar base class |
-| `progress-primary` | Color | Primary color |
-| `progress-secondary` | Color | Secondary color |
-| `progress-accent` | Color | Accent color |
-| `progress-neutral` | Color | Neutral color |
-| `progress-info` | Color | Info state color |
-| `progress-success` | Color | Success state color |
-| `progress-warning` | Color | Warning state color |
-| `progress-error` | Color | Error state color |
+| `progress` | Component | Base class for `<progress>` tag |
+| `progress-neutral` | Color | Applies neutral color scheme |
+| `progress-primary` | Color | Applies primary color scheme |
+| `progress-secondary` | Color | Applies secondary color scheme |
+| `progress-accent` | Color | Applies accent color scheme |
+| `progress-info` | Color | Applies info color scheme |
+| `progress-success` | Color | Applies success color scheme |
+| `progress-warning` | Color | Applies warning color scheme |
+| `progress-error` | Color | Applies error color scheme |
 
 ## Key Examples
 

@@ -1,18 +1,18 @@
 # Swap
 
-Component for swapping between two states with optional animation.
+Container component that enables toggle visibility between two elements with optional animation effects. Commonly used for theme toggles, hamburger menus, and state-based icon swaps.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `swap` | Component | Swap container element |
-| `swap-on` | Element | Content shown when active (checked) |
-| `swap-off` | Element | Content shown when inactive (unchecked) |
-| `swap-rotate` | Animation | Rotate animation |
-| `swap-flip` | Animation | Flip animation |
-| `swap-active` | State | Force active state |
-| `swap-indeterminate` | State | Indeterminate state |
+| `swap` | Component | Container that enables toggle visibility between two elements |
+| `swap-on` | Part | Child element visible when checkbox checked or swap active |
+| `swap-off` | Part | Child element visible when checkbox unchecked or swap inactive |
+| `swap-indeterminate` | Part | Child element shown when checkbox is indeterminate |
+| `swap-active` | Modifier | Activates the swap without requiring a checkbox |
+| `swap-rotate` | Style | Applies rotation animation effect to swap transition |
+| `swap-flip` | Style | Applies flip animation effect to swap transition |
 
 ## Key Examples
 

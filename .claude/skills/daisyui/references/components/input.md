@@ -1,25 +1,26 @@
 # Input
 
-Text input component for user data entry.
+Text input component for user data entry. Works with various input types (text, password, email, number, date, etc.) and can be used as a wrapper label to include icons, badges, and helper elements.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `input` | Base input class |
-| `input-bordered` | Adds border |
-| `input-ghost` | No border, transparent |
-| `input-primary` | Primary color focus |
-| `input-secondary` | Secondary color focus |
-| `input-accent` | Accent color focus |
-| `input-info` | Info state color |
-| `input-success` | Success state color |
-| `input-warning` | Warning state color |
-| `input-error` | Error state color |
-| `input-xs` | Extra small size |
-| `input-sm` | Small size |
-| `input-md` | Medium size (default) |
-| `input-lg` | Large size |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `input` | Component | Base class for `<input type="text">` tags or wrapper elements |
+| `input-ghost` | Style | Minimalist variant without visible borders |
+| `input-neutral` | Color | Neutral color scheme |
+| `input-primary` | Color | Primary brand color |
+| `input-secondary` | Color | Secondary brand color |
+| `input-accent` | Color | Accent color |
+| `input-info` | Color | Information/notice styling |
+| `input-success` | Color | Success/positive feedback |
+| `input-warning` | Color | Warning state |
+| `input-error` | Color | Error/invalid state |
+| `input-xs` | Size | Extra small |
+| `input-sm` | Size | Small |
+| `input-md` | Size | Medium (default) |
+| `input-lg` | Size | Large |
+| `input-xl` | Size | Extra large |
 
 ## Key Examples
 
@@ -45,6 +46,7 @@ Text input component for user data entry.
 <input type="text" class="input input-bordered input-sm" placeholder="Small" />
 <input type="text" class="input input-bordered input-md" placeholder="Medium" />
 <input type="text" class="input input-bordered input-lg" placeholder="Large" />
+<input type="text" class="input input-bordered input-xl" placeholder="Extra large" />
 ```
 
 ### With label (form-control)

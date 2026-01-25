@@ -1,20 +1,20 @@
 # Stats
 
-Component for displaying statistics and metrics.
+Component for displaying statistics and metrics. Container of multiple stat items showing numbers and data in blocks.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `stats` | Component | Stats container element |
-| `stat` | Element | Individual stat container |
-| `stat-title` | Element | Title text |
-| `stat-value` | Element | Main value (large text) |
-| `stat-desc` | Element | Description text |
-| `stat-figure` | Element | Icon/image container |
-| `stat-actions` | Element | Actions container |
-| `stats-vertical` | Layout | Vertical layout |
-| `stats-horizontal` | Layout | Horizontal layout (default) |
+| `stats` | Component | Container of multiple stat items |
+| `stat` | Part | A block to display stat data about a topic |
+| `stat-title` | Part | Title part |
+| `stat-value` | Part | Value part |
+| `stat-desc` | Part | Description part |
+| `stat-figure` | Part | Figure part for icon, etc |
+| `stat-actions` | Part | Actions part for button, etc |
+| `stats-horizontal` | direction | Makes stats horizontal (default) |
+| `stats-vertical` | direction | Makes stats vertical |
 
 ## Key Examples
 
@@ -39,13 +39,13 @@ Component for displaying statistics and metrics.
     <div class="stat-value">31K</div>
     <div class="stat-desc">Jan 1st - Feb 1st</div>
   </div>
-  
+
   <div class="stat">
     <div class="stat-title">New Users</div>
     <div class="stat-value">4,200</div>
     <div class="stat-desc">↗︎ 400 (22%)</div>
   </div>
-  
+
   <div class="stat">
     <div class="stat-title">New Registers</div>
     <div class="stat-value">1,200</div>
@@ -68,7 +68,7 @@ Component for displaying statistics and metrics.
     <div class="stat-value text-primary">25.6K</div>
     <div class="stat-desc">21% more than last month</div>
   </div>
-  
+
   <div class="stat">
     <div class="stat-figure text-secondary">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current">
@@ -82,6 +82,24 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
+### Centered stats
+
+```html
+<div class="stats shadow">
+  <div class="stat place-items-center">
+    <div class="stat-title">Downloads</div>
+    <div class="stat-value">31K</div>
+    <div class="stat-desc">From January 1st to February 1st</div>
+  </div>
+
+  <div class="stat place-items-center">
+    <div class="stat-title">New Users</div>
+    <div class="stat-value text-secondary">4,200</div>
+    <div class="stat-desc text-secondary">↗︎ 40 (2%)</div>
+  </div>
+</div>
+```
+
 ### Vertical stats
 
 ```html
@@ -91,7 +109,7 @@ Component for displaying statistics and metrics.
     <div class="stat-value">31K</div>
     <div class="stat-desc">Jan 1st - Feb 1st</div>
   </div>
-  
+
   <div class="stat">
     <div class="stat-title">New Users</div>
     <div class="stat-value">4,200</div>
@@ -108,7 +126,7 @@ Component for displaying statistics and metrics.
     <div class="stat-title">Downloads</div>
     <div class="stat-value">31K</div>
   </div>
-  
+
   <div class="stat">
     <div class="stat-title">New Users</div>
     <div class="stat-value">4,200</div>
@@ -124,7 +142,7 @@ Component for displaying statistics and metrics.
     <div class="stat-title">Downloads</div>
     <div class="stat-value">31K</div>
     <div class="stat-actions">
-      <button class="btn btn-sm btn-primary">View Details</button>
+      <button class="btn btn-sm btn-success">View Details</button>
     </div>
   </div>
 </div>

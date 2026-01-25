@@ -6,9 +6,9 @@ Full-width banner component for landing pages and headers.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `hero` | Component | Hero container element |
-| `hero-content` | Element | Content wrapper |
-| `hero-overlay` | Element | Overlay layer for background images |
+| `hero` | Component | Hero container |
+| `hero-content` | Part | Content part |
+| `hero-overlay` | Part | Overlay that covers the background image |
 
 ## Key Examples
 

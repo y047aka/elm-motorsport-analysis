@@ -4,12 +4,12 @@ Navigation bar component for site headers.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `navbar` | Container element |
-| `navbar-start` | Left section (child element) |
-| `navbar-center` | Center section (child element) |
-| `navbar-end` | Right section (child element) |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `navbar` | Component | Navigation bar container |
+| `navbar-start` | Part | For the div inside navbar, to fill 50% of width (left section) |
+| `navbar-center` | Part | For the div inside navbar, to be at center horizontally |
+| `navbar-end` | Part | For the div inside navbar, to fill second 50% of width (right section) |
 
 ## Key Examples
 

@@ -1,20 +1,20 @@
 # Drawer
 
-Sidebar component for navigation, typically hidden on mobile.
+Sidebar component for navigation. The drawer is a wrapper for sidebar and content, controlled by a hidden checkbox.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `drawer` | Container element |
-| `drawer-toggle` | Hidden checkbox for toggle |
-| `drawer-content` | Main content container |
-| `drawer-side` | Sidebar container |
-| `drawer-overlay` | Overlay behind sidebar |
-| `drawer-button` | Button styling (optional) |
-| `drawer-end` | Position drawer on right |
-| `drawer-open` | Force drawer open |
-| `lg:drawer-open` | Open on large screens (responsive) |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `drawer` | Component | The wrapper for sidebar and content |
+| `drawer-toggle` | Part | The hidden checkbox that controls the state of drawer |
+| `drawer-content` | Part | Content part |
+| `drawer-side` | Part | Sidebar part |
+| `drawer-overlay` | Part | Label that covers the page when drawer is open |
+| `drawer-end` | Placement | Puts drawer to the other side |
+| `drawer-open` | Modifier | Forces the drawer to be open |
+| `is-drawer-open:` | Variant | Applies styles when the drawer is open |
+| `is-drawer-close:` | Variant | Applies styles when the drawer is closed |
 
 ## Key Examples
 
@@ -141,6 +141,24 @@ Sidebar component for navigation, typically hidden on mobile.
         <li><a>Dashboard</a></li>
         <li><a>Analytics</a></li>
       </ul>
+    </div>
+  </div>
+</div>
+```
+
+### State-based styling with variants
+
+```html
+<div class="drawer">
+  <input id="my-drawer-5" type="checkbox" class="drawer-toggle" />
+  <div class="drawer-content">
+    <label for="my-drawer-5" class="btn is-drawer-open:hidden">Open</label>
+    <label for="my-drawer-5" class="btn is-drawer-close:hidden">Close</label>
+  </div>
+  <div class="drawer-side">
+    <label for="my-drawer-5" class="drawer-overlay"></label>
+    <div class="bg-base-200 min-h-full w-80 is-drawer-open:w-64 p-4">
+      Sidebar content
     </div>
   </div>
 </div>

@@ -4,13 +4,15 @@ Slideshow component for cycling through images or content.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `carousel` | Container element |
-| `carousel-item` | Individual slide |
-| `carousel-center` | Snap to center |
-| `carousel-end` | Snap to end |
-| `carousel-vertical` | Vertical scrolling |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `carousel` | Component | Carousel container |
+| `carousel-item` | Part | Carousel item |
+| `carousel-start` | Modifier | Snap elements to start [default] |
+| `carousel-center` | Modifier | Snap elements to center |
+| `carousel-end` | Modifier | Snap elements to end |
+| `carousel-horizontal` | direction | Horizontal layout [default] |
+| `carousel-vertical` | direction | Vertical layout |
 
 ## Key Examples
 
@@ -26,6 +28,38 @@ Slideshow component for cycling through images or content.
   </div>
   <div class="carousel-item">
     <img src="image3.jpg" alt="Slide 3" />
+  </div>
+</div>
+```
+
+### Vertical carousel
+
+```html
+<div class="carousel carousel-vertical rounded-box h-96">
+  <div class="carousel-item h-full">
+    <img src="image1.jpg" />
+  </div>
+  <div class="carousel-item h-full">
+    <img src="image2.jpg" />
+  </div>
+  <div class="carousel-item h-full">
+    <img src="image3.jpg" />
+  </div>
+</div>
+```
+
+### Carousel center with spacing
+
+```html
+<div class="carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4">
+  <div class="carousel-item">
+    <img src="image1.jpg" class="rounded-box" />
+  </div>
+  <div class="carousel-item">
+    <img src="image2.jpg" class="rounded-box" />
+  </div>
+  <div class="carousel-item">
+    <img src="image3.jpg" class="rounded-box" />
   </div>
 </div>
 ```
@@ -76,37 +110,5 @@ Slideshow component for cycling through images or content.
   <a href="#item1" class="btn btn-xs">1</a>
   <a href="#item2" class="btn btn-xs">2</a>
   <a href="#item3" class="btn btn-xs">3</a>
-</div>
-```
-
-### Vertical carousel
-
-```html
-<div class="carousel carousel-vertical rounded-box h-96">
-  <div class="carousel-item h-full">
-    <img src="image1.jpg" />
-  </div>
-  <div class="carousel-item h-full">
-    <img src="image2.jpg" />
-  </div>
-  <div class="carousel-item h-full">
-    <img src="image3.jpg" />
-  </div>
-</div>
-```
-
-### Carousel center with spacing
-
-```html
-<div class="carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4">
-  <div class="carousel-item">
-    <img src="image1.jpg" class="rounded-box" />
-  </div>
-  <div class="carousel-item">
-    <img src="image2.jpg" class="rounded-box" />
-  </div>
-  <div class="carousel-item">
-    <img src="image3.jpg" class="rounded-box" />
-  </div>
 </div>
 ```

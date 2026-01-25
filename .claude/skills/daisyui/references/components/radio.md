@@ -1,31 +1,32 @@
 # Radio
 
-Radio button component for single selection from a group.
+Radio button component for single selection from a group. Each set of radio inputs should have unique `name` attributes to avoid conflicts with other sets of radio inputs on the same page.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `radio` | Base radio class |
-| `radio-primary` | Primary color |
-| `radio-secondary` | Secondary color |
-| `radio-accent` | Accent color |
-| `radio-neutral` | Neutral color |
-| `radio-info` | Info state color |
-| `radio-success` | Success state color |
-| `radio-warning` | Warning state color |
-| `radio-error` | Error state color |
-| `radio-xs` | Extra small size |
-| `radio-sm` | Small size |
-| `radio-md` | Medium size (default) |
-| `radio-lg` | Large size |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `radio` | Component | For radio input |
+| `radio-neutral` | Color | Neutral color |
+| `radio-primary` | Color | Primary color |
+| `radio-secondary` | Color | Secondary color |
+| `radio-accent` | Color | Accent color |
+| `radio-success` | Color | Success color |
+| `radio-warning` | Color | Warning color |
+| `radio-info` | Color | Info color |
+| `radio-error` | Color | Error color |
+| `radio-xs` | Size | Extra small size |
+| `radio-sm` | Size | Small size |
+| `radio-md` | Size | Medium size (default) |
+| `radio-lg` | Size | Large size |
+| `radio-xl` | Size | Extra large size |
 
 ## Key Examples
 
 ### Basic radio
 
 ```html
-<input type="radio" name="radio-1" class="radio" checked />
+<input type="radio" name="radio-1" class="radio" checked="checked" />
 <input type="radio" name="radio-1" class="radio" />
 ```
 
@@ -46,6 +47,7 @@ Radio button component for single selection from a group.
 <input type="radio" name="radio-size" class="radio radio-sm" />
 <input type="radio" name="radio-size" class="radio radio-md" />
 <input type="radio" name="radio-size" class="radio radio-lg" />
+<input type="radio" name="radio-size" class="radio radio-xl" />
 ```
 
 ### With label (form-control)

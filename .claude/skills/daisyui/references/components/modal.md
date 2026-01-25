@@ -4,17 +4,19 @@ Dialog component for displaying content in a layer above the page.
 
 ## Class Reference
 
-| Class | Description |
-|-------|-------------|
-| `modal` | Container element |
-| `modal-box` | Content container |
-| `modal-action` | Actions container |
-| `modal-backdrop` | Backdrop element (for click-outside-to-close) |
-| `modal-toggle` | Hidden checkbox for toggle method |
-| `modal-open` | Force modal open (for testing) |
-| `modal-top` | Position at top |
-| `modal-middle` | Position at middle (default) |
-| `modal-bottom` | Position at bottom |
+| Class name | Type | Description |
+|------------|------|-------------|
+| `modal` | Component | Modal is used to show a dialog or a box when you click a button |
+| `modal-box` | Part | The content part |
+| `modal-action` | Part | Actions part (buttons, etc.) |
+| `modal-backdrop` | Part | Label that covers the page when modal is open so we can close the modal by clicking outside |
+| `modal-toggle` | Part | Hidden checkbox that controls the state of modal |
+| `modal-open` | Modifier | Keeps the modal open (you can add this class using JS) |
+| `modal-top` | Placement | Moves the modal to top |
+| `modal-middle` | Placement | Moves the modal to middle [Default] |
+| `modal-bottom` | Placement | Moves the modal to bottom |
+| `modal-start` | Placement | Moves the modal to start horizontally |
+| `modal-end` | Placement | Moves the modal to end horizontally |
 
 ## Key Examples
 
