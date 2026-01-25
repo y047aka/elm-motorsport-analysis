@@ -2,7 +2,25 @@
 
 Vertical or horizontal list of navigation links.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `menu` | Component | Menu container element |
+| `menu-title` | Element | Title/header item |
+| `menu-horizontal` | Layout | Horizontal layout |
+| `menu-vertical` | Layout | Vertical layout (default) |
+| `menu-xs` | Size | Extra small size |
+| `menu-sm` | Size | Small size |
+| `menu-md` | Size | Medium size (default) |
+| `menu-lg` | Size | Large size |
+| `active` | State | Active state (on anchor) |
+| `focus` | State | Focus state (on anchor) |
+| `disabled` | State | Disabled state (on li) |
+
+## Key Examples
+
+### Basic menu
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -12,7 +30,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-## With Title
+### Menu with title
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -23,7 +41,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-## With Icons
+### Menu with icons
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -54,7 +72,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-## With Submenu (Details)
+### Menu with submenu
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -65,15 +83,6 @@ Vertical or horizontal list of navigation links.
       <ul>
         <li><a>Submenu 1</a></li>
         <li><a>Submenu 2</a></li>
-        <li>
-          <details open>
-            <summary>Parent</summary>
-            <ul>
-              <li><a>Submenu 1</a></li>
-              <li><a>Submenu 2</a></li>
-            </ul>
-          </details>
-        </li>
       </ul>
     </details>
   </li>
@@ -81,37 +90,17 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-## Active Item
+### Active and disabled states
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
   <li><a>Item 1</a></li>
   <li><a class="active">Active Item</a></li>
-  <li><a>Item 3</a></li>
-</ul>
-```
-
-## Focus Item
-
-```html
-<ul class="menu bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
-  <li><a class="focus">Focused Item</a></li>
-  <li><a>Item 3</a></li>
-</ul>
-```
-
-## Disabled Item
-
-```html
-<ul class="menu bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
   <li class="disabled"><a>Disabled Item</a></li>
-  <li><a>Item 3</a></li>
 </ul>
 ```
 
-## Horizontal Menu
+### Horizontal menu
 
 ```html
 <ul class="menu menu-horizontal bg-base-200 rounded-box">
@@ -121,35 +110,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-## Sizes
-
-```html
-<!-- Extra small -->
-<ul class="menu menu-xs bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-</ul>
-
-<!-- Small -->
-<ul class="menu menu-sm bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-</ul>
-
-<!-- Medium (default) -->
-<ul class="menu menu-md bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-</ul>
-
-<!-- Large -->
-<ul class="menu menu-lg bg-base-200 rounded-box w-56">
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-</ul>
-```
-
-## With Badge
+### Menu with badges
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -168,45 +129,3 @@ Vertical or horizontal list of navigation links.
   <li><a>Stats</a></li>
 </ul>
 ```
-
-## Responsive (Horizontal on Large)
-
-```html
-<ul class="menu menu-vertical lg:menu-horizontal bg-base-200 rounded-box">
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-  <li><a>Item 3</a></li>
-</ul>
-```
-
-## Collapsible Submenu
-
-```html
-<ul class="menu bg-base-200 rounded-box w-56">
-  <li>
-    <details>
-      <summary>Click to open</summary>
-      <ul>
-        <li><a>Submenu 1</a></li>
-        <li><a>Submenu 2</a></li>
-      </ul>
-    </details>
-  </li>
-</ul>
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `menu` | Container element |
-| `menu-title` | Title/header item |
-| `menu-horizontal` | Horizontal layout |
-| `menu-vertical` | Vertical layout (default) |
-| `menu-xs` | Extra small size |
-| `menu-sm` | Small size |
-| `menu-md` | Medium size (default) |
-| `menu-lg` | Large size |
-| `active` | Active state (on anchor) |
-| `focus` | Focus state (on anchor) |
-| `disabled` | Disabled state (on li) |

@@ -2,37 +2,45 @@
 
 Switch/toggle component for binary on/off states.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `toggle` | Component | Toggle base class |
+| `toggle-primary` | Color | Primary color |
+| `toggle-secondary` | Color | Secondary color |
+| `toggle-accent` | Color | Accent color |
+| `toggle-neutral` | Color | Neutral color |
+| `toggle-info` | Color | Info state color |
+| `toggle-success` | Color | Success state color |
+| `toggle-warning` | Color | Warning state color |
+| `toggle-error` | Color | Error state color |
+| `toggle-xs` | Size | Extra small size |
+| `toggle-sm` | Size | Small size |
+| `toggle-md` | Size | Medium size (default) |
+| `toggle-lg` | Size | Large size |
+
+## Key Examples
+
+### Basic toggle
 
 ```html
 <input type="checkbox" class="toggle" />
-```
-
-## Checked State
-
-```html
 <input type="checkbox" class="toggle" checked />
 ```
 
-## Color Variants
+### Toggle colors
 
 ```html
 <input type="checkbox" class="toggle toggle-primary" checked />
 <input type="checkbox" class="toggle toggle-secondary" checked />
 <input type="checkbox" class="toggle toggle-accent" checked />
-<input type="checkbox" class="toggle toggle-neutral" checked />
-```
-
-## State Colors
-
-```html
-<input type="checkbox" class="toggle toggle-info" checked />
 <input type="checkbox" class="toggle toggle-success" checked />
 <input type="checkbox" class="toggle toggle-warning" checked />
 <input type="checkbox" class="toggle toggle-error" checked />
 ```
 
-## Sizes
+### Toggle sizes
 
 ```html
 <input type="checkbox" class="toggle toggle-xs" />
@@ -41,14 +49,7 @@ Switch/toggle component for binary on/off states.
 <input type="checkbox" class="toggle toggle-lg" />
 ```
 
-## Disabled
-
-```html
-<input type="checkbox" class="toggle" disabled />
-<input type="checkbox" class="toggle" checked disabled />
-```
-
-## With Label
+### Toggle with label
 
 ```html
 <div class="form-control">
@@ -59,7 +60,7 @@ Switch/toggle component for binary on/off states.
 </div>
 ```
 
-## Label on Left
+### Toggle with label on left
 
 ```html
 <div class="form-control">
@@ -70,7 +71,7 @@ Switch/toggle component for binary on/off states.
 </div>
 ```
 
-## With Description
+### Toggle with description
 
 ```html
 <div class="form-control w-full">
@@ -84,32 +85,7 @@ Switch/toggle component for binary on/off states.
 </div>
 ```
 
-## Toggle Group
-
-```html
-<div class="space-y-2">
-  <div class="form-control">
-    <label class="label cursor-pointer">
-      <span class="label-text">Wi-Fi</span>
-      <input type="checkbox" class="toggle toggle-primary" checked />
-    </label>
-  </div>
-  <div class="form-control">
-    <label class="label cursor-pointer">
-      <span class="label-text">Bluetooth</span>
-      <input type="checkbox" class="toggle toggle-primary" checked />
-    </label>
-  </div>
-  <div class="form-control">
-    <label class="label cursor-pointer">
-      <span class="label-text">Airplane mode</span>
-      <input type="checkbox" class="toggle toggle-primary" />
-    </label>
-  </div>
-</div>
-```
-
-## In Card
+### Toggle group in card
 
 ```html
 <div class="card bg-base-100 shadow-xl">
@@ -136,30 +112,3 @@ Switch/toggle component for binary on/off states.
   </div>
 </div>
 ```
-
-## Indeterminate State
-
-```html
-<input type="checkbox" class="toggle" id="toggle-indeterminate" />
-<script>
-  document.getElementById('toggle-indeterminate').indeterminate = true;
-</script>
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `toggle` | Base toggle class |
-| `toggle-primary` | Primary color |
-| `toggle-secondary` | Secondary color |
-| `toggle-accent` | Accent color |
-| `toggle-neutral` | Neutral color |
-| `toggle-info` | Info state color |
-| `toggle-success` | Success state color |
-| `toggle-warning` | Warning state color |
-| `toggle-error` | Error state color |
-| `toggle-xs` | Extra small size |
-| `toggle-sm` | Small size |
-| `toggle-md` | Medium size (default) |
-| `toggle-lg` | Large size |

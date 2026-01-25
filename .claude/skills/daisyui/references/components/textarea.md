@@ -2,43 +2,48 @@
 
 Multi-line text input component.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `textarea` | Component | Textarea base class |
+| `textarea-bordered` | Style | Adds border |
+| `textarea-ghost` | Style | No border, transparent |
+| `textarea-primary` | Color | Primary color focus |
+| `textarea-secondary` | Color | Secondary color focus |
+| `textarea-accent` | Color | Accent color focus |
+| `textarea-neutral` | Color | Neutral color focus |
+| `textarea-info` | Color | Info state color |
+| `textarea-success` | Color | Success state color |
+| `textarea-warning` | Color | Warning state color |
+| `textarea-error` | Color | Error state color |
+| `textarea-xs` | Size | Extra small size |
+| `textarea-sm` | Size | Small size |
+| `textarea-md` | Size | Medium size (default) |
+| `textarea-lg` | Size | Large size |
+
+## Key Examples
+
+### Basic textarea
 
 ```html
 <textarea class="textarea" placeholder="Bio"></textarea>
-```
-
-## With Border
-
-```html
 <textarea class="textarea textarea-bordered" placeholder="Bio"></textarea>
-```
-
-## Ghost (No Border)
-
-```html
 <textarea class="textarea textarea-ghost" placeholder="Bio"></textarea>
 ```
 
-## Color Variants
+### Textarea colors
 
 ```html
 <textarea class="textarea textarea-bordered textarea-primary" placeholder="Primary"></textarea>
 <textarea class="textarea textarea-bordered textarea-secondary" placeholder="Secondary"></textarea>
 <textarea class="textarea textarea-bordered textarea-accent" placeholder="Accent"></textarea>
-<textarea class="textarea textarea-bordered textarea-neutral" placeholder="Neutral"></textarea>
-```
-
-## State Colors
-
-```html
-<textarea class="textarea textarea-bordered textarea-info" placeholder="Info"></textarea>
 <textarea class="textarea textarea-bordered textarea-success" placeholder="Success"></textarea>
 <textarea class="textarea textarea-bordered textarea-warning" placeholder="Warning"></textarea>
 <textarea class="textarea textarea-bordered textarea-error" placeholder="Error"></textarea>
 ```
 
-## Sizes
+### Textarea sizes
 
 ```html
 <textarea class="textarea textarea-bordered textarea-xs" placeholder="Extra small"></textarea>
@@ -47,13 +52,7 @@ Multi-line text input component.
 <textarea class="textarea textarea-bordered textarea-lg" placeholder="Large"></textarea>
 ```
 
-## Disabled
-
-```html
-<textarea class="textarea textarea-bordered" placeholder="Disabled" disabled></textarea>
-```
-
-## With Label
+### Textarea with label
 
 ```html
 <label class="form-control">
@@ -68,24 +67,17 @@ Multi-line text input component.
 </label>
 ```
 
-## Full Width
-
-```html
-<textarea class="textarea textarea-bordered w-full" placeholder="Full width"></textarea>
-```
-
-## Fixed Height
+### Textarea with fixed height
 
 ```html
 <textarea class="textarea textarea-bordered h-24" placeholder="Fixed height"></textarea>
 <textarea class="textarea textarea-bordered h-32" placeholder="Taller"></textarea>
-<textarea class="textarea textarea-bordered h-48" placeholder="Even taller"></textarea>
 ```
 
-## Resizable
+### Resizable textarea
 
 ```html
-<!-- Vertical resize only (default browser behavior) -->
+<!-- Vertical resize only (default) -->
 <textarea class="textarea textarea-bordered resize-y" placeholder="Resize vertically"></textarea>
 
 <!-- Both directions -->
@@ -95,7 +87,7 @@ Multi-line text input component.
 <textarea class="textarea textarea-bordered resize-none" placeholder="No resize"></textarea>
 ```
 
-## With Character Count
+### Textarea with character count
 
 ```html
 <label class="form-control">
@@ -108,23 +100,3 @@ Multi-line text input component.
   </div>
 </label>
 ```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `textarea` | Base textarea class |
-| `textarea-bordered` | Adds border |
-| `textarea-ghost` | No border, transparent |
-| `textarea-primary` | Primary color focus |
-| `textarea-secondary` | Secondary color focus |
-| `textarea-accent` | Accent color focus |
-| `textarea-neutral` | Neutral color focus |
-| `textarea-info` | Info state color |
-| `textarea-success` | Success state color |
-| `textarea-warning` | Warning state color |
-| `textarea-error` | Error state color |
-| `textarea-xs` | Extra small size |
-| `textarea-sm` | Small size |
-| `textarea-md` | Medium size (default) |
-| `textarea-lg` | Large size |

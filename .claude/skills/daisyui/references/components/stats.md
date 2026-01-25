@@ -2,7 +2,23 @@
 
 Component for displaying statistics and metrics.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `stats` | Component | Stats container element |
+| `stat` | Element | Individual stat container |
+| `stat-title` | Element | Title text |
+| `stat-value` | Element | Main value (large text) |
+| `stat-desc` | Element | Description text |
+| `stat-figure` | Element | Icon/image container |
+| `stat-actions` | Element | Actions container |
+| `stats-vertical` | Layout | Vertical layout |
+| `stats-horizontal` | Layout | Horizontal layout (default) |
+
+## Key Examples
+
+### Basic stat
 
 ```html
 <div class="stats shadow">
@@ -14,7 +30,7 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
-## Multiple Stats
+### Multiple stats
 
 ```html
 <div class="stats shadow">
@@ -38,7 +54,7 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
-## With Icons
+### Stats with icons
 
 ```html
 <div class="stats shadow">
@@ -66,26 +82,7 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
-## With Avatar/Image
-
-```html
-<div class="stats shadow">
-  <div class="stat">
-    <div class="stat-figure text-secondary">
-      <div class="avatar online">
-        <div class="w-16 rounded-full">
-          <img src="avatar.jpg" />
-        </div>
-      </div>
-    </div>
-    <div class="stat-value">86%</div>
-    <div class="stat-title">Tasks done</div>
-    <div class="stat-desc text-secondary">31 tasks remaining</div>
-  </div>
-</div>
-```
-
-## Vertical Stats
+### Vertical stats
 
 ```html
 <div class="stats stats-vertical shadow">
@@ -100,19 +97,12 @@ Component for displaying statistics and metrics.
     <div class="stat-value">4,200</div>
     <div class="stat-desc">↗︎ 400 (22%)</div>
   </div>
-  
-  <div class="stat">
-    <div class="stat-title">New Registers</div>
-    <div class="stat-value">1,200</div>
-    <div class="stat-desc">↘︎ 90 (14%)</div>
-  </div>
 </div>
 ```
 
-## Responsive Layout
+### Responsive stats
 
 ```html
-<!-- Vertical on mobile, horizontal on larger screens -->
 <div class="stats stats-vertical lg:stats-horizontal shadow">
   <div class="stat">
     <div class="stat-title">Downloads</div>
@@ -126,30 +116,7 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
-## Colored Stats
-
-```html
-<div class="stats bg-primary text-primary-content">
-  <div class="stat">
-    <div class="stat-title">Account balance</div>
-    <div class="stat-value">$89,400</div>
-    <div class="stat-actions">
-      <button class="btn btn-sm btn-success">Add funds</button>
-    </div>
-  </div>
-  
-  <div class="stat">
-    <div class="stat-title">Current balance</div>
-    <div class="stat-value">$89,400</div>
-    <div class="stat-actions">
-      <button class="btn btn-sm">Withdrawal</button>
-      <button class="btn btn-sm">Deposit</button>
-    </div>
-  </div>
-</div>
-```
-
-## With Actions
+### Stats with actions
 
 ```html
 <div class="stats shadow">
@@ -162,17 +129,3 @@ Component for displaying statistics and metrics.
   </div>
 </div>
 ```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `stats` | Container element |
-| `stat` | Individual stat container |
-| `stat-title` | Title text |
-| `stat-value` | Main value (large text) |
-| `stat-desc` | Description text |
-| `stat-figure` | Icon/image container |
-| `stat-actions` | Actions container |
-| `stats-vertical` | Vertical layout |
-| `stats-horizontal` | Horizontal layout (default) |

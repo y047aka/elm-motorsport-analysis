@@ -2,7 +2,28 @@
 
 Tooltip component for showing additional information on hover.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `tooltip` | Component | Tooltip container element |
+| `tooltip-open` | State | Force tooltip to show |
+| `tooltip-top` | Position | Position at top (default) |
+| `tooltip-bottom` | Position | Position at bottom |
+| `tooltip-left` | Position | Position at left |
+| `tooltip-right` | Position | Position at right |
+| `tooltip-primary` | Color | Primary color |
+| `tooltip-secondary` | Color | Secondary color |
+| `tooltip-accent` | Color | Accent color |
+| `tooltip-neutral` | Color | Neutral color |
+| `tooltip-info` | Color | Info state color |
+| `tooltip-success` | Color | Success state color |
+| `tooltip-warning` | Color | Warning state color |
+| `tooltip-error` | Color | Error state color |
+
+## Key Examples
+
+### Basic tooltip
 
 ```html
 <div class="tooltip" data-tip="Hello">
@@ -10,39 +31,27 @@ Tooltip component for showing additional information on hover.
 </div>
 ```
 
-## Positions
+### Tooltip positions
 
 ```html
-<!-- Top (default) -->
 <div class="tooltip tooltip-top" data-tip="Top tooltip">
   <button class="btn">Top</button>
 </div>
 
-<!-- Bottom -->
 <div class="tooltip tooltip-bottom" data-tip="Bottom tooltip">
   <button class="btn">Bottom</button>
 </div>
 
-<!-- Left -->
 <div class="tooltip tooltip-left" data-tip="Left tooltip">
   <button class="btn">Left</button>
 </div>
 
-<!-- Right -->
 <div class="tooltip tooltip-right" data-tip="Right tooltip">
   <button class="btn">Right</button>
 </div>
 ```
 
-## Force Open
-
-```html
-<div class="tooltip tooltip-open" data-tip="Always visible">
-  <button class="btn">Open</button>
-</div>
-```
-
-## Color Variants
+### Tooltip colors
 
 ```html
 <div class="tooltip tooltip-primary" data-tip="Primary">
@@ -57,32 +66,28 @@ Tooltip component for showing additional information on hover.
   <button class="btn">Accent</button>
 </div>
 
-<div class="tooltip tooltip-neutral" data-tip="Neutral">
-  <button class="btn">Neutral</button>
-</div>
-```
-
-## State Colors
-
-```html
-<div class="tooltip tooltip-info" data-tip="Info tooltip">
-  <button class="btn">Info</button>
-</div>
-
-<div class="tooltip tooltip-success" data-tip="Success tooltip">
+<div class="tooltip tooltip-success" data-tip="Success">
   <button class="btn">Success</button>
 </div>
 
-<div class="tooltip tooltip-warning" data-tip="Warning tooltip">
+<div class="tooltip tooltip-warning" data-tip="Warning">
   <button class="btn">Warning</button>
 </div>
 
-<div class="tooltip tooltip-error" data-tip="Error tooltip">
+<div class="tooltip tooltip-error" data-tip="Error">
   <button class="btn">Error</button>
 </div>
 ```
 
-## On Different Elements
+### Force open tooltip
+
+```html
+<div class="tooltip tooltip-open" data-tip="Always visible">
+  <button class="btn">Open</button>
+</div>
+```
+
+### Tooltip on different elements
 
 ```html
 <!-- On text -->
@@ -103,23 +108,7 @@ Tooltip component for showing additional information on hover.
 </div>
 ```
 
-## Responsive Tooltip
-
-```html
-<div class="tooltip tooltip-bottom md:tooltip-top lg:tooltip-right" data-tip="Responsive position">
-  <button class="btn">Responsive</button>
-</div>
-```
-
-## Multiline Tooltip
-
-```html
-<div class="tooltip" data-tip="Line 1&#10;Line 2&#10;Line 3">
-  <button class="btn">Multiline</button>
-</div>
-```
-
-## With Form Elements
+### Tooltip with form label
 
 ```html
 <label class="form-control w-full max-w-xs">
@@ -135,64 +124,10 @@ Tooltip component for showing additional information on hover.
 </label>
 ```
 
-## In Table Header
+### Responsive tooltip positions
 
 ```html
-<table class="table">
-  <thead>
-    <tr>
-      <th>
-        <div class="tooltip" data-tip="User's full name">
-          Name
-        </div>
-      </th>
-      <th>
-        <div class="tooltip" data-tip="User's email address">
-          Email
-        </div>
-      </th>
-      <th>
-        <div class="tooltip" data-tip="Account status">
-          Status
-        </div>
-      </th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>John Doe</td>
-      <td>john@example.com</td>
-      <td><span class="badge badge-success">Active</span></td>
-    </tr>
-  </tbody>
-</table>
-```
-
-## Long Content
-
-```html
-<div class="tooltip" data-tip="This is a very long tooltip text that explains something in detail. It will wrap to multiple lines if necessary.">
-  <button class="btn">Long tooltip</button>
+<div class="tooltip tooltip-bottom md:tooltip-top lg:tooltip-right" data-tip="Responsive position">
+  <button class="btn">Responsive</button>
 </div>
 ```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `tooltip` | Container element |
-| `tooltip-open` | Force tooltip to show |
-| `tooltip-top` | Position at top (default) |
-| `tooltip-bottom` | Position at bottom |
-| `tooltip-left` | Position at left |
-| `tooltip-right` | Position at right |
-| `tooltip-primary` | Primary color |
-| `tooltip-secondary` | Secondary color |
-| `tooltip-accent` | Accent color |
-| `tooltip-neutral` | Neutral color |
-| `tooltip-info` | Info state color |
-| `tooltip-success` | Success state color |
-| `tooltip-warning` | Warning state color |
-| `tooltip-error` | Error state color |
-
-Note: Tooltip content is set via the `data-tip` attribute.

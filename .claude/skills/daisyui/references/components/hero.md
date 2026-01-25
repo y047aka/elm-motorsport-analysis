@@ -2,7 +2,17 @@
 
 Full-width banner component for landing pages and headers.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `hero` | Component | Hero container element |
+| `hero-content` | Element | Content wrapper |
+| `hero-overlay` | Element | Overlay layer for background images |
+
+## Key Examples
+
+### Basic centered hero
 
 ```html
 <div class="hero min-h-screen bg-base-200">
@@ -19,7 +29,7 @@ Full-width banner component for landing pages and headers.
 </div>
 ```
 
-## With Background Image
+### Hero with background image and overlay
 
 ```html
 <div class="hero min-h-screen" style="background-image: url(https://img.daisyui.com/images/stock/photo-1507358522600-9f71e620c44e.webp);">
@@ -37,7 +47,7 @@ Full-width banner component for landing pages and headers.
 </div>
 ```
 
-## With Figure (Side by Side)
+### Hero with image (side by side)
 
 ```html
 <div class="hero min-h-screen bg-base-200">
@@ -57,7 +67,7 @@ Full-width banner component for landing pages and headers.
 </div>
 ```
 
-## With Figure Reversed
+### Hero with reversed layout
 
 ```html
 <div class="hero min-h-screen bg-base-200">
@@ -77,7 +87,7 @@ Full-width banner component for landing pages and headers.
 </div>
 ```
 
-## With Form
+### Hero with login form
 
 ```html
 <div class="hero min-h-screen bg-base-200">
@@ -114,84 +124,3 @@ Full-width banner component for landing pages and headers.
   </div>
 </div>
 ```
-
-## Overlay Colors
-
-```html
-<!-- Dark overlay -->
-<div class="hero min-h-screen" style="background-image: url(image.jpg);">
-  <div class="hero-overlay bg-black bg-opacity-70"></div>
-  <div class="hero-content text-white">
-    <h1 class="text-5xl font-bold">Dark Overlay</h1>
-  </div>
-</div>
-
-<!-- Primary color overlay -->
-<div class="hero min-h-screen" style="background-image: url(image.jpg);">
-  <div class="hero-overlay bg-primary bg-opacity-80"></div>
-  <div class="hero-content text-primary-content">
-    <h1 class="text-5xl font-bold">Primary Overlay</h1>
-  </div>
-</div>
-
-<!-- Gradient overlay -->
-<div class="hero min-h-screen" style="background-image: url(image.jpg);">
-  <div class="hero-overlay bg-gradient-to-r from-black to-transparent"></div>
-  <div class="hero-content text-white">
-    <h1 class="text-5xl font-bold">Gradient Overlay</h1>
-  </div>
-</div>
-```
-
-## Different Heights
-
-```html
-<!-- Minimum height 50% -->
-<div class="hero min-h-[50vh] bg-base-200">
-  <div class="hero-content">
-    <h1 class="text-5xl font-bold">Half Height</h1>
-  </div>
-</div>
-
-<!-- Fixed height -->
-<div class="hero h-96 bg-base-200">
-  <div class="hero-content">
-    <h1 class="text-5xl font-bold">Fixed Height</h1>
-  </div>
-</div>
-```
-
-## With Stats
-
-```html
-<div class="hero min-h-screen bg-base-200">
-  <div class="hero-content text-center">
-    <div>
-      <h1 class="text-5xl font-bold mb-8">Our Achievements</h1>
-      <div class="stats shadow">
-        <div class="stat">
-          <div class="stat-title">Downloads</div>
-          <div class="stat-value">31K</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Users</div>
-          <div class="stat-value">4,200</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Followers</div>
-          <div class="stat-value">1,200</div>
-        </div>
-      </div>
-      <button class="btn btn-primary mt-8">Join Us</button>
-    </div>
-  </div>
-</div>
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `hero` | Container element |
-| `hero-content` | Content wrapper |
-| `hero-overlay` | Overlay layer (for background images) |

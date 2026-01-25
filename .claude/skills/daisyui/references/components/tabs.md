@@ -2,7 +2,26 @@
 
 Tab navigation component for switching between views.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `tabs` | Component | Tabs container element |
+| `tab` | Element | Individual tab element |
+| `tab-active` | State | Active tab state |
+| `tab-disabled` | State | Disabled tab state |
+| `tab-content` | Element | Tab content panel |
+| `tabs-bordered` | Style | Bordered style |
+| `tabs-lifted` | Style | Lifted style |
+| `tabs-boxed` | Style | Boxed style |
+| `tabs-xs` | Size | Extra small size |
+| `tabs-sm` | Size | Small size |
+| `tabs-md` | Size | Medium size (default) |
+| `tabs-lg` | Size | Large size |
+
+## Key Examples
+
+### Basic tabs
 
 ```html
 <div role="tablist" class="tabs">
@@ -12,29 +31,24 @@ Tab navigation component for switching between views.
 </div>
 ```
 
-## Bordered Tabs
+### Tab styles
 
 ```html
+<!-- Bordered tabs -->
 <div role="tablist" class="tabs tabs-bordered">
   <a role="tab" class="tab">Tab 1</a>
   <a role="tab" class="tab tab-active">Tab 2</a>
   <a role="tab" class="tab">Tab 3</a>
 </div>
-```
 
-## Lifted Tabs
-
-```html
+<!-- Lifted tabs -->
 <div role="tablist" class="tabs tabs-lifted">
   <a role="tab" class="tab">Tab 1</a>
   <a role="tab" class="tab tab-active">Tab 2</a>
   <a role="tab" class="tab">Tab 3</a>
 </div>
-```
 
-## Boxed Tabs
-
-```html
+<!-- Boxed tabs -->
 <div role="tablist" class="tabs tabs-boxed">
   <a role="tab" class="tab">Tab 1</a>
   <a role="tab" class="tab tab-active">Tab 2</a>
@@ -42,39 +56,26 @@ Tab navigation component for switching between views.
 </div>
 ```
 
-## Sizes
+### Tab sizes
 
 ```html
-<!-- Extra small -->
 <div role="tablist" class="tabs tabs-bordered tabs-xs">
   <a role="tab" class="tab">Tiny</a>
   <a role="tab" class="tab tab-active">Tiny</a>
-  <a role="tab" class="tab">Tiny</a>
 </div>
 
-<!-- Small -->
 <div role="tablist" class="tabs tabs-bordered tabs-sm">
   <a role="tab" class="tab">Small</a>
   <a role="tab" class="tab tab-active">Small</a>
-  <a role="tab" class="tab">Small</a>
 </div>
 
-<!-- Medium (default) -->
-<div role="tablist" class="tabs tabs-bordered tabs-md">
-  <a role="tab" class="tab">Medium</a>
-  <a role="tab" class="tab tab-active">Medium</a>
-  <a role="tab" class="tab">Medium</a>
-</div>
-
-<!-- Large -->
 <div role="tablist" class="tabs tabs-bordered tabs-lg">
   <a role="tab" class="tab">Large</a>
   <a role="tab" class="tab tab-active">Large</a>
-  <a role="tab" class="tab">Large</a>
 </div>
 ```
 
-## With Tab Content
+### Tabs with content (radio inputs)
 
 ```html
 <div role="tablist" class="tabs tabs-lifted">
@@ -95,22 +96,7 @@ Tab navigation component for switching between views.
 </div>
 ```
 
-## Bordered Tabs with Content
-
-```html
-<div role="tablist" class="tabs tabs-bordered">
-  <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="Tab 1" />
-  <div role="tabpanel" class="tab-content p-10">Tab content 1</div>
-
-  <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="Tab 2" checked />
-  <div role="tabpanel" class="tab-content p-10">Tab content 2</div>
-
-  <input type="radio" name="my_tabs_2" role="tab" class="tab" aria-label="Tab 3" />
-  <div role="tabpanel" class="tab-content p-10">Tab content 3</div>
-</div>
-```
-
-## Disabled Tab
+### Disabled tab
 
 ```html
 <div role="tablist" class="tabs tabs-bordered">
@@ -120,7 +106,7 @@ Tab navigation component for switching between views.
 </div>
 ```
 
-## With Icons
+### Tabs with icons
 
 ```html
 <div role="tablist" class="tabs tabs-bordered">
@@ -136,39 +122,5 @@ Tab navigation component for switching between views.
     </svg>
     Details
   </a>
-  <a role="tab" class="tab">
-    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
-    Settings
-  </a>
 </div>
 ```
-
-## Full Width
-
-```html
-<div role="tablist" class="tabs tabs-bordered w-full">
-  <a role="tab" class="tab flex-1">Tab 1</a>
-  <a role="tab" class="tab tab-active flex-1">Tab 2</a>
-  <a role="tab" class="tab flex-1">Tab 3</a>
-</div>
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `tabs` | Container element |
-| `tab` | Individual tab element |
-| `tab-active` | Active tab state |
-| `tab-disabled` | Disabled tab state |
-| `tab-content` | Tab content panel |
-| `tabs-bordered` | Bordered style |
-| `tabs-lifted` | Lifted style |
-| `tabs-boxed` | Boxed style |
-| `tabs-xs` | Extra small size |
-| `tabs-sm` | Small size |
-| `tabs-md` | Medium size (default) |
-| `tabs-lg` | Large size |

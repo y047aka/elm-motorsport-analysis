@@ -1,144 +1,78 @@
-# daisyUI themes
+# daisyUI Themes
 
-How to use daisyUI themes?
+How to use and customize daisyUI themes.
 
-daisyUI comes with 35 built-in themes that instantly transform your website's entire look - a time-saver that lets you focus on building rather than deciding on colors. You can also create your own custom themes or customize built-in themes.
+## Enable Built-in Themes
 
-You can manage themes by adding brackets in front of `@plugin "daisyui"` in your CSS file.
+By default, `light` and `dark` themes are enabled. Configure themes in CSS:
 
-```app.css
-  @import "tailwindcss";
-- @plugin "daisyui";
-+ @plugin "daisyui" {
-+   themes: light --default, dark --prefersdark;
-+ }
-```
-
-- `themes` is a comma-separated list of theme names you want to enable.
-- You can set `--default` flag for a theme to make it the default theme.
-- You can also set `--prefersdark` flag for a theme to make it the default theme for dark mode (prefers-color-scheme: dark).
-
-## Enable a built-in theme
-
-By default, `light` and `dark` themes are enabled. Let's enable `cupcake` theme:
-
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: light --default, dark --prefersdark, cupcake;
 }
 ```
 
-And set `cupcake` theme for the page:
+- `--default` flag sets the default theme
+- `--prefersdark` flag sets the default for dark mode (prefers-color-scheme: dark)
 
-```index.html
-<html data-theme="cupcake"></html>
+## Apply Themes
+
+Use `data-theme` attribute:
+
+```html
+<html data-theme="dark">
+  <div data-theme="light">Theme can be nested</div>
+</html>
 ```
 
-I suggest using theme-change, so you can switch themes and save selected theme in local storage.
+## Built-in Themes
 
-## List of themes
+daisyUI includes 35 built-in themes. Common ones include:
 
-Try them:
+- **Light themes**: light, cupcake, bumblebee, emerald, corporate, wireframe, cmyk, autumn, lemonade, winter
+- **Dark themes**: dark, synthwave, retro, cyberpunk, halloween, forest, dracula, business, night, coffee, dim, sunset, abyss
 
-- light
-- dark
-- cupcake
-- bumblebee
-- emerald
-- corporate
-- synthwave
-- retro
-- cyberpunk
-- valentine
-- halloween
-- garden
-- forest
-- aqua
-- lofi
-- pastel
-- fantasy
-- wireframe
-- black
-- luxury
-- dracula
-- cmyk
-- autumn
-- business
-- acid
-- lemonade
-- night
-- coffee
-- winter
-- dim
-- nord
-- sunset
-- caramellatte
-- abyss
-- silk
+For the complete list of 35 themes, see: https://daisyui.com/docs/themes/
 
-## Enable all themes
+### Enable All Themes
 
-Enable all 35 built-in themes by setting `themes` to `all`:
-
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: all;
 }
 ```
 
-## Disable a theme
+### Disable Themes
 
-To disable `dark` theme for example, remove it from the list. Now only light theme is included:
-
-```app.css
-  @import "tailwindcss";
-  @plugin "daisyui" {
--   themes: light --default, dark --prefersdark;
-+   themes: light --default;
-  }
-```
-
-If for some reason you want to disable all themes and remove all daisyUI colors, set `themes` to `false`:
-
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: false;
 }
 ```
 
-## How to use a theme only for a section of a page?
+## Create Custom Theme
 
-Add `data-theme='THEME_NAME'` to any element and everything inside will have your theme. You can nest themes and there is no limit! You can force a section of your HTML to only use a specific theme.
+Add a custom theme using `@plugin "daisyui/theme" {}`:
 
-```index.html
-<html data-theme="dark">
-  <div data-theme="light">
-    This div will always use light theme
-    <span data-theme="retro">This span will always use retro theme!</span>
-  </div>
-</html>
-```
-
-## How to add a new custom theme?
-
-To add a new theme, use `@plugin "daisyui/theme" {}` in your CSS file, with the following structure:
-
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui";
 @plugin "daisyui/theme" {
   name: "mytheme";
   default: true; /* set as default */
-  prefersdark: false; /* set as default dark mode (prefers-color-scheme:dark) */
-  color-scheme: light; /* color of browser-provided UI */
+  prefersdark: false; /* set as default dark mode */
+  color-scheme: light; /* browser UI color scheme */
 
+  /* Base colors */
   --color-base-100: oklch(98% 0.02 240);
   --color-base-200: oklch(95% 0.03 240);
   --color-base-300: oklch(92% 0.04 240);
   --color-base-content: oklch(20% 0.05 240);
+
+  /* Brand colors */
   --color-primary: oklch(55% 0.3 240);
   --color-primary-content: oklch(98% 0.01 240);
   --color-secondary: oklch(70% 0.25 200);
@@ -147,6 +81,8 @@ To add a new theme, use `@plugin "daisyui/theme" {}` in your CSS file, with the 
   --color-accent-content: oklch(98% 0.01 160);
   --color-neutral: oklch(50% 0.05 240);
   --color-neutral-content: oklch(98% 0.01 240);
+
+  /* State colors */
   --color-info: oklch(70% 0.2 220);
   --color-info-content: oklch(98% 0.01 220);
   --color-success: oklch(65% 0.25 140);
@@ -156,40 +92,29 @@ To add a new theme, use `@plugin "daisyui/theme" {}` in your CSS file, with the 
   --color-error: oklch(65% 0.3 30);
   --color-error-content: oklch(98% 0.01 30);
 
-  /* border radius */
+  /* Border radius */
   --radius-selector: 1rem;
   --radius-field: 0.25rem;
   --radius-box: 0.5rem;
 
-  /* base sizes */
+  /* Base sizes */
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
 
-  /* border size */
+  /* Border size */
   --border: 1px;
 
-  /* effects */
+  /* Effects */
   --depth: 1;
   --noise: 0;
 }
 ```
 
-If you're using CDN and you want to use a custom theme, use it like this:
+## Customize Existing Theme
 
-```app.css
-:root:has(input.theme-controller[value=mytheme]:checked),
-[data-theme="mytheme"] { /* mytheme is the name of the custom theme */
-  color-scheme: light;
-  --color-base-100: oklch(98% 0.02 240);
-  /* ...rest of CSS variables like above example */
-}
-```
+Override specific properties of a built-in theme:
 
-## How to customize an existing theme?
-
-To customize a built-in theme, you can use the same structure as adding a new theme, but with the same name as the built-in theme. For example, to customize the `light` theme:
-
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui";
 @plugin "daisyui/theme" {
@@ -200,13 +125,13 @@ To customize a built-in theme, you can use the same structure as adding a new th
 }
 ```
 
-All the other values will be inherited from the original theme.
+All other values inherit from the original theme.
 
-## How to add custom styles for a specific theme?
+## Theme-Specific Styles
 
-You can write custom style for your elements only for a specific theme. In this example, `.my-btn` class only will have this style on light theme.
+Apply custom styles for a specific theme:
 
-```app.css
+```css
 [data-theme="light"] {
   .my-btn {
     background-color: #1EA1F1;
@@ -219,11 +144,11 @@ You can write custom style for your elements only for a specific theme. In this 
 }
 ```
 
-## How to apply Tailwind's 'dark:' selector for specific themes
+## Tailwind Dark Mode Integration
 
-daisyUI can be configured to use Tailwind's `dark:` prefix. For example if you want a padding only for a daisyUI dark theme you can use `dark:p-10`. In the example below, 'night' is darkmode theme so we add it to `@variant dark`.
+Configure daisyUI themes to work with Tailwind's `dark:` prefix:
 
-```app.css
+```css
 @import "tailwindcss";
 @plugin "daisyui" {
   themes: winter --default, night --prefersdark;
@@ -232,7 +157,7 @@ daisyUI can be configured to use Tailwind's `dark:` prefix. For example if you w
 @custom-variant dark (&:where([data-theme=night], [data-theme=night] *));
 ```
 
-```index.html
+```html
 <div class="p-10 dark:p-20">
   I will have 10 padding on winter theme and 20 padding on night theme
 </div>

@@ -2,7 +2,21 @@
 
 Component for swapping between two states with optional animation.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `swap` | Component | Swap container element |
+| `swap-on` | Element | Content shown when active (checked) |
+| `swap-off` | Element | Content shown when inactive (unchecked) |
+| `swap-rotate` | Animation | Rotate animation |
+| `swap-flip` | Animation | Flip animation |
+| `swap-active` | State | Force active state |
+| `swap-indeterminate` | State | Indeterminate state |
+
+## Key Examples
+
+### Basic swap
 
 ```html
 <label class="swap">
@@ -12,7 +26,7 @@ Component for swapping between two states with optional animation.
 </label>
 ```
 
-## Rotate Animation
+### Swap with rotate animation (theme toggle)
 
 ```html
 <label class="swap swap-rotate">
@@ -30,7 +44,7 @@ Component for swapping between two states with optional animation.
 </label>
 ```
 
-## Flip Animation
+### Swap with flip animation
 
 ```html
 <label class="swap swap-flip text-9xl">
@@ -40,7 +54,7 @@ Component for swapping between two states with optional animation.
 </label>
 ```
 
-## Hamburger Menu
+### Hamburger menu swap
 
 ```html
 <label class="btn btn-circle swap swap-rotate">
@@ -58,7 +72,7 @@ Component for swapping between two states with optional animation.
 </label>
 ```
 
-## Volume Control
+### Volume control swap
 
 ```html
 <label class="swap">
@@ -76,27 +90,7 @@ Component for swapping between two states with optional animation.
 </label>
 ```
 
-## Forced State (Active)
-
-```html
-<label class="swap swap-active">
-  <input type="checkbox" />
-  <div class="swap-on">ON</div>
-  <div class="swap-off">OFF</div>
-</label>
-```
-
-## Indeterminate State
-
-```html
-<label class="swap swap-indeterminate">
-  <input type="checkbox" />
-  <div class="swap-on">ON</div>
-  <div class="swap-off">OFF</div>
-</label>
-```
-
-## With Text
+### Text swap
 
 ```html
 <label class="swap swap-flip">
@@ -105,15 +99,3 @@ Component for swapping between two states with optional animation.
   <div class="swap-off text-2xl font-bold text-error">NO</div>
 </label>
 ```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `swap` | Container element |
-| `swap-on` | Content shown when active (checked) |
-| `swap-off` | Content shown when inactive (unchecked) |
-| `swap-rotate` | Rotate animation |
-| `swap-flip` | Flip animation |
-| `swap-active` | Force active state |
-| `swap-indeterminate` | Indeterminate state |

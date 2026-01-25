@@ -2,7 +2,23 @@
 
 Component for displaying tabular data.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `table` | Component | Table base class |
+| `table-zebra` | Style | Alternating row colors |
+| `table-pin-rows` | Layout | Sticky header rows |
+| `table-pin-cols` | Layout | Sticky first/last columns |
+| `table-xs` | Size | Extra small size |
+| `table-sm` | Size | Small size |
+| `table-md` | Size | Medium size (default) |
+| `table-lg` | Size | Large size |
+| `hover` | State | Row hover effect (on tr) |
+
+## Key Examples
+
+### Basic table
 
 ```html
 <div class="overflow-x-auto">
@@ -39,11 +55,10 @@ Component for displaying tabular data.
 </div>
 ```
 
-## Zebra Rows
+### Zebra striped table
 
 ```html
 <table class="table table-zebra">
-  <!-- Alternating row colors -->
   <thead>
     <tr>
       <th>Name</th>
@@ -59,33 +74,7 @@ Component for displaying tabular data.
       <td>Jane</td>
       <td>Designer</td>
     </tr>
-  </tbody>
-</table>
-```
-
-## Active/Hover Rows
-
-```html
-<table class="table">
-  <thead>
     <tr>
-      <th>Name</th>
-      <th>Job</th>
-    </tr>
-  </thead>
-  <tbody>
-    <!-- Active row -->
-    <tr class="bg-base-200">
-      <td>John</td>
-      <td>Engineer</td>
-    </tr>
-    <!-- Hover effect -->
-    <tr class="hover">
-      <td>Jane</td>
-      <td>Designer</td>
-    </tr>
-    <!-- Hover on all rows -->
-    <tr class="hover:bg-base-300">
       <td>Bob</td>
       <td>Manager</td>
     </tr>
@@ -93,23 +82,16 @@ Component for displaying tabular data.
 </table>
 ```
 
-## Table Sizes
+### Table sizes
 
 ```html
-<!-- Extra small -->
-<table class="table table-xs">...</table>
-
-<!-- Small -->
-<table class="table table-sm">...</table>
-
-<!-- Medium (default) -->
-<table class="table table-md">...</table>
-
-<!-- Large -->
-<table class="table table-lg">...</table>
+<table class="table table-xs"><!-- Extra small --></table>
+<table class="table table-sm"><!-- Small --></table>
+<table class="table table-md"><!-- Medium (default) --></table>
+<table class="table table-lg"><!-- Large --></table>
 ```
 
-## Pinned Rows (Sticky Header)
+### Sticky header (pinned rows)
 
 ```html
 <div class="overflow-x-auto h-96">
@@ -127,7 +109,7 @@ Component for displaying tabular data.
 </div>
 ```
 
-## Pinned Columns (Sticky Columns)
+### Sticky columns (pinned columns)
 
 ```html
 <div class="overflow-x-auto">
@@ -154,29 +136,16 @@ Component for displaying tabular data.
 </div>
 ```
 
-## Pinned Rows and Columns
-
-```html
-<div class="overflow-x-auto h-96">
-  <table class="table table-pin-rows table-pin-cols">
-    <!-- Both header rows and first/last columns are sticky -->
-  </table>
-</div>
-```
-
-## With Visual Elements
+### Table with interactive elements
 
 ```html
 <table class="table">
   <thead>
     <tr>
       <th>
-        <label>
-          <input type="checkbox" class="checkbox" />
-        </label>
+        <input type="checkbox" class="checkbox" />
       </th>
       <th>Name</th>
-      <th>Job</th>
       <th>Status</th>
       <th></th>
     </tr>
@@ -184,9 +153,7 @@ Component for displaying tabular data.
   <tbody>
     <tr>
       <th>
-        <label>
-          <input type="checkbox" class="checkbox" />
-        </label>
+        <input type="checkbox" class="checkbox" />
       </th>
       <td>
         <div class="flex items-center gap-3">
@@ -202,11 +169,6 @@ Component for displaying tabular data.
         </div>
       </td>
       <td>
-        Zemlak, Daniel and Leannon
-        <br />
-        <span class="badge badge-ghost badge-sm">Desktop Support Technician</span>
-      </td>
-      <td>
         <span class="badge badge-success">Active</span>
       </td>
       <th>
@@ -214,28 +176,5 @@ Component for displaying tabular data.
       </th>
     </tr>
   </tbody>
-  <tfoot>
-    <tr>
-      <th></th>
-      <th>Name</th>
-      <th>Job</th>
-      <th>Status</th>
-      <th></th>
-    </tr>
-  </tfoot>
 </table>
 ```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `table` | Base table class |
-| `table-zebra` | Alternating row colors |
-| `table-pin-rows` | Sticky header rows |
-| `table-pin-cols` | Sticky first/last columns |
-| `table-xs` | Extra small size |
-| `table-sm` | Small size |
-| `table-md` | Medium size (default) |
-| `table-lg` | Large size |
-| `hover` | Row hover effect (on tr) |

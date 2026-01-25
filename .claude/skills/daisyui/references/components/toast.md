@@ -2,7 +2,21 @@
 
 Toast notification component for temporary messages.
 
-## Basic Usage
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `toast` | Component | Toast container element |
+| `toast-start` | Position | Align to start (left) |
+| `toast-center` | Position | Align to center |
+| `toast-end` | Position | Align to end (right) |
+| `toast-top` | Position | Position at top |
+| `toast-middle` | Position | Position at middle |
+| `toast-bottom` | Position | Position at bottom |
+
+## Key Examples
+
+### Basic toast
 
 ```html
 <div class="toast">
@@ -12,48 +26,13 @@ Toast notification component for temporary messages.
 </div>
 ```
 
-## Positions
+### Toast positions
 
 ```html
-<!-- Top start -->
-<div class="toast toast-top toast-start">
-  <div class="alert alert-info">
-    <span>Top start</span>
-  </div>
-</div>
-
-<!-- Top center -->
-<div class="toast toast-top toast-center">
-  <div class="alert alert-info">
-    <span>Top center</span>
-  </div>
-</div>
-
 <!-- Top end -->
 <div class="toast toast-top toast-end">
   <div class="alert alert-info">
     <span>Top end</span>
-  </div>
-</div>
-
-<!-- Middle start -->
-<div class="toast toast-middle toast-start">
-  <div class="alert alert-info">
-    <span>Middle start</span>
-  </div>
-</div>
-
-<!-- Middle center -->
-<div class="toast toast-middle toast-center">
-  <div class="alert alert-info">
-    <span>Middle center</span>
-  </div>
-</div>
-
-<!-- Middle end -->
-<div class="toast toast-middle toast-end">
-  <div class="alert alert-info">
-    <span>Middle end</span>
   </div>
 </div>
 
@@ -64,22 +43,15 @@ Toast notification component for temporary messages.
   </div>
 </div>
 
-<!-- Bottom center -->
-<div class="toast toast-bottom toast-center">
+<!-- Middle center -->
+<div class="toast toast-middle toast-center">
   <div class="alert alert-info">
-    <span>Bottom center</span>
-  </div>
-</div>
-
-<!-- Bottom end (default) -->
-<div class="toast toast-bottom toast-end">
-  <div class="alert alert-info">
-    <span>Bottom end</span>
+    <span>Middle center</span>
   </div>
 </div>
 ```
 
-## Multiple Toasts
+### Multiple toasts
 
 ```html
 <div class="toast toast-end">
@@ -95,24 +67,12 @@ Toast notification component for temporary messages.
 </div>
 ```
 
-## With Different Alert Types
+### Toast with different alert types
 
 ```html
 <div class="toast">
-  <div class="alert alert-info">
-    <span>Info message</span>
-  </div>
-</div>
-
-<div class="toast">
   <div class="alert alert-success">
     <span>Success message</span>
-  </div>
-</div>
-
-<div class="toast">
-  <div class="alert alert-warning">
-    <span>Warning message</span>
   </div>
 </div>
 
@@ -123,7 +83,7 @@ Toast notification component for temporary messages.
 </div>
 ```
 
-## With Close Button
+### Toast with close button
 
 ```html
 <div class="toast">
@@ -134,7 +94,7 @@ Toast notification component for temporary messages.
 </div>
 ```
 
-## With Action Button
+### Toast with action button
 
 ```html
 <div class="toast">
@@ -145,17 +105,7 @@ Toast notification component for temporary messages.
 </div>
 ```
 
-## Compact Toast
-
-```html
-<div class="toast">
-  <div class="alert py-2">
-    <span class="text-sm">Compact notification</span>
-  </div>
-</div>
-```
-
-## Dynamic Toast (JavaScript)
+### Dynamic toast with JavaScript
 
 ```html
 <button class="btn" onclick="showToast()">Show Toast</button>
@@ -179,33 +129,3 @@ function showToast() {
 }
 </script>
 ```
-
-## Stacked Toasts
-
-```html
-<div class="toast toast-end">
-  <div class="alert alert-info shadow-lg">
-    <span>1st notification</span>
-  </div>
-  <div class="alert alert-success shadow-lg">
-    <span>2nd notification</span>
-  </div>
-  <div class="alert alert-warning shadow-lg">
-    <span>3rd notification</span>
-  </div>
-</div>
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `toast` | Container element |
-| `toast-start` | Align to start (left) |
-| `toast-center` | Align to center |
-| `toast-end` | Align to end (right) |
-| `toast-top` | Position at top |
-| `toast-middle` | Position at middle |
-| `toast-bottom` | Position at bottom |
-
-Note: Toast uses alert components for the actual notification content.

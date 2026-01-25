@@ -2,7 +2,23 @@
 
 Dialog component for displaying content in a layer above the page.
 
-## Basic Usage (Dialog Element)
+## Class Reference
+
+| Class | Description |
+|-------|-------------|
+| `modal` | Container element |
+| `modal-box` | Content container |
+| `modal-action` | Actions container |
+| `modal-backdrop` | Backdrop element (for click-outside-to-close) |
+| `modal-toggle` | Hidden checkbox for toggle method |
+| `modal-open` | Force modal open (for testing) |
+| `modal-top` | Position at top |
+| `modal-middle` | Position at middle (default) |
+| `modal-bottom` | Position at bottom |
+
+## Key Examples
+
+### Basic modal (dialog element)
 
 ```html
 <!-- Button to open modal -->
@@ -22,7 +38,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## Close on Outside Click
+### Close on outside click
 
 ```html
 <dialog id="my_modal" class="modal">
@@ -36,7 +52,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## Close Button Inside
+### Close button inside modal
 
 ```html
 <dialog id="my_modal" class="modal">
@@ -50,20 +66,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## Modal Positions
-
-```html
-<!-- Top -->
-<dialog class="modal modal-top">...</dialog>
-
-<!-- Bottom -->
-<dialog class="modal modal-bottom">...</dialog>
-
-<!-- Middle (default) -->
-<dialog class="modal modal-middle">...</dialog>
-```
-
-## Responsive Position
+### Responsive position
 
 ```html
 <!-- Bottom on mobile, middle on larger screens -->
@@ -75,7 +78,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## Custom Width
+### Custom width
 
 ```html
 <dialog class="modal">
@@ -86,7 +89,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## With Actions
+### Confirmation modal
 
 ```html
 <dialog id="confirm_modal" class="modal">
@@ -103,7 +106,17 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-## Using Checkbox (Alternative Method)
+## JavaScript Control
+
+```javascript
+// Open modal
+document.getElementById('my_modal').showModal();
+
+// Close modal
+document.getElementById('my_modal').close();
+```
+
+## Alternative: Checkbox Toggle Method
 
 ```html
 <!-- Toggle button -->
@@ -124,37 +137,3 @@ Dialog component for displaying content in a layer above the page.
   <label class="modal-backdrop" for="my-modal">Close</label>
 </div>
 ```
-
-## Force Open (for testing)
-
-```html
-<dialog class="modal modal-open">
-  <div class="modal-box">
-    <p>This modal is always open</p>
-  </div>
-</dialog>
-```
-
-## JavaScript Control
-
-```javascript
-// Open modal
-document.getElementById('my_modal').showModal();
-
-// Close modal
-document.getElementById('my_modal').close();
-```
-
-## Classes Reference
-
-| Class | Description |
-|-------|-------------|
-| `modal` | Container element |
-| `modal-box` | Content container |
-| `modal-action` | Actions container |
-| `modal-backdrop` | Backdrop element (for click-outside-to-close) |
-| `modal-toggle` | Hidden checkbox for toggle method |
-| `modal-open` | Force modal open |
-| `modal-top` | Position at top |
-| `modal-middle` | Position at middle (default) |
-| `modal-bottom` | Position at bottom |

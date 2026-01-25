@@ -23,20 +23,6 @@ Navbar + Drawer sidebar + Stats for admin dashboards:
       <div class="flex-1">
         <a class="btn btn-ghost text-xl">Dashboard</a>
       </div>
-      <div class="flex-none gap-2">
-        <div class="dropdown dropdown-end">
-          <label tabindex="0" class="btn btn-ghost btn-circle avatar">
-            <div class="w-10 rounded-full">
-              <img src="avatar.jpg" alt="User avatar" />
-            </div>
-          </label>
-          <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-            <li><a>Profile</a></li>
-            <li><a>Settings</a></li>
-            <li><a>Logout</a></li>
-          </ul>
-        </div>
-      </div>
     </div>
     
     <!-- Main content -->
@@ -52,11 +38,6 @@ Navbar + Drawer sidebar + Stats for admin dashboards:
           <div class="stat-title">Revenue</div>
           <div class="stat-value text-primary">$25,600</div>
           <div class="stat-desc">12% increase</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Active Now</div>
-          <div class="stat-value text-secondary">1,200</div>
-          <div class="stat-desc">Currently online</div>
         </div>
       </div>
       
@@ -78,9 +59,6 @@ Navbar + Drawer sidebar + Stats for admin dashboards:
       <li><a class="active">Dashboard</a></li>
       <li><a>Analytics</a></li>
       <li><a>Reports</a></li>
-      <li class="menu-title">Management</li>
-      <li><a>Users</a></li>
-      <li><a>Settings</a></li>
     </ul>
   </div>
 </div>
@@ -128,10 +106,7 @@ Card-based login/register form:
       
       <div class="divider">OR</div>
       
-      <button class="btn btn-outline">
-        <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24"><!-- Google icon --></svg>
-        Continue with Google
-      </button>
+      <button class="btn btn-outline">Continue with Google</button>
       
       <p class="text-center mt-4">
         Don't have an account? 
@@ -142,56 +117,9 @@ Card-based login/register form:
 </div>
 ```
 
-## Confirmation Modal
-
-Modal dialog for destructive actions:
-
-```html
-<button class="btn btn-error" onclick="confirm_modal.showModal()">Delete Item</button>
-
-<dialog id="confirm_modal" class="modal modal-bottom sm:modal-middle">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg text-error">Confirm Deletion</h3>
-    <p class="py-4">Are you sure you want to delete this item? This action cannot be undone.</p>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn btn-ghost">Cancel</button>
-      </form>
-      <button class="btn btn-error" onclick="deleteItem()">Delete</button>
-    </div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-```
-
 ## Toast Notifications
 
-Positioned toast alerts:
-
-```html
-<!-- Toast container (place at end of body) -->
-<div class="toast toast-end">
-  <!-- Success toast -->
-  <div class="alert alert-success">
-    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-    <span>Changes saved successfully!</span>
-  </div>
-</div>
-
-<!-- Toast with action -->
-<div class="toast toast-end">
-  <div class="alert alert-info">
-    <span>New message received</span>
-    <button class="btn btn-sm">View</button>
-  </div>
-</div>
-```
-
-### JavaScript Toast Manager
+JavaScript toast manager for dynamic notifications:
 
 ```javascript
 function showToast(message, type = 'info', duration = 3000) {
@@ -220,60 +148,6 @@ function createToastContainer() {
 // Usage
 showToast('File uploaded!', 'success');
 showToast('Something went wrong', 'error');
-```
-
-## Responsive Navigation
-
-Mobile-friendly navbar with dropdown menu:
-
-```html
-<div class="navbar bg-base-100 shadow">
-  <div class="navbar-start">
-    <!-- Mobile menu -->
-    <div class="dropdown">
-      <label tabindex="0" class="btn btn-ghost lg:hidden">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16" />
-        </svg>
-      </label>
-      <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-        <li><a>Home</a></li>
-        <li>
-          <a>Products</a>
-          <ul class="p-2">
-            <li><a>Category 1</a></li>
-            <li><a>Category 2</a></li>
-          </ul>
-        </li>
-        <li><a>About</a></li>
-        <li><a>Contact</a></li>
-      </ul>
-    </div>
-    <a class="btn btn-ghost text-xl">Brand</a>
-  </div>
-  
-  <!-- Desktop menu -->
-  <div class="navbar-center hidden lg:flex">
-    <ul class="menu menu-horizontal px-1">
-      <li><a>Home</a></li>
-      <li>
-        <details>
-          <summary>Products</summary>
-          <ul class="p-2">
-            <li><a>Category 1</a></li>
-            <li><a>Category 2</a></li>
-          </ul>
-        </details>
-      </li>
-      <li><a>About</a></li>
-      <li><a>Contact</a></li>
-    </ul>
-  </div>
-  
-  <div class="navbar-end">
-    <a class="btn btn-primary">Get Started</a>
-  </div>
-</div>
 ```
 
 ## Data Table with Actions
@@ -322,11 +196,7 @@ Table with row actions and pagination:
         </td>
         <td>
           <div class="dropdown dropdown-end">
-            <label tabindex="0" class="btn btn-ghost btn-sm">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
-              </svg>
-            </label>
+            <label tabindex="0" class="btn btn-ghost btn-sm">⋮</label>
             <ul tabindex="0" class="dropdown-content z-[1] menu p-2 shadow bg-base-100 rounded-box w-32">
               <li><a>Edit</a></li>
               <li><a>View</a></li>
@@ -347,48 +217,6 @@ Table with row actions and pagination:
     <button class="join-item btn btn-active">2</button>
     <button class="join-item btn">3</button>
     <button class="join-item btn">»</button>
-  </div>
-</div>
-```
-
-## Loading States
-
-Button and skeleton loading patterns:
-
-```html
-<!-- Loading button -->
-<button class="btn btn-primary">
-  <span class="loading loading-spinner"></span>
-  Loading
-</button>
-
-<!-- Disabled button while loading -->
-<button class="btn btn-primary" disabled>
-  <span class="loading loading-spinner"></span>
-  Processing...
-</button>
-
-<!-- Skeleton card -->
-<div class="card w-96 bg-base-100 shadow">
-  <figure class="skeleton h-48 w-full"></figure>
-  <div class="card-body">
-    <div class="skeleton h-6 w-3/4"></div>
-    <div class="skeleton h-4 w-full"></div>
-    <div class="skeleton h-4 w-2/3"></div>
-    <div class="card-actions justify-end mt-4">
-      <div class="skeleton h-10 w-24"></div>
-    </div>
-  </div>
-</div>
-
-<!-- Skeleton list -->
-<div class="flex flex-col gap-4">
-  <div class="flex items-center gap-4">
-    <div class="skeleton h-12 w-12 shrink-0 rounded-full"></div>
-    <div class="flex flex-col gap-2 flex-1">
-      <div class="skeleton h-4 w-1/2"></div>
-      <div class="skeleton h-3 w-3/4"></div>
-    </div>
   </div>
 </div>
 ```
@@ -421,18 +249,14 @@ Form inputs with validation states:
     </label>
   </div>
   
-  <!-- Input with icon -->
+  <!-- Input with icon button -->
   <div class="form-control">
     <label class="label">
       <span class="label-text">Search</span>
     </label>
     <div class="join">
       <input type="text" placeholder="Search..." class="input input-bordered join-item flex-1" />
-      <button class="btn btn-primary join-item">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </button>
+      <button class="btn btn-primary join-item">Search</button>
     </div>
   </div>
 </form>
@@ -466,6 +290,36 @@ Landing page hero with CTA:
       <h1 class="mb-5 text-5xl font-bold">Welcome</h1>
       <p class="mb-5">Your journey starts here.</p>
       <button class="btn btn-primary">Get Started</button>
+    </div>
+  </div>
+</div>
+```
+
+## Loading States
+
+Skeleton loading for cards and lists:
+
+```html
+<!-- Skeleton card -->
+<div class="card w-96 bg-base-100 shadow">
+  <figure class="skeleton h-48 w-full"></figure>
+  <div class="card-body">
+    <div class="skeleton h-6 w-3/4"></div>
+    <div class="skeleton h-4 w-full"></div>
+    <div class="skeleton h-4 w-2/3"></div>
+    <div class="card-actions justify-end mt-4">
+      <div class="skeleton h-10 w-24"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Skeleton list -->
+<div class="flex flex-col gap-4">
+  <div class="flex items-center gap-4">
+    <div class="skeleton h-12 w-12 shrink-0 rounded-full"></div>
+    <div class="flex flex-col gap-2 flex-1">
+      <div class="skeleton h-4 w-1/2"></div>
+      <div class="skeleton h-3 w-3/4"></div>
     </div>
   </div>
 </div>
