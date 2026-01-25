@@ -6,25 +6,25 @@ Dropdown selection component for choosing from a list of options.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `select` | Component | Core styling for `<select>` elements |
-| `select-ghost` | Style | "ghost style" variant without background |
-| `select-neutral` | Color | Neutral color variant |
-| `select-primary` | Color | Primary color variant |
-| `select-secondary` | Color | Secondary color variant |
-| `select-accent` | Color | Accent color variant |
-| `select-info` | Color | Info color variant |
-| `select-success` | Color | Success color variant |
-| `select-warning` | Color | Warning color variant |
-| `select-error` | Color | Error color variant |
-| `select-xs` | Size | Extra small sizing |
-| `select-sm` | Size | Small sizing |
-| `select-md` | Size | Medium sizing (default) |
-| `select-lg` | Size | Large sizing |
-| `select-xl` | Size | Extra large sizing |
+| `select` | Component | Base `<select>` element |
+| `select-ghost` | Style | Borderless variant |
+| `select-neutral` | Color | Neutral color |
+| `select-primary` | Color | Primary color |
+| `select-secondary` | Color | Secondary color |
+| `select-accent` | Color | Accent color |
+| `select-info` | Color | Info color |
+| `select-success` | Color | Success color |
+| `select-warning` | Color | Warning color |
+| `select-error` | Color | Error color |
+| `select-xs` | Size | Extra small |
+| `select-sm` | Size | Small |
+| `select-md` | Size | Medium (default) |
+| `select-lg` | Size | Large |
+| `select-xl` | Size | Extra large |
 
-## Key Examples
+## Essential Examples
 
-### Basic select
+### Basic usage
 
 ```html
 <select class="select w-full max-w-xs">
@@ -35,84 +35,7 @@ Dropdown selection component for choosing from a list of options.
 </select>
 ```
 
-### Select styles
-
-```html
-<select class="select select-ghost">
-  <option disabled selected>Ghost</option>
-  <option>Option 1</option>
-</select>
-```
-
-### Select colors
-
-```html
-<select class="select select-primary">
-  <option disabled selected>Primary</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-secondary">
-  <option disabled selected>Secondary</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-accent">
-  <option disabled selected>Accent</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-neutral">
-  <option disabled selected>Neutral</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-info">
-  <option disabled selected>Info</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-success">
-  <option disabled selected>Success</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-warning">
-  <option disabled selected>Warning</option>
-  <option>Option 1</option>
-</select>
-
-<select class="select select-error">
-  <option disabled selected>Error</option>
-  <option>Option 1</option>
-</select>
-```
-
-### Select sizes
-
-```html
-<select class="select select-xs">
-  <option>Extra small</option>
-</select>
-
-<select class="select select-sm">
-  <option>Small</option>
-</select>
-
-<select class="select select-md">
-  <option>Medium</option>
-</select>
-
-<select class="select select-lg">
-  <option>Large</option>
-</select>
-
-<select class="select select-xl">
-  <option>Extra large</option>
-</select>
-```
-
-### Select with label
+### With label
 
 ```html
 <label class="form-control w-full max-w-xs">
@@ -124,7 +47,6 @@ Dropdown selection component for choosing from a list of options.
     <option>Star Wars</option>
     <option>Harry Potter</option>
     <option>Lord of the Rings</option>
-    <option>Star Trek</option>
   </select>
   <div class="label">
     <span class="label-text-alt">Choose wisely</span>
@@ -132,7 +54,7 @@ Dropdown selection component for choosing from a list of options.
 </label>
 ```
 
-### Select with option groups
+### With option groups
 
 ```html
 <select class="select w-full max-w-xs">
@@ -147,3 +69,7 @@ Dropdown selection component for choosing from a list of options.
   </optgroup>
 </select>
 ```
+
+## Notes
+
+- Wrap with `<label class="form-control">` for labels and helper text

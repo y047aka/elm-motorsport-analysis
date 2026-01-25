@@ -8,9 +8,9 @@ Navigation component showing the current page's location in a hierarchy.
 |------------|------|-------------|
 | `breadcrumbs` | Component | Wrapper around a `<ul>` |
 
-## Key Examples
+## Essential Examples
 
-### Basic breadcrumbs
+### Basic usage
 
 ```html
 <div class="breadcrumbs text-sm">
@@ -22,7 +22,7 @@ Navigation component showing the current page's location in a hierarchy.
 </div>
 ```
 
-### Breadcrumbs with icons
+### With icons
 
 ```html
 <div class="breadcrumbs text-sm">
@@ -47,3 +47,9 @@ Navigation component showing the current page's location in a hierarchy.
   </ul>
 </div>
 ```
+
+## Notes
+
+- Use standard `<ul>` list structure
+- Last item typically not linked (current page)
+- Separators automatically added via CSS

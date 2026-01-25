@@ -1,12 +1,12 @@
 # Radio
 
-Radio button component for single selection from a group. Each set of radio inputs should have unique `name` attributes to avoid conflicts with other sets of radio inputs on the same page.
+Radio button for single selection from a group.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `radio` | Component | For radio input |
+| `radio` | Component | Base radio input |
 | `radio-neutral` | Color | Neutral color |
 | `radio-primary` | Color | Primary color |
 | `radio-secondary` | Color | Secondary color |
@@ -15,42 +15,22 @@ Radio button component for single selection from a group. Each set of radio inpu
 | `radio-warning` | Color | Warning color |
 | `radio-info` | Color | Info color |
 | `radio-error` | Color | Error color |
-| `radio-xs` | Size | Extra small size |
-| `radio-sm` | Size | Small size |
-| `radio-md` | Size | Medium size (default) |
-| `radio-lg` | Size | Large size |
-| `radio-xl` | Size | Extra large size |
+| `radio-xs` | Size | Extra small |
+| `radio-sm` | Size | Small |
+| `radio-md` | Size | Medium (default) |
+| `radio-lg` | Size | Large |
+| `radio-xl` | Size | Extra large |
 
-## Key Examples
+## Essential Examples
 
-### Basic radio
+### Basic usage
 
 ```html
-<input type="radio" name="radio-1" class="radio" checked="checked" />
+<input type="radio" name="radio-1" class="radio" checked />
 <input type="radio" name="radio-1" class="radio" />
 ```
 
-### Color variants
-
-```html
-<input type="radio" name="radio-2" class="radio radio-primary" checked />
-<input type="radio" name="radio-3" class="radio radio-secondary" checked />
-<input type="radio" name="radio-4" class="radio radio-accent" checked />
-<input type="radio" name="radio-5" class="radio radio-success" checked />
-<input type="radio" name="radio-6" class="radio radio-error" checked />
-```
-
-### Sizes
-
-```html
-<input type="radio" name="radio-size" class="radio radio-xs" />
-<input type="radio" name="radio-size" class="radio radio-sm" />
-<input type="radio" name="radio-size" class="radio radio-md" />
-<input type="radio" name="radio-size" class="radio radio-lg" />
-<input type="radio" name="radio-size" class="radio radio-xl" />
-```
-
-### With label (form-control)
+### With labels
 
 ```html
 <div class="form-control">
@@ -76,33 +56,8 @@ Radio button component for single selection from a group. Each set of radio inpu
     <span class="label-text">Option A</span>
   </label>
 </div>
-<div class="form-control">
-  <label class="label cursor-pointer justify-start gap-2">
-    <input type="radio" name="radio-left" class="radio" />
-    <span class="label-text">Option B</span>
-  </label>
-</div>
 ```
 
-### With description
+## Notes
 
-```html
-<div class="form-control">
-  <label class="label cursor-pointer">
-    <div>
-      <span class="label-text font-medium">Standard shipping</span>
-      <p class="text-xs text-base-content/60">4-10 business days</p>
-    </div>
-    <input type="radio" name="shipping" class="radio radio-primary" checked />
-  </label>
-</div>
-<div class="form-control">
-  <label class="label cursor-pointer">
-    <div>
-      <span class="label-text font-medium">Express shipping</span>
-      <p class="text-xs text-base-content/60">2-5 business days</p>
-    </div>
-    <input type="radio" name="shipping" class="radio radio-primary" />
-  </label>
-</div>
-```
+- Wrap with `<label class="label cursor-pointer">` for clickable labels

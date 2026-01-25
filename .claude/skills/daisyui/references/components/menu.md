@@ -1,30 +1,30 @@
 # Menu
 
-Vertical or horizontal list of navigation links.
+Vertical or horizontal navigation list.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `menu` | Component | Main component class for `<ul>` tag |
-| `menu-title` | Part | Styles a `<li>` as a title |
-| `menu-dropdown` | Part | For collapsible `<ul>` elements displayed via JavaScript |
-| `menu-dropdown-toggle` | Part | Toggle to show/hide the menu-dropdown using JS |
-| `menu-disabled` | Modifier | Makes an element inside `<li>` appear disabled |
-| `menu-active` | Modifier | Highlights an element inside `<li>` as active/selected |
-| `menu-focus` | Modifier | Applies focus styling to an element inside `<li>` |
-| `menu-dropdown-show` | Behavior | Shows the menu-dropdown-toggle and collapsible submenu via JS |
-| `menu-xs` | Size | Extra small size |
-| `menu-sm` | Size | Small size |
-| `menu-md` | Size | Medium size (default) |
-| `menu-lg` | Size | Large size |
-| `menu-xl` | Size | Extra large size |
-| `menu-vertical` | direction | Vertical menu layout (default) |
-| `menu-horizontal` | direction | Horizontal menu layout |
+| `menu` | Component | Main component for `<ul>` |
+| `menu-title` | Part | Section title |
+| `menu-dropdown` | Part | Collapsible submenu |
+| `menu-dropdown-toggle` | Part | Toggle for submenu |
+| `menu-disabled` | Modifier | Disabled state |
+| `menu-active` | Modifier | Active/selected state |
+| `menu-focus` | Modifier | Focus styling |
+| `menu-dropdown-show` | Behavior | Show submenu via JS |
+| `menu-xs` | Size | Extra small |
+| `menu-sm` | Size | Small |
+| `menu-md` | Size | Medium (default) |
+| `menu-lg` | Size | Large |
+| `menu-xl` | Size | Extra large |
+| `menu-vertical` | direction | Vertical layout (default) |
+| `menu-horizontal` | direction | Horizontal layout |
 
-## Key Examples
+## Essential Examples
 
-### Basic menu
+### Basic usage
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -34,18 +34,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-### Menu with title
-
-```html
-<ul class="menu bg-base-200 rounded-box w-56">
-  <li class="menu-title">Title</li>
-  <li><a>Item 1</a></li>
-  <li><a>Item 2</a></li>
-  <li><a>Item 3</a></li>
-</ul>
-```
-
-### Menu with icons
+### With icons
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -65,18 +54,10 @@ Vertical or horizontal list of navigation links.
       Details
     </a>
   </li>
-  <li>
-    <a>
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-      </svg>
-      Stats
-    </a>
-  </li>
 </ul>
 ```
 
-### Menu with submenu
+### With submenu
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -94,7 +75,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-### Active and disabled states
+### Active state
 
 ```html
 <ul class="menu bg-base-200 rounded-box w-56">
@@ -114,22 +95,7 @@ Vertical or horizontal list of navigation links.
 </ul>
 ```
 
-### Menu with badges
+## Notes
 
-```html
-<ul class="menu bg-base-200 rounded-box w-56">
-  <li>
-    <a>
-      Inbox
-      <span class="badge badge-sm">99+</span>
-    </a>
-  </li>
-  <li>
-    <a>
-      Updates
-      <span class="badge badge-sm badge-warning">NEW</span>
-    </a>
-  </li>
-  <li><a>Stats</a></li>
-</ul>
-```
+- Submenu: Use `<details>` + `<summary>` for collapsible sections
+- Common use: Sidebar navigation, navbar links, dropdown menus

@@ -6,17 +6,17 @@ Slideshow component for cycling through images or content.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `carousel` | Component | Carousel container |
-| `carousel-item` | Part | Carousel item |
-| `carousel-start` | Modifier | Snap elements to start [default] |
-| `carousel-center` | Modifier | Snap elements to center |
-| `carousel-end` | Modifier | Snap elements to end |
+| `carousel` | Component | Container element |
+| `carousel-item` | Part | Individual slide |
+| `carousel-start` | Modifier | Snap to start (default) |
+| `carousel-center` | Modifier | Snap to center |
+| `carousel-end` | Modifier | Snap to end |
 | `carousel-horizontal` | direction | Horizontal layout [default] |
 | `carousel-vertical` | direction | Vertical layout |
 
-## Key Examples
+## Essential Examples
 
-### Basic carousel
+### Basic usage
 
 ```html
 <div class="carousel rounded-box">
@@ -28,38 +28,6 @@ Slideshow component for cycling through images or content.
   </div>
   <div class="carousel-item">
     <img src="image3.jpg" alt="Slide 3" />
-  </div>
-</div>
-```
-
-### Vertical carousel
-
-```html
-<div class="carousel carousel-vertical rounded-box h-96">
-  <div class="carousel-item h-full">
-    <img src="image1.jpg" />
-  </div>
-  <div class="carousel-item h-full">
-    <img src="image2.jpg" />
-  </div>
-  <div class="carousel-item h-full">
-    <img src="image3.jpg" />
-  </div>
-</div>
-```
-
-### Carousel center with spacing
-
-```html
-<div class="carousel carousel-center bg-neutral rounded-box max-w-md space-x-4 p-4">
-  <div class="carousel-item">
-    <img src="image1.jpg" class="rounded-box" />
-  </div>
-  <div class="carousel-item">
-    <img src="image2.jpg" class="rounded-box" />
-  </div>
-  <div class="carousel-item">
-    <img src="image3.jpg" class="rounded-box" />
   </div>
 </div>
 ```
@@ -82,13 +50,6 @@ Slideshow component for cycling through images or content.
       <a href="#slide3" class="btn btn-circle">❯</a>
     </div>
   </div>
-  <div id="slide3" class="carousel-item relative w-full">
-    <img src="image3.jpg" class="w-full" />
-    <div class="absolute left-5 right-5 top-1/2 flex -translate-y-1/2 transform justify-between">
-      <a href="#slide2" class="btn btn-circle">❮</a>
-      <a href="#slide1" class="btn btn-circle">❯</a>
-    </div>
-  </div>
 </div>
 ```
 
@@ -102,13 +63,16 @@ Slideshow component for cycling through images or content.
   <div id="item2" class="carousel-item w-full">
     <img src="image2.jpg" class="w-full" />
   </div>
-  <div id="item3" class="carousel-item w-full">
-    <img src="image3.jpg" class="w-full" />
-  </div>
 </div>
 <div class="flex w-full justify-center gap-2 py-2">
   <a href="#item1" class="btn btn-xs">1</a>
   <a href="#item2" class="btn btn-xs">2</a>
-  <a href="#item3" class="btn btn-xs">3</a>
 </div>
 ```
+
+## Notes
+
+- Uses CSS scroll snap for smooth scrolling
+- Layout: `carousel-center` for centered items with spacing
+- Direction: `carousel-vertical` with appropriate height constraints
+- Navigation: Use anchor links with IDs for slide navigation

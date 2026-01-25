@@ -1,22 +1,22 @@
 # Swap
 
-Container component that enables toggle visibility between two elements with optional animation effects. Commonly used for theme toggles, hamburger menus, and state-based icon swaps.
+Toggle visibility between two elements with animation effects.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `swap` | Component | Container that enables toggle visibility between two elements |
-| `swap-on` | Part | Child element visible when checkbox checked or swap active |
-| `swap-off` | Part | Child element visible when checkbox unchecked or swap inactive |
-| `swap-indeterminate` | Part | Child element shown when checkbox is indeterminate |
-| `swap-active` | Modifier | Activates the swap without requiring a checkbox |
-| `swap-rotate` | Style | Applies rotation animation effect to swap transition |
-| `swap-flip` | Style | Applies flip animation effect to swap transition |
+| `swap` | Component | Container for toggle elements |
+| `swap-on` | Part | Visible when active/checked |
+| `swap-off` | Part | Visible when inactive/unchecked |
+| `swap-indeterminate` | Part | Visible when indeterminate |
+| `swap-active` | Modifier | Force active state without checkbox |
+| `swap-rotate` | Style | Rotation animation |
+| `swap-flip` | Style | Flip animation |
 
-## Key Examples
+## Essential Examples
 
-### Basic swap
+### Basic usage
 
 ```html
 <label class="swap">
@@ -26,7 +26,7 @@ Container component that enables toggle visibility between two elements with opt
 </label>
 ```
 
-### Swap with rotate animation (theme toggle)
+### Theme toggle with rotate
 
 ```html
 <label class="swap swap-rotate">
@@ -44,17 +44,7 @@ Container component that enables toggle visibility between two elements with opt
 </label>
 ```
 
-### Swap with flip animation
-
-```html
-<label class="swap swap-flip text-9xl">
-  <input type="checkbox" />
-  <div class="swap-on">😈</div>
-  <div class="swap-off">😇</div>
-</label>
-```
-
-### Hamburger menu swap
+### Hamburger menu
 
 ```html
 <label class="btn btn-circle swap swap-rotate">
@@ -72,30 +62,19 @@ Container component that enables toggle visibility between two elements with opt
 </label>
 ```
 
-### Volume control swap
+### Flip animation
 
 ```html
-<label class="swap">
+<label class="swap swap-flip text-9xl">
   <input type="checkbox" />
-  
-  <!-- Volume on -->
-  <svg class="swap-on h-10 w-10 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M14,3.23V5.29C16.89,6.15 19,8.83 19,12C19,15.17 16.89,17.84 14,18.7V20.77C18,19.86 21,16.28 21,12C21,7.72 18,4.14 14,3.23M16.5,12C16.5,10.23 15.5,8.71 14,7.97V16C15.5,15.29 16.5,13.76 16.5,12M3,9V15H7L12,20V4L7,9H3Z"/>
-  </svg>
-  
-  <!-- Volume off -->
-  <svg class="swap-off h-10 w-10 fill-current" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-    <path d="M3,9H7L12,4V20L7,15H3V9M16.59,12L14,9.41L15.41,8L18,10.59L20.59,8L22,9.41L19.41,12L22,14.59L20.59,16L18,13.41L15.41,16L14,14.59L16.59,12Z"/>
-  </svg>
+  <div class="swap-on">😈</div>
+  <div class="swap-off">😇</div>
 </label>
 ```
 
-### Text swap
+## Notes
 
-```html
-<label class="swap swap-flip">
-  <input type="checkbox" />
-  <div class="swap-on text-2xl font-bold text-primary">YES</div>
-  <div class="swap-off text-2xl font-bold text-error">NO</div>
-</label>
-```
+- Animation: `swap-rotate` for rotation, `swap-flip` for flip effect
+- Control: Uses checkbox state to toggle between elements
+- Common use: Theme toggles, hamburger menus, icon swaps
+- Parts: `swap-on` shown when checked, `swap-off` when unchecked

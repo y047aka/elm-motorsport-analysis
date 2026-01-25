@@ -1,26 +1,26 @@
 # Card
 
-Cards are used to group and display content in a way that is easily readable.
+Container for grouping and displaying content in an organized way.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `card` | Component | Container element for card |
-| `card-title` | Part | Title part of the card |
-| `card-body` | Part | Body part (content container with padding) |
-| `card-actions` | Part | Actions part (buttons, etc.) |
-| `card-border` | Style | Adds a visible border around the card |
-| `card-dash` | Style | Applies a dashed border style |
-| `card-side` | Modifier | Positions image from `<figure>` element to the side |
-| `image-full` | Modifier | Makes image in `<figure>` the background |
-| `card-xs` | Size | Extra small card dimensions |
-| `card-sm` | Size | Small card dimensions |
-| `card-md` | Size | Medium card (default) |
-| `card-lg` | Size | Large card dimensions |
-| `card-xl` | Size | Extra large card dimensions |
+| `card` | Component | Container element |
+| `card-title` | Part | Title section |
+| `card-body` | Part | Content container with padding |
+| `card-actions` | Part | Actions section (buttons, etc.) |
+| `card-border` | Style | Visible border |
+| `card-dash` | Style | Dashed border |
+| `card-side` | Modifier | Horizontal layout (image on side) |
+| `image-full` | Modifier | Image as background |
+| `card-xs` | Size | Extra small |
+| `card-sm` | Size | Small |
+| `card-md` | Size | Medium (default) |
+| `card-lg` | Size | Large |
+| `card-xl` | Size | Extra large |
 
-## Key Examples
+## Essential Examples
 
 ### Basic card
 
@@ -39,65 +39,7 @@ Cards are used to group and display content in a way that is easily readable.
 </div>
 ```
 
-### Card with border styles
-
-```html
-<!-- Border style -->
-<div class="card card-border bg-base-100 w-96">
-  <div class="card-body">
-    <h2 class="card-title">Bordered Card</h2>
-    <p>Card with solid border</p>
-  </div>
-</div>
-
-<!-- Dash style -->
-<div class="card card-dash bg-base-100 w-96">
-  <div class="card-body">
-    <h2 class="card-title">Dashed Card</h2>
-    <p>Card with dashed border</p>
-  </div>
-</div>
-```
-
-### Card sizes
-
-```html
-<!-- Extra small -->
-<div class="card card-xs bg-base-100 shadow-xl">
-  <div class="card-body">
-    <h2 class="card-title">XS Card</h2>
-  </div>
-</div>
-
-<!-- Large -->
-<div class="card card-lg bg-base-100 shadow-xl">
-  <div class="card-body">
-    <h2 class="card-title">Large Card</h2>
-  </div>
-</div>
-```
-
-### Card with color variants
-
-```html
-<!-- Primary background -->
-<div class="card bg-primary text-primary-content w-96">
-  <div class="card-body">
-    <h2 class="card-title">Primary Card</h2>
-    <p>Primary background color</p>
-  </div>
-</div>
-
-<!-- Neutral background -->
-<div class="card bg-neutral text-neutral-content w-96">
-  <div class="card-body">
-    <h2 class="card-title">Neutral Card</h2>
-    <p>Neutral background color</p>
-  </div>
-</div>
-```
-
-### Card with badge
+### With badge
 
 ```html
 <div class="card bg-base-100 w-96 shadow-xl">
@@ -115,7 +57,7 @@ Cards are used to group and display content in a way that is easily readable.
 </div>
 ```
 
-### Image overlay card
+### Image overlay
 
 ```html
 <div class="card bg-base-100 w-96 image-full">
@@ -132,13 +74,8 @@ Cards are used to group and display content in a way that is easily readable.
 </div>
 ```
 
-### Card without image
+## Notes
 
-```html
-<div class="card bg-base-100 w-96 shadow-xl">
-  <div class="card-body">
-    <h2 class="card-title">Card Title</h2>
-    <p>Content goes here</p>
-  </div>
-</div>
-```
+- Use `<figure>` for images
+- Combine with Tailwind: `shadow-xl`, `rounded-box`, background colors
+- Colors: Apply via `bg-{color}` with matching `text-{color}-content`

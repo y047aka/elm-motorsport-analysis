@@ -1,24 +1,24 @@
 # Stats
 
-Component for displaying statistics and metrics. Container of multiple stat items showing numbers and data in blocks.
+Component for displaying statistics and metrics.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `stats` | Component | Container of multiple stat items |
-| `stat` | Part | A block to display stat data about a topic |
-| `stat-title` | Part | Title part |
-| `stat-value` | Part | Value part |
-| `stat-desc` | Part | Description part |
-| `stat-figure` | Part | Figure part for icon, etc |
-| `stat-actions` | Part | Actions part for button, etc |
-| `stats-horizontal` | direction | Makes stats horizontal (default) |
-| `stats-vertical` | direction | Makes stats vertical |
+| `stats` | Component | Container for stat blocks |
+| `stat` | Part | Individual stat block |
+| `stat-title` | Part | Title section |
+| `stat-value` | Part | Main value display |
+| `stat-desc` | Part | Description section |
+| `stat-figure` | Part | Icon or visual element |
+| `stat-actions` | Part | Action buttons |
+| `stats-horizontal` | direction | Horizontal layout (default) |
+| `stats-vertical` | direction | Vertical layout |
 
-## Key Examples
+## Essential Examples
 
-### Basic stat
+### Basic usage
 
 ```html
 <div class="stats shadow">
@@ -54,7 +54,7 @@ Component for displaying statistics and metrics. Container of multiple stat item
 </div>
 ```
 
-### Stats with icons
+### With icons
 
 ```html
 <div class="stats shadow">
@@ -68,57 +68,10 @@ Component for displaying statistics and metrics. Container of multiple stat item
     <div class="stat-value text-primary">25.6K</div>
     <div class="stat-desc">21% more than last month</div>
   </div>
-
-  <div class="stat">
-    <div class="stat-figure text-secondary">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block h-8 w-8 stroke-current">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-      </svg>
-    </div>
-    <div class="stat-title">Page Views</div>
-    <div class="stat-value text-secondary">2.6M</div>
-    <div class="stat-desc">21% more than last month</div>
-  </div>
 </div>
 ```
 
-### Centered stats
-
-```html
-<div class="stats shadow">
-  <div class="stat place-items-center">
-    <div class="stat-title">Downloads</div>
-    <div class="stat-value">31K</div>
-    <div class="stat-desc">From January 1st to February 1st</div>
-  </div>
-
-  <div class="stat place-items-center">
-    <div class="stat-title">New Users</div>
-    <div class="stat-value text-secondary">4,200</div>
-    <div class="stat-desc text-secondary">↗︎ 40 (2%)</div>
-  </div>
-</div>
-```
-
-### Vertical stats
-
-```html
-<div class="stats stats-vertical shadow">
-  <div class="stat">
-    <div class="stat-title">Downloads</div>
-    <div class="stat-value">31K</div>
-    <div class="stat-desc">Jan 1st - Feb 1st</div>
-  </div>
-
-  <div class="stat">
-    <div class="stat-title">New Users</div>
-    <div class="stat-value">4,200</div>
-    <div class="stat-desc">↗︎ 400 (22%)</div>
-  </div>
-</div>
-```
-
-### Responsive stats
+### Responsive layout
 
 ```html
 <div class="stats stats-vertical lg:stats-horizontal shadow">
@@ -134,16 +87,9 @@ Component for displaying statistics and metrics. Container of multiple stat item
 </div>
 ```
 
-### Stats with actions
+## Notes
 
-```html
-<div class="stats shadow">
-  <div class="stat">
-    <div class="stat-title">Downloads</div>
-    <div class="stat-value">31K</div>
-    <div class="stat-actions">
-      <button class="btn btn-sm btn-success">View Details</button>
-    </div>
-  </div>
-</div>
-```
+- Layout: `stats-vertical` or `stats-horizontal` (default)
+- Centering: Add `place-items-center` to individual `stat` elements
+- Combine with Tailwind: `shadow`, background colors, text colors
+- Common parts: `stat-figure` for icons, `stat-actions` for buttons

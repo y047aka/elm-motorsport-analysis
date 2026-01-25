@@ -32,58 +32,23 @@ Buttons allow the user to take actions or make choices.
 | `btn-square` | Modifier | Square shape (1:1 ratio) |
 | `btn-circle` | Modifier | Circle shape (1:1 ratio with rounded corners) |
 
-## Key Examples
+## Essential Examples
 
-### Basic buttons with colors
+### Basic usage
 
 ```html
 <button class="btn">Default</button>
 <button class="btn btn-primary">Primary</button>
-<button class="btn btn-secondary">Secondary</button>
-<button class="btn btn-accent">Accent</button>
+<button class="btn btn-outline btn-primary">Outline</button>
 ```
 
-### Button sizes
+### States
 
 ```html
-<button class="btn btn-xs">Extra Small</button>
-<button class="btn btn-sm">Small</button>
-<button class="btn">Default</button>
-<button class="btn btn-lg">Large</button>
-<button class="btn btn-xl">Extra Large</button>
-```
-
-### Responsive sizes
-
-```html
-<button class="btn sm:btn-sm md:btn-md lg:btn-lg">Responsive</button>
-
-### Button styles
-
-```html
-<!-- Outline buttons -->
-<button class="btn btn-outline">Default</button>
-<button class="btn btn-outline btn-primary">Primary</button>
-
-<!-- Soft style -->
-<button class="btn btn-soft btn-primary">Soft Primary</button>
-
-<!-- Ghost buttons -->
-<button class="btn btn-ghost">Ghost</button>
-<button class="btn btn-ghost btn-primary">Ghost Primary</button>
-
-```
-
-### Button states
-
-```html
-<!-- Disabled (prefer this) -->
+<!-- Disabled (prefer disabled attribute) -->
 <button class="btn" disabled>Disabled</button>
 <!-- Disabled with class -->
 <button class="btn btn-disabled" tabindex="-1" role="button" aria-disabled="true">Disabled</button>
-
-<!-- Active -->
-<button class="btn btn-active btn-primary">Active</button>
 
 <!-- Loading -->
 <button class="btn">
@@ -95,7 +60,7 @@ Buttons allow the user to take actions or make choices.
 ### Icon buttons
 
 ```html
-<!-- Button with icon and text -->
+<!-- With text -->
 <button class="btn">
   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12Z" />
@@ -103,14 +68,14 @@ Buttons allow the user to take actions or make choices.
   Like
 </button>
 
-<!-- Square icon button -->
+<!-- Icon only -->
 <button class="btn btn-square">
   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
   </svg>
 </button>
 
-<!-- Circle icon button -->
+<!-- Circle -->
 <button class="btn btn-circle btn-primary">
   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -118,19 +83,6 @@ Buttons allow the user to take actions or make choices.
 </button>
 ```
 
-### Block and wide buttons
+## Notes
 
-```html
-<button class="btn btn-block">Full Width Button</button>
-<button class="btn btn-wide">Wide Button</button>
-```
-
-## Usage as Other Elements
-
-Buttons can be applied to various HTML elements:
-
-```html
-<a role="button" class="btn">Link Button</a>
-<input type="button" value="Input Button" class="btn" />
-<input type="submit" value="Submit" class="btn btn-primary" />
-```
+- Can be used with `<a>`, `<input type="button">`, `<input type="submit">`

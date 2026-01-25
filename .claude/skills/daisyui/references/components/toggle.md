@@ -1,58 +1,36 @@
 # Toggle
 
-Checkbox component styled to look like a switch button for binary on/off states.
+Switch-style checkbox for binary on/off states.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `toggle` | Component | Checkbox that is styled to look like a switch button |
-| `toggle-primary` | Color | Applies primary color styling |
-| `toggle-secondary` | Color | Applies secondary color styling |
-| `toggle-accent` | Color | Applies accent color styling |
-| `toggle-neutral` | Color | Applies neutral color styling |
-| `toggle-success` | Color | Applies success color styling |
-| `toggle-warning` | Color | Applies warning color styling |
-| `toggle-info` | Color | Applies info color styling |
-| `toggle-error` | Color | Applies error color styling |
-| `toggle-xs` | Size | Extra small variant |
-| `toggle-sm` | Size | Small variant |
-| `toggle-md` | Size | Medium size (default) |
-| `toggle-lg` | Size | Large variant |
-| `toggle-xl` | Size | Extra large variant |
+| `toggle` | Component | Switch-styled checkbox |
+| `toggle-primary` | Color | Primary color |
+| `toggle-secondary` | Color | Secondary color |
+| `toggle-accent` | Color | Accent color |
+| `toggle-neutral` | Color | Neutral color |
+| `toggle-success` | Color | Success color |
+| `toggle-warning` | Color | Warning color |
+| `toggle-info` | Color | Info color |
+| `toggle-error` | Color | Error color |
+| `toggle-xs` | Size | Extra small |
+| `toggle-sm` | Size | Small |
+| `toggle-md` | Size | Medium (default) |
+| `toggle-lg` | Size | Large |
+| `toggle-xl` | Size | Extra large |
 
-## Key Examples
+## Essential Examples
 
-### Basic toggle
+### Basic usage
 
 ```html
 <input type="checkbox" class="toggle" />
 <input type="checkbox" class="toggle" checked />
 ```
 
-### Toggle colors
-
-```html
-<input type="checkbox" class="toggle toggle-primary" checked />
-<input type="checkbox" class="toggle toggle-secondary" checked />
-<input type="checkbox" class="toggle toggle-accent" checked />
-<input type="checkbox" class="toggle toggle-success" checked />
-<input type="checkbox" class="toggle toggle-warning" checked />
-<input type="checkbox" class="toggle toggle-info" checked />
-<input type="checkbox" class="toggle toggle-error" checked />
-```
-
-### Toggle sizes
-
-```html
-<input type="checkbox" class="toggle toggle-xs" checked />
-<input type="checkbox" class="toggle toggle-sm" checked />
-<input type="checkbox" class="toggle toggle-md" checked />
-<input type="checkbox" class="toggle toggle-lg" checked />
-<input type="checkbox" class="toggle toggle-xl" checked />
-```
-
-### Toggle with label
+### With label
 
 ```html
 <div class="form-control">
@@ -63,7 +41,7 @@ Checkbox component styled to look like a switch button for binary on/off states.
 </div>
 ```
 
-### Toggle with label on left
+### Label on left
 
 ```html
 <div class="form-control">
@@ -74,33 +52,7 @@ Checkbox component styled to look like a switch button for binary on/off states.
 </div>
 ```
 
-### Toggle with description
-
-```html
-<div class="form-control w-full">
-  <label class="label cursor-pointer">
-    <div>
-      <span class="label-text font-medium">Dark mode</span>
-      <p class="text-xs text-base-content/60">Enable dark theme</p>
-    </div>
-    <input type="checkbox" class="toggle toggle-primary" />
-  </label>
-</div>
-```
-
-### Toggle with fieldset
-
-```html
-<fieldset class="fieldset">
-  <legend class="fieldset-legend">Login options</legend>
-  <label class="label">
-    <input type="checkbox" class="toggle" checked />
-    Remember me
-  </label>
-</fieldset>
-```
-
-### Toggle group in card
+### Settings panel
 
 ```html
 <div class="card bg-base-100 shadow-xl">
@@ -118,19 +70,11 @@ Checkbox component styled to look like a switch button for binary on/off states.
         <input type="checkbox" class="toggle toggle-primary" />
       </label>
     </div>
-    <div class="form-control">
-      <label class="label cursor-pointer">
-        <span class="label-text">SMS notifications</span>
-        <input type="checkbox" class="toggle toggle-primary" />
-      </label>
-    </div>
   </div>
 </div>
 ```
 
-### Toggle with custom colors
+## Notes
 
-```html
-<input type="checkbox" class="toggle border-indigo-600 bg-indigo-500 
-  checked:border-orange-500 checked:bg-orange-400" checked />
-```
+- Use `<label class="label cursor-pointer">` for clickable labels
+- Disabled: Add `disabled` attribute

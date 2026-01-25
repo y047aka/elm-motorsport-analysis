@@ -6,27 +6,25 @@ Dialog component for displaying content in a layer above the page.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `modal` | Component | Modal is used to show a dialog or a box when you click a button |
-| `modal-box` | Part | The content part |
-| `modal-action` | Part | Actions part (buttons, etc.) |
-| `modal-backdrop` | Part | Label that covers the page when modal is open so we can close the modal by clicking outside |
-| `modal-toggle` | Part | Hidden checkbox that controls the state of modal |
-| `modal-open` | Modifier | Keeps the modal open (you can add this class using JS) |
-| `modal-top` | Placement | Moves the modal to top |
-| `modal-middle` | Placement | Moves the modal to middle [Default] |
-| `modal-bottom` | Placement | Moves the modal to bottom |
+| `modal` | Component | Modal container |
+| `modal-box` | Part | Content container |
+| `modal-action` | Part | Actions section (buttons) |
+| `modal-backdrop` | Part | Overlay for closing on outside click |
+| `modal-toggle` | Part | Hidden checkbox controlling state |
+| `modal-open` | Modifier | Force modal open |
+| `modal-top` | Placement | Position at top |
+| `modal-middle` | Placement | Position at middle (default) |
+| `modal-bottom` | Placement | Position at bottom |
 | `modal-start` | Placement | Moves the modal to start horizontally |
 | `modal-end` | Placement | Moves the modal to end horizontally |
 
-## Key Examples
+## Essential Examples
 
-### Basic modal (dialog element)
+### Basic usage (dialog element)
 
 ```html
-<!-- Button to open modal -->
 <button class="btn" onclick="my_modal.showModal()">Open Modal</button>
 
-<!-- Modal -->
 <dialog id="my_modal" class="modal">
   <div class="modal-box">
     <h3 class="text-lg font-bold">Hello!</h3>
@@ -54,7 +52,7 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-### Close button inside modal
+### Close button in corner
 
 ```html
 <dialog id="my_modal" class="modal">
@@ -71,7 +69,6 @@ Dialog component for displaying content in a layer above the page.
 ### Responsive position
 
 ```html
-<!-- Bottom on mobile, middle on larger screens -->
 <dialog class="modal modal-bottom sm:modal-middle">
   <div class="modal-box">
     <h3 class="text-lg font-bold">Responsive Modal</h3>
@@ -80,62 +77,9 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
-### Custom width
+## Notes
 
-```html
-<dialog class="modal">
-  <div class="modal-box w-11/12 max-w-5xl">
-    <h3 class="text-lg font-bold">Wide Modal</h3>
-    <p class="py-4">This modal is wider than default</p>
-  </div>
-</dialog>
-```
-
-### Confirmation modal
-
-```html
-<dialog id="confirm_modal" class="modal">
-  <div class="modal-box">
-    <h3 class="text-lg font-bold">Confirm Action</h3>
-    <p class="py-4">Are you sure you want to proceed?</p>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn btn-error">Delete</button>
-        <button class="btn">Cancel</button>
-      </form>
-    </div>
-  </div>
-</dialog>
-```
-
-## JavaScript Control
-
-```javascript
-// Open modal
-document.getElementById('my_modal').showModal();
-
-// Close modal
-document.getElementById('my_modal').close();
-```
-
-## Alternative: Checkbox Toggle Method
-
-```html
-<!-- Toggle button -->
-<label for="my-modal" class="btn">Open Modal</label>
-
-<!-- Hidden checkbox -->
-<input type="checkbox" id="my-modal" class="modal-toggle" />
-
-<!-- Modal -->
-<div class="modal" role="dialog">
-  <div class="modal-box">
-    <h3 class="text-lg font-bold">Hello!</h3>
-    <p class="py-4">This modal uses checkbox toggle</p>
-    <div class="modal-action">
-      <label for="my-modal" class="btn">Close</label>
-    </div>
-  </div>
-  <label class="modal-backdrop" for="my-modal">Close</label>
-</div>
-```
+- Control: `element.showModal()` to open, `element.close()` to close
+- Close on outside click: Use `<form method="dialog" class="modal-backdrop">`
+- Close on ESC: Native `<dialog>` behavior
+- Alternative: Use checkbox toggle method with `modal-toggle` class

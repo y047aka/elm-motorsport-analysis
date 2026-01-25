@@ -1,30 +1,30 @@
 # Tooltip
 
-Tooltip component for showing additional information on hover.
+Component for showing additional information on hover.
 
 ## Class Reference
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `tooltip` | Component | Container element for tooltip |
-| `tooltip-content` | Part | Optional div for custom tooltip content instead of `data-tip` |
-| `tooltip-top` | Placement | Positions tooltip above element (default) |
-| `tooltip-bottom` | Placement | Positions tooltip below element |
-| `tooltip-left` | Placement | Positions tooltip to the left |
-| `tooltip-right` | Placement | Positions tooltip to the right |
-| `tooltip-open` | Modifier | Forces tooltip to remain visible |
-| `tooltip-neutral` | Color | Applies neutral color scheme |
-| `tooltip-primary` | Color | Applies primary color scheme |
-| `tooltip-secondary` | Color | Applies secondary color scheme |
-| `tooltip-accent` | Color | Applies accent color scheme |
-| `tooltip-info` | Color | Applies info color scheme |
-| `tooltip-success` | Color | Applies success color scheme |
-| `tooltip-warning` | Color | Applies warning color scheme |
-| `tooltip-error` | Color | Applies error color scheme |
+| `tooltip` | Component | Container element |
+| `tooltip-content` | Part | Custom content instead of `data-tip` |
+| `tooltip-top` | Placement | Position above (default) |
+| `tooltip-bottom` | Placement | Position below |
+| `tooltip-left` | Placement | Position to left |
+| `tooltip-right` | Placement | Position to right |
+| `tooltip-open` | Modifier | Force visible |
+| `tooltip-neutral` | Color | Neutral color |
+| `tooltip-primary` | Color | Primary color |
+| `tooltip-secondary` | Color | Secondary color |
+| `tooltip-accent` | Color | Accent color |
+| `tooltip-info` | Color | Info color |
+| `tooltip-success` | Color | Success color |
+| `tooltip-warning` | Color | Warning color |
+| `tooltip-error` | Color | Error color |
 
-## Key Examples
+## Essential Examples
 
-### Basic tooltip
+### Basic usage
 
 ```html
 <div class="tooltip" data-tip="Hello">
@@ -32,18 +32,7 @@ Tooltip component for showing additional information on hover.
 </div>
 ```
 
-### Custom content tooltip
-
-```html
-<div class="tooltip">
-  <div class="tooltip-content">
-    <strong>Bold text</strong> and <em>italic text</em>
-  </div>
-  <button class="btn">Hover me</button>
-</div>
-```
-
-### Tooltip positions
+### Positions
 
 ```html
 <div class="tooltip tooltip-top" data-tip="Top tooltip">
@@ -63,43 +52,7 @@ Tooltip component for showing additional information on hover.
 </div>
 ```
 
-### Tooltip colors
-
-```html
-<div class="tooltip tooltip-primary" data-tip="Primary">
-  <button class="btn">Primary</button>
-</div>
-
-<div class="tooltip tooltip-secondary" data-tip="Secondary">
-  <button class="btn">Secondary</button>
-</div>
-
-<div class="tooltip tooltip-accent" data-tip="Accent">
-  <button class="btn">Accent</button>
-</div>
-
-<div class="tooltip tooltip-success" data-tip="Success">
-  <button class="btn">Success</button>
-</div>
-
-<div class="tooltip tooltip-warning" data-tip="Warning">
-  <button class="btn">Warning</button>
-</div>
-
-<div class="tooltip tooltip-error" data-tip="Error">
-  <button class="btn">Error</button>
-</div>
-```
-
-### Force open tooltip
-
-```html
-<div class="tooltip tooltip-open" data-tip="Always visible">
-  <button class="btn">Open</button>
-</div>
-```
-
-### Tooltip on different elements
+### On different elements
 
 ```html
 <!-- On text -->
@@ -120,26 +73,15 @@ Tooltip component for showing additional information on hover.
 </div>
 ```
 
-### Tooltip with form label
+### Force open
 
 ```html
-<label class="form-control w-full max-w-xs">
-  <div class="label">
-    <span class="label-text">Email</span>
-    <div class="tooltip" data-tip="Enter your email address">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-4 w-4 stroke-current opacity-60">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-    </div>
-  </div>
-  <input type="email" class="input input-bordered" />
-</label>
-```
-
-### Responsive tooltip positions
-
-```html
-<div class="tooltip tooltip-bottom md:tooltip-top lg:tooltip-right" data-tip="Responsive position">
-  <button class="btn">Responsive</button>
+<div class="tooltip tooltip-open" data-tip="Always visible">
+  <button class="btn">Open</button>
 </div>
 ```
+
+## Notes
+
+- Custom content: Use `tooltip-content` div for rich content
+- Responsive: Combine with breakpoint classes (e.g., `tooltip-bottom md:tooltip-top`)
