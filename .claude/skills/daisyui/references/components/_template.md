@@ -1,60 +1,60 @@
 <!--
 TEMPLATE GUIDE:
-このテンプレートはdaisyUI skillのための高精度なリファレンスを作成するためのものです。
-Claude Codeが既知の一般的な情報は完全に省略し、daisyUI固有の情報のみに特化します。
+This template is for creating high-precision references for the daisyUI skill.
+Omit general information that Claude Code already knows and focus only on daisyUI-specific information.
 
-【重要原則】
-- カラーバリアント(primary/secondary等)は記載しない → Claude Codeが既知
-- サイズバリアント(xs/sm/md/lg/xl)は標準パターンなら記載しない → 特殊なサイズのみ記載
-- レスポンシブ対応(`sm:btn-sm`等)は記載しない → Tailwindの標準機能
-- 単純なHTML属性(disabled等)は記載しない → 一般的な知識
+【KEY PRINCIPLES】
+- Do NOT document color variants (primary/secondary, etc.) → Claude Code already knows these
+- Do NOT document size variants (xs/sm/md/lg/xl) if they follow standard patterns → Only document special sizes
+- Do NOT document responsive prefixes (`sm:btn-sm`, etc.) → Standard Tailwind functionality
+- Do NOT document simple HTML attributes (disabled, etc.) → Common knowledge
 
-【記載すべき情報】
-1. daisyUI固有のクラス名(modal-box, modal-backdrop等)
-2. 必須のHTML構造(dialog要素、form method="dialog"等)
-3. コンポーネント固有の制約(modal-action内のformタグ等)
-4. ブラウザAPIとの連携(element.showModal()等)
-5. daisyUI固有の修飾子(btn-wide, btn-square等)
+【WHAT TO DOCUMENT】
+1. daisyUI-specific class names (modal-box, modal-backdrop, etc.)
+2. Required HTML structure (dialog elements, form method="dialog", etc.)
+3. Component-specific constraints (form tag inside modal-action, etc.)
+4. Browser API integration (element.showModal(), etc.)
+5. daisyUI-specific modifiers (btn-wide, btn-square, etc.)
 
-使用方法:
-1. {ComponentName}, {prefix}等のプレースホルダーを置き換える
-2. 公式ドキュメントURL({official_url})を記載
-3. Class Referenceは公式情報で不明確な点がある場合のみ追加説明を記載
-4. Essential Examplesに必要なセクションのみを残す
-5. 不要なセクションは全て削除
+How to use:
+1. Replace placeholders like {ComponentName}, {prefix}, etc.
+2. Add official documentation URL ({official_url})
+3. Only add supplementary explanations in Class Reference when official docs are unclear
+4. Keep only necessary sections in Essential Examples
+5. Delete all unnecessary sections
 -->
 
 # {ComponentName}
 
-{1行の簡潔な説明文 - daisyUI固有の特徴を記載}
+{One-line concise description - document daisyUI-specific features}
 
 ## Class Reference
 
-公式ドキュメント: {official_url}
+Official documentation: {official_url}
 
 <!--
-【基本方針】
-公式ドキュメントのClass name tableを参照すること。
-以下の場合のみ、補足説明を記載:
+【BASIC POLICY】
+Refer to the Class name table in the official documentation.
+Only add supplementary explanations in the following cases:
 
-✅ 記載すべき補足:
-- 公式のDescriptionが不明確なクラスの詳細説明
-- 必須の組み合わせ(例: "modal-box は modal 内でのみ使用")
-- HTML構造の制約(例: "modal-backdrop は form method='dialog' と併用")
-- ブラウザAPIとの連携(例: "modal-open は dialog.showModal() で自動付与")
+✅ SHOULD document:
+- Detailed explanations for classes with unclear official descriptions
+- Required combinations (e.g., "modal-box must be used inside modal")
+- HTML structure constraints (e.g., "modal-backdrop should be used with form method='dialog'")
+- Browser API integration (e.g., "modal-open is automatically added by dialog.showModal()")
 
-❌ 記載不要:
-- 公式ドキュメントに明記されているクラス名の単純な列挙
-- Type分類(公式のtableに記載済み)
-- 一般的なカラー/サイズバリアント
+❌ Should NOT document:
+- Simple listing of class names already documented in official docs
+- Type classifications (already in official table)
+- Common color/size variants
 
-補足が不要な場合は、このセクションを「公式ドキュメント: {url}」のみにすること
+If no supplementary notes are needed, keep only "Official documentation: {url}" in this section
 -->
 
-<!-- 以下は公式情報が不明確な場合のみ記載 -->
-| Class name | 補足 |
-|------------|------|
-| `{specific-class}` | {公式ドキュメントで不明確な点の詳細説明} |
+<!-- Only include the following when official information is unclear -->
+| Class name | Notes |
+|------------|-------|
+| `{specific-class}` | {Detailed explanation for points unclear in official docs} |
 
 
 ## Essential Examples
@@ -62,52 +62,52 @@ Claude Codeが既知の一般的な情報は完全に省略し、daisyUI固有�
 ### Basic usage
 
 ```html
-<!-- コピペ可能な最小実装 - 必須クラスとHTML構造のみ -->
+<!-- Copy-paste ready minimal implementation - required classes and HTML structure only -->
 ```
 
 ### With structure
 
 ```html
-<!-- 複雑なHTML構造が必要な場合のみ記載
-     例: modalのdialog要素、dropdownの階層構造、form method="dialog"等
+<!-- Only include when complex HTML structure is required
+     e.g., dialog elements for modal, hierarchical structure for dropdown, form method="dialog", etc.
 
-     単純な構造(<button class="btn">等)なら削除 -->
+     Delete if structure is simple (like <button class="btn">) -->
 ```
 
 ### Interactive
 
 ```html
-<!-- ブラウザAPIとの連携が必要な場合のみ記載
-     例: dialog.showModal()、checkbox:checked擬似クラス等
+<!-- Only include when browser API integration is required
+     e.g., dialog.showModal(), checkbox:checked pseudo-class, etc.
 
-     APIとの連携がなければ削除 -->
+     Delete if no API integration is needed -->
 ```
 
 <!--
-セクション削除基準:
-- "Basic usage": 必須(削除不可)
-- "With structure": 単純な構造なら削除
-- "Interactive": ブラウザAPIとの連携がなければ削除
+Section deletion criteria:
+- "Basic usage": Required (do not delete)
+- "With structure": Delete if structure is simple
+- "Interactive": Delete if no browser API integration
 
-廃止されたセクション:
-- "Colors and styles" → カラー/スタイルはClaude Codeが既知
-- "States" → HTML標準のため不要
-- "Responsive" → Tailwindの標準機能のため不要
-- "Icon buttons" → 一般的なHTMLパターンのため不要
+Deprecated sections:
+- "Colors and styles" → Claude Code already knows color/style patterns
+- "States" → Not needed as it's HTML standard
+- "Responsive" → Not needed as it's standard Tailwind functionality
+- "Icon buttons" → Not needed as it's a common HTML pattern
 -->
 
 ## Notes
 
 <!--
-記載基準:
-✅ 必須: daisyUI固有の制約事項(modal-action内のformタグ、dialog要素の使用等)
-✅ 推奨: daisyUI固有のアクセシビリティパターン
-✅ 非推奨: v4.xの破壊的変更、古いクラス名
-❌ 不要: ブラウザの一般的な挙動、HTML標準の知識
+Documentation criteria:
+✅ Required: daisyUI-specific constraints (form tag in modal-action, use of dialog element, etc.)
+✅ Recommended: daisyUI-specific accessibility patterns
+✅ Deprecated: v4.x breaking changes, old class names
+❌ Not needed: General browser behavior, HTML standard knowledge
 
-注意点がない場合はNotesセクション全体を削除すること
+Delete the entire Notes section if there are no notes to document
 -->
 
-- **必須**: {daisyUI固有の制約事項}
-- **推奨**: {daisyUI固有のアクセシビリティパターン}
-- **非推奨**: {v4.xで変更された情報}
+- **Required**: {daisyUI-specific constraints}
+- **Recommended**: {daisyUI-specific accessibility patterns}
+- **Deprecated**: {Information changed in v4.x}
