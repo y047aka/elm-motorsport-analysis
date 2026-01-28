@@ -4,114 +4,69 @@ Practical patterns combining multiple daisyUI components for common UI scenarios
 
 ## Dashboard Layout
 
-Navbar + Drawer sidebar + Stats for admin dashboards:
+Stats row + Card content area inside a drawer layout. See `drawer.md` "With navbar" for the full drawer+navbar structure.
 
 ```html
-<div class="drawer lg:drawer-open">
-  <input id="dashboard-drawer" type="checkbox" class="drawer-toggle" />
-  
-  <div class="drawer-content flex flex-col">
-    <!-- Navbar -->
-    <div class="navbar bg-base-100 border-b">
-      <div class="flex-none lg:hidden">
-        <label for="dashboard-drawer" class="btn btn-square btn-ghost">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </label>
-      </div>
-      <div class="flex-1">
-        <a class="btn btn-ghost text-xl">Dashboard</a>
-      </div>
+<!-- Main content area (inside drawer-content) -->
+<main class="flex-1 p-6">
+  <!-- Stats row -->
+  <div class="stats shadow w-full mb-6">
+    <div class="stat">
+      <div class="stat-title">Total Users</div>
+      <div class="stat-value">89,400</div>
+      <div class="stat-desc">21% more than last month</div>
     </div>
-    
-    <!-- Main content -->
-    <main class="flex-1 p-6">
-      <!-- Stats row -->
-      <div class="stats shadow w-full mb-6">
-        <div class="stat">
-          <div class="stat-title">Total Users</div>
-          <div class="stat-value">89,400</div>
-          <div class="stat-desc">21% more than last month</div>
-        </div>
-        <div class="stat">
-          <div class="stat-title">Revenue</div>
-          <div class="stat-value text-primary">$25,600</div>
-          <div class="stat-desc">12% increase</div>
-        </div>
-      </div>
-      
-      <!-- Content area -->
-      <div class="card bg-base-100 shadow">
-        <div class="card-body">
-          <h2 class="card-title">Content</h2>
-          <p>Dashboard content goes here.</p>
-        </div>
-      </div>
-    </main>
+    <div class="stat">
+      <div class="stat-title">Revenue</div>
+      <div class="stat-value text-primary">$25,600</div>
+      <div class="stat-desc">12% increase</div>
+    </div>
   </div>
-  
-  <!-- Sidebar -->
-  <div class="drawer-side">
-    <label for="dashboard-drawer" class="drawer-overlay"></label>
-    <ul class="menu p-4 w-64 min-h-full bg-base-200 text-base-content">
-      <li class="menu-title">Navigation</li>
-      <li><a class="active">Dashboard</a></li>
-      <li><a>Analytics</a></li>
-      <li><a>Reports</a></li>
-    </ul>
+
+  <!-- Content cards -->
+  <div class="card bg-base-100 shadow">
+    <div class="card-body">
+      <h2 class="card-title">Content</h2>
+      <p>Dashboard content goes here.</p>
+    </div>
   </div>
-</div>
+</main>
 ```
 
 ## Authentication Page
 
-Card-based login/register form:
+Card-based login form combining card + input + checkbox:
 
 ```html
 <div class="min-h-screen flex items-center justify-center bg-base-200">
   <div class="card w-full max-w-sm bg-base-100 shadow-xl">
     <div class="card-body">
       <h2 class="card-title justify-center text-2xl font-bold">Login</h2>
-      
-      <form>
-        <div class="form-control">
-          <label class="label">
-            <span class="label-text">Email</span>
-          </label>
-          <input type="email" placeholder="email@example.com" class="input input-bordered" required />
-        </div>
-        
-        <div class="form-control mt-4">
-          <label class="label">
-            <span class="label-text">Password</span>
-          </label>
-          <input type="password" placeholder="Enter password" class="input input-bordered" required />
-          <label class="label">
+
+      <form class="space-y-4 mt-4">
+        <label class="form-control">
+          <div class="label"><span class="label-text">Email</span></div>
+          <input type="email" placeholder="email@example.com" class="input w-full" required />
+        </label>
+
+        <label class="form-control">
+          <div class="label"><span class="label-text">Password</span></div>
+          <input type="password" placeholder="Enter password" class="input w-full" required />
+          <div class="label">
             <a href="#" class="label-text-alt link link-hover">Forgot password?</a>
-          </label>
-        </div>
-        
-        <div class="form-control mt-2">
-          <label class="label cursor-pointer justify-start gap-2">
-            <input type="checkbox" class="checkbox checkbox-sm" />
-            <span class="label-text">Remember me</span>
-          </label>
-        </div>
-        
-        <div class="form-control mt-6">
-          <button class="btn btn-primary">Login</button>
-        </div>
+          </div>
+        </label>
+
+        <label class="label cursor-pointer justify-start gap-2">
+          <input type="checkbox" class="checkbox checkbox-sm" />
+          <span class="label-text">Remember me</span>
+        </label>
+
+        <button class="btn btn-primary w-full">Login</button>
       </form>
-      
+
       <div class="divider">OR</div>
-      
-      <button class="btn btn-outline">Continue with Google</button>
-      
-      <p class="text-center mt-4">
-        Don't have an account? 
-        <a href="#" class="link link-primary">Sign up</a>
-      </p>
+      <button class="btn btn-outline w-full">Continue with Google</button>
     </div>
   </div>
 </div>
@@ -152,7 +107,7 @@ showToast('Something went wrong', 'error');
 
 ## Data Table with Actions
 
-Table with row actions and pagination:
+Table with row actions and pagination. See also `table.md` for base table usage and sizes.
 
 ```html
 <div class="overflow-x-auto">
@@ -260,39 +215,6 @@ Form inputs with validation states:
     </div>
   </div>
 </form>
-```
-
-## Hero Section
-
-Landing page hero with CTA:
-
-```html
-<div class="hero min-h-[60vh] bg-base-200">
-  <div class="hero-content text-center">
-    <div class="max-w-md">
-      <h1 class="text-5xl font-bold">Hello there</h1>
-      <p class="py-6">
-        Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem quasi.
-      </p>
-      <div class="flex gap-4 justify-center">
-        <button class="btn btn-primary">Get Started</button>
-        <button class="btn btn-outline">Learn More</button>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Hero with background image -->
-<div class="hero min-h-screen" style="background-image: url(hero-bg.jpg);">
-  <div class="hero-overlay bg-opacity-60"></div>
-  <div class="hero-content text-center text-neutral-content">
-    <div class="max-w-md">
-      <h1 class="mb-5 text-5xl font-bold">Welcome</h1>
-      <p class="mb-5">Your journey starts here.</p>
-      <button class="btn btn-primary">Get Started</button>
-    </div>
-  </div>
-</div>
 ```
 
 ## Loading States
