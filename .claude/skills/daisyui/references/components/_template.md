@@ -16,6 +16,20 @@ Focus on daisyUI-specific information that Claude Code needs for accurate code g
 4. Browser API integration (e.g., element.showModal())
 5. daisyUI-specific modifiers (btn-wide, btn-square, etc.)
 
+【EXAMPLE SELECTION CRITERIA】
+✅ Include examples that demonstrate:
+- Structural requirements (specific HTML elements or nesting)
+- Part relationships (parent-child class dependencies)
+- Browser API integration (showModal, checked state, etc.)
+- Wrapper patterns (e.g., input class on <label> for icons)
+- Responsive structural changes (e.g., alert-vertical sm:alert-horizontal)
+
+❌ Exclude examples that only show:
+- Color variations (Class Reference table is sufficient)
+- Size variations (pattern is self-evident)
+- Standard HTML states (disabled, etc.)
+- Simple style combinations (btn btn-outline btn-primary)
+
 How to use:
 1. Replace placeholders like {ComponentName}, {prefix}, etc.
 2. List all classes from the official documentation in the Class Reference table

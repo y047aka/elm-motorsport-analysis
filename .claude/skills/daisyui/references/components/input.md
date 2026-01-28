@@ -66,6 +66,32 @@ Text input component for user data entry.
 </div>
 ```
 
+### With validation
+
+```html
+<!-- Success state -->
+<label class="form-control w-full max-w-xs">
+  <div class="label">
+    <span class="label-text">Email</span>
+  </div>
+  <input type="email" class="input input-success w-full" value="valid@email.com" />
+  <div class="label">
+    <span class="label-text-alt text-success">Email is valid</span>
+  </div>
+</label>
+
+<!-- Error state -->
+<label class="form-control w-full max-w-xs">
+  <div class="label">
+    <span class="label-text">Password</span>
+  </div>
+  <input type="password" class="input input-error w-full" />
+  <div class="label">
+    <span class="label-text-alt text-error">Password must be at least 8 characters</span>
+  </div>
+</label>
+```
+
 ## Notes
 
 - **Required**: Can be used as wrapper element. Apply `input` class to `<label>` with `flex items-center gap-2` to include icons, badges, or kbd elements

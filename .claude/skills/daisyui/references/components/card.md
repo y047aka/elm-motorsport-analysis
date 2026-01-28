@@ -74,6 +74,23 @@ Container for grouping and displaying content in an organized way.
 </div>
 ```
 
+### Side image layout
+
+```html
+<div class="card card-side bg-base-100 shadow-xl">
+  <figure>
+    <img src="image.jpg" alt="Image" />
+  </figure>
+  <div class="card-body">
+    <h2 class="card-title">Side Layout</h2>
+    <p>Image on the side, content on the right</p>
+    <div class="card-actions justify-end">
+      <button class="btn btn-primary">Watch</button>
+    </div>
+  </div>
+</div>
+```
+
 ## Notes
 
 - **Recommended**: Use `<figure>` element for images

@@ -4,6 +4,8 @@ Practical patterns combining multiple daisyUI components for common UI scenarios
 
 ## Dashboard Layout
 
+**Components**: stats, card, drawer
+
 Stats row + Card content area inside a drawer layout. See `drawer.md` "With navbar" for the full drawer+navbar structure.
 
 ```html
@@ -34,6 +36,8 @@ Stats row + Card content area inside a drawer layout. See `drawer.md` "With navb
 ```
 
 ## Authentication Page
+
+**Components**: card, input, checkbox, button, divider
 
 Card-based login form combining card + input + checkbox:
 
@@ -74,6 +78,8 @@ Card-based login form combining card + input + checkbox:
 
 ## Toast Notifications
 
+**Components**: toast, alert
+
 JavaScript toast manager for dynamic notifications:
 
 ```javascript
@@ -106,6 +112,8 @@ showToast('Something went wrong', 'error');
 ```
 
 ## Data Table with Actions
+
+**Components**: table, checkbox, avatar, badge, dropdown, menu, join, button
 
 Table with row actions and pagination. See also `table.md` for base table usage and sizes.
 
@@ -178,6 +186,8 @@ Table with row actions and pagination. See also `table.md` for base table usage 
 
 ## Form with Validation Feedback
 
+**Components**: input, join, button
+
 Form inputs with validation states:
 
 ```html
@@ -218,6 +228,8 @@ Form inputs with validation states:
 ```
 
 ## Loading States
+
+**Components**: skeleton, card
 
 Skeleton loading for cards and lists:
 

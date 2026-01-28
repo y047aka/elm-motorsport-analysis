@@ -32,7 +32,6 @@ Small status indicator for labels and counts.
 ```html
 <div class="badge">Default</div>
 <div class="badge badge-primary">Primary</div>
-<div class="badge badge-outline badge-primary">Outline</div>
 ```
 
 ### Empty badge (dot indicator)

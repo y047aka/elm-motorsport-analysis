@@ -70,6 +70,21 @@ Dialog component for displaying content in a layer above the page.
 </dialog>
 ```
 
+### Responsive positioning
+
+```html
+<!-- Bottom on mobile, centered on desktop -->
+<dialog id="my_modal" class="modal modal-bottom sm:modal-middle">
+  <div class="modal-box">
+    <h3 class="text-lg font-bold">Responsive Modal</h3>
+    <p class="py-4">Bottom on mobile, centered on desktop</p>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+```
+
 ## Notes
 
 - **Required**: Use `<dialog>` element with `modal` class
