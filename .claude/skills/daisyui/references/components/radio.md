@@ -60,4 +60,4 @@ Radio button for single selection from a group.
 
 ## Notes
 
-- Wrap with `<label class="label cursor-pointer">` for clickable labels
+- **Recommended**: Wrap with `<label class="label cursor-pointer">` for clickable labels

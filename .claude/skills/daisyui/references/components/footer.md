@@ -7,14 +7,14 @@ Page bottom navigation and information section.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `footer` | Component | Container for footer content |
-| `footer-title` | Part | Section heading styles |
-| `footer-center` | Placement | Center all content |
-| `footer-horizontal` | direction | Horizontal layout |
+| `footer-title` | Part | Section heading styles for footer navigation groups |
+| `footer-center` | Placement | Center all footer content |
+| `footer-horizontal` | direction | Horizontal layout for footer items |
 | `footer-vertical` | direction | Vertical layout (default) |
 
 ## Essential Examples
 
-### Basic footer
+### Basic usage
 
 ```html
 <footer class="footer bg-neutral text-neutral-content p-10">
@@ -66,6 +66,5 @@ Page bottom navigation and information section.
 
 ## Notes
 
-- Use `<nav>` for link groups with `footer-title` headings
-- Layout: `footer-center` for centered content, responsive with Tailwind classes
-- Combine with background colors: `bg-neutral`, `bg-base-200`
+- **Recommended**: Use `<nav>` elements for link groups with `footer-title` headings
+- **Recommended**: Combine with background colors like `bg-neutral`, `bg-base-200` and matching text colors

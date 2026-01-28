@@ -6,7 +6,7 @@ Navigation component showing the current page's location in a hierarchy.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `breadcrumbs` | Component | Wrapper around a `<ul>` |
+| `breadcrumbs` | Component | Wrapper around a `<ul>` element |
 
 ## Essential Examples
 
@@ -50,6 +50,5 @@ Navigation component showing the current page's location in a hierarchy.
 
 ## Notes
 
-- Use standard `<ul>` list structure
-- Last item typically not linked (current page)
-- Separators automatically added via CSS
+- **Required**: Must use `<ul>` list structure with breadcrumbs class
+- **Recommended**: Last item typically not linked (represents current page)

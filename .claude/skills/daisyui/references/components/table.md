@@ -8,8 +8,8 @@ Component for displaying tabular data.
 |------------|------|-------------|
 | `table` | Component | Base `<table>` styling |
 | `table-zebra` | Modifier | Alternating row stripes |
-| `table-pin-rows` | Modifier | Sticky header/footer |
-| `table-pin-cols` | Modifier | Sticky `<th>` columns |
+| `table-pin-rows` | Modifier | For `<table>` to make all the rows inside `<thead>` and `<tfoot>` sticky |
+| `table-pin-cols` | Modifier | For `<table>` to make all the `<th>` columns sticky |
 | `table-xs` | Size | Extra small |
 | `table-sm` | Size | Small |
 | `table-md` | Size | Medium (default) |
@@ -110,6 +110,6 @@ Component for displaying tabular data.
 
 ## Notes
 
-- Wrap with `overflow-x-auto` for responsive horizontal scrolling
-- Active row: Add `bg-base-200` class to `<tr>`
-- Hover: Add `hover:bg-base-300` to rows
+- **Required**: Wrap with `overflow-x-auto` container for responsive horizontal scrolling
+- **Recommended**: Add `bg-base-200` class to `<tr>` for active row highlighting
+- **Recommended**: Add `hover:bg-base-300` class to rows for hover effects

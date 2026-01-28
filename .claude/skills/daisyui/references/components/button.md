@@ -27,10 +27,10 @@ Buttons allow the user to take actions or make choices.
 | `btn-md` | Size | Medium (default) |
 | `btn-lg` | Size | Large |
 | `btn-xl` | Size | Extra large |
-| `btn-wide` | Modifier | Extra horizontal padding |
-| `btn-block` | Modifier | Full width |
-| `btn-square` | Modifier | Square shape (1:1 ratio) |
-| `btn-circle` | Modifier | Circle shape (1:1 ratio with rounded corners) |
+| `btn-wide` | Modifier | Extra horizontal padding for wider button |
+| `btn-block` | Modifier | Full width button |
+| `btn-square` | Modifier | Square shape with 1:1 aspect ratio |
+| `btn-circle` | Modifier | Circle shape with 1:1 aspect ratio and rounded corners |
 
 ## Essential Examples
 
@@ -42,15 +42,9 @@ Buttons allow the user to take actions or make choices.
 <button class="btn btn-outline btn-primary">Outline</button>
 ```
 
-### States
+### With loading state
 
 ```html
-<!-- Disabled (prefer disabled attribute) -->
-<button class="btn" disabled>Disabled</button>
-<!-- Disabled with class -->
-<button class="btn btn-disabled" tabindex="-1" role="button" aria-disabled="true">Disabled</button>
-
-<!-- Loading -->
 <button class="btn">
   <span class="loading loading-spinner"></span>
   Loading
@@ -68,14 +62,14 @@ Buttons allow the user to take actions or make choices.
   Like
 </button>
 
-<!-- Icon only -->
+<!-- Icon only with square -->
 <button class="btn btn-square">
   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
   </svg>
 </button>
 
-<!-- Circle -->
+<!-- Icon only with circle -->
 <button class="btn btn-circle btn-primary">
   <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -85,4 +79,5 @@ Buttons allow the user to take actions or make choices.
 
 ## Notes
 
-- Can be used with `<a>`, `<input type="button">`, `<input type="submit">`
+- **Recommended**: Can be used with `<a>`, `<input type="button">`, `<input type="submit">` elements
+- **Recommended**: For disabled state, prefer using `disabled` attribute over `btn-disabled` class

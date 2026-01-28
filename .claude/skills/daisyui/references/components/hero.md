@@ -7,12 +7,12 @@ Full-width banner component for landing pages and headers.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `hero` | Component | Container element |
-| `hero-content` | Part | Content wrapper |
-| `hero-overlay` | Part | Overlay covering background image |
+| `hero-content` | Part | Content wrapper inside hero |
+| `hero-overlay` | Part | Overlay covering background image (use with `bg-opacity-{value}`) |
 
 ## Essential Examples
 
-### Basic centered hero
+### Basic usage
 
 ```html
 <div class="hero min-h-screen bg-base-200">
@@ -60,7 +60,6 @@ Full-width banner component for landing pages and headers.
 
 ## Notes
 
-- Use `min-h-screen` for full-height sections
-- Layout: Combine `flex-col lg:flex-row` for responsive layouts
-- Overlay: Use `hero-overlay` with `bg-opacity-{value}` for image overlays
-- Background: Set via inline style or Tailwind classes
+- **Recommended**: Use `min-h-screen` for full-height sections
+- **Recommended**: Combine `flex-col lg:flex-row` on hero-content for responsive layouts
+- **Recommended**: Use `hero-overlay` with `bg-opacity-{value}` for image overlays

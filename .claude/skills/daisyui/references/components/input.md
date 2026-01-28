@@ -6,7 +6,7 @@ Text input component for user data entry.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `input` | Component | Base input element |
+| `input` | Component | Component for `<input type="text">` tag or a wrapper of `<input type="text">` tag |
 | `input-ghost` | Style | Borderless variant |
 | `input-neutral` | Color | Neutral color |
 | `input-primary` | Color | Primary color |
@@ -30,9 +30,10 @@ Text input component for user data entry.
 <input type="text" placeholder="Type here" class="input w-full max-w-xs" />
 ```
 
-### With label
+### With structure
 
 ```html
+<!-- With label and helper text -->
 <label class="form-control w-full max-w-xs">
   <div class="label">
     <span class="label-text">What is your name?</span>
@@ -47,6 +48,7 @@ Text input component for user data entry.
 ### With icon
 
 ```html
+<!-- Input as wrapper element -->
 <label class="input flex items-center gap-2">
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="h-4 w-4 opacity-70">
     <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
@@ -66,8 +68,6 @@ Text input component for user data entry.
 
 ## Notes
 
-- Base `input` class provides default styling (borders included)
-- Can be used as wrapper element: Apply `input` class to `<label>` and use `flex items-center gap-2` to include icons, badges, or kbd elements
-- Form control pattern: Wrap with `<label class="form-control">` for labels and helper text
-- Supported input types: text, password, email, number, date, datetime-local, week, month, tel, url, search, time, and datalist
-- Add native `disabled` attribute for disabled state
+- **Required**: Can be used as wrapper element. Apply `input` class to `<label>` with `flex items-center gap-2` to include icons, badges, or kbd elements
+- **Recommended**: Use `<label class="form-control">` wrapper for labels and helper text
+- **Recommended**: Supported input types: text, password, email, number, date, datetime-local, week, month, tel, url, search, time, and datalist

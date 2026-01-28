@@ -1,25 +1,25 @@
 <!--
 TEMPLATE GUIDE:
 This template is for creating high-precision references for the daisyUI skill.
-Omit general information that Claude Code already knows and focus only on daisyUI-specific information.
+Focus on daisyUI-specific information that Claude Code needs for accurate code generation.
 
 【KEY PRINCIPLES】
-- Do NOT document color variants (primary/secondary, etc.) → Claude Code already knows these
-- Do NOT document size variants (xs/sm/md/lg/xl) if they follow standard patterns → Only document special sizes
+- Document ALL class names listed in the official documentation → Provides complete reference
+- Use Type column to classify each class (Component, Part, Style, Color, Size, Modifier, Placement, Behavior)
 - Do NOT document responsive prefixes (`sm:btn-sm`, etc.) → Standard Tailwind functionality
 - Do NOT document simple HTML attributes (disabled, etc.) → Common knowledge
 
 【WHAT TO DOCUMENT】
-1. daisyUI-specific class names (modal-box, modal-backdrop, etc.)
+1. All daisyUI class names with Type classification
 2. Required HTML structure (dialog elements, form method="dialog", etc.)
-3. Component-specific constraints (form tag inside modal-action, etc.)
-4. Browser API integration (element.showModal(), etc.)
+3. Component-specific constraints (e.g., modal-box must be inside modal)
+4. Browser API integration (e.g., element.showModal())
 5. daisyUI-specific modifiers (btn-wide, btn-square, etc.)
 
 How to use:
 1. Replace placeholders like {ComponentName}, {prefix}, etc.
-2. Add official documentation URL ({official_url})
-3. Only add supplementary explanations in Class Reference when official docs are unclear
+2. List all classes from the official documentation in the Class Reference table
+3. Add supplementary notes only when official docs are unclear
 4. Keep only necessary sections in Essential Examples
 5. Delete all unnecessary sections
 -->
@@ -30,31 +30,45 @@ How to use:
 
 ## Class Reference
 
-Official documentation: {official_url}
+| Class name | Type | Description |
+|------------|------|-------------|
+| `{prefix}` | Component | Base class |
+| `{prefix}-{variant}` | Style | {Style description} |
+| `{prefix}-neutral` | Color | Neutral color |
+| `{prefix}-primary` | Color | Primary color |
+| `{prefix}-secondary` | Color | Secondary color |
+| `{prefix}-accent` | Color | Accent color |
+| `{prefix}-info` | Color | Info color |
+| `{prefix}-success` | Color | Success color |
+| `{prefix}-warning` | Color | Warning color |
+| `{prefix}-error` | Color | Error color |
+| `{prefix}-xs` | Size | Extra small |
+| `{prefix}-sm` | Size | Small |
+| `{prefix}-md` | Size | Medium (default) |
+| `{prefix}-lg` | Size | Large |
+| `{prefix}-xl` | Size | Extra large |
+| `{prefix}-{modifier}` | Modifier | {Modifier description} |
+| `{prefix}-{part}` | Part | {Part description - note required parent/child relationships} |
+| `{prefix}-{placement}` | Placement | {Placement description} |
+| `{prefix}-{behavior}` | Behavior | {Behavior description} |
 
 <!--
-【BASIC POLICY】
-Refer to the Class name table in the official documentation.
-Only add supplementary explanations in the following cases:
+【Type classification guidelines】
+- Component: Base class that must be applied to the root element (e.g., `btn`, `modal`, `table`)
+- Part: Child element classes that must be used inside the Component (e.g., `modal-box`, `card-body`, `stat-title`)
+- Style: Visual appearance variants (e.g., `btn-outline`, `btn-ghost`, `btn-link`, `btn-dash`, `btn-soft`)
+- Color: Named color variants (neutral, primary, secondary, accent, info, success, warning, error)
+- Size: Scale options (xs, sm, md, lg, xl)
+- Modifier: Layout or shape adjustments (e.g., `btn-wide`, `btn-block`, `btn-square`, `btn-circle`, `table-zebra`)
+- Placement: Position or direction (e.g., `modal-top`, `modal-bottom`, `tooltip-left`)
+- Behavior: State or interaction classes (e.g., `btn-active`, `btn-disabled`, `modal-open`)
 
-✅ SHOULD document:
-- Detailed explanations for classes with unclear official descriptions
-- Required combinations (e.g., "modal-box must be used inside modal")
-- HTML structure constraints (e.g., "modal-backdrop should be used with form method='dialog'")
-- Browser API integration (e.g., "modal-open is automatically added by dialog.showModal()")
-
-❌ Should NOT document:
-- Simple listing of class names already documented in official docs
-- Type classifications (already in official table)
-- Common color/size variants
-
-If no supplementary notes are needed, keep only "Official documentation: {url}" in this section
+【Notes column guidelines】
+- For Part classes: Note required parent relationships (e.g., "Must be used inside modal")
+- For Modifier/Placement/Behavior: Add brief explanation when not self-evident
+- For Component/Style/Color/Size: Simple description is sufficient
+- Omit Notes column entirely if no classes need supplementary explanation
 -->
-
-<!-- Only include the following when official information is unclear -->
-| Class name | Notes |
-|------------|-------|
-| `{specific-class}` | {Detailed explanation for points unclear in official docs} |
 
 
 ## Essential Examples

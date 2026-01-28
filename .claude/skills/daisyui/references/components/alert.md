@@ -14,8 +14,8 @@ Component for displaying important messages and notifications.
 | `alert-success` | Color | Success color style |
 | `alert-warning` | Color | Warning color style |
 | `alert-error` | Color | Error color style |
-| `alert-vertical` | direction | Vertical layout (mobile-friendly) |
-| `alert-horizontal` | direction | Horizontal layout (desktop-friendly) |
+| `alert-vertical` | direction | Vertical layout for mobile display |
+| `alert-horizontal` | direction | Horizontal layout for desktop display |
 
 ## Essential Examples
 
@@ -27,18 +27,6 @@ Component for displaying important messages and notifications.
     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
   </svg>
   <span>12 unread messages. Tap to see.</span>
-</div>
-```
-
-### Colors and styles
-
-```html
-<div role="alert" class="alert alert-success">
-  <span>Your purchase has been confirmed!</span>
-</div>
-
-<div role="alert" class="alert alert-error alert-outline">
-  <span>Error! Task failed successfully.</span>
 </div>
 ```
 
@@ -74,4 +62,5 @@ Component for displaying important messages and notifications.
 
 ## Notes
 
-- Layout: Use `alert-vertical sm:alert-horizontal` for responsive behavior
+- **Recommended**: Use `alert-vertical sm:alert-horizontal` for responsive behavior
+- **Recommended**: Use `role="alert"` attribute for accessibility

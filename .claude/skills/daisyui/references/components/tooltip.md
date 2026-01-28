@@ -7,12 +7,12 @@ Component for showing additional information on hover.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `tooltip` | Component | Container element |
-| `tooltip-content` | Part | Custom content instead of `data-tip` |
-| `tooltip-top` | Placement | Position above (default) |
-| `tooltip-bottom` | Placement | Position below |
-| `tooltip-left` | Placement | Position to left |
-| `tooltip-right` | Placement | Position to right |
-| `tooltip-open` | Modifier | Force visible |
+| `tooltip-content` | Part | Optional. Setting a div as the content instead of `data-tip` text |
+| `tooltip-top` | Placement | Position tooltip above element (default) |
+| `tooltip-bottom` | Placement | Position tooltip below element |
+| `tooltip-left` | Placement | Position tooltip to left of element |
+| `tooltip-right` | Placement | Position tooltip to right of element |
+| `tooltip-open` | Modifier | Force tooltip to be visible |
 | `tooltip-neutral` | Color | Neutral color |
 | `tooltip-primary` | Color | Primary color |
 | `tooltip-secondary` | Color | Secondary color |
@@ -73,15 +73,8 @@ Component for showing additional information on hover.
 </div>
 ```
 
-### Force open
-
-```html
-<div class="tooltip tooltip-open" data-tip="Always visible">
-  <button class="btn">Open</button>
-</div>
-```
-
 ## Notes
 
-- Custom content: Use `tooltip-content` div for rich content
-- Responsive: Combine with breakpoint classes (e.g., `tooltip-bottom md:tooltip-top`)
+- **Required**: Use `data-tip` attribute for tooltip text content
+- **Recommended**: Use `tooltip-content` div for rich HTML content instead of `data-tip`
+- **Recommended**: Combine with responsive breakpoint classes (e.g., `tooltip-bottom md:tooltip-top`)

@@ -48,5 +48,5 @@ Progress bar for showing task completion or time passage.
 
 ## Notes
 
-- Indeterminate: Omit `value` attribute for loading animation
-- Width: Use Tailwind width classes (e.g., `w-56`, `w-full`)
+- **Recommended**: Omit `value` attribute for indeterminate loading animation
+- **Recommended**: Use Tailwind width classes for sizing (e.g., `w-56`, `w-full`)

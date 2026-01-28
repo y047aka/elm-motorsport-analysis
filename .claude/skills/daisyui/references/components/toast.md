@@ -6,13 +6,13 @@ Notification container that sticks to page corners.
 
 | Class name | Type | Description |
 |------------|------|-------------|
-| `toast` | Component | Fixed position container |
-| `toast-start` | Placement | Align to left |
-| `toast-center` | Placement | Align to center |
-| `toast-end` | Placement | Align to right (default) |
-| `toast-top` | Placement | Align to top |
-| `toast-middle` | Placement | Align to middle |
-| `toast-bottom` | Placement | Align to bottom (default) |
+| `toast` | Component | Container element that sticks to the corner of page |
+| `toast-start` | Placement | Align horizontally to left |
+| `toast-center` | Placement | Align horizontally to center |
+| `toast-end` | Placement | Align horizontally to right (default) |
+| `toast-top` | Placement | Align vertically to top |
+| `toast-middle` | Placement | Align vertically to middle |
+| `toast-bottom` | Placement | Align vertically to bottom (default) |
 
 ## Essential Examples
 
@@ -70,7 +70,6 @@ Notification container that sticks to page corners.
 
 ## Notes
 
-- Position: Combine vertical (`toast-{top|middle|bottom}`) and horizontal (`toast-{start|center|end}`)
-- Content: Typically contains `alert` components
-- Dynamic: Add/remove with JavaScript for notifications
-- Z-index: Positioned above other content by default
+- **Required**: Combine vertical and horizontal placement classes (e.g., `toast-top toast-end`)
+- **Recommended**: Typically contains `alert` components
+- **Recommended**: Add/remove dynamically with JavaScript for notifications

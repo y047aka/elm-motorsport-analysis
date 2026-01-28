@@ -45,15 +45,6 @@ Loading indicator for async operations.
 </button>
 ```
 
-### With colors
-
-```html
-<span class="loading loading-spinner text-primary"></span>
-<span class="loading loading-spinner text-secondary"></span>
-<span class="loading loading-spinner text-accent"></span>
-```
-
 ## Notes
 
-- Colors: Use Tailwind `text-{color}` classes
-- Common use: Inside buttons, overlays, or standalone with text
+- **Recommended**: Use Tailwind `text-{color}` classes for colors

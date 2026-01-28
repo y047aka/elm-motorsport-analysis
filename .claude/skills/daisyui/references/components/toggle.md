@@ -76,5 +76,4 @@ Switch-style checkbox for binary on/off states.
 
 ## Notes
 
-- Use `<label class="label cursor-pointer">` for clickable labels
-- Disabled: Add `disabled` attribute
+- **Recommended**: Wrap with `<label class="label cursor-pointer">` for clickable labels

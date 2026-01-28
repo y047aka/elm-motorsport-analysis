@@ -7,14 +7,14 @@ Component for displaying statistics and metrics.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `stats` | Component | Container for stat blocks |
-| `stat` | Part | Individual stat block |
-| `stat-title` | Part | Title section |
-| `stat-value` | Part | Main value display |
+| `stat` | Part |  Individual stat block (must be inside stats container) |
+| `stat-title` | Part | Title section for the stat |
+| `stat-value` | Part | Main value display (large text) |
 | `stat-desc` | Part | Description section |
-| `stat-figure` | Part | Icon or visual element |
-| `stat-actions` | Part | Action buttons |
+| `stat-figure` | Part | Icon or visual element positioned separately |
+| `stat-actions` | Part | Action buttons section |
 | `stats-horizontal` | direction | Horizontal layout (default) |
-| `stats-vertical` | direction | Vertical layout |
+| `stats-vertical` | direction | Vertical layout for stats |
 
 ## Essential Examples
 
@@ -71,25 +71,8 @@ Component for displaying statistics and metrics.
 </div>
 ```
 
-### Responsive layout
-
-```html
-<div class="stats stats-vertical lg:stats-horizontal shadow">
-  <div class="stat">
-    <div class="stat-title">Downloads</div>
-    <div class="stat-value">31K</div>
-  </div>
-
-  <div class="stat">
-    <div class="stat-title">New Users</div>
-    <div class="stat-value">4,200</div>
-  </div>
-</div>
-```
-
 ## Notes
 
-- Layout: `stats-vertical` or `stats-horizontal` (default)
-- Centering: Add `place-items-center` to individual `stat` elements
-- Combine with Tailwind: `shadow`, background colors, text colors
-- Common parts: `stat-figure` for icons, `stat-actions` for buttons
+- **Recommended**: Use `stats-vertical lg:stats-horizontal` for responsive layouts
+- **Recommended**: Combine with Tailwind utilities like `shadow`, background colors, and text colors
+- **Recommended**: Add `place-items-center` to individual `stat` elements for centered content

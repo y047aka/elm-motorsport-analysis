@@ -7,14 +7,14 @@ Sidebar component controlled by a hidden checkbox.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `drawer` | Component | Wrapper for sidebar and content |
-| `drawer-toggle` | Part | Hidden checkbox controlling state |
+| `drawer-toggle` | Part | Hidden checkbox that controls drawer state |
 | `drawer-content` | Part | Main content area |
 | `drawer-side` | Part | Sidebar area |
-| `drawer-overlay` | Part | Overlay covering page when open |
-| `drawer-end` | Placement | Position drawer on right side |
-| `drawer-open` | Modifier | Force drawer open |
-| `is-drawer-open:` | Variant | Apply styles when open |
-| `is-drawer-close:` | Variant | Apply styles when closed |
+| `drawer-overlay` | Part | Label that covers the page when drawer is open |
+| `drawer-end` | Placement | Position drawer on right side instead of left |
+| `drawer-open` | Modifier | Force drawer to be open (use with responsive modifiers like `lg:drawer-open`) |
+| `is-drawer-open:` | Variant | Apply styles when drawer is open |
+| `is-drawer-close:` | Variant | Apply styles when drawer is closed |
 
 ## Essential Examples
 
@@ -36,9 +36,10 @@ Sidebar component controlled by a hidden checkbox.
 </div>
 ```
 
-### Responsive drawer (mobile overlay, desktop persistent)
+### With structure
 
 ```html
+<!-- Responsive drawer: mobile overlay, desktop persistent -->
 <div class="drawer lg:drawer-open">
   <input id="my-drawer-2" type="checkbox" class="drawer-toggle" />
   <div class="drawer-content flex flex-col">
@@ -87,7 +88,6 @@ Sidebar component controlled by a hidden checkbox.
 
 ## Notes
 
-- Controlled via checkbox: Use matching IDs on `<input>` and `<label>`
-- Position: Add `drawer-end` for right-side drawer
-- Responsive: Use `lg:drawer-open` for persistent desktop sidebar
-- Variants: `is-drawer-open:` and `is-drawer-close:` for conditional styling
+- **Required**: Drawer is controlled via checkbox with matching IDs on `<input>` and `<label>`
+- **Recommended**: Use `lg:drawer-open` for persistent desktop sidebar with mobile overlay
+- **Recommended**: Use `drawer-end` to position drawer on right side

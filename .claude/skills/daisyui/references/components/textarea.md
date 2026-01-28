@@ -30,9 +30,10 @@ Multi-line text input component.
 <textarea class="textarea" placeholder="Bio"></textarea>
 ```
 
-### With label
+### With structure
 
 ```html
+<!-- With label and helper text -->
 <label class="form-control">
   <div class="label">
     <span class="label-text">Your bio</span>
@@ -51,18 +52,8 @@ Multi-line text input component.
 <textarea class="textarea h-32" placeholder="Taller"></textarea>
 ```
 
-### Resize control
-
-```html
-<!-- Vertical resize only (default) -->
-<textarea class="textarea resize-y" placeholder="Resize vertically"></textarea>
-
-<!-- No resize -->
-<textarea class="textarea resize-none" placeholder="No resize"></textarea>
-```
-
 ## Notes
 
-- Use `textarea-bordered` for visible border
-- Height: Control with Tailwind classes (`h-24`, `h-32`, etc.)
-- Resize: `resize-y` (vertical), `resize-none` (disabled), `resize` (both)
+- **Recommended**: Control height with Tailwind classes (`h-24`, `h-32`, etc.)
+- **Recommended**: Use Tailwind resize utilities: `resize-y` (vertical only), `resize-none` (disabled), `resize` (both directions)
+- **Recommended**: Wrap with `<label class="form-control">` for labels and helper text

@@ -7,13 +7,13 @@ Container for grouping and displaying content in an organized way.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `card` | Component | Container element |
-| `card-title` | Part | Title section |
+| `card-title` | Part | Title section within card-body |
 | `card-body` | Part | Content container with padding |
-| `card-actions` | Part | Actions section (buttons, etc.) |
+| `card-actions` | Part | Actions section for buttons or interactive elements |
 | `card-border` | Style | Visible border |
 | `card-dash` | Style | Dashed border |
-| `card-side` | Modifier | Horizontal layout (image on side) |
-| `image-full` | Modifier | Image as background |
+| `card-side` | Modifier | The image in `<figure>` will be on the side |
+| `image-full` | Modifier | The image in `<figure>` element will be the background |
 | `card-xs` | Size | Extra small |
 | `card-sm` | Size | Small |
 | `card-md` | Size | Medium (default) |
@@ -76,6 +76,5 @@ Container for grouping and displaying content in an organized way.
 
 ## Notes
 
-- Use `<figure>` for images
-- Combine with Tailwind: `shadow-xl`, `rounded-box`, background colors
-- Colors: Apply via `bg-{color}` with matching `text-{color}-content`
+- **Recommended**: Use `<figure>` element for images
+- **Recommended**: Combine with Tailwind utilities like `shadow-xl`, `rounded-box`, and background colors

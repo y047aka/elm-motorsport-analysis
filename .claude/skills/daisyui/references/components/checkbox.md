@@ -39,16 +39,10 @@ Checkbox input for boolean selections.
 </label>
 ```
 
-### Disabled state
+### Interactive
 
 ```html
-<input type="checkbox" class="checkbox" disabled />
-<input type="checkbox" class="checkbox" checked disabled />
-```
-
-### Indeterminate state
-
-```html
+<!-- Indeterminate state -->
 <input type="checkbox" class="checkbox" id="indeterminate" />
 <script>
   document.getElementById('indeterminate').indeterminate = true;
@@ -57,4 +51,4 @@ Checkbox input for boolean selections.
 
 ## Notes
 
-- Indeterminate state set via JavaScript
+- **Required**: Indeterminate state must be set via JavaScript `element.indeterminate = true`

@@ -35,9 +35,10 @@ Dropdown selection component for choosing from a list of options.
 </select>
 ```
 
-### With label
+### With structure
 
 ```html
+<!-- With label and helper text -->
 <label class="form-control w-full max-w-xs">
   <div class="label">
     <span class="label-text">Pick the best fantasy franchise</span>
@@ -72,4 +73,4 @@ Dropdown selection component for choosing from a list of options.
 
 ## Notes
 
-- Wrap with `<label class="form-control">` for labels and helper text
+- **Recommended**: Wrap with `<label class="form-control">` for labels and helper text

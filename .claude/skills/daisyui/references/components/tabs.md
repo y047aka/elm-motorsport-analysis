@@ -7,13 +7,13 @@ Tab navigation for switching between views.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `tabs` | Component | Container for tab items |
-| `tab` | Part | Individual tab button |
-| `tab-content` | Part | Content section following a tab |
-| `tabs-box` | Style | Box styling |
-| `tabs-border` | Style | Bottom border styling |
-| `tabs-lift` | Style | Lift effect styling |
-| `tab-active` | Modifier | Active state |
-| `tab-disabled` | Modifier | Disabled state |
+| `tab` | Part | Individual tab button (must be inside tabs container) |
+| `tab-content` | Part | Content section following a tab (used with radio input pattern) |
+| `tabs-box` | Style | Box styling variant |
+| `tabs-border` | Style | Bottom border styling variant |
+| `tabs-lift` | Style | Lift effect styling variant |
+| `tab-active` | Modifier | Active state for tab |
+| `tab-disabled` | Modifier | Disabled state for tab |
 | `tabs-top` | Placement | Puts tab buttons on top of the tab-content (default) |
 | `tabs-bottom` | Placement | Puts tabs under the tab-content |
 | `tabs-xs` | Size | Extra small |
@@ -59,9 +59,10 @@ Tab navigation for switching between views.
 </div>
 ```
 
-### With content (radio inputs)
+### Interactive
 
 ```html
+<!-- With content using radio inputs -->
 <div role="tablist" class="tabs tabs-lift">
   <input type="radio" name="my_tabs" role="tab" class="tab" aria-label="Tab 1" />
   <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
@@ -82,5 +83,6 @@ Tab navigation for switching between views.
 
 ## Notes
 
-- With content: Use radio inputs + `tab-content` for built-in toggle behavior
-- Alternative: Manage active state via JavaScript with `tab-active` class
+- **Required**: For built-in content toggle, use radio inputs with `tab-content` pattern
+- **Recommended**: Manage active state via JavaScript with `tab-active` class for custom implementations
+- **Recommended**: Use `role="tablist"`, `role="tab"`, and `role="tabpanel"` for accessibility

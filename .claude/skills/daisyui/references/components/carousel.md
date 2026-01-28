@@ -7,12 +7,12 @@ Slideshow component for cycling through images or content.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `carousel` | Component | Container element |
-| `carousel-item` | Part | Individual slide |
-| `carousel-start` | Modifier | Snap to start (default) |
-| `carousel-center` | Modifier | Snap to center |
-| `carousel-end` | Modifier | Snap to end |
+| `carousel-item` | Part | Individual slide within carousel |
+| `carousel-start` | Modifier | Snap elements to start (default) |
+| `carousel-center` | Modifier | Snap elements to center |
+| `carousel-end` | Modifier | Snap elements to end |
 | `carousel-horizontal` | direction | Horizontal layout [default] |
-| `carousel-vertical` | direction | Vertical layout |
+| `carousel-vertical` | direction | Vertical scrolling carousel |
 
 ## Essential Examples
 
@@ -72,7 +72,6 @@ Slideshow component for cycling through images or content.
 
 ## Notes
 
-- Uses CSS scroll snap for smooth scrolling
-- Layout: `carousel-center` for centered items with spacing
-- Direction: `carousel-vertical` with appropriate height constraints
-- Navigation: Use anchor links with IDs for slide navigation
+- **Required**: Uses CSS scroll snap for smooth scrolling behavior
+- **Recommended**: Use anchor links with element IDs for slide navigation
+- **Recommended**: For vertical carousel, set appropriate height constraints

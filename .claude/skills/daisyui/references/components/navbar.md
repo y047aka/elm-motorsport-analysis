@@ -7,9 +7,9 @@ Navigation bar component for site headers.
 | Class name | Type | Description |
 |------------|------|-------------|
 | `navbar` | Component | Container element |
-| `navbar-start` | Part | Left section (fills 50% width) |
+| `navbar-start` | Part | For the div inside navbar, to fill 50% of width |
 | `navbar-center` | Part | Center section |
-| `navbar-end` | Part | Right section (fills 50% width) |
+| `navbar-end` | Part | For the div inside navbar, to fill second 50% of width |
 
 ## Essential Examples
 
@@ -21,33 +21,10 @@ Navigation bar component for site headers.
 </div>
 ```
 
-### With menu sections
+### With structure
 
 ```html
-<div class="navbar bg-base-100">
-  <div class="flex-1">
-    <a class="btn btn-ghost text-xl">daisyUI</a>
-  </div>
-  <div class="flex-none">
-    <ul class="menu menu-horizontal px-1">
-      <li><a>Link</a></li>
-      <li>
-        <details>
-          <summary>Parent</summary>
-          <ul class="bg-base-100 rounded-t-none p-2">
-            <li><a>Link 1</a></li>
-            <li><a>Link 2</a></li>
-          </ul>
-        </details>
-      </li>
-    </ul>
-  </div>
-</div>
-```
-
-### Responsive with hamburger menu
-
-```html
+<!-- Responsive with hamburger menu -->
 <div class="navbar bg-base-100">
   <div class="navbar-start">
     <div class="dropdown">
@@ -75,31 +52,31 @@ Navigation bar component for site headers.
 </div>
 ```
 
-### With dropdown avatar
+### With menu sections
 
 ```html
 <div class="navbar bg-base-100">
   <div class="flex-1">
     <a class="btn btn-ghost text-xl">daisyUI</a>
   </div>
-  <div class="flex-none gap-2">
-    <div class="dropdown dropdown-end">
-      <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar">
-        <div class="w-10 rounded-full">
-          <img alt="Avatar" src="avatar.jpg" />
-        </div>
-      </div>
-      <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
-        <li><a>Profile</a></li>
-        <li><a>Settings</a></li>
-        <li><a>Logout</a></li>
-      </ul>
-    </div>
+  <div class="flex-none">
+    <ul class="menu menu-horizontal px-1">
+      <li><a>Link</a></li>
+      <li>
+        <details>
+          <summary>Parent</summary>
+          <ul class="bg-base-100 rounded-t-none p-2">
+            <li><a>Link 1</a></li>
+            <li><a>Link 2</a></li>
+          </ul>
+        </details>
+      </li>
+    </ul>
   </div>
 </div>
 ```
 
 ## Notes
 
-- Responsive: Use dropdown + `lg:hidden` / `lg:flex` pattern for mobile menu
-- Combine with: `menu`, `dropdown`, `btn-ghost` components
+- **Recommended**: For responsive design, use dropdown with `lg:hidden` / `lg:flex` pattern for mobile hamburger menu
+- **Recommended**: Combine with `menu`, `dropdown`, and `btn-ghost` components
