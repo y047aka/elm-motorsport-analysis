@@ -32,18 +32,33 @@ For installation instructions, see the official documentation: https://daisyui.c
 
 ## Component Categories
 
-daisyUI provides components across these categories. Each has a reference file at `references/components/{name}.md`:
+daisyUI provides 60+ components across these categories. Each has a reference file at `references/components/{name}.md`:
 
-| Category | Components |
-|----------|------------|
-| **Actions** | button, dropdown, modal, swap |
-| **Data Display** | card, badge, table, carousel, stats |
-| **Data Input** | input, textarea, select, checkbox, radio, toggle |
-| **Navigation** | navbar, menu, tabs, breadcrumbs |
-| **Feedback** | alert, progress, loading, toast, tooltip |
-| **Layout** | drawer, footer, hero |
+### Actions
+button, dropdown, modal, swap, theme-controller
 
-For component-specific guidance, read `references/components/{component}.md` (e.g., `references/components/button.md`).
+### Data Display
+accordion, avatar, badge, card, carousel, chat-bubble, collapse, countdown, diff, kbd, progress, radial-progress, stat, table, timeline
+
+### Data Input
+checkbox, file-input, input, radio, range, rating, select, textarea, toggle, validator
+
+### Navigation
+breadcrumbs, drawer, link, menu, navbar, pagination, steps, tabs
+
+### Layout
+divider, dock, fab, footer, hero, indicator, join, mask, stack
+
+### Feedback
+alert, loading, skeleton, toast, tooltip
+
+### Mockup Components
+mockup-browser, mockup-code, mockup-phone, mockup-window
+
+### Utilities
+calendar, fieldset, filter, label, list, status
+
+**For component-specific guidance**, read `references/components/{component}.md` (e.g., `references/components/button.md`).
 
 ## Quick Usage
 
@@ -119,12 +134,23 @@ Semantic color classes that adapt to each theme:
 ## When to Consult References
 
 ### Component Documentation
-Each component has its own reference file at `references/components/{component}.md`:
+Each component has its own reference file at `references/components/{component}.md`. All available components:
 
-- alert, badge, breadcrumbs, button, card, carousel, checkbox
-- drawer, dropdown, footer, hero, input, loading, menu
-- modal, navbar, progress, radio, select, stats, swap
-- table, tabs, textarea, toast, toggle, tooltip
+**Actions**: button, dropdown, modal, swap, theme-controller
+
+**Data Display**: accordion, avatar, badge, card, carousel, chat-bubble, collapse, countdown, diff, kbd, progress, radial-progress, stats, table, timeline
+
+**Data Input**: checkbox, file-input, input, radio, range, rating, select, textarea, toggle, validator
+
+**Navigation**: breadcrumbs, drawer, link, menu, navbar, pagination, steps, tabs
+
+**Layout**: divider, dock, fab, footer, hero, indicator, join, mask, stack
+
+**Feedback**: alert, loading, skeleton, toast, tooltip
+
+**Mockup Components**: mockup-browser, mockup-code, mockup-phone, mockup-window
+
+**Utilities**: calendar, fieldset, filter, label, list, status
 
 ### Other References
 - **Theming and customization**: Read `references/theming.md`
