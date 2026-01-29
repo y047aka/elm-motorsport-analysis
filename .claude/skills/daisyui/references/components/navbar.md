@@ -80,3 +80,4 @@ Navigation bar component for site headers.
 
 - **Recommended**: For responsive design, use dropdown with `lg:hidden` / `lg:flex` pattern for mobile hamburger menu
 - **Recommended**: Combine with `menu`, `dropdown`, and `btn-ghost` components
+- **Deprecated since v5**: `btm-nav` → use `dock` component instead for bottom navigation

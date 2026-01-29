@@ -76,3 +76,4 @@ Component for displaying statistics and metrics.
 - **Recommended**: Use `stats-vertical lg:stats-horizontal` for responsive layouts
 - **Recommended**: Combine with Tailwind utilities like `shadow`, background colors, and text colors
 - **Recommended**: Add `place-items-center` to individual `stat` elements for centered content
+- **Changed since v4**: Background is now transparent by default, add `bg-base-100` explicitly if needed

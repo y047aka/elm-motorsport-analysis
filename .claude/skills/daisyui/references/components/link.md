@@ -8,14 +8,7 @@ Styled underline for anchor elements, restoring default link appearance over Tai
 |------------|------|-------------|
 | `link` | Component | Base class adding underline styling to links |
 | `link-hover` | Style | Shows underline only on hover |
-| `link-neutral` | Color | Neutral color |
-| `link-primary` | Color | Primary color |
-| `link-secondary` | Color | Secondary color |
-| `link-accent` | Color | Accent color |
-| `link-success` | Color | Success color |
-| `link-info` | Color | Info color |
-| `link-warning` | Color | Warning color |
-| `link-error` | Color | Error color |
+| `link-{color}` | Color | primary, secondary, accent, neutral, info, success, warning, error |
 
 ## Essential Examples
 

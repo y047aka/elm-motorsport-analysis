@@ -68,3 +68,4 @@ Page bottom navigation and information section.
 
 - **Recommended**: Use `<nav>` elements for link groups with `footer-title` headings
 - **Recommended**: Combine with background colors like `bg-neutral`, `bg-base-200` and matching text colors
+- **Changed since v5**: Vertical layout is now default, use `footer-horizontal` for horizontal layout

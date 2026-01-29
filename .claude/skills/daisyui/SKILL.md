@@ -3,9 +3,11 @@ name: daisyui
 description: Guide for using daisyUI component library with Tailwind CSS for building UI components, theming, and responsive design
 ---
 
-# daisyUI Component Library
+# daisyUI Component Library (v5.x)
 
 Use this skill when building user interfaces with daisyUI and Tailwind CSS, implementing UI components, or configuring themes.
+
+**Current version: daisyUI v5.x** (requires Tailwind CSS v4.x)
 
 ## When to Use This Skill
 
@@ -59,43 +61,6 @@ mockup-browser, mockup-code, mockup-phone, mockup-window
 calendar, fieldset, filter, label, list, status
 
 **For component-specific guidance**, read `references/components/{component}.md` (e.g., `references/components/button.md`).
-
-## Quick Usage
-
-### Button
-
-```html
-<button class="btn btn-primary">Primary Button</button>
-```
-
-### Card
-
-```html
-<div class="card w-96 bg-base-100 shadow-xl">
-  <div class="card-body">
-    <h2 class="card-title">Card Title</h2>
-    <p>Card description text</p>
-  </div>
-</div>
-```
-
-### Modal
-
-```html
-<button class="btn" onclick="my_modal.showModal()">Open Modal</button>
-
-<dialog id="my_modal" class="modal">
-  <div class="modal-box">
-    <h3 class="font-bold text-lg">Modal Title</h3>
-    <p class="py-4">Modal content here</p>
-    <div class="modal-action">
-      <form method="dialog">
-        <button class="btn">Close</button>
-      </form>
-    </div>
-  </div>
-</dialog>
-```
 
 ## Theming
 

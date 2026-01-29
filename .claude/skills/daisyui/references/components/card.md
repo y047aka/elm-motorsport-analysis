@@ -95,3 +95,5 @@ Container for grouping and displaying content in an organized way.
 
 - **Recommended**: Use `<figure>` element for images
 - **Recommended**: Combine with Tailwind utilities like `shadow-xl`, `rounded-box`, and background colors
+- **Deprecated since v5**: `card-bordered` → `card-border`
+- **Deprecated since v5**: `card-compact` → `card-sm`

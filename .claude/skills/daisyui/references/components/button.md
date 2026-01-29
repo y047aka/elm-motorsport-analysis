@@ -74,3 +74,5 @@ Buttons allow the user to take actions or make choices.
 
 - **Recommended**: Can be used with `<a>`, `<input type="button">`, `<input type="submit">` elements
 - **Recommended**: For disabled state, prefer using `disabled` attribute over `btn-disabled` class
+- **Deprecated since v4**: `btn-group` → use `join` with `join-item` instead
+- **Changed since v4**: Uppercase text is no longer default, add `uppercase` class if needed

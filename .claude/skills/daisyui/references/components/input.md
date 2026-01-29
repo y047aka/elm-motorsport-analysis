@@ -97,3 +97,5 @@ Text input component for user data entry.
 - **Required**: Can be used as wrapper element. Apply `input` class to `<label>` with `flex items-center gap-2` to include icons, badges, or kbd elements
 - **Recommended**: Use `<label class="form-control">` wrapper for labels and helper text
 - **Recommended**: Supported input types: text, password, email, number, date, datetime-local, week, month, tel, url, search, time, and datalist
+- **Deprecated since v4**: `input-bordered` → border is now default, use `input-ghost` for borderless
+- **Deprecated since v4**: `input-group` → use `join` with `join-item` instead

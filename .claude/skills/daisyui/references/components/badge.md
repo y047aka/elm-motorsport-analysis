@@ -11,19 +11,8 @@ Small status indicator for labels and counts.
 | `badge-dash` | Style | Dashed outline style |
 | `badge-soft` | Style | Soft background style |
 | `badge-ghost` | Style | Ghost style |
-| `badge-neutral` | Color | Neutral color |
-| `badge-primary` | Color | Primary color |
-| `badge-secondary` | Color | Secondary color |
-| `badge-accent` | Color | Accent color |
-| `badge-info` | Color | Info color |
-| `badge-success` | Color | Success color |
-| `badge-warning` | Color | Warning color |
-| `badge-error` | Color | Error color |
-| `badge-xs` | Size | Extra small |
-| `badge-sm` | Size | Small |
-| `badge-md` | Size | Medium (default) |
-| `badge-lg` | Size | Large |
-| `badge-xl` | Size | Extra large |
+| `badge-{color}` | Color | primary, secondary, accent, neutral, info, success, warning, error |
+| `badge-{size}` | Size | xs, sm, md (default), lg, xl |
 
 ## Essential Examples
 

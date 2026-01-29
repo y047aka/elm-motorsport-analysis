@@ -77,3 +77,4 @@ Displays a user image or placeholder with optional status indicators.
 - **Recommended**: Use negative spacing (`-space-x-6`) on `avatar-group` to create the overlap effect
 - **Recommended**: Use `ring` and `ring-offset` Tailwind utilities for avatar borders
 - **Recommended**: Use `bg-{color} text-{color}-content` for placeholder avatars
+- **Deprecated since v5**: `.avatar .online` → `avatar-online`, `.avatar .offline` → `avatar-offline`, `.avatar .placeholder` → `avatar-placeholder`

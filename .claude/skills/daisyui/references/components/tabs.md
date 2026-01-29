@@ -86,3 +86,5 @@ Tab navigation for switching between views.
 - **Required**: For built-in content toggle, use radio inputs with `tab-content` pattern
 - **Recommended**: Manage active state via JavaScript with `tab-active` class for custom implementations
 - **Recommended**: Use `role="tablist"`, `role="tab"`, and `role="tabpanel"` for accessibility
+- **Deprecated since v4**: `tab-lifted` → `tabs-lifted`, `tab-bordered` → `tabs-bordered`, `tab-boxed` → `tabs-box` (moved to parent)
+- **Deprecated since v4**: `tab-lg/md/sm/xs` → `tabs-lg/md/sm/xs` (moved to parent)

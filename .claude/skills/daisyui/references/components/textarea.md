@@ -57,3 +57,4 @@ Multi-line text input component.
 - **Recommended**: Control height with Tailwind classes (`h-24`, `h-32`, etc.)
 - **Recommended**: Use Tailwind resize utilities: `resize-y` (vertical only), `resize-none` (disabled), `resize` (both directions)
 - **Recommended**: Wrap with `<label class="form-control">` for labels and helper text
+- **Deprecated since v4**: `textarea-bordered` → border is now default, use `textarea-ghost` for borderless
