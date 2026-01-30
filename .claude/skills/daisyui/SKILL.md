@@ -16,18 +16,32 @@ Use this skill when building user interfaces with daisyUI and Tailwind CSS.
 - Configuring or customizing themes
 - Troubleshooting daisyUI styling
 
-## Decision Flow
+## Component Reference
 
-| Building... | Reference |
-|-------------|-----------|
-| Forms (inputs, selects, checkboxes) | `references/forms.md` |
-| Navigation (navbar, menu, tabs) | `references/navigation.md` |
-| Feedback (alerts, toasts, loading) | `references/feedback.md` |
-| Layout (cards, modals, hero) | `references/layout.md` |
-| Data display (tables, stats, badges) | `references/data-display.md` |
-| Complete UI patterns | `references/patterns.md` |
-| Theme configuration | `references/theming.md` |
-| Specific component details | `references/components/{name}.md` |
+### By Category
+
+**Actions**: button, dropdown, modal, swap, theme-controller
+**Data Input**: input, textarea, select, checkbox, radio, toggle, range, rating, file-input, calendar, label, fieldset, validator
+**Data Display**: table, stats, card, badge, avatar, countdown, diff, kbd, list, timeline
+**Navigation**: navbar, menu, tabs, breadcrumbs, pagination, steps, dock, link
+**Feedback**: alert, toast, loading, progress, radial-progress, skeleton, status
+**Layout**: drawer, hero, footer, divider, join, indicator, stack, fab, mask, collapse, accordion, carousel
+
+### Direct Access
+
+- Single component: `references/components/{name}.md`
+- UI pattern: `references/patterns/{name}.md`
+- Theming: `references/theming.md`
+
+### Common Patterns
+
+| Pattern | Use Case |
+|---------|----------|
+| dashboard | Stats + card layout |
+| authentication | Login/signup forms |
+| data-table | Table with actions and pagination |
+| settings-page | Toggle and select preferences |
+| sidebar-navigation | Drawer with menu |
 
 ## Color System
 
