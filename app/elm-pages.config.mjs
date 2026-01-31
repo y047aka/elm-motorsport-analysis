@@ -4,9 +4,7 @@ export default {
   vite: defineConfig({}),
   headTagsTemplate(context) {
     return `
-<link href="https://cdn.jsdelivr.net/npm/daisyui@5" rel="stylesheet" type="text/css" />
 <link rel="stylesheet" href="/style.css" />
-<link rel="stylesheet" href="/output.css" />
 <meta name="generator" content="elm-pages v${context.cliVersion}" />
 `;
   },
