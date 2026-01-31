@@ -1,6 +1,14 @@
 ---
 name: daisyui
-description: Guide for daisyUI v5 component library with Tailwind CSS v4. Use when building UI components, configuring themes, or creating responsive designs. Triggers on: "daisyUI", "button component", "card", "modal", "form", "dashboard layout", "navigation menu", "theme setup", "alert", "table", "tabs".
+description: |
+  Guide for daisyUI v5 component library with Tailwind CSS v4. 
+  
+  **Auto-trigger on:**
+  - Component names: "button", "card", "modal", "table", "tabs", "badge", "alert", "navbar", "form"
+  - Actions: "UI implementation", "daisyUI"
+  - Styling: "theme setup", "dark mode", "responsive design", "component styling"
+  
+  **IMPORTANT:** Always read this skill when implementing or modifying UI components to ensure correct v5 syntax and avoid deprecated patterns from v4.
 ---
 
 # daisyUI Component Library (v5.x)
@@ -9,6 +17,8 @@ Use this skill when building user interfaces with daisyUI and Tailwind CSS.
 
 **Current version: daisyUI v5.x** (requires Tailwind CSS v4.x)
 
+> **Claude's knowledge cutoff warning**: daisyUI v5 has breaking changes from v4. Always reference this skill for correct syntax rather than relying on prior knowledge.
+
 ## When to Use This Skill
 
 - Building UI components with daisyUI
@@ -16,19 +26,67 @@ Use this skill when building user interfaces with daisyUI and Tailwind CSS.
 - Configuring or customizing themes
 - Troubleshooting daisyUI styling
 
-## Workflow: Building a UI Component
+## Quick Start: Installation & Setup
 
-### Step 1: Identify Component Type
-Determine from the Component Reference which component(s) suit the need.
+### Step 1: Install daisyUI
 
-### Step 2: Check Component Documentation
-Navigate to `references/components/{name}.md` for class reference and examples.
+```bash
+npm install -D daisyui
+```
 
-### Step 3: Apply Theming (if needed)
-Refer to `references/theming.md` for color customization.
+### Step 2: Configure CSS (Simplest Form)
 
-### Step 4: Combine into Pattern (if applicable)
-Check `references/patterns/` for pre-built layout patterns.
+```css
+@import "tailwindcss";
+@plugin "daisyui";
+```
+
+This is the **minimal and most reliable** configuration. Use this first, then add options only if needed.
+
+### Step 3: Optional Theme Configuration
+
+For theme customization, see `references/config.md`:
+
+```css
+@import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, dark --prefersdark;
+}
+```
+
+### Step 4: Apply Theme in HTML
+
+```html
+<html data-theme="dark">
+  <div data-theme="light">Theme can be nested</div>
+</html>
+```
+
+## Join Component (Grouping Elements)
+
+When using `join` for grouped elements, add `join-item` to each child:
+
+```html
+<div class="join">
+  <button class="btn join-item">-</button>
+  <span class="badge join-item">5</span>
+  <button class="btn join-item">+</button>
+</div>
+```
+
+## Vite Integration Note
+
+If styles aren't applying with Vite, build CSS separately with Tailwind CLI:
+
+```json
+{
+  "scripts": {
+    "css:build": "npx @tailwindcss/cli -i style.css -o public/style.css --minify",
+    "dev": "npm run css:build && vite",
+    "build": "npm run css:build && vite build"
+  }
+}
+```
 
 ## Component Reference
 
@@ -84,33 +142,37 @@ Most components support sizes:
 {component}-xl    Extra large
 ```
 
-## Quick Theme Setup
+## v4 → v5 Breaking Changes
 
-```css
-@import "tailwindcss";
-@plugin "daisyui" {
-  themes: light --default, dark --prefersdark;
-}
-```
+**CRITICAL**: These patterns from v4 are deprecated in v5:
 
-```html
-<html data-theme="dark">
-  <div data-theme="light">Theme can be nested</div>
-</html>
-```
-
-For advanced theming: `references/theming.md`
+| v4 (Deprecated) | v5 (Current) |
+|-----------------|--------------|
+| `btn-group` | `join` with `join-item` on children |
+| `input-bordered` | `input` (bordered by default) |
+| `input-group` | `join` with `join-item` |
+| `card-bordered` | `card-border` |
+| `card-compact` | `card-sm` |
+| `btm-nav` | `dock` |
+| `tab-lifted` | `tabs-lift` (on parent) |
+| `tab-bordered` | `tabs-border` (on parent) |
+| `tab-boxed` | `tabs-box` (on parent) |
 
 ## Troubleshooting
 
 ### Styles not applying
-- Verify daisyUI is installed: `@plugin "daisyui"` in CSS
-- Check class spelling (e.g., `btn-primary` not `button-primary`)
-- Ensure Tailwind CSS v4.x is used (daisyUI v5 requires it)
+1. Verify daisyUI is installed: `@plugin "daisyui"` in CSS
+2. Check class spelling (e.g., `btn-primary` not `button-primary`)
+3. Ensure Tailwind CSS v4.x is used (daisyUI v5 requires it)
+4. **For Vite**: Build CSS with Tailwind CLI separately (see Vite Integration Note)
 
 ### Theme not changing
 - Verify `data-theme` attribute on `<html>` or container element
 - Check theme is enabled in CSS config
+
+### Classes work in CLI but not in build
+- Vite may not process `@plugin` correctly
+- Solution: Use Tailwind CLI to pre-build CSS to `public/` directory
 
 ## Installation
 

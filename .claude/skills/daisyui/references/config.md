@@ -1,8 +1,19 @@
 # daisyUI Configuration
 
-Configure daisyUI in your CSS file using `@plugin "daisyui" {}`.
+Configure daisyUI in your CSS file.
+
+## Simplest Setup (Recommended Start)
+
+```css
+@import "tailwindcss";
+@plugin "daisyui";
+```
+
+This enables daisyUI with default settings (light + dark themes). Start with this, then add options only if needed.
 
 ## Configuration Options
+
+For customization, use `@plugin "daisyui" { ... }`:
 
 | Option | Default | Type | Description |
 |--------|---------|------|-------------|
