@@ -36,7 +36,7 @@ Check `references/patterns/` for pre-built layout patterns.
 
 **Actions**: button, dropdown, modal, swap, theme-controller
 **Data Input**: input, textarea, select, checkbox, radio, toggle, range, rating, file-input, calendar, label, fieldset, validator
-**Data Display**: table, stats, card, badge, avatar, countdown, diff, kbd, list, timeline
+**Data Display**: table, stats, card, badge, avatar, countdown, diff, kbd, list, timeline, hover-3d, hover-gallery, text-rotate
 **Navigation**: navbar, menu, tabs, breadcrumbs, pagination, steps, dock, link
 **Feedback**: alert, toast, loading, progress, radial-progress, skeleton, status
 **Layout**: drawer, hero, footer, divider, join, indicator, stack, fab, mask, collapse, accordion, carousel
@@ -46,6 +46,9 @@ Check `references/patterns/` for pre-built layout patterns.
 - Single component: `references/components/{name}.md`
 - UI pattern: `references/patterns/{name}.md`
 - Theming: `references/theming.md`
+- Colors: `references/colors.md`
+- Configuration: `references/config.md`
+- Utilities: `references/utilities.md`
 
 ### Common Patterns
 
