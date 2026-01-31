@@ -6,7 +6,7 @@ import DataView
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (css, type_, value)
+import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
@@ -152,9 +152,9 @@ view app { analysis, raceControl } { leaderboardState } =
                         ]
                         []
                     , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                        , basicLabel [] [ text (String.fromInt lapCount) ]
-                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                        [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                        , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
+                        , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
                     , text (Clock.getElapsed clock |> Duration.toString)
                     ]

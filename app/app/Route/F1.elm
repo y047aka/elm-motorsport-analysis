@@ -5,7 +5,7 @@ import Css exposing (displayFlex, justifyContent, spaceBetween)
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled exposing (header, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (css, type_, value)
+import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
@@ -152,9 +152,9 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                         ]
                         []
                     , labeledButton []
-                        [ button [ onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                        , basicLabel [] [ text (String.fromInt lapCount) ]
-                        , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                        [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                        , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
+                        , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                         ]
                     , text (Clock.getElapsed clock |> Duration.toString)
                     ]
