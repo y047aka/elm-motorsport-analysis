@@ -1,0 +1,54 @@
+# Breadcrumbs
+
+Navigation component showing the current page's location in a hierarchy.
+
+## Class Reference
+
+| Class name | Type | Description |
+|------------|------|-------------|
+| `breadcrumbs` | Component | Wrapper around a `<ul>` element |
+
+## Essential Examples
+
+### Basic usage
+
+```html
+<div class="breadcrumbs text-sm">
+  <ul>
+    <li><a>Home</a></li>
+    <li><a>Documents</a></li>
+    <li>Add Document</li>
+  </ul>
+</div>
+```
+
+### With icons
+
+```html
+<div class="breadcrumbs text-sm">
+  <ul>
+    <li>
+      <a>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-4 w-4 stroke-current">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+        </svg>
+        Home
+      </a>
+    </li>
+    <li>
+      <a>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="h-4 w-4 stroke-current">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path>
+        </svg>
+        Documents
+      </a>
+    </li>
+    <li>Add Document</li>
+  </ul>
+</div>
+```
+
+## Notes
+
+- **Required**: Must use `<ul>` list structure with breadcrumbs class
+- **Recommended**: Last item typically not linked (represents current page)

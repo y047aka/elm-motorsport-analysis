@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@plugin "daisyui";
+@source "./**/*.elm";
+@source "../package/**/*.elm";
 
 [data-theme="dark"] {
     --root-bg: oklch(0.2 0 0);
