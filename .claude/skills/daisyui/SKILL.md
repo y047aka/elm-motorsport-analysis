@@ -1,6 +1,6 @@
 ---
 name: daisyui
-description: Guide for using daisyUI component library with Tailwind CSS for building UI components, theming, and responsive design
+description: Guide for daisyUI v5 component library with Tailwind CSS v4. Use when building UI components, configuring themes, or creating responsive designs. Triggers on: "daisyUI", "button component", "card", "modal", "form", "dashboard layout", "navigation menu", "theme setup", "alert", "table", "tabs".
 ---
 
 # daisyUI Component Library (v5.x)
@@ -15,6 +15,20 @@ Use this skill when building user interfaces with daisyUI and Tailwind CSS.
 - Choosing appropriate components for design needs
 - Configuring or customizing themes
 - Troubleshooting daisyUI styling
+
+## Workflow: Building a UI Component
+
+### Step 1: Identify Component Type
+Determine from the Component Reference which component(s) suit the need.
+
+### Step 2: Check Component Documentation
+Navigate to `references/components/{name}.md` for class reference and examples.
+
+### Step 3: Apply Theming (if needed)
+Refer to `references/theming.md` for color customization.
+
+### Step 4: Combine into Pattern (if applicable)
+Check `references/patterns/` for pre-built layout patterns.
 
 ## Component Reference
 
@@ -83,6 +97,17 @@ Most components support sizes:
 ```
 
 For advanced theming: `references/theming.md`
+
+## Troubleshooting
+
+### Styles not applying
+- Verify daisyUI is installed: `@plugin "daisyui"` in CSS
+- Check class spelling (e.g., `btn-primary` not `button-primary`)
+- Ensure Tailwind CSS v4.x is used (daisyUI v5 requires it)
+
+### Theme not changing
+- Verify `data-theme` attribute on `<html>` or container element
+- Check theme is enabled in CSS config
 
 ## Installation
 
