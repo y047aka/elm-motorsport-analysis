@@ -1,8 +1,8 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, backgroundColor, before, hover, property, qt)
+import Css exposing (backgroundColor, before, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, img, li, text)
+import Html.Styled as Html exposing (Html, div, img, table, td, text, tr)
 import Html.Styled.Attributes exposing (alt, class, css, src)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
@@ -24,17 +24,6 @@ type alias Props msg =
 
 view : Props msg -> Html msg
 view props =
-    let
-        carList =
-            props.viewModel.items
-                |> SortedList.toList
-                |> List.map
-                    (\item ->
-                        ( item.metadata.carNumber
-                        , Lazy.lazy2 carRow props.onSelectCar item
-                        )
-                    )
-    in
     div
         [ css
             [ property "height" "100%"
@@ -71,20 +60,21 @@ view props =
                             ]
                         ]
                         [ text (Class.toString class_) ]
-                    , Keyed.node "ul"
-                        [ class "list"
-                        , css
-                            [ property "overflow-y" "scroll" ]
-                        ]
-                        (cars
-                            |> SortedList.toList
-                            |> List.map
-                                (\item ->
-                                    ( item.metadata.carNumber
-                                    , Lazy.lazy2 carRow props.onSelectCar item
-                                    )
+                    , div [ class "overflow-y-auto" ]
+                        [ table [ class "table table-xs" ]
+                            [ Keyed.node "tbody"
+                                []
+                                (cars
+                                    |> SortedList.toList
+                                    |> List.map
+                                        (\item ->
+                                            ( item.metadata.carNumber
+                                            , Lazy.lazy2 carRow props.onSelectCar item
+                                            )
+                                        )
                                 )
-                        )
+                            ]
+                        ]
                     ]
             )
             props.viewModel.itemsByClass
@@ -104,45 +94,50 @@ formatDriverName fullName =
 
 carRow : (ViewModelItem -> msg) -> ViewModelItem -> Html msg
 carRow onSelect item =
-    li
+    tr
         [ onClick (onSelect item)
-        , class "list-row p-0.5 grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2"
-        , css
-            [ property "cursor" "pointer"
-            , property "transition" "background-color 0.2s ease"
-            , after [ property "border" "none" ]
-            , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
-            ]
+        , class "hover:bg-base-200/10 cursor-pointer transition-colors [&>td]:px-1"
         ]
-        [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
-        , div
-            [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
-            , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
-            ]
-            [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
-                Just logoUrl ->
-                    img
-                        [ src logoUrl
-                        , alt (Manufacturer.toString item.metadata.manufacturer)
-                        , class "object-contain"
-                        , css [ property "height" "14px" ]
-                        ]
-                        []
-
-                Nothing ->
-                    div [] [ text "" ]
-            , div [ class "text-center leading-none text-xs font-bold" ]
-                [ text item.metadata.carNumber ]
-            ]
-        , div [ class "text-xs opacity-70" ]
+        [ td [ class "text-center" ] [ text (String.fromInt item.position) ]
+        , td [] [ manufacturerBadge item ]
+        , td [ class "opacity-70 w-full" ]
             [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
-        , div [ class "text-xs text-right" ]
+        , td [ class "text-right" ]
             [ text (Gap.toString item.timing.interval) ]
-        , if item.status == Car.InPit then
-            div
-                [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
-                [ text "P" ]
+        , td []
+            [ if item.status == Car.InPit then
+                pitStatusBadge
 
-          else
-            text ""
+              else
+                text ""
+            ]
         ]
+
+
+manufacturerBadge : ViewModelItem -> Html msg
+manufacturerBadge item =
+    div
+        [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
+        , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
+        ]
+        [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
+            Just logoUrl ->
+                img
+                    [ src logoUrl
+                    , alt (Manufacturer.toString item.metadata.manufacturer)
+                    , class "object-contain h-3.5"
+                    ]
+                    []
+
+            Nothing ->
+                div [] [ text "" ]
+        , div [ class "text-center leading-none font-bold" ]
+            [ text item.metadata.carNumber ]
+        ]
+
+
+pitStatusBadge : Html msg
+pitStatusBadge =
+    Html.span
+        [ class "badge badge-outline badge-xs w-4 h-4 p-0 flex items-center justify-center rounded-full" ]
+        [ text "P" ]
