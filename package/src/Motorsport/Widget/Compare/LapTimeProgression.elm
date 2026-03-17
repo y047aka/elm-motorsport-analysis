@@ -28,16 +28,6 @@ import TypedSvg.Types exposing (Transform(..))
 -- Chart configuration
 
 
-w : Float
-w =
-    1600
-
-
-h : Float
-h =
-    180
-
-
 padding : Float
 padding =
     15
@@ -65,8 +55,8 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
-view clock viewModel selectedCars =
+view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view size clock viewModel selectedCars =
     let
         body =
             case buildClassProgressionData clock viewModel selectedCars of
@@ -74,7 +64,7 @@ view clock viewModel selectedCars =
                     Widget.emptyState message
 
                 Ok classData ->
-                    lapTimeProgressionChart classData.series
+                    lapTimeProgressionChart size classData.series
     in
     div
         [ css
@@ -159,8 +149,8 @@ filterOutlierLaps laps =
 -- Scales
 
 
-xScale : List Lap -> ContinuousScale Float
-xScale laps =
+xScale : { width : Float, height : Float } -> List Lap -> ContinuousScale Float
+xScale size laps =
     let
         ( minTime, maxTime ) =
             laps
@@ -171,11 +161,11 @@ xScale laps =
                         )
                    )
     in
-    Scale.linear ( paddingLeft, w - padding ) ( toFloat minTime, toFloat maxTime )
+    Scale.linear ( paddingLeft, size.width - padding ) ( toFloat minTime, toFloat maxTime )
 
 
-yScale : List Lap -> ContinuousScale Float
-yScale laps =
+yScale : { width : Float, height : Float } -> List Lap -> ContinuousScale Float
+yScale size laps =
     let
         ( minTime, maxTime ) =
             laps
@@ -195,15 +185,15 @@ yScale laps =
             , maxTime + padding_y
             )
     in
-    Scale.linear ( h - paddingBottom, padding ) ( adjustedMin, adjustedMax )
+    Scale.linear ( size.height - paddingBottom, padding ) ( adjustedMin, adjustedMax )
 
 
 
 -- Axes
 
 
-xAxis : List Lap -> Svg msg
-xAxis laps =
+xAxis : { width : Float, height : Float } -> List Lap -> Svg msg
+xAxis size laps =
     let
         axis =
             fromUnstyled <|
@@ -213,7 +203,7 @@ xAxis laps =
                     , tickSizeInner 3
                     , tickFormat (round >> Duration.toString)
                     ]
-                    (xScale laps)
+                    (xScale size laps)
     in
     g
         [ SvgAttr.css
@@ -231,13 +221,13 @@ xAxis laps =
                     ]
                 ]
             ]
-        , transform [ Translate 0 (h - paddingBottom) ]
+        , transform [ Translate 0 (size.height - paddingBottom) ]
         ]
         [ axis ]
 
 
-yAxis : List Lap -> Svg msg
-yAxis laps =
+yAxis : { width : Float, height : Float } -> List Lap -> Svg msg
+yAxis size laps =
     let
         axis =
             fromUnstyled <|
@@ -247,7 +237,7 @@ yAxis laps =
                     , tickSizeInner 5
                     , tickFormat (round >> Duration.toString)
                     ]
-                    (yScale laps)
+                    (yScale size laps)
     in
     g
         [ SvgAttr.css
@@ -274,25 +264,25 @@ yAxis laps =
 -- Rendering
 
 
-lapTimeProgressionChart : List LapTimeSeries -> Html msg
-lapTimeProgressionChart series =
+lapTimeProgressionChart : { width : Float, height : Float } -> List LapTimeSeries -> Html msg
+lapTimeProgressionChart size series =
     let
         allLaps =
             series |> List.concatMap .laps
     in
     svg
         [ SvgAttr.width "100%"
-        , viewBox 0 0 w h
+        , viewBox 0 0 size.width size.height
         ]
-        ([ xAxis allLaps
-         , yAxis allLaps
+        ([ xAxis size allLaps
+         , yAxis size allLaps
          ]
-            ++ (series |> List.map (renderLapSeries allLaps))
+            ++ (series |> List.map (renderLapSeries size allLaps))
         )
 
 
-renderLapSeries : List Lap -> LapTimeSeries -> Svg msg
-renderLapSeries allLaps series =
+renderLapSeries : { width : Float, height : Float } -> List Lap -> LapTimeSeries -> Svg msg
+renderLapSeries size allLaps series =
     let
         dataPoints =
             series.laps
@@ -300,10 +290,10 @@ renderLapSeries allLaps series =
                     (\{ time, elapsed } ->
                         ( elapsed
                             |> toFloat
-                            |> Scale.convert (xScale allLaps)
+                            |> Scale.convert (xScale size allLaps)
                         , time
                             |> toFloat
-                            |> Scale.convert (yScale allLaps)
+                            |> Scale.convert (yScale size allLaps)
                         )
                     )
 

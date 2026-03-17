@@ -288,7 +288,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     ]
                                 ]
                                 [ Html.map CompareWidgetMsg <|
-                                    Lazy.lazy2 CompareWidget.viewCharts compareProps m.compare
+                                    Lazy.lazy3 CompareWidget.viewCharts { width = 1600, height = 180 } compareProps m.compare
                                 ]
                             , div
                                 [ css

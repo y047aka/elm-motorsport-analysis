@@ -78,8 +78,8 @@ type alias Props =
 -- VIEW
 
 
-viewCharts : Props -> Model -> Html Msg
-viewCharts props model =
+viewCharts : { width : Float, height : Float } -> Props -> Model -> Html Msg
+viewCharts size props model =
     let
         selectedCars =
             resolveCars model.selectedCars props.viewModel
@@ -93,7 +93,7 @@ viewCharts props model =
             ]
         ]
         [ viewChartTabs model.activeChart
-        , viewActiveChart model.activeChart props selectedCars
+        , viewActiveChart model.activeChart size props selectedCars
         ]
 
 
@@ -124,17 +124,19 @@ chartTabButton label chart isActive =
         [ text label ]
 
 
-viewActiveChart : ActiveChart -> Props -> List ViewModelItem -> Html Msg
-viewActiveChart activeChart props selectedCars =
+viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List ViewModelItem -> Html Msg
+viewActiveChart activeChart size props selectedCars =
     case activeChart of
         PositionProgressionChart ->
             PositionProgression.view
+                size
                 props.clock
                 props.viewModel
                 selectedCars
 
         LapTimeProgressionChart ->
             LapTimeProgression.view
+                size
                 props.clock
                 props.viewModel
                 selectedCars
@@ -150,6 +152,7 @@ viewActiveChart activeChart props selectedCars =
                                 NonEmpty.head cars
                         in
                         CloseBattles.closeBattleItem
+                            size
                             { cars = cars
                             , position = leader.position
                             }
@@ -157,7 +160,7 @@ viewActiveChart activeChart props selectedCars =
                 |> Maybe.withDefault (text "")
 
         BoxPlotChart ->
-            BoxPlot.view props.analysis selectedCars
+            BoxPlot.view size props.analysis selectedCars
 
 
 resolveCars : List String -> ViewModel -> List ViewModelItem

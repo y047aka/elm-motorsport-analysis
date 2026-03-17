@@ -22,13 +22,13 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-view : Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
-view clock viewModel selectedCars =
+view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view size clock viewModel selectedCars =
     let
         body =
             case buildClassProgressionData clock viewModel selectedCars of
                 Ok series ->
-                    positionProgressionChart series
+                    positionProgressionChart size series
 
                 Err message ->
                     Widget.emptyState message
@@ -97,16 +97,6 @@ type alias PositionSeries =
     }
 
 
-chartWidth : Float
-chartWidth =
-    1600
-
-
-chartHeight : Float
-chartHeight =
-    180
-
-
 chartPadding : Float
 chartPadding =
     15
@@ -143,20 +133,20 @@ calculateLapThreshold clock viewModel =
         |> Maybe.withDefault 1
 
 
-positionProgressionChart : List PositionSeries -> Html msg
-positionProgressionChart series =
+positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
+positionProgressionChart size series =
     let
         allPoints =
             series |> List.concatMap .points
     in
     svg
         [ SvgAttr.width "100%"
-        , viewBox 0 0 chartWidth chartHeight
+        , viewBox 0 0 size.width size.height
         ]
-        ([ xAxis allPoints
-         , yAxis allPoints
+        ([ xAxis size allPoints
+         , yAxis size allPoints
          ]
-            ++ (series |> List.map (renderPositionLine allPoints))
+            ++ (series |> List.map (renderPositionLine size allPoints))
         )
 
 
@@ -170,8 +160,8 @@ buildPositionPoints lapThreshold item =
             )
 
 
-xScale : List PositionPoint -> ContinuousScale Float
-xScale positions =
+xScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
+xScale size positions =
     let
         ( minLap, maxLap ) =
             positions
@@ -182,11 +172,11 @@ xScale positions =
                         )
                    )
     in
-    Scale.linear ( chartPaddingLeft, chartWidth - chartPadding ) ( toFloat minLap, toFloat maxLap )
+    Scale.linear ( chartPaddingLeft, size.width - chartPadding ) ( toFloat minLap, toFloat maxLap )
 
 
-yScale : List PositionPoint -> ContinuousScale Float
-yScale positions =
+yScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
+yScale size positions =
     let
         allPositions =
             positions |> List.map .position
@@ -205,11 +195,11 @@ yScale positions =
         adjustedMax =
             maxPos + paddingY
     in
-    Scale.linear ( chartHeight - chartPaddingBottom, chartPadding ) ( toFloat adjustedMax, toFloat adjustedMin )
+    Scale.linear ( size.height - chartPaddingBottom, chartPadding ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
-xAxis : List PositionPoint -> Svg msg
-xAxis positions =
+xAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
+xAxis size positions =
     let
         axis =
             fromUnstyled <|
@@ -219,7 +209,7 @@ xAxis positions =
                     , tickSizeInner 3
                     , tickFormat (round >> String.fromInt)
                     ]
-                    (xScale positions)
+                    (xScale size positions)
     in
     g
         [ SvgAttr.css
@@ -237,13 +227,13 @@ xAxis positions =
                     ]
                 ]
             ]
-        , transform [ Translate 0 (chartHeight - chartPaddingBottom) ]
+        , transform [ Translate 0 (size.height - chartPaddingBottom) ]
         ]
         [ axis ]
 
 
-yAxis : List PositionPoint -> Svg msg
-yAxis positions =
+yAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
+yAxis size positions =
     let
         allPositions =
             positions |> List.map .position
@@ -262,7 +252,7 @@ yAxis positions =
                     , tickSizeInner 5
                     , tickFormat (round >> String.fromInt)
                     ]
-                    (yScale positions)
+                    (yScale size positions)
     in
     g
         [ SvgAttr.css
@@ -285,8 +275,8 @@ yAxis positions =
         [ axis ]
 
 
-renderPositionLine : List PositionPoint -> PositionSeries -> Svg msg
-renderPositionLine allPoints series =
+renderPositionLine : { width : Float, height : Float } -> List PositionPoint -> PositionSeries -> Svg msg
+renderPositionLine size allPoints series =
     let
         dataPoints =
             series.points
@@ -294,10 +284,10 @@ renderPositionLine allPoints series =
                     (\{ lapNumber, position } ->
                         ( lapNumber
                             |> toFloat
-                            |> Scale.convert (xScale allPoints)
+                            |> Scale.convert (xScale size allPoints)
                         , position
                             |> toFloat
-                            |> Scale.convert (yScale allPoints)
+                            |> Scale.convert (yScale size allPoints)
                         )
                     )
 

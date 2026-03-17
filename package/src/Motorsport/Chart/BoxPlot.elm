@@ -5,7 +5,6 @@ import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
-import Html.Styled.Attributes exposing (attribute)
 import List.Extra as ListExtra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Duration as Duration
@@ -20,16 +19,6 @@ import Svg.Styled.Attributes as SvgAttributes
 import TypedSvg.Styled.Attributes as TypedSvgAttributes
 import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..), px)
-
-
-chartWidth : Float
-chartWidth =
-    600
-
-
-chartHeight : Float
-chartHeight =
-    180
 
 
 padding : Float
@@ -57,11 +46,11 @@ type alias BoxStats =
     }
 
 
-xScale : List String -> BandScale String
-xScale carNumbers =
+xScale : { width : Float, height : Float } -> List String -> BandScale String
+xScale size carNumbers =
     Scale.band
         { defaultBandConfig | paddingInner = 0.2, paddingOuter = 0.1 }
-        ( paddingLeft, chartWidth - padding )
+        ( paddingLeft, size.width - padding )
         carNumbers
 
 
@@ -81,8 +70,8 @@ type alias CarBoxPlot =
     }
 
 
-view : Analysis -> List ViewModelItem -> Html msg
-view analysis selectedCars =
+view : { width : Float, height : Float } -> Analysis -> List ViewModelItem -> Html msg
+view size analysis selectedCars =
     let
         carBoxPlots =
             selectedCars
@@ -99,26 +88,24 @@ view analysis selectedCars =
             selectedCars |> List.map (.metadata >> .carNumber)
 
         yScale_ =
-            computeGlobalYScale analysis carBoxPlots
+            computeGlobalYScale size analysis carBoxPlots
 
         xScale_ =
-            xScale carNumbers
+            xScale size carNumbers
     in
     svg
-        [ TypedSvgAttributes.viewBox 0 0 chartWidth chartHeight
+        [ TypedSvgAttributes.viewBox 0 0 size.width size.height
         , SvgAttributes.width "100%"
-        , SvgAttributes.height (String.fromFloat chartHeight)
-        , attribute "preserveAspectRatio" "none"
         ]
         [ yAxis yScale_
-        , xAxis xScale_
+        , xAxis size xScale_
         , g []
             (carBoxPlots |> List.map (renderCarBoxPlot xScale_ yScale_ analysis))
         ]
 
 
-xAxis : BandScale String -> Svg msg
-xAxis scale =
+xAxis : { width : Float, height : Float } -> BandScale String -> Svg msg
+xAxis size scale =
     let
         axis =
             fromUnstyled <|
@@ -129,7 +116,7 @@ xAxis scale =
                     (Scale.toRenderable identity scale)
     in
     g
-        [ TypedSvgAttributes.transform [ Translate 0 (chartHeight - paddingBottom) ]
+        [ TypedSvgAttributes.transform [ Translate 0 (size.height - paddingBottom) ]
         , SvgAttributes.css
             [ descendants
                 [ Css.Global.typeSelector "text"
@@ -240,8 +227,8 @@ computeStatistics laps =
     }
 
 
-computeGlobalYScale : Analysis -> List CarBoxPlot -> ContinuousScale Float
-computeGlobalYScale { fastestLapTime, slowestLapTime } carBoxPlots =
+computeGlobalYScale : { width : Float, height : Float } -> Analysis -> List CarBoxPlot -> ContinuousScale Float
+computeGlobalYScale size { fastestLapTime, slowestLapTime } carBoxPlots =
     let
         allValues =
             carBoxPlots
@@ -259,7 +246,7 @@ computeGlobalYScale { fastestLapTime, slowestLapTime } carBoxPlots =
                 |> Maybe.withDefault (toFloat slowestLapTime)
                 |> max (toFloat fastestLapTime * 1.07)
     in
-    Scale.linear ( chartHeight - paddingBottom, padding ) ( minValue, maxValue )
+    Scale.linear ( size.height - paddingBottom, padding ) ( minValue, maxValue )
 
 
 renderCarBoxPlot : BandScale String -> ContinuousScale Float -> Analysis -> CarBoxPlot -> Svg msg
