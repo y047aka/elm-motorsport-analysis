@@ -106,29 +106,9 @@ closeBattleItem size { cars } =
                 [ Css.borderTop3 (px 1) Css.solid (Css.hsl 0 0 0.4) ]
             ]
         ]
-        [ battleHeaderView cars
-        , battleChart size cars
+        [ battleChart size cars
         , lapTimeComparison cars
         ]
-
-
-battleHeaderView : NonEmpty ViewModelItem -> Html msg
-battleHeaderView cars =
-    let
-        carNumbers =
-            cars
-                |> NonEmpty.toList
-                |> List.map (.metadata >> .carNumber)
-                |> String.join " - "
-    in
-    div
-        [ css
-            [ Css.fontSize (px 14)
-            , Css.fontWeight Css.bold
-            , Css.color (Css.hsl 0 0 0.9)
-            ]
-        ]
-        [ text carNumbers ]
 
 
 lapTimeComparison : NonEmpty ViewModelItem -> Html msg
@@ -434,7 +414,7 @@ xAxis size gapPoints =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -468,7 +448,7 @@ yAxis size gapPoints =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"

@@ -132,7 +132,7 @@ viewWithConfig direction config vm =
     in
     svg
         [ viewBox 0 0 w h
-        , css [ Css.maxWidth (Css.pct 40), Css.maxHeight (Css.pct 100) ]
+        , css [ Css.maxWidth (Css.pct 50), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config vm

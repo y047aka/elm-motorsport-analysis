@@ -254,7 +254,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 , padding (px 10)
                                 , property "display" "grid"
                                 , property "grid-template-columns" "300px 1fr"
-                                , property "grid-template-rows" "1fr auto 135px"
+                                , property "grid-template-rows" "minmax(0, 1fr) auto 135px"
                                 , property "row-gap" "10px"
                                 , property "column-gap" "10px"
                                 ]
@@ -288,7 +288,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     ]
                                 ]
                                 [ Html.map CompareWidgetMsg <|
-                                    Lazy.lazy3 CompareWidget.viewCharts { width = 1600, height = 180 } compareProps m.compare
+                                    Lazy.lazy3 CompareWidget.viewCharts { width = 1200, height = 200 } compareProps m.compare
                                 ]
                             , div
                                 [ css

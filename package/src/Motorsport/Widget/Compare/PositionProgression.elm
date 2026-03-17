@@ -4,8 +4,8 @@ import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html.Styled as Html exposing (Html, div)
+import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer as Manufacturer
@@ -35,14 +35,11 @@ view size clock viewModel selectedCars =
     in
     div
         [ css
-            [ Css.property "display" "grid"
-            , Css.property "row-gap" "8px"
-            , Css.property "padding-top" "12px"
+            [ Css.property "padding-top" "12px"
             , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
             ]
         ]
-        [ Html.div [ class "text-sm font-semibold" ] [ text "Position Progression" ]
-        , body
+        [ body
         ]
 
 
@@ -216,7 +213,7 @@ xAxis size positions =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -259,7 +256,7 @@ yAxis size positions =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -301,10 +298,10 @@ renderPositionLine size allPoints series =
 
         strokeWidth =
             if series.isSelected then
-                "1.5"
+                "2"
 
             else
-                "1"
+                "1.2"
 
         opacity =
             if series.isSelected then
@@ -328,10 +325,10 @@ renderPositionLine size allPoints series =
                             radius =
                                 if series.isSelected then
                                     if index == totalPoints - 1 then
-                                        2.5
+                                        3.0
 
                                     else
-                                        1.5
+                                        2.0
 
                                 else
                                     0.8
@@ -342,7 +339,15 @@ renderPositionLine size allPoints series =
                             , InPx.r radius
                             , SvgAttr.css
                                 [ Css.fill series.color
-                                , Css.opacity (num (if series.isSelected then 1 else 0.4))
+                                , Css.opacity
+                                    (num
+                                        (if series.isSelected then
+                                            1
+
+                                         else
+                                            0.4
+                                        )
+                                    )
                                 ]
                             ]
                             []

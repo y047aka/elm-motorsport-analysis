@@ -121,7 +121,7 @@ xAxis size scale =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 10)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -155,7 +155,7 @@ yAxis scale =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"

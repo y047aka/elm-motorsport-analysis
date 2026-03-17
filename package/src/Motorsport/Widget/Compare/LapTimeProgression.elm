@@ -4,8 +4,8 @@ import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html.Styled as Html exposing (Html, div)
+import Html.Styled.Attributes exposing (css)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -68,14 +68,11 @@ view size clock viewModel selectedCars =
     in
     div
         [ css
-            [ Css.property "display" "grid"
-            , Css.property "row-gap" "8px"
-            , Css.property "padding-top" "12px"
+            [ Css.property "padding-top" "12px"
             , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
             ]
         ]
-        [ Html.div [ class "text-sm font-semibold" ] [ text "Lap Time Progression" ]
-        , body
+        [ body
         ]
 
 
@@ -210,7 +207,7 @@ xAxis size laps =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -244,7 +241,7 @@ yAxis size laps =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -307,10 +304,10 @@ renderLapSeries size allLaps series =
 
         strokeWidth =
             if series.isSelected then
-                "1.5"
+                "2"
 
             else
-                "1"
+                "1.2"
 
         opacity =
             if series.isSelected then
@@ -334,10 +331,10 @@ renderLapSeries size allLaps series =
                             radius =
                                 case ( series.isSelected, index == totalPoints - 1 ) of
                                     ( True, True ) ->
-                                        2.5
+                                        3.0
 
                                     ( True, False ) ->
-                                        1.5
+                                        2.0
 
                                     _ ->
                                         0.8
