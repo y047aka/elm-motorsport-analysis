@@ -226,7 +226,7 @@ view app { eventSummary, analysis, raceControl } m =
                     }
                 """ ]
             , main_
-                [ attribute "data-theme" "dark"
+                [ attribute "data-theme" "forest"
                 , css
                     [ height (pct 100)
                     , property "display" "grid"

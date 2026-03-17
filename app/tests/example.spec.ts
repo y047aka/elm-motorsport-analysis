@@ -8,7 +8,7 @@ const WAIT_TIMEOUT = 5000;
  * @param contentSelector ページ固有のコンテンツを示すセレクター
  */
 async function waitForPageReady(page: Page, contentSelector: string) {
-  await page.locator('[data-theme="dark"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  await page.locator('[data-theme="forest"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   await page.locator(contentSelector).waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   await page.evaluate(() => document.fonts.ready);
 }
