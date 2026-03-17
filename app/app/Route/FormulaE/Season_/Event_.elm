@@ -7,7 +7,7 @@ import Data.Series as Series
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (css, src, type_, value)
+import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
@@ -218,8 +218,8 @@ header { eventSummary, raceControl } =
 
                     _ ->
                         labeledButton []
-                            [ button [ onClick (RaceControlMsg (RaceControl.SkipTime (10 * 1000))) ] [ text "+10s" ]
-                            , button [ onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
+                            [ button [ class "join-item", onClick (RaceControlMsg (RaceControl.SkipTime (10 * 1000))) ] [ text "+10s" ]
+                            , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+1 Lap" ]
                             ]
                 ]
             , statusBar raceControl

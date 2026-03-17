@@ -1,15 +1,14 @@
 @import "tailwindcss";
-@plugin "daisyui";
+@plugin "daisyui" {
+  themes: light --default, forest --prefersdark;
+}
 @source "./**/*.elm";
 @source "../package/**/*.elm";
 
-[data-theme="dark"] {
-    --root-bg: oklch(0.2 0 0);
-    --btn-color: oklch(1 0 0 / 0.2);
+[data-theme="forest"]{
+    --color-base-100: oklch(0.2 0 0);
 
     --widget-bg: oklch(1 0 0 / 0.04);
-
-    --half-modal-bg: oklch(0.3 0 0 / 0.8);
 
     --performance-standard: oklch(0.8652 0.1768 90.38);
     --performance-personal-best: oklch(0.7323 0.249195 142.4953);

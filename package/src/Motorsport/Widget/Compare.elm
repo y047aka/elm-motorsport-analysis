@@ -3,7 +3,7 @@ module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, 
 import Css exposing (backgroundColor, before, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled as Html exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (css, src)
+import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import List.NonEmpty as NonEmpty
@@ -206,43 +206,23 @@ carSelectorItem model item =
                 "0.5"
     in
     div
-        [ css
-            [ property "padding" "4px"
-            , property "border" borderStyle
-            , property "border-radius" "4px"
+        [ class "stat px-0 py-1 place-items-center gap-1 rounded cursor-pointer"
+        , css
+            [ property "border" borderStyle
             , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / " ++ opacity ++ ")")
-            , property "display" "flex"
-            , property "flex-direction" "column"
-            , property "align-items" "center"
-            , property "justify-content" "space-between"
-            , property "gap" "4px"
-            , property "cursor" "pointer"
             , property "transition" "all 0.2s"
             ]
         , onClick (ToggleCar item.metadata.carNumber)
         ]
         [ -- Position
           div
-            [ css
-                [ property "font-size" "9px"
-                , property "font-weight" "700"
-                , property "line-height" "1"
-                , property "color" "hsl(0 0% 100%)"
-                , property "opacity" "0.8"
-                ]
-            ]
+            [ class "stat-title text-[9px] leading-none" ]
             [ text ("P" ++ String.fromInt item.position) ]
         , -- Manufacturer logo
           manufacturerLogo item.metadata.manufacturer
         , -- Car number
           div
-            [ css
-                [ property "font-size" "12px"
-                , property "font-weight" "700"
-                , property "line-height" "1"
-                , property "color" "hsl(0 0% 100%)"
-                ]
-            ]
+            [ class "stat-value text-xs leading-none" ]
             [ text item.metadata.carNumber ]
         ]
 

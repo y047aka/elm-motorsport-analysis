@@ -16,3 +16,6 @@ elm-stuff
 
 # elm-verify-examples generated files
 VerifyExamples
+
+# Generated CSS
+app/public/style.css
