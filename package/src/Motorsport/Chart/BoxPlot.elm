@@ -1,10 +1,11 @@
 module Motorsport.Chart.BoxPlot exposing (view)
 
 import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Css exposing (Color, height, width)
+import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
+import Html.Styled.Attributes exposing (attribute)
 import List.Extra as ListExtra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Duration as Duration
@@ -23,7 +24,7 @@ import TypedSvg.Types exposing (Transform(..), px)
 
 chartWidth : Float
 chartWidth =
-    300
+    600
 
 
 chartHeight : Float
@@ -105,7 +106,9 @@ view analysis selectedCars =
     in
     svg
         [ TypedSvgAttributes.viewBox 0 0 chartWidth chartHeight
-        , SvgAttributes.css [ width (Css.px chartWidth), height (Css.px chartHeight) ]
+        , SvgAttributes.width "100%"
+        , SvgAttributes.height (String.fromFloat chartHeight)
+        , attribute "preserveAspectRatio" "none"
         ]
         [ yAxis yScale_
         , xAxis xScale_

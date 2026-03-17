@@ -46,7 +46,7 @@ type alias CarGapData =
 
 w : Float
 w =
-    320
+    1600
 
 
 h : Float
@@ -299,8 +299,7 @@ battleChart cars =
                 |> List.concatMap .gapData
     in
     svg
-        [ InPx.width w
-        , InPx.height h
+        [ SvgAttr.width "100%"
         , TSA.viewBox 0 0 w h
         ]
         ([ xAxis allGapPoints

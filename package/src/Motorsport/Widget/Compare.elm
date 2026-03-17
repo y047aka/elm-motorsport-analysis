@@ -2,7 +2,7 @@ module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, 
 
 import Css exposing (backgroundColor, before, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, img, text)
+import Html.Styled as Html exposing (Html, button, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
@@ -23,17 +23,29 @@ import SortedList
 -- TYPES
 
 
+type ActiveChart
+    = PositionProgressionChart
+    | LapTimeProgressionChart
+    | CloseBattlesChart
+    | BoxPlotChart
+
+
 type alias Model =
-    { selectedCars : List String }
+    { selectedCars : List String
+    , activeChart : ActiveChart
+    }
 
 
 init : Model
 init =
-    { selectedCars = [] }
+    { selectedCars = []
+    , activeChart = PositionProgressionChart
+    }
 
 
 type Msg
     = ToggleCar String
+    | SwitchChart ActiveChart
 
 
 update : Msg -> Model -> Model
@@ -41,10 +53,13 @@ update msg model =
     case msg of
         ToggleCar carNumber ->
             if List.member carNumber model.selectedCars then
-                { selectedCars = List.filter ((/=) carNumber) model.selectedCars }
+                { model | selectedCars = List.filter ((/=) carNumber) model.selectedCars }
 
             else
-                { selectedCars = model.selectedCars ++ [ carNumber ] }
+                { model | selectedCars = model.selectedCars ++ [ carNumber ] }
+
+        SwitchChart chart ->
+            { model | activeChart = chart }
 
 
 
@@ -74,34 +89,75 @@ viewCharts props model =
         [ css
             [ property "display" "flex"
             , property "flex-direction" "column"
-            , property "gap" "12px"
+            , property "gap" "8px"
             ]
         ]
-        [ PositionProgression.view
-            props.clock
-            props.viewModel
-            selectedCars
-        , LapTimeProgression.view
-            props.clock
-            props.viewModel
-            selectedCars
-        , selectedCars
-            |> List.sortBy .position
-            |> NonEmpty.fromList
-            |> Maybe.map
-                (\cars ->
-                    let
-                        leader =
-                            NonEmpty.head cars
-                    in
-                    CloseBattles.closeBattleItem
-                        { cars = cars
-                        , position = leader.position
-                        }
-                )
-            |> Maybe.withDefault (text "")
-        , BoxPlot.view props.analysis selectedCars
+        [ viewChartTabs model.activeChart
+        , viewActiveChart model.activeChart props selectedCars
         ]
+
+
+viewChartTabs : ActiveChart -> Html Msg
+viewChartTabs activeChart =
+    div [ class "join" ]
+        [ chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
+        , chartTabButton "Lap Time" LapTimeProgressionChart (activeChart == LapTimeProgressionChart)
+        , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
+        , chartTabButton "Box Plot" BoxPlotChart (activeChart == BoxPlotChart)
+        ]
+
+
+chartTabButton : String -> ActiveChart -> Bool -> Html Msg
+chartTabButton label chart isActive =
+    button
+        [ onClick (SwitchChart chart)
+        , class
+            ("join-item btn btn-sm btn-soft"
+                ++ (if isActive then
+                        " btn-active"
+
+                    else
+                        ""
+                   )
+            )
+        ]
+        [ text label ]
+
+
+viewActiveChart : ActiveChart -> Props -> List ViewModelItem -> Html Msg
+viewActiveChart activeChart props selectedCars =
+    case activeChart of
+        PositionProgressionChart ->
+            PositionProgression.view
+                props.clock
+                props.viewModel
+                selectedCars
+
+        LapTimeProgressionChart ->
+            LapTimeProgression.view
+                props.clock
+                props.viewModel
+                selectedCars
+
+        CloseBattlesChart ->
+            selectedCars
+                |> List.sortBy .position
+                |> NonEmpty.fromList
+                |> Maybe.map
+                    (\cars ->
+                        let
+                            leader =
+                                NonEmpty.head cars
+                        in
+                        CloseBattles.closeBattleItem
+                            { cars = cars
+                            , position = leader.position
+                            }
+                    )
+                |> Maybe.withDefault (text "")
+
+        BoxPlotChart ->
+            BoxPlot.view props.analysis selectedCars
 
 
 resolveCars : List String -> ViewModel -> List ViewModelItem

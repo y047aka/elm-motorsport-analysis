@@ -99,7 +99,7 @@ type alias PositionSeries =
 
 chartWidth : Float
 chartWidth =
-    320
+    1600
 
 
 chartHeight : Float
@@ -150,8 +150,7 @@ positionProgressionChart series =
             series |> List.concatMap .points
     in
     svg
-        [ InPx.width chartWidth
-        , InPx.height chartHeight
+        [ SvgAttr.width "100%"
         , viewBox 0 0 chartWidth chartHeight
         ]
         ([ xAxis allPoints

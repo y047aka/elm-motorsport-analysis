@@ -30,7 +30,7 @@ import TypedSvg.Types exposing (Transform(..))
 
 w : Float
 w =
-    320
+    1600
 
 
 h : Float
@@ -281,8 +281,7 @@ lapTimeProgressionChart series =
             series |> List.concatMap .laps
     in
     svg
-        [ InPx.width w
-        , InPx.height h
+        [ SvgAttr.width "100%"
         , viewBox 0 0 w h
         ]
         ([ xAxis allLaps

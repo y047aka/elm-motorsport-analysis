@@ -253,14 +253,15 @@ view app { eventSummary, analysis, raceControl } m =
                                 , overflowY hidden
                                 , padding (px 10)
                                 , property "display" "grid"
-                                , property "grid-template-columns" "300px 1fr 300px"
-                                , property "grid-template-rows" "1fr 135px"
+                                , property "grid-template-columns" "300px 1fr"
+                                , property "grid-template-rows" "1fr auto 135px"
                                 , property "row-gap" "10px"
+                                , property "column-gap" "10px"
                                 ]
                             ]
                             [ div
                                 [ css
-                                    [ property "grid-row" "1"
+                                    [ property "grid-row" "1 / 3"
                                     , property "grid-column" "1"
                                     , property "height" "100%"
                                     ]
@@ -282,9 +283,8 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
                             , div
                                 [ css
-                                    [ property "grid-row" "1"
-                                    , property "grid-column" "3"
-                                    , overflowY scroll
+                                    [ property "grid-row" "2"
+                                    , property "grid-column" "2"
                                     ]
                                 ]
                                 [ Html.map CompareWidgetMsg <|
@@ -292,7 +292,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 ]
                             , div
                                 [ css
-                                    [ property "grid-row" "2"
+                                    [ property "grid-row" "3"
                                     , property "grid-column" "1 / -1"
                                     ]
                                 ]
