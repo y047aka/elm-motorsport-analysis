@@ -1,7 +1,7 @@
 module Motorsport.Widget.Compare.PositionProgression exposing (view)
 
-import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Css exposing (Color, num)
+import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
+import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled as Html exposing (Html)
@@ -12,12 +12,12 @@ import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
+import TypedSvg.Styled.Attributes.InPx as InPx
 import Shape
 import SortedList
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -99,7 +99,7 @@ chartPaddingBottom =
 
 positionHistoryWindowMillis : Int
 positionHistoryWindowMillis =
-    60 * 60 * 1000
+    3 * 60 * 60 * 1000
 
 
 calculateLapThreshold : Clock.Model -> ViewModel -> Int
@@ -128,7 +128,8 @@ positionProgressionChart size series =
         [ SvgAttr.width "100%"
         , viewBox 0 0 size.width size.height
         ]
-        ([ xAxis size allPoints
+        ([ xGridLines size allPoints
+         , xAxis size allPoints
          , yAxis size allPoints
          ]
             ++ (series |> List.map (renderPositionLine size allPoints))
@@ -175,7 +176,7 @@ yScale size positions =
             max 1 ((maxPos - minPos) // 10)
 
         adjustedMin =
-            max 1 (minPos - paddingY)
+            max 0 (minPos - paddingY)
 
         adjustedMax =
             maxPos + paddingY
@@ -183,16 +184,72 @@ yScale size positions =
     Scale.linear ( size.height - chartPaddingBottom, chartPadding ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
+xGridLines : { width : Float, height : Float } -> List PositionPoint -> Svg msg
+xGridLines size positions =
+    let
+        lapNumbers =
+            positions |> List.map .lapNumber
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        gridLaps =
+            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+
+        top =
+            chartPadding
+
+        bottom =
+            size.height - chartPaddingBottom
+    in
+    g [] <|
+        List.map
+            (\lap ->
+                let
+                    x =
+                        toFloat lap |> Scale.convert (xScale size positions)
+                in
+                line
+                    [ SvgAttr.x1 (String.fromFloat x)
+                    , SvgAttr.x2 (String.fromFloat x)
+                    , SvgAttr.y1 (String.fromFloat top)
+                    , SvgAttr.y2 (String.fromFloat bottom)
+                    , SvgAttr.css
+                        [ Css.property "stroke" "#333"
+                        , Css.Extra.strokeWidth 1
+                        ]
+                    ]
+                    []
+            )
+            gridLaps
+
+
 xAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
 xAxis size positions =
     let
+        lapNumbers =
+            positions |> List.map .lapNumber
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        allLaps =
+            List.range minLap maxLap |> List.map toFloat
+
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 4
+                    [ ticks allLaps
                     , tickSizeOuter 0
-                    , tickSizeInner 3
-                    , tickFormat (round >> String.fromInt)
+                    , tickSizeInner -3
+                    , tickPadding 8
+                    , tickFormat (\f -> if modBy 5 (round f) == 0 then String.fromInt (round f) else "")
                     ]
                     (xScale size positions)
     in
@@ -220,24 +277,30 @@ xAxis size positions =
 yAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
 yAxis size positions =
     let
-        allPositions =
-            positions |> List.map .position
+        scale =
+            yScale size positions
 
-        positionRange =
-            (List.maximum allPositions |> Maybe.withDefault 1) - (List.minimum allPositions |> Maybe.withDefault 1) + 1
+        ( domainMax, _ ) =
+            Scale.domain scale
 
-        tickCount_ =
-            min 5 (max 2 positionRange)
+        -- ラベルは1-indexed（1位、5位、10位...）、スケールは0-indexed
+        labelPositions =
+            1
+                :: (List.range 1 ((round domainMax // 5) + 1) |> List.map (\i -> i * 5))
+                |> List.filter (\v -> v - 1 <= round domainMax)
+
+        tickValues_ =
+            labelPositions |> List.map (\label -> toFloat (label - 1))
 
         axis =
             fromUnstyled <|
                 Axis.left
-                    [ tickCount tickCount_
+                    [ ticks tickValues_
                     , tickSizeOuter 0
                     , tickSizeInner 5
-                    , tickFormat (round >> String.fromInt)
+                    , tickFormat (round >> (+) 1 >> String.fromInt)
                     ]
-                    (yScale size positions)
+                    scale
     in
     g
         [ SvgAttr.css
@@ -276,9 +339,6 @@ renderPositionLine size allPoints series =
                         )
                     )
 
-        totalPoints =
-            List.length dataPoints
-
         linePath =
             dataPoints
                 |> List.map Just
@@ -305,43 +365,26 @@ renderPositionLine size allPoints series =
             , SvgAttr.fill "none"
             ]
 
-        pointElements =
-            dataPoints
-                |> List.indexedMap
-                    (\index ( x, y ) ->
-                        let
-                            radius =
-                                if series.isSelected then
-                                    if index == totalPoints - 1 then
-                                        3.0
-
-                                    else
-                                        2.0
-
-                                else
-                                    0.8
-                        in
-                        circle
-                            [ InPx.cx x
-                            , InPx.cy y
-                            , InPx.r radius
-                            , SvgAttr.css
-                                [ Css.fill series.color
-                                , Css.opacity
-                                    (num
-                                        (if series.isSelected then
-                                            1
-
-                                         else
-                                            0.4
-                                        )
-                                    )
+        lastPointElement =
+            if series.isSelected then
+                dataPoints
+                    |> List.Extra.last
+                    |> Maybe.map
+                        (\( x, y ) ->
+                            circle
+                                [ InPx.cx x
+                                , InPx.cy y
+                                , InPx.r 3.0
+                                , SvgAttr.css [ Css.fill series.color ]
                                 ]
-                            ]
-                            []
-                    )
+                                []
+                        )
+                    |> Maybe.withDefault (g [] [])
+
+            else
+                g [] []
     in
     g []
-        (Path.element linePath lineAttributes
-            :: pointElements
-        )
+        [ Path.element linePath lineAttributes
+        , lastPointElement
+        ]
