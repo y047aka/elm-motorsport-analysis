@@ -132,7 +132,7 @@ viewWithConfig direction config vm =
     in
     svg
         [ viewBox 0 0 w h
-        , css [ Css.maxWidth (Css.pct 50), Css.maxHeight (Css.pct 100) ]
+        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config vm
@@ -179,7 +179,7 @@ track direction config =
                 , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
                 , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
                 , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
-                , stroke "oklch(0.2 0 0)"
+                , stroke "oklch(0.22 0 0)"
                 , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []

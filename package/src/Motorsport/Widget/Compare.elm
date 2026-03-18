@@ -186,8 +186,9 @@ viewCarSelector props model =
     div
         [ css
             [ property "display" "flex"
-            , property "column-gap" "20px"
+            , property "gap" "10px"
             , property "flex-wrap" "wrap"
+            , property "height" "100%"
             ]
         ]
         (List.map (viewClassGroup model) groupedByClass)
@@ -201,43 +202,44 @@ viewClassGroup model cars =
 
         Just firstCar ->
             div
-                [ css
-                    [ property "display" "flex"
-                    , property "flex-direction" "column"
-                    , property "gap" "4px"
-                    , property "flex" "1"
+                [ class "card bg-base-200"
+                , css
+                    [ property "flex" "1"
                     , property "min-width" "200px"
                     ]
                 ]
-                [ -- Class header
-                  div
-                    [ css
-                        [ property "display" "flex"
-                        , property "align-items" "center"
-                        , property "column-gap" "0.5em"
-                        , property "font-size" "10px"
-                        , property "font-weight" "700"
-                        , property "color" "hsl(0 0% 100% / 0.8)"
-                        , before
-                            [ property "display" "block"
-                            , property "content" (qt "")
-                            , property "width" "0.2em"
-                            , property "height" "1.2em"
-                            , property "border-radius" "2px"
-                            , backgroundColor (Class.toHexColor 2025 firstCar.metadata.class)
+                [ div
+                    [ class "card-body p-3 gap-2" ]
+                    [ -- Class header
+                      div
+                        [ css
+                            [ property "display" "flex"
+                            , property "align-items" "center"
+                            , property "column-gap" "0.5em"
+                            , property "font-size" "10px"
+                            , property "font-weight" "700"
+                            , property "color" "hsl(0 0% 100% / 0.8)"
+                            , before
+                                [ property "display" "block"
+                                , property "content" (qt "")
+                                , property "width" "0.2em"
+                                , property "height" "1.2em"
+                                , property "border-radius" "2px"
+                                , backgroundColor (Class.toHexColor 2025 firstCar.metadata.class)
+                                ]
                             ]
                         ]
-                    ]
-                    [ text (Class.toString firstCar.metadata.class) ]
-                , -- Car grid
-                  div
-                    [ css
-                        [ property "display" "grid"
-                        , property "grid-template-columns" "repeat(auto-fill, minmax(35px, 1fr))"
-                        , property "gap" "2px"
+                        [ text (Class.toString firstCar.metadata.class) ]
+                    , -- Car grid
+                      div
+                        [ css
+                            [ property "display" "grid"
+                            , property "grid-template-columns" "repeat(auto-fill, minmax(35px, 1fr))"
+                            , property "gap" "2px"
+                            ]
                         ]
+                        (List.map (carSelectorItem model) cars)
                     ]
-                    (List.map (carSelectorItem model) cars)
                 ]
 
 

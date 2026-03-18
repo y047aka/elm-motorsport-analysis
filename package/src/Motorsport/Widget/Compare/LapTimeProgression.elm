@@ -4,8 +4,7 @@ import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
 import Css exposing (Color, num)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html, div)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled as Html exposing (Html)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -57,23 +56,12 @@ type alias ClassProgressionData =
 
 view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
 view size clock viewModel selectedCars =
-    let
-        body =
-            case buildClassProgressionData clock viewModel selectedCars of
-                Err message ->
-                    Widget.emptyState message
+    case buildClassProgressionData clock viewModel selectedCars of
+        Err message ->
+            Widget.emptyState message
 
-                Ok classData ->
-                    lapTimeProgressionChart size classData.series
-    in
-    div
-        [ css
-            [ Css.property "padding-top" "12px"
-            , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
-            ]
-        ]
-        [ body
-        ]
+        Ok classData ->
+            lapTimeProgressionChart size classData.series
 
 
 buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String ClassProgressionData

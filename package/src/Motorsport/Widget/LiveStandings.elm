@@ -39,18 +39,17 @@ view props =
         [ css
             [ property "height" "100%"
             , property "display" "grid"
-            , property "grid-template-rows" "repeat(3, 195px)"
-            , property "row-gap" "15px"
+            , property "grid-template-rows" "repeat(3, 1fr)"
+            , property "row-gap" "10px"
             ]
         ]
         (List.map
             (\( class_, cars ) ->
                 div
-                    [ css
-                        [ property "height" "100%"
-                        , property "display" "grid"
+                    [ class "card bg-base-200 overflow-hidden"
+                    , css
+                        [ property "display" "grid"
                         , property "grid-template-rows" "auto 1fr"
-                        , property "row-gap" "4px"
                         ]
                     ]
                     [ div
@@ -58,6 +57,7 @@ view props =
                             [ property "display" "flex"
                             , property "align-items" "center"
                             , property "column-gap" "0.5em"
+                            , property "padding" "8px 10px"
                             , property "font-size" "10px"
                             , property "font-weight" "bold"
                             , before
@@ -74,7 +74,9 @@ view props =
                     , Keyed.node "ul"
                         [ class "list"
                         , css
-                            [ property "overflow-y" "scroll" ]
+                            [ property "overflow-y" "scroll"
+                            , property "padding" "0 10px 10px"
+                            ]
                         ]
                         (cars
                             |> SortedList.toList

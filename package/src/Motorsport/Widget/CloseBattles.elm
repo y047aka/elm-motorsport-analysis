@@ -100,10 +100,7 @@ closeBattleItem size { cars } =
         [ css
             [ Css.property "display" "grid"
             , Css.property "row-gap" "10px"
-            , Css.padding2 (px 15) Css.zero
             , Css.fontSize (px 12)
-            , Css.nthChild "n+2"
-                [ Css.borderTop3 (px 1) Css.solid (Css.hsl 0 0 0.4) ]
             ]
         ]
         [ battleChart size cars
