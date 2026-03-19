@@ -12,9 +12,9 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
-import Scale exposing (BandScale, ContinuousScale)
+import Scale exposing (ContinuousScale)
 import Statistics
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg, text_)
 import Svg.Styled.Attributes as SvgAttributes
 import TypedSvg.Styled.Attributes as TypedSvgAttributes
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -28,12 +28,17 @@ padding =
 
 paddingLeft : Float
 paddingLeft =
-    padding + 35
+    padding + 45
 
 
 paddingBottom : Float
 paddingBottom =
     padding + 20
+
+
+axisStrokeColor : String
+axisStrokeColor =
+    "#555"
 
 
 type alias BoxStats =
@@ -46,94 +51,220 @@ type alias BoxStats =
     }
 
 
-xScale : { width : Float, height : Float } -> List String -> BandScale String
-xScale size carNumbers =
-    Scale.band
-        { defaultBandConfig | paddingInner = 0.2, paddingOuter = 0.1 }
-        ( paddingLeft, size.width - padding )
-        carNumbers
-
-
-defaultBandConfig : Scale.BandConfig
-defaultBandConfig =
-    { paddingInner = 0
-    , paddingOuter = 0
-    , align = 0.5
-    }
-
-
-type alias CarBoxPlot =
+type alias HourlyBoxPlot =
     { carNumber : String
+    , hourIndex : Int
     , stats : BoxStats
     , color : Color
     , currentLap : Maybe Lap
     }
 
 
+type alias PositionedBoxPlot =
+    { boxPlot : HourlyBoxPlot
+    , x : Float
+    , width : Float
+    }
+
+
+hourInMillis : Int
+hourInMillis =
+    3600000
+
+
+groupGap : Float
+groupGap =
+    20
+
+
+innerGap : Float
+innerGap =
+    4
+
+
+maxBoxWidth : Float
+maxBoxWidth =
+    60
+
+
+toHourlyGroups : List Lap -> List { hourIndex : Int, laps : List Lap }
+toHourlyGroups laps =
+    laps
+        |> ListExtra.groupWhile (\a b -> a.elapsed // hourInMillis == b.elapsed // hourInMillis)
+        |> List.map
+            (\( first, rest ) ->
+                { hourIndex = first.elapsed // hourInMillis
+                , laps = first :: rest
+                }
+            )
+
+
+computeLayout : { width : Float, height : Float } -> List (List HourlyBoxPlot) -> List PositionedBoxPlot
+computeLayout size grouped =
+    let
+        numGroups =
+            List.length grouped
+
+        carsPerGroup =
+            grouped |> List.map List.length |> List.maximum |> Maybe.withDefault 1
+
+        availableWidth =
+            size.width - paddingLeft - padding
+
+        totalGroupGaps =
+            toFloat (max 0 (numGroups - 1)) * groupGap
+
+        groupWidth =
+            (availableWidth - totalGroupGaps) / toFloat (max 1 numGroups)
+
+        rawBoxWidth =
+            (groupWidth - toFloat (max 0 (carsPerGroup - 1)) * innerGap) / toFloat (max 1 carsPerGroup)
+
+        boxWidth =
+            Basics.min rawBoxWidth maxBoxWidth
+
+        usedGroupWidth =
+            boxWidth * toFloat carsPerGroup + innerGap * toFloat (max 0 (carsPerGroup - 1))
+
+        groupOffset =
+            (groupWidth - usedGroupWidth) / 2
+    in
+    grouped
+        |> List.indexedMap
+            (\gi group ->
+                let
+                    groupStartX =
+                        paddingLeft + toFloat gi * (groupWidth + groupGap) + groupOffset
+                in
+                group
+                    |> List.indexedMap
+                        (\ci bp ->
+                            { boxPlot = bp
+                            , x = groupStartX + toFloat ci * (boxWidth + innerGap)
+                            , width = boxWidth
+                            }
+                        )
+            )
+        |> List.concat
+
+
 view : { width : Float, height : Float } -> Analysis -> List ViewModelItem -> Html msg
 view size analysis selectedCars =
     let
-        carBoxPlots =
+        hourlyBoxPlots =
             selectedCars
-                |> List.map
+                |> List.concatMap
                     (\item ->
-                        { carNumber = item.metadata.carNumber
-                        , stats = computeStatistics item.history
-                        , color = Manufacturer.toColorWithFallback item.metadata
-                        , currentLap = item.currentLap
-                        }
+                        let
+                            color =
+                                Manufacturer.toColorWithFallback item.metadata
+
+                            carNumber =
+                                item.metadata.carNumber
+
+                            groups =
+                                toHourlyGroups item.history
+
+                            lastHourIndex =
+                                groups |> ListExtra.last |> Maybe.map .hourIndex
+                        in
+                        groups
+                            |> List.map
+                                (\group ->
+                                    { carNumber = carNumber
+                                    , hourIndex = group.hourIndex
+                                    , stats = computeStatistics group.laps
+                                    , color = color
+                                    , currentLap =
+                                        if Just group.hourIndex == lastHourIndex then
+                                            item.currentLap
+
+                                        else
+                                            Nothing
+                                    }
+                                )
                     )
 
-        carNumbers =
-            selectedCars |> List.map (.metadata >> .carNumber)
+        groupedByHour =
+            hourlyBoxPlots
+                |> List.sortBy .hourIndex
+                |> ListExtra.groupWhile (\a b -> a.hourIndex == b.hourIndex)
+                |> List.map (\( first, rest ) -> first :: rest)
+
+        positionedBoxPlots =
+            computeLayout size groupedByHour
 
         yScale_ =
-            computeGlobalYScale size analysis carBoxPlots
-
-        xScale_ =
-            xScale size carNumbers
+            computeGlobalYScale size analysis (List.concat groupedByHour)
     in
     svg
         [ TypedSvgAttributes.viewBox 0 0 size.width size.height
         , SvgAttributes.width "100%"
         ]
         [ yAxis yScale_
-        , xAxis size xScale_
+        , xAxisLabels size positionedBoxPlots
         , g []
-            (carBoxPlots |> List.map (renderCarBoxPlot xScale_ yScale_ analysis))
+            (positionedBoxPlots |> List.map (renderPositionedBoxPlot yScale_ analysis))
         ]
 
 
-xAxis : { width : Float, height : Float } -> BandScale String -> Svg msg
-xAxis size scale =
+formatLabel : HourlyBoxPlot -> String
+formatLabel { hourIndex, carNumber } =
+    "H" ++ String.fromInt (hourIndex + 1) ++ " #" ++ carNumber
+
+
+xAxisLabels : { width : Float, height : Float } -> List PositionedBoxPlot -> Svg msg
+xAxisLabels size positioned =
     let
-        axis =
-            fromUnstyled <|
-                Axis.bottom
-                    [ tickSizeOuter 0
-                    , tickSizeInner 3
-                    ]
-                    (Scale.toRenderable identity scale)
+        tickSize =
+            3
+
+        baseline =
+            line
+                [ TypedSvgAttributes.x1 (px paddingLeft)
+                , TypedSvgAttributes.y1 (px 0)
+                , TypedSvgAttributes.x2 (px (size.width - padding))
+                , TypedSvgAttributes.y2 (px 0)
+                , SvgAttributes.stroke axisStrokeColor
+                , SvgAttributes.strokeWidth "1"
+                ]
+                []
+
+        ticksAndLabels =
+            positioned
+                |> List.map
+                    (\p ->
+                        let
+                            centerX =
+                                p.x + p.width / 2
+                        in
+                        g []
+                            [ line
+                                [ TypedSvgAttributes.x1 (px centerX)
+                                , TypedSvgAttributes.y1 (px 0)
+                                , TypedSvgAttributes.x2 (px centerX)
+                                , TypedSvgAttributes.y2 (px tickSize)
+                                , SvgAttributes.stroke axisStrokeColor
+                                , SvgAttributes.strokeWidth "1"
+                                ]
+                                []
+                            , text_
+                                [ InPx.x centerX
+                                , InPx.y (tickSize + 12)
+                                , SvgAttributes.css
+                                    [ Css.fill (Css.hsl 0 0 0.7)
+                                    , Css.fontSize (Css.px 11)
+                                    ]
+                                , SvgAttributes.textAnchor "middle"
+                                ]
+                                [ Svg.Styled.text (formatLabel p.boxPlot) ]
+                            ]
+                    )
     in
     g
         [ TypedSvgAttributes.transform [ Translate 0 (size.height - paddingBottom) ]
-        , SvgAttributes.css
-            [ descendants
-                [ Css.Global.typeSelector "text"
-                    [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 11)
-                    ]
-                , each
-                    [ Css.Global.typeSelector "line"
-                    , Css.Global.typeSelector "path"
-                    ]
-                    [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
-                    ]
-                ]
-            ]
         ]
-        [ axis ]
+        (baseline :: ticksAndLabels)
 
 
 yAxis : ContinuousScale Float -> Svg msg
@@ -162,7 +293,7 @@ yAxis scale =
                     , Css.Global.typeSelector "path"
                     ]
                     [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
+                    , Css.property "stroke" axisStrokeColor
                     ]
                 ]
             ]
@@ -227,12 +358,12 @@ computeStatistics laps =
     }
 
 
-computeGlobalYScale : { width : Float, height : Float } -> Analysis -> List CarBoxPlot -> ContinuousScale Float
-computeGlobalYScale size { fastestLapTime, slowestLapTime } carBoxPlots =
+computeGlobalYScale : { width : Float, height : Float } -> Analysis -> List HourlyBoxPlot -> ContinuousScale Float
+computeGlobalYScale size { fastestLapTime } hourlyBoxPlots =
     let
         allValues =
-            carBoxPlots
-                |> List.concatMap (\car -> [ car.stats.min, car.stats.max ])
+            hourlyBoxPlots
+                |> List.concatMap (\h -> [ h.stats.min, h.stats.max ])
 
         minValue =
             allValues
@@ -243,26 +374,20 @@ computeGlobalYScale size { fastestLapTime, slowestLapTime } carBoxPlots =
         maxValue =
             allValues
                 |> List.maximum
-                |> Maybe.withDefault (toFloat slowestLapTime)
+                |> Maybe.withDefault (toFloat fastestLapTime * 1.07)
                 |> max (toFloat fastestLapTime * 1.07)
     in
     Scale.linear ( size.height - paddingBottom, padding ) ( minValue, maxValue )
 
 
-renderCarBoxPlot : BandScale String -> ContinuousScale Float -> Analysis -> CarBoxPlot -> Svg msg
-renderCarBoxPlot xScale_ yScale_ analysis { carNumber, stats, color, currentLap } =
+renderPositionedBoxPlot : ContinuousScale Float -> Analysis -> PositionedBoxPlot -> Svg msg
+renderPositionedBoxPlot yScale_ analysis { boxPlot, x, width } =
     let
-        xPosition =
-            Scale.convert xScale_ carNumber
-
-        bandwidth =
-            Scale.bandwidth xScale_
-
-        left =
-            xPosition
+        { stats, color, currentLap } =
+            boxPlot
 
         center =
-            left + (bandwidth / 2)
+            x + (width / 2)
 
         firstQuartileY =
             Scale.convert yScale_ stats.firstQuartile
@@ -298,22 +423,22 @@ renderCarBoxPlot xScale_ yScale_ analysis { carNumber, stats, color, currentLap 
         ([ whisker
             { color = color
             , center = center
-            , width = bandwidth * 0.3
+            , width = width * 0.3
             , upperWhiskerY = Scale.convert yScale_ stats.max
             , boxTop = boxTop
             , boxBottom = boxBottom
             , lowerWhiskerY = Scale.convert yScale_ stats.min
             }
-         , box
+         , boxRect
             { top = boxTop
-            , left = left
-            , width = bandwidth
+            , left = x
+            , width = width
             , height = Basics.max 1 (boxBottom - boxTop)
             , color = color
             }
          , medianLine
-            { left = left
-            , width = bandwidth
+            { left = x
+            , width = width
             , medianY = Scale.convert yScale_ stats.median
             , color = color
             }
@@ -323,7 +448,7 @@ renderCarBoxPlot xScale_ yScale_ analysis { carNumber, stats, color, currentLap 
         )
 
 
-box :
+boxRect :
     { top : Float
     , left : Float
     , width : Float
@@ -331,7 +456,7 @@ box :
     , color : Color
     }
     -> Svg msg
-box { top, left, width, height, color } =
+boxRect { top, left, width, height, color } =
     rect
         [ InPx.x left
         , InPx.y top
@@ -428,6 +553,5 @@ currentLapCircle color yScale_ center lap =
         , InPx.cy (Scale.convert yScale_ (toFloat lap.time))
         , InPx.r 2.5
         , SvgAttributes.fill color
-        , SvgAttributes.strokeWidth "0.6"
         ]
         []
