@@ -12,12 +12,12 @@ import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
-import TypedSvg.Styled.Attributes.InPx as InPx
 import Shape
 import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
+import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -89,7 +89,7 @@ chartPadding =
 
 chartPaddingLeft : Float
 chartPaddingLeft =
-    chartPadding + 35
+    chartPadding + 15
 
 
 chartPaddingBottom : Float
@@ -249,7 +249,14 @@ xAxis size positions =
                     , tickSizeOuter 0
                     , tickSizeInner -3
                     , tickPadding 8
-                    , tickFormat (\f -> if modBy 5 (round f) == 0 then String.fromInt (round f) else "")
+                    , tickFormat
+                        (\f ->
+                            if modBy 5 (round f) == 0 then
+                                String.fromInt (round f)
+
+                            else
+                                ""
+                        )
                     ]
                     (xScale size positions)
     in
