@@ -1,11 +1,10 @@
 module Motorsport.Widget.Compare.LapTimeProgression exposing (view)
 
-import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
-import Css exposing (Color, num)
+import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
+import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html.Styled as Html exposing (Html)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -17,7 +16,7 @@ import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
 import SortedList
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -28,16 +27,6 @@ import TypedSvg.Types exposing (Transform(..))
 -- Chart configuration
 
 
-w : Float
-w =
-    320
-
-
-h : Float
-h =
-    180
-
-
 padding : Float
 padding =
     15
@@ -45,7 +34,7 @@ padding =
 
 paddingLeft : Float
 paddingLeft =
-    padding + 35
+    padding + 50
 
 
 paddingBottom : Float
@@ -65,28 +54,14 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
-view clock viewModel selectedCars =
-    let
-        body =
-            case buildClassProgressionData clock viewModel selectedCars of
-                Err message ->
-                    Widget.emptyState message
+view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view size clock viewModel selectedCars =
+    case buildClassProgressionData clock viewModel selectedCars of
+        Err message ->
+            Widget.emptyState message
 
-                Ok classData ->
-                    lapTimeProgressionChart classData.series
-    in
-    div
-        [ css
-            [ Css.property "display" "grid"
-            , Css.property "row-gap" "8px"
-            , Css.property "padding-top" "12px"
-            , Css.property "border-top" "1px solid hsl(0 0% 100% / 0.1)"
-            ]
-        ]
-        [ Html.div [ class "text-sm font-semibold" ] [ text "Lap Time Progression" ]
-        , body
-        ]
+        Ok classData ->
+            lapTimeProgressionChart size classData.series
 
 
 buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String ClassProgressionData
@@ -133,7 +108,7 @@ extractLapDataForCar clock laps =
             Clock.getElapsed clock
 
         timeThreshold =
-            currentRaceTime - (60 * 60 * 1000)
+            currentRaceTime - (2 * 60 * 60 * 1000)
     in
     laps
         |> List.filter (\lap -> timeThreshold <= lap.elapsed && lap.elapsed <= currentRaceTime)
@@ -159,8 +134,8 @@ filterOutlierLaps laps =
 -- Scales
 
 
-xScale : List Lap -> ContinuousScale Float
-xScale laps =
+xScale : { width : Float, height : Float } -> List Lap -> ContinuousScale Float
+xScale size laps =
     let
         ( minTime, maxTime ) =
             laps
@@ -171,11 +146,11 @@ xScale laps =
                         )
                    )
     in
-    Scale.linear ( paddingLeft, w - padding ) ( toFloat minTime, toFloat maxTime )
+    Scale.linear ( paddingLeft, size.width - padding ) ( toFloat minTime, toFloat maxTime )
 
 
-yScale : List Lap -> ContinuousScale Float
-yScale laps =
+yScale : { width : Float, height : Float } -> List Lap -> ContinuousScale Float
+yScale size laps =
     let
         ( minTime, maxTime ) =
             laps
@@ -195,32 +170,116 @@ yScale laps =
             , maxTime + padding_y
             )
     in
-    Scale.linear ( h - paddingBottom, padding ) ( adjustedMin, adjustedMax )
+    Scale.linear ( size.height - paddingBottom, padding ) ( adjustedMin, adjustedMax )
 
 
 
 -- Axes
 
 
-xAxis : List Lap -> Svg msg
-xAxis laps =
+xGridLines : { width : Float, height : Float } -> List Lap -> Svg msg
+xGridLines size laps =
     let
+        gridIntervalMs =
+            15 * 60 * 1000
+
+        elapsedTimes =
+            laps |> List.map .elapsed
+
+        minElapsedMs =
+            List.minimum elapsedTimes |> Maybe.withDefault 0
+
+        maxElapsedMs =
+            List.maximum elapsedTimes |> Maybe.withDefault 0
+
+        gridTimes =
+            List.range 0 (maxElapsedMs // gridIntervalMs + 1)
+                |> List.map (\i -> i * gridIntervalMs)
+                |> List.filter (\t -> t >= minElapsedMs && t <= maxElapsedMs)
+
+        top =
+            padding
+
+        bottom =
+            size.height - paddingBottom
+    in
+    g [] <|
+        List.map
+            (\t ->
+                let
+                    x =
+                        toFloat t |> Scale.convert (xScale size laps)
+                in
+                line
+                    [ SvgAttr.x1 (String.fromFloat x)
+                    , SvgAttr.x2 (String.fromFloat x)
+                    , SvgAttr.y1 (String.fromFloat top)
+                    , SvgAttr.y2 (String.fromFloat bottom)
+                    , SvgAttr.css
+                        [ Css.property "stroke" "#333"
+                        , Css.Extra.strokeWidth 1
+                        ]
+                    ]
+                    []
+            )
+            gridTimes
+
+
+formatElapsedHoursMinutes : Int -> String
+formatElapsedHoursMinutes ms =
+    let
+        h =
+            ms // (60 * 60 * 1000)
+
+        m =
+            remainderBy (60 * 60 * 1000) ms // (60 * 1000)
+    in
+    String.fromInt h ++ ":" ++ String.padLeft 2 '0' (String.fromInt m)
+
+
+xAxis : { width : Float, height : Float } -> List Lap -> Svg msg
+xAxis size laps =
+    let
+        tickIntervalMs =
+            5 * 60 * 1000
+
+        elapsedTimes =
+            laps |> List.map .elapsed
+
+        minElapsedMs =
+            List.minimum elapsedTimes |> Maybe.withDefault 0
+
+        maxElapsedMs =
+            List.maximum elapsedTimes |> Maybe.withDefault 0
+
+        allTicks =
+            List.range (minElapsedMs // tickIntervalMs) (maxElapsedMs // tickIntervalMs + 1)
+                |> List.map (\i -> toFloat (i * tickIntervalMs))
+
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 4
+                    [ ticks allTicks
                     , tickSizeOuter 0
-                    , tickSizeInner 3
-                    , tickFormat (round >> Duration.toString)
+                    , tickSizeInner -3
+                    , tickPadding 8
+                    , tickFormat
+                        (\f ->
+                            if modBy (15 * 60 * 1000) (round f) == 0 then
+                                formatElapsedHoursMinutes (round f)
+
+                            else
+                                ""
+                        )
                     ]
-                    (xScale laps)
+                    (xScale size laps)
     in
     g
         [ SvgAttr.css
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -231,13 +290,13 @@ xAxis laps =
                     ]
                 ]
             ]
-        , transform [ Translate 0 (h - paddingBottom) ]
+        , transform [ Translate 0 (size.height - paddingBottom) ]
         ]
         [ axis ]
 
 
-yAxis : List Lap -> Svg msg
-yAxis laps =
+yAxis : { width : Float, height : Float } -> List Lap -> Svg msg
+yAxis size laps =
     let
         axis =
             fromUnstyled <|
@@ -247,14 +306,14 @@ yAxis laps =
                     , tickSizeInner 5
                     , tickFormat (round >> Duration.toString)
                     ]
-                    (yScale laps)
+                    (yScale size laps)
     in
     g
         [ SvgAttr.css
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -274,26 +333,26 @@ yAxis laps =
 -- Rendering
 
 
-lapTimeProgressionChart : List LapTimeSeries -> Html msg
-lapTimeProgressionChart series =
+lapTimeProgressionChart : { width : Float, height : Float } -> List LapTimeSeries -> Html msg
+lapTimeProgressionChart size series =
     let
         allLaps =
             series |> List.concatMap .laps
     in
     svg
-        [ InPx.width w
-        , InPx.height h
-        , viewBox 0 0 w h
+        [ SvgAttr.width "100%"
+        , viewBox 0 0 size.width size.height
         ]
-        ([ xAxis allLaps
-         , yAxis allLaps
+        ([ xGridLines size allLaps
+         , xAxis size allLaps
+         , yAxis size allLaps
          ]
-            ++ (series |> List.map (renderLapSeries allLaps))
+            ++ (series |> List.map (renderLapSeries size allLaps))
         )
 
 
-renderLapSeries : List Lap -> LapTimeSeries -> Svg msg
-renderLapSeries allLaps series =
+renderLapSeries : { width : Float, height : Float } -> List Lap -> LapTimeSeries -> Svg msg
+renderLapSeries size allLaps series =
     let
         dataPoints =
             series.laps
@@ -301,15 +360,12 @@ renderLapSeries allLaps series =
                     (\{ time, elapsed } ->
                         ( elapsed
                             |> toFloat
-                            |> Scale.convert (xScale allLaps)
+                            |> Scale.convert (xScale size allLaps)
                         , time
                             |> toFloat
-                            |> Scale.convert (yScale allLaps)
+                            |> Scale.convert (yScale size allLaps)
                         )
                     )
-
-        totalPoints =
-            List.length dataPoints
 
         linePath =
             dataPoints
@@ -318,10 +374,10 @@ renderLapSeries allLaps series =
 
         strokeWidth =
             if series.isSelected then
-                "1.5"
+                "2"
 
             else
-                "1"
+                "1.2"
 
         opacity =
             if series.isSelected then
@@ -337,41 +393,26 @@ renderLapSeries allLaps series =
             , SvgAttr.fill "none"
             ]
 
-        pointElements =
-            dataPoints
-                |> List.indexedMap
-                    (\index ( x, y ) ->
-                        let
-                            radius =
-                                case ( series.isSelected, index == totalPoints - 1 ) of
-                                    ( True, True ) ->
-                                        2.5
-
-                                    ( True, False ) ->
-                                        1.5
-
-                                    _ ->
-                                        0.8
-                        in
-                        circle
-                            [ InPx.cx x
-                            , InPx.cy y
-                            , InPx.r radius
-                            , SvgAttr.css
-                                [ Css.fill series.color
-                                , Css.opacity
-                                    (if series.isSelected then
-                                        num 1
-
-                                     else
-                                        num 0.4
-                                    )
+        lastPointElement =
+            if series.isSelected then
+                dataPoints
+                    |> List.Extra.last
+                    |> Maybe.map
+                        (\( x, y ) ->
+                            circle
+                                [ InPx.cx x
+                                , InPx.cy y
+                                , InPx.r 3.0
+                                , SvgAttr.css [ Css.fill series.color ]
                                 ]
-                            ]
-                            []
-                    )
+                                []
+                        )
+                    |> Maybe.withDefault (g [] [])
+
+            else
+                g [] []
     in
     g []
-        (Path.element linePath lineAttributes
-            :: pointElements
-        )
+        [ Path.element linePath lineAttributes
+        , lastPointElement
+        ]

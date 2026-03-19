@@ -1,6 +1,6 @@
 module Motorsport.Widget.CloseBattles exposing (closeBattleItem, view)
 
-import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
+import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color, pct, px)
 import Css.Extra
 import Css.Global exposing (children, descendants, each)
@@ -17,7 +17,7 @@ import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
-import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
+import Svg.Styled exposing (Svg, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes as TSA
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -44,16 +44,6 @@ type alias CarGapData =
     }
 
 
-w : Float
-w =
-    320
-
-
-h : Float
-h =
-    140
-
-
 padding : Float
 padding =
     5
@@ -61,7 +51,7 @@ padding =
 
 paddingLeft : Float
 paddingLeft =
-    padding + 45
+    padding + 60
 
 
 paddingBottom : Float
@@ -69,8 +59,8 @@ paddingBottom =
     padding + 15
 
 
-view : ViewModel -> Html msg
-view viewModel =
+view : { width : Float, height : Float } -> ViewModel -> Html msg
+view size viewModel =
     let
         closeBattles =
             if viewModel.leadLapNumber > 1 then
@@ -84,7 +74,7 @@ view viewModel =
             Widget.emptyState "No close battles detected"
 
         else
-            div [] (List.map closeBattleItem closeBattles)
+            div [] (List.map (closeBattleItem size) closeBattles)
 
 
 detectCloseBattles : ViewModel -> List CloseBattle
@@ -104,41 +94,18 @@ createCloseBattle cars =
             )
 
 
-closeBattleItem : CloseBattle -> Html msg
-closeBattleItem { cars } =
+closeBattleItem : { width : Float, height : Float } -> CloseBattle -> Html msg
+closeBattleItem size { cars } =
     div
         [ css
             [ Css.property "display" "grid"
             , Css.property "row-gap" "10px"
-            , Css.padding2 (px 15) Css.zero
             , Css.fontSize (px 12)
-            , Css.nthChild "n+2"
-                [ Css.borderTop3 (px 1) Css.solid (Css.hsl 0 0 0.4) ]
             ]
         ]
-        [ battleHeaderView cars
-        , battleChart cars
+        [ battleChart size cars
         , lapTimeComparison cars
         ]
-
-
-battleHeaderView : NonEmpty ViewModelItem -> Html msg
-battleHeaderView cars =
-    let
-        carNumbers =
-            cars
-                |> NonEmpty.toList
-                |> List.map (.metadata >> .carNumber)
-                |> String.join " - "
-    in
-    div
-        [ css
-            [ Css.fontSize (px 14)
-            , Css.fontWeight Css.bold
-            , Css.color (Css.hsl 0 0 0.9)
-            ]
-        ]
-        [ text carNumbers ]
 
 
 lapTimeComparison : NonEmpty ViewModelItem -> Html msg
@@ -150,7 +117,7 @@ lapTimeComparison cars =
                     { leadLapNumber = NonEmpty.head cars |> .lap }
             in
             cars
-                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
+                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 9 options car.history)
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -274,8 +241,8 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : NonEmpty ViewModelItem -> Html msg
-battleChart cars =
+battleChart : { width : Float, height : Float } -> NonEmpty ViewModelItem -> Html msg
+battleChart size cars =
     let
         options =
             { leadLapNumber = NonEmpty.head cars |> .lap }
@@ -285,7 +252,7 @@ battleChart cars =
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = ViewModel.getRecentLaps 10 options car.history
+                        , laps = ViewModel.getRecentLaps 20 options car.history
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )
@@ -299,14 +266,15 @@ battleChart cars =
                 |> List.concatMap .gapData
     in
     svg
-        [ InPx.width w
-        , InPx.height h
-        , TSA.viewBox 0 0 w h
+        [ SvgAttr.width "100%"
+        , TSA.viewBox 0 0 size.width size.height
         ]
-        ([ xAxis allGapPoints
-         , yAxis allGapPoints
+        ([ xGridLines size allGapPoints
+         , zeroLine size allGapPoints
+         , xAxis size allGapPoints
+         , yAxis size allGapPoints
          ]
-            ++ (carGapData |> NonEmpty.toList |> renderBattleGapLines)
+            ++ (carGapData |> NonEmpty.toList |> renderBattleGapLines size)
         )
 
 
@@ -388,8 +356,8 @@ average values =
             Just (List.sum values / toFloat (List.length values))
 
 
-xScale : List { lap : Int, gap : Int } -> ContinuousScale Float
-xScale gapPoints =
+xScale : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> ContinuousScale Float
+xScale size gapPoints =
     let
         ( minLap, maxLap ) =
             gapPoints
@@ -400,15 +368,15 @@ xScale gapPoints =
                         )
                    )
     in
-    Scale.linear ( paddingLeft, w - padding ) ( toFloat minLap, toFloat maxLap )
+    Scale.linear ( paddingLeft, size.width - padding ) ( toFloat minLap, toFloat maxLap )
 
 
-yScale : List { lap : Int, gap : Int } -> ContinuousScale Float
-yScale gapPoints =
+yScale : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> ContinuousScale Float
+yScale size gapPoints =
     let
         ( minGap, maxGap ) =
             gapPoints
-                |> List.filter (\{ gap } -> -50000 <= gap && gap <= 50000)
+                |> List.filter (\{ gap } -> -60000 <= gap && gap <= 60000)
                 |> List.map .gap
                 |> (\gaps ->
                         ( List.minimum gaps |> Maybe.withDefault 0 |> toFloat
@@ -424,28 +392,110 @@ yScale gapPoints =
             , maxGap + padding_y
             )
     in
-    Scale.linear ( h - paddingBottom, padding ) ( adjustedMax, adjustedMin )
+    Scale.linear ( size.height - paddingBottom, padding ) ( adjustedMax, adjustedMin )
 
 
-xAxis : List { lap : Int, gap : Int } -> Svg msg
-xAxis gapPoints =
+xGridLines : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+xGridLines size gapPoints =
     let
+        lapNumbers =
+            gapPoints |> List.map .lap
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        gridLaps =
+            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+
+        top =
+            padding
+
+        bottom =
+            size.height - paddingBottom
+    in
+    g [] <|
+        List.map
+            (\lap ->
+                let
+                    x =
+                        toFloat lap |> Scale.convert (xScale size gapPoints)
+                in
+                line
+                    [ SvgAttr.x1 (String.fromFloat x)
+                    , SvgAttr.x2 (String.fromFloat x)
+                    , SvgAttr.y1 (String.fromFloat top)
+                    , SvgAttr.y2 (String.fromFloat bottom)
+                    , SvgAttr.css
+                        [ Css.property "stroke" "#333"
+                        , Css.Extra.strokeWidth 1
+                        ]
+                    ]
+                    []
+            )
+            gridLaps
+
+
+zeroLine : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+zeroLine size gapPoints =
+    let
+        y =
+            Scale.convert (yScale size gapPoints) 0
+    in
+    line
+        [ SvgAttr.x1 (String.fromFloat paddingLeft)
+        , SvgAttr.x2 (String.fromFloat (size.width - padding))
+        , SvgAttr.y1 (String.fromFloat y)
+        , SvgAttr.y2 (String.fromFloat y)
+        , SvgAttr.css
+            [ Css.property "stroke" "#555"
+            , Css.Extra.strokeWidth 1
+            ]
+        ]
+        []
+
+
+xAxis : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+xAxis size gapPoints =
+    let
+        lapNumbers =
+            gapPoints |> List.map .lap
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        allLaps =
+            List.range minLap maxLap |> List.map toFloat
+
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 4
+                    [ ticks allLaps
                     , tickSizeOuter 0
-                    , tickSizeInner 3
-                    , tickFormat (Basics.round >> String.fromInt)
+                    , tickSizeInner -3
+                    , tickPadding 8
+                    , tickFormat
+                        (\f ->
+                            if modBy 5 (round f) == 0 then
+                                String.fromInt (round f)
+
+                            else
+                                ""
+                        )
                     ]
-                    (xScale gapPoints)
+                    (xScale size gapPoints)
     in
     g
         [ SvgAttr.css
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -456,13 +506,13 @@ xAxis gapPoints =
                     ]
                 ]
             ]
-        , TSA.transform [ Translate 0 (h - paddingBottom) ]
+        , TSA.transform [ Translate 0 (size.height - paddingBottom) ]
         ]
         [ axis ]
 
 
-yAxis : List { lap : Int, gap : Int } -> Svg msg
-yAxis gapPoints =
+yAxis : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+yAxis size gapPoints =
     let
         axis =
             fromUnstyled <|
@@ -472,14 +522,14 @@ yAxis gapPoints =
                     , tickSizeInner 5
                     , tickFormat (Basics.round >> Duration.toString)
                     ]
-                    (yScale gapPoints)
+                    (yScale size gapPoints)
     in
     g
         [ SvgAttr.css
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
+                    , Css.fontSize (Css.px 11)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -495,18 +545,18 @@ yAxis gapPoints =
         [ axis ]
 
 
-renderBattleGapLines : List CarGapData -> List (Svg msg)
-renderBattleGapLines carGapData =
+renderBattleGapLines : { width : Float, height : Float } -> List CarGapData -> List (Svg msg)
+renderBattleGapLines size carGapData =
     let
         allGapPoints =
             List.concatMap .gapData carGapData
     in
     carGapData
-        |> List.concatMap (renderCarGapLine allGapPoints)
+        |> List.concatMap (renderCarGapLine size allGapPoints)
 
 
-renderCarGapLine : List { lap : Int, gap : Int } -> CarGapData -> List (Svg msg)
-renderCarGapLine allGapPoints carData =
+renderCarGapLine : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> CarGapData -> List (Svg msg)
+renderCarGapLine size allGapPoints carData =
     let
         dataPoints =
             carData.gapData
@@ -514,10 +564,10 @@ renderCarGapLine allGapPoints carData =
                     (\{ lap, gap } ->
                         ( lap
                             |> toFloat
-                            |> Scale.convert (xScale allGapPoints)
+                            |> Scale.convert (xScale size allGapPoints)
                         , gap
                             |> toFloat
-                            |> Scale.convert (yScale allGapPoints)
+                            |> Scale.convert (yScale size allGapPoints)
                         )
                     )
 
@@ -526,24 +576,25 @@ renderCarGapLine allGapPoints carData =
                 |> List.map Just
                 |> Shape.line Shape.linearCurve
 
-        points =
-            List.map point dataPoints
-
-        point ( x, y ) =
-            Svg.Styled.circle
-                [ InPx.cx x
-                , InPx.cy y
-                , InPx.r 2
-                , SvgAttr.css
-                    [ Css.fill carData.color
-                    , Css.property "stroke" "none"
-                    ]
-                ]
-                []
+        lastPointElement =
+            dataPoints
+                |> List.Extra.last
+                |> Maybe.map
+                    (\( x, y ) ->
+                        Svg.Styled.circle
+                            [ InPx.cx x
+                            , InPx.cy y
+                            , InPx.r 3.0
+                            , SvgAttr.css [ Css.fill carData.color ]
+                            ]
+                            []
+                    )
+                |> Maybe.withDefault (g [] [])
     in
-    Path.element linePath
+    [ Path.element linePath
         [ SvgAttr.stroke carData.color.value
-        , SvgAttr.strokeWidth "1.5"
+        , SvgAttr.strokeWidth "2"
         , SvgAttr.fill "none"
         ]
-        :: points
+    , lastPointElement
+    ]
