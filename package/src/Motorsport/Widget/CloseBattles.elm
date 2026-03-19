@@ -1,6 +1,6 @@
 module Motorsport.Widget.CloseBattles exposing (closeBattleItem, view)
 
-import Axis exposing (tickCount, tickFormat, tickSizeInner, tickSizeOuter)
+import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color, pct, px)
 import Css.Extra
 import Css.Global exposing (children, descendants, each)
@@ -17,7 +17,7 @@ import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
-import Svg.Styled exposing (Svg, fromUnstyled, g, svg)
+import Svg.Styled exposing (Svg, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes as TSA
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -51,7 +51,7 @@ padding =
 
 paddingLeft : Float
 paddingLeft =
-    padding + 45
+    padding + 60
 
 
 paddingBottom : Float
@@ -117,7 +117,7 @@ lapTimeComparison cars =
                     { leadLapNumber = NonEmpty.head cars |> .lap }
             in
             cars
-                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 3 options car.history)
+                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 9 options car.history)
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -252,7 +252,7 @@ battleChart size cars =
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = ViewModel.getRecentLaps 10 options car.history
+                        , laps = ViewModel.getRecentLaps 20 options car.history
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )
@@ -269,7 +269,9 @@ battleChart size cars =
         [ SvgAttr.width "100%"
         , TSA.viewBox 0 0 size.width size.height
         ]
-        ([ xAxis size allGapPoints
+        ([ xGridLines size allGapPoints
+         , zeroLine size allGapPoints
+         , xAxis size allGapPoints
          , yAxis size allGapPoints
          ]
             ++ (carGapData |> NonEmpty.toList |> renderBattleGapLines size)
@@ -374,7 +376,7 @@ yScale size gapPoints =
     let
         ( minGap, maxGap ) =
             gapPoints
-                |> List.filter (\{ gap } -> -50000 <= gap && gap <= 50000)
+                |> List.filter (\{ gap } -> -60000 <= gap && gap <= 60000)
                 |> List.map .gap
                 |> (\gaps ->
                         ( List.minimum gaps |> Maybe.withDefault 0 |> toFloat
@@ -393,16 +395,98 @@ yScale size gapPoints =
     Scale.linear ( size.height - paddingBottom, padding ) ( adjustedMax, adjustedMin )
 
 
+xGridLines : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+xGridLines size gapPoints =
+    let
+        lapNumbers =
+            gapPoints |> List.map .lap
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        gridLaps =
+            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+
+        top =
+            padding
+
+        bottom =
+            size.height - paddingBottom
+    in
+    g [] <|
+        List.map
+            (\lap ->
+                let
+                    x =
+                        toFloat lap |> Scale.convert (xScale size gapPoints)
+                in
+                line
+                    [ SvgAttr.x1 (String.fromFloat x)
+                    , SvgAttr.x2 (String.fromFloat x)
+                    , SvgAttr.y1 (String.fromFloat top)
+                    , SvgAttr.y2 (String.fromFloat bottom)
+                    , SvgAttr.css
+                        [ Css.property "stroke" "#333"
+                        , Css.Extra.strokeWidth 1
+                        ]
+                    ]
+                    []
+            )
+            gridLaps
+
+
+zeroLine : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
+zeroLine size gapPoints =
+    let
+        y =
+            Scale.convert (yScale size gapPoints) 0
+    in
+    line
+        [ SvgAttr.x1 (String.fromFloat paddingLeft)
+        , SvgAttr.x2 (String.fromFloat (size.width - padding))
+        , SvgAttr.y1 (String.fromFloat y)
+        , SvgAttr.y2 (String.fromFloat y)
+        , SvgAttr.css
+            [ Css.property "stroke" "#555"
+            , Css.Extra.strokeWidth 1
+            ]
+        ]
+        []
+
+
 xAxis : { width : Float, height : Float } -> List { lap : Int, gap : Int } -> Svg msg
 xAxis size gapPoints =
     let
+        lapNumbers =
+            gapPoints |> List.map .lap
+
+        minLap =
+            List.minimum lapNumbers |> Maybe.withDefault 1
+
+        maxLap =
+            List.maximum lapNumbers |> Maybe.withDefault 1
+
+        allLaps =
+            List.range minLap maxLap |> List.map toFloat
+
         axis =
             fromUnstyled <|
                 Axis.bottom
-                    [ tickCount 4
+                    [ ticks allLaps
                     , tickSizeOuter 0
-                    , tickSizeInner 3
-                    , tickFormat (Basics.round >> String.fromInt)
+                    , tickSizeInner -3
+                    , tickPadding 8
+                    , tickFormat
+                        (\f ->
+                            if modBy 5 (round f) == 0 then
+                                String.fromInt (round f)
+
+                            else
+                                ""
+                        )
                     ]
                     (xScale size gapPoints)
     in
@@ -492,24 +576,25 @@ renderCarGapLine size allGapPoints carData =
                 |> List.map Just
                 |> Shape.line Shape.linearCurve
 
-        points =
-            List.map point dataPoints
-
-        point ( x, y ) =
-            Svg.Styled.circle
-                [ InPx.cx x
-                , InPx.cy y
-                , InPx.r 2
-                , SvgAttr.css
-                    [ Css.fill carData.color
-                    , Css.property "stroke" "none"
-                    ]
-                ]
-                []
+        lastPointElement =
+            dataPoints
+                |> List.Extra.last
+                |> Maybe.map
+                    (\( x, y ) ->
+                        Svg.Styled.circle
+                            [ InPx.cx x
+                            , InPx.cy y
+                            , InPx.r 3.0
+                            , SvgAttr.css [ Css.fill carData.color ]
+                            ]
+                            []
+                    )
+                |> Maybe.withDefault (g [] [])
     in
-    Path.element linePath
+    [ Path.element linePath
         [ SvgAttr.stroke carData.color.value
-        , SvgAttr.strokeWidth "1.5"
+        , SvgAttr.strokeWidth "2"
         , SvgAttr.fill "none"
         ]
-        :: points
+    , lastPointElement
+    ]
