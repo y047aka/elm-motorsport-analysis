@@ -17,8 +17,7 @@ npm run build               # Production build
 ### Testing
 ```bash
 npm test                    # Elm package tests (elm-verify-examples + elm-test)
-npm run -w app test         # Playwright VRT tests (Docker required)
-npm run -w app test:update-snapshots  # Update VRT snapshots
+npm run -w app test         # Playwright VRT tests (local)
 ```
 
 ### Code Quality
@@ -72,8 +71,9 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 ## Testing
 
 ### Playwright VRT
-- Docker container required: `mcr.microsoft.com/playwright:v1.57.0-noble`
-- Strict 0 pixel tolerance for visual diffs
+- Local: runs directly on host, 1% pixel ratio tolerance for cross-platform diffs
+- CI: runs on ubuntu-latest, strict 0 pixel tolerance
+- Snapshot updates: CI の workflow_dispatch で実行し、アーティファクトをダウンロードしてコミット
 - Test files in `/app/tests/`
 
 ### Elm Tests
