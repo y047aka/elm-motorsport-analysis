@@ -10,7 +10,7 @@ const WAIT_TIMEOUT = 5000;
 async function waitForPageReady(page: Page, contentSelector: string) {
   await page.locator('[data-theme="forest"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   await page.locator(contentSelector).waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
-  await page.evaluate(() => document.fonts.ready);
+  await page.waitForFunction(() => document.fonts.check('12px "Inter"'), { timeout: WAIT_TIMEOUT });
 }
 
 test.describe('Top Page Visual Tests', () => {
