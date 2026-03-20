@@ -23,11 +23,22 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:1234',
     trace: 'on-first-retry',
+    launchOptions: {
+      args: [
+        '--font-render-hinting=none',
+        '--disable-lcd-text',
+        '--disable-font-subpixel-positioning',
+        '--force-color-profile=srgb',
+        '--disable-skia-runtime-opts',
+      ],
+    },
   },
 
   expect: {
     timeout: 5000,
-    toHaveScreenshot: { maxDiffPixels: 0 },
+    toHaveScreenshot: process.env.CI
+      ? { maxDiffPixels: 0 }
+      : { maxDiffPixelRatio: 0.01 },
   },
 
   projects: [
