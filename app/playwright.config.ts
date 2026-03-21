@@ -25,7 +25,8 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: [
-        '--disable-skia-runtime-opts',
+        '--font-render-hinting=none',
+        '--disable-font-subpixel-positioning',
       ],
     },
   },
