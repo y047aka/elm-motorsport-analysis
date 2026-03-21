@@ -27,7 +27,6 @@ export default defineConfig({
       args: [
         '--font-render-hinting=none',
         '--disable-lcd-text',
-        '--disable-font-subpixel-positioning',
       ],
     },
   },
@@ -36,7 +35,7 @@ export default defineConfig({
     timeout: 5000,
     toHaveScreenshot: process.env.CI
       ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.002 },
+      : { maxDiffPixelRatio: 0 },
   },
 
   projects: [
