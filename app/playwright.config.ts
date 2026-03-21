@@ -28,8 +28,7 @@ export default defineConfig({
         '--font-render-hinting=none',
         '--disable-lcd-text',
         '--disable-font-subpixel-positioning',
-        '--force-color-profile=srgb',
-        '--disable-skia-runtime-opts',
+        '--enable-font-antialiasing',
       ],
     },
   },
@@ -38,7 +37,7 @@ export default defineConfig({
     timeout: 5000,
     toHaveScreenshot: process.env.CI
       ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.01 },
+      : { maxDiffPixelRatio: 0.002 },
   },
 
   projects: [

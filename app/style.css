@@ -10,12 +10,6 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-/* Normalize font rendering across macOS (Core Text) and Linux (FreeType) */
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
 [data-theme="forest"]{
     --color-base-100: oklch(0.2 0 0);
     --color-base-200: oklch(0.22 0 0);
