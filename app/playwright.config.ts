@@ -25,6 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: [
+        '--enable-font-antialiasing',
       ],
     },
   },
