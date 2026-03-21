@@ -25,10 +25,6 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: [
-        '--font-render-hinting=none',
-        '--disable-lcd-text',
-        '--disable-font-subpixel-positioning',
-        '--enable-font-antialiasing',
       ],
     },
   },
