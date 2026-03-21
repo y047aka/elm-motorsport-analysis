@@ -25,8 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: [
-        '--font-render-hinting=none',
-        '--disable-font-subpixel-positioning',
+        '--disable-skia-runtime-opts',
       ],
     },
   },
@@ -35,7 +34,7 @@ export default defineConfig({
     timeout: 5000,
     toHaveScreenshot: process.env.CI
       ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0 },
+      : { maxDiffPixelRatio: 0.002 },
   },
 
   projects: [
