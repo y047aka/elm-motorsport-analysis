@@ -26,7 +26,7 @@ export default defineConfig({
     launchOptions: {
       args: [
         '--font-render-hinting=none',
-        '--disable-font-subpixel-positioning',
+        '--disable-lcd-text',
       ],
     },
   },
