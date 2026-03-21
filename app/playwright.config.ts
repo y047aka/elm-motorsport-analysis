@@ -25,7 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     launchOptions: {
       args: [
-        '--disable-font-subpixel-positioning',
+        '--disable-lcd-text',
       ],
     },
   },
