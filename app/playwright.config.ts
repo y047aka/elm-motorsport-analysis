@@ -35,7 +35,7 @@ export default defineConfig({
     timeout: 5000,
     toHaveScreenshot: process.env.CI
       ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.002 },
+      : { maxDiffPixelRatio: 0.0002 },
   },
 
   projects: [

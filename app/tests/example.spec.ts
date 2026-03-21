@@ -1,6 +1,7 @@
 import { test, expect, Page } from '@playwright/test';
 
 const WAIT_TIMEOUT = 5000;
+const FONT_SMOOTHING_CSS = 'html { -webkit-font-smoothing: antialiased; }';
 
 /**
  * ページのレンダリング完了を待機するヘルパー関数
@@ -17,6 +18,7 @@ test.describe('Top Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'load' });
     await waitForPageReady(page, 'text=Formula E 2025');
+    await page.addStyleTag({ content: FONT_SMOOTHING_CSS });
   });
 
   test('should render the main page correctly', async ({ page }) => {
@@ -30,6 +32,7 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
     await waitForPageReady(page, 'text=24 Hours of Le Mans');
+    await page.addStyleTag({ content: FONT_SMOOTHING_CSS });
   });
 
   test('should render Le Mans 2025 page correctly', async ({ page }) => {
