@@ -6,7 +6,19 @@
 
   outputs = { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
-      let pkgs = nixpkgs.legacyPackages.${system};
+      let
+        pkgs = nixpkgs.legacyPackages.${system};
+
+        mkCargoApp = name: cargoArgs:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt ];
+            text = ''
+              cd cli
+              cargo ${cargoArgs}
+            '';
+          };
+
       in {
         devShells.default = with pkgs;
           mkShell {
@@ -17,5 +29,10 @@
               rustfmt
             ];
           };
+
+        apps = {
+          cli-build = { type = "app"; program = "${mkCargoApp "cli-build" "build"}/bin/cli-build"; };
+          cli-test  = { type = "app"; program = "${mkCargoApp "cli-test"  "test"}/bin/cli-test"; };
+        };
       });
 }
