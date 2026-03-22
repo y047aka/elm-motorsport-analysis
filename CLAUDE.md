@@ -10,28 +10,28 @@ Motorsport race analysis and visualization application. Monorepo with Elm fronte
 
 ### Development
 ```bash
-npm start                    # elm-pages dev server (localhost:1234)
-npm run build               # Production build
+nix run .#dev                # elm-pages dev server (localhost:1234)
+nix run .#build              # Production build
 ```
 
 ### Testing
 ```bash
-npm test                    # Elm package tests (elm-verify-examples + elm-test)
-npm run -w app test         # Playwright VRT tests (local)
+nix run .#test               # Elm package tests (elm-verify-examples + elm-test)
+nix run .#test-vrt           # Playwright VRT tests
 ```
 
 ### Code Quality
 ```bash
-npm run -w review app       # elm-review on app
-npm run -w review package   # elm-review on package
-biome format --write .      # Format code
-biome check --write .       # Lint and fix
+nix run .#review-app         # elm-review on app
+nix run .#review-package     # elm-review on package
+nix run .#format             # Format code (biome format --write .)
+nix run .#lint               # Lint and fix (biome check --write .)
 ```
 
 ### Rust CLI
 ```bash
-cd cli && cargo build       # Build CLI
-cd cli && cargo test        # Run Rust tests
+nix run .#cli-build          # Build CLI
+nix run .#cli-test           # Run Rust tests
 ```
 
 ## Architecture
@@ -73,7 +73,7 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 ### Playwright VRT
 - Local: runs directly on host, 1% pixel ratio tolerance for cross-platform diffs
 - CI: runs on ubuntu-latest, strict 0 pixel tolerance
-- Snapshot updates: CI の workflow_dispatch で実行し、アーティファクトをダウンロードしてコミット
+- Snapshot updates: CI の workflow_dispatch で実行し、ブランチに自動プッシュ
 - Test files in `/app/tests/`
 
 ### Elm Tests
@@ -83,4 +83,4 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 
 ## Environment
 
-Nix flake provides reproducible dev environment (Node.js 24, Rust toolchain). Use `direnv allow` or `nix develop`.
+Nix flake provides reproducible dev environment (Node.js 24, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.
