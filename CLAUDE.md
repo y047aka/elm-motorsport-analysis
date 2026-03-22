@@ -30,8 +30,8 @@ biome check --write .       # Lint and fix
 
 ### Rust CLI
 ```bash
-cd cli && cargo build       # Build CLI
-cd cli && cargo test        # Run Rust tests
+nix develop --command bash -c "cd cli && cargo build"   # Build CLI
+nix develop --command bash -c "cd cli && cargo test"    # Run Rust tests
 ```
 
 ## Architecture
