@@ -13,20 +13,29 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'html',
+  reporter: process.env.CI ? [['github'], ['html']] : 'html',
 
   use: {
     baseURL: 'http://localhost:1234',
     trace: 'on-first-retry',
+    launchOptions: {
+      args: [
+        '--font-render-hinting=none',
+        '--disable-lcd-text',
+      ],
+    },
   },
 
   expect: {
     timeout: 5000,
-    toHaveScreenshot: { maxDiffPixels: 0 },
+    toHaveScreenshot: process.env.CI
+      ? { maxDiffPixels: 0 }
+      : { maxDiffPixelRatio: 0.0002 },
   },
 
   projects: [
