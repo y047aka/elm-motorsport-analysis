@@ -34,6 +34,7 @@
               rustc
               cargo
               rustfmt
+              elmPackages.elm-json
             ];
           };
 
