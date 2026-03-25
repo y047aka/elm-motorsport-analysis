@@ -27,6 +27,17 @@ allowed-tools:
 
 Audit and update project dependencies across all ecosystems in this monorepo.
 
+## Ecosystem references
+
+Each ecosystem's audit, update, and verify procedures are documented in:
+
+- npm: `references/npm.md`
+- Elm: `references/elm.md`
+- Rust: `references/rust.md`
+- Nix: `references/nix.md`
+
+Read the relevant reference file(s) before executing each phase.
+
 ## Instructions
 
 ### Phase 0: Pre-flight
@@ -37,38 +48,7 @@ If `$ARGUMENTS` specifies an ecosystem (`npm`, `elm`, `rust`, or `nix`), only pr
 
 ### Phase 1: Audit
 
-Run audit commands for each target ecosystem. Do NOT make any changes yet.
-
-**npm:**
-```bash
-npm outdated || true
-```
-Note whether each update is a patch, minor, or major bump.
-
-**Elm:**
-Check `which elm-json` first. If unavailable, tell the user to run `direnv reload` or `nix develop`, then skip.
-
-`elm-json upgrade` has no `--dry-run`. Read the elm.json files (`app/elm.json`, `package/elm.json`, `review/elm.json`) and report pinned versions.
-
-**Rust:**
-```bash
-cargo update --dry-run --manifest-path cli/Cargo.toml
-```
-
-**Nix:**
-No dry-run available. Report pinned revision dates from `flake.lock`:
-```bash
-cat flake.lock | python3 -c "
-import json, sys, datetime
-d = json.load(sys.stdin)
-for k, v in d.get('nodes', {}).items():
-    if 'locked' in v:
-        ts = v['locked'].get('lastModified', 0)
-        date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-        rev = v['locked'].get('rev', '?')[:12]
-        print(f'{k}: pinned {date} (rev {rev})')
-"
-```
+Run **Audit** steps from each target ecosystem's reference file. Do NOT make any changes yet.
 
 Present the results as a consolidated report.
 
@@ -77,47 +57,17 @@ Present the results as a consolidated report.
 - **Single ecosystem** (`$ARGUMENTS` given) — ask yes/no confirmation.
 - **All ecosystems** (no argument) — ask which to update. Accept: `all`, comma-separated list, or `skip`.
 
-**npm:**
-Run `npm update` for semver-compatible updates. For major bumps that exceed the semver range, list them separately and ask if the user wants `npm install <pkg>@latest`.
-
-**Elm:**
-Use `--yes` to skip interactive confirmation.
-
-**CRITICAL — elm-pages ecosystem exclusion:** `app/elm.json` contains `dillonkearns/*` packages that MUST stay in sync with the elm-pages npm package. Do NOT accept version changes to these packages. Always restore them unconditionally:
-
-1. Read `app/elm.json` and record ALL `dillonkearns/*` package versions (direct and indirect).
-2. Run `elm-json upgrade --yes app/elm.json`.
-3. Restore all `dillonkearns/*` packages to recorded versions. Run one install per package:
-   ```bash
-   elm-json install --yes 'dillonkearns/elm-pages@10.2.1' -- app/elm.json
-   elm-json install --yes 'dillonkearns/elm-form@3.0.1' -- app/elm.json
-   # ... repeat for each dillonkearns/* package
-   ```
-
-Other elm.json files — upgrade normally:
-```bash
-elm-json upgrade --yes package/elm.json
-elm-json upgrade --yes review/elm.json
-```
-
-**Rust:**
-```bash
-cargo update --manifest-path cli/Cargo.toml
-```
-
-**Nix:**
-```bash
-nix flake update
-```
+Run **Update** steps from each confirmed ecosystem's reference file.
 
 ### Phase 3: Verify
 
-| Updated ecosystem | Verification commands |
-|---|---|
-| npm | `nix run .#test`, `nix run .#build` |
-| Elm | `nix run .#test`, `nix run .#build` |
-| Rust | `nix run .#cli-test` |
-| Nix | `nix run .#test`, `nix run .#cli-test`, `nix run .#build` |
+Collect **Verify** commands from each updated ecosystem's reference file and deduplicate before running. Reference table:
+
+| Command | npm | Elm | Rust | Nix |
+|---|:---:|:---:|:---:|:---:|
+| `nix run .#test` | x | x | | x |
+| `nix run .#build` | x | x | | x |
+| `nix run .#cli-test` | | | x | x |
 
 Show `git diff --stat` so the user can see what changed.
 
@@ -125,7 +75,6 @@ Show `git diff --stat` so the user can see what changed.
 
 Ask the user if they want to commit. If yes, follow the repository's commit message conventions (check `git log --oneline`).
 
-## Special handling
+## General notes
 
-- **Playwright version change**: If `@playwright/test` is updated, remind the user to run `npx playwright install` and warn that VRT snapshots may need updating via `nix run .#test-vrt`.
 - **Network errors**: If any audit command fails, report the error and continue with the remaining ecosystems.
