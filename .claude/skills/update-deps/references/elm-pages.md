@@ -1,17 +1,14 @@
 # elm-pages
 
-Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm packages + lamdera).
+Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm packages).
 
 ## Audit
 
-1. Check current versions from `app/package.json`:
-   - `elm-pages` (exact pin)
-   - `lamdera` (semver range)
+1. Check current `elm-pages` version from `app/package.json` (exact pin).
 
-2. Check latest available versions:
+2. Check latest available version:
    ```bash
    npm view elm-pages dist-tags.latest
-   npm view lamdera dist-tags.latest
    ```
 
 3. Report all `dillonkearns/*` package versions from `app/elm.json` (direct + indirect).
@@ -23,18 +20,13 @@ Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm 
 
 ## Update
 
-Update npm packages first, then Elm packages.
+Update npm package first, then Elm packages.
 
-### Step 1: Update npm packages
+### Step 1: Update npm package
 
 elm-pages must be pinned exact (no caret). Always use `--save-exact` (omitting it adds `^`):
 ```bash
 npm install --save-exact elm-pages@<version> -w app
-```
-
-Check lamdera compatibility and update if needed:
-```bash
-npm install lamdera@<version> -w app
 ```
 
 ### Step 2: Identify the required Elm package version
