@@ -4,6 +4,7 @@ description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Ni
 argument-hint: "[npm|elm|elm-pages|rust|nix]"
 disable-model-invocation: true
 allowed-tools:
+  - Bash(npm audit *)
   - Bash(npm outdated *)
   - Bash(npm update *)
   - Bash(npm install *)
