@@ -5,15 +5,16 @@
 No dry-run available. Report pinned revision dates from `flake.lock`:
 
 ```bash
-cat flake.lock | python3 -c "
-import json, sys, datetime
-d = json.load(sys.stdin)
-for k, v in d.get('nodes', {}).items():
-    if 'locked' in v:
-        ts = v['locked'].get('lastModified', 0)
-        date = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d')
-        rev = v['locked'].get('rev', '?')[:12]
-        print(f'{k}: pinned {date} (rev {rev})')
+node -e "
+  const d = JSON.parse(require('fs').readFileSync('flake.lock','utf8'));
+  for (const [k, v] of Object.entries(d.nodes || {})) {
+    if (v.locked) {
+      const ts = v.locked.lastModified || 0;
+      const date = new Date(ts * 1000).toISOString().slice(0, 10);
+      const rev = (v.locked.rev || '?').slice(0, 12);
+      console.log(k + ': pinned ' + date + ' (rev ' + rev + ')');
+    }
+  }
 "
 ```
 

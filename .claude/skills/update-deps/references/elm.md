@@ -12,7 +12,9 @@ Use `--yes` to skip interactive confirmation.
 
 ### CRITICAL — elm-pages ecosystem exclusion
 
-`app/elm.json` contains `dillonkearns/*` packages that MUST stay in sync with the elm-pages npm package. Do NOT accept version changes to these packages. Always restore them unconditionally:
+`app/elm.json` contains `dillonkearns/*` packages that MUST stay in sync with the elm-pages npm package. Do NOT accept version changes to these packages. Always restore them unconditionally.
+
+> To update `dillonkearns/*` packages, use `/update-deps elm-pages`. See `references/elm-pages.md` for details.
 
 1. Read `app/elm.json` and record ALL `dillonkearns/*` package versions (direct and indirect).
 2. Run `elm-json upgrade --yes app/elm.json`.
