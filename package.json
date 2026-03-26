@@ -1,6 +1,10 @@
 {
   "type": "module",
-  "workspaces": ["app", "package", "review"],
+  "workspaces": [
+    "app",
+    "package",
+    "review"
+  ],
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
