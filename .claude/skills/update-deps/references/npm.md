@@ -33,6 +33,12 @@ for (const f of files) {
 "
 ```
 
+Then run `npm install` to sync `package-lock.json` with the pinned versions:
+
+```bash
+npm install
+```
+
 For major bumps that exceed the semver range, list them separately and ask if the user wants `npm install --save-exact <pkg>@latest`.
 
 ### Special handling
