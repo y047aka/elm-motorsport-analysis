@@ -60,7 +60,9 @@ Present the results as a consolidated report.
 
 ### Phase 2: Update
 
-- **Single ecosystem** (`$ARGUMENTS` given) — ask yes/no confirmation.
+- **Single ecosystem** (`$ARGUMENTS` given) — ask confirmation in two parts:
+  1. Whether to apply semver-compatible updates (patch and minor)
+  2. Whether to apply major bumps (list each package separately)
 - **All ecosystems** (no argument) — ask which to update. Accept: `all`, comma-separated list, or `skip`.
 
 Run **Update** steps from each confirmed ecosystem's reference file.

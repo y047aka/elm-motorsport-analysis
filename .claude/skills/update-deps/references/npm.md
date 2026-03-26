@@ -4,9 +4,11 @@
 
 ```bash
 npm outdated || true
+npm audit || true
 ```
 
 Note whether each update is a patch, minor, or major bump.
+For `npm audit` findings, note whether fixes require `--force` (which may be a breaking change) and report them to the user.
 
 ## Update
 
