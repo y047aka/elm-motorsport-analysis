@@ -103,3 +103,19 @@ Major elm-pages updates may require application code changes due to API changes.
 - The `lamdera/codecs` Elm package is automatically injected by elm-pages during build. Do not manage it manually.
 - elm-pages must remain exact-pinned (no caret) in `app/package.json`.
 - npm and Elm package version numbers are independent (e.g. npm 3.0.22 corresponds to Elm 10.2.1). The compatibilityKey integer is the binding contract between them.
+
+### vite version alignment
+
+elm-pages bundles its own vite internally, but `app/elm-pages.config.mjs` imports `defineConfig` from the user-installed vite (resolved via Node.js module resolution, not elm-pages's nested copy). The `defineConfig` output is merged with elm-pages's internal vite config at build time.
+
+When elm-pages is updated:
+
+1. Check elm-pages's new bundled vite version:
+   ```bash
+   node -e "console.log(require('elm-pages/node_modules/vite/package.json').version)"
+   ```
+2. If the bundled vite major version changed, update the user's vite in `app/package.json` to match:
+   ```bash
+   npm install --save-exact vite@<version> -w app
+   ```
+3. If only a minor/patch bump, no action is needed — minor version mismatch between the user's vite and elm-pages's bundled vite is acceptable since `defineConfig` is stable across minors.
