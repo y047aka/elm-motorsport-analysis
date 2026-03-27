@@ -10,6 +10,7 @@ allowed-tools:
   - Bash(npm install *)
   - Bash(elm-json *)
   - Bash(cargo update *)
+  - Bash(cargo search *)
   - Bash(nix flake update *)
   - Bash(nix run *)
   - Bash(git diff *)
