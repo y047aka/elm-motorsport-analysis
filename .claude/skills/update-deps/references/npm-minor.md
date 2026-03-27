@@ -1,4 +1,6 @@
-# npm
+# npm (minor)
+
+Semver-compatible (patch and minor) updates for npm packages.
 
 ## Audit
 
@@ -7,7 +9,8 @@ npm outdated || true
 npm audit || true
 ```
 
-Note whether each update is a patch, minor, or major bump.
+Focus on packages where **Current** differs from **Wanted** — these are semver-compatible updates allowed by the existing version constraints.
+
 For `npm audit` findings, note whether fixes require `--force` (which may be a breaking change) and report them to the user.
 
 ## Update
@@ -57,8 +60,6 @@ Then run `npm install` to sync `package-lock.json` with the pinned versions:
 ```bash
 npm install
 ```
-
-For major bumps that exceed the semver range, list them separately and ask if the user wants `npm install --save-exact <pkg>@latest`.
 
 ### Special handling
 

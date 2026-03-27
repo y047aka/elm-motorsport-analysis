@@ -1,18 +1,10 @@
-# Rust
+# Rust (major)
+
+Major version updates for Rust crates (leftmost non-zero version component increases).
 
 The workspace root is `cli/Cargo.toml` with members `cli/` and `motorsport/`.
 
 ## Audit
-
-### 1. Check semver-compatible updates
-
-```bash
-cargo update --dry-run --manifest-path cli/Cargo.toml
-```
-
-Note whether each update is a patch or minor bump.
-
-### 2. Check for major version updates
 
 Extract direct dependencies and check the latest published version for each:
 
@@ -38,17 +30,9 @@ for (const f of files) {
 done
 ```
 
-A **major bump** is when the leftmost non-zero version component increases (e.g., `1.x → 2.x`). List these separately for confirmation.
+A **major bump** is when the leftmost non-zero version component increases (e.g., `0.8 → 0.9`, `1.x → 2.x`). List these separately for confirmation.
 
 ## Update
-
-### patch/minor: semver-compatible updates
-
-```bash
-cargo update --manifest-path cli/Cargo.toml
-```
-
-### major: manual Cargo.toml edits
 
 For each crate with a confirmed major version bump, update its version constraint in the relevant file:
 - `cli/Cargo.toml` — workspace-level dependencies (`[workspace.dependencies]`)
