@@ -9,22 +9,7 @@ The workspace root is `cli/Cargo.toml` with members `cli/` and `motorsport/`.
 Extract direct dependencies and check the latest published version for each:
 
 ```bash
-node -e "
-const fs = require('fs');
-const files = ['cli/Cargo.toml', 'cli/cli/Cargo.toml', 'cli/motorsport/Cargo.toml'];
-const seen = new Set();
-for (const f of files) {
-  const content = fs.readFileSync(f, 'utf8');
-  let inDeps = false;
-  for (const line of content.split('\n')) {
-    if (/^\[(workspace\.)?(dev-)?dependencies\]/.test(line)) { inDeps = true; continue; }
-    if (/^\[/.test(line)) { inDeps = false; continue; }
-    if (!inDeps) continue;
-    const m = line.match(/^([\w-]+)\s*=\s*(?:\"([^\"]+)\"|.*version\s*=\s*\"([^\"]+)\")/);
-    if (m && !seen.has(m[1])) { seen.add(m[1]); console.log(m[1] + ' ' + (m[2] || m[3])); }
-  }
-}
-" | while read crate constraint; do
+node .claude/skills/update-deps/scripts/rust-deps-parse.cjs | while read crate constraint; do
   latest=$(cargo search "$crate" --limit 1 2>/dev/null | grep "^$crate " | grep -o '"[^"]*"' | head -1 | tr -d '"')
   echo "$crate: constraint=$constraint latest=${latest:-unknown}"
 done

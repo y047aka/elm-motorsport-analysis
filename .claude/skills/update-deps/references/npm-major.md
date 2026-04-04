@@ -24,7 +24,7 @@ If the package belongs to a workspace, add the workspace flag (e.g., `-w app`).
 
 - **Playwright version change**: If `@playwright/test` is updated, remind the user to run `npx playwright install` and warn that VRT snapshots may need updating via `nix run .#test-vrt`.
 - **vite version change**: `vite` is directly imported by `app/elm-pages.config.mjs` (`import { defineConfig } from "vite"`). elm-pages also bundles its own vite internally (in `node_modules/elm-pages/node_modules/vite/`). When updating vite:
-  1. Check elm-pages's bundled vite version: `node -e "console.log(require('elm-pages/node_modules/vite/package.json').version)"`
+  1. Check elm-pages's bundled vite version: `node .claude/skills/update-deps/scripts/vite-bundled-version.cjs`
   2. **Never** upgrade the user's vite past elm-pages's bundled major version, as `defineConfig` output is merged with elm-pages's internal vite config and major version mismatch may cause incompatibilities.
   3. Never remove vite — without it, elm-pages silently falls back to default config, ignoring `elm-pages.config.mjs` (headTagsTemplate, preloadTagForFile, etc.).
 

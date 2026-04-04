@@ -112,7 +112,7 @@ When elm-pages is updated:
 
 1. Check elm-pages's new bundled vite version:
    ```bash
-   node -e "console.log(require('elm-pages/node_modules/vite/package.json').version)"
+   node .claude/skills/update-deps/scripts/vite-bundled-version.cjs
    ```
 2. If the bundled vite major version changed, update the user's vite in `app/package.json` to match:
    ```bash
