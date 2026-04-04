@@ -11,7 +11,10 @@ Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm 
    npm view elm-pages dist-tags.latest
    ```
 
-3. Report all `dillonkearns/*` package versions from `app/elm.json` (direct + indirect).
+3. Report all `dillonkearns/*` package versions:
+   ```bash
+   node .claude/skills/update-deps/scripts/elm-dillonkearns-guard.cjs
+   ```
 
 4. Report the current compatibilityKey:
    ```bash
@@ -33,25 +36,13 @@ npm install --save-exact elm-pages@<version> -w app
 
 The npm package ships Elm source with a compatibilityKey integer. The Elm package installed from package.elm-lang.org must have the same key.
 
-1. Read the target compatibilityKey from the newly installed npm source:
-   ```bash
-   cat node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm
-   ```
+```bash
+node .claude/skills/update-deps/scripts/elm-pages-compat-key.cjs
+```
 
-2. Find the matching Elm package version by checking all cached versions:
-   ```bash
-   for f in ~/.elm/0.19.1/packages/dillonkearns/elm-pages/*/src/Pages/Internal/Platform/CompatibilityKey.elm; do
-     ver=$(echo "$f" | sed 's|.*elm-pages/\([^/]*\)/.*|\1|')
-     key=$(grep -o '[0-9]*' "$f" | tail -1)
-     echo "$ver: key=$key"
-   done
-   ```
-   Pick the version whose key matches the npm value.
+If the script reports `matchingElmVersion: no-match`, follow its instruction to install the latest Elm package to populate the cache, then re-run the script.
 
-3. If no cached version matches, install the latest from package.elm-lang.org to populate the cache, then re-check:
-   ```bash
-   elm-json install --yes 'dillonkearns/elm-pages@latest' -- app/elm.json
-   ```
+Use the `matchingElmVersion` value as the target version in Step 3.
 
 ### Step 3: Update Elm packages in app/elm.json
 

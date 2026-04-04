@@ -16,14 +16,15 @@ Use `--yes` to skip interactive confirmation.
 
 > To update `dillonkearns/*` packages, use `/update-deps elm-pages`. See `references/elm-pages.md` for details.
 
-1. Read `app/elm.json` and record ALL `dillonkearns/*` package versions (direct and indirect).
-2. Run `elm-json upgrade --yes app/elm.json`.
-3. Restore all `dillonkearns/*` packages to recorded versions. Run one install per package:
+1. Capture dillonkearns package versions and restore commands:
    ```bash
-   elm-json install --yes 'dillonkearns/elm-pages@10.2.1' -- app/elm.json
-   elm-json install --yes 'dillonkearns/elm-form@3.0.1' -- app/elm.json
-   # ... repeat for each dillonkearns/* package
+   node .claude/skills/update-deps/scripts/elm-dillonkearns-guard.cjs
    ```
+   Save the output (the `restore commands` section contains the commands needed in step 3).
+
+2. Run `elm-json upgrade --yes app/elm.json`.
+
+3. Restore dillonkearns packages by executing each command from the `restore commands` section of step 1's output.
 
 ### Other elm.json files
 
