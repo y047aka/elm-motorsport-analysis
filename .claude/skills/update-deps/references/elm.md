@@ -4,7 +4,11 @@
 
 Check `which elm-json` first. If unavailable, tell the user to run `direnv reload` or `nix develop`, then skip.
 
-`elm-json upgrade` has no `--dry-run`. Read the elm.json files (`app/elm.json`, `package/elm.json`, `review/elm.json`) and report pinned versions.
+`elm-json upgrade` has no `--dry-run`. Report current pinned versions:
+
+```bash
+node .claude/skills/update-deps/scripts/elm-versions-report.cjs
+```
 
 ## Update
 

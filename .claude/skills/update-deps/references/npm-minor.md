@@ -6,12 +6,12 @@ Semver-compatible (patch and minor) updates for npm packages.
 
 ```bash
 npm outdated --json 2>/dev/null | node .claude/skills/update-deps/scripts/npm-outdated-audit.cjs
-npm audit || true
+npm audit --json 2>/dev/null | node .claude/skills/update-deps/scripts/npm-audit-parse.cjs
 ```
 
-The script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
+The first script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
 
-For `npm audit` findings, note whether fixes require `--force` (which may be a breaking change) and report them to the user.
+The second script classifies security vulnerabilities by severity and fix availability. Note `fixable-breaking` count — these fixes require `--force` and may introduce breaking changes.
 
 ## Update
 
