@@ -1,8 +1,15 @@
 // Classify npm outdated --json output into minor/major update sections.
-// Pipe from: npm outdated --json 2>/dev/null | node <this-script>
+// Pipe from: npm outdated --json 2>/dev/null | node --experimental-strip-types <this-script>
 // Run from the project root.
-const fs = require("fs");
-const path = require("path");
+import fs from "fs";
+import path from "path";
+
+interface OutdatedInfo {
+  current: string;
+  wanted: string;
+  latest: string;
+  dependent?: string;
+}
 
 const input = fs.readFileSync("/dev/stdin", "utf8").trim();
 if (!input) {
@@ -14,11 +21,11 @@ if (!input) {
   process.exit(0);
 }
 
-const data = JSON.parse(input);
-const minor = [];
-const major = [];
+const data: Record<string, OutdatedInfo> = JSON.parse(input);
+const minor: string[] = [];
+const major: string[] = [];
 let playwrightChanged = false;
-let viteEntry = null;
+let viteEntry: { current: string; latest: string } | null = null;
 
 for (const [name, info] of Object.entries(data)) {
   const current = info.current;
@@ -59,7 +66,7 @@ if (viteEntry) {
   const nested = path.join(root, "node_modules/elm-pages/node_modules/vite/package.json");
   const hoisted = path.join(root, "node_modules/vite/package.json");
   const bundledPkg = fs.existsSync(nested) ? nested : hoisted;
-  const bundledVersion = fs.existsSync(bundledPkg) ? require(bundledPkg).version : "unknown";
+  const bundledVersion: string = fs.existsSync(bundledPkg) ? JSON.parse(fs.readFileSync(bundledPkg, "utf8")).version : "unknown";
   console.log("");
   console.log("--- vite ---");
   console.log("current: " + viteEntry.current);

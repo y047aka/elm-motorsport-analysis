@@ -1,10 +1,11 @@
 // Pin all workspace package.json dependency versions to the exact versions
 // resolved in package-lock.json.
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
+
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
 
-function resolved(name, wsPrefix) {
+function resolved(name: string, wsPrefix: string): string | null {
   if (wsPrefix) {
     const k = wsPrefix + "/node_modules/" + name;
     if (lock.packages[k]) return lock.packages[k].version;
@@ -13,7 +14,7 @@ function resolved(name, wsPrefix) {
   return lock.packages[k] ? lock.packages[k].version : null;
 }
 
-const workspaces = {
+const workspaces: Record<string, string> = {
   "package.json": "",
   "app/package.json": "app",
   "package/package.json": "package",

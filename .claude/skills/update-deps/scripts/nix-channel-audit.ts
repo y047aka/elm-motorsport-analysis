@@ -1,7 +1,8 @@
 // Audit the current nixpkgs channel in flake.nix and report whether
 // a newer stable channel is available.
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
+
 const flake = fs.readFileSync("flake.nix", "utf8");
 const m = flake.match(/nixpkgs\/nixpkgs-(\d+)\.(\d+)-darwin/);
 if (!m) {
@@ -14,7 +15,7 @@ console.log("current channel: nixpkgs-" + yy + "." + mm + "-darwin");
 const now = new Date();
 const year = now.getFullYear() % 100;
 
-const channels = [];
+const channels: { y: number; mm: string; label: string }[] = [];
 for (let y = 24; y <= year; y++) {
   for (const releaseMonth of [5, 11]) {
     const releaseDate = new Date(2000 + y, releaseMonth - 1, 1);
@@ -32,8 +33,8 @@ const latestNum = latest.y * 100 + parseInt(latest.mm);
 if (latestNum > currentNum) {
   console.log(
     "latest channel:  nixpkgs-" +
-      latest.label +
-      "-darwin  <- UPGRADE AVAILABLE"
+    latest.label +
+    "-darwin  <- UPGRADE AVAILABLE"
   );
 } else {
   console.log(

@@ -1,13 +1,14 @@
 // Parse direct dependencies from all Cargo.toml files in the workspace.
 // Outputs one line per unique crate: "crate-name version-constraint"
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
+
 const files = [
   "cli/Cargo.toml",
   "cli/cli/Cargo.toml",
   "cli/motorsport/Cargo.toml",
 ];
-const seen = new Set();
+const seen = new Set<string>();
 for (const f of files) {
   const content = fs.readFileSync(f, "utf8");
   let inDeps = false;

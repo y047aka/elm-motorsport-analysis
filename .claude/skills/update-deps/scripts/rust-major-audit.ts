@@ -2,8 +2,8 @@
 // Parses Cargo.toml files, runs cargo search for each crate,
 // and classifies results by major version bump.
 // Run from the project root.
-const fs = require("fs");
-const { execSync } = require("child_process");
+import fs from "fs";
+import { execSync } from "child_process";
 
 const files = [
   "cli/Cargo.toml",
@@ -11,9 +11,9 @@ const files = [
   "cli/motorsport/Cargo.toml",
 ];
 
-// Parse direct dependencies (same logic as rust-deps-parse.cjs)
-const seen = new Set();
-const deps = [];
+// Parse direct dependencies (same logic as rust-deps-parse.ts)
+const seen = new Set<string>();
+const deps: { name: string; constraint: string }[] = [];
 for (const f of files) {
   const content = fs.readFileSync(f, "utf8");
   let inDeps = false;
@@ -38,7 +38,7 @@ for (const f of files) {
 }
 
 // Extract leftmost non-zero component for major version comparison
-function majorComponent(version) {
+function majorComponent(version: string): { index: number; value: number } {
   const parts = version.split(".").map(Number);
   for (const p of parts) {
     if (p !== 0) return { index: parts.indexOf(p), value: p };
@@ -46,7 +46,7 @@ function majorComponent(version) {
   return { index: 0, value: 0 };
 }
 
-function isMajorBump(current, latest) {
+function isMajorBump(current: string, latest: string): boolean {
   const c = majorComponent(current);
   const l = majorComponent(latest);
   if (c.index !== l.index) return true;
@@ -54,12 +54,12 @@ function isMajorBump(current, latest) {
 }
 
 // Strip leading constraint operators to get base version
-function baseVersion(constraint) {
+function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
-const majorUpdates = [];
-const upToDate = [];
+const majorUpdates: string[] = [];
+const upToDate: string[] = [];
 
 for (const dep of deps) {
   let latest = "unknown";

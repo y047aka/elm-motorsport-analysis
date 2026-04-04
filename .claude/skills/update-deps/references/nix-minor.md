@@ -7,7 +7,7 @@ Update flake inputs to the latest commit within the current channel.
 Check pinned revision dates in flake.lock:
 
 ```bash
-node .claude/skills/update-deps/scripts/nix-flakelock-audit.cjs
+node --experimental-strip-types .claude/skills/update-deps/scripts/nix-flakelock-audit.ts
 ```
 
 ## Update

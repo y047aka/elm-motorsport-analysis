@@ -22,7 +22,7 @@ allowed-tools:
   - Bash(cat node_modules/*)
   - Bash(npm view *)
   - Bash(node -e *)
-  - Bash(node .claude/skills/update-deps/scripts/*)
+  - Bash(node --experimental-strip-types .claude/skills/update-deps/scripts/*)
   - Bash(find ~/.elm *)
   - Read
   - Edit

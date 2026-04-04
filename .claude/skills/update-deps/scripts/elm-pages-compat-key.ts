@@ -1,8 +1,8 @@
 // Match elm-pages npm compatibilityKey with the correct Elm package version.
 // Run from the project root.
-const fs = require("fs");
-const path = require("path");
-const os = require("os");
+import fs from "fs";
+import path from "path";
+import os from "os";
 
 const npmKeyFile = path.join(process.cwd(), "node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm");
 if (!fs.existsSync(npmKeyFile)) {
@@ -29,7 +29,7 @@ if (!fs.existsSync(cacheDir)) {
 }
 
 const versions = fs.readdirSync(cacheDir);
-const matches = [];
+const matches: string[] = [];
 
 for (const ver of versions) {
   const keyFile = path.join(cacheDir, ver, "src/Pages/Internal/Platform/CompatibilityKey.elm");
@@ -41,7 +41,7 @@ for (const ver of versions) {
   }
 }
 
-matches.sort((a, b) => {
+matches.sort((a: string, b: string) => {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
   for (let i = 0; i < Math.max(pa.length, pb.length); i++) {

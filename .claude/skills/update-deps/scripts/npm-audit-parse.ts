@@ -1,7 +1,23 @@
 // Classify npm audit --json output into a structured vulnerability report.
-// Pipe from: npm audit --json 2>/dev/null | node <this-script>
+// Pipe from: npm audit --json 2>/dev/null | node --experimental-strip-types <this-script>
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
+
+interface ViaObject {
+  title?: string;
+}
+
+interface FixAvailableObject {
+  name: string;
+  version: string;
+  isSemVerMajor?: boolean;
+}
+
+interface VulnInfo {
+  severity: string;
+  via: (ViaObject | string)[];
+  fixAvailable: boolean | FixAvailableObject;
+}
 
 const input = fs.readFileSync("/dev/stdin", "utf8").trim();
 if (!input) {
@@ -14,8 +30,8 @@ if (!input) {
 }
 
 const data = JSON.parse(input);
-const vulns = data.vulnerabilities || {};
-const lines = [];
+const vulns: Record<string, VulnInfo> = data.vulnerabilities || {};
+const lines: string[] = [];
 let total = 0;
 let fixable = 0;
 let fixableBreaking = 0;
@@ -25,10 +41,10 @@ for (const [name, info] of Object.entries(vulns)) {
 
   // Build description from via entries
   const titles = (info.via || [])
-    .filter(v => typeof v === "object" && v.title)
+    .filter((v): v is ViaObject => typeof v === "object" && v.title != null)
     .map(v => v.title);
   const viaNames = (info.via || [])
-    .filter(v => typeof v === "string");
+    .filter((v): v is string => typeof v === "string");
   const desc = titles.length
     ? titles[0]
     : viaNames.length
@@ -41,7 +57,7 @@ for (const [name, info] of Object.entries(vulns)) {
     fixable++;
     fixStr = "fix available";
   } else if (info.fixAvailable && typeof info.fixAvailable === "object") {
-    const fix = info.fixAvailable;
+    const fix = info.fixAvailable as FixAvailableObject;
     if (fix.isSemVerMajor) {
       fixableBreaking++;
       fixStr = "fix: " + fix.name + "@" + fix.version + " (BREAKING)";

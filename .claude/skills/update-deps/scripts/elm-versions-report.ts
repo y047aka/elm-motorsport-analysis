@@ -1,17 +1,17 @@
 // Report all Elm package versions across the three elm.json files.
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
 
 const files = ["app/elm.json", "package/elm.json", "review/elm.json"];
 
 for (const f of files) {
   const elmJson = JSON.parse(fs.readFileSync(f, "utf8"));
-  const type = elmJson.type || "unknown";
+  const type: string = elmJson.type || "unknown";
   console.log("--- " + f + " (" + type + ") ---");
 
   if (type === "application") {
-    const deps = elmJson.dependencies || {};
-    const testDeps = elmJson["test-dependencies"] || {};
+    const deps: Record<string, Record<string, string>> = elmJson.dependencies || {};
+    const testDeps: Record<string, Record<string, string>> = elmJson["test-dependencies"] || {};
 
     console.log("direct:");
     for (const [name, version] of Object.entries(deps.direct || {})) {
@@ -32,8 +32,8 @@ for (const f of files) {
       }
     }
   } else if (type === "package") {
-    const deps = elmJson.dependencies || {};
-    const testDeps = elmJson["test-dependencies"] || {};
+    const deps: Record<string, string> = elmJson.dependencies || {};
+    const testDeps: Record<string, string> = elmJson["test-dependencies"] || {};
     console.log("dependencies:");
     for (const [name, constraint] of Object.entries(deps)) {
       console.log("  " + name + ": " + constraint);

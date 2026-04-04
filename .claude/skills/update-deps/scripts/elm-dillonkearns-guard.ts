@@ -1,15 +1,15 @@
 // Extract dillonkearns/* package versions from app/elm.json
 // and print elm-json install commands to restore them.
 // Run from the project root.
-const fs = require("fs");
+import fs from "fs";
 
 const elmJson = JSON.parse(fs.readFileSync("app/elm.json", "utf8"));
-const deps = elmJson.dependencies || {};
-const direct = deps.direct || {};
-const indirect = deps.indirect || {};
+const deps: Record<string, Record<string, string>> = elmJson.dependencies || {};
+const direct: Record<string, string> = deps.direct || {};
+const indirect: Record<string, string> = deps.indirect || {};
 
-const directPkgs = [];
-const indirectPkgs = [];
+const directPkgs: { name: string; version: string }[] = [];
+const indirectPkgs: { name: string; version: string }[] = [];
 
 for (const [name, version] of Object.entries(direct)) {
   if (name.startsWith("dillonkearns/")) {
