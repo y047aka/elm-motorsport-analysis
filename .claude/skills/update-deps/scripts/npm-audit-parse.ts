@@ -47,21 +47,17 @@ const { lines, fixable, fixableBreaking } = Object.entries(vulns).reduce(
       : "";
 
     // Fix availability
-    let fixStr = "no fix available";
-    let fixKind: "fixable" | "breaking" | "none" = "none";
-    if (info.fixAvailable === true) {
-      fixStr = "fix available";
-      fixKind = "fixable";
-    } else if (info.fixAvailable && typeof info.fixAvailable === "object") {
-      const fix = info.fixAvailable as FixAvailableObject;
-      if (fix.isSemVerMajor) {
-        fixStr = `fix: ${fix.name}@${fix.version} (BREAKING)`;
-        fixKind = "breaking";
-      } else {
-        fixStr = `fix: ${fix.name}@${fix.version}`;
-        fixKind = "fixable";
-      }
-    }
+    const fix = typeof info.fixAvailable === "object" && info.fixAvailable
+      ? info.fixAvailable as FixAvailableObject
+      : null;
+    const [fixStr, fixKind]: [string, "fixable" | "breaking" | "none"] =
+      info.fixAvailable === true
+        ? ["fix available", "fixable"]
+        : fix?.isSemVerMajor
+        ? [`fix: ${fix.name}@${fix.version} (BREAKING)`, "breaking"]
+        : fix
+        ? [`fix: ${fix.name}@${fix.version}`, "fixable"]
+        : ["no fix available", "none"];
 
     return {
       lines: [...acc.lines, `${name} (${info.severity}): ${desc} — ${fixStr}`],

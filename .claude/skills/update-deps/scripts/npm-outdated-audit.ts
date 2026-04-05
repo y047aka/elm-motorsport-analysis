@@ -30,34 +30,30 @@ if (!input) {
 
 const data: Record<string, OutdatedInfo> = JSON.parse(input);
 
-const { minor, major, playwrightChanged, viteEntry } = Object.entries(data)
-  .reduce(
-    (acc, [name, info]) => {
-      const { current, wanted, latest } = info;
-      const dep = info.dependent || "";
-      const currentMajor = parseInt(current);
-      const latestMajor = parseInt(latest);
+const { minor, major } = Object.entries(data).reduce(
+  (acc, [name, info]) => {
+    const { current, wanted, latest } = info;
+    const dep = info.dependent || "";
+    return {
+      minor: current !== wanted
+        ? [...acc.minor, `${name}: ${current} -> ${wanted} (${dep})`]
+        : acc.minor,
+      major: parseInt(latest) > parseInt(current)
+        ? [...acc.major, `${name}: ${current} -> ${latest} (${dep})`]
+        : acc.major,
+    };
+  },
+  { minor: [] as string[], major: [] as string[] },
+);
 
-      return {
-        minor: current !== wanted
-          ? [...acc.minor, `${name}: ${current} -> ${wanted} (${dep})`]
-          : acc.minor,
-        major: latestMajor > currentMajor
-          ? [...acc.major, `${name}: ${current} -> ${latest} (${dep})`]
-          : acc.major,
-        playwrightChanged: acc.playwrightChanged ||
-          (name === "@playwright/test" &&
-            (current !== wanted || latestMajor > currentMajor)),
-        viteEntry: name === "vite" ? { current, latest } : acc.viteEntry,
-      };
-    },
-    {
-      minor: [] as string[],
-      major: [] as string[],
-      playwrightChanged: false,
-      viteEntry: null as { current: string; latest: string } | null,
-    },
-  );
+const pw = data["@playwright/test"];
+const playwrightChanged = pw != null &&
+  (pw.current !== pw.wanted || parseInt(pw.latest) > parseInt(pw.current));
+
+const vite = data["vite"];
+const viteEntry = vite != null
+  ? { current: vite.current, latest: vite.latest }
+  : null;
 
 console.log("--- minor updates ---");
 console.log(minor.length ? minor.join("\n") : "none");

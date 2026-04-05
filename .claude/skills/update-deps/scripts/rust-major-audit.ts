@@ -56,6 +56,7 @@ function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
+const decoder = new TextDecoder();
 const classified = await Promise.all(
   deps.map(async (dep) => {
     let latest = "unknown";
@@ -65,7 +66,7 @@ const classified = await Promise.all(
         stdout: "piped",
         stderr: "null",
       });
-      const out = new TextDecoder().decode((await cmd.output()).stdout);
+      const out = decoder.decode((await cmd.output()).stdout);
       const m = out.match(
         new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
       );
