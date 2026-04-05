@@ -20,12 +20,6 @@ interface VulnInfo {
   fixAvailable: boolean | FixAvailableObject;
 }
 
-function isFixAvailableObject(
-  v: boolean | FixAvailableObject,
-): v is FixAvailableObject {
-  return typeof v === "object" && v !== null && "name" in v;
-}
-
 const input = (await new Response(Deno.stdin.readable).text()).trim();
 if (!input) {
   console.log("--- vulnerabilities ---");
@@ -68,17 +62,14 @@ const { lines, fixable, fixableBreaking } = Object.entries(vulns).reduce(
       : "";
 
     // Fix availability
-    const fix = isFixAvailableObject(info.fixAvailable)
-      ? info.fixAvailable
-      : null;
     const [fixStr, fixKind]: [string, "fixable" | "breaking" | "none"] =
-      info.fixAvailable === true
-        ? ["fix available", "fixable"]
-        : fix?.isSemVerMajor
-        ? [`fix: ${fix.name}@${fix.version} (BREAKING)`, "breaking"]
-        : fix
-        ? [`fix: ${fix.name}@${fix.version}`, "fixable"]
-        : ["no fix available", "none"];
+      typeof info.fixAvailable === "boolean"
+        ? info.fixAvailable
+          ? ["fix available", "fixable"]
+          : ["no fix available", "none"]
+        : info.fixAvailable.isSemVerMajor
+        ? [`fix: ${info.fixAvailable.name}@${info.fixAvailable.version} (BREAKING)`, "breaking"]
+        : [`fix: ${info.fixAvailable.name}@${info.fixAvailable.version}`, "fixable"];
 
     return {
       lines: [...acc.lines, `${name} (${info.severity}): ${desc} — ${fixStr}`],

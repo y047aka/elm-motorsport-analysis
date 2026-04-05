@@ -3,6 +3,8 @@
 // and classifies results by major version bump.
 // Run from the project root.
 
+import { type Option, type Some, some, none, isSome, getOrElse } from "./_option.ts";
+
 const files = [
   "cli/Cargo.toml",
   "cli/cli/Cargo.toml",
@@ -69,13 +71,9 @@ function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
-type VersionLookup =
-  | { status: "found"; version: string }
-  | { status: "unknown" };
-
 const decoder = new TextDecoder();
 
-async function fetchLatestVersion(name: string): Promise<VersionLookup> {
+async function fetchLatestVersion(name: string): Promise<Option<string>> {
   try {
     const cmd = new Deno.Command("cargo", {
       args: ["search", name, "--limit", "1"],
@@ -84,10 +82,10 @@ async function fetchLatestVersion(name: string): Promise<VersionLookup> {
     });
     const out = decoder.decode((await cmd.output()).stdout);
     const m = out.match(new RegExp(`^${name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`));
-    return m ? { status: "found", version: m[1] } : { status: "unknown" };
+    return m ? some(m[1]) : none;
   } catch (_) {
     // network error — report as unknown
-    return { status: "unknown" };
+    return none;
   }
 }
 
@@ -99,12 +97,10 @@ const classified = await Promise.all(
 );
 
 type ClassifiedDep = (typeof classified)[number];
-type FoundDep = Omit<ClassifiedDep, "latest"> & {
-  latest: { status: "found"; version: string };
-};
+type FoundDep = Omit<ClassifiedDep, "latest"> & { latest: Some<string> };
 
 function isMajorUpdate(d: ClassifiedDep): d is FoundDep {
-  return d.latest.status === "found" && isMajorBump(d.current, d.latest.version);
+  return isSome(d.latest) && isMajorBump(d.current, d.latest.value);
 }
 
 const [majorDeps, upToDateDeps] = classified.reduce<[FoundDep[], ClassifiedDep[]]>(
@@ -113,10 +109,10 @@ const [majorDeps, upToDateDeps] = classified.reduce<[FoundDep[], ClassifiedDep[]
 );
 
 const majorUpdates = majorDeps.map(({ name, current, latest }) =>
-  `${name}: ${current} -> ${latest.version}`
+  `${name}: ${current} -> ${latest.value}`
 );
 const upToDate = upToDateDeps.map(({ name, current, latest }) =>
-  `${name}: ${current} (latest ${latest.status === "found" ? latest.version : "unknown"})`
+  `${name}: ${current} (latest ${getOrElse(latest, "unknown")})`
 );
 
 console.log("--- major updates ---");

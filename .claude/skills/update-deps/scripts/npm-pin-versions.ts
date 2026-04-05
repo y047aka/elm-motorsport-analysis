@@ -2,15 +2,17 @@
 // resolved in package-lock.json.
 // Run from the project root.
 
+import { type Option, some, none, getOrElse } from "./_option.ts";
+
 const lock = JSON.parse(Deno.readTextFileSync("package-lock.json"));
 
-function resolved(name: string, wsPrefix: string): string | null {
+function resolved(name: string, wsPrefix: string): Option<string> {
   if (wsPrefix) {
     const k = wsPrefix + "/node_modules/" + name;
-    if (lock.packages[k]) return lock.packages[k].version;
+    if (lock.packages[k]) return some(lock.packages[k].version);
   }
   const k = "node_modules/" + name;
-  return lock.packages[k] ? lock.packages[k].version : null;
+  return lock.packages[k] ? some(lock.packages[k].version) : none;
 }
 
 const workspaces: Record<string, string> = {
@@ -30,7 +32,7 @@ Object.entries(workspaces).forEach(([f, ws]) => {
           [name, ver],
         ) => [
           name,
-          resolved(name, ws) || ver.replace(/^[\^~]/, ""),
+          getOrElse(resolved(name, ws), ver.replace(/^[\^~]/, "")),
         ]),
       );
     });

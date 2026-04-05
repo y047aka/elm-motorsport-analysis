@@ -1,6 +1,8 @@
 // Match elm-pages npm compatibilityKey with the correct Elm package version.
 // Run from the project root.
 
+import { type Option, isSome, fromNullable } from "./_option.ts";
+
 function existsSync(path: string): boolean {
   try {
     Deno.statSync(path);
@@ -53,10 +55,6 @@ const matches = versions.filter((ver) => {
   return m != null && parseInt(m[1]) === npmKey;
 });
 
-type VersionMatch =
-  | { status: "matched"; version: string }
-  | { status: "no-match" };
-
 function compareSemver(a: string, b: string): number {
   const pa = a.split(".").map(Number);
   const pb = b.split(".").map(Number);
@@ -66,13 +64,10 @@ function compareSemver(a: string, b: string): number {
     .find((d) => d !== 0) ?? 0;
 }
 
-const best = matches.toSorted(compareSemver).at(-1);
-const matchResult: VersionMatch = best != null
-  ? { status: "matched", version: best }
-  : { status: "no-match" };
+const matchResult: Option<string> = fromNullable(matches.toSorted(compareSemver).at(-1));
 
-if (matchResult.status === "matched") {
-  console.log(`matchingElmVersion: ${matchResult.version}`);
+if (isSome(matchResult)) {
+  console.log(`matchingElmVersion: ${matchResult.value}`);
 } else {
   console.log("matchingElmVersion: no-match");
   console.log(

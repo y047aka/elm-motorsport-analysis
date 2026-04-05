@@ -2,6 +2,8 @@
 // Pipe from: npm outdated --json 2>/dev/null | deno run --allow-read <this-script>
 // Run from the project root.
 
+import { type Option, some, none, isSome, getOrElse } from "./_option.ts";
+
 function existsSync(path: string): boolean {
   try {
     Deno.statSync(path);
@@ -17,10 +19,6 @@ interface OutdatedInfo {
   latest: string;
   dependent?: string;
 }
-
-type BundledVersion =
-  | { status: "found"; version: string }
-  | { status: "unknown" };
 
 function isOutdatedData(v: unknown): v is Record<string, OutdatedInfo> {
   return typeof v === "object" && v !== null;
@@ -83,14 +81,14 @@ if (viteEntry) {
     `${root}/node_modules/elm-pages/node_modules/vite/package.json`;
   const hoisted = `${root}/node_modules/vite/package.json`;
   const bundledPkg = existsSync(nested) ? nested : hoisted;
-  const bundled: BundledVersion = existsSync(bundledPkg)
-    ? { status: "found", version: JSON.parse(Deno.readTextFileSync(bundledPkg)).version }
-    : { status: "unknown" };
+  const bundled: Option<string> = existsSync(bundledPkg)
+    ? some(JSON.parse(Deno.readTextFileSync(bundledPkg)).version)
+    : none;
   console.log("");
   console.log("--- vite ---");
   console.log(`current: ${viteEntry.current}`);
   console.log(`latest: ${viteEntry.latest}`);
   console.log(
-    `bundled-major: ${bundled.status === "found" ? parseInt(bundled.version) : "unknown"}`,
+    `bundled-major: ${isSome(bundled) ? parseInt(bundled.value) : "unknown"}`,
   );
 }
