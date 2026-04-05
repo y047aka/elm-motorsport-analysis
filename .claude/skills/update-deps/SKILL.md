@@ -18,15 +18,12 @@ allowed-tools:
   - Bash(git add *)
   - Bash(git commit *)
   - Bash(which *)
-  - Bash(cat flake.lock *)
   - Bash(cat node_modules/*)
   - Bash(npm view *)
-  - Bash(node -e *)
   - Bash(deno run --allow-read .claude/skills/update-deps/scripts/*)
   - Bash(deno run --allow-read --allow-write .claude/skills/update-deps/scripts/*)
   - Bash(deno run --allow-read --allow-sys=homedir .claude/skills/update-deps/scripts/*)
   - Bash(deno run --allow-read --allow-run=cargo --allow-env=PATH .claude/skills/update-deps/scripts/*)
-  - Bash(find ~/.elm *)
   - Read
   - Edit
   - Write
@@ -101,4 +98,4 @@ Ask the user if they want to commit. If yes, follow the repository's commit mess
 ## General notes
 
 - **Network errors**: If any audit command fails, report the error and continue with the remaining ecosystems.
-- **No python3**: `python3` is not available in this Nix environment. Use `node -e` for scripting.
+- **No python3**: `python3` is not available in this Nix environment.
