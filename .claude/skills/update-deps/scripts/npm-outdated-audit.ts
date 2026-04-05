@@ -33,7 +33,7 @@ const data: Record<string, OutdatedInfo> = JSON.parse(input);
 const { minor, major } = Object.entries(data).reduce(
   (acc, [name, info]) => {
     const { current, wanted, latest } = info;
-    const dep = info.dependent || "";
+    const dep = info.dependent ?? "";
     return {
       minor: current !== wanted
         ? [...acc.minor, `${name}: ${current} -> ${wanted} (${dep})`]

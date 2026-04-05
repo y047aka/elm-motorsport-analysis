@@ -29,16 +29,16 @@ if (!input) {
 }
 
 const data = JSON.parse(input);
-const vulns: Record<string, VulnInfo> = data.vulnerabilities || {};
+const vulns: Record<string, VulnInfo> = data.vulnerabilities ?? {};
 const total = Object.keys(vulns).length;
 
 const { lines, fixable, fixableBreaking } = Object.entries(vulns).reduce(
   (acc, [name, info]) => {
     // Build description from via entries
-    const titles = (info.via || [])
+    const titles = (info.via ?? [])
       .filter((v): v is ViaObject => typeof v === "object" && v.title != null)
       .map((v) => v.title);
-    const viaNames = (info.via || [])
+    const viaNames = (info.via ?? [])
       .filter((v): v is string => typeof v === "string");
     const desc = titles.length
       ? titles[0]
