@@ -13,15 +13,15 @@ function existsSync(path: string): boolean {
 const npmKeyFile =
   `${Deno.cwd()}/node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm`;
 if (!existsSync(npmKeyFile)) {
-  console.log(`error: ${npmKeyFile} not found`);
-  console.log("Run npm install first.");
+  console.error(`${npmKeyFile} not found`);
+  console.error("Run npm install first.");
   Deno.exit(1);
 }
 
 const npmSource = Deno.readTextFileSync(npmKeyFile);
 const npmMatch = npmSource.match(/currentCompatibilityKey\s*=\s*(\d+)/);
 if (!npmMatch) {
-  console.log("error: could not parse compatibilityKey from npm source");
+  console.error("could not parse compatibilityKey from npm source");
   Deno.exit(1);
 }
 
@@ -30,7 +30,7 @@ console.log(`npmKey: ${npmKey}`);
 
 const home = Deno.env.get("HOME");
 if (!home) {
-  console.log("error: HOME not set");
+  console.error("HOME not set");
   Deno.exit(1);
 }
 const cacheDir = `${home}/.elm/0.19.1/packages/dillonkearns/elm-pages`;

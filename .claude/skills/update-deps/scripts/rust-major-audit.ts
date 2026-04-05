@@ -74,23 +74,26 @@ type VersionLookup =
   | { status: "unknown" };
 
 const decoder = new TextDecoder();
+
+async function fetchLatestVersion(name: string): Promise<VersionLookup> {
+  try {
+    const cmd = new Deno.Command("cargo", {
+      args: ["search", name, "--limit", "1"],
+      stdout: "piped",
+      stderr: "null",
+    });
+    const out = decoder.decode((await cmd.output()).stdout);
+    const m = out.match(new RegExp(`^${name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`));
+    return m ? { status: "found", version: m[1] } : { status: "unknown" };
+  } catch (_) {
+    // network error — report as unknown
+    return { status: "unknown" };
+  }
+}
+
 const classified = await Promise.all(
   deps.map(async (dep) => {
-    let latest: VersionLookup = { status: "unknown" };
-    try {
-      const cmd = new Deno.Command("cargo", {
-        args: ["search", dep.name, "--limit", "1"],
-        stdout: "piped",
-        stderr: "null",
-      });
-      const out = decoder.decode((await cmd.output()).stdout);
-      const m = out.match(
-        new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
-      );
-      if (m) latest = { status: "found", version: m[1] };
-    } catch (_) {
-      // network error — report as unknown
-    }
+    const latest = await fetchLatestVersion(dep.name);
     return { ...dep, latest, current: baseVersion(dep.constraint) };
   }),
 );

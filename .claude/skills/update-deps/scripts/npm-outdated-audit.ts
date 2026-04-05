@@ -32,12 +32,16 @@ if (!input) {
   Deno.exit(0);
 }
 
+function isOutdatedData(v: unknown): v is Record<string, OutdatedInfo> {
+  return typeof v === "object" && v !== null;
+}
+
 const raw: unknown = JSON.parse(input);
-if (typeof raw !== "object" || raw === null) {
+if (!isOutdatedData(raw)) {
   console.error("unexpected npm outdated format");
   Deno.exit(1);
 }
-const data = raw as Record<string, OutdatedInfo>;
+const data = raw;
 
 const { minor, major } = Object.entries(data).reduce(
   (acc, [name, info]) => {

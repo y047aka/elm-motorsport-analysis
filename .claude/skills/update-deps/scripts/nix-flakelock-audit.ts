@@ -14,12 +14,16 @@ interface FlakeLock {
   nodes?: Record<string, FlakeNode>;
 }
 
+function isFlakeLock(v: unknown): v is FlakeLock {
+  return typeof v === "object" && v !== null;
+}
+
 const raw: unknown = JSON.parse(Deno.readTextFileSync("flake.lock"));
-if (typeof raw !== "object" || raw === null) {
+if (!isFlakeLock(raw)) {
   console.error("unexpected flake.lock format");
   Deno.exit(1);
 }
-const d = raw as FlakeLock;
+const d = raw;
 
 (Object.entries(d.nodes ?? {}) as [string, FlakeNode][])
   .filter(

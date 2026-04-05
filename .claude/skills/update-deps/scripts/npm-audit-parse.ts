@@ -40,12 +40,16 @@ interface AuditData {
   vulnerabilities?: Record<string, VulnInfo>;
 }
 
+function isAuditData(v: unknown): v is AuditData {
+  return typeof v === "object" && v !== null;
+}
+
 const raw: unknown = JSON.parse(input);
-if (typeof raw !== "object" || raw === null) {
+if (!isAuditData(raw)) {
   console.error("unexpected npm audit format");
   Deno.exit(1);
 }
-const data = raw as AuditData;
+const data = raw;
 const vulns: Record<string, VulnInfo> = data.vulnerabilities ?? {};
 const total = Object.keys(vulns).length;
 
