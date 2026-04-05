@@ -30,44 +30,47 @@ if (!input) {
 
 const data = JSON.parse(input);
 const vulns: Record<string, VulnInfo> = data.vulnerabilities || {};
-const lines: string[] = [];
-let total = 0;
-let fixable = 0;
-let fixableBreaking = 0;
+const total = Object.keys(vulns).length;
 
-for (const [name, info] of Object.entries(vulns)) {
-  total++;
-
-  // Build description from via entries
-  const titles = (info.via || [])
-    .filter((v): v is ViaObject => typeof v === "object" && v.title != null)
-    .map(v => v.title);
-  const viaNames = (info.via || [])
-    .filter((v): v is string => typeof v === "string");
-  const desc = titles.length
-    ? titles[0]
-    : viaNames.length
+const { lines, fixable, fixableBreaking } = Object.entries(vulns).reduce(
+  (acc, [name, info]) => {
+    // Build description from via entries
+    const titles = (info.via || [])
+      .filter((v): v is ViaObject => typeof v === "object" && v.title != null)
+      .map((v) => v.title);
+    const viaNames = (info.via || [])
+      .filter((v): v is string => typeof v === "string");
+    const desc = titles.length
+      ? titles[0]
+      : viaNames.length
       ? `via ${viaNames.join(", ")}`
       : "";
 
-  // Fix availability
-  let fixStr = "no fix available";
-  if (info.fixAvailable === true) {
-    fixable++;
-    fixStr = "fix available";
-  } else if (info.fixAvailable && typeof info.fixAvailable === "object") {
-    const fix = info.fixAvailable as FixAvailableObject;
-    if (fix.isSemVerMajor) {
-      fixableBreaking++;
-      fixStr = `fix: ${fix.name}@${fix.version} (BREAKING)`;
-    } else {
-      fixable++;
-      fixStr = `fix: ${fix.name}@${fix.version}`;
+    // Fix availability
+    let fixStr = "no fix available";
+    let fixKind: "fixable" | "breaking" | "none" = "none";
+    if (info.fixAvailable === true) {
+      fixStr = "fix available";
+      fixKind = "fixable";
+    } else if (info.fixAvailable && typeof info.fixAvailable === "object") {
+      const fix = info.fixAvailable as FixAvailableObject;
+      if (fix.isSemVerMajor) {
+        fixStr = `fix: ${fix.name}@${fix.version} (BREAKING)`;
+        fixKind = "breaking";
+      } else {
+        fixStr = `fix: ${fix.name}@${fix.version}`;
+        fixKind = "fixable";
+      }
     }
-  }
 
-  lines.push(`${name} (${info.severity}): ${desc} — ${fixStr}`);
-}
+    return {
+      lines: [...acc.lines, `${name} (${info.severity}): ${desc} — ${fixStr}`],
+      fixable: acc.fixable + (fixKind === "fixable" ? 1 : 0),
+      fixableBreaking: acc.fixableBreaking + (fixKind === "breaking" ? 1 : 0),
+    };
+  },
+  { lines: [] as string[], fixable: 0, fixableBreaking: 0 },
+);
 
 console.log("--- vulnerabilities ---");
 console.log(lines.length ? lines.join("\n") : "none");

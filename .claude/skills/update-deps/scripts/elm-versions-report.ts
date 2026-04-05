@@ -2,47 +2,52 @@
 // Run from the project root.
 const files = ["app/elm.json", "package/elm.json", "review/elm.json"];
 
-for (const f of files) {
+files.forEach((f) => {
   const elmJson = JSON.parse(Deno.readTextFileSync(f));
   const type: string = elmJson.type || "unknown";
   console.log(`--- ${f} (${type}) ---`);
 
   if (type === "application") {
-    const deps: Record<string, Record<string, string>> = elmJson.dependencies || {};
-    const testDeps: Record<string, Record<string, string>> = elmJson["test-dependencies"] || {};
+    const deps: Record<string, Record<string, string>> = elmJson.dependencies ||
+      {};
+    const testDeps: Record<string, Record<string, string>> =
+      elmJson["test-dependencies"] || {};
 
     console.log("direct:");
-    for (const [name, version] of Object.entries(deps.direct || {})) {
-      console.log(`  ${name}: ${version}`);
-    }
+    Object.entries(deps.direct || {}).forEach(([name, version]) =>
+      console.log(`  ${name}: ${version}`)
+    );
     console.log("indirect:");
-    for (const [name, version] of Object.entries(deps.indirect || {})) {
-      console.log(`  ${name}: ${version}`);
-    }
-    if (Object.keys(testDeps.direct || {}).length || Object.keys(testDeps.indirect || {}).length) {
+    Object.entries(deps.indirect || {}).forEach(([name, version]) =>
+      console.log(`  ${name}: ${version}`)
+    );
+    if (
+      Object.keys(testDeps.direct || {}).length ||
+      Object.keys(testDeps.indirect || {}).length
+    ) {
       console.log("test-direct:");
-      for (const [name, version] of Object.entries(testDeps.direct || {})) {
-        console.log(`  ${name}: ${version}`);
-      }
+      Object.entries(testDeps.direct || {}).forEach(([name, version]) =>
+        console.log(`  ${name}: ${version}`)
+      );
       console.log("test-indirect:");
-      for (const [name, version] of Object.entries(testDeps.indirect || {})) {
-        console.log(`  ${name}: ${version}`);
-      }
+      Object.entries(testDeps.indirect || {}).forEach(([name, version]) =>
+        console.log(`  ${name}: ${version}`)
+      );
     }
   } else if (type === "package") {
     const deps: Record<string, string> = elmJson.dependencies || {};
     const testDeps: Record<string, string> = elmJson["test-dependencies"] || {};
     console.log("dependencies:");
-    for (const [name, constraint] of Object.entries(deps)) {
-      console.log(`  ${name}: ${constraint}`);
-    }
+    Object.entries(deps).forEach(([name, constraint]) =>
+      console.log(`  ${name}: ${constraint}`)
+    );
     if (Object.keys(testDeps).length) {
       console.log("test-dependencies:");
-      for (const [name, constraint] of Object.entries(testDeps)) {
-        console.log(`  ${name}: ${constraint}`);
-      }
+      Object.entries(testDeps).forEach(([name, constraint]) =>
+        console.log(`  ${name}: ${constraint}`)
+      );
     }
   }
 
   console.log("");
-}
+});

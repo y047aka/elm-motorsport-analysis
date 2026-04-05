@@ -3,7 +3,12 @@
 // Run from the project root.
 
 function existsSync(path: string): boolean {
-  try { Deno.statSync(path); return true; } catch { return false; }
+  try {
+    Deno.statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 const root = Deno.cwd();

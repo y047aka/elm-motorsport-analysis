@@ -3,7 +3,12 @@
 // Run from the project root.
 
 function existsSync(path: string): boolean {
-  try { Deno.statSync(path); return true; } catch { return false; }
+  try {
+    Deno.statSync(path);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 interface OutdatedInfo {
@@ -24,35 +29,35 @@ if (!input) {
 }
 
 const data: Record<string, OutdatedInfo> = JSON.parse(input);
-const minor: string[] = [];
-const major: string[] = [];
-let playwrightChanged = false;
-let viteEntry: { current: string; latest: string } | null = null;
 
-for (const [name, info] of Object.entries(data)) {
-  const current = info.current;
-  const wanted = info.wanted;
-  const latest = info.latest;
-  const dep = info.dependent || "";
+const { minor, major, playwrightChanged, viteEntry } = Object.entries(data)
+  .reduce(
+    (acc, [name, info]) => {
+      const { current, wanted, latest } = info;
+      const dep = info.dependent || "";
+      const currentMajor = parseInt(current);
+      const latestMajor = parseInt(latest);
 
-  if (current !== wanted) {
-    minor.push(`${name}: ${current} -> ${wanted} (${dep})`);
-  }
-
-  const currentMajor = parseInt(current);
-  const latestMajor = parseInt(latest);
-  if (latestMajor > currentMajor) {
-    major.push(`${name}: ${current} -> ${latest} (${dep})`);
-  }
-
-  if (name === "@playwright/test" && (current !== wanted || latestMajor > currentMajor)) {
-    playwrightChanged = true;
-  }
-
-  if (name === "vite") {
-    viteEntry = { current: current, latest: latest };
-  }
-}
+      return {
+        minor: current !== wanted
+          ? [...acc.minor, `${name}: ${current} -> ${wanted} (${dep})`]
+          : acc.minor,
+        major: latestMajor > currentMajor
+          ? [...acc.major, `${name}: ${current} -> ${latest} (${dep})`]
+          : acc.major,
+        playwrightChanged: acc.playwrightChanged ||
+          (name === "@playwright/test" &&
+            (current !== wanted || latestMajor > currentMajor)),
+        viteEntry: name === "vite" ? { current, latest } : acc.viteEntry,
+      };
+    },
+    {
+      minor: [] as string[],
+      major: [] as string[],
+      playwrightChanged: false,
+      viteEntry: null as { current: string; latest: string } | null,
+    },
+  );
 
 console.log("--- minor updates ---");
 console.log(minor.length ? minor.join("\n") : "none");
@@ -65,10 +70,13 @@ console.log(`playwright-changed: ${playwrightChanged}`);
 
 if (viteEntry) {
   const root = Deno.cwd();
-  const nested = `${root}/node_modules/elm-pages/node_modules/vite/package.json`;
+  const nested =
+    `${root}/node_modules/elm-pages/node_modules/vite/package.json`;
   const hoisted = `${root}/node_modules/vite/package.json`;
   const bundledPkg = existsSync(nested) ? nested : hoisted;
-  const bundledVersion: string = existsSync(bundledPkg) ? JSON.parse(Deno.readTextFileSync(bundledPkg)).version : "unknown";
+  const bundledVersion: string = existsSync(bundledPkg)
+    ? JSON.parse(Deno.readTextFileSync(bundledPkg)).version
+    : "unknown";
   console.log("");
   console.log("--- vite ---");
   console.log(`current: ${viteEntry.current}`);

@@ -20,14 +20,16 @@ const workspaces: Record<string, string> = {
   "review/package.json": "review",
 };
 
-for (const [f, ws] of Object.entries(workspaces)) {
+Object.entries(workspaces).forEach(([f, ws]) => {
   const pkg = JSON.parse(Deno.readTextFileSync(f));
   for (const key of ["dependencies", "devDependencies"]) {
     if (!pkg[key]) continue;
-    for (const name of Object.keys(pkg[key])) {
-      const v = resolved(name, ws);
-      pkg[key][name] = v || pkg[key][name].replace(/^[\^~]/, "");
-    }
+    pkg[key] = Object.fromEntries(
+      Object.entries(pkg[key] as Record<string, string>).map(([name, ver]) => [
+        name,
+        resolved(name, ws) || ver.replace(/^[\^~]/, ""),
+      ]),
+    );
   }
   Deno.writeTextFileSync(f, JSON.stringify(pkg, null, 2) + "\n");
-}
+});

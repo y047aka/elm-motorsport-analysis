@@ -6,31 +6,22 @@ const deps: Record<string, Record<string, string>> = elmJson.dependencies || {};
 const direct: Record<string, string> = deps.direct || {};
 const indirect: Record<string, string> = deps.indirect || {};
 
-const directPkgs: { name: string; version: string }[] = [];
-const indirectPkgs: { name: string; version: string }[] = [];
+const directPkgs = Object.entries(direct)
+  .filter(([name]) => name.startsWith("dillonkearns/"))
+  .map(([name, version]) => ({ name, version }));
 
-for (const [name, version] of Object.entries(direct)) {
-  if (name.startsWith("dillonkearns/")) {
-    directPkgs.push({ name: name, version: version });
-  }
-}
-
-for (const [name, version] of Object.entries(indirect)) {
-  if (name.startsWith("dillonkearns/")) {
-    indirectPkgs.push({ name: name, version: version });
-  }
-}
+const indirectPkgs = Object.entries(indirect)
+  .filter(([name]) => name.startsWith("dillonkearns/"))
+  .map(([name, version]) => ({ name, version }));
 
 console.log("--- dillonkearns packages ---");
-for (const p of directPkgs) {
-  console.log(`${p.name}: ${p.version} (direct)`);
-}
-for (const p of indirectPkgs) {
-  console.log(`${p.name}: ${p.version} (indirect)`);
-}
+directPkgs.forEach((p) => console.log(`${p.name}: ${p.version} (direct)`));
+indirectPkgs.forEach((p) => console.log(`${p.name}: ${p.version} (indirect)`));
 
 console.log("");
-console.log("--- restore commands (direct only; indirect restored transitively) ---");
-for (const p of directPkgs) {
-  console.log(`elm-json install --yes '${p.name}@${p.version}' -- app/elm.json`);
-}
+console.log(
+  "--- restore commands (direct only; indirect restored transitively) ---",
+);
+directPkgs.forEach((p) =>
+  console.log(`elm-json install --yes '${p.name}@${p.version}' -- app/elm.json`)
+);

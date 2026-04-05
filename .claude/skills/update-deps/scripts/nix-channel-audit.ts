@@ -13,16 +13,15 @@ console.log(`current channel: nixpkgs-${yy}.${mm}-darwin`);
 const now = new Date();
 const year = now.getFullYear() % 100;
 
-const channels: { y: number; mm: string; label: string }[] = [];
-for (let y = 24; y <= year; y++) {
-  for (const releaseMonth of [5, 11]) {
-    const releaseDate = new Date(2000 + y, releaseMonth - 1, 1);
-    if (releaseDate <= now) {
-      const mm2 = String(releaseMonth).padStart(2, "0");
-      channels.push({ y, mm: mm2, label: `${y}.${mm2}` });
-    }
-  }
-}
+const channels = Array.from({ length: year - 24 + 1 }, (_, i) => 24 + i)
+  .flatMap((y) =>
+    [5, 11]
+      .filter((month) => new Date(2000 + y, month - 1, 1) <= now)
+      .map((month) => {
+        const mm2 = String(month).padStart(2, "0");
+        return { y, mm: mm2, label: `${y}.${mm2}` };
+      })
+  );
 
 const latest = channels[channels.length - 1];
 const currentNum = parseInt(yy) * 100 + parseInt(mm);
@@ -30,10 +29,10 @@ const latestNum = latest.y * 100 + parseInt(latest.mm);
 
 if (latestNum > currentNum) {
   console.log(
-    `latest channel:  nixpkgs-${latest.label}-darwin  <- UPGRADE AVAILABLE`
+    `latest channel:  nixpkgs-${latest.label}-darwin  <- UPGRADE AVAILABLE`,
   );
 } else {
   console.log(
-    `latest channel:  nixpkgs-${latest.label}-darwin  (up to date)`
+    `latest channel:  nixpkgs-${latest.label}-darwin  (up to date)`,
   );
 }

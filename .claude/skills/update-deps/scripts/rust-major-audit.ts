@@ -10,30 +10,30 @@ const files = [
 ];
 
 // Parse direct dependencies (same logic as rust-deps-parse.ts)
-const seen = new Set<string>();
-const deps: { name: string; constraint: string }[] = [];
-for (const f of files) {
-  const content = Deno.readTextFileSync(f);
-  let inDeps = false;
-  for (const line of content.split("\n")) {
-    if (/^\[(workspace\.)?(dev-)?dependencies\]/.test(line)) {
-      inDeps = true;
-      continue;
-    }
-    if (/^\[/.test(line)) {
-      inDeps = false;
-      continue;
-    }
-    if (!inDeps) continue;
-    const m = line.match(
-      /^([\w-]+)\s*=\s*(?:"([^"]+)"|.*version\s*=\s*"([^"]+)")/
-    );
-    if (m && !seen.has(m[1])) {
-      seen.add(m[1]);
-      deps.push({ name: m[1], constraint: m[2] || m[3] });
-    }
-  }
-}
+const allDeps = files.flatMap((f) =>
+  Deno.readTextFileSync(f).split("\n").reduce<
+    { inDeps: boolean; deps: { name: string; constraint: string }[] }
+  >(
+    (acc, line) => {
+      if (/^\[(workspace\.)?(dev-)?dependencies\]/.test(line)) {
+        return { ...acc, inDeps: true };
+      }
+      if (/^\[/.test(line)) return { ...acc, inDeps: false };
+      if (!acc.inDeps) return acc;
+      const m = line.match(
+        /^([\w-]+)\s*=\s*(?:"([^"]+)"|.*version\s*=\s*"([^"]+)")/,
+      );
+      return m
+        ? {
+          ...acc,
+          deps: [...acc.deps, { name: m[1], constraint: m[2] || m[3] }],
+        }
+        : acc;
+    },
+    { inDeps: false, deps: [] },
+  ).deps
+);
+const deps = [...new Map(allDeps.map((d) => [d.name, d])).values()];
 
 // Extract leftmost non-zero component for major version comparison
 function majorComponent(version: string): { index: number; value: number } {
@@ -56,10 +56,7 @@ function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
-const majorUpdates: string[] = [];
-const upToDate: string[] = [];
-
-for (const dep of deps) {
+const classified = deps.map((dep) => {
   let latest = "unknown";
   try {
     const cmd = new Deno.Command("cargo", {
@@ -67,22 +64,32 @@ for (const dep of deps) {
       stdout: "piped",
       stderr: "null",
     });
-    const { stdout } = cmd.outputSync();
-    const out = new TextDecoder().decode(stdout);
-    const m = out.match(new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`));
+    const out = new TextDecoder().decode(cmd.outputSync().stdout);
+    const m = out.match(
+      new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
+    );
     if (m) latest = m[1];
   } catch (_) {
     // network error — report as unknown
   }
+  return { ...dep, latest, current: baseVersion(dep.constraint) };
+});
 
-  const current = baseVersion(dep.constraint);
-
-  if (latest !== "unknown" && isMajorBump(current, latest)) {
-    majorUpdates.push(`${dep.name}: ${current} -> ${latest}`);
-  } else {
-    upToDate.push(`${dep.name}: ${current} (latest ${latest})`);
-  }
-}
+const { majorUpdates, upToDate } = classified.reduce(
+  (acc, { name, current, latest }) => {
+    if (latest !== "unknown" && isMajorBump(current, latest)) {
+      return {
+        ...acc,
+        majorUpdates: [...acc.majorUpdates, `${name}: ${current} -> ${latest}`],
+      };
+    }
+    return {
+      ...acc,
+      upToDate: [...acc.upToDate, `${name}: ${current} (latest ${latest})`],
+    };
+  },
+  { majorUpdates: [] as string[], upToDate: [] as string[] },
+);
 
 console.log("--- major updates ---");
 console.log(majorUpdates.length ? majorUpdates.join("\n") : "none");
