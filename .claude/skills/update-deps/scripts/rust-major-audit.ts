@@ -2,8 +2,6 @@
 // Parses Cargo.toml files, runs cargo search for each crate,
 // and classifies results by major version bump.
 // Run from the project root.
-import fs from "node:fs";
-import { execSync } from "node:child_process";
 
 const files = [
   "cli/Cargo.toml",
@@ -15,7 +13,7 @@ const files = [
 const seen = new Set<string>();
 const deps: { name: string; constraint: string }[] = [];
 for (const f of files) {
-  const content = fs.readFileSync(f, "utf8");
+  const content = Deno.readTextFileSync(f);
   let inDeps = false;
   for (const line of content.split("\n")) {
     if (/^\[(workspace\.)?(dev-)?dependencies\]/.test(line)) {
@@ -64,14 +62,17 @@ const upToDate: string[] = [];
 for (const dep of deps) {
   let latest = "unknown";
   try {
-    const out = execSync("cargo search " + JSON.stringify(dep.name) + " --limit 1 2>/dev/null", {
-      encoding: "utf8",
-      timeout: 15000,
+    const cmd = new Deno.Command("cargo", {
+      args: ["search", dep.name, "--limit", "1"],
+      stdout: "piped",
+      stderr: "null",
     });
+    const { stdout } = cmd.outputSync();
+    const out = new TextDecoder().decode(stdout);
     const m = out.match(new RegExp("^" + dep.name.replace(/-/g, "[-_]") + '\\s.*"([^"]+)"'));
     if (m) latest = m[1];
   } catch (_) {
-    // network error or timeout — report as unknown
+    // network error — report as unknown
   }
 
   const current = baseVersion(dep.constraint);

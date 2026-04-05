@@ -1,9 +1,8 @@
 // Pin all workspace package.json dependency versions to the exact versions
 // resolved in package-lock.json.
 // Run from the project root.
-import fs from "node:fs";
 
-const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
+const lock = JSON.parse(Deno.readTextFileSync("package-lock.json"));
 
 function resolved(name: string, wsPrefix: string): string | null {
   if (wsPrefix) {
@@ -22,7 +21,7 @@ const workspaces: Record<string, string> = {
 };
 
 for (const [f, ws] of Object.entries(workspaces)) {
-  const pkg = JSON.parse(fs.readFileSync(f, "utf8"));
+  const pkg = JSON.parse(Deno.readTextFileSync(f));
   for (const key of ["dependencies", "devDependencies"]) {
     if (!pkg[key]) continue;
     for (const name of Object.keys(pkg[key])) {
@@ -30,5 +29,5 @@ for (const [f, ws] of Object.entries(workspaces)) {
       pkg[key][name] = v || pkg[key][name].replace(/^[\^~]/, "");
     }
   }
-  fs.writeFileSync(f, JSON.stringify(pkg, null, 2) + "\n");
+  Deno.writeTextFileSync(f, JSON.stringify(pkg, null, 2) + "\n");
 }

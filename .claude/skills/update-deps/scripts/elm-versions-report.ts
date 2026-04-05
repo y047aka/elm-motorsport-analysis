@@ -1,11 +1,9 @@
 // Report all Elm package versions across the three elm.json files.
 // Run from the project root.
-import fs from "node:fs";
-
 const files = ["app/elm.json", "package/elm.json", "review/elm.json"];
 
 for (const f of files) {
-  const elmJson = JSON.parse(fs.readFileSync(f, "utf8"));
+  const elmJson = JSON.parse(Deno.readTextFileSync(f));
   const type: string = elmJson.type || "unknown";
   console.log("--- " + f + " (" + type + ") ---");
 

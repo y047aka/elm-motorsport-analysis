@@ -2,20 +2,6 @@
 // Pipe from: npm audit --json 2>/dev/null | deno run --allow-read <this-script>
 // Run from the project root.
 
-function readStdin(): string {
-  const chunks: Uint8Array[] = [];
-  const buf = new Uint8Array(4096);
-  for (;;) {
-    const n = Deno.stdin.readSync(buf);
-    if (n === null) break;
-    chunks.push(buf.slice(0, n));
-  }
-  const merged = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
-  let offset = 0;
-  for (const c of chunks) { merged.set(c, offset); offset += c.length; }
-  return new TextDecoder().decode(merged);
-}
-
 interface ViaObject {
   title?: string;
 }
@@ -32,14 +18,14 @@ interface VulnInfo {
   fixAvailable: boolean | FixAvailableObject;
 }
 
-const input = readStdin().trim();
+const input = (await new Response(Deno.stdin.readable).text()).trim();
 if (!input) {
   console.log("--- vulnerabilities ---");
   console.log("none");
   console.log("");
   console.log("--- summary ---");
   console.log("total: 0");
-  process.exit(0);
+  Deno.exit(0);
 }
 
 const data = JSON.parse(input);

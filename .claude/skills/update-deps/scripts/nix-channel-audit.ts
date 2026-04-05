@@ -1,13 +1,11 @@
 // Audit the current nixpkgs channel in flake.nix and report whether
 // a newer stable channel is available.
 // Run from the project root.
-import fs from "node:fs";
-
-const flake = fs.readFileSync("flake.nix", "utf8");
+const flake = Deno.readTextFileSync("flake.nix");
 const m = flake.match(/nixpkgs\/nixpkgs-(\d+)\.(\d+)-darwin/);
 if (!m) {
   console.log("channel: unknown");
-  process.exit(0);
+  Deno.exit(0);
 }
 const [, yy, mm] = m;
 console.log("current channel: nixpkgs-" + yy + "." + mm + "-darwin");

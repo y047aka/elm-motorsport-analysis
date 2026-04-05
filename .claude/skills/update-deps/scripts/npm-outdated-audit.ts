@@ -1,21 +1,9 @@
 // Classify npm outdated --json output into minor/major update sections.
 // Pipe from: npm outdated --json 2>/dev/null | deno run --allow-read <this-script>
 // Run from the project root.
-import fs from "node:fs";
-import path from "node:path";
 
-function readStdin(): string {
-  const chunks: Uint8Array[] = [];
-  const buf = new Uint8Array(4096);
-  for (;;) {
-    const n = Deno.stdin.readSync(buf);
-    if (n === null) break;
-    chunks.push(buf.slice(0, n));
-  }
-  const merged = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
-  let offset = 0;
-  for (const c of chunks) { merged.set(c, offset); offset += c.length; }
-  return new TextDecoder().decode(merged);
+function existsSync(path: string): boolean {
+  try { Deno.statSync(path); return true; } catch { return false; }
 }
 
 interface OutdatedInfo {
@@ -25,14 +13,14 @@ interface OutdatedInfo {
   dependent?: string;
 }
 
-const input = readStdin().trim();
+const input = (await new Response(Deno.stdin.readable).text()).trim();
 if (!input) {
   console.log("--- minor updates ---");
   console.log("none");
   console.log("");
   console.log("--- major updates ---");
   console.log("none");
-  process.exit(0);
+  Deno.exit(0);
 }
 
 const data: Record<string, OutdatedInfo> = JSON.parse(input);
@@ -76,11 +64,11 @@ console.log("--- flags ---");
 console.log("playwright-changed: " + playwrightChanged);
 
 if (viteEntry) {
-  const root = process.cwd();
-  const nested = path.join(root, "node_modules/elm-pages/node_modules/vite/package.json");
-  const hoisted = path.join(root, "node_modules/vite/package.json");
-  const bundledPkg = fs.existsSync(nested) ? nested : hoisted;
-  const bundledVersion: string = fs.existsSync(bundledPkg) ? JSON.parse(fs.readFileSync(bundledPkg, "utf8")).version : "unknown";
+  const root = Deno.cwd();
+  const nested = `${root}/node_modules/elm-pages/node_modules/vite/package.json`;
+  const hoisted = `${root}/node_modules/vite/package.json`;
+  const bundledPkg = existsSync(nested) ? nested : hoisted;
+  const bundledVersion: string = existsSync(bundledPkg) ? JSON.parse(Deno.readTextFileSync(bundledPkg)).version : "unknown";
   console.log("");
   console.log("--- vite ---");
   console.log("current: " + viteEntry.current);
