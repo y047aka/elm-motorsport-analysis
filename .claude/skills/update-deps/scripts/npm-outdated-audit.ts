@@ -36,13 +36,13 @@ for (const [name, info] of Object.entries(data)) {
   const dep = info.dependent || "";
 
   if (current !== wanted) {
-    minor.push(name + ": " + current + " -> " + wanted + " (" + dep + ")");
+    minor.push(`${name}: ${current} -> ${wanted} (${dep})`);
   }
 
   const currentMajor = parseInt(current);
   const latestMajor = parseInt(latest);
   if (latestMajor > currentMajor) {
-    major.push(name + ": " + current + " -> " + latest + " (" + dep + ")");
+    major.push(`${name}: ${current} -> ${latest} (${dep})`);
   }
 
   if (name === "@playwright/test" && (current !== wanted || latestMajor > currentMajor)) {
@@ -61,7 +61,7 @@ console.log("--- major updates ---");
 console.log(major.length ? major.join("\n") : "none");
 console.log("");
 console.log("--- flags ---");
-console.log("playwright-changed: " + playwrightChanged);
+console.log(`playwright-changed: ${playwrightChanged}`);
 
 if (viteEntry) {
   const root = Deno.cwd();
@@ -71,7 +71,7 @@ if (viteEntry) {
   const bundledVersion: string = existsSync(bundledPkg) ? JSON.parse(Deno.readTextFileSync(bundledPkg)).version : "unknown";
   console.log("");
   console.log("--- vite ---");
-  console.log("current: " + viteEntry.current);
-  console.log("latest: " + viteEntry.latest);
-  console.log("bundled-major: " + parseInt(bundledVersion));
+  console.log(`current: ${viteEntry.current}`);
+  console.log(`latest: ${viteEntry.latest}`);
+  console.log(`bundled-major: ${parseInt(bundledVersion)}`);
 }

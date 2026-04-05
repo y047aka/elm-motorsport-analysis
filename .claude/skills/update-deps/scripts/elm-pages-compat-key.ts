@@ -7,7 +7,7 @@ function existsSync(path: string): boolean {
 
 const npmKeyFile = `${Deno.cwd()}/node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm`;
 if (!existsSync(npmKeyFile)) {
-  console.log("error: " + npmKeyFile + " not found");
+  console.log(`error: ${npmKeyFile} not found`);
   console.log("Run npm install first.");
   Deno.exit(1);
 }
@@ -20,7 +20,7 @@ if (!npmMatch) {
 }
 
 const npmKey = parseInt(npmMatch[1]);
-console.log("npmKey: " + npmKey);
+console.log(`npmKey: ${npmKey}`);
 
 const home = Deno.env.get("HOME");
 if (!home) {
@@ -59,7 +59,7 @@ matches.sort((a: string, b: string) => {
 const matchingVersion = matches.length ? matches[matches.length - 1] : null;
 
 if (matchingVersion) {
-  console.log("matchingElmVersion: " + matchingVersion);
+  console.log(`matchingElmVersion: ${matchingVersion}`);
 } else {
   console.log("matchingElmVersion: no-match");
   console.log("Install latest to populate cache: elm-json install --yes 'dillonkearns/elm-pages@latest' -- app/elm.json");

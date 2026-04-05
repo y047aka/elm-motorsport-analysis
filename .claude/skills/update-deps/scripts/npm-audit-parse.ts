@@ -47,7 +47,7 @@ for (const [name, info] of Object.entries(vulns)) {
   const desc = titles.length
     ? titles[0]
     : viaNames.length
-      ? "via " + viaNames.join(", ")
+      ? `via ${viaNames.join(", ")}`
       : "";
 
   // Fix availability
@@ -59,20 +59,20 @@ for (const [name, info] of Object.entries(vulns)) {
     const fix = info.fixAvailable as FixAvailableObject;
     if (fix.isSemVerMajor) {
       fixableBreaking++;
-      fixStr = "fix: " + fix.name + "@" + fix.version + " (BREAKING)";
+      fixStr = `fix: ${fix.name}@${fix.version} (BREAKING)`;
     } else {
       fixable++;
-      fixStr = "fix: " + fix.name + "@" + fix.version;
+      fixStr = `fix: ${fix.name}@${fix.version}`;
     }
   }
 
-  lines.push(name + " (" + info.severity + "): " + desc + " — " + fixStr);
+  lines.push(`${name} (${info.severity}): ${desc} — ${fixStr}`);
 }
 
 console.log("--- vulnerabilities ---");
 console.log(lines.length ? lines.join("\n") : "none");
 console.log("");
 console.log("--- summary ---");
-console.log("total: " + total);
-console.log("fixable: " + fixable);
-console.log("fixable-breaking: " + fixableBreaking);
+console.log(`total: ${total}`);
+console.log(`fixable: ${fixable}`);
+console.log(`fixable-breaking: ${fixableBreaking}`);

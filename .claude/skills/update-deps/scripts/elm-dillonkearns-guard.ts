@@ -23,14 +23,14 @@ for (const [name, version] of Object.entries(indirect)) {
 
 console.log("--- dillonkearns packages ---");
 for (const p of directPkgs) {
-  console.log(p.name + ": " + p.version + " (direct)");
+  console.log(`${p.name}: ${p.version} (direct)`);
 }
 for (const p of indirectPkgs) {
-  console.log(p.name + ": " + p.version + " (indirect)");
+  console.log(`${p.name}: ${p.version} (indirect)`);
 }
 
 console.log("");
 console.log("--- restore commands (direct only; indirect restored transitively) ---");
 for (const p of directPkgs) {
-  console.log("elm-json install --yes '" + p.name + "@" + p.version + "' -- app/elm.json");
+  console.log(`elm-json install --yes '${p.name}@${p.version}' -- app/elm.json`);
 }

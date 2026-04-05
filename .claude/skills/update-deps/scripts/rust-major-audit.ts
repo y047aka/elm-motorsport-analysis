@@ -69,7 +69,7 @@ for (const dep of deps) {
     });
     const { stdout } = cmd.outputSync();
     const out = new TextDecoder().decode(stdout);
-    const m = out.match(new RegExp("^" + dep.name.replace(/-/g, "[-_]") + '\\s.*"([^"]+)"'));
+    const m = out.match(new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`));
     if (m) latest = m[1];
   } catch (_) {
     // network error — report as unknown
@@ -78,9 +78,9 @@ for (const dep of deps) {
   const current = baseVersion(dep.constraint);
 
   if (latest !== "unknown" && isMajorBump(current, latest)) {
-    majorUpdates.push(dep.name + ": " + current + " -> " + latest);
+    majorUpdates.push(`${dep.name}: ${current} -> ${latest}`);
   } else {
-    upToDate.push(dep.name + ": " + current + " (latest " + latest + ")");
+    upToDate.push(`${dep.name}: ${current} (latest ${latest})`);
   }
 }
 

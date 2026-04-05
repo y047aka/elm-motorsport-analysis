@@ -8,7 +8,7 @@ if (!m) {
   Deno.exit(0);
 }
 const [, yy, mm] = m;
-console.log("current channel: nixpkgs-" + yy + "." + mm + "-darwin");
+console.log(`current channel: nixpkgs-${yy}.${mm}-darwin`);
 
 const now = new Date();
 const year = now.getFullYear() % 100;
@@ -19,7 +19,7 @@ for (let y = 24; y <= year; y++) {
     const releaseDate = new Date(2000 + y, releaseMonth - 1, 1);
     if (releaseDate <= now) {
       const mm2 = String(releaseMonth).padStart(2, "0");
-      channels.push({ y, mm: mm2, label: y + "." + mm2 });
+      channels.push({ y, mm: mm2, label: `${y}.${mm2}` });
     }
   }
 }
@@ -30,12 +30,10 @@ const latestNum = latest.y * 100 + parseInt(latest.mm);
 
 if (latestNum > currentNum) {
   console.log(
-    "latest channel:  nixpkgs-" +
-    latest.label +
-    "-darwin  <- UPGRADE AVAILABLE"
+    `latest channel:  nixpkgs-${latest.label}-darwin  <- UPGRADE AVAILABLE`
   );
 } else {
   console.log(
-    "latest channel:  nixpkgs-" + latest.label + "-darwin  (up to date)"
+    `latest channel:  nixpkgs-${latest.label}-darwin  (up to date)`
   );
 }
