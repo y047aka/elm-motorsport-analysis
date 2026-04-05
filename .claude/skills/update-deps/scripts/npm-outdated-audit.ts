@@ -22,6 +22,10 @@ type BundledVersion =
   | { status: "found"; version: string }
   | { status: "unknown" };
 
+function isOutdatedData(v: unknown): v is Record<string, OutdatedInfo> {
+  return typeof v === "object" && v !== null;
+}
+
 const input = (await new Response(Deno.stdin.readable).text()).trim();
 if (!input) {
   console.log("--- minor updates ---");
@@ -30,10 +34,6 @@ if (!input) {
   console.log("--- major updates ---");
   console.log("none");
   Deno.exit(0);
-}
-
-function isOutdatedData(v: unknown): v is Record<string, OutdatedInfo> {
-  return typeof v === "object" && v !== null;
 }
 
 const raw: unknown = JSON.parse(input);

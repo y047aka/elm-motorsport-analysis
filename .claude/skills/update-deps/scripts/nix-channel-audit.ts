@@ -23,7 +23,12 @@ const channels = Array.from({ length: year - 24 + 1 }, (_, i) => 24 + i)
       })
   );
 
-const latest = channels[channels.length - 1];
+const latest = channels.at(-1);
+if (!latest) {
+  console.log("latest channel: unknown");
+  Deno.exit(0);
+}
+
 const currentNum = parseInt(yy) * 100 + parseInt(mm);
 const latestNum = latest.y * 100 + parseInt(latest.mm);
 

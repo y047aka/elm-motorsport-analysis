@@ -103,19 +103,21 @@ type FoundDep = Omit<ClassifiedDep, "latest"> & {
   latest: { status: "found"; version: string };
 };
 
-const majorUpdates = classified
-  .filter((d): d is FoundDep =>
-    d.latest.status === "found" && isMajorBump(d.current, d.latest.version)
-  )
-  .map(({ name, current, latest }) => `${name}: ${current} -> ${latest.version}`);
+function isMajorUpdate(d: ClassifiedDep): d is FoundDep {
+  return d.latest.status === "found" && isMajorBump(d.current, d.latest.version);
+}
 
-const upToDate = classified
-  .filter((d) =>
-    !(d.latest.status === "found" && isMajorBump(d.current, d.latest.version))
-  )
-  .map(({ name, current, latest }) =>
-    `${name}: ${current} (latest ${latest.status === "found" ? latest.version : "unknown"})`
-  );
+const [majorDeps, upToDateDeps] = classified.reduce<[FoundDep[], ClassifiedDep[]]>(
+  ([maj, utd], d) => isMajorUpdate(d) ? [[...maj, d], utd] : [maj, [...utd, d]],
+  [[], []],
+);
+
+const majorUpdates = majorDeps.map(({ name, current, latest }) =>
+  `${name}: ${current} -> ${latest.version}`
+);
+const upToDate = upToDateDeps.map(({ name, current, latest }) =>
+  `${name}: ${current} (latest ${latest.status === "found" ? latest.version : "unknown"})`
+);
 
 console.log("--- major updates ---");
 console.log(majorUpdates.length ? majorUpdates.join("\n") : "none");

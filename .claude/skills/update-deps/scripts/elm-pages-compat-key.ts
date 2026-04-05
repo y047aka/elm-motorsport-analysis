@@ -57,16 +57,16 @@ type VersionMatch =
   | { status: "matched"; version: string }
   | { status: "no-match" };
 
-const best = matches
-  .toSorted((a: string, b: string) => {
-    const pa = a.split(".").map(Number);
-    const pb = b.split(".").map(Number);
-    const len = Math.max(pa.length, pb.length);
-    return Array.from({ length: len })
-      .map((_, i) => (pa[i] || 0) - (pb[i] || 0))
-      .find((d) => d !== 0) ?? 0;
-  })
-  .at(-1);
+function compareSemver(a: string, b: string): number {
+  const pa = a.split(".").map(Number);
+  const pb = b.split(".").map(Number);
+  const len = Math.max(pa.length, pb.length);
+  return Array.from({ length: len })
+    .map((_, i) => (pa[i] || 0) - (pb[i] || 0))
+    .find((d) => d !== 0) ?? 0;
+}
+
+const best = matches.toSorted(compareSemver).at(-1);
 const matchResult: VersionMatch = best != null
   ? { status: "matched", version: best }
   : { status: "no-match" };
