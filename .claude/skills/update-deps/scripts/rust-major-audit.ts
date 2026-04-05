@@ -56,39 +56,37 @@ function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
-const classified = deps.map((dep) => {
-  let latest = "unknown";
-  try {
-    const cmd = new Deno.Command("cargo", {
-      args: ["search", dep.name, "--limit", "1"],
-      stdout: "piped",
-      stderr: "null",
-    });
-    const out = new TextDecoder().decode(cmd.outputSync().stdout);
-    const m = out.match(
-      new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
-    );
-    if (m) latest = m[1];
-  } catch (_) {
-    // network error — report as unknown
-  }
-  return { ...dep, latest, current: baseVersion(dep.constraint) };
-});
-
-const { majorUpdates, upToDate } = classified.reduce(
-  (acc, { name, current, latest }) => {
-    if (latest !== "unknown" && isMajorBump(current, latest)) {
-      return {
-        ...acc,
-        majorUpdates: [...acc.majorUpdates, `${name}: ${current} -> ${latest}`],
-      };
+const classified = await Promise.all(
+  deps.map(async (dep) => {
+    let latest = "unknown";
+    try {
+      const cmd = new Deno.Command("cargo", {
+        args: ["search", dep.name, "--limit", "1"],
+        stdout: "piped",
+        stderr: "null",
+      });
+      const out = new TextDecoder().decode((await cmd.output()).stdout);
+      const m = out.match(
+        new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
+      );
+      if (m) latest = m[1];
+    } catch (_) {
+      // network error — report as unknown
     }
-    return {
-      ...acc,
-      upToDate: [...acc.upToDate, `${name}: ${current} (latest ${latest})`],
-    };
-  },
-  { majorUpdates: [] as string[], upToDate: [] as string[] },
+    return { ...dep, latest, current: baseVersion(dep.constraint) };
+  }),
+);
+
+const grouped = Map.groupBy(
+  classified,
+  ({ current, latest }) =>
+    latest !== "unknown" && isMajorBump(current, latest) ? "major" : "upToDate",
+);
+const majorUpdates = (grouped.get("major") ?? []).map(
+  ({ name, current, latest }) => `${name}: ${current} -> ${latest}`,
+);
+const upToDate = (grouped.get("upToDate") ?? []).map(
+  ({ name, current, latest }) => `${name}: ${current} (latest ${latest})`,
 );
 
 console.log("--- major updates ---");
