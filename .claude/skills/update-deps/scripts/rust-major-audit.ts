@@ -9,11 +9,19 @@ const files = [
   "cli/motorsport/Cargo.toml",
 ];
 
+interface CrateDep {
+  name: string;
+  constraint: string;
+}
+
+interface DepsParseState {
+  inDeps: boolean;
+  deps: CrateDep[];
+}
+
 // Parse direct dependencies (same logic as rust-deps-parse.ts)
 const allDeps = files.flatMap((f) =>
-  Deno.readTextFileSync(f).split("\n").reduce<
-    { inDeps: boolean; deps: { name: string; constraint: string }[] }
-  >(
+  Deno.readTextFileSync(f).split("\n").reduce<DepsParseState>(
     (acc, line) => {
       if (/^\[(workspace\.)?(dev-)?dependencies\]/.test(line)) {
         return { ...acc, inDeps: true };
@@ -35,8 +43,13 @@ const allDeps = files.flatMap((f) =>
 );
 const deps = [...new Map(allDeps.map((d) => [d.name, d])).values()];
 
+interface MajorComponent {
+  index: number;
+  value: number;
+}
+
 // Extract leftmost non-zero component for major version comparison
-function majorComponent(version: string): { index: number; value: number } {
+function majorComponent(version: string): MajorComponent {
   const parts = version.split(".").map(Number);
   const idx = parts.findIndex((p) => p !== 0);
   return idx === -1
@@ -56,10 +69,14 @@ function baseVersion(constraint: string): string {
   return constraint.replace(/^[~^>=<]*/, "");
 }
 
+type VersionLookup =
+  | { status: "found"; version: string }
+  | { status: "unknown" };
+
 const decoder = new TextDecoder();
 const classified = await Promise.all(
   deps.map(async (dep) => {
-    let latest = "unknown";
+    let latest: VersionLookup = { status: "unknown" };
     try {
       const cmd = new Deno.Command("cargo", {
         args: ["search", dep.name, "--limit", "1"],
@@ -70,7 +87,7 @@ const classified = await Promise.all(
       const m = out.match(
         new RegExp(`^${dep.name.replace(/-/g, "[-_]")}\\s.*"([^"]+)"`),
       );
-      if (m) latest = m[1];
+      if (m) latest = { status: "found", version: m[1] };
     } catch (_) {
       // network error — report as unknown
     }
@@ -78,17 +95,24 @@ const classified = await Promise.all(
   }),
 );
 
-const grouped = Map.groupBy(
-  classified,
-  ({ current, latest }) =>
-    latest !== "unknown" && isMajorBump(current, latest) ? "major" : "upToDate",
-);
-const majorUpdates = (grouped.get("major") ?? []).map(
-  ({ name, current, latest }) => `${name}: ${current} -> ${latest}`,
-);
-const upToDate = (grouped.get("upToDate") ?? []).map(
-  ({ name, current, latest }) => `${name}: ${current} (latest ${latest})`,
-);
+type ClassifiedDep = (typeof classified)[number];
+type FoundDep = Omit<ClassifiedDep, "latest"> & {
+  latest: { status: "found"; version: string };
+};
+
+const majorUpdates = classified
+  .filter((d): d is FoundDep =>
+    d.latest.status === "found" && isMajorBump(d.current, d.latest.version)
+  )
+  .map(({ name, current, latest }) => `${name}: ${current} -> ${latest.version}`);
+
+const upToDate = classified
+  .filter((d) =>
+    !(d.latest.status === "found" && isMajorBump(d.current, d.latest.version))
+  )
+  .map(({ name, current, latest }) =>
+    `${name}: ${current} (latest ${latest.status === "found" ? latest.version : "unknown"})`
+  );
 
 console.log("--- major updates ---");
 console.log(majorUpdates.length ? majorUpdates.join("\n") : "none");

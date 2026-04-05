@@ -4,8 +4,8 @@ const files = ["app/elm.json", "package/elm.json", "review/elm.json"];
 
 files.forEach((f) => {
   const elmJson = JSON.parse(Deno.readTextFileSync(f));
-  const type: string = elmJson.type ?? "unknown";
-  console.log(`--- ${f} (${type}) ---`);
+  const type: "application" | "package" | undefined = elmJson.type;
+  console.log(`--- ${f} (${type ?? "unknown"}) ---`);
 
   if (type === "application") {
     const deps: Record<string, Record<string, string>> = elmJson.dependencies ||

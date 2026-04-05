@@ -12,10 +12,18 @@ interface FixAvailableObject {
   isSemVerMajor?: boolean;
 }
 
+type Severity = "info" | "low" | "moderate" | "high" | "critical";
+
 interface VulnInfo {
-  severity: string;
+  severity: Severity;
   via: (ViaObject | string)[];
   fixAvailable: boolean | FixAvailableObject;
+}
+
+function isFixAvailableObject(
+  v: boolean | FixAvailableObject,
+): v is FixAvailableObject {
+  return typeof v === "object" && v !== null && "name" in v;
 }
 
 const input = (await new Response(Deno.stdin.readable).text()).trim();
@@ -28,7 +36,16 @@ if (!input) {
   Deno.exit(0);
 }
 
-const data = JSON.parse(input);
+interface AuditData {
+  vulnerabilities?: Record<string, VulnInfo>;
+}
+
+const raw: unknown = JSON.parse(input);
+if (typeof raw !== "object" || raw === null) {
+  console.error("unexpected npm audit format");
+  Deno.exit(1);
+}
+const data = raw as AuditData;
 const vulns: Record<string, VulnInfo> = data.vulnerabilities ?? {};
 const total = Object.keys(vulns).length;
 
@@ -47,8 +64,8 @@ const { lines, fixable, fixableBreaking } = Object.entries(vulns).reduce(
       : "";
 
     // Fix availability
-    const fix = typeof info.fixAvailable === "object" && info.fixAvailable
-      ? info.fixAvailable as FixAvailableObject
+    const fix = isFixAvailableObject(info.fixAvailable)
+      ? info.fixAvailable
       : null;
     const [fixStr, fixKind]: [string, "fixable" | "breaking" | "none"] =
       info.fixAvailable === true

@@ -53,7 +53,11 @@ const matches = versions.filter((ver) => {
   return m != null && parseInt(m[1]) === npmKey;
 });
 
-const matchingVersion = matches
+type VersionMatch =
+  | { status: "matched"; version: string }
+  | { status: "no-match" };
+
+const best = matches
   .toSorted((a: string, b: string) => {
     const pa = a.split(".").map(Number);
     const pb = b.split(".").map(Number);
@@ -62,10 +66,13 @@ const matchingVersion = matches
       .map((_, i) => (pa[i] || 0) - (pb[i] || 0))
       .find((d) => d !== 0) ?? 0;
   })
-  .at(-1) ?? null;
+  .at(-1);
+const matchResult: VersionMatch = best != null
+  ? { status: "matched", version: best }
+  : { status: "no-match" };
 
-if (matchingVersion) {
-  console.log(`matchingElmVersion: ${matchingVersion}`);
+if (matchResult.status === "matched") {
+  console.log(`matchingElmVersion: ${matchResult.version}`);
 } else {
   console.log("matchingElmVersion: no-match");
   console.log(

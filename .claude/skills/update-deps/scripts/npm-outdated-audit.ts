@@ -18,6 +18,10 @@ interface OutdatedInfo {
   dependent?: string;
 }
 
+type BundledVersion =
+  | { status: "found"; version: string }
+  | { status: "unknown" };
+
 const input = (await new Response(Deno.stdin.readable).text()).trim();
 if (!input) {
   console.log("--- minor updates ---");
@@ -28,7 +32,12 @@ if (!input) {
   Deno.exit(0);
 }
 
-const data: Record<string, OutdatedInfo> = JSON.parse(input);
+const raw: unknown = JSON.parse(input);
+if (typeof raw !== "object" || raw === null) {
+  console.error("unexpected npm outdated format");
+  Deno.exit(1);
+}
+const data = raw as Record<string, OutdatedInfo>;
 
 const { minor, major } = Object.entries(data).reduce(
   (acc, [name, info]) => {
@@ -70,12 +79,14 @@ if (viteEntry) {
     `${root}/node_modules/elm-pages/node_modules/vite/package.json`;
   const hoisted = `${root}/node_modules/vite/package.json`;
   const bundledPkg = existsSync(nested) ? nested : hoisted;
-  const bundledVersion: string = existsSync(bundledPkg)
-    ? JSON.parse(Deno.readTextFileSync(bundledPkg)).version
-    : "unknown";
+  const bundled: BundledVersion = existsSync(bundledPkg)
+    ? { status: "found", version: JSON.parse(Deno.readTextFileSync(bundledPkg)).version }
+    : { status: "unknown" };
   console.log("");
   console.log("--- vite ---");
   console.log(`current: ${viteEntry.current}`);
   console.log(`latest: ${viteEntry.latest}`);
-  console.log(`bundled-major: ${parseInt(bundledVersion)}`);
+  console.log(
+    `bundled-major: ${bundled.status === "found" ? parseInt(bundled.version) : "unknown"}`,
+  );
 }
