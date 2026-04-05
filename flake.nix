@@ -37,7 +37,7 @@
       in {
         devShells.default = with pkgs;
           mkShell {
-            buildInputs = [ nodejs_24 rustc cargo rustfmt ] ++ elmTools;
+            buildInputs = [ nodejs_24 deno rustc cargo rustfmt ] ++ elmTools;
           };
 
         apps = {

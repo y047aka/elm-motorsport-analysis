@@ -1,6 +1,6 @@
 // Report pinned revision dates and hashes from flake.lock.
 // Run from the project root.
-import fs from "fs";
+import fs from "node:fs";
 
 const d = JSON.parse(fs.readFileSync("flake.lock", "utf8"));
 for (const [k, v] of Object.entries(d.nodes || {}) as [string, { locked?: { lastModified?: number; rev?: string } }][]) {

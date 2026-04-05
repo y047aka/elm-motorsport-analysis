@@ -1,8 +1,8 @@
 // Match elm-pages npm compatibilityKey with the correct Elm package version.
 // Run from the project root.
-import fs from "fs";
-import path from "path";
-import os from "os";
+import fs from "node:fs";
+import path from "node:path";
+import os from "node:os";
 
 const npmKeyFile = path.join(process.cwd(), "node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm");
 if (!fs.existsSync(npmKeyFile)) {

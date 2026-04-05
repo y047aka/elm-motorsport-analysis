@@ -1,8 +1,8 @@
 // Print the vite version bundled inside elm-pages.
 // Checks the nested copy first; falls back to the hoisted copy when npm deduplicates.
 // Run from the project root.
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 const root = process.cwd();
 const nested = path.join(root, "node_modules/elm-pages/node_modules/vite/package.json");

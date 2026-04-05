@@ -1,6 +1,6 @@
 // Report all Elm package versions across the three elm.json files.
 // Run from the project root.
-import fs from "fs";
+import fs from "node:fs";
 
 const files = ["app/elm.json", "package/elm.json", "review/elm.json"];
 

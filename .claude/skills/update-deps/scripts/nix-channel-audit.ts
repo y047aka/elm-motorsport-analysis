@@ -1,7 +1,7 @@
 // Audit the current nixpkgs channel in flake.nix and report whether
 // a newer stable channel is available.
 // Run from the project root.
-import fs from "fs";
+import fs from "node:fs";
 
 const flake = fs.readFileSync("flake.nix", "utf8");
 const m = flake.match(/nixpkgs\/nixpkgs-(\d+)\.(\d+)-darwin/);

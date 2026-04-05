@@ -1,8 +1,22 @@
 // Classify npm outdated --json output into minor/major update sections.
-// Pipe from: npm outdated --json 2>/dev/null | node --experimental-strip-types <this-script>
+// Pipe from: npm outdated --json 2>/dev/null | deno run --allow-read <this-script>
 // Run from the project root.
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
+
+function readStdin(): string {
+  const chunks: Uint8Array[] = [];
+  const buf = new Uint8Array(4096);
+  for (;;) {
+    const n = Deno.stdin.readSync(buf);
+    if (n === null) break;
+    chunks.push(buf.slice(0, n));
+  }
+  const merged = new Uint8Array(chunks.reduce((s, c) => s + c.length, 0));
+  let offset = 0;
+  for (const c of chunks) { merged.set(c, offset); offset += c.length; }
+  return new TextDecoder().decode(merged);
+}
 
 interface OutdatedInfo {
   current: string;
@@ -11,7 +25,7 @@ interface OutdatedInfo {
   dependent?: string;
 }
 
-const input = fs.readFileSync("/dev/stdin", "utf8").trim();
+const input = readStdin().trim();
 if (!input) {
   console.log("--- minor updates ---");
   console.log("none");

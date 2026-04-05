@@ -7,7 +7,7 @@ Upgrade the nixpkgs channel to a newer release.
 Read `flake.nix` to extract the current channel name. Channels follow the pattern `nixpkgs-YY.MM-darwin` (e.g. `nixpkgs-25.05-darwin`). NixOS releases new stable channels every 6 months: May (05) and November (11).
 
 ```bash
-node --experimental-strip-types .claude/skills/update-deps/scripts/nix-channel-audit.ts
+deno run --allow-read .claude/skills/update-deps/scripts/nix-channel-audit.ts
 ```
 
 ## Update

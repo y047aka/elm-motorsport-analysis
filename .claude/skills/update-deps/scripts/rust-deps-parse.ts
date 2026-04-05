@@ -1,7 +1,7 @@
 // Parse direct dependencies from all Cargo.toml files in the workspace.
 // Outputs one line per unique crate: "crate-name version-constraint"
 // Run from the project root.
-import fs from "fs";
+import fs from "node:fs";
 
 const files = [
   "cli/Cargo.toml",

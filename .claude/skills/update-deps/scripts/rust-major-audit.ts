@@ -2,8 +2,8 @@
 // Parses Cargo.toml files, runs cargo search for each crate,
 // and classifies results by major version bump.
 // Run from the project root.
-import fs from "fs";
-import { execSync } from "child_process";
+import fs from "node:fs";
+import { execSync } from "node:child_process";
 
 const files = [
   "cli/Cargo.toml",

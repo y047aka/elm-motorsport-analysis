@@ -1,7 +1,7 @@
 // Pin all workspace package.json dependency versions to the exact versions
 // resolved in package-lock.json.
 // Run from the project root.
-import fs from "fs";
+import fs from "node:fs";
 
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
 
