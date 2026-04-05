@@ -38,10 +38,10 @@ const deps = [...new Map(allDeps.map((d) => [d.name, d])).values()];
 // Extract leftmost non-zero component for major version comparison
 function majorComponent(version: string): { index: number; value: number } {
   const parts = version.split(".").map(Number);
-  for (const p of parts) {
-    if (p !== 0) return { index: parts.indexOf(p), value: p };
-  }
-  return { index: 0, value: 0 };
+  const idx = parts.findIndex((p) => p !== 0);
+  return idx === -1
+    ? { index: 0, value: 0 }
+    : { index: idx, value: parts[idx] };
 }
 
 function isMajorBump(current: string, latest: string): boolean {

@@ -22,14 +22,17 @@ const workspaces: Record<string, string> = {
 
 Object.entries(workspaces).forEach(([f, ws]) => {
   const pkg = JSON.parse(Deno.readTextFileSync(f));
-  for (const key of ["dependencies", "devDependencies"]) {
-    if (!pkg[key]) continue;
-    pkg[key] = Object.fromEntries(
-      Object.entries(pkg[key] as Record<string, string>).map(([name, ver]) => [
-        name,
-        resolved(name, ws) || ver.replace(/^[\^~]/, ""),
-      ]),
-    );
-  }
+  ["dependencies", "devDependencies"]
+    .filter((key) => pkg[key])
+    .forEach((key) => {
+      pkg[key] = Object.fromEntries(
+        Object.entries(pkg[key] as Record<string, string>).map((
+          [name, ver],
+        ) => [
+          name,
+          resolved(name, ws) || ver.replace(/^[\^~]/, ""),
+        ]),
+      );
+    });
   Deno.writeTextFileSync(f, JSON.stringify(pkg, null, 2) + "\n");
 });
