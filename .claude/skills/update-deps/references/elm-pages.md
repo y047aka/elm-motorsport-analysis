@@ -4,22 +4,11 @@ Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm 
 
 ## Audit
 
-1. Check current `elm-pages` version from `app/package.json` (exact pin).
+```bash
+npm view elm-pages dist-tags.latest 2>/dev/null | deno run --allow-read --allow-env=HOME .claude/skills/update-deps/scripts/elm-pages-audit.ts
+```
 
-2. Check latest available version:
-   ```bash
-   npm view elm-pages dist-tags.latest
-   ```
-
-3. Report all `dillonkearns/*` package versions:
-   ```bash
-   deno run --allow-read .claude/skills/update-deps/scripts/elm-dillonkearns-guard.ts
-   ```
-
-4. Report the current compatibilityKey:
-   ```bash
-   cat node_modules/elm-pages/generator/src/compatibility-key.js
-   ```
+The script reports current/latest versions, dillonkearns package versions with restore commands, and compatibilityKey matching status.
 
 ## Update
 
