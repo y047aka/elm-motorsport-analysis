@@ -49,7 +49,7 @@ const { minor, major } = Object.entries(data).reduce(
       minor: current !== wanted
         ? [...acc.minor, `${name}: ${current} -> ${wanted} (${dep})`]
         : acc.minor,
-      major: parseInt(latest) > parseInt(current)
+      major: latest !== wanted
         ? [...acc.major, `${name}: ${current} -> ${latest} (${dep})`]
         : acc.major,
     };
