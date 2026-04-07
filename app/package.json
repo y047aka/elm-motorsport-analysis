@@ -9,9 +9,9 @@
     "test": "npx playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.59.1",
     "@tailwindcss/cli": "4.2.2",
-    "@types/node": "25.5.0",
+    "@types/node": "25.5.2",
     "daisyui": "5.5.19",
     "elm-codegen": "0.6.3",
     "elm-optimize-level-2": "0.3.5",
