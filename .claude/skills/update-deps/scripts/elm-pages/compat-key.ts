@@ -1,7 +1,7 @@
 // Match elm-pages npm compatibilityKey with the correct Elm package version.
 // Run from the project root.
 
-import { type Option, isSome, fromNullable } from "./_option.ts";
+import { type Option, isSome, fromNullable } from "../_shared/option.ts";
 
 function existsSync(path: string): boolean {
   try {

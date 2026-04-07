@@ -7,7 +7,7 @@ The workspace root is `cli/Cargo.toml` with members `cli/` and `motorsport/`.
 ## Audit
 
 ```bash
-deno run --allow-read --allow-run=cargo --allow-env=PATH .claude/skills/update-deps/scripts/rust-major-audit.ts
+deno run --allow-read --allow-run=cargo --allow-env=PATH .claude/skills/update-deps/scripts/rust/major-audit.ts
 ```
 
 The script parses all Cargo.toml files, runs `cargo search` for each crate, and classifies results. A **major bump** is when the leftmost non-zero version component increases (e.g., `0.8 → 0.9`, `1.x → 2.x`). Focus on the `major updates` section.

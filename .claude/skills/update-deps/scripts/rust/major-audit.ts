@@ -3,7 +3,7 @@
 // and classifies results by major version bump.
 // Run from the project root.
 
-import { type Option, type Some, some, none, isSome, getOrElse } from "./_option.ts";
+import { type Option, type Some, some, none, isSome, getOrElse } from "../_shared/option.ts";
 
 const files = [
   "cli/Cargo.toml",

@@ -20,10 +20,10 @@ allowed-tools:
   - Bash(which *)
   - Bash(cat node_modules/*)
   - Bash(npm view *)
-  - Bash(deno run --allow-read .claude/skills/update-deps/scripts/*)
-  - Bash(deno run --allow-read --allow-write .claude/skills/update-deps/scripts/*)
-  - Bash(deno run --allow-read --allow-env=HOME .claude/skills/update-deps/scripts/*)
-  - Bash(deno run --allow-read --allow-run=cargo --allow-env=PATH .claude/skills/update-deps/scripts/*)
+  - Bash(deno run --allow-read .claude/skills/update-deps/scripts/**)
+  - Bash(deno run --allow-read --allow-write .claude/skills/update-deps/scripts/**)
+  - Bash(deno run --allow-read --allow-env=HOME .claude/skills/update-deps/scripts/**)
+  - Bash(deno run --allow-read --allow-run=cargo --allow-env=PATH .claude/skills/update-deps/scripts/**)
   - Read
   - Edit
   - Write

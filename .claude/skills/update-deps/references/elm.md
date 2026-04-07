@@ -7,7 +7,7 @@ Check `which elm-json` first. If unavailable, tell the user to run `direnv reloa
 `elm-json upgrade` has no `--dry-run`. Report current pinned versions:
 
 ```bash
-deno run --allow-read .claude/skills/update-deps/scripts/elm-versions-report.ts
+deno run --allow-read .claude/skills/update-deps/scripts/elm/versions-report.ts
 ```
 
 ## Update
@@ -22,7 +22,7 @@ Use `--yes` to skip interactive confirmation.
 
 1. Capture dillonkearns package versions and restore commands:
    ```bash
-   deno run --allow-read .claude/skills/update-deps/scripts/elm-dillonkearns-guard.ts
+   deno run --allow-read .claude/skills/update-deps/scripts/elm-pages/elm-guard.ts
    ```
    Save the output (the `restore commands` section contains the commands needed in step 3).
 

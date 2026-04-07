@@ -7,7 +7,7 @@ The workspace root is `cli/Cargo.toml` with members `cli/` and `motorsport/`.
 ## Audit
 
 ```bash
-cargo update --dry-run --manifest-path cli/Cargo.toml 2>&1 | deno run --allow-read .claude/skills/update-deps/scripts/rust-minor-audit.ts
+cargo update --dry-run --manifest-path cli/Cargo.toml 2>&1 | deno run --allow-read .claude/skills/update-deps/scripts/rust/minor-audit.ts
 ```
 
 The script classifies semver-compatible updates into minor and patch sections.

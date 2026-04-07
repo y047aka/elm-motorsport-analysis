@@ -2,7 +2,7 @@
 // Pipe from: npm view elm-pages dist-tags.latest 2>/dev/null | deno run --allow-read --allow-env=HOME <this-script>
 // Run from the project root.
 
-import { type Option, isSome, fromNullable } from "./_option.ts";
+import { type Option, isSome, fromNullable } from "../_shared/option.ts";
 
 function existsSync(path: string): boolean {
   try {

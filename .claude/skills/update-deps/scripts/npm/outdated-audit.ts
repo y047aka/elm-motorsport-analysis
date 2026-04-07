@@ -2,7 +2,7 @@
 // Pipe from: npm outdated --json 2>/dev/null | deno run --allow-read <this-script>
 // Run from the project root.
 
-import { type Option, some, none, isSome, getOrElse } from "./_option.ts";
+import { type Option, some, none, isSome, getOrElse } from "../_shared/option.ts";
 
 function existsSync(path: string): boolean {
   try {

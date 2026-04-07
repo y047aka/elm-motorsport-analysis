@@ -2,7 +2,7 @@
 // resolved in package-lock.json.
 // Run from the project root.
 
-import { type Option, some, none, getOrElse } from "./_option.ts";
+import { type Option, some, none, getOrElse } from "../_shared/option.ts";
 
 const lock = JSON.parse(Deno.readTextFileSync("package-lock.json"));
 
