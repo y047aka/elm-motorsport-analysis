@@ -8,12 +8,6 @@
     "build": "npm run css:build && elm-pages build",
     "test": "npx playwright test"
   },
-  "optionalDependencies": {
-    "@lamdera/compiler-darwin-x64": "0.19.1-1.4.0",
-    "@lamdera/compiler-linux-arm64": "0.19.1-1.4.0",
-    "@lamdera/compiler-linux-x64": "0.19.1-1.4.0",
-    "@lamdera/compiler-win32-x64": "0.19.1-1.4.0"
-  },
   "devDependencies": {
     "@playwright/test": "1.59.1",
     "@tailwindcss/cli": "4.2.2",
