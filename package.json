@@ -11,6 +11,6 @@
     "@biomejs/biome": "1.9.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@parcel/watcher", "esbuild", "lamdera"]
+    "onlyBuiltDependencies": ["@parcel/watcher", "esbuild"]
   }
 }

@@ -7,7 +7,12 @@
   outputs = { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = nixpkgs.legacyPackages.${system};
+        pkgs = import nixpkgs {
+          inherit system;
+          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
+            "lamdera"
+          ];
+        };
 
         elmTools = with pkgs.elmPackages; [
           elm
@@ -16,6 +21,7 @@
           elm-review
           elm-test
           elm-verify-examples
+          lamdera
         ];
 
         mkNodeApp = name: cmd:
