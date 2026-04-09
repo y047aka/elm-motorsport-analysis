@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-25.11-darwin";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -10,6 +10,7 @@
         pkgs = nixpkgs.legacyPackages.${system};
 
         elmTools = with pkgs.elmPackages; [
+          elm
           elm-format
           elm-json
           elm-review
