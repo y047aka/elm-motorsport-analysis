@@ -11,6 +11,10 @@
     "@biomejs/biome": "1.9.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@parcel/watcher", "esbuild"]
+    "ignoredBuiltDependencies": [
+      "@biomejs/biome",
+      "@parcel/watcher",
+      "esbuild"
+    ]
   }
 }
