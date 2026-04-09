@@ -13,6 +13,6 @@
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "elm": "^0.19.1-6"
+    "elm": "0.19.1-6"
   }
 }
