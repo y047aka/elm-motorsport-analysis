@@ -34,6 +34,12 @@ nix run .#cli-build          # Build CLI
 nix run .#cli-test           # Run Rust tests
 ```
 
+### Dependency Management
+```bash
+/update-deps                 # Audit and update all dependencies (Claude skill)
+/update-deps [npm|elm|rust|nix]  # Target a specific ecosystem
+```
+
 ## Architecture
 
 ### Monorepo Structure (npm workspaces)

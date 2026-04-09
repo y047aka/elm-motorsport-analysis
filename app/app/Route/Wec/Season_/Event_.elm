@@ -11,7 +11,6 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, button, div, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Html.Styled.Lazy as Lazy
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
@@ -291,7 +290,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 ]
                                 [ div [ Attributes.class "card-body p-3" ]
                                     [ Html.map CompareWidgetMsg <|
-                                        Lazy.lazy3 CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
+                                        CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
                                     ]
                                 ]
                             , div
@@ -309,7 +308,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     ]
                                 ]
                                 [ Html.map CompareWidgetMsg <|
-                                    Lazy.lazy2 CompareWidget.viewCarSelector compareProps m.compare
+                                    CompareWidget.viewCarSelector compareProps m.compare
                                 ]
                             ]
 

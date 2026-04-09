@@ -3,9 +3,5 @@
   "scripts": {
     "test": "elm-verify-examples && elm-test",
     "benchmark": "cd benchmark && elm reactor"
-  },
-  "devDependencies": {
-    "elm-test": "^0.19.1-revision12",
-    "elm-verify-examples": "^6.0.3"
   }
 }
