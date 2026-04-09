@@ -4,10 +4,11 @@ description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Ni
 argument-hint: "[npm|elm|elm-pages|rust|nix] [minor|major]"
 disable-model-invocation: true
 allowed-tools:
-  - Bash(npm audit *)
-  - Bash(npm outdated *)
-  - Bash(npm update *)
-  - Bash(npm install *)
+  - Bash(pnpm audit *)
+  - Bash(pnpm outdated *)
+  - Bash(pnpm update *)
+  - Bash(pnpm install *)
+  - Bash(pnpm add *)
   - Bash(elm-json *)
   - Bash(cargo update *)
   - Bash(cargo search *)
@@ -19,7 +20,7 @@ allowed-tools:
   - Bash(git commit *)
   - Bash(which *)
   - Bash(cat node_modules/*)
-  - Bash(npm view *)
+  - Bash(pnpm view *)
   - Bash(cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- **)
   - Bash(*| cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- **)
   - Read

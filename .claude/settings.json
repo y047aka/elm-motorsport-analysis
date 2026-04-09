@@ -6,7 +6,7 @@
       "Bash(git push:*)",
       "Bash(cargo install:*)",
       "Bash(cargo add:*)",
-      "Bash(npm install:*)"
+      "Bash(pnpm install:*)"
     ],
     "deny": [
       "Read(.env*)",
@@ -27,7 +27,7 @@
       "Bash(git reset:*)",
       "Bash(git rm:*)",
       "Bash(cargo publish:*)",
-      "Bash(npm publish:*)"
+      "Bash(pnpm publish:*)"
     ]
   }
 }

@@ -1,18 +1,23 @@
 {
+  "packageManager": "pnpm@10.28.0",
   "type": "module",
-  "workspaces": [
-    "app",
-    "package",
-    "review"
-  ],
   "scripts": {
-    "start": "npm run -w app start",
-    "build": "npm run -w app build",
-    "test": "npm run -w package test",
-    "benchmark": "npm run -w cli benchmark"
+    "start": "pnpm --filter app start",
+    "build": "pnpm --filter app build",
+    "test": "pnpm --filter package test",
+    "benchmark": "pnpm --filter cli benchmark"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
     "elm": "0.19.1-6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@biomejs/biome",
+      "@parcel/watcher",
+      "elm",
+      "esbuild",
+      "lamdera"
+    ]
   }
 }

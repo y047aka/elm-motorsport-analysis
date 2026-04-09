@@ -31,7 +31,7 @@ Use this skill when building user interfaces with daisyUI and Tailwind CSS.
 ### Step 1: Install daisyUI
 
 ```bash
-npm install -D daisyui
+pnpm add -D daisyui
 ```
 
 ### Step 2: Configure CSS (Simplest Form)
@@ -81,9 +81,9 @@ If styles aren't applying with Vite, build CSS separately with Tailwind CLI:
 ```json
 {
   "scripts": {
-    "css:build": "npx @tailwindcss/cli -i style.css -o public/style.css --minify",
-    "dev": "npm run css:build && vite",
-    "build": "npm run css:build && vite build"
+    "css:build": "tailwindcss -i style.css -o public/style.css --minify",
+    "dev": "pnpm run css:build && vite",
+    "build": "pnpm run css:build && vite build"
   }
 }
 ```

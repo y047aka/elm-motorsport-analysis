@@ -42,7 +42,7 @@ nix run .#cli-test           # Run Rust tests
 
 ## Architecture
 
-### Monorepo Structure (npm workspaces)
+### Monorepo Structure (pnpm workspaces)
 - **`/app`** - elm-pages 3.x web application (frontend)
 - **`/package`** - Reusable Elm library (motorsport domain models)
 - **`/cli`** - Rust CLI for CSV→JSON data processing
