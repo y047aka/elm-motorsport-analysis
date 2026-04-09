@@ -5,8 +5,8 @@ Semver-compatible (patch and minor) updates for npm packages.
 ## Audit
 
 ```bash
-npm outdated --json 2>/dev/null | deno run --allow-read .claude/skills/update-deps/scripts/npm/outdated-audit.ts
-npm audit --json 2>/dev/null | deno run --allow-read .claude/skills/update-deps/scripts/npm/security-audit.ts
+npm outdated --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-outdated-audit
+npm audit --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-security-audit
 ```
 
 The first script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
@@ -21,7 +21,7 @@ After updating, pin all dependency versions using the resolved versions from `pa
 (not the semver constraint, which may differ from the installed version for pre-release packages):
 
 ```bash
-deno run --allow-read --allow-write .claude/skills/update-deps/scripts/npm/pin-versions.ts
+cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-pin-versions
 ```
 
 Then run `npm install` to sync `package-lock.json` with the pinned versions:

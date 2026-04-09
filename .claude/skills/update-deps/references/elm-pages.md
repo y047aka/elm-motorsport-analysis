@@ -5,7 +5,7 @@ Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm 
 ## Audit
 
 ```bash
-npm view elm-pages dist-tags.latest 2>/dev/null | deno run --allow-read --allow-env=HOME .claude/skills/update-deps/scripts/elm-pages/audit.ts
+npm view elm-pages dist-tags.latest 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-audit
 ```
 
 The script reports current/latest versions, dillonkearns package versions with restore commands, and compatibilityKey matching status.
@@ -26,7 +26,7 @@ npm install --save-exact elm-pages@<version> -w app
 The npm package ships Elm source with a compatibilityKey integer. The Elm package installed from package.elm-lang.org must have the same key.
 
 ```bash
-deno run --allow-read --allow-sys=homedir .claude/skills/update-deps/scripts/elm-pages/compat-key.ts
+cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-compat-key
 ```
 
 If the script reports `matchingElmVersion: no-match`, follow its instruction to install the latest Elm package to populate the cache, then re-run the script.
@@ -92,7 +92,7 @@ When elm-pages is updated:
 
 1. Check elm-pages's new bundled vite version:
    ```bash
-   deno run --allow-read .claude/skills/update-deps/scripts/elm-pages/vite-version.ts
+   cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-vite-version
    ```
 2. If the bundled vite major version changed, update the user's vite in `app/package.json` to match:
    ```bash
