@@ -1,10 +1,6 @@
 {
   "type": "module",
-  "workspaces": [
-    "app",
-    "package",
-    "review"
-  ],
+  "workspaces": ["app", "package", "review"],
   "scripts": {
     "start": "npm run -w app start",
     "build": "npm run -w app build",
@@ -12,7 +8,8 @@
     "benchmark": "npm run -w cli benchmark"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.4.10",
-    "elm": "0.19.1-6"
+    "@biomejs/biome": "1.9.4",
+    "elm": "^0.19.1-6",
+    "elm-format": "^0.8.7"
   }
 }
