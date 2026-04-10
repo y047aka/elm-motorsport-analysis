@@ -44,7 +44,7 @@
         mkVrtApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
+            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
             text = ''
               export FONTCONFIG_FILE=${fontsConf}
               export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
@@ -69,7 +69,7 @@
 
       in {
         devShells.default = pkgs.mkShell ({
-          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ elmTools;
           FONTCONFIG_FILE = fontsConf;
           PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
