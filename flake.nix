@@ -81,10 +81,6 @@
           PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-          shellHook = ''
-            mkdir -p app/node_modules/@playwright
-            ln -sfn ${playwrightModules}/@playwright/test app/node_modules/@playwright/test
-          '';
         } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath chromiumDeps;
         });
