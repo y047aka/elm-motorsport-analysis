@@ -17,6 +17,13 @@
         fontPkgs = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
         fontsConf = pkgs.makeFontsConf { fontDirectories = fontPkgs; };
 
+        chromiumDeps = with pkgs; [
+          nss nspr at-spi2-atk cups libdrm libxkbcommon
+          at-spi2-core xorg.libXcomposite xorg.libXdamage
+          xorg.libXfixes xorg.libXrandr mesa pango cairo
+          alsa-lib
+        ];
+
         elmTools = with pkgs.elmPackages; [
           elm
           elm-format
@@ -40,6 +47,7 @@
             runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
             text = ''
               export FONTCONFIG_FILE=${fontsConf}
+              export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath chromiumDeps}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
               ${cmd}
             '';
           };
@@ -58,6 +66,7 @@
         devShells.default = pkgs.mkShell {
           buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt ] ++ elmTools;
           FONTCONFIG_FILE = fontsConf;
+          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath chromiumDeps;
         };
 
         apps = {

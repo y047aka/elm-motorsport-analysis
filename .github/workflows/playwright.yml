@@ -19,27 +19,14 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v6
-        with:
-          node-version: lts/*
-          cache: pnpm
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: nix develop --command pnpm install --frozen-lockfile
       - uses: actions/cache@v5
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('app/package.json') }}
-      - name: Install Playwright system libraries
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libnss3 libnspr4 libatk1.0-0t64 libatk-bridge2.0-0t64 \
-            libcups2t64 libdrm2 libxkbcommon0 libatspi2.0-0t64 \
-            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 \
-            libgbm1 libpango-1.0-0 libcairo2 libasound2t64
       - name: Install Playwright Browsers
-        run: pnpm --filter app exec playwright install chromium
+        run: nix develop --command pnpm --filter app exec playwright install chromium
       - name: Run Playwright tests
         run: nix run .#test-vrt
         env:
