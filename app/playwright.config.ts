@@ -27,6 +27,7 @@ export default defineConfig({
       args: [
         '--font-render-hinting=none',
         '--disable-lcd-text',
+        ...(process.env.CI ? ['--no-sandbox'] : []),
       ],
     },
   },
