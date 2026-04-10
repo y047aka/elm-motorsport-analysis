@@ -14,9 +14,6 @@
           ];
         };
 
-        fontPkgs = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
-        fontsConf = pkgs.makeFontsConf { fontDirectories = fontPkgs; };
-
         elmTools = with pkgs.elmPackages; [
           elm
           elm-format
@@ -28,7 +25,9 @@
         ];
 
         playwrightEnv = {
-          FONTCONFIG_FILE                       = fontsConf;
+          FONTCONFIG_FILE                       = pkgs.makeFontsConf {
+            fontDirectories = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
+          };
           PLAYWRIGHT_BROWSERS_PATH              = pkgs.playwright-driver.browsers.override {
             withFirefox = false;
             withWebkit  = false;
