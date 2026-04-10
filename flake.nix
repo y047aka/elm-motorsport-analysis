@@ -29,7 +29,10 @@
 
         playwrightEnv = {
           FONTCONFIG_FILE                       = fontsConf;
-          PLAYWRIGHT_BROWSERS_PATH              = pkgs.playwright-driver.browsers-chromium;
+          PLAYWRIGHT_BROWSERS_PATH              = pkgs.playwright-driver.browsers.override {
+            withFirefox = false;
+            withWebkit  = false;
+          };
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD      = "1";
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         };
