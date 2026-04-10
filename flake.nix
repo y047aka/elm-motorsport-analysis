@@ -41,6 +41,8 @@
             text = cmd;
           };
 
+        playwrightModules = "${pkgs.playwright-test}/lib/node_modules";
+
         mkVrtApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
@@ -53,6 +55,11 @@
               ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
                 export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath chromiumDeps}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
               ''}
+
+              # Symlink @playwright/test into node_modules for ESM resolution
+              mkdir -p app/node_modules/@playwright
+              ln -sfn ${playwrightModules}/@playwright/test app/node_modules/@playwright/test
+
               ${cmd}
             '';
           };
@@ -74,6 +81,10 @@
           PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+          shellHook = ''
+            mkdir -p app/node_modules/@playwright
+            ln -sfn ${playwrightModules}/@playwright/test app/node_modules/@playwright/test
+          '';
         } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath chromiumDeps;
         });
@@ -82,7 +93,7 @@
           dev            = { type = "app"; program = "${mkNodeApp "dev"            "pnpm start"}/bin/dev";                      meta.description = "Start elm-pages dev server (localhost:1234)"; };
           build          = { type = "app"; program = "${mkNodeApp "build"          "pnpm run build"}/bin/build";                 meta.description = "Production build"; };
           test           = { type = "app"; program = "${mkNodeApp "test"           "pnpm test"}/bin/test";                       meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
-          test-vrt       = { type = "app"; program = "${mkVrtApp "test-vrt"       "pnpm --filter app test"}/bin/test-vrt";        meta.description = "Run Playwright VRT tests"; };
+          test-vrt       = { type = "app"; program = "${mkVrtApp "test-vrt"       "cd app && playwright test"}/bin/test-vrt";     meta.description = "Run Playwright VRT tests"; };
           review-app     = { type = "app"; program = "${mkNodeApp "review-app"     "pnpm --filter review app"}/bin/review-app";    meta.description = "Run elm-review on app"; };
           review-package = { type = "app"; program = "${mkNodeApp "review-package" "pnpm --filter review package"}/bin/review-package"; meta.description = "Run elm-review on package"; };
           format         = { type = "app"; program = "${mkNodeApp "format"         "pnpm exec biome format --write ."}/bin/format";   meta.description = "Format code (biome format --write .)"; };
