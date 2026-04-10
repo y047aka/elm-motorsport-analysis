@@ -14,6 +14,9 @@
           ];
         };
 
+        fontPkgs = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
+        fontsConf = pkgs.makeFontsConf { fontDirectories = fontPkgs; };
+
         elmTools = with pkgs.elmPackages; [
           elm
           elm-format
@@ -31,6 +34,16 @@
             text = cmd;
           };
 
+        mkVrtApp = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
+            text = ''
+              export FONTCONFIG_FILE=${fontsConf}
+              ${cmd}
+            '';
+          };
+
         mkCargoApp = name: cargoArgs:
           pkgs.writeShellApplication {
             inherit name;
@@ -42,16 +55,16 @@
           };
 
       in {
-        devShells.default = with pkgs;
-          mkShell {
-            buildInputs = [ nodejs_24 pnpm rustc cargo rustfmt ] ++ elmTools;
-          };
+        devShells.default = pkgs.mkShell {
+          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt ] ++ elmTools;
+          FONTCONFIG_FILE = fontsConf;
+        };
 
         apps = {
           dev            = { type = "app"; program = "${mkNodeApp "dev"            "pnpm start"}/bin/dev";                      meta.description = "Start elm-pages dev server (localhost:1234)"; };
           build          = { type = "app"; program = "${mkNodeApp "build"          "pnpm run build"}/bin/build";                 meta.description = "Production build"; };
           test           = { type = "app"; program = "${mkNodeApp "test"           "pnpm test"}/bin/test";                       meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
-          test-vrt       = { type = "app"; program = "${mkNodeApp "test-vrt"       "pnpm --filter app test"}/bin/test-vrt";        meta.description = "Run Playwright VRT tests"; };
+          test-vrt       = { type = "app"; program = "${mkVrtApp "test-vrt"       "pnpm --filter app test"}/bin/test-vrt";        meta.description = "Run Playwright VRT tests"; };
           review-app     = { type = "app"; program = "${mkNodeApp "review-app"     "pnpm --filter review app"}/bin/review-app";    meta.description = "Run elm-review on app"; };
           review-package = { type = "app"; program = "${mkNodeApp "review-package" "pnpm --filter review package"}/bin/review-package"; meta.description = "Run elm-review on package"; };
           format         = { type = "app"; program = "${mkNodeApp "format"         "pnpm exec biome format --write ."}/bin/format";   meta.description = "Format code (biome format --write .)"; };
