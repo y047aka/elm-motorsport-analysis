@@ -14,12 +14,8 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 22
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - name: Install dependencies
+        run: nix develop --command pnpm install --frozen-lockfile
       - run: nix run .#build
       - uses: actions/upload-pages-artifact@v4
         with:

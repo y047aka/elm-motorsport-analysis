@@ -24,7 +24,7 @@ jobs:
       - name: Install dependencies
         run: nix develop --command pnpm install --frozen-lockfile
       - name: Update snapshots
-        run: nix develop --command bash -c 'cd app && playwright test --update-snapshots'
+        run: nix run .#update-snapshots-vrt
         env:
           CI: true
       - name: Push updated snapshots to branch

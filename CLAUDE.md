@@ -18,6 +18,7 @@ nix run .#build              # Production build
 ```bash
 nix run .#test               # Elm package tests (elm-verify-examples + elm-test)
 nix run .#test-vrt           # Playwright VRT tests
+nix run .#update-snapshots-vrt  # Update Playwright VRT snapshots
 ```
 
 ### Code Quality
@@ -79,7 +80,7 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 ### Playwright VRT
 - Local: runs directly on host, 1% pixel ratio tolerance for cross-platform diffs
 - CI: runs on ubuntu-latest, strict 0 pixel tolerance
-- Snapshot updates: CI の workflow_dispatch で実行し、ブランチに自動プッシュ
+- Snapshot updates: run `nix run .#update-snapshots-vrt` locally, or trigger workflow_dispatch in CI to auto-push to branch
 - Test files in `/app/tests/`
 
 ### Elm Tests

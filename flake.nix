@@ -89,7 +89,8 @@
           dev            = { type = "app"; program = "${mkNodeApp "dev"            "pnpm start"}/bin/dev";                      meta.description = "Start elm-pages dev server (localhost:1234)"; };
           build          = { type = "app"; program = "${mkNodeApp "build"          "pnpm run build"}/bin/build";                 meta.description = "Production build"; };
           test           = { type = "app"; program = "${mkNodeApp "test"           "pnpm test"}/bin/test";                       meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
-          test-vrt       = { type = "app"; program = "${mkVrtApp "test-vrt"       "cd app && playwright test"}/bin/test-vrt";     meta.description = "Run Playwright VRT tests"; };
+          test-vrt              = { type = "app"; program = "${mkVrtApp "test-vrt"              "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
+          update-snapshots-vrt  = { type = "app"; program = "${mkVrtApp "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           review-app     = { type = "app"; program = "${mkNodeApp "review-app"     "pnpm --filter review app"}/bin/review-app";    meta.description = "Run elm-review on app"; };
           review-package = { type = "app"; program = "${mkNodeApp "review-package" "pnpm --filter review package"}/bin/review-package"; meta.description = "Run elm-review on package"; };
           format         = { type = "app"; program = "${mkNodeApp "format"         "pnpm exec biome format --write ."}/bin/format";   meta.description = "Format code (biome format --write .)"; };
