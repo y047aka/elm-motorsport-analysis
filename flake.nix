@@ -25,14 +25,14 @@
         ];
 
         playwrightEnv = {
-          FONTCONFIG_FILE                       = pkgs.makeFontsConf {
+          FONTCONFIG_FILE = pkgs.makeFontsConf {
             fontDirectories = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
           };
-          PLAYWRIGHT_BROWSERS_PATH              = pkgs.playwright-driver.browsers.override {
+          PLAYWRIGHT_BROWSERS_PATH = pkgs.playwright-driver.browsers.override {
             withFirefox = false;
-            withWebkit  = false;
+            withWebkit = false;
           };
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD      = "1";
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
           PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
         };
 
