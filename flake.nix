@@ -17,13 +17,6 @@
         fontPkgs = with pkgs; [ ipafont freefont_ttf wqy_zenhei ];
         fontsConf = pkgs.makeFontsConf { fontDirectories = fontPkgs; };
 
-        chromiumDeps = with pkgs; [
-          nss nspr at-spi2-atk cups libdrm libxkbcommon
-          at-spi2-core xorg.libXcomposite xorg.libXdamage
-          xorg.libXfixes xorg.libXrandr mesa pango cairo
-          alsa-lib
-        ];
-
         elmTools = with pkgs.elmPackages; [
           elm
           elm-format
@@ -33,6 +26,13 @@
           elm-verify-examples
           lamdera
         ];
+
+        playwrightEnv = {
+          FONTCONFIG_FILE                       = fontsConf;
+          PLAYWRIGHT_BROWSERS_PATH              = pkgs.playwright-driver.browsers-chromium;
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD      = "1";
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+        };
 
         mkNodeApp = name: cmd:
           pkgs.writeShellApplication {
@@ -48,13 +48,10 @@
             inherit name;
             runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
             text = ''
-              export FONTCONFIG_FILE=${fontsConf}
-              export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
-              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
-              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
-              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
-                export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath chromiumDeps}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
-              ''}
+              export FONTCONFIG_FILE=${playwrightEnv.FONTCONFIG_FILE}
+              export PLAYWRIGHT_BROWSERS_PATH=${playwrightEnv.PLAYWRIGHT_BROWSERS_PATH}
+              export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=${playwrightEnv.PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD}
+              export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=${playwrightEnv.PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS}
 
               # Symlink @playwright/test into node_modules for ESM resolution
               mkdir -p app/node_modules/@playwright
@@ -75,28 +72,22 @@
           };
 
       in {
-        devShells.default = pkgs.mkShell ({
+        devShells.default = pkgs.mkShell (playwrightEnv // {
           buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ elmTools;
-          FONTCONFIG_FILE = fontsConf;
-          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
-          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
-          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
-        } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
-          LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath chromiumDeps;
         });
 
         apps = {
-          dev            = { type = "app"; program = "${mkNodeApp "dev"            "pnpm start"}/bin/dev";                      meta.description = "Start elm-pages dev server (localhost:1234)"; };
-          build          = { type = "app"; program = "${mkNodeApp "build"          "pnpm run build"}/bin/build";                 meta.description = "Production build"; };
-          test           = { type = "app"; program = "${mkNodeApp "test"           "pnpm test"}/bin/test";                       meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
-          test-vrt              = { type = "app"; program = "${mkVrtApp "test-vrt"              "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
-          update-snapshots-vrt  = { type = "app"; program = "${mkVrtApp "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
-          review-app     = { type = "app"; program = "${mkNodeApp "review-app"     "pnpm --filter review app"}/bin/review-app";    meta.description = "Run elm-review on app"; };
-          review-package = { type = "app"; program = "${mkNodeApp "review-package" "pnpm --filter review package"}/bin/review-package"; meta.description = "Run elm-review on package"; };
-          format         = { type = "app"; program = "${mkNodeApp "format"         "pnpm exec biome format --write ."}/bin/format";   meta.description = "Format code (biome format --write .)"; };
-          lint           = { type = "app"; program = "${mkNodeApp "lint"           "pnpm exec biome check --write ."}/bin/lint";      meta.description = "Lint and fix (biome check --write .)"; };
-          cli-build      = { type = "app"; program = "${mkCargoApp "cli-build"     "build"}/bin/cli-build";                    meta.description = "Build Rust CLI"; };
-          cli-test       = { type = "app"; program = "${mkCargoApp "cli-test"      "test"}/bin/cli-test";                      meta.description = "Run Rust CLI tests"; };
+          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "pnpm start"}/bin/dev";                                              meta.description = "Start elm-pages dev server (localhost:1234)"; };
+          build                = { type = "app"; program = "${mkNodeApp "build"                "pnpm run build"}/bin/build";                                         meta.description = "Production build"; };
+          test                 = { type = "app"; program = "${mkNodeApp "test"                 "pnpm test"}/bin/test";                                               meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
+          test-vrt             = { type = "app"; program = "${mkVrtApp  "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
+          update-snapshots-vrt = { type = "app"; program = "${mkVrtApp  "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
+          review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "pnpm --filter review app"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
+          review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "pnpm --filter review package"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
+          format               = { type = "app"; program = "${mkNodeApp "format"               "pnpm exec biome format --write ."}/bin/format";                      meta.description = "Format code (biome format --write .)"; };
+          lint                 = { type = "app"; program = "${mkNodeApp "lint"                 "pnpm exec biome check --write ."}/bin/lint";                         meta.description = "Lint and fix (biome check --write .)"; };
+          cli-build            = { type = "app"; program = "${mkCargoApp "cli-build"           "build"}/bin/cli-build";                                              meta.description = "Build Rust CLI"; };
+          cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"            "test"}/bin/cli-test";                                                meta.description = "Run Rust CLI tests"; };
         };
       });
 }
