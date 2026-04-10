@@ -47,7 +47,12 @@
             runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
             text = ''
               export FONTCONFIG_FILE=${fontsConf}
-              export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath chromiumDeps}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+              ${pkgs.lib.optionalString pkgs.stdenv.isLinux ''
+                export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath chromiumDeps}''${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+                export PLAYWRIGHT_BROWSERS_PATH=${pkgs.playwright-driver.browsers}
+                export PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+                export PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS=true
+              ''}
               ${cmd}
             '';
           };
@@ -63,11 +68,15 @@
           };
 
       in {
-        devShells.default = pkgs.mkShell {
+        devShells.default = pkgs.mkShell ({
           buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt ] ++ elmTools;
           FONTCONFIG_FILE = fontsConf;
+        } // pkgs.lib.optionalAttrs pkgs.stdenv.isLinux {
           LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath chromiumDeps;
-        };
+          PLAYWRIGHT_BROWSERS_PATH = "${pkgs.playwright-driver.browsers}";
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
+          PLAYWRIGHT_SKIP_VALIDATE_HOST_REQUIREMENTS = "true";
+        });
 
         apps = {
           dev            = { type = "app"; program = "${mkNodeApp "dev"            "pnpm start"}/bin/dev";                      meta.description = "Start elm-pages dev server (localhost:1234)"; };

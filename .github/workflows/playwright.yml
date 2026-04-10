@@ -21,12 +21,6 @@ jobs:
           restore-prefixes-first-match: nix-${{ runner.os }}-
       - name: Install dependencies
         run: nix develop --command pnpm install --frozen-lockfile
-      - uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('app/package.json') }}
-      - name: Install Playwright Browsers
-        run: nix develop --command pnpm --filter app exec playwright install chromium
       - name: Run Playwright tests
         run: nix run .#test-vrt
         env:
