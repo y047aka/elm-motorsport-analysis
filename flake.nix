@@ -43,8 +43,6 @@
             text = cmd;
           };
 
-        playwrightModules = "${pkgs.playwright-test}/lib/node_modules";
-
         mkVrtApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
@@ -57,7 +55,7 @@
 
               # Symlink @playwright/test into node_modules for ESM resolution
               mkdir -p app/node_modules/@playwright
-              ln -sfn ${playwrightModules}/@playwright/test app/node_modules/@playwright/test
+              ln -sfn ${pkgs.playwright-test}/lib/node_modules/@playwright/test app/node_modules/@playwright/test
 
               ${cmd}
             '';
