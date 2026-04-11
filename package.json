@@ -8,16 +8,13 @@
     "benchmark": "pnpm --filter cli benchmark"
   },
   "devDependencies": {
-    "@biomejs/biome": "1.9.4",
-    "elm": "0.19.1-6"
+    "@biomejs/biome": "1.9.4"
   },
   "pnpm": {
-    "onlyBuiltDependencies": [
+    "ignoredBuiltDependencies": [
       "@biomejs/biome",
       "@parcel/watcher",
-      "elm",
-      "esbuild",
-      "lamdera"
+      "esbuild"
     ]
   }
 }

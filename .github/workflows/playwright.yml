@@ -9,26 +9,20 @@ on:
 jobs:
   test:
     timeout-minutes: 60
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     steps:
       - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v6
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: nix-community/cache-nix-action@v7
         with:
-          node-version: lts/*
-          cache: pnpm
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - uses: actions/cache@v5
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('app/package.json') }}
-      - name: Install Playwright Browsers
-        run: pnpm --filter app exec playwright install --with-deps chromium
+        run: nix develop --command pnpm install --frozen-lockfile
       - name: Run Playwright tests
-        run: pnpm --filter app test
+        run: nix run .#test-vrt
         env:
           CI: true
       - uses: actions/upload-artifact@v7

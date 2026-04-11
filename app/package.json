@@ -6,18 +6,15 @@
     "css:watch": "tailwindcss -i style.css -o public/style.css --watch",
     "start": "pnpm run css:build && elm-pages dev",
     "build": "pnpm run css:build && elm-pages build",
-    "test": "pnpm exec playwright test"
+    "test": "playwright test"
   },
   "devDependencies": {
-    "@playwright/test": "1.57.0",
     "@tailwindcss/cli": "4.2.2",
     "@types/node": "25.5.2",
     "daisyui": "5.5.19",
     "elm-codegen": "0.6.3",
     "elm-optimize-level-2": "0.3.5",
     "elm-pages": "3.3.4",
-    "elm-review": "2.13.5",
-    "lamdera": "0.19.1-1.4.0",
     "tailwindcss": "4.2.2",
     "vite": "7.3.2"
   }
