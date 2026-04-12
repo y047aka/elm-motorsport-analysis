@@ -8,7 +8,7 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import List.NonEmpty as NonEmpty
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -18,6 +18,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RunningOrder as RunningOrder
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -249,7 +250,8 @@ raceControlToLeaderboard { lapCount, cars } =
     let
         sortedItems =
             cars
-                |> NonEmpty.find (\car -> car.metadata.carNumber == "2")
+                |> RunningOrder.toList
+                |> List.Extra.find (\car -> car.metadata.carNumber == "2")
                 |> Maybe.map
                     (\car ->
                         car.laps

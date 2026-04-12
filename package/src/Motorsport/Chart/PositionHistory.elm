@@ -6,12 +6,12 @@ import Css.Extra exposing (strokeWidth, svgPalette)
 import Css.Global exposing (descendants, each)
 import Css.Palette.Svg exposing (..)
 import Html.Styled exposing (Html)
-import List.NonEmpty as NonEmpty
 import Motorsport.Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.RunningOrder as RunningOrder
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, fromUnstyled, g, polyline, svg, text, text_)
 import Svg.Styled.Attributes exposing (css)
@@ -101,7 +101,7 @@ view { clock, lapTotal, cars } =
         [ xAxis lapTotal
         , g []
             (cars
-                |> NonEmpty.toList
+                |> RunningOrder.toList
                 |> List.sortBy .startPosition
                 |> List.map
                     (\car ->
@@ -116,7 +116,7 @@ view { clock, lapTotal, cars } =
                         in
                         history
                             { x = toFloat >> Scale.convert (xScale lapTotal)
-                            , y = toFloat >> Scale.convert (yScale (NonEmpty.toList cars))
+                            , y = toFloat >> Scale.convert (yScale (RunningOrder.toList cars))
                             , svgPalette = Class.toStrokePalette class
                             , label = String.join " " [ carNumber, team ]
                             }

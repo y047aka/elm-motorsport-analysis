@@ -19,7 +19,6 @@ module Motorsport.RaceControl.ViewModel exposing
 
 import Dict exposing (Dict)
 import List.Extra
-import List.NonEmpty as NonEmpty exposing (NonEmpty)
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Class exposing (Class)
@@ -30,6 +29,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
 import SortedList exposing (SortedList)
 
@@ -67,12 +67,17 @@ type alias Timing =
 init : RaceControl.Model -> ViewModel
 init { clock, lapCount, cars } =
     let
+        carsList =
+            RunningOrder.toList cars
+
+        leaderCar =
+            RunningOrder.leader cars
+
         positionsInClass =
             positionsInClassByCarNumber cars
 
         items =
-            cars
-                |> NonEmpty.toList
+            carsList
                 |> List.indexedMap
                     (\index car ->
                         let
@@ -96,8 +101,8 @@ init { clock, lapCount, cars } =
                         , lap = lastLap.lap
                         , timing =
                             init_timing clock
-                                { leader = Just (NonEmpty.head cars)
-                                , rival = List.Extra.getAt (index - 1) (NonEmpty.toList cars)
+                                { leader = Just leaderCar
+                                , rival = List.Extra.getAt (index - 1) carsList
                                 }
                                 car
                         , currentLap = car.currentLap
@@ -157,10 +162,10 @@ init_timing clock { leader, rival } car =
     }
 
 
-positionsInClassByCarNumber : NonEmpty Car -> Dict String Int
-positionsInClassByCarNumber cars =
-    cars
-        |> NonEmpty.toList
+positionsInClassByCarNumber : RunningOrder -> Dict String Int
+positionsInClassByCarNumber raceOrder =
+    raceOrder
+        |> RunningOrder.toList
         |> List.Extra.gatherEqualsBy (.metadata >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->

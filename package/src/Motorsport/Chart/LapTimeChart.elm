@@ -4,11 +4,11 @@ import Axis
 import Css exposing (Style, fill, hex, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html)
-import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Fragments exposing (dotWithLabel, path)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.RunningOrder as RunningOrder
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, fromUnstyled, g, svg, text)
 import Svg.Styled.Attributes exposing (css)
@@ -85,7 +85,7 @@ view analysis { lapTotal, cars } =
         , yAxis fastestLapTime
         , g [] <|
             (cars
-                |> NonEmpty.toList
+                |> RunningOrder.toList
                 |> List.map
                     (\{ laps } ->
                         dotHistory

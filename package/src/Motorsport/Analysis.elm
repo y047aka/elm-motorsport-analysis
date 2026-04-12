@@ -1,11 +1,10 @@
 module Motorsport.Analysis exposing (Analysis, finished, fromRaceControl)
 
-import List.NonEmpty as NonEmpty exposing (NonEmpty)
-import Motorsport.Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
+import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 
 
 type alias Analysis =
@@ -18,14 +17,14 @@ type alias Analysis =
     }
 
 
-fromRaceControl : { a | clock : Clock.Model, cars : NonEmpty Car } -> Analysis
+fromRaceControl : { a | clock : Clock.Model, cars : RunningOrder } -> Analysis
 fromRaceControl { clock, cars } =
     let
         raceClock =
             { elapsed = Clock.getElapsed clock }
 
         completedLaps =
-            NonEmpty.toList cars
+            RunningOrder.toList cars
                 |> List.map (.laps >> completedLapsAt raceClock)
     in
     { fastestLapTime = completedLaps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
@@ -37,11 +36,11 @@ fromRaceControl { clock, cars } =
     }
 
 
-finished : { a | cars : NonEmpty Car } -> Analysis
+finished : { a | cars : RunningOrder } -> Analysis
 finished { cars } =
     let
         laps =
-            NonEmpty.toList cars
+            RunningOrder.toList cars
                 |> List.map .laps
     in
     { fastestLapTime = laps |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
