@@ -4,7 +4,7 @@ import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, tic
 import Css exposing (Color)
 import Css.Extra
 import Css.Global exposing (descendants, each)
-import Html.Styled as Html exposing (Html)
+import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer as Manufacturer

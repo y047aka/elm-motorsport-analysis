@@ -60,7 +60,7 @@ import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car as Car exposing (Status(..))
+import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
