@@ -25,8 +25,7 @@ nix run .#update-snapshots-vrt  # Update Playwright VRT snapshots
 ```bash
 nix run .#review-app         # elm-review on app
 nix run .#review-package     # elm-review on package
-nix run .#format             # Format code (biome format --write .)
-nix run .#lint               # Lint and fix (biome check --write .)
+nix run .#format             # Format Elm code (elm-format)
 ```
 
 ### Rust CLI

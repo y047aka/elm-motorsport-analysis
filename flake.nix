@@ -86,8 +86,7 @@
           update-snapshots-vrt = { type = "app"; program = "${mkVrtApp  "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
-          format               = { type = "app"; program = "${mkNodeApp "format"               "pnpm exec biome format --write ."}/bin/format";                      meta.description = "Format code (biome format --write .)"; };
-          lint                 = { type = "app"; program = "${mkNodeApp "lint"                 "pnpm exec biome check --write ."}/bin/lint";                         meta.description = "Lint and fix (biome check --write .)"; };
+          format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/app app/src package/src"}/bin/format";           meta.description = "Format Elm code (elm-format)"; };
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build"           "build"}/bin/cli-build";                                              meta.description = "Build Rust CLI"; };
           cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"            "test"}/bin/cli-test";                                                meta.description = "Run Rust CLI tests"; };
         };
