@@ -21,7 +21,7 @@ import Svg.Styled exposing (Svg, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes as TSA
 import TypedSvg.Styled.Attributes.InPx as InPx
-import TypedSvg.Types exposing (Length(..), Opacity(..), Paint(..), Transform(..))
+import TypedSvg.Types exposing (Transform(..))
 
 
 type alias CloseBattle =

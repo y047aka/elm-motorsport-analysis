@@ -2,7 +2,7 @@ module Motorsport.Chart.Tracker exposing (view)
 
 import Css
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorData(..), TrackConfig)
+import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
@@ -15,8 +15,8 @@ import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
 import Svg.Styled.Lazy as Lazy
-import TypedSvg.Styled.Attributes as Attributes exposing (cx, cy, fontSize, height, r, strokeWidth, viewBox, width, x1, x2, y1, y2)
-import TypedSvg.Types exposing (Transform(..), num, px)
+import TypedSvg.Styled.Attributes as Attributes exposing (fontSize, strokeWidth, viewBox, x1, x2, y1, y2)
+import TypedSvg.Types exposing (Transform(..), px)
 
 
 type alias Constants =
@@ -158,9 +158,6 @@ track direction config =
 
         outerTrackCircle =
             trackCircle "oklch(1 0 0 / 0.2)" 1
-
-        innerTrackCircle =
-            trackCircle "oklch(0.2 0 0)" trackWidth
 
         startFinishLine =
             line

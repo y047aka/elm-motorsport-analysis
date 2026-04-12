@@ -2,7 +2,7 @@ module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, before, hover, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, div, img, li, text)
+import Html.Styled exposing (Html, div, img, li, text)
 import Html.Styled.Attributes exposing (alt, class, css, src)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
@@ -24,17 +24,6 @@ type alias Props msg =
 
 view : Props msg -> Html msg
 view props =
-    let
-        carList =
-            props.viewModel.items
-                |> SortedList.toList
-                |> List.map
-                    (\item ->
-                        ( item.metadata.carNumber
-                        , Lazy.lazy2 carRow props.onSelectCar item
-                        )
-                    )
-    in
     div
         [ css
             [ property "height" "100%"

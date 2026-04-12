@@ -2,7 +2,7 @@ module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, 
 
 import Css exposing (backgroundColor, before, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled as Html exposing (Html, button, div, img, text)
+import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import List.Extra

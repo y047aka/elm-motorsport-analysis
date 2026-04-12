@@ -4,7 +4,7 @@ import Axis
 import Css exposing (Style, fill, hex, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, text)
-import List.NonEmpty as NonEmpty exposing (NonEmpty)
+import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Fragments exposing (dotWithLabel, path)
 import Motorsport.Duration exposing (Duration)

@@ -11,7 +11,7 @@ module Motorsport.Widget exposing
 -}
 
 import Css exposing (..)
-import Html.Styled as Html exposing (Html, div, h3, text)
+import Html.Styled exposing (Html, div, h3, text)
 import Html.Styled.Attributes exposing (class, css)
 import Motorsport.Class as Class exposing (Class)
 
