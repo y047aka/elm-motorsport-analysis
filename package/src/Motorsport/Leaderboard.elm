@@ -68,7 +68,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
-import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModel, ViewModelItem)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
@@ -234,7 +234,7 @@ performanceColumn { getter, sorter, analysis } =
     }
 
 
-carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer.Manufacturer } } -> Column data msg
+carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
 carNumberColumn_Wec season { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec season
@@ -243,7 +243,7 @@ carNumberColumn_Wec season { getter } =
     }
 
 
-viewCarNumberColumn_Wec : Int -> { a | carNumber : String, class : Class, manufacturer : Manufacturer.Manufacturer } -> Html msg
+viewCarNumberColumn_Wec : Int -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
 viewCarNumberColumn_Wec season { carNumber, class, manufacturer } =
     div
         [ css
