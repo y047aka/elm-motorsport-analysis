@@ -12,11 +12,25 @@ when inside the directory containing this file.
 -}
 
 import NoRedundantlyQualifiedType
+import NoSimpleLetBody
+
+import CognitiveComplexity
 
 import NoConfusingPrefixOperator
 import NoExposingEverything
 import NoImportingEverything
 import NoMissingTypeAnnotation
+
+import NoDebug.Log
+import NoDebug.TodoOrToString
+
+import NoUnapprovedLicense
+
+import NoUnoptimizedRecursion
+
+import NoConfusingPrefixOperator
+import NoRecursiveUpdate
+import NoUselessSubscriptions
 
 import NoUnused.Dependencies
 import NoUnused.Parameters
@@ -30,12 +44,34 @@ config =
     [
       -- jfmengels/elm-review-code-style
       NoRedundantlyQualifiedType.rule
+    , NoSimpleLetBody.rule
+
+    -- jfmengels/elm-review-cognitive-complexity
+    , CognitiveComplexity.rule 21
 
     -- jfmengels/elm-review-common
-    ,  NoConfusingPrefixOperator.rule
+    , NoConfusingPrefixOperator.rule
     , NoExposingEverything.rule
     , NoImportingEverything.rule [ "Css", "Css.Palette.Svg" ]
     , NoMissingTypeAnnotation.rule
+
+    -- jfmengels/elm-review-debug
+    , NoDebug.Log.rule
+    , NoDebug.TodoOrToString.rule
+
+    -- jfmengels/elm-review-license
+    , NoUnapprovedLicense.rule
+        { allowed = [ "BSD-3-Clause", "MIT", "MPL-2.0" ]
+        , forbidden = [ "GPL-3.0-only", "GPL-3.0-or-later" ]
+        }
+
+    -- jfmengels/elm-review-performance
+    -- , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+
+    -- jfmengels/elm-review-the-elm-architecture
+    , NoConfusingPrefixOperator.rule
+    , NoRecursiveUpdate.rule
+    , NoUselessSubscriptions.rule
 
     -- jfmengels/elm-review-unused
     -- , NoUnused.Dependencies.rule
