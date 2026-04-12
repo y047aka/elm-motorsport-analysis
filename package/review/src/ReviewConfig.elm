@@ -11,20 +11,28 @@ when inside the directory containing this file.
 
 -}
 
+import NoConfusingPrefixOperator
 import NoExposingEverything
+import NoImportingEverything
 import NoMissingTypeAnnotation
-import NoPrematureLetComputation
-import NoUnused.Exports
+import NoUnused.Dependencies
+import NoUnused.Parameters
+import NoUnused.Patterns
+import NoUnused.Variables
 import Review.Rule exposing (Rule)
 
 
 config : List Rule
 config =
     [ -- jfmengels/elm-review-common
-      NoExposingEverything.rule
+      NoConfusingPrefixOperator.rule
+    , NoExposingEverything.rule
+    , NoImportingEverything.rule [ "Css", "Css.Palette.Svg" ]
     , NoMissingTypeAnnotation.rule
-    , NoPrematureLetComputation.rule
 
     -- jfmengels/elm-review-unused
-    , NoUnused.Exports.rule
+    -- , NoUnused.Dependencies.rule
+    -- , NoUnused.Parameters.rule
+    -- , NoUnused.Patterns.rule
+    , NoUnused.Variables.rule
     ]
