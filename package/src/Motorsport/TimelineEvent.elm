@@ -85,7 +85,23 @@ durationDecoder =
 
 lapDecoder : Decoder Lap
 lapDecoder =
-    Decode.succeed Lap
+    Decode.succeed
+        (\carNumber driver lap_ position time best s1 s2 s3 s1b s2b s3b elapsed miniSectors_ ->
+            { metadata = { carNumber = carNumber, driver = driver }
+            , lap = lap_
+            , position = position
+            , time = time
+            , best = best
+            , sector_1 = s1
+            , sector_2 = s2
+            , sector_3 = s3
+            , s1_best = s1b
+            , s2_best = s2b
+            , s3_best = s3b
+            , elapsed = elapsed
+            , miniSectors = miniSectors_
+            }
+        )
         |> required "car_number" string
         |> required "driver" (Decode.map Driver string)
         |> required "lap" int

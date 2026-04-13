@@ -1,5 +1,5 @@
 module Motorsport.Lap exposing
-    ( Lap, empty
+    ( Lap, Metadata, empty
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , currentSector
@@ -9,7 +9,7 @@ module Motorsport.Lap exposing
 
 {-|
 
-@docs Lap, empty
+@docs Lap, Metadata, empty
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -26,8 +26,7 @@ import Motorsport.Sector as Sector exposing (Sector(..))
 
 
 type alias Lap =
-    { carNumber : String
-    , driver : Driver
+    { metadata : Metadata
     , lap : Int
     , position : Maybe Int
     , time : Duration
@@ -40,6 +39,12 @@ type alias Lap =
     , s3_best : Duration
     , elapsed : Duration
     , miniSectors : Maybe MiniSectors
+    }
+
+
+type alias Metadata =
+    { carNumber : String
+    , driver : Driver
     }
 
 
@@ -71,18 +76,17 @@ type alias MiniSectorData =
 
 empty : Lap
 empty =
-    { carNumber = ""
-    , driver = Driver ""
+    { metadata = { carNumber = "", driver = Driver "" }
     , lap = 0
     , position = Nothing
     , time = 0
+    , best = 0
     , sector_1 = 0
     , sector_2 = 0
     , sector_3 = 0
     , s1_best = 0
     , s2_best = 0
     , s3_best = 0
-    , best = 0
     , elapsed = 0
     , miniSectors = Nothing
     }

@@ -104,8 +104,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
             laps
                 |> List.indexedMap
                     (\count { lap, time } ->
-                        { carNumber = carNumber
-                        , driver = driver
+                        { metadata = { carNumber = carNumber, driver = driver }
                         , lap = lap
                         , position =
                             getPositionAt { carNumber = carNumber, lapNumber = lap } ordersByLap

@@ -122,7 +122,7 @@ update msg m =
                                 m.cars
                                     |> RunningOrder.toList
                                     |> applyEvents newElapsed m.timelineEvents
-                                                |> RunningOrder.fromList { elapsed = newClock.elapsed }
+                                    |> RunningOrder.fromList { elapsed = newClock.elapsed }
                                     |> Maybe.withDefault m.cars
                         }
 
@@ -250,7 +250,7 @@ updateCarFields clock =
             { car
                 | currentLap = currentLap
                 , lastLap = Lap.findLastLapAt clock car.laps
-                , currentDriver = currentLap |> Maybe.map .driver
+                , currentDriver = currentLap |> Maybe.map (.metadata >> .driver)
             }
         )
 
@@ -313,7 +313,7 @@ applyEventToCar event car =
         CarEvent _ (TimelineEvent.Start { currentLap }) ->
             { car
                 | currentLap = Just currentLap
-                , currentDriver = Just currentLap.driver
+                , currentDriver = Just currentLap.metadata.driver
                 , status = Racing
             }
 
@@ -337,7 +337,7 @@ applyEventToCar event car =
             { car
                 | currentLap = currentLap
                 , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
-                , currentDriver = currentLap |> Maybe.map .driver
+                , currentDriver = currentLap |> Maybe.map (.metadata >> .driver)
             }
 
 

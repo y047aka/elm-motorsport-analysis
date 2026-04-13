@@ -23,8 +23,7 @@ suite =
                                 CarEvent "007"
                                     (Start
                                         { currentLap =
-                                            { carNumber = "007"
-                                            , driver = Driver "Driver A"
+                                            { metadata = { carNumber = "007", driver = Driver "Driver A" }
                                             , lap = 1
                                             , position = Just 1
                                             , time = 95365 -- 1:35.365
@@ -46,8 +45,7 @@ suite =
                                 CarEvent "007"
                                     (LapCompleted 1
                                         { nextLap =
-                                            { carNumber = "007"
-                                            , driver = Driver "Driver A"
+                                            { metadata = { carNumber = "007", driver = Driver "Driver A" }
                                             , lap = 2
                                             , position = Just 1
                                             , time = 94210 -- 1:34.210
