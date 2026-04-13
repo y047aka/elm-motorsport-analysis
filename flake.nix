@@ -63,13 +63,13 @@
             '';
           };
 
-        mkCargoApp = name: cargoArgs:
+        mkCargoApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
             runtimeInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt ];
             text = ''
               cd cli
-              cargo ${cargoArgs}
+              ${cmd}
             '';
           };
 
@@ -87,8 +87,9 @@
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/app app/src package/src"}/bin/format";           meta.description = "Format Elm code (elm-format)"; };
-          cli-build            = { type = "app"; program = "${mkCargoApp "cli-build"           "build"}/bin/cli-build";                                              meta.description = "Build Rust CLI"; };
-          cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"            "test"}/bin/cli-test";                                                meta.description = "Run Rust CLI tests"; };
+          cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
+          cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
+          cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2025"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
         };
       });
 }
