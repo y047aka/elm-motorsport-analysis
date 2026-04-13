@@ -12,11 +12,11 @@ module Motorsport.TimelineEvent exposing
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (custom, optional, required)
 import Motorsport.Car exposing (CarNumber)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 
 
 type alias TimelineEvent =
@@ -83,27 +83,17 @@ durationDecoder =
     string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
 
 
-lapDecoder : Decoder Lap
-lapDecoder =
-    Decode.succeed
-        (\carNumber driver lap_ position time best s1 s2 s3 s1b s2b s3b elapsed miniSectors_ ->
-            { metadata = { carNumber = carNumber, driver = driver }
-            , lap = lap_
-            , position = position
-            , time = time
-            , best = best
-            , sector_1 = s1
-            , sector_2 = s2
-            , sector_3 = s3
-            , s1_best = s1b
-            , s2_best = s2b
-            , s3_best = s3b
-            , elapsed = elapsed
-            , miniSectors = miniSectors_
-            }
-        )
+lapMetadataDecoder : Decoder Lap.Metadata
+lapMetadataDecoder =
+    Decode.succeed Lap.Metadata
         |> required "car_number" string
         |> required "driver" (Decode.map Driver string)
+
+
+lapDecoder : Decoder Lap
+lapDecoder =
+    Decode.succeed Lap
+        |> custom lapMetadataDecoder
         |> required "lap" int
         |> required "position" (Decode.maybe int)
         |> required "time" durationDecoder
