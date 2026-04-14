@@ -1,5 +1,6 @@
 module Motorsport.Car exposing
     ( Car, Metadata, CarNumber
+    , fromStartingGrid
     , Status(..), hasRetired, statusToString
     , setStatus
     )
@@ -7,6 +8,7 @@ module Motorsport.Car exposing
 {-|
 
 @docs Car, Metadata, CarNumber
+@docs fromStartingGrid
 @docs Status, hasRetired, statusToString
 @docs setStatus
 
@@ -82,3 +84,15 @@ statusToString status =
 setStatus : Status -> Car -> Car
 setStatus status car =
     { car | status = status }
+
+
+fromStartingGrid : { position : Int, car : Metadata } -> Car
+fromStartingGrid item =
+    { metadata = item.car
+    , startPosition = item.position
+    , laps = []
+    , currentLap = Nothing
+    , lastLap = Nothing
+    , status = PreRace
+    , currentDriver = Nothing
+    }
