@@ -19,7 +19,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.RaceControl.ViewModel exposing (SectorProgress, MiniSectorProgress, TimingState, StandingsEntry)
+import Motorsport.Standings exposing (SectorProgress, MiniSectorProgress, TimingState, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 
 

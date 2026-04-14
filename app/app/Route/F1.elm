@@ -15,7 +15,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (StandingsEntry)
+import Motorsport.Standings as Standings exposing (StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -165,7 +165,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    ViewModel.init raceControl_F1
+                    Standings.init raceControl_F1
                         |> Leaderboard.view (config analysis_F1) leaderboardState
 
                 PositionHistory ->

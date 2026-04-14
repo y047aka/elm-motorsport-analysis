@@ -17,7 +17,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
 import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.RunningOrder as RunningOrder
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)

@@ -11,7 +11,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (StandingsEntry)
+import Motorsport.Standings exposing (StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Statistics
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg, text_)

@@ -12,7 +12,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings as ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)

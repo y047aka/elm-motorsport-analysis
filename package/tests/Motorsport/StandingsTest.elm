@@ -1,4 +1,4 @@
-module Motorsport.RaceControl.ViewModelTest exposing (suite)
+module Motorsport.StandingsTest exposing (suite)
 
 import Expect
 import Motorsport.Car as Car exposing (Status(..))
@@ -8,7 +8,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Ordering as Ordering
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (StandingsEntry, TimingState)
+import Motorsport.Standings as Standings exposing (StandingsEntry, TimingState)
 import SortedList
 import Test exposing (Test, describe, test)
 
@@ -38,7 +38,7 @@ suite =
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
-                    ViewModel.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals standings
                         |> Expect.equal
                             [ [ createStandingsEntry 1 "1" 1000
                               , createStandingsEntry 2 "2" 1500
@@ -65,7 +65,7 @@ suite =
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
-                    ViewModel.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals standings
                         |> Expect.equal
                             [ [ createStandingsEntry 2 "2" 2000
                               , createStandingsEntry 3 "3" 1200
@@ -92,7 +92,7 @@ suite =
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
                             }
                     in
-                    ViewModel.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals standings
                         |> Expect.equal []
             ]
         ]

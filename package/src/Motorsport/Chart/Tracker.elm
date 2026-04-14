@@ -7,7 +7,7 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
 import SortedList

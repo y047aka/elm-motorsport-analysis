@@ -16,7 +16,7 @@ import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel
+import Motorsport.Standings as Standings
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.Compare as CompareWidget
@@ -235,7 +235,7 @@ view app { eventSummary, analysis, raceControl } m =
                 [ navigation eventSummary raceControl m.mode
                 , let
                     viewModel =
-                        ViewModel.init raceControl
+                        Standings.init raceControl
 
                     compareProps =
                         { eventSummary = eventSummary

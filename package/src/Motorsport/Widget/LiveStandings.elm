@@ -11,7 +11,7 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings exposing (Standings, StandingsEntry)
 import SortedList
 
 

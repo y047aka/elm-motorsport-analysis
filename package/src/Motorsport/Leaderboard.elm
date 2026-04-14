@@ -69,7 +69,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.RaceControl.ViewModel exposing (TimingState, Standings, StandingsEntry)
+import Motorsport.Standings exposing (TimingState, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import SortedList

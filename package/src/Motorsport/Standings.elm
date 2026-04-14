@@ -1,4 +1,4 @@
-module Motorsport.RaceControl.ViewModel exposing
+module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , TimingState, SectorProgress, MiniSectorProgress
     , init
@@ -13,6 +13,7 @@ module Motorsport.RaceControl.ViewModel exposing
 @docs init
 
 @docs groupCarsByCloseIntervals
+
 @docs getRecentLaps
 
 -}
@@ -28,7 +29,6 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, completedLapsAt)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
-import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
 import SortedList exposing (SortedList)
@@ -76,7 +76,7 @@ type alias MiniSectorProgress =
     }
 
 
-init : RaceControl.Model -> Standings
+init : { r | clock : Clock.Model, lapCount : Int, cars : RunningOrder } -> Standings
 init { clock, lapCount, cars } =
     let
         carsList =

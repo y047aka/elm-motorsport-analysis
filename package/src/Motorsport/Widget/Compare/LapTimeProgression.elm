@@ -10,7 +10,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)

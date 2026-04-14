@@ -12,7 +12,7 @@ import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
