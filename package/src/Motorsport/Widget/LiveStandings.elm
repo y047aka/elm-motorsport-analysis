@@ -17,7 +17,7 @@ import SortedList
 
 type alias Props msg =
     { eventSummary : EventSummary
-    , viewModel : Standings
+    , standings : Standings
     , onSelectCar : StandingsEntry -> msg
     }
 
@@ -78,7 +78,7 @@ view props =
                         )
                     ]
             )
-            props.viewModel.entriesByClass
+            props.standings.entriesByClass
         )
 
 

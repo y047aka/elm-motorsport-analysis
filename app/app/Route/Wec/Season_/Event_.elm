@@ -234,7 +234,7 @@ view app { eventSummary, analysis, raceControl } m =
                 ]
                 [ navigation eventSummary raceControl m.mode
                 , let
-                    viewModel =
+                    standings =
                         Standings.init
                             { elapsed = Clock.getElapsed raceControl.clock
                             , lapCount = raceControl.lapCount
@@ -243,7 +243,7 @@ view app { eventSummary, analysis, raceControl } m =
 
                     compareProps =
                         { eventSummary = eventSummary
-                        , viewModel = viewModel
+                        , standings = standings
                         , clock = raceControl.clock
                         , analysis = analysis
                         }
@@ -271,7 +271,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 ]
                                 [ LiveStandingsWidget.view
                                     { eventSummary = eventSummary
-                                    , viewModel = viewModel
+                                    , standings = standings
                                     , onSelectCar = (\item -> CompareWidget.ToggleCar item.metadata.carNumber) >> CompareWidgetMsg
                                     }
                                 ]
@@ -284,7 +284,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     , property "place-items" "center"
                                     ]
                                 ]
-                                [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis viewModel ]
+                                [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis standings ]
                             , div
                                 [ Attributes.class "card bg-base-200 overflow-hidden"
                                 , css

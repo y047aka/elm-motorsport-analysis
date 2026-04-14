@@ -22,8 +22,8 @@ import TypedSvg.Types exposing (Transform(..))
 
 
 view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
-view size clock viewModel selectedCars =
-    case buildClassProgressionData clock viewModel selectedCars of
+view size clock standings selectedCars =
+    case buildClassProgressionData clock standings selectedCars of
         Ok series ->
             positionProgressionChart size series
 
@@ -32,17 +32,17 @@ view size clock viewModel selectedCars =
 
 
 buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String (List PositionSeries)
-buildClassProgressionData clock viewModel selectedCars =
+buildClassProgressionData clock standings selectedCars =
     let
         lapThreshold =
-            calculateLapThreshold clock viewModel
+            calculateLapThreshold clock standings
 
         selectedCarNumbers =
             selectedCars |> List.map (.metadata >> .carNumber)
 
         classCars : List StandingsEntry
         classCars =
-            viewModel.entriesByClass
+            standings.entriesByClass
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []
@@ -103,7 +103,7 @@ positionHistoryWindowMillis =
 
 
 calculateLapThreshold : Clock.Model -> Standings -> Int
-calculateLapThreshold clock viewModel =
+calculateLapThreshold clock standings =
     let
         currentRaceTime =
             Clock.getElapsed clock
@@ -111,7 +111,7 @@ calculateLapThreshold clock viewModel =
         timeThreshold =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
-    SortedList.head viewModel.entries
+    SortedList.head standings.entries
         |> Maybe.map .history
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap

@@ -60,11 +60,11 @@ paddingBottom =
 
 
 view : { width : Float, height : Float } -> Standings -> Html msg
-view size viewModel =
+view size standings =
     let
         closeBattles =
-            if viewModel.leadLapNumber > 1 then
-                detectCloseBattles viewModel
+            if standings.leadLapNumber > 1 then
+                detectCloseBattles standings
 
             else
                 []
@@ -78,8 +78,8 @@ view size viewModel =
 
 
 detectCloseBattles : Standings -> List CloseBattle
-detectCloseBattles viewModel =
-    Standings.groupCarsByCloseIntervals viewModel
+detectCloseBattles standings =
+    Standings.groupCarsByCloseIntervals standings
         |> List.filterMap createCloseBattle
 
 

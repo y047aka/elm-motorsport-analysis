@@ -721,8 +721,8 @@ viewLastLapColumn_LeMans24h analysis maybeLap =
 
 
 view : Config StandingsEntry msg -> Model -> Standings -> Html msg
-view config state viewModel =
-    DataView.view config state (SortedList.toList viewModel.entries)
+view config state standings =
+    DataView.view config state (SortedList.toList standings.entries)
 
 
 

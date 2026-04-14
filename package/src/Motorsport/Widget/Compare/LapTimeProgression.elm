@@ -55,8 +55,8 @@ type alias ClassProgressionData =
 
 
 view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
-view size clock viewModel selectedCars =
-    case buildClassProgressionData clock viewModel selectedCars of
+view size clock standings selectedCars =
+    case buildClassProgressionData clock standings selectedCars of
         Err message ->
             Widget.emptyState message
 
@@ -65,14 +65,14 @@ view size clock viewModel selectedCars =
 
 
 buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String ClassProgressionData
-buildClassProgressionData clock viewModel selectedCars =
+buildClassProgressionData clock standings selectedCars =
     let
         selectedCarNumbers =
             selectedCars |> List.map (.metadata >> .carNumber)
 
         carsInClass : List StandingsEntry
         carsInClass =
-            viewModel.entriesByClass
+            standings.entriesByClass
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []

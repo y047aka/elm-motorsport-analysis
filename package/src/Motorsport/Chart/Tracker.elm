@@ -95,7 +95,7 @@ progressToAngleScale direction =
 
 
 view : { season : Int, eventName : String } -> Analysis -> Standings -> Svg msg
-view { season, eventName } analysis vm =
+view { season, eventName } analysis standings =
     let
         layout =
             if season == 2025 && eventName == "24 Hours of Le Mans" then
@@ -110,7 +110,7 @@ view { season, eventName } analysis vm =
         config =
             Config.buildConfig layout analysis
     in
-    viewWithConfig layout.direction config vm
+    viewWithConfig layout.direction config standings
 
 
 {-| Check if a circuit runs counter-clockwise
@@ -125,7 +125,7 @@ isCounterClockwiseCircuit eventName =
 
 
 viewWithConfig : Direction -> TrackConfig -> Standings -> Svg msg
-viewWithConfig direction config vm =
+viewWithConfig direction config standings =
     let
         { w, h } =
             constants.viewBox
@@ -135,7 +135,7 @@ viewWithConfig direction config vm =
         , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
-        , renderCars direction config vm
+        , renderCars direction config standings
         ]
 
 
@@ -284,10 +284,10 @@ makeLabel direction { progress, radius, fontSize, color, label } =
 
 
 renderCars : Direction -> TrackConfig -> Standings -> Svg msg
-renderCars direction config viewModel =
+renderCars direction config standings =
     Keyed.node "g"
         []
-        (SortedList.toList viewModel.entries
+        (SortedList.toList standings.entries
             |> List.reverse
             |> List.map
                 (\car ->

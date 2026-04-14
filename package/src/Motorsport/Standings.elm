@@ -188,7 +188,7 @@ positionsInClassByCarNumber raceOrder =
 
 
 groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
-groupCarsByCloseIntervals vm =
+groupCarsByCloseIntervals standings =
     let
         isCloseToNext current =
             case current.timing.intervalToPrevious of
@@ -210,7 +210,7 @@ groupCarsByCloseIntervals vm =
                     in
                     (first :: group) :: groupCars remaining
     in
-    SortedList.toList vm.entries
+    SortedList.toList standings.entries
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 

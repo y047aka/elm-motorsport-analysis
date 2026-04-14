@@ -68,7 +68,7 @@ update msg model =
 
 type alias Props =
     { eventSummary : EventSummary
-    , viewModel : Standings
+    , standings : Standings
     , clock : Clock.Model
     , analysis : Analysis
     }
@@ -82,7 +82,7 @@ viewCharts : { width : Float, height : Float } -> Props -> Model -> Html Msg
 viewCharts size props model =
     let
         selectedCars =
-            resolveCars model.selectedCars props.viewModel
+            resolveCars model.selectedCars props.standings
                 |> List.sortBy .position
     in
     div
@@ -131,14 +131,14 @@ viewActiveChart activeChart size props selectedCars =
             PositionProgression.view
                 size
                 props.clock
-                props.viewModel
+                props.standings
                 selectedCars
 
         LapTimeProgressionChart ->
             LapTimeProgression.view
                 size
                 props.clock
-                props.viewModel
+                props.standings
                 selectedCars
 
         CloseBattlesChart ->
@@ -164,11 +164,11 @@ viewActiveChart activeChart size props selectedCars =
 
 
 resolveCars : List String -> Standings -> List StandingsEntry
-resolveCars carNumbers viewModel =
+resolveCars carNumbers standings =
     carNumbers
         |> List.filterMap
             (\carNumber ->
-                viewModel.entries
+                standings.entries
                     |> SortedList.toList
                     |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
             )
@@ -178,7 +178,7 @@ viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
     let
         groupedByClass =
-            props.viewModel.entries
+            props.standings.entries
                 |> SortedList.toList
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
