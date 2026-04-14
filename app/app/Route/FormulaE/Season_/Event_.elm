@@ -179,7 +179,11 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
             [ header shared
             , let
                 viewModel =
-                    Standings.init raceControl
+                    Standings.init
+                        { elapsed = Clock.getElapsed raceControl.clock
+                        , lapCount = raceControl.lapCount
+                        , cars = raceControl.cars
+                        }
               in
               case mode of
                 Leaderboard ->

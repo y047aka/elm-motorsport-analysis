@@ -165,7 +165,11 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    Standings.init raceControl_F1
+                    Standings.init
+                        { elapsed = Clock.getElapsed raceControl_F1.clock
+                        , lapCount = raceControl_F1.lapCount
+                        , cars = raceControl_F1.cars
+                        }
                         |> Leaderboard.view (config analysis_F1) leaderboardState
 
                 PositionHistory ->

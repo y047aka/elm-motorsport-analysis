@@ -2,7 +2,6 @@ module Motorsport.Gap exposing (Gap(..), at, toString)
 
 import List.Extra
 import Motorsport.Car exposing (Car)
-import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap
 
@@ -13,24 +12,24 @@ type Gap
     | Laps Int
 
 
-at : Clock.Model -> Car -> Car -> Gap
-at clock carA carB =
-    case lapDiffAt clock carA carB of
+at : Duration -> Car -> Car -> Gap
+at elapsed carA carB =
+    case lapDiffAt elapsed carA carB of
         0 ->
-            secondsAt clock carA carB
+            secondsAt elapsed carA carB
 
         laps ->
             Laps laps
 
 
-lapDiffAt : Clock.Model -> Car -> Car -> Duration
-lapDiffAt clock carA carB =
+lapDiffAt : Duration -> Car -> Car -> Duration
+lapDiffAt elapsed carA carB =
     let
         diff =
             Maybe.map2 (\lapA lapB -> lapA.lap - lapB.lap) carA.currentLap carB.currentLap
 
         raceClock =
-            { elapsed = Clock.getElapsed clock }
+            { elapsed = elapsed }
 
         currentSector =
             carB.currentLap
@@ -58,11 +57,11 @@ lapDiffAt clock carA carB =
             0
 
 
-secondsAt : Clock.Model -> Car -> Car -> Gap
-secondsAt clock carA carB =
+secondsAt : Duration -> Car -> Car -> Gap
+secondsAt elapsed carA carB =
     let
         raceClock =
-            { elapsed = Clock.getElapsed clock }
+            { elapsed = elapsed }
 
         carB_currentSector =
             carB.currentLap

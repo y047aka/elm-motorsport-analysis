@@ -23,7 +23,6 @@ import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Class exposing (Class)
-import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -76,8 +75,8 @@ type alias MiniSectorProgress =
     }
 
 
-init : { r | clock : Clock.Model, lapCount : Int, cars : RunningOrder } -> Standings
-init { clock, lapCount, cars } =
+init : { elapsed : Duration, lapCount : Int, cars : RunningOrder } -> Standings
+init { elapsed, lapCount, cars } =
     let
         carsList =
             RunningOrder.toList cars
@@ -88,14 +87,14 @@ init { clock, lapCount, cars } =
         positionsInClass =
             positionsInClassByCarNumber cars
 
+        raceClock =
+            { elapsed = elapsed }
+
         entries =
             carsList
                 |> List.indexedMap
                     (\index car ->
                         let
-                            raceClock =
-                                { elapsed = Clock.getElapsed clock }
-
                             metadata =
                                 car.metadata
 
@@ -112,7 +111,7 @@ init { clock, lapCount, cars } =
                         , metadata = metadata
                         , lap = lastLap.lap
                         , timing =
-                            init_timing clock
+                            init_timing elapsed
                                 { leader = Just leaderCar
                                 , rival = List.Extra.getAt (index - 1) carsList
                                 }
@@ -136,11 +135,11 @@ init { clock, lapCount, cars } =
     }
 
 
-init_timing : Clock.Model -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
-init_timing clock { leader, rival } car =
+init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
+init_timing elapsed { leader, rival } car =
     let
         raceClock =
-            { elapsed = Clock.getElapsed clock }
+            { elapsed = elapsed }
 
         currentLap =
             Maybe.withDefault Lap.empty car.currentLap
@@ -167,10 +166,10 @@ init_timing clock { leader, rival } car =
     , sector = currentSector
     , miniSector = currentMiniSector
     , gapToLeader =
-        Maybe.map2 (Gap.at clock) leader (Just car)
+        Maybe.map2 (Gap.at elapsed) leader (Just car)
             |> Maybe.withDefault Gap.None
     , intervalToPrevious =
-        Maybe.map2 (Gap.at clock) rival (Just car)
+        Maybe.map2 (Gap.at elapsed) rival (Just car)
             |> Maybe.withDefault Gap.None
     }
 

@@ -17,6 +17,8 @@ import Html exposing (Html)
 import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
+import Motorsport.Car as Car
+import Motorsport.LapExtractor as LapExtractor
 import Motorsport.RaceControl as RaceControl
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
@@ -140,7 +142,10 @@ update msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.fromTimeline decoded.timelineEvents decoded.startingGrid
+                    decoded.startingGrid
+                        |> List.map Car.fromStartingGrid
+                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
+                        |> RaceControl.fromCars decoded.timelineEvents
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -175,7 +180,10 @@ update msg m =
         JsonLoaded_FormulaE (Ok decoded) ->
             let
                 rcNew =
-                    RaceControl.fromTimeline decoded.timelineEvents decoded.startingGrid
+                    decoded.startingGrid
+                        |> List.map Car.fromStartingGrid
+                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
+                        |> RaceControl.fromCars decoded.timelineEvents
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =

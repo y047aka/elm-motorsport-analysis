@@ -1,8 +1,7 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, fromCars, fromTimeline, placeholder, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, fromCars, placeholder, update)
 
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status(..))
-import Motorsport.LapExtractor as LapExtractor
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
@@ -47,14 +46,6 @@ placeholder =
     , cars = RunningOrder.singleton { elapsed = 0 } dummyCar
     , timelineEvents = []
     }
-
-
-fromTimeline : List TimelineEvent -> List { position : Int, car : Car.Metadata } -> Maybe Model
-fromTimeline timelineEvents startingGrid =
-    startingGrid
-        |> List.map Car.fromStartingGrid
-        |> LapExtractor.extractLapsFromTimelineEvents timelineEvents
-        |> fromCars timelineEvents
 
 
 fromCars : List TimelineEvent -> List Car -> Maybe Model
