@@ -12,7 +12,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as ViewModel exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -79,7 +79,7 @@ view size viewModel =
 
 detectCloseBattles : Standings -> List CloseBattle
 detectCloseBattles viewModel =
-    ViewModel.groupCarsByCloseIntervals viewModel
+    Standings.groupCarsByCloseIntervals viewModel
         |> List.filterMap createCloseBattle
 
 
@@ -117,7 +117,7 @@ lapTimeComparison cars =
                     { leadLapNumber = NonEmpty.head cars |> .lap }
             in
             cars
-                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 9 options car.history)
+                |> NonEmpty.map (\car -> Standings.getRecentLaps 9 options car.history)
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -252,7 +252,7 @@ battleChart size cars =
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = ViewModel.getRecentLaps 20 options car.history
+                        , laps = Standings.getRecentLaps 20 options car.history
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )

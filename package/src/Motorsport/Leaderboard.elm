@@ -539,7 +539,7 @@ viewCurrentLapColumn_LeMans24h analysis { status, timing, currentLap } =
                         [ lapTime { time = timing.currentLapElapsed, personalBest = best }
                         , let
                             progressMap =
-                                LeMans.calculateMiniSectorProgress (timing.miniSector |> Maybe.map (\ms -> ( ms.miniSector, ms.progress )))
+                                LeMans.calculateMiniSectorProgress timing.miniSector
                           in
                           div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
                             [ sectorCell { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl2, progress = progressMap.scl2 }

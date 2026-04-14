@@ -240,7 +240,7 @@ miniSectorAccessor mini =
 Returns a record with progress (0 to 1) for each mini sector
 -}
 calculateMiniSectorProgress :
-    Maybe ( LeMans2025MiniSector, Float )
+    Maybe { miniSector : LeMans2025MiniSector, progress : Float }
     ->
         { scl2 : Float
         , z4 : Float
@@ -260,50 +260,52 @@ calculateMiniSectorProgress :
         }
 calculateMiniSectorProgress maybeCurrentMiniSector =
     case maybeCurrentMiniSector of
-        Just ( SCL2, progress ) ->
-            { scl2 = progress, z4 = 0, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( Z4, progress ) ->
-            { scl2 = 1, z4 = progress, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( IP1, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = progress, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( Z12, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = progress, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( SCLC, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = progress, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( A7_1, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = progress, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( IP2, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = progress, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( A8_1, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = progress, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( SCLB, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = progress, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( PORIN, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = progress, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( POROUT, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = progress, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( PITREF, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = progress, scl1 = 0, fordout = 0, fl = 0 }
-
-        Just ( SCL1, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = progress, fordout = 0, fl = 0 }
-
-        Just ( FORDOUT, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = progress, fl = 0 }
-
-        Just ( FL, progress ) ->
-            { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = 1, fl = progress }
-
         Nothing ->
             { scl2 = 0, z4 = 0, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+        Just { miniSector, progress } ->
+            case miniSector of
+                SCL2 ->
+                    { scl2 = progress, z4 = 0, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                Z4 ->
+                    { scl2 = 1, z4 = progress, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                IP1 ->
+                    { scl2 = 1, z4 = 1, ip1 = progress, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                Z12 ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = progress, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                SCLC ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = progress, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                A7_1 ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = progress, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                IP2 ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = progress, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                A8_1 ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = progress, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                SCLB ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = progress, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                PORIN ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = progress, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                POROUT ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = progress, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+
+                PITREF ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = progress, scl1 = 0, fordout = 0, fl = 0 }
+
+                SCL1 ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = progress, fordout = 0, fl = 0 }
+
+                FORDOUT ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = progress, fl = 0 }
+
+                FL ->
+                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = 1, fl = progress }
