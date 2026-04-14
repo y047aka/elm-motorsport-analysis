@@ -34,7 +34,7 @@ import SortedList exposing (SortedList)
 
 
 type alias Standings =
-    { leadLapNumber : Int
+    { laps : Int
     , entries : SortedList ByPosition StandingsEntry
     , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
     }
@@ -45,7 +45,7 @@ type alias StandingsEntry =
     , positionInClass : Int
     , status : Status
     , metadata : Car.Metadata
-    , lap : Int
+    , lapsCompleted : Int
     , timing : TimingState
     , currentLap : Maybe Lap
     , lastLap : Maybe Lap
@@ -59,7 +59,7 @@ type alias TimingState =
     , sector : Maybe SectorProgress
     , miniSector : Maybe MiniSectorProgress
     , gapToLeader : Gap
-    , intervalToPrevious : Gap
+    , intervalToAhead : Gap
     }
 
 
@@ -109,7 +109,7 @@ init { elapsed, lapCount, cars } =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
-                        , lap = lastLap.lap
+                        , lapsCompleted = lastLap.lap
                         , timing =
                             init_timing elapsed
                                 { leader = Just leaderCar
@@ -126,7 +126,7 @@ init { elapsed, lapCount, cars } =
         sortedEntries =
             Ordering.byPosition entries
     in
-    { leadLapNumber = lapCount
+    { laps = lapCount
     , entries = sortedEntries
     , entriesByClass =
         sortedEntries
@@ -168,7 +168,7 @@ init_timing elapsed { leader, rival } car =
     , gapToLeader =
         Maybe.map2 (Gap.at elapsed) leader (Just car)
             |> Maybe.withDefault Gap.None
-    , intervalToPrevious =
+    , intervalToAhead =
         Maybe.map2 (Gap.at elapsed) rival (Just car)
             |> Maybe.withDefault Gap.None
     }
@@ -191,7 +191,7 @@ groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
 groupCarsByCloseIntervals standings =
     let
         isCloseToNext current =
-            case current.timing.intervalToPrevious of
+            case current.timing.intervalToAhead of
                 Gap.Seconds duration ->
                     duration <= 1500
 
@@ -215,12 +215,12 @@ groupCarsByCloseIntervals standings =
         |> List.filter (\group -> List.length group >= 2)
 
 
-getRecentLaps : Int -> { leadLapNumber : Int } -> List Lap -> List Lap
-getRecentLaps n { leadLapNumber } laps =
+getRecentLaps : Int -> { laps : Int } -> List Lap -> List Lap
+getRecentLaps n { laps } lapList =
     let
         targetRange =
-            List.range (leadLapNumber - n) leadLapNumber
+            List.range (laps - n) laps
     in
-    laps
+    lapList
         |> List.filter (\lap -> List.member lap.lap targetRange)
         |> List.sortBy .lap

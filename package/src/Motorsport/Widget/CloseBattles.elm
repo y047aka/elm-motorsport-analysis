@@ -63,7 +63,7 @@ view : { width : Float, height : Float } -> Standings -> Html msg
 view size standings =
     let
         closeBattles =
-            if standings.leadLapNumber > 1 then
+            if standings.laps > 1 then
                 detectCloseBattles standings
 
             else
@@ -114,7 +114,7 @@ lapTimeComparison cars =
         allRecentLaps =
             let
                 options =
-                    { leadLapNumber = NonEmpty.head cars |> .lap }
+                    { laps = NonEmpty.head cars |> .lapsCompleted }
             in
             cars
                 |> NonEmpty.map (\car -> Standings.getRecentLaps 9 options car.history)
@@ -193,7 +193,7 @@ carTimeRow car carLaps allCarsLaps =
                         , Css.color (Css.hsl 0 0 1)
                         ]
                     ]
-                    [ text (Gap.toString car.timing.intervalToPrevious) ]
+                    [ text (Gap.toString car.timing.intervalToAhead) ]
                 ]
     in
     Html.tr [ css [ children [ Css.Global.td [ Css.padding Css.zero ] ] ] ]
@@ -245,7 +245,7 @@ battleChart : { width : Float, height : Float } -> NonEmpty StandingsEntry -> Ht
 battleChart size cars =
     let
         options =
-            { leadLapNumber = NonEmpty.head cars |> .lap }
+            { laps = NonEmpty.head cars |> .lapsCompleted }
 
         carProgressionData =
             cars

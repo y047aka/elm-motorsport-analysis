@@ -180,7 +180,7 @@ config analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec 2025 { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , sectorTimeColumn
             { label = "S1"
             , getter =
@@ -262,13 +262,13 @@ raceControlToLeaderboard { lapCount, cars } =
                                     , positionInClass = index + 1
                                     , status = car.status
                                     , metadata = car.metadata
-                                    , lap = lap.lap
+                                    , lapsCompleted = lap.lap
                                     , timing =
                                         { currentLapElapsed = 0
                                         , sector = Nothing
                                         , miniSector = Nothing
                                         , gapToLeader = Gap.None
-                                        , intervalToPrevious = Gap.None
+                                        , intervalToAhead = Gap.None
                                         }
                                     , currentLap = Just lap
                                     , lastLap = Just lap
@@ -280,10 +280,10 @@ raceControlToLeaderboard { lapCount, cars } =
                 |> Maybe.withDefault []
                 |> Ordering.byPosition
 
-        leadLapNumber =
-            sortedItems |> SortedList.head |> Maybe.map .lap |> Maybe.withDefault 0
+        laps =
+            sortedItems |> SortedList.head |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
     in
-    { leadLapNumber = leadLapNumber
+    { laps = laps
     , entries = sortedItems
     , entriesByClass =
         sortedItems

@@ -30,7 +30,7 @@ suite =
                             Ordering.byPosition entries
 
                         standings =
-                            { leadLapNumber = List.head entries |> Maybe.map .lap |> Maybe.withDefault 0
+                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
                             , entries = sortedEntries
                             , entriesByClass =
                                 sortedEntries
@@ -57,7 +57,7 @@ suite =
                             Ordering.byPosition entries
 
                         standings =
-                            { leadLapNumber = List.head entries |> Maybe.map .lap |> Maybe.withDefault 0
+                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
                             , entries = sortedEntries
                             , entriesByClass =
                                 sortedEntries
@@ -84,7 +84,7 @@ suite =
                             Ordering.byPosition entries
 
                         standings =
-                            { leadLapNumber = List.head entries |> Maybe.map .lap |> Maybe.withDefault 0
+                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
                             , entries = sortedEntries
                             , entriesByClass =
                                 sortedEntries
@@ -113,7 +113,7 @@ createStandingsEntryWithGap position carNumber gap =
     , positionInClass = 1
     , status = Racing
     , metadata = createMetadata carNumber
-    , lap = 5
+    , lapsCompleted = 5
     , timing = createTimingState gap
     , currentLap = Nothing
     , lastLap = Nothing
@@ -139,5 +139,5 @@ createTimingState gap =
     , sector = Nothing
     , miniSector = Nothing
     , gapToLeader = Gap.None
-    , intervalToPrevious = gap
+    , intervalToAhead = gap
     }

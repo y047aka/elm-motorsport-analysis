@@ -128,7 +128,7 @@ carRow onSelect item =
         , div [ class "text-xs opacity-70" ]
             [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
         , div [ class "text-xs text-right" ]
-            [ text (Gap.toString item.timing.intervalToPrevious) ]
+            [ text (Gap.toString item.timing.intervalToAhead) ]
         , if item.status == Car.InPit then
             div
                 [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]

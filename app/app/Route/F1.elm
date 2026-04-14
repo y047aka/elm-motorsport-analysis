@@ -190,7 +190,7 @@ config analysis =
             , getter = .currentDriver >> Maybe.map .name >> Maybe.withDefault ""
             }
         , stringColumn { label = "Team", getter = .metadata >> .team }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , customColumn
             { label = "Gap"
             , getter = .timing >> .gapToLeader >> Gap.toString

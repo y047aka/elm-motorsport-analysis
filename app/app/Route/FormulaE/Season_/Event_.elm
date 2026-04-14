@@ -272,7 +272,7 @@ config season analysis =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , customColumn
             { label = "Gap"
             , getter = .timing >> .gapToLeader >> Gap.toString
@@ -280,7 +280,7 @@ config season analysis =
             }
         , customColumn
             { label = "Interval"
-            , getter = .timing >> .intervalToPrevious >> Gap.toString
+            , getter = .timing >> .intervalToAhead >> Gap.toString
             , sorter = compareBy .position
             }
         , currentLapColumn_Wec
