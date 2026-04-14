@@ -12,7 +12,7 @@ import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
@@ -68,7 +68,7 @@ update msg model =
 
 type alias Props =
     { eventSummary : EventSummary
-    , viewModel : ViewModel
+    , viewModel : Standings
     , clock : Clock.Model
     , analysis : Analysis
     }
@@ -124,7 +124,7 @@ chartTabButton label chart isActive =
         [ text label ]
 
 
-viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List ViewModelItem -> Html Msg
+viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List StandingsEntry -> Html Msg
 viewActiveChart activeChart size props selectedCars =
     case activeChart of
         PositionProgressionChart ->
@@ -163,12 +163,12 @@ viewActiveChart activeChart size props selectedCars =
             BoxPlot.view size props.analysis selectedCars
 
 
-resolveCars : List String -> ViewModel -> List ViewModelItem
+resolveCars : List String -> Standings -> List StandingsEntry
 resolveCars carNumbers viewModel =
     carNumbers
         |> List.filterMap
             (\carNumber ->
-                viewModel.items
+                viewModel.entries
                     |> SortedList.toList
                     |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
             )
@@ -178,7 +178,7 @@ viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
     let
         groupedByClass =
-            props.viewModel.items
+            props.viewModel.entries
                 |> SortedList.toList
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
@@ -194,7 +194,7 @@ viewCarSelector props model =
         (List.map (viewClassGroup model) groupedByClass)
 
 
-viewClassGroup : Model -> List ViewModelItem -> Html Msg
+viewClassGroup : Model -> List StandingsEntry -> Html Msg
 viewClassGroup model cars =
     case List.head cars of
         Nothing ->
@@ -243,7 +243,7 @@ viewClassGroup model cars =
                 ]
 
 
-carSelectorItem : Model -> ViewModelItem -> Html Msg
+carSelectorItem : Model -> StandingsEntry -> Html Msg
 carSelectorItem model item =
     let
         isSelected =

@@ -15,7 +15,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -174,7 +174,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Leaderboard.Config ViewModelItem Msg
+config : Analysis -> Leaderboard.Config StandingsEntry Msg
 config analysis =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -189,7 +189,7 @@ config analysis =
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
+            , getter = .timing >> .gapToLeader >> Gap.toString
             , sorter = compareBy .position
             }
         , lastLapColumn_F1

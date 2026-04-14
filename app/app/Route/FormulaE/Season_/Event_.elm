@@ -17,7 +17,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -260,7 +260,7 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
+config : Int -> Analysis -> Leaderboard.Config StandingsEntry Msg
 config season analysis =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -271,12 +271,12 @@ config season analysis =
         , intColumn { label = "Lap", getter = .lap }
         , customColumn
             { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
+            , getter = .timing >> .gapToLeader >> Gap.toString
             , sorter = compareBy .position
             }
         , customColumn
             { label = "Interval"
-            , getter = .timing >> .interval >> Gap.toString
+            , getter = .timing >> .intervalToPrevious >> Gap.toString
             , sorter = compareBy .position
             }
         , currentLapColumn_Wec

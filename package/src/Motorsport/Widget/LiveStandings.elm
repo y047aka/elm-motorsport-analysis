@@ -11,14 +11,14 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
 import SortedList
 
 
 type alias Props msg =
     { eventSummary : EventSummary
-    , viewModel : ViewModel
-    , onSelectCar : ViewModelItem -> msg
+    , viewModel : Standings
+    , onSelectCar : StandingsEntry -> msg
     }
 
 
@@ -78,7 +78,7 @@ view props =
                         )
                     ]
             )
-            props.viewModel.itemsByClass
+            props.viewModel.entriesByClass
         )
 
 
@@ -93,7 +93,7 @@ formatDriverName fullName =
             fullName
 
 
-carRow : (ViewModelItem -> msg) -> ViewModelItem -> Html msg
+carRow : (StandingsEntry -> msg) -> StandingsEntry -> Html msg
 carRow onSelect item =
     li
         [ onClick (onSelect item)
@@ -128,7 +128,7 @@ carRow onSelect item =
         , div [ class "text-xs opacity-70" ]
             [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
         , div [ class "text-xs text-right" ]
-            [ text (Gap.toString item.timing.interval) ]
+            [ text (Gap.toString item.timing.intervalToPrevious) ]
         , if item.status == Car.InPit then
             div
                 [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]

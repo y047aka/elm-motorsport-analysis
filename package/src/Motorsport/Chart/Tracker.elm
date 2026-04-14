@@ -7,7 +7,7 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
 import SortedList
@@ -94,7 +94,7 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view : { season : Int, eventName : String } -> Analysis -> ViewModel -> Svg msg
+view : { season : Int, eventName : String } -> Analysis -> Standings -> Svg msg
 view { season, eventName } analysis vm =
     let
         layout =
@@ -124,7 +124,7 @@ isCounterClockwiseCircuit eventName =
         ]
 
 
-viewWithConfig : Direction -> TrackConfig -> ViewModel -> Svg msg
+viewWithConfig : Direction -> TrackConfig -> Standings -> Svg msg
 viewWithConfig direction config vm =
     let
         { w, h } =
@@ -283,11 +283,11 @@ makeLabel direction { progress, radius, fontSize, color, label } =
         [ text label ]
 
 
-renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg
+renderCars : Direction -> TrackConfig -> Standings -> Svg msg
 renderCars direction config viewModel =
     Keyed.node "g"
         []
-        (SortedList.toList viewModel.items
+        (SortedList.toList viewModel.entries
             |> List.reverse
             |> List.map
                 (\car ->
@@ -298,7 +298,7 @@ renderCars direction config viewModel =
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> ViewModelItem -> Svg msg
+renderCarOnTrack : Direction -> TrackConfig -> StandingsEntry -> Svg msg
 renderCarOnTrack direction config car =
     let
         coords =
@@ -307,7 +307,7 @@ renderCarOnTrack direction config car =
     renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> StandingsEntry -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -325,7 +325,7 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> ViewModelItem -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Direction -> StandingsEntry -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
         { carNumber, class } =

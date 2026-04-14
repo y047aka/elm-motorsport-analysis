@@ -12,7 +12,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -25,7 +25,7 @@ import TypedSvg.Types exposing (Transform(..))
 
 
 type alias CloseBattle =
-    { cars : NonEmpty ViewModelItem
+    { cars : NonEmpty StandingsEntry
     , position : Int
     }
 
@@ -59,7 +59,7 @@ paddingBottom =
     padding + 15
 
 
-view : { width : Float, height : Float } -> ViewModel -> Html msg
+view : { width : Float, height : Float } -> Standings -> Html msg
 view size viewModel =
     let
         closeBattles =
@@ -77,13 +77,13 @@ view size viewModel =
             div [] (List.map (closeBattleItem size) closeBattles)
 
 
-detectCloseBattles : ViewModel -> List CloseBattle
+detectCloseBattles : Standings -> List CloseBattle
 detectCloseBattles viewModel =
     ViewModel.groupCarsByCloseIntervals viewModel
         |> List.filterMap createCloseBattle
 
 
-createCloseBattle : List ViewModelItem -> Maybe CloseBattle
+createCloseBattle : List StandingsEntry -> Maybe CloseBattle
 createCloseBattle cars =
     NonEmpty.fromList cars
         |> Maybe.map
@@ -108,7 +108,7 @@ closeBattleItem size { cars } =
         ]
 
 
-lapTimeComparison : NonEmpty ViewModelItem -> Html msg
+lapTimeComparison : NonEmpty StandingsEntry -> Html msg
 lapTimeComparison cars =
     let
         allRecentLaps =
@@ -152,7 +152,7 @@ lapTimeComparison cars =
         ]
 
 
-carTimeRow : ViewModelItem -> List Lap -> NonEmpty (List Lap) -> Html msg
+carTimeRow : StandingsEntry -> List Lap -> NonEmpty (List Lap) -> Html msg
 carTimeRow car carLaps allCarsLaps =
     let
         leaderLaps =
@@ -193,7 +193,7 @@ carTimeRow car carLaps allCarsLaps =
                         , Css.color (Css.hsl 0 0 1)
                         ]
                     ]
-                    [ text (Gap.toString car.timing.interval) ]
+                    [ text (Gap.toString car.timing.intervalToPrevious) ]
                 ]
     in
     Html.tr [ css [ children [ Css.Global.td [ Css.padding Css.zero ] ] ] ]
@@ -241,7 +241,7 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : { width : Float, height : Float } -> NonEmpty ViewModelItem -> Html msg
+battleChart : { width : Float, height : Float } -> NonEmpty StandingsEntry -> Html msg
 battleChart size cars =
     let
         options =

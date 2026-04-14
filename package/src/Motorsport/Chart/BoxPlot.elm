@@ -11,7 +11,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Statistics
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg, text_)
@@ -148,7 +148,7 @@ computeLayout size grouped =
         |> List.concat
 
 
-view : { width : Float, height : Float } -> Analysis -> List ViewModelItem -> Html msg
+view : { width : Float, height : Float } -> Analysis -> List StandingsEntry -> Html msg
 view size analysis selectedCars =
     let
         hourlyBoxPlots =

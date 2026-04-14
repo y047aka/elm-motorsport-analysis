@@ -19,7 +19,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (SectorProgress, MiniSectorProgress, TimingState, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 
 
@@ -156,7 +156,7 @@ buildMiniSectors miniSectors sectorStart miniRatio =
                 |> WithMiniSectors
 
 
-computeProgress : TrackConfig -> ViewModelItem -> Float
+computeProgress : TrackConfig -> StandingsEntry -> Float
 computeProgress config car =
     case ( car.currentLap, car.timing.sector, car.timing.miniSector ) of
         ( Just currentLap, _, _ ) ->
@@ -172,16 +172,16 @@ computeProgress config car =
             0
 
 
-progressFromSector : List SectorConfig -> ( Sector, Float ) -> Float
-progressFromSector sectors ( targetSector, progress ) =
+progressFromSector : List SectorConfig -> SectorProgress -> Float
+progressFromSector sectors { sector, progress } =
     sectors
-        |> List.Extra.find (\{ sector } -> sector == targetSector)
+        |> List.Extra.find (\sectorConfig -> sectorConfig.sector == sector)
         |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
         |> Maybe.withDefault 0
 
 
-progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
-progressFromMiniSector config ( miniSector, progress ) =
+progressFromMiniSector : TrackConfig -> MiniSectorProgress -> Float
+progressFromMiniSector config { miniSector, progress } =
     case findMiniSectorShare config miniSector of
         Just { start, share } ->
             start + progress * share
@@ -205,9 +205,9 @@ findMiniSectorShare sectors targetMini =
         |> List.Extra.find (\{ mini } -> mini == targetMini)
 
 
-progressFromElapsed : Lap -> Timing -> Float
+progressFromElapsed : Lap -> TimingState -> Float
 progressFromElapsed currentLap timing =
-    (toFloat timing.time / toFloat currentLap.time)
+    (toFloat timing.currentLapElapsed / toFloat currentLap.time)
         |> min 1.0
 
 

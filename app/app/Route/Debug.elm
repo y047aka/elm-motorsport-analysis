@@ -17,7 +17,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
 import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel as ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.RunningOrder as RunningOrder
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -167,12 +167,12 @@ view app { analysis, raceControl } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (SortedList.toList (raceControlToLeaderboard raceControl).items)
+            , DataView.view (config analysis) leaderboardState (SortedList.toList (raceControlToLeaderboard raceControl).entries)
             ]
         }
 
 
-config : Analysis -> Leaderboard.Config ViewModelItem Msg
+config : Analysis -> Leaderboard.Config StandingsEntry Msg
 config analysis =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -245,7 +245,7 @@ config analysis =
     }
 
 
-raceControlToLeaderboard : RaceControl.Model -> ViewModel
+raceControlToLeaderboard : RaceControl.Model -> Standings
 raceControlToLeaderboard { lapCount, cars } =
     let
         sortedItems =
@@ -264,11 +264,11 @@ raceControlToLeaderboard { lapCount, cars } =
                                     , metadata = car.metadata
                                     , lap = lap.lap
                                     , timing =
-                                        { time = 0
+                                        { currentLapElapsed = 0
                                         , sector = Nothing
                                         , miniSector = Nothing
-                                        , gap = Gap.None
-                                        , interval = Gap.None
+                                        , gapToLeader = Gap.None
+                                        , intervalToPrevious = Gap.None
                                         }
                                     , currentLap = Just lap
                                     , lastLap = Just lap
@@ -284,8 +284,8 @@ raceControlToLeaderboard { lapCount, cars } =
             sortedItems |> SortedList.head |> Maybe.map .lap |> Maybe.withDefault 0
     in
     { leadLapNumber = leadLapNumber
-    , items = sortedItems
-    , itemsByClass =
+    , entries = sortedItems
+    , entriesByClass =
         sortedItems
             |> SortedList.gatherEqualsBy (.metadata >> .class)
             |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))

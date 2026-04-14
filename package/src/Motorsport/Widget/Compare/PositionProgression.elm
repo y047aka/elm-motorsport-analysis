@@ -8,7 +8,7 @@ import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -21,7 +21,7 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
 view size clock viewModel selectedCars =
     case buildClassProgressionData clock viewModel selectedCars of
         Ok series ->
@@ -31,7 +31,7 @@ view size clock viewModel selectedCars =
             Widget.emptyState message
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String (List PositionSeries)
+buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String (List PositionSeries)
 buildClassProgressionData clock viewModel selectedCars =
     let
         lapThreshold =
@@ -40,9 +40,9 @@ buildClassProgressionData clock viewModel selectedCars =
         selectedCarNumbers =
             selectedCars |> List.map (.metadata >> .carNumber)
 
-        classCars : List ViewModelItem
+        classCars : List StandingsEntry
         classCars =
-            viewModel.itemsByClass
+            viewModel.entriesByClass
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []
@@ -102,7 +102,7 @@ positionHistoryWindowMillis =
     3 * 60 * 60 * 1000
 
 
-calculateLapThreshold : Clock.Model -> ViewModel -> Int
+calculateLapThreshold : Clock.Model -> Standings -> Int
 calculateLapThreshold clock viewModel =
     let
         currentRaceTime =
@@ -111,7 +111,7 @@ calculateLapThreshold clock viewModel =
         timeThreshold =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
-    SortedList.head viewModel.items
+    SortedList.head viewModel.entries
         |> Maybe.map .history
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap
@@ -136,7 +136,7 @@ positionProgressionChart size series =
         )
 
 
-buildPositionPoints : Int -> ViewModelItem -> List PositionPoint
+buildPositionPoints : Int -> StandingsEntry -> List PositionPoint
 buildPositionPoints lapThreshold item =
     item.history
         |> List.filter (\lap -> lap.lap >= lapThreshold)

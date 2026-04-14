@@ -10,7 +10,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.RaceControl.ViewModel exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -54,7 +54,7 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
+view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
 view size clock viewModel selectedCars =
     case buildClassProgressionData clock viewModel selectedCars of
         Err message ->
@@ -64,15 +64,15 @@ view size clock viewModel selectedCars =
             lapTimeProgressionChart size classData.series
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String ClassProgressionData
+buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String ClassProgressionData
 buildClassProgressionData clock viewModel selectedCars =
     let
         selectedCarNumbers =
             selectedCars |> List.map (.metadata >> .carNumber)
 
-        carsInClass : List ViewModelItem
+        carsInClass : List StandingsEntry
         carsInClass =
-            viewModel.itemsByClass
+            viewModel.entriesByClass
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
                 |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
                 |> Maybe.withDefault []
