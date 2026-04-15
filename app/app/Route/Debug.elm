@@ -181,7 +181,7 @@ config : Analysis -> Standings -> Leaderboard.Config StandingsEntry Msg
 config analysis standings =
     let
         currentLapFor item =
-            Standings.getCurrentLap item.metadata.carNumber standings
+            item.currentLap
 
         lastLapFor item =
             Standings.getLastLap item.metadata.carNumber standings
@@ -284,6 +284,7 @@ raceControlToLeaderboard { lapCount, cars } =
                         , status = car.status
                         , metadata = { carNumber = String.fromInt lap.lap, drivers = car.metadata.drivers, class = car.metadata.class, group = car.metadata.group, team = car.metadata.team, manufacturer = car.metadata.manufacturer }
                         , lapsCompleted = lap.lap
+                        , currentLap = Nothing
                         , currentLapElapsed = 0
                         , sector = Nothing
                         , miniSector = Nothing

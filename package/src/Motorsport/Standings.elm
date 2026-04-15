@@ -2,7 +2,7 @@ module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , SectorProgress, MiniSectorProgress
     , init
-    , getCarHistory, getCurrentLap, getLastLap
+    , getCarHistory, getLastLap
     , groupCarsByCloseIntervals
     , getRecentLaps
     )
@@ -13,7 +13,7 @@ module Motorsport.Standings exposing
 @docs SectorProgress, MiniSectorProgress
 @docs init
 
-@docs getCarHistory, getCurrentLap, getLastLap
+@docs getCarHistory, getLastLap
 
 @docs groupCarsByCloseIntervals
 
@@ -51,6 +51,7 @@ type alias StandingsEntry =
     , status : Status
     , metadata : Car.Metadata
     , lapsCompleted : Int
+    , currentLap : Maybe Lap
     , currentLapElapsed : Duration
     , sector : Maybe SectorProgress
     , miniSector : Maybe MiniSectorProgress
@@ -117,6 +118,7 @@ init { elapsed, lapCount, cars } =
                         , status = car.status
                         , metadata = metadata
                         , lapsCompleted = lastLap.lap
+                        , currentLap = car.currentLap
                         , currentLapElapsed = timing.currentLapElapsed
                         , sector = timing.sector
                         , miniSector = timing.miniSector
@@ -158,14 +160,6 @@ getCarHistory : String -> Standings -> List Lap
 getCarHistory carNumber standings =
     Dict.get carNumber standings.lapHistory
         |> Maybe.withDefault []
-
-
-{-| carNumber から currentLap を取得する
--}
-getCurrentLap : String -> Standings -> Maybe Lap
-getCurrentLap carNumber standings =
-    Dict.get carNumber standings.carLapData
-        |> Maybe.andThen .currentLap
 
 
 {-| carNumber から lastLap を取得する

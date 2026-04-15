@@ -284,15 +284,8 @@ config season analysis standings =
             , sorter = compareBy .position
             }
         , currentLapColumn_Wec
-            { getter =
-                \item ->
-                    { status = item.status
-                    , currentLapElapsed = item.currentLapElapsed
-                    , sector = item.sector
-                    , miniSector = item.miniSector
-                    , currentLap = Standings.getCurrentLap item.metadata.carNumber standings
-                    }
-            , sorter = compareBy (\item -> Standings.getCurrentLap item.metadata.carNumber standings |> Maybe.map .time |> Maybe.withDefault 0)
+            { getter = identity
+            , sorter = compareBy (\item -> item.currentLap |> Maybe.map .time |> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_Wec

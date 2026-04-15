@@ -177,7 +177,7 @@ view size analysis standings selectedCars =
                                     , color = color
                                     , currentLap =
                                         if Just group.hourIndex == lastHourIndex then
-                                            Standings.getCurrentLap item.metadata.carNumber standings
+                                            item.currentLap
 
                                         else
                                             Nothing
