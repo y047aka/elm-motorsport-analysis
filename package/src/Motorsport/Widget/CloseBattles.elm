@@ -74,7 +74,7 @@ view size standings =
             Widget.emptyState "No close battles detected"
 
         else
-            div [] (List.map (closeBattleItem size) closeBattles)
+            div [] (List.map (closeBattleItem size standings) closeBattles)
 
 
 detectCloseBattles : Standings -> List CloseBattle
@@ -94,8 +94,8 @@ createCloseBattle cars =
             )
 
 
-closeBattleItem : { width : Float, height : Float } -> CloseBattle -> Html msg
-closeBattleItem size { cars } =
+closeBattleItem : { width : Float, height : Float } -> Standings -> CloseBattle -> Html msg
+closeBattleItem size standings { cars } =
     div
         [ css
             [ Css.property "display" "grid"
@@ -103,13 +103,13 @@ closeBattleItem size { cars } =
             , Css.fontSize (px 12)
             ]
         ]
-        [ battleChart size cars
-        , lapTimeComparison cars
+        [ battleChart size standings cars
+        , lapTimeComparison standings cars
         ]
 
 
-lapTimeComparison : NonEmpty StandingsEntry -> Html msg
-lapTimeComparison cars =
+lapTimeComparison : Standings -> NonEmpty StandingsEntry -> Html msg
+lapTimeComparison standings cars =
     let
         allRecentLaps =
             let
@@ -117,7 +117,7 @@ lapTimeComparison cars =
                     { laps = NonEmpty.head cars |> .lapsCompleted }
             in
             cars
-                |> NonEmpty.map (\car -> Standings.getRecentLaps 9 options car.history)
+                |> NonEmpty.map (\car -> Standings.getRecentLaps 9 options (Standings.getCarHistory car.metadata.carNumber standings))
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -241,8 +241,8 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : { width : Float, height : Float } -> NonEmpty StandingsEntry -> Html msg
-battleChart size cars =
+battleChart : { width : Float, height : Float } -> Standings -> NonEmpty StandingsEntry -> Html msg
+battleChart size standings cars =
     let
         options =
             { laps = NonEmpty.head cars |> .lapsCompleted }
@@ -252,7 +252,7 @@ battleChart size cars =
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = Standings.getRecentLaps 20 options car.history
+                        , laps = Standings.getRecentLaps 20 options (Standings.getCarHistory car.metadata.carNumber standings)
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )

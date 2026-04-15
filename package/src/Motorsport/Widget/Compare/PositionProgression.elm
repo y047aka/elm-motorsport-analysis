@@ -7,8 +7,9 @@ import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Clock as Clock
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -55,7 +56,7 @@ buildClassProgressionData clock standings selectedCars =
                             carNumber =
                                 item.metadata.carNumber
                         in
-                        { points = buildPositionPoints lapThreshold item
+                        { points = buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) item
                         , color = Manufacturer.toColorWithFallback item.metadata
                         , isSelected = List.member carNumber selectedCarNumbers
                         }
@@ -112,7 +113,7 @@ calculateLapThreshold clock standings =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
     SortedList.head standings.entries
-        |> Maybe.map .history
+        |> Maybe.map (\leader -> Standings.getCarHistory leader.metadata.carNumber standings)
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap
         |> Maybe.withDefault 1
@@ -136,9 +137,9 @@ positionProgressionChart size series =
         )
 
 
-buildPositionPoints : Int -> StandingsEntry -> List PositionPoint
-buildPositionPoints lapThreshold item =
-    item.history
+buildPositionPoints : Int -> List Lap -> StandingsEntry -> List PositionPoint
+buildPositionPoints lapThreshold history item =
+    history
         |> List.filter (\lap -> lap.lap >= lapThreshold)
         |> List.filterMap
             (\lap ->

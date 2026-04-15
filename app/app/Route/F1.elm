@@ -165,12 +165,15 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    Standings.init
-                        { elapsed = Clock.getElapsed raceControl_F1.clock
-                        , lapCount = raceControl_F1.lapCount
-                        , cars = raceControl_F1.cars
-                        }
-                        |> Leaderboard.view (config analysis_F1) leaderboardState
+                    let
+                        standings =
+                            Standings.init
+                                { elapsed = Clock.getElapsed raceControl_F1.clock
+                                , lapCount = raceControl_F1.lapCount
+                                , cars = raceControl_F1.cars
+                                }
+                    in
+                    Leaderboard.view (config analysis_F1 standings) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -178,8 +181,8 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Leaderboard.Config StandingsEntry Msg
-config analysis =
+config : Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
+config analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -193,23 +196,23 @@ config analysis =
         , intColumn { label = "Lap", getter = .lapsCompleted }
         , customColumn
             { label = "Gap"
-            , getter = .timing >> .gapToLeader >> Gap.toString
+            , getter = .gapToLeader >> Gap.toString
             , sorter = compareBy .position
             }
         , lastLapColumn_F1
-            { getter = .lastLap
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            { getter = \item -> Standings.getLastLap item.metadata.carNumber standings
+            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
+        , bestTimeColumn { getter = .bestLapTime }
         , performanceColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = .history
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2
             }

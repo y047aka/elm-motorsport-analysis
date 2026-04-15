@@ -1,6 +1,7 @@
 module Motorsport.StandingsTest exposing (suite)
 
 import Expect
+import Dict
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
@@ -36,6 +37,8 @@ suite =
                                 sortedEntries
                                     |> SortedList.gatherEqualsBy (.metadata >> .class)
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                            , lapHistory = Dict.empty
+                            , carLapData = Dict.empty
                             }
                     in
                     Standings.groupCarsByCloseIntervals standings
@@ -63,6 +66,8 @@ suite =
                                 sortedEntries
                                     |> SortedList.gatherEqualsBy (.metadata >> .class)
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                            , lapHistory = Dict.empty
+                            , carLapData = Dict.empty
                             }
                     in
                     Standings.groupCarsByCloseIntervals standings
@@ -90,6 +95,8 @@ suite =
                                 sortedEntries
                                     |> SortedList.gatherEqualsBy (.metadata >> .class)
                                     |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+                            , lapHistory = Dict.empty
+                            , carLapData = Dict.empty
                             }
                     in
                     Standings.groupCarsByCloseIntervals standings
@@ -119,10 +126,10 @@ createStandingsEntryWithGap position carNumber gap =
     , miniSector = Nothing
     , gapToLeader = Gap.None
     , intervalToAhead = gap
-    , currentLap = Nothing
-    , lastLap = Nothing
+    , currentLapProgress = 0
+    , lastLapTime = Nothing
+    , bestLapTime = Nothing
     , currentDriver = Nothing
-    , history = []
     }
 
 

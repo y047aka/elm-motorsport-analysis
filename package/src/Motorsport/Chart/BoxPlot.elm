@@ -11,7 +11,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings exposing (StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Statistics
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg, text_)
@@ -148,8 +148,8 @@ computeLayout size grouped =
         |> List.concat
 
 
-view : { width : Float, height : Float } -> Analysis -> List StandingsEntry -> Html msg
-view size analysis selectedCars =
+view : { width : Float, height : Float } -> Analysis -> Standings -> List StandingsEntry -> Html msg
+view size analysis standings selectedCars =
     let
         hourlyBoxPlots =
             selectedCars
@@ -163,7 +163,7 @@ view size analysis selectedCars =
                                 item.metadata.carNumber
 
                             groups =
-                                toHourlyGroups item.history
+                                toHourlyGroups (Standings.getCarHistory item.metadata.carNumber standings)
 
                             lastHourIndex =
                                 groups |> ListExtra.last |> Maybe.map .hourIndex
@@ -177,7 +177,7 @@ view size analysis selectedCars =
                                     , color = color
                                     , currentLap =
                                         if Just group.hourIndex == lastHourIndex then
-                                            item.currentLap
+                                            Standings.getCurrentLap item.metadata.carNumber standings
 
                                         else
                                             Nothing

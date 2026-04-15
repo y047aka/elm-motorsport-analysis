@@ -153,6 +153,7 @@ viewActiveChart activeChart size props selectedCars =
                         in
                         CloseBattles.closeBattleItem
                             size
+                            props.standings
                             { cars = cars
                             , position = leader.position
                             }
@@ -160,7 +161,7 @@ viewActiveChart activeChart size props selectedCars =
                 |> Maybe.withDefault (text "")
 
         BoxPlotChart ->
-            BoxPlot.view size props.analysis selectedCars
+            BoxPlot.view size props.analysis props.standings selectedCars
 
 
 resolveCars : List String -> Standings -> List StandingsEntry

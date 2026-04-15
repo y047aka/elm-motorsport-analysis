@@ -2,6 +2,7 @@ module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , SectorProgress, MiniSectorProgress
     , init
+    , getCarHistory, getCurrentLap, getLastLap
     , groupCarsByCloseIntervals
     , getRecentLaps
     )
@@ -11,6 +12,8 @@ module Motorsport.Standings exposing
 @docs Standings, StandingsEntry
 @docs SectorProgress, MiniSectorProgress
 @docs init
+
+@docs getCarHistory, getCurrentLap, getLastLap
 
 @docs groupCarsByCloseIntervals
 
@@ -37,6 +40,8 @@ type alias Standings =
     { laps : Int
     , entries : SortedList ByPosition StandingsEntry
     , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
+    , lapHistory : Dict String (List Lap)
+    , carLapData : Dict String { currentLap : Maybe Lap, lastLap : Maybe Lap }
     }
 
 
@@ -51,9 +56,9 @@ type alias StandingsEntry =
     , miniSector : Maybe MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
-    , currentLap : Maybe Lap
-    , lastLap : Maybe Lap
-    , history : List Lap
+    , currentLapProgress : Float
+    , lastLapTime : Maybe Duration
+    , bestLapTime : Maybe Duration
     , currentDriver : Maybe Driver
     }
 
@@ -117,9 +122,12 @@ init { elapsed, lapCount, cars } =
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
                         , intervalToAhead = timing.intervalToAhead
-                        , currentLap = car.currentLap
-                        , lastLap = car.lastLap
-                        , history = completedLapsAt raceClock car.laps
+                        , currentLapProgress =
+                            car.currentLap
+                                |> Maybe.map (\lap -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lap.time))
+                                |> Maybe.withDefault 0
+                        , lastLapTime = car.lastLap |> Maybe.map .time
+                        , bestLapTime = car.lastLap |> Maybe.map .best
                         , currentDriver = car.currentDriver
                         }
                     )
@@ -133,7 +141,39 @@ init { elapsed, lapCount, cars } =
         sortedEntries
             |> SortedList.gatherEqualsBy (.metadata >> .class)
             |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+    , lapHistory =
+        carsList
+            |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
+            |> Dict.fromList
+    , carLapData =
+        carsList
+            |> List.map (\car -> ( car.metadata.carNumber, { currentLap = car.currentLap, lastLap = car.lastLap } ))
+            |> Dict.fromList
     }
+
+
+{-| carNumber からラップ履歴を取得する
+-}
+getCarHistory : String -> Standings -> List Lap
+getCarHistory carNumber standings =
+    Dict.get carNumber standings.lapHistory
+        |> Maybe.withDefault []
+
+
+{-| carNumber から currentLap を取得する
+-}
+getCurrentLap : String -> Standings -> Maybe Lap
+getCurrentLap carNumber standings =
+    Dict.get carNumber standings.carLapData
+        |> Maybe.andThen .currentLap
+
+
+{-| carNumber から lastLap を取得する
+-}
+getLastLap : String -> Standings -> Maybe Lap
+getLastLap carNumber standings =
+    Dict.get carNumber standings.carLapData
+        |> Maybe.andThen .lastLap
 
 
 type alias TimingState =

@@ -10,7 +10,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -87,7 +87,7 @@ buildClassProgressionData clock standings selectedCars =
                                 item.metadata.carNumber
                         in
                         { carNumber = carNumber
-                        , laps = extractLapDataForCar clock item.history
+                        , laps = extractLapDataForCar clock (Standings.getCarHistory item.metadata.carNumber standings)
                         , color = Manufacturer.toColorWithFallback item.metadata
                         , isSelected = List.member carNumber selectedCarNumbers
                         }

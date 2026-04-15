@@ -460,16 +460,16 @@ viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, sector, miniSecto
                         , let
                             ( s1_progress, s2_progress, s3_progress ) =
                                 case sector of
-                                    Just { sector, progress } ->
-                                        case sector of
+                                    Just sectorProgress ->
+                                        case sectorProgress.sector of
                                             S1 ->
-                                                ( progress, 0, 0 )
+                                                ( sectorProgress.progress, 0, 0 )
 
                                             S2 ->
-                                                ( 100, progress, 0 )
+                                                ( 100, sectorProgress.progress, 0 )
 
                                             S3 ->
-                                                ( 100, 100, progress )
+                                                ( 100, 100, sectorProgress.progress )
 
                                     Nothing ->
                                         ( 100, 100, 100 )
