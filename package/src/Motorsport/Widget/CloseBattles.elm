@@ -193,7 +193,7 @@ carTimeRow car carLaps allCarsLaps =
                         , Css.color (Css.hsl 0 0 1)
                         ]
                     ]
-                    [ text (Gap.toString car.timing.intervalToAhead) ]
+                    [ text (Gap.toString car.intervalToAhead) ]
                 ]
     in
     Html.tr [ css [ children [ Css.Global.td [ Css.padding Css.zero ] ] ] ]

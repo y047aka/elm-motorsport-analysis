@@ -69,7 +69,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Standings exposing (TimingState, Standings, StandingsEntry)
+import Motorsport.Standings exposing (MiniSectorProgress, SectorProgress, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import SortedList
@@ -373,7 +373,16 @@ lastLapColumn_F1 { getter, sorter, analysis } =
 
 
 currentLapColumn_Wec :
-    { getter : data -> { a | status : Status, timing : TimingState, currentLap : Maybe Lap }
+    { getter :
+        data
+        ->
+            { a
+                | status : Status
+                , currentLapElapsed : Duration
+                , sector : Maybe SectorProgress
+                , miniSector : Maybe MiniSectorProgress
+                , currentLap : Maybe Lap
+            }
     , sorter : data -> data -> Order
     , analysis : Analysis
     }
@@ -386,8 +395,18 @@ currentLapColumn_Wec { getter, sorter, analysis } =
     }
 
 
-viewCurrentLapColumn_Wec : Analysis -> { a | status : Status, timing : TimingState, currentLap : Maybe Lap } -> Html msg
-viewCurrentLapColumn_Wec analysis { status, timing, currentLap } =
+viewCurrentLapColumn_Wec :
+    Analysis
+    ->
+        { a
+            | status : Status
+            , currentLapElapsed : Duration
+            , sector : Maybe SectorProgress
+            , miniSector : Maybe MiniSectorProgress
+            , currentLap : Maybe Lap
+        }
+    -> Html msg
+viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, sector, miniSector, currentLap } =
     let
         lapTime { time, personalBest } =
             div
@@ -437,10 +456,10 @@ viewCurrentLapColumn_Wec analysis { status, timing, currentLap } =
             |> Maybe.map
                 (\{ best, sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = timing.currentLapElapsed, personalBest = best }
+                        [ lapTime { time = currentLapElapsed, personalBest = best }
                         , let
                             ( s1_progress, s2_progress, s3_progress ) =
-                                case timing.sector of
+                                case sector of
                                     Just { sector, progress } ->
                                         case sector of
                                             S1 ->
@@ -472,7 +491,16 @@ viewCurrentLapColumn_Wec analysis { status, timing, currentLap } =
 
 
 currentLapColumn_LeMans24h :
-    { getter : data -> { a | status : Status, timing : TimingState, currentLap : Maybe Lap }
+    { getter :
+        data
+        ->
+            { a
+                | status : Status
+                , currentLapElapsed : Duration
+                , sector : Maybe SectorProgress
+                , miniSector : Maybe MiniSectorProgress
+                , currentLap : Maybe Lap
+            }
     , sorter : data -> data -> Order
     , analysis : Analysis
     }
@@ -485,8 +513,18 @@ currentLapColumn_LeMans24h { getter, sorter, analysis } =
     }
 
 
-viewCurrentLapColumn_LeMans24h : Analysis -> { a | status : Status, timing : TimingState, currentLap : Maybe Lap } -> Html msg
-viewCurrentLapColumn_LeMans24h analysis { status, timing, currentLap } =
+viewCurrentLapColumn_LeMans24h :
+    Analysis
+    ->
+        { a
+            | status : Status
+            , currentLapElapsed : Duration
+            , sector : Maybe SectorProgress
+            , miniSector : Maybe MiniSectorProgress
+            , currentLap : Maybe Lap
+        }
+    -> Html msg
+viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, sector, miniSector, currentLap } =
     let
         lapTime { time, personalBest } =
             div
@@ -536,10 +574,10 @@ viewCurrentLapColumn_LeMans24h analysis { status, timing, currentLap } =
             |> Maybe.map
                 (\{ best, miniSectors } ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = timing.currentLapElapsed, personalBest = best }
+                        [ lapTime { time = currentLapElapsed, personalBest = best }
                         , let
                             progressMap =
-                                LeMans.calculateMiniSectorProgress timing.miniSector
+                                LeMans.calculateMiniSectorProgress miniSector
                           in
                           div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
                             [ sectorCell { time = Maybe.andThen (.scl2 >> .time) miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) miniSectors, fastest = analysis.miniSectorFastest.scl2, progress = progressMap.scl2 }

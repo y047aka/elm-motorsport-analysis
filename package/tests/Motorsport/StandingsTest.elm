@@ -8,7 +8,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Ordering as Ordering
-import Motorsport.Standings as Standings exposing (StandingsEntry, TimingState)
+import Motorsport.Standings as Standings exposing (StandingsEntry)
 import SortedList
 import Test exposing (Test, describe, test)
 
@@ -114,7 +114,11 @@ createStandingsEntryWithGap position carNumber gap =
     , status = Racing
     , metadata = createMetadata carNumber
     , lapsCompleted = 5
-    , timing = createTimingState gap
+    , currentLapElapsed = 90000 -- 1:30.000
+    , sector = Nothing
+    , miniSector = Nothing
+    , gapToLeader = Gap.None
+    , intervalToAhead = gap
     , currentLap = Nothing
     , lastLap = Nothing
     , currentDriver = Nothing
@@ -130,14 +134,4 @@ createMetadata carNumber =
     , team = "Test Team"
     , drivers = [ Driver "Test Driver" ]
     , manufacturer = Manufacturer.Other
-    }
-
-
-createTimingState : Gap -> TimingState
-createTimingState gap =
-    { currentLapElapsed = 90000 -- 1:30.000
-    , sector = Nothing
-    , miniSector = Nothing
-    , gapToLeader = Gap.None
-    , intervalToAhead = gap
     }

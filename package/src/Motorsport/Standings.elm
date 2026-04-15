@@ -1,6 +1,6 @@
 module Motorsport.Standings exposing
     ( Standings, StandingsEntry
-    , TimingState, SectorProgress, MiniSectorProgress
+    , SectorProgress, MiniSectorProgress
     , init
     , groupCarsByCloseIntervals
     , getRecentLaps
@@ -9,7 +9,7 @@ module Motorsport.Standings exposing
 {-|
 
 @docs Standings, StandingsEntry
-@docs TimingState, SectorProgress, MiniSectorProgress
+@docs SectorProgress, MiniSectorProgress
 @docs init
 
 @docs groupCarsByCloseIntervals
@@ -46,20 +46,15 @@ type alias StandingsEntry =
     , status : Status
     , metadata : Car.Metadata
     , lapsCompleted : Int
-    , timing : TimingState
-    , currentLap : Maybe Lap
-    , lastLap : Maybe Lap
-    , history : List Lap
-    , currentDriver : Maybe Driver
-    }
-
-
-type alias TimingState =
-    { currentLapElapsed : Duration
+    , currentLapElapsed : Duration
     , sector : Maybe SectorProgress
     , miniSector : Maybe MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
+    , currentLap : Maybe Lap
+    , lastLap : Maybe Lap
+    , history : List Lap
+    , currentDriver : Maybe Driver
     }
 
 
@@ -104,18 +99,24 @@ init { elapsed, lapCount, cars } =
 
                             lastLap =
                                 Maybe.withDefault Lap.empty car.lastLap
+
+                            timing =
+                                init_timing elapsed
+                                    { leader = Just leaderCar
+                                    , rival = List.Extra.getAt (index - 1) carsList
+                                    }
+                                    car
                         in
                         { position = index + 1
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
                         , lapsCompleted = lastLap.lap
-                        , timing =
-                            init_timing elapsed
-                                { leader = Just leaderCar
-                                , rival = List.Extra.getAt (index - 1) carsList
-                                }
-                                car
+                        , currentLapElapsed = timing.currentLapElapsed
+                        , sector = timing.sector
+                        , miniSector = timing.miniSector
+                        , gapToLeader = timing.gapToLeader
+                        , intervalToAhead = timing.intervalToAhead
                         , currentLap = car.currentLap
                         , lastLap = car.lastLap
                         , history = completedLapsAt raceClock car.laps
@@ -132,6 +133,15 @@ init { elapsed, lapCount, cars } =
         sortedEntries
             |> SortedList.gatherEqualsBy (.metadata >> .class)
             |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+    }
+
+
+type alias TimingState =
+    { currentLapElapsed : Duration
+    , sector : Maybe SectorProgress
+    , miniSector : Maybe MiniSectorProgress
+    , gapToLeader : Gap
+    , intervalToAhead : Gap
     }
 
 
@@ -191,7 +201,7 @@ groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
 groupCarsByCloseIntervals standings =
     let
         isCloseToNext current =
-            case current.timing.intervalToAhead of
+            case current.intervalToAhead of
                 Gap.Seconds duration ->
                     duration <= 1500
 

@@ -18,8 +18,9 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Standings exposing (SectorProgress, MiniSectorProgress, TimingState, StandingsEntry)
+import Motorsport.Standings exposing (SectorProgress, MiniSectorProgress, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 
 
@@ -158,9 +159,9 @@ buildMiniSectors miniSectors sectorStart miniRatio =
 
 computeProgress : TrackConfig -> StandingsEntry -> Float
 computeProgress config car =
-    case ( car.currentLap, car.timing.sector, car.timing.miniSector ) of
+    case ( car.currentLap, car.sector, car.miniSector ) of
         ( Just currentLap, _, _ ) ->
-            progressFromElapsed currentLap car.timing
+            progressFromElapsed currentLap car
 
         ( _, Just sectorProgress, Nothing ) ->
             progressFromSector config sectorProgress
@@ -205,9 +206,9 @@ findMiniSectorShare sectors targetMini =
         |> List.Extra.find (\{ mini } -> mini == targetMini)
 
 
-progressFromElapsed : Lap -> TimingState -> Float
-progressFromElapsed currentLap timing =
-    (toFloat timing.currentLapElapsed / toFloat currentLap.time)
+progressFromElapsed : Lap -> { a | currentLapElapsed : Duration } -> Float
+progressFromElapsed currentLap entry =
+    (toFloat entry.currentLapElapsed / toFloat currentLap.time)
         |> min 1.0
 
 
