@@ -1,7 +1,7 @@
 module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , SectorProgress, MiniSectorProgress
-    , init
+    , init, fromLaps
     , getCarHistory, getLastLap
     , groupCarsByCloseIntervals
     , getRecentLaps
@@ -11,7 +11,7 @@ module Motorsport.Standings exposing
 
 @docs Standings, StandingsEntry
 @docs SectorProgress, MiniSectorProgress
-@docs init
+@docs init, fromLaps
 
 @docs getCarHistory, getLastLap
 
@@ -150,6 +150,60 @@ init { elapsed, lapCount, cars } =
     , carLapData =
         carsList
             |> List.map (\car -> ( car.metadata.carNumber, { currentLap = car.currentLap, lastLap = car.lastLap } ))
+            |> Dict.fromList
+    }
+
+
+{-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
+
+各ラップを1つの StandingsEntry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
+`lapHistory` / `carLapData` はラップ番号文字列をキーとして構築されるため、不変条件が保たれる。
+
+-}
+fromLaps : Car.Metadata -> List Lap -> Standings
+fromLaps baseMetadata laps =
+    let
+        entries =
+            laps
+                |> List.indexedMap
+                    (\index lap ->
+                        { position = index + 1
+                        , positionInClass = index + 1
+                        , status = Car.Racing
+                        , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
+                        , lapsCompleted = lap.lap
+                        , currentLap = Just lap
+                        , currentLapElapsed = 0
+                        , sector = Nothing
+                        , miniSector = Nothing
+                        , gapToLeader = Gap.None
+                        , intervalToAhead = Gap.None
+                        , currentLapProgress = 0
+                        , lastLapTime = Just lap.time
+                        , bestLapTime = Just lap.best
+                        , currentDriver = Just lap.driver
+                        }
+                    )
+
+        sortedEntries =
+            Ordering.byPosition entries
+
+        lapKey lap =
+            String.fromInt lap.lap
+    in
+    { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
+    , entries = sortedEntries
+    , entriesByClass =
+        sortedEntries
+            |> SortedList.gatherEqualsBy (.metadata >> .class)
+            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+    , lapHistory =
+        laps
+            |> List.map (\lap -> ( lapKey lap, [ lap ] ))
+            |> Dict.fromList
+    , carLapData =
+        laps
+            |> List.map (\lap -> ( lapKey lap, { currentLap = Just lap, lastLap = Just lap } ))
             |> Dict.fromList
     }
 

@@ -3,7 +3,6 @@ module Route.Debug exposing (ActionData, Data, Model, Msg, route)
 import BackendTask exposing (BackendTask)
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
-import Dict
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
@@ -11,12 +10,12 @@ import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Class
 import Motorsport.Clock as Clock
+import Motorsport.Manufacturer
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
-import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
-import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.RunningOrder as RunningOrder
@@ -170,7 +169,11 @@ view app { analysis, raceControl } { leaderboardState } =
                 ]
             , let
                 standings =
-                    raceControlToLeaderboard raceControl
+                    raceControl.cars
+                        |> RunningOrder.toList
+                        |> List.Extra.find (\car -> car.metadata.carNumber == "2")
+                        |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
+                        |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
               in
               DataView.view (config analysis standings) leaderboardState (SortedList.toList standings.entries)
             ]
@@ -260,56 +263,3 @@ config analysis standings =
     }
 
 
-raceControlToLeaderboard : RaceControl.Model -> Standings
-raceControlToLeaderboard { lapCount, cars } =
-    let
-        lapsForCar =
-            cars
-                |> RunningOrder.toList
-                |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                |> Maybe.map
-                    (\car ->
-                        car.laps
-                            |> List.take lapCount
-                            |> List.map (\lap -> ( car, lap ))
-                    )
-                |> Maybe.withDefault []
-
-        sortedItems =
-            lapsForCar
-                |> List.indexedMap
-                    (\index ( car, lap ) ->
-                        { position = index + 1
-                        , positionInClass = index + 1
-                        , status = car.status
-                        , metadata = { carNumber = String.fromInt lap.lap, drivers = car.metadata.drivers, class = car.metadata.class, group = car.metadata.group, team = car.metadata.team, manufacturer = car.metadata.manufacturer }
-                        , lapsCompleted = lap.lap
-                        , currentLap = Nothing
-                        , currentLapElapsed = 0
-                        , sector = Nothing
-                        , miniSector = Nothing
-                        , gapToLeader = Gap.None
-                        , intervalToAhead = Gap.None
-                        , currentLapProgress = 0
-                        , lastLapTime = Just lap.time
-                        , bestLapTime = Just lap.best
-                        , currentDriver = Just lap.driver
-                        }
-                    )
-                |> Ordering.byPosition
-
-        laps =
-            sortedItems |> SortedList.head |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
-    in
-    { laps = laps
-    , entries = sortedItems
-    , entriesByClass =
-        sortedItems
-            |> SortedList.gatherEqualsBy (.metadata >> .class)
-            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-    , lapHistory = Dict.empty
-    , carLapData =
-        lapsForCar
-            |> List.map (\( _, lap ) -> ( String.fromInt lap.lap, { currentLap = Just lap, lastLap = Just lap } ))
-            |> Dict.fromList
-    }
