@@ -11,8 +11,7 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings exposing (Standings, StandingsEntry)
-import SortedList
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 
 
 type alias Props msg =
@@ -68,7 +67,6 @@ view props =
                             ]
                         ]
                         (cars
-                            |> SortedList.toList
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
@@ -78,7 +76,7 @@ view props =
                         )
                     ]
             )
-            props.standings.entriesByClass
+            (Standings.toClassList props.standings)
         )
 
 

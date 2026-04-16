@@ -63,7 +63,7 @@ view : { width : Float, height : Float } -> Standings -> Html msg
 view size standings =
     let
         closeBattles =
-            if standings.laps > 1 then
+            if Standings.lapCount standings > 1 then
                 detectCloseBattles standings
 
             else

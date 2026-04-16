@@ -14,7 +14,6 @@ import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
-import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
@@ -43,9 +42,9 @@ buildClassProgressionData clock standings selectedCars =
 
         classCars : List StandingsEntry
         classCars =
-            standings.entriesByClass
+            Standings.toClassList standings
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
-                |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
+                |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
 
         series =
@@ -112,8 +111,8 @@ calculateLapThreshold clock standings =
         timeThreshold =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
-    SortedList.head standings.entries
-        |> Maybe.map (\leader -> Standings.getCarHistory leader.metadata.carNumber standings)
+    Standings.leader standings
+        |> Maybe.map (\l -> Standings.getCarHistory l.metadata.carNumber standings)
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap
         |> Maybe.withDefault 1

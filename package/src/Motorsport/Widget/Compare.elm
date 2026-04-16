@@ -12,11 +12,10 @@ import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
-import SortedList
 
 
 
@@ -169,8 +168,7 @@ resolveCars carNumbers standings =
     carNumbers
         |> List.filterMap
             (\carNumber ->
-                standings.entries
-                    |> SortedList.toList
+                Standings.toList standings
                     |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
             )
 
@@ -179,8 +177,7 @@ viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
     let
         groupedByClass =
-            props.standings.entries
-                |> SortedList.toList
+            Standings.toList props.standings
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
     in

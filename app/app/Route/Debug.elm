@@ -23,7 +23,6 @@ import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
-import SortedList
 import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
@@ -175,7 +174,7 @@ view app { analysis, raceControl } { leaderboardState } =
                         |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
                         |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
               in
-              DataView.view (config analysis standings) leaderboardState (SortedList.toList standings.entries)
+              DataView.view (config analysis standings) leaderboardState (Standings.toList standings)
             ]
         }
 

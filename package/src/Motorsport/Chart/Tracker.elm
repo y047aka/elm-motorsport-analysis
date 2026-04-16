@@ -7,10 +7,9 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
-import SortedList
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
@@ -287,7 +286,7 @@ renderCars : Direction -> TrackConfig -> Standings -> Svg msg
 renderCars direction config standings =
     Keyed.node "g"
         []
-        (SortedList.toList standings.entries
+        (Standings.toList standings
             |> List.reverse
             |> List.map
                 (\car ->

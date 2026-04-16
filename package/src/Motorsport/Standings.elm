@@ -1,7 +1,8 @@
 module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , SectorProgress, MiniSectorProgress
-    , init, fromLaps
+    , init, fromLaps, fromList
+    , toList, toClassList, leader, lapCount
     , getCarHistory, getLastLap
     , groupCarsByCloseIntervals
     , getRecentLaps
@@ -11,7 +12,9 @@ module Motorsport.Standings exposing
 
 @docs Standings, StandingsEntry
 @docs SectorProgress, MiniSectorProgress
-@docs init, fromLaps
+@docs init, fromLaps, fromList
+
+@docs toList, toClassList, leader, lapCount
 
 @docs getCarHistory, getLastLap
 
@@ -36,13 +39,14 @@ import Motorsport.Sector exposing (Sector(..))
 import SortedList exposing (SortedList)
 
 
-type alias Standings =
-    { laps : Int
-    , entries : SortedList ByPosition StandingsEntry
-    , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
-    , lapHistory : Dict String (List Lap)
-    , carLapData : Dict String { currentLap : Maybe Lap, lastLap : Maybe Lap }
-    }
+type Standings
+    = Standings
+        { laps : Int
+        , entries : SortedList ByPosition StandingsEntry
+        , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
+        , lapHistory : Dict String (List Lap)
+        , carLapData : Dict String { currentLap : Maybe Lap, lastLap : Maybe Lap }
+        }
 
 
 type alias StandingsEntry =
@@ -77,19 +81,19 @@ type alias MiniSectorProgress =
 
 
 init : { elapsed : Duration, lapCount : Int, cars : RunningOrder } -> Standings
-init { elapsed, lapCount, cars } =
+init config =
     let
         carsList =
-            RunningOrder.toList cars
+            RunningOrder.toList config.cars
 
         leaderCar =
-            RunningOrder.leader cars
+            RunningOrder.leader config.cars
 
         positionsInClass =
-            positionsInClassByCarNumber cars
+            positionsInClassByCarNumber config.cars
 
         raceClock =
-            { elapsed = elapsed }
+            { elapsed = config.elapsed }
 
         entries =
             carsList
@@ -107,7 +111,7 @@ init { elapsed, lapCount, cars } =
                                 Maybe.withDefault Lap.empty car.lastLap
 
                             timing =
-                                init_timing elapsed
+                                init_timing config.elapsed
                                     { leader = Just leaderCar
                                     , rival = List.Extra.getAt (index - 1) carsList
                                     }
@@ -137,21 +141,22 @@ init { elapsed, lapCount, cars } =
         sortedEntries =
             Ordering.byPosition entries
     in
-    { laps = lapCount
-    , entries = sortedEntries
-    , entriesByClass =
-        sortedEntries
-            |> SortedList.gatherEqualsBy (.metadata >> .class)
-            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-    , lapHistory =
-        carsList
-            |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
-            |> Dict.fromList
-    , carLapData =
-        carsList
-            |> List.map (\car -> ( car.metadata.carNumber, { currentLap = car.currentLap, lastLap = car.lastLap } ))
-            |> Dict.fromList
-    }
+    Standings
+        { laps = config.lapCount
+        , entries = sortedEntries
+        , entriesByClass =
+            sortedEntries
+                |> SortedList.gatherEqualsBy (.metadata >> .class)
+                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , lapHistory =
+            carsList
+                |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
+                |> Dict.fromList
+        , carLapData =
+            carsList
+                |> List.map (\car -> ( car.metadata.carNumber, { currentLap = car.currentLap, lastLap = car.lastLap } ))
+                |> Dict.fromList
+        }
 
 
 {-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
@@ -191,36 +196,57 @@ fromLaps baseMetadata laps =
         lapKey lap =
             String.fromInt lap.lap
     in
-    { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
-    , entries = sortedEntries
-    , entriesByClass =
-        sortedEntries
-            |> SortedList.gatherEqualsBy (.metadata >> .class)
-            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-    , lapHistory =
-        laps
-            |> List.map (\lap -> ( lapKey lap, [ lap ] ))
-            |> Dict.fromList
-    , carLapData =
-        laps
-            |> List.map (\lap -> ( lapKey lap, { currentLap = Just lap, lastLap = Just lap } ))
-            |> Dict.fromList
-    }
+    Standings
+        { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
+        , entries = sortedEntries
+        , entriesByClass =
+            sortedEntries
+                |> SortedList.gatherEqualsBy (.metadata >> .class)
+                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , lapHistory =
+            laps
+                |> List.map (\lap -> ( lapKey lap, [ lap ] ))
+                |> Dict.fromList
+        , carLapData =
+            laps
+                |> List.map (\lap -> ( lapKey lap, { currentLap = Just lap, lastLap = Just lap } ))
+                |> Dict.fromList
+        }
+
+
+{-| `StandingsEntry` のリストから `Standings` を組み立てる。テスト用途などで直接エントリを指定したい場合に使う。
+-}
+fromList : List StandingsEntry -> Standings
+fromList entries =
+    let
+        sortedEntries =
+            Ordering.byPosition entries
+    in
+    Standings
+        { laps = entries |> List.filterMap (.currentLap >> Maybe.map .lap) |> List.maximum |> Maybe.withDefault 0
+        , entries = sortedEntries
+        , entriesByClass =
+            sortedEntries
+                |> SortedList.gatherEqualsBy (.metadata >> .class)
+                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , lapHistory = Dict.empty
+        , carLapData = Dict.empty
+        }
 
 
 {-| carNumber からラップ履歴を取得する
 -}
 getCarHistory : String -> Standings -> List Lap
-getCarHistory carNumber standings =
-    Dict.get carNumber standings.lapHistory
+getCarHistory carNumber (Standings s) =
+    Dict.get carNumber s.lapHistory
         |> Maybe.withDefault []
 
 
 {-| carNumber から lastLap を取得する
 -}
 getLastLap : String -> Standings -> Maybe Lap
-getLastLap carNumber standings =
-    Dict.get carNumber standings.carLapData
+getLastLap carNumber (Standings s) =
+    Dict.get carNumber s.carLapData
         |> Maybe.andThen .lastLap
 
 
@@ -234,7 +260,7 @@ type alias TimingState =
 
 
 init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
-init_timing elapsed { leader, rival } car =
+init_timing elapsed rivals car =
     let
         raceClock =
             { elapsed = elapsed }
@@ -264,10 +290,10 @@ init_timing elapsed { leader, rival } car =
     , sector = currentSector
     , miniSector = currentMiniSector
     , gapToLeader =
-        Maybe.map2 (Gap.at elapsed) leader (Just car)
+        Maybe.map2 (Gap.at elapsed) rivals.leader (Just car)
             |> Maybe.withDefault Gap.None
     , intervalToAhead =
-        Maybe.map2 (Gap.at elapsed) rival (Just car)
+        Maybe.map2 (Gap.at elapsed) rivals.rival (Just car)
             |> Maybe.withDefault Gap.None
     }
 
@@ -285,8 +311,29 @@ positionsInClassByCarNumber raceOrder =
         |> Dict.fromList
 
 
+toList : Standings -> List StandingsEntry
+toList (Standings s) =
+    SortedList.toList s.entries
+
+
+toClassList : Standings -> List ( Class, List StandingsEntry )
+toClassList (Standings s) =
+    s.entriesByClass
+        |> List.map (Tuple.mapSecond SortedList.toList)
+
+
+leader : Standings -> Maybe StandingsEntry
+leader (Standings s) =
+    SortedList.head s.entries
+
+
+lapCount : Standings -> Int
+lapCount (Standings s) =
+    s.laps
+
+
 groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
-groupCarsByCloseIntervals standings =
+groupCarsByCloseIntervals (Standings s) =
     let
         isCloseToNext current =
             case current.intervalToAhead of
@@ -308,7 +355,7 @@ groupCarsByCloseIntervals standings =
                     in
                     (first :: group) :: groupCars remaining
     in
-    SortedList.toList standings.entries
+    SortedList.toList s.entries
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
 

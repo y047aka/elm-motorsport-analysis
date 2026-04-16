@@ -69,10 +69,9 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Standings exposing (MiniSectorProgress, SectorProgress, Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (MiniSectorProgress, SectorProgress, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
-import SortedList
 
 
 
@@ -760,7 +759,7 @@ viewLastLapColumn_LeMans24h analysis maybeLap =
 
 view : Config StandingsEntry msg -> Model -> Standings -> Html msg
 view config state standings =
-    DataView.view config state (SortedList.toList standings.entries)
+    DataView.view config state (Standings.toList standings)
 
 
 

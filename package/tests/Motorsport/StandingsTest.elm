@@ -1,16 +1,13 @@
 module Motorsport.StandingsTest exposing (suite)
 
 import Expect
-import Dict
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Ordering as Ordering
 import Motorsport.Standings as Standings exposing (StandingsEntry)
-import SortedList
 import Test exposing (Test, describe, test)
 
 
@@ -27,21 +24,8 @@ suite =
                             , createStandingsEntry 3 "3" 1501 -- 1.501s - not close
                             ]
 
-                        sortedEntries =
-                            Ordering.byPosition entries
-
-                        standings =
-                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
-                            , entries = sortedEntries
-                            , entriesByClass =
-                                sortedEntries
-                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-                            , lapHistory = Dict.empty
-                            , carLapData = Dict.empty
-                            }
                     in
-                    Standings.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals (Standings.fromList entries)
                         |> Expect.equal
                             [ [ createStandingsEntry 1 "1" 1000
                               , createStandingsEntry 2 "2" 1500
@@ -56,21 +40,8 @@ suite =
                             , createStandingsEntry 3 "3" 1200 -- Continues Group 2
                             ]
 
-                        sortedEntries =
-                            Ordering.byPosition entries
-
-                        standings =
-                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
-                            , entries = sortedEntries
-                            , entriesByClass =
-                                sortedEntries
-                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-                            , lapHistory = Dict.empty
-                            , carLapData = Dict.empty
-                            }
                     in
-                    Standings.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals (Standings.fromList entries)
                         |> Expect.equal
                             [ [ createStandingsEntry 2 "2" 2000
                               , createStandingsEntry 3 "3" 1200
@@ -85,21 +56,8 @@ suite =
                             , createStandingsEntryWithGap 3 "3" (Gap.Laps 1)
                             ]
 
-                        sortedEntries =
-                            Ordering.byPosition entries
-
-                        standings =
-                            { laps = List.head entries |> Maybe.map .lapsCompleted |> Maybe.withDefault 0
-                            , entries = sortedEntries
-                            , entriesByClass =
-                                sortedEntries
-                                    |> SortedList.gatherEqualsBy (.metadata >> .class)
-                                    |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-                            , lapHistory = Dict.empty
-                            , carLapData = Dict.empty
-                            }
                     in
-                    Standings.groupCarsByCloseIntervals standings
+                    Standings.groupCarsByCloseIntervals (Standings.fromList entries)
                         |> Expect.equal []
             ]
         ]
