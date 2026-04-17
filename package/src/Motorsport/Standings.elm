@@ -2,6 +2,7 @@ module Motorsport.Standings exposing
     ( Standings, StandingsEntry
     , SectorProgress, MiniSectorProgress
     , SectorTimes
+    , SectorPerformance, MiniSectorPerformance
     , init, fromLaps, fromList
     , toList, toClassList, leader, lapCount
     , getCarHistory
@@ -14,6 +15,7 @@ module Motorsport.Standings exposing
 @docs Standings, StandingsEntry
 @docs SectorProgress, MiniSectorProgress
 @docs SectorTimes
+@docs SectorPerformance, MiniSectorPerformance
 @docs init, fromLaps, fromList
 
 @docs toList, toClassList, leader, lapCount
@@ -35,7 +37,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
-import Motorsport.Lap.Performance exposing (LapTime, performanceLevel)
+import Motorsport.Lap.Performance exposing (LapTime, LeMans2025MiniSectorFastest, MiniSectorTime, PerformanceLevel(..), SectorTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
@@ -61,6 +63,32 @@ type alias SectorTimes =
     }
 
 
+type alias SectorPerformance =
+    { sector_1 : SectorTime
+    , sector_2 : SectorTime
+    , sector_3 : SectorTime
+    }
+
+
+type alias MiniSectorPerformance =
+    { scl2 : MiniSectorTime
+    , z4 : MiniSectorTime
+    , ip1 : MiniSectorTime
+    , z12 : MiniSectorTime
+    , sclc : MiniSectorTime
+    , a7_1 : MiniSectorTime
+    , ip2 : MiniSectorTime
+    , a8_1 : MiniSectorTime
+    , sclb : MiniSectorTime
+    , porin : MiniSectorTime
+    , porout : MiniSectorTime
+    , pitref : MiniSectorTime
+    , scl1 : MiniSectorTime
+    , fordout : MiniSectorTime
+    , fl : MiniSectorTime
+    }
+
+
 type alias StandingsEntry =
     { position : Int
     , positionInClass : Int
@@ -79,8 +107,8 @@ type alias StandingsEntry =
     , currentLapProgress : Float
     , lastLap : Maybe LapTime
     , bestLap : Maybe LapTime
-    , lastLapSectors : Maybe SectorTimes
-    , lastLapMiniSectors : Maybe MiniSectors
+    , lastLapSectors : Maybe SectorPerformance
+    , lastLapMiniSectors : Maybe MiniSectorPerformance
     , currentDriver : Maybe Driver
     }
 
@@ -97,8 +125,17 @@ type alias MiniSectorProgress =
     }
 
 
-init : { elapsed : Duration, lapCount : Int, cars : RunningOrder, fastestLapTime : Duration } -> Standings
-init config =
+init :
+    { a
+        | fastestLapTime : Duration
+        , sector_1_fastest : Duration
+        , sector_2_fastest : Duration
+        , sector_3_fastest : Duration
+        , miniSectorFastest : LeMans2025MiniSectorFastest
+    }
+    -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
+    -> Standings
+init fastest config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -160,7 +197,7 @@ init config =
                                 |> Maybe.map
                                     (\lap ->
                                         { time = lap.time
-                                        , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = config.fastestLapTime }
+                                        , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastest.fastestLapTime }
                                         }
                                     )
                         , bestLap =
@@ -168,11 +205,11 @@ init config =
                                 |> Maybe.map
                                     (\lap ->
                                         { time = lap.best
-                                        , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = config.fastestLapTime }
+                                        , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastest.fastestLapTime }
                                         }
                                     )
-                        , lastLapSectors = car.lastLap |> Maybe.map extractSectorTimes
-                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen .miniSectors
+                        , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance fastest)
+                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance fastest)
                         , currentDriver = car.currentDriver
                         }
                     )
@@ -203,8 +240,13 @@ init config =
 fromLaps : Car.Metadata -> List Lap -> Standings
 fromLaps baseMetadata laps =
     let
-        fastestLapTime =
-            laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
+        fastest =
+            { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
+            , sector_1_fastest = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
+            , sector_2_fastest = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
+            , sector_3_fastest = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
+            , miniSectorFastest = calculateMiniSectorFastest [ laps ]
+            }
 
         entries =
             laps
@@ -228,15 +270,15 @@ fromLaps baseMetadata laps =
                         , lastLap =
                             Just
                                 { time = lap.time
-                                , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
+                                , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastest.fastestLapTime }
                                 }
                         , bestLap =
                             Just
                                 { time = lap.best
-                                , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastestLapTime }
+                                , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastest.fastestLapTime }
                                 }
-                        , lastLapSectors = Just (extractSectorTimes lap)
-                        , lastLapMiniSectors = lap.miniSectors
+                        , lastLapSectors = Just (extractSectorPerformance fastest lap)
+                        , lastLapMiniSectors = extractMiniSectorPerformance fastest lap
                         , currentDriver = Just lap.driver
                         }
                     )
@@ -289,6 +331,65 @@ extractSectorTimes lap =
     , s2_best = lap.s2_best
     , s3_best = lap.s3_best
     }
+
+
+extractSectorPerformance :
+    { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    -> Lap
+    -> SectorPerformance
+extractSectorPerformance fastest lap =
+    { sector_1 =
+        { time = lap.sector_1
+        , performance = performanceLevel { time = lap.sector_1, personalBest = lap.s1_best, fastest = fastest.sector_1_fastest }
+        }
+    , sector_2 =
+        { time = lap.sector_2
+        , performance = performanceLevel { time = lap.sector_2, personalBest = lap.s2_best, fastest = fastest.sector_2_fastest }
+        }
+    , sector_3 =
+        { time = lap.sector_3
+        , performance = performanceLevel { time = lap.sector_3, personalBest = lap.s3_best, fastest = fastest.sector_3_fastest }
+        }
+    }
+
+
+extractMiniSectorPerformance :
+    { a | miniSectorFastest : LeMans2025MiniSectorFastest }
+    -> Lap
+    -> Maybe MiniSectorPerformance
+extractMiniSectorPerformance fastest lap =
+    lap.miniSectors
+        |> Maybe.map
+            (\ms ->
+                let
+                    toMiniSectorTime msd fastestTime =
+                        { time = msd.time
+                        , performance =
+                            case ( msd.time, msd.best ) of
+                                ( Just t, Just b ) ->
+                                    performanceLevel { time = t, personalBest = b, fastest = fastestTime }
+
+                                _ ->
+                                    Standard
+                        }
+                in
+                { scl2 = toMiniSectorTime ms.scl2 fastest.miniSectorFastest.scl2
+                , z4 = toMiniSectorTime ms.z4 fastest.miniSectorFastest.z4
+                , ip1 = toMiniSectorTime ms.ip1 fastest.miniSectorFastest.ip1
+                , z12 = toMiniSectorTime ms.z12 fastest.miniSectorFastest.z12
+                , sclc = toMiniSectorTime ms.sclc fastest.miniSectorFastest.sclc
+                , a7_1 = toMiniSectorTime ms.a7_1 fastest.miniSectorFastest.a7_1
+                , ip2 = toMiniSectorTime ms.ip2 fastest.miniSectorFastest.ip2
+                , a8_1 = toMiniSectorTime ms.a8_1 fastest.miniSectorFastest.a8_1
+                , sclb = toMiniSectorTime ms.sclb fastest.miniSectorFastest.sclb
+                , porin = toMiniSectorTime ms.porin fastest.miniSectorFastest.porin
+                , porout = toMiniSectorTime ms.porout fastest.miniSectorFastest.porout
+                , pitref = toMiniSectorTime ms.pitref fastest.miniSectorFastest.pitref
+                , scl1 = toMiniSectorTime ms.scl1 fastest.miniSectorFastest.scl1
+                , fordout = toMiniSectorTime ms.fordout fastest.miniSectorFastest.fordout
+                , fl = toMiniSectorTime ms.fl fastest.miniSectorFastest.fl
+                }
+            )
 
 
 {-| carNumber からラップ履歴を取得する

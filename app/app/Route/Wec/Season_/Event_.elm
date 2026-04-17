@@ -235,11 +235,10 @@ view app { eventSummary, analysis, raceControl } m =
                 [ navigation eventSummary raceControl m.mode
                 , let
                     standings =
-                        Standings.init
+                        Standings.init analysis
                             { elapsed = Clock.getElapsed raceControl.clock
                             , lapCount = raceControl.lapCount
                             , cars = raceControl.cars
-                            , fastestLapTime = analysis.fastestLapTime
                             }
 
                     compareProps =

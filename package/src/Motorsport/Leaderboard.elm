@@ -69,7 +69,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (LapTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Standings as Standings exposing (MiniSectorProgress, SectorProgress, SectorTimes, Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 
@@ -602,21 +602,20 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorTimes }
+    { getter : data -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorPerformance }
     , sorter : data -> data -> Order
-    , analysis : Analysis
     }
     -> Column data msg
-lastLapColumn_Wec { getter, sorter, analysis } =
+lastLapColumn_Wec { getter, sorter } =
     { name = "Last Lap"
-    , view = getter >> Lazy.lazy2 viewLastLapColumn_Wec analysis
+    , view = getter >> Lazy.lazy viewLastLapColumn_Wec
     , sorter = sorter
     , filter = \_ _ -> True
     }
 
 
-viewLastLapColumn_Wec : Analysis -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorTimes } -> Html msg
-viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
+viewLastLapColumn_Wec : { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
+viewLastLapColumn_Wec { lastLap, lastLapSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -632,15 +631,12 @@ viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell sector_ =
+        sectorCell { performance } =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , property "background-color"
-                        (performanceLevel sector_
-                            |> Performance.toColorVariable
-                        )
+                    , property "background-color" (Performance.toColorVariable performance)
                     ]
                 ]
                 []
@@ -650,7 +646,7 @@ viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
                 , case lastLapSectors of
-                    Just { sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
+                    Just { sector_1, sector_2, sector_3 } ->
                         div
                             [ css
                                 [ property "display" "grid"
@@ -658,9 +654,9 @@ viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
                                 , property "column-gap" "4px"
                                 ]
                             ]
-                            [ sectorCell { time = sector_1, personalBest = s1_best, fastest = analysis.sector_1_fastest }
-                            , sectorCell { time = sector_2, personalBest = s2_best, fastest = analysis.sector_2_fastest }
-                            , sectorCell { time = sector_3, personalBest = s3_best, fastest = analysis.sector_3_fastest }
+                            [ sectorCell sector_1
+                            , sectorCell sector_2
+                            , sectorCell sector_3
                             ]
 
                     Nothing ->
@@ -672,21 +668,20 @@ viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectors }
+    { getter : data -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
     , sorter : data -> data -> Order
-    , analysis : Analysis
     }
     -> Column data msg
-lastLapColumn_LeMans24h { getter, sorter, analysis } =
+lastLapColumn_LeMans24h { getter, sorter } =
     { name = "Last Lap"
-    , view = getter >> Lazy.lazy2 viewLastLapColumn_LeMans24h analysis
+    , view = getter >> Lazy.lazy viewLastLapColumn_LeMans24h
     , sorter = sorter
     , filter = \_ _ -> True
     }
 
 
-viewLastLapColumn_LeMans24h : Analysis -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectors } -> Html msg
-viewLastLapColumn_LeMans24h analysis { lastLap, lastLapMiniSectors } =
+viewLastLapColumn_LeMans24h : { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
+viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -702,15 +697,12 @@ viewLastLapColumn_LeMans24h analysis { lastLap, lastLapMiniSectors } =
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell sector_ =
+        sectorCell { performance } =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , property "background-color"
-                        (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
-                            |> Performance.toColorVariable
-                        )
+                    , property "background-color" (Performance.toColorVariable performance)
                     ]
                 ]
                 []
@@ -721,25 +713,25 @@ viewLastLapColumn_LeMans24h analysis { lastLap, lastLapMiniSectors } =
                 [ lapTimeView lapTime
                 , lastLapMiniSectors
                     |> Maybe.map
-                        (\miniSectors_ ->
+                        (\ms ->
                             div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                                [ sectorCell { time = miniSectors_.scl2.time, personalBest = miniSectors_.scl2.best, fastest = analysis.miniSectorFastest.scl2 }
-                                , sectorCell { time = miniSectors_.z4.time, personalBest = miniSectors_.z4.best, fastest = analysis.miniSectorFastest.z4 }
-                                , sectorCell { time = miniSectors_.ip1.time, personalBest = miniSectors_.ip1.best, fastest = analysis.miniSectorFastest.ip1 }
+                                [ sectorCell ms.scl2
+                                , sectorCell ms.z4
+                                , sectorCell ms.ip1
                                 , div [] [] -- spacer
-                                , sectorCell { time = miniSectors_.z12.time, personalBest = miniSectors_.z12.best, fastest = analysis.miniSectorFastest.z12 }
-                                , sectorCell { time = miniSectors_.sclc.time, personalBest = miniSectors_.sclc.best, fastest = analysis.miniSectorFastest.sclc }
-                                , sectorCell { time = miniSectors_.a7_1.time, personalBest = miniSectors_.a7_1.best, fastest = analysis.miniSectorFastest.a7_1 }
-                                , sectorCell { time = miniSectors_.ip2.time, personalBest = miniSectors_.ip2.best, fastest = analysis.miniSectorFastest.ip2 }
+                                , sectorCell ms.z12
+                                , sectorCell ms.sclc
+                                , sectorCell ms.a7_1
+                                , sectorCell ms.ip2
                                 , div [] [] -- spacer
-                                , sectorCell { time = miniSectors_.a8_1.time, personalBest = miniSectors_.a8_1.best, fastest = analysis.miniSectorFastest.a8_1 }
-                                , sectorCell { time = miniSectors_.sclb.time, personalBest = miniSectors_.sclb.best, fastest = analysis.miniSectorFastest.sclb }
-                                , sectorCell { time = miniSectors_.porin.time, personalBest = miniSectors_.porin.best, fastest = analysis.miniSectorFastest.porin }
-                                , sectorCell { time = miniSectors_.porout.time, personalBest = miniSectors_.porout.best, fastest = analysis.miniSectorFastest.porout }
-                                , sectorCell { time = miniSectors_.pitref.time, personalBest = miniSectors_.pitref.best, fastest = analysis.miniSectorFastest.pitref }
-                                , sectorCell { time = miniSectors_.scl1.time, personalBest = miniSectors_.scl1.best, fastest = analysis.miniSectorFastest.scl1 }
-                                , sectorCell { time = miniSectors_.fordout.time, personalBest = miniSectors_.fordout.best, fastest = analysis.miniSectorFastest.fordout }
-                                , sectorCell { time = miniSectors_.fl.time, personalBest = miniSectors_.fl.best, fastest = analysis.miniSectorFastest.fl }
+                                , sectorCell ms.a8_1
+                                , sectorCell ms.sclb
+                                , sectorCell ms.porin
+                                , sectorCell ms.porout
+                                , sectorCell ms.pitref
+                                , sectorCell ms.scl1
+                                , sectorCell ms.fordout
+                                , sectorCell ms.fl
                                 ]
                         )
                     |> Maybe.withDefault (text "-")

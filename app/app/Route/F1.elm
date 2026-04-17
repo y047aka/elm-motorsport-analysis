@@ -167,11 +167,10 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 Leaderboard ->
                     let
                         standings =
-                            Standings.init
+                            Standings.init analysis_F1
                                 { elapsed = Clock.getElapsed raceControl_F1.clock
                                 , lapCount = raceControl_F1.lapCount
                                 , cars = raceControl_F1.cars
-                                , fastestLapTime = analysis_F1.fastestLapTime
                                 }
                     in
                     Leaderboard.view (config analysis_F1 standings) leaderboardState standings

@@ -179,11 +179,10 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
             [ header shared
             , let
                 standings =
-                    Standings.init
+                    Standings.init analysis
                         { elapsed = Clock.getElapsed raceControl.clock
                         , lapCount = raceControl.lapCount
                         , cars = raceControl.cars
-                        , fastestLapTime = analysis.fastestLapTime
                         }
               in
               case mode of
@@ -292,7 +291,6 @@ config season analysis standings =
         , lastLapColumn_Wec
             { getter = identity
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
             }
         , bestTimeColumn { getter = .bestLap }
         , performanceColumn
