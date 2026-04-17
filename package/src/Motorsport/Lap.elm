@@ -1,5 +1,6 @@
 module Motorsport.Lap exposing
     ( Lap, empty
+    , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , currentSector
@@ -10,6 +11,7 @@ module Motorsport.Lap exposing
 {-|
 
 @docs Lap, empty
+@docs MiniSectors, MiniSectorData
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 

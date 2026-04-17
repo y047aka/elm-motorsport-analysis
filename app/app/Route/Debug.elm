@@ -181,13 +181,6 @@ view app { analysis, raceControl } { leaderboardState } =
 
 config : Analysis -> Standings -> Leaderboard.Config StandingsEntry Msg
 config analysis standings =
-    let
-        currentLapFor item =
-            item.currentLap
-
-        lastLapFor item =
-            Standings.getLastLap item.metadata.carNumber standings
-    in
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -199,7 +192,7 @@ config analysis standings =
             { label = "S1"
             , getter =
                 \item ->
-                    currentLapFor item
+                    item.currentLapSectors
                         |> Maybe.map
                             (\{ sector_1, s1_best } ->
                                 { time = sector_1
@@ -211,14 +204,14 @@ config analysis standings =
             }
         , customColumn
             { label = "S1 Best"
-            , getter = \item -> currentLapFor item |> Maybe.map (.s1_best >> Duration.toString) |> Maybe.withDefault ""
-            , sorter = compareBy (\item -> currentLapFor item |> Maybe.map .s1_best |> Maybe.withDefault 0)
+            , getter = \item -> item.currentLapSectors |> Maybe.map (.s1_best >> Duration.toString) |> Maybe.withDefault ""
+            , sorter = compareBy (\item -> item.currentLapSectors |> Maybe.map .s1_best |> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S2"
             , getter =
                 \item ->
-                    currentLapFor item
+                    item.currentLapSectors
                         |> Maybe.map
                             (\{ sector_2, s2_best } ->
                                 { time = sector_2
@@ -230,14 +223,14 @@ config analysis standings =
             }
         , customColumn
             { label = "S2 Best"
-            , getter = \item -> currentLapFor item |> Maybe.map (.s2_best >> Duration.toString) |> Maybe.withDefault ""
-            , sorter = compareBy (\item -> currentLapFor item |> Maybe.map .s2_best |> Maybe.withDefault 0)
+            , getter = \item -> item.currentLapSectors |> Maybe.map (.s2_best >> Duration.toString) |> Maybe.withDefault ""
+            , sorter = compareBy (\item -> item.currentLapSectors |> Maybe.map .s2_best |> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S3"
             , getter =
                 \item ->
-                    currentLapFor item
+                    item.currentLapSectors
                         |> Maybe.map
                             (\{ sector_3, s3_best } ->
                                 { time = sector_3
@@ -249,11 +242,11 @@ config analysis standings =
             }
         , customColumn
             { label = "S3 Best"
-            , getter = \item -> currentLapFor item |> Maybe.map (.s3_best >> Duration.toString) |> Maybe.withDefault ""
-            , sorter = compareBy (\item -> currentLapFor item |> Maybe.map .s3_best |> Maybe.withDefault 0)
+            , getter = \item -> item.currentLapSectors |> Maybe.map (.s3_best >> Duration.toString) |> Maybe.withDefault ""
+            , sorter = compareBy (\item -> item.currentLapSectors |> Maybe.map .s3_best |> Maybe.withDefault 0)
             }
         , lastLapColumn_F1
-            { getter = lastLapFor
+            { getter = identity
             , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }

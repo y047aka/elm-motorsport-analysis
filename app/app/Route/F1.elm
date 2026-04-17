@@ -200,7 +200,7 @@ config analysis standings =
             , sorter = compareBy .position
             }
         , lastLapColumn_F1
-            { getter = \item -> Standings.getLastLap item.metadata.carNumber standings
+            { getter = identity
             , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }

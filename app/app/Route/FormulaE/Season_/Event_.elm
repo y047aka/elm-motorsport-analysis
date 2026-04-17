@@ -285,11 +285,11 @@ config season analysis standings =
             }
         , currentLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (\item -> item.currentLap |> Maybe.map .time |> Maybe.withDefault 0)
+            , sorter = compareBy (\item -> item.currentLapTime |> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_Wec
-            { getter = \item -> Standings.getLastLap item.metadata.carNumber standings
+            { getter = identity
             , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }

@@ -79,7 +79,10 @@ createStandingsEntryWithGap position carNumber gap =
     , status = Racing
     , metadata = createMetadata carNumber
     , lapsCompleted = 5
-    , currentLap = Nothing
+    , currentLapTime = Nothing
+    , currentLapBest = Nothing
+    , currentLapSectors = Nothing
+    , currentLapMiniSectors = Nothing
     , currentLapElapsed = 90000 -- 1:30.000
     , sector = Nothing
     , miniSector = Nothing
@@ -88,6 +91,8 @@ createStandingsEntryWithGap position carNumber gap =
     , currentLapProgress = 0
     , lastLapTime = Nothing
     , bestLapTime = Nothing
+    , lastLapSectors = Nothing
+    , lastLapMiniSectors = Nothing
     , currentDriver = Nothing
     }
 
