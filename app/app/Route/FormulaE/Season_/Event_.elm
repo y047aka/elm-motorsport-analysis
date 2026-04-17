@@ -285,7 +285,7 @@ config season analysis standings =
             }
         , currentLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (\item -> item.currentLapTime |> Maybe.withDefault 0)
+            , sorter = compareBy (.currentLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_Wec
