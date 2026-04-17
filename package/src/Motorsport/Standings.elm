@@ -370,7 +370,7 @@ extractMiniSectorPerformance fastest lap =
                                     performanceLevel { time = t, personalBest = b, fastest = fastestTime }
 
                                 _ ->
-                                    Standard
+                                    Incompleted
                         }
                 in
                 { scl2 = toMiniSectorTime ms.scl2 fastest.miniSectorFastest.scl2

@@ -78,6 +78,7 @@ type PerformanceLevel
     = Fastest
     | PersonalBest
     | Standard
+    | Incompleted
 
 
 performanceLevel : { a | time : Duration, personalBest : Duration, fastest : Duration } -> PerformanceLevel
@@ -94,7 +95,7 @@ performanceLevel { time, personalBest, fastest } =
 
 isStandard : PerformanceLevel -> Bool
 isStandard level =
-    level == Standard
+    level == Standard || level == Incompleted
 
 
 toColorVariable : PerformanceLevel -> String
@@ -107,6 +108,9 @@ toColorVariable level =
             "var(--performance-personal-best)"
 
         Standard ->
+            "var(--performance-standard)"
+
+        Incompleted ->
             "var(--performance-standard)"
 
 
