@@ -247,10 +247,9 @@ config analysis standings =
             }
         , lastLapColumn_F1
             { getter = identity
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
-            , analysis = analysis
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLapTime }
+        , bestTimeColumn { getter = .bestLap }
         ]
     }
 

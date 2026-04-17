@@ -67,7 +67,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
-import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (LapTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Standings as Standings exposing (MiniSectorProgress, SectorProgress, SectorTimes, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
@@ -195,12 +195,12 @@ sectorTimeColumn { label, getter } =
     }
 
 
-bestTimeColumn : { getter : data -> Maybe Duration } -> Column data msg
+bestTimeColumn : { getter : data -> Maybe LapTime } -> Column data msg
 bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
-        , getter = getter >> Maybe.map Duration.toString >> Maybe.withDefault "-"
-        , sorter = compareBy (getter >> Maybe.withDefault 0)
+        , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
+        , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
         }
 
 
@@ -338,38 +338,30 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 
 lastLapColumn_F1 :
-    { getter : data -> { a | lastLapTime : Maybe Duration, bestLapTime : Maybe Duration }
+    { getter : data -> { a | lastLap : Maybe LapTime }
     , sorter : data -> data -> Order
-    , analysis : Analysis
     }
     -> Column data msg
-lastLapColumn_F1 { getter, sorter, analysis } =
+lastLapColumn_F1 { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
-            >> (\{ lastLapTime, bestLapTime } ->
-                    Maybe.map2
-                        (\time best ->
-                            span
-                                [ css
-                                    [ let
-                                        status =
-                                            performanceLevel { time = time, personalBest = best, fastest = analysis.fastestLapTime }
-                                      in
-                                      if Performance.isStandard status then
-                                        batch []
+            >> .lastLap
+            >> Maybe.map
+                (\{ time, performance } ->
+                    span
+                        [ css
+                            [ if Performance.isStandard performance then
+                                batch []
 
-                                      else
-                                        Performance.toColorVariable status
-                                            |> property "color"
-                                    ]
-                                ]
-                                [ text (Duration.toString time) ]
-                        )
-                        lastLapTime
-                        bestLapTime
-                        |> Maybe.withDefault (text "-")
-               )
+                              else
+                                Performance.toColorVariable performance
+                                    |> property "color"
+                            ]
+                        ]
+                        [ text (Duration.toString time) ]
+                )
+            >> Maybe.withDefault (text "-")
     , sorter = sorter
     , filter = \_ _ -> True
     }
@@ -610,7 +602,7 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLapTime : Maybe Duration, bestLapTime : Maybe Duration, lastLapSectors : Maybe SectorTimes }
+    { getter : data -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorTimes }
     , sorter : data -> data -> Order
     , analysis : Analysis
     }
@@ -623,22 +615,18 @@ lastLapColumn_Wec { getter, sorter, analysis } =
     }
 
 
-viewLastLapColumn_Wec : Analysis -> { a | lastLapTime : Maybe Duration, bestLapTime : Maybe Duration, lastLapSectors : Maybe SectorTimes } -> Html msg
-viewLastLapColumn_Wec analysis { lastLapTime, bestLapTime, lastLapSectors } =
+viewLastLapColumn_Wec : Analysis -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorTimes } -> Html msg
+viewLastLapColumn_Wec analysis { lastLap, lastLapSectors } =
     let
-        lapTime { time, personalBest } =
+        lapTimeView { time, performance } =
             div
                 [ css
                     [ textAlign center
-                    , let
-                        status =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
-                      in
-                      if Performance.isStandard status then
+                    , if Performance.isStandard performance then
                         batch []
 
                       else
-                        Performance.toColorVariable status
+                        Performance.toColorVariable performance
                             |> property "color"
                     ]
                 ]
@@ -657,10 +645,10 @@ viewLastLapColumn_Wec analysis { lastLapTime, bestLapTime, lastLapSectors } =
                 ]
                 []
     in
-    case Maybe.map2 Tuple.pair lastLapTime bestLapTime of
-        Just ( time, best ) ->
+    case lastLap of
+        Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ lapTime { time = time, personalBest = best }
+                [ lapTimeView lapTime
                 , case lastLapSectors of
                     Just { sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
                         div
@@ -684,7 +672,7 @@ viewLastLapColumn_Wec analysis { lastLapTime, bestLapTime, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLapTime : Maybe Duration, bestLapTime : Maybe Duration, lastLapMiniSectors : Maybe MiniSectors }
+    { getter : data -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectors }
     , sorter : data -> data -> Order
     , analysis : Analysis
     }
@@ -697,22 +685,18 @@ lastLapColumn_LeMans24h { getter, sorter, analysis } =
     }
 
 
-viewLastLapColumn_LeMans24h : Analysis -> { a | lastLapTime : Maybe Duration, bestLapTime : Maybe Duration, lastLapMiniSectors : Maybe MiniSectors } -> Html msg
-viewLastLapColumn_LeMans24h analysis { lastLapTime, bestLapTime, lastLapMiniSectors } =
+viewLastLapColumn_LeMans24h : Analysis -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectors } -> Html msg
+viewLastLapColumn_LeMans24h analysis { lastLap, lastLapMiniSectors } =
     let
-        lapTime { time, personalBest } =
+        lapTimeView { time, performance } =
             div
                 [ css
                     [ textAlign center
-                    , let
-                        status =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
-                      in
-                      if Performance.isStandard status then
+                    , if Performance.isStandard performance then
                         batch []
 
                       else
-                        Performance.toColorVariable status
+                        Performance.toColorVariable performance
                             |> property "color"
                     ]
                 ]
@@ -731,10 +715,10 @@ viewLastLapColumn_LeMans24h analysis { lastLapTime, bestLapTime, lastLapMiniSect
                 ]
                 []
     in
-    case Maybe.map2 Tuple.pair lastLapTime bestLapTime of
-        Just ( time, best ) ->
+    case lastLap of
+        Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ lapTime { time = time, personalBest = best }
+                [ lapTimeView lapTime
                 , lastLapMiniSectors
                     |> Maybe.map
                         (\miniSectors_ ->

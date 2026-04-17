@@ -183,6 +183,7 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                         { elapsed = Clock.getElapsed raceControl.clock
                         , lapCount = raceControl.lapCount
                         , cars = raceControl.cars
+                        , fastestLapTime = analysis.fastestLapTime
                         }
               in
               case mode of
@@ -290,18 +291,18 @@ config season analysis standings =
             }
         , lastLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
-        , bestTimeColumn { getter = .bestLapTime }
+        , bestTimeColumn { getter = .bestLap }
         , performanceColumn
             { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
             { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2
             }

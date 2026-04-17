@@ -35,6 +35,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
+import Motorsport.Lap.Performance exposing (LapTime, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
@@ -76,8 +77,8 @@ type alias StandingsEntry =
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
-    , lastLapTime : Maybe Duration
-    , bestLapTime : Maybe Duration
+    , lastLap : Maybe LapTime
+    , bestLap : Maybe LapTime
     , lastLapSectors : Maybe SectorTimes
     , lastLapMiniSectors : Maybe MiniSectors
     , currentDriver : Maybe Driver
@@ -96,7 +97,7 @@ type alias MiniSectorProgress =
     }
 
 
-init : { elapsed : Duration, lapCount : Int, cars : RunningOrder } -> Standings
+init : { elapsed : Duration, lapCount : Int, cars : RunningOrder, fastestLapTime : Duration } -> Standings
 init config =
     let
         carsList =
@@ -154,8 +155,22 @@ init config =
                             currentLap
                                 |> Maybe.map (\lap -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lap.time))
                                 |> Maybe.withDefault 0
-                        , lastLapTime = car.lastLap |> Maybe.map .time
-                        , bestLapTime = car.lastLap |> Maybe.map .best
+                        , lastLap =
+                            car.lastLap
+                                |> Maybe.map
+                                    (\lap ->
+                                        { time = lap.time
+                                        , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = config.fastestLapTime }
+                                        }
+                                    )
+                        , bestLap =
+                            car.lastLap
+                                |> Maybe.map
+                                    (\lap ->
+                                        { time = lap.best
+                                        , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = config.fastestLapTime }
+                                        }
+                                    )
                         , lastLapSectors = car.lastLap |> Maybe.map extractSectorTimes
                         , lastLapMiniSectors = car.lastLap |> Maybe.andThen .miniSectors
                         , currentDriver = car.currentDriver
@@ -188,6 +203,9 @@ init config =
 fromLaps : Car.Metadata -> List Lap -> Standings
 fromLaps baseMetadata laps =
     let
+        fastestLapTime =
+            laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
+
         entries =
             laps
                 |> List.indexedMap
@@ -207,8 +225,16 @@ fromLaps baseMetadata laps =
                         , gapToLeader = Gap.None
                         , intervalToAhead = Gap.None
                         , currentLapProgress = 0
-                        , lastLapTime = Just lap.time
-                        , bestLapTime = Just lap.best
+                        , lastLap =
+                            Just
+                                { time = lap.time
+                                , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
+                                }
+                        , bestLap =
+                            Just
+                                { time = lap.best
+                                , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastestLapTime }
+                                }
                         , lastLapSectors = Just (extractSectorTimes lap)
                         , lastLapMiniSectors = lap.miniSectors
                         , currentDriver = Just lap.driver

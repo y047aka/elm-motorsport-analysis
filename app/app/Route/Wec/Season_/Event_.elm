@@ -239,6 +239,7 @@ view app { eventSummary, analysis, raceControl } m =
                             { elapsed = Clock.getElapsed raceControl.clock
                             , lapCount = raceControl.lapCount
                             , cars = raceControl.cars
+                            , fastestLapTime = analysis.fastestLapTime
                             }
 
                     compareProps =

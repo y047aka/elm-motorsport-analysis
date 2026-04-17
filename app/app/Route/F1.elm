@@ -171,6 +171,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                                 { elapsed = Clock.getElapsed raceControl_F1.clock
                                 , lapCount = raceControl_F1.lapCount
                                 , cars = raceControl_F1.cars
+                                , fastestLapTime = analysis_F1.fastestLapTime
                                 }
                     in
                     Leaderboard.view (config analysis_F1 standings) leaderboardState standings
@@ -201,18 +202,17 @@ config analysis standings =
             }
         , lastLapColumn_F1
             { getter = identity
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
-            , analysis = analysis
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLapTime }
+        , bestTimeColumn { getter = .bestLap }
         , performanceColumn
             { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
             { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLapTime >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2
             }
