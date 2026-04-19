@@ -1,20 +1,20 @@
 use std::ffi::OsStr;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::CliError;
 use crate::pipeline::FileTask;
 
 #[derive(Debug)]
 pub enum InputType {
-    File(String),
-    Directory(String),
+    File(PathBuf),
+    Directory(PathBuf),
 }
 
 #[derive(Debug)]
 pub struct Config {
     pub input_type: InputType,
-    pub output_file: Option<String>,
+    pub output_file: Option<PathBuf>,
 }
 
 impl Config {
@@ -22,11 +22,11 @@ impl Config {
         args.next();
 
         let mut input_path = None;
-        let mut output_file = None;
+        let mut output_file: Option<PathBuf> = None;
 
         while let Some(arg) = args.next() {
             if arg == "--output" {
-                output_file = args.next();
+                output_file = args.next().map(PathBuf::from);
             } else if input_path.is_none() {
                 input_path = Some(arg);
             } else {
@@ -34,17 +34,16 @@ impl Config {
             }
         }
 
-        let input_path = input_path.ok_or(CliError::MissingInputPath)?;
+        let path = PathBuf::from(input_path.ok_or(CliError::MissingInputPath)?);
 
-        let path = Path::new(&input_path);
         let input_type = if !path.exists() {
-            return Err(CliError::InputPathNotFound(input_path));
+            return Err(CliError::InputPathNotFound(path.display().to_string()));
         } else if path.is_dir() {
-            InputType::Directory(input_path)
+            InputType::Directory(path)
         } else if path.is_file() {
-            InputType::File(input_path)
+            InputType::File(path)
         } else {
-            return Err(CliError::InvalidInputPath(input_path));
+            return Err(CliError::InvalidInputPath(path.display().to_string()));
         };
 
         if output_file.is_some() && matches!(input_type, InputType::Directory(_)) {
@@ -87,14 +86,13 @@ impl Config {
     }
 
     /// 入力ファイル名から出力ファイル名とイベント名を生成
-    pub fn generate_output_names(input_file: &str) -> (String, String) {
-        let path = Path::new(input_file);
-        let stem = path
+    pub fn generate_output_names(input_file: &Path) -> (PathBuf, String) {
+        let stem = input_file
             .file_stem()
             .unwrap_or_else(|| OsStr::new("output"))
             .to_string_lossy();
 
-        let output_file = path.with_extension("json").to_string_lossy().to_string();
+        let output_file = input_file.with_extension("json");
         let event_name = stem.to_string();
 
         (output_file, event_name)
@@ -102,10 +100,10 @@ impl Config {
 }
 
 /// ディレクトリ内のCSVファイルを再帰的に検索
-fn find_csv_files(dir_path: &str) -> Result<Vec<String>, CliError> {
+fn find_csv_files(dir_path: &Path) -> Result<Vec<PathBuf>, CliError> {
     let mut csv_files = Vec::new();
     let entries = fs::read_dir(dir_path).map_err(|e| CliError::ReadDir {
-        path: dir_path.to_string(),
+        path: dir_path.display().to_string(),
         source: e,
     })?;
 
@@ -114,12 +112,11 @@ fn find_csv_files(dir_path: &str) -> Result<Vec<String>, CliError> {
         let path = entry.path();
 
         if path.is_dir() {
-            let subdir_path = path.to_string_lossy().to_string();
-            let mut subdir_files = find_csv_files(&subdir_path)?;
+            let mut subdir_files = find_csv_files(&path)?;
             csv_files.append(&mut subdir_files);
         } else if let Some(extension) = path.extension() {
             if extension == "csv" {
-                csv_files.push(path.to_string_lossy().to_string());
+                csv_files.push(path);
             }
         }
     }
@@ -150,36 +147,39 @@ mod tests {
 
     #[test]
     fn generate_output_names_basic() {
-        let (output_file, event_name) = Config::generate_output_names("input.csv");
-        assert_eq!(output_file, "input.json");
+        let (output_file, event_name) = Config::generate_output_names(Path::new("input.csv"));
+        assert_eq!(output_file, PathBuf::from("input.json"));
         assert_eq!(event_name, "input");
     }
 
     #[test]
     fn generate_output_names_with_path() {
-        let (output_file, event_name) = Config::generate_output_names("/path/to/input.csv");
-        assert_eq!(output_file, "/path/to/input.json");
+        let (output_file, event_name) =
+            Config::generate_output_names(Path::new("/path/to/input.csv"));
+        assert_eq!(output_file, PathBuf::from("/path/to/input.json"));
         assert_eq!(event_name, "input");
     }
 
     #[test]
     fn generate_output_names_multiple_dots() {
-        let (output_file, event_name) = Config::generate_output_names("my.test.file.csv");
-        assert_eq!(output_file, "my.test.file.json");
+        let (output_file, event_name) =
+            Config::generate_output_names(Path::new("my.test.file.csv"));
+        assert_eq!(output_file, PathBuf::from("my.test.file.json"));
         assert_eq!(event_name, "my.test.file");
     }
 
     #[test]
     fn generate_output_names_no_extension() {
-        let (output_file, event_name) = Config::generate_output_names("input");
-        assert_eq!(output_file, "input.json");
+        let (output_file, event_name) = Config::generate_output_names(Path::new("input"));
+        assert_eq!(output_file, PathBuf::from("input.json"));
         assert_eq!(event_name, "input");
     }
 
     #[test]
     fn generate_output_names_relative_path() {
-        let (output_file, event_name) = Config::generate_output_names("./data/input.csv");
-        assert_eq!(output_file, "./data/input.json");
+        let (output_file, event_name) =
+            Config::generate_output_names(Path::new("./data/input.csv"));
+        assert_eq!(output_file, PathBuf::from("./data/input.json"));
         assert_eq!(event_name, "input");
     }
 
@@ -201,7 +201,7 @@ mod tests {
         let config = Config::build(args.into_iter()).unwrap();
         match &config.input_type {
             InputType::File(file_path) => {
-                assert_eq!(file_path, &input_path.to_string_lossy().to_string());
+                assert_eq!(file_path, &input_path);
             }
             _ => panic!("Expected File input type"),
         }
@@ -237,7 +237,7 @@ mod tests {
         let config = Config::build(args.into_iter()).unwrap();
         match &config.input_type {
             InputType::Directory(dir_path) => {
-                assert_eq!(dir_path, &temp_dir.path().to_string_lossy().to_string());
+                assert_eq!(dir_path, temp_dir.path());
             }
             _ => panic!("Expected Directory input type"),
         }

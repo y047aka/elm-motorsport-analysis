@@ -1,5 +1,5 @@
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use crate::error::CliError;
 use crate::output;
@@ -7,8 +7,8 @@ use crate::preprocess;
 
 /// 1ファイルの処理に必要な情報
 pub struct FileTask {
-    pub input_path: String,
-    pub output_path: String,
+    pub input_path: PathBuf,
+    pub output_path: PathBuf,
     pub event_name: String,
 }
 
@@ -22,8 +22,8 @@ struct SerializedOutput {
 /// 処理完了の報告（呼び出し元がログに使う）
 pub struct ProcessingReport {
     pub car_count: usize,
-    pub metadata_path: String,
-    pub laps_path: String,
+    pub metadata_path: PathBuf,
+    pub laps_path: PathBuf,
 }
 
 /// パイプライン: read → transform+serialize → write
@@ -38,9 +38,9 @@ pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     })
 }
 
-fn read_csv(input_path: &str) -> Result<String, CliError> {
+fn read_csv(input_path: &Path) -> Result<String, CliError> {
     fs::read_to_string(input_path).map_err(|e| CliError::ReadFile {
-        path: input_path.to_string(),
+        path: input_path.display().to_string(),
         source: e,
     })
 }
@@ -74,25 +74,27 @@ fn transform_and_serialize(
 }
 
 struct WrittenFiles {
-    metadata_path: String,
-    laps_path: String,
+    metadata_path: PathBuf,
+    laps_path: PathBuf,
 }
 
 fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFiles, CliError> {
     fs::write(&task.output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
-        path: task.output_path.clone(),
+        path: task.output_path.display().to_string(),
         source: e,
     })?;
 
     let laps_path = {
-        let p = Path::new(&task.output_path);
-        let stem = p.file_stem().unwrap_or_default().to_string_lossy();
-        p.with_file_name(format!("{}_laps.json", stem))
-            .to_string_lossy()
-            .into_owned()
+        let stem = task
+            .output_path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
+        task.output_path
+            .with_file_name(format!("{}_laps.json", stem))
     };
     fs::write(&laps_path, &output.laps_json).map_err(|e| CliError::WriteFile {
-        path: laps_path.clone(),
+        path: laps_path.display().to_string(),
         source: e,
     })?;
 

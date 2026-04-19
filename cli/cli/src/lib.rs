@@ -16,7 +16,7 @@ pub struct RunSummary {
 
 pub fn run(config: Config) -> Result<RunSummary, CliError> {
     if let InputType::Directory(dir) = &config.input_type {
-        log::info!("Scanning directory '{}' for CSV files...", dir);
+        log::info!("Scanning directory '{}' for CSV files...", dir.display());
     }
     let tasks = config.into_tasks()?;
 
@@ -31,16 +31,16 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
     let mut errors = 0;
 
     for task in &tasks {
-        log::info!("Processing: {}", task.input_path);
+        log::info!("Processing: {}", task.input_path.display());
         match pipeline::process_file(task) {
             Ok(report) => {
-                log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
-                log::info!("Wrote metadata JSON to {}", report.metadata_path);
-                log::info!("Wrote laps JSON to {}", report.laps_path);
+                log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path.display());
+                log::info!("Wrote metadata JSON to {}", report.metadata_path.display());
+                log::info!("Wrote laps JSON to {}", report.laps_path.display());
                 processed += 1;
             }
             Err(e) => {
-                log::error!("Error processing '{}': {}", task.input_path, e);
+                log::error!("Error processing '{}': {}", task.input_path.display(), e);
                 errors += 1;
             }
         }
