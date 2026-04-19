@@ -194,20 +194,10 @@ init fastest config =
                                 |> Maybe.withDefault 0
                         , lastLap =
                             car.lastLap
-                                |> Maybe.map
-                                    (\lap ->
-                                        { time = lap.time
-                                        , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastest.fastestLapTime }
-                                        }
-                                    )
+                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLap =
                             car.lastLap
-                                |> Maybe.map
-                                    (\lap ->
-                                        { time = lap.best
-                                        , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastest.fastestLapTime }
-                                        }
-                                    )
+                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance fastest)
                         , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance fastest)
                         , currentDriver = car.currentDriver
@@ -268,15 +258,9 @@ fromLaps baseMetadata laps =
                         , intervalToAhead = Gap.None
                         , currentLapProgress = 0
                         , lastLap =
-                            Just
-                                { time = lap.time
-                                , performance = performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastest.fastestLapTime }
-                                }
+                            Just (rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLap =
-                            Just
-                                { time = lap.best
-                                , performance = performanceLevel { time = lap.best, personalBest = lap.best, fastest = fastest.fastestLapTime }
-                                }
+                            Just (rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = Just (extractSectorPerformance fastest lap)
                         , lastLapMiniSectors = extractMiniSectorPerformance fastest lap
                         , currentDriver = Just lap.driver
@@ -322,6 +306,13 @@ fromList entries =
         }
 
 
+rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime
+rateTime fastest { time, personalBest } =
+    { time = time
+    , performance = performanceLevel { time = time, personalBest = personalBest, fastest = fastest }
+    }
+
+
 extractSectorTimes : Lap -> SectorTimes
 extractSectorTimes lap =
     { sector_1 = lap.sector_1
@@ -338,18 +329,9 @@ extractSectorPerformance :
     -> Lap
     -> SectorPerformance
 extractSectorPerformance fastest lap =
-    { sector_1 =
-        { time = lap.sector_1
-        , performance = performanceLevel { time = lap.sector_1, personalBest = lap.s1_best, fastest = fastest.sector_1_fastest }
-        }
-    , sector_2 =
-        { time = lap.sector_2
-        , performance = performanceLevel { time = lap.sector_2, personalBest = lap.s2_best, fastest = fastest.sector_2_fastest }
-        }
-    , sector_3 =
-        { time = lap.sector_3
-        , performance = performanceLevel { time = lap.sector_3, personalBest = lap.s3_best, fastest = fastest.sector_3_fastest }
-        }
+    { sector_1 = rateTime fastest.sector_1_fastest { time = lap.sector_1, personalBest = lap.s1_best }
+    , sector_2 = rateTime fastest.sector_2_fastest { time = lap.sector_2, personalBest = lap.s2_best }
+    , sector_3 = rateTime fastest.sector_3_fastest { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
