@@ -7,9 +7,42 @@ use crate::preprocess;
 
 /// 1ファイルの処理に必要な情報
 pub struct FileTask {
-    pub input_path: PathBuf,
-    pub output_path: PathBuf,
-    pub event_name: String,
+    input_path: PathBuf,
+    output_path: PathBuf,
+    event_name: String,
+}
+
+impl FileTask {
+    /// 入力ファイルパスから FileTask を生成する。
+    /// output_override が None の場合、入力ファイルの拡張子を .json に置換したパスを使う。
+    pub fn new(input_path: PathBuf, output_override: Option<PathBuf>) -> Self {
+        let stem = input_path
+            .file_stem()
+            .unwrap_or_else(|| std::ffi::OsStr::new("output"))
+            .to_string_lossy();
+
+        let output_path = output_override
+            .unwrap_or_else(|| input_path.with_extension("json"));
+        let event_name = stem.to_string();
+
+        Self {
+            input_path,
+            output_path,
+            event_name,
+        }
+    }
+
+    pub fn input_path(&self) -> &Path {
+        &self.input_path
+    }
+
+    pub fn output_path(&self) -> &Path {
+        &self.output_path
+    }
+
+    pub fn event_name(&self) -> &str {
+        &self.event_name
+    }
 }
 
 /// 変換・直列化の結果（純粋な変換の出力）
@@ -28,8 +61,8 @@ pub struct ProcessingReport {
 
 /// パイプライン: read → transform+serialize → write
 pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
-    let csv_content = read_csv(&task.input_path)?;
-    let output = transform_and_serialize(&csv_content, &task.event_name)?;
+    let csv_content = read_csv(task.input_path())?;
+    let output = transform_and_serialize(&csv_content, task.event_name())?;
     let written = write_files(task, &output)?;
     Ok(ProcessingReport {
         car_count: output.car_count,
@@ -79,19 +112,18 @@ struct WrittenFiles {
 }
 
 fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFiles, CliError> {
-    fs::write(&task.output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
-        path: task.output_path.display().to_string(),
+    let output_path = task.output_path();
+    fs::write(output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
+        path: output_path.display().to_string(),
         source: e,
     })?;
 
     let laps_path = {
-        let stem = task
-            .output_path
+        let stem = output_path
             .file_stem()
             .unwrap_or_default()
             .to_string_lossy();
-        task.output_path
-            .with_file_name(format!("{}_laps.json", stem))
+        output_path.with_file_name(format!("{}_laps.json", stem))
     };
     fs::write(&laps_path, &output.laps_json).map_err(|e| CliError::WriteFile {
         path: laps_path.display().to_string(),
@@ -99,7 +131,7 @@ fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFile
     })?;
 
     Ok(WrittenFiles {
-        metadata_path: task.output_path.clone(),
+        metadata_path: output_path.to_path_buf(),
         laps_path,
     })
 }

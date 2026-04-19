@@ -1,4 +1,3 @@
-use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -58,14 +57,7 @@ impl Config {
             Config::SingleFile {
                 file_path,
                 output_file,
-            } => {
-                let (default_output, event_name) = Self::generate_output_names(&file_path);
-                Ok(vec![FileTask {
-                    input_path: file_path,
-                    output_path: output_file.unwrap_or(default_output),
-                    event_name,
-                }])
-            }
+            } => Ok(vec![FileTask::new(file_path, output_file)]),
             Config::BatchDirectory { dir_path } => {
                 let csv_files = find_csv_files(&dir_path)?;
                 if csv_files.is_empty() {
@@ -73,31 +65,11 @@ impl Config {
                 }
                 let tasks = csv_files
                     .into_iter()
-                    .map(|csv_file| {
-                        let (output, event) = Self::generate_output_names(&csv_file);
-                        FileTask {
-                            input_path: csv_file,
-                            output_path: output,
-                            event_name: event,
-                        }
-                    })
+                    .map(|csv_file| FileTask::new(csv_file, None))
                     .collect();
                 Ok(tasks)
             }
         }
-    }
-
-    /// 入力ファイル名から出力ファイル名とイベント名を生成
-    pub fn generate_output_names(input_file: &Path) -> (PathBuf, String) {
-        let stem = input_file
-            .file_stem()
-            .unwrap_or_else(|| OsStr::new("output"))
-            .to_string_lossy();
-
-        let output_file = input_file.with_extension("json");
-        let event_name = stem.to_string();
-
-        (output_file, event_name)
     }
 }
 
@@ -148,41 +120,45 @@ mod tests {
     }
 
     #[test]
-    fn generate_output_names_basic() {
-        let (output_file, event_name) = Config::generate_output_names(Path::new("input.csv"));
-        assert_eq!(output_file, PathBuf::from("input.json"));
-        assert_eq!(event_name, "input");
+    fn file_task_default_output_basic() {
+        let task = FileTask::new(PathBuf::from("input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("input.json"));
+        assert_eq!(task.event_name(), "input");
     }
 
     #[test]
-    fn generate_output_names_with_path() {
-        let (output_file, event_name) =
-            Config::generate_output_names(Path::new("/path/to/input.csv"));
-        assert_eq!(output_file, PathBuf::from("/path/to/input.json"));
-        assert_eq!(event_name, "input");
+    fn file_task_default_output_with_path() {
+        let task = FileTask::new(PathBuf::from("/path/to/input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("/path/to/input.json"));
+        assert_eq!(task.event_name(), "input");
     }
 
     #[test]
-    fn generate_output_names_multiple_dots() {
-        let (output_file, event_name) =
-            Config::generate_output_names(Path::new("my.test.file.csv"));
-        assert_eq!(output_file, PathBuf::from("my.test.file.json"));
-        assert_eq!(event_name, "my.test.file");
+    fn file_task_default_output_multiple_dots() {
+        let task = FileTask::new(PathBuf::from("my.test.file.csv"), None);
+        assert_eq!(task.output_path(), Path::new("my.test.file.json"));
+        assert_eq!(task.event_name(), "my.test.file");
     }
 
     #[test]
-    fn generate_output_names_no_extension() {
-        let (output_file, event_name) = Config::generate_output_names(Path::new("input"));
-        assert_eq!(output_file, PathBuf::from("input.json"));
-        assert_eq!(event_name, "input");
+    fn file_task_default_output_no_extension() {
+        let task = FileTask::new(PathBuf::from("input"), None);
+        assert_eq!(task.output_path(), Path::new("input.json"));
+        assert_eq!(task.event_name(), "input");
     }
 
     #[test]
-    fn generate_output_names_relative_path() {
-        let (output_file, event_name) =
-            Config::generate_output_names(Path::new("./data/input.csv"));
-        assert_eq!(output_file, PathBuf::from("./data/input.json"));
-        assert_eq!(event_name, "input");
+    fn file_task_default_output_relative_path() {
+        let task = FileTask::new(PathBuf::from("./data/input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("./data/input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_with_output_override() {
+        let task = FileTask::new(PathBuf::from("input.csv"), Some(PathBuf::from("custom.json")));
+        assert_eq!(task.output_path(), Path::new("custom.json"));
+        assert_eq!(task.event_name(), "input");
     }
 
     #[test]
