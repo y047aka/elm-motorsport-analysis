@@ -10,6 +10,9 @@ pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    if let InputType::Directory(dir) = &config.input_type {
+        println!("Scanning directory '{}' for CSV files...", dir);
+    }
     let tasks = config.into_tasks()?;
 
     if tasks.is_empty() {

@@ -48,28 +48,10 @@ impl Config {
             return Err(format!("Input path is neither a file nor directory: {input_path}").into());
         };
 
-        // output_fileが指定されていない場合はデフォルト値を生成
-        let output_file = output_file.or_else(|| match &input_type {
-            InputType::File(file_path) => {
-                let (default_output, _) = Self::generate_output_names(file_path);
-                Some(default_output)
-            }
-            InputType::Directory(_) => None,
-        });
-
-        // event_nameは常にデフォルト値を使用
-        let event_name = match &input_type {
-            InputType::File(file_path) => {
-                let (_, default_event) = Self::generate_output_names(file_path);
-                Some(default_event)
-            }
-            InputType::Directory(_) => None,
-        };
-
         Ok(Config {
             input_type,
             output_file,
-            event_name,
+            event_name: None,
         })
     }
 
@@ -85,7 +67,6 @@ impl Config {
                 }])
             }
             InputType::Directory(dir_path) => {
-                println!("Scanning directory '{}' for CSV files...", dir_path);
                 let csv_files = pipeline::find_csv_files(&dir_path)?;
                 let tasks = csv_files
                     .into_iter()
@@ -178,7 +159,6 @@ mod tests {
     fn config_build_file_auto_names() {
         let temp_dir = tempdir().unwrap();
         let input_path = temp_dir.path().join("input.csv");
-        let expected_output = temp_dir.path().join("input.json");
 
         File::create(&input_path)
             .unwrap()
@@ -197,12 +177,10 @@ mod tests {
             }
             _ => panic!("Expected File input type"),
         }
-        // 自動生成された名前が設定されていることを確認
-        assert_eq!(
-            config.output_file,
-            Some(expected_output.to_string_lossy().to_string())
-        );
-        assert_eq!(config.event_name, Some("input".to_string()));
+        // output_file は --output 未指定なので None、event_name は常に None
+        // 名前解決は into_tasks() で行われる
+        assert_eq!(config.output_file, None);
+        assert_eq!(config.event_name, None);
     }
 
     #[test]

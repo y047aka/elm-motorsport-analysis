@@ -11,12 +11,19 @@ pub struct FileTask {
     pub event_name: String,
 }
 
+/// 変換結果
+struct TransformResult {
+    metadata: MetadataOutput,
+    laps: Vec<RawLap>,
+    car_count: usize,
+}
+
 /// パイプライン: read → transform → write
 pub fn process_file(task: &FileTask) -> Result<(), Box<dyn Error>> {
     let csv_content = read_csv(&task.input_path)?;
-    let (metadata, laps) = transform(&csv_content, &task.event_name);
-    println!("Read {} cars from CSV '{}'", metadata.starting_grid.len(), task.input_path);
-    write_outputs(task, &metadata, &laps)?;
+    let result = transform(&csv_content, &task.event_name);
+    println!("Read {} cars from CSV '{}'", result.car_count, task.input_path);
+    write_outputs(task, &result.metadata, &result.laps)?;
     Ok(())
 }
 
@@ -25,12 +32,17 @@ fn read_csv(input_path: &str) -> Result<String, Box<dyn Error>> {
         .map_err(|e| format!("Failed to read input file '{}': {}", input_path, e).into())
 }
 
-fn transform(csv_content: &str, event_name: &str) -> (MetadataOutput, Vec<RawLap>) {
+fn transform(csv_content: &str, event_name: &str) -> TransformResult {
     let laps_with_metadata = preprocess::parse_laps_from_csv(csv_content);
     let cars = preprocess::group_laps_by_car(laps_with_metadata.clone());
+    let car_count = cars.len();
     let metadata = output::create_metadata_output(event_name, &cars);
     let laps = output::create_laps_output(&laps_with_metadata);
-    (metadata, laps)
+    TransformResult {
+        metadata,
+        laps,
+        car_count,
+    }
 }
 
 fn write_outputs(
