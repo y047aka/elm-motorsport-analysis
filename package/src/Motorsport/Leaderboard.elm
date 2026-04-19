@@ -67,7 +67,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
-import Motorsport.Lap.Performance as Performance exposing (LapTime, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
@@ -195,7 +195,7 @@ sectorTimeColumn { label, getter } =
     }
 
 
-bestTimeColumn : { getter : data -> Maybe LapTime } -> Column data msg
+bestTimeColumn : { getter : data -> Maybe RatedTime } -> Column data msg
 bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
@@ -338,7 +338,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 
 lastLapColumn_F1 :
-    { getter : data -> { a | lastLap : Maybe LapTime }
+    { getter : data -> { a | lastLap : Maybe RatedTime }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -602,7 +602,7 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorPerformance }
+    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -614,7 +614,7 @@ lastLapColumn_Wec { getter, sorter } =
     }
 
 
-viewLastLapColumn_Wec : { a | lastLap : Maybe LapTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
+viewLastLapColumn_Wec : { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
 viewLastLapColumn_Wec { lastLap, lastLapSectors } =
     let
         lapTimeView { time, performance } =
@@ -668,7 +668,7 @@ viewLastLapColumn_Wec { lastLap, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
+    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -680,7 +680,7 @@ lastLapColumn_LeMans24h { getter, sorter } =
     }
 
 
-viewLastLapColumn_LeMans24h : { a | lastLap : Maybe LapTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
+viewLastLapColumn_LeMans24h : { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
 viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
     let
         lapTimeView { time, performance } =
@@ -702,7 +702,11 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , property "background-color" (Performance.toColorVariable performance)
+                    , property "background-color"
+                        (performance
+                            |> Maybe.withDefault Performance.Standard
+                            |> Performance.toColorVariable
+                        )
                     ]
                 ]
                 []

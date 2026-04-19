@@ -1,7 +1,7 @@
 module Motorsport.Lap.Performance exposing
     ( findPersonalBest, findFastest, findFastestBy, findSlowest
     , calculateMiniSectorFastest, LeMans2025MiniSectorFastest
-    , LapTime, SectorTime, MiniSectorTime
+    , RatedTime, MiniSectorTime
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
@@ -12,7 +12,7 @@ module Motorsport.Lap.Performance exposing
 @docs findPersonalBest, findFastest, findFastestBy, findSlowest
 @docs calculateMiniSectorFastest, LeMans2025MiniSectorFastest
 
-@docs LapTime, SectorTime, MiniSectorTime
+@docs RatedTime, MiniSectorTime
 
 @docs PerformanceLevel(..), performanceLevel
 @docs isStandard
@@ -52,13 +52,7 @@ findFastestBy getter laps =
 
 
 
-type alias LapTime =
-    { time : Duration
-    , performance : PerformanceLevel
-    }
-
-
-type alias SectorTime =
+type alias RatedTime =
     { time : Duration
     , performance : PerformanceLevel
     }
@@ -66,7 +60,7 @@ type alias SectorTime =
 
 type alias MiniSectorTime =
     { time : Maybe Duration
-    , performance : PerformanceLevel
+    , performance : Maybe PerformanceLevel
     }
 
 
@@ -78,7 +72,6 @@ type PerformanceLevel
     = Fastest
     | PersonalBest
     | Standard
-    | Incompleted
 
 
 performanceLevel : { a | time : Duration, personalBest : Duration, fastest : Duration } -> PerformanceLevel
@@ -95,7 +88,7 @@ performanceLevel { time, personalBest, fastest } =
 
 isStandard : PerformanceLevel -> Bool
 isStandard level =
-    level == Standard || level == Incompleted
+    level == Standard
 
 
 toColorVariable : PerformanceLevel -> String
@@ -108,9 +101,6 @@ toColorVariable level =
             "var(--performance-personal-best)"
 
         Standard ->
-            "var(--performance-standard)"
-
-        Incompleted ->
             "var(--performance-standard)"
 
 

@@ -117,7 +117,7 @@ lapTimeComparison standings cars =
                     { laps = NonEmpty.head cars |> .lapsCompleted }
             in
             cars
-                |> NonEmpty.map (\car -> Standings.getRecentLaps 9 options (Standings.getCarHistory car.metadata.carNumber standings))
+                |> NonEmpty.map (\car -> Standings.getRecentLaps { count = 9, currentLap = options.laps } (Standings.getCarHistory car.metadata.carNumber standings))
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -252,7 +252,7 @@ battleChart size standings cars =
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = Standings.getRecentLaps 20 options (Standings.getCarHistory car.metadata.carNumber standings)
+                        , laps = Standings.getRecentLaps { count = 20, currentLap = options.laps } (Standings.getCarHistory car.metadata.carNumber standings)
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )

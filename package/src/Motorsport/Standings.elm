@@ -37,7 +37,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
-import Motorsport.Lap.Performance exposing (LapTime, LeMans2025MiniSectorFastest, MiniSectorTime, PerformanceLevel(..), SectorTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, MiniSectorTime, PerformanceLevel(..), RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
@@ -64,9 +64,9 @@ type alias SectorTimes =
 
 
 type alias SectorPerformance =
-    { sector_1 : SectorTime
-    , sector_2 : SectorTime
-    , sector_3 : SectorTime
+    { sector_1 : RatedTime
+    , sector_2 : RatedTime
+    , sector_3 : RatedTime
     }
 
 
@@ -105,8 +105,8 @@ type alias StandingsEntry =
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
-    , lastLap : Maybe LapTime
-    , bestLap : Maybe LapTime
+    , lastLap : Maybe RatedTime
+    , bestLap : Maybe RatedTime
     , lastLapSectors : Maybe SectorPerformance
     , lastLapMiniSectors : Maybe MiniSectorPerformance
     , currentDriver : Maybe Driver
@@ -367,10 +367,10 @@ extractMiniSectorPerformance fastest lap =
                         , performance =
                             case ( msd.time, msd.best ) of
                                 ( Just t, Just b ) ->
-                                    performanceLevel { time = t, personalBest = b, fastest = fastestTime }
+                                    Just (performanceLevel { time = t, personalBest = b, fastest = fastestTime })
 
                                 _ ->
-                                    Incompleted
+                                    Nothing
                         }
                 in
                 { scl2 = toMiniSectorTime ms.scl2 fastest.miniSectorFastest.scl2
@@ -511,11 +511,11 @@ groupCarsByCloseIntervals (Standings s) =
         |> List.filter (\group -> List.length group >= 2)
 
 
-getRecentLaps : Int -> { laps : Int } -> List Lap -> List Lap
-getRecentLaps n { laps } lapList =
+getRecentLaps : { count : Int, currentLap : Int } -> List Lap -> List Lap
+getRecentLaps { count, currentLap } lapList =
     let
         targetRange =
-            List.range (laps - n) laps
+            List.range (currentLap - count) currentLap
     in
     lapList
         |> List.filter (\lap -> List.member lap.lap targetRange)
