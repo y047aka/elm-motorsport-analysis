@@ -54,7 +54,15 @@ fn process_single_file(config: &Config) -> Result<(), Box<dyn Error>> {
     fs::write(&base_output_path, &metadata_json)
         .map_err(|e| format!("Failed to write output file '{}': {e}", base_output_path))?;
 
-    let laps_output_path = base_output_path.replace(".json", "_laps.json");
+    let base_path = Path::new(&base_output_path);
+    let laps_output_path = {
+        let stem = base_path.file_stem().unwrap_or_default().to_string_lossy();
+        let parent = base_path.parent().unwrap_or_else(|| Path::new(""));
+        parent
+            .join(format!("{}_laps.json", stem))
+            .to_string_lossy()
+            .into_owned()
+    };
     fs::write(&laps_output_path, &laps_json)
         .map_err(|e| format!("Failed to write laps file '{}': {e}", laps_output_path))?;
 
