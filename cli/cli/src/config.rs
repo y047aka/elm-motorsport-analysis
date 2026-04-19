@@ -4,19 +4,16 @@ use std::path::{Path, PathBuf};
 use crate::error::CliError;
 use crate::pipeline::FileTask;
 
-#[derive(Debug)]
-pub enum Config {
-    SingleFile {
-        file_path: PathBuf,
-        output_file: Option<PathBuf>,
-    },
-    BatchDirectory {
-        dir_path: PathBuf,
-    },
+/// 引数パース結果（ファイルシステム未検証）
+#[derive(Debug, PartialEq)]
+struct RawArgs {
+    input_path: PathBuf,
+    output_file: Option<PathBuf>,
 }
 
-impl Config {
-    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, CliError> {
+impl RawArgs {
+    /// 純粋な引数パース（I/O なし）
+    fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, CliError> {
         args.next();
 
         let mut input_path = None;
@@ -32,23 +29,48 @@ impl Config {
             }
         }
 
-        let path = PathBuf::from(input_path.ok_or(CliError::MissingInputPath)?);
+        Ok(RawArgs {
+            input_path: PathBuf::from(input_path.ok_or(CliError::MissingInputPath)?),
+            output_file,
+        })
+    }
+
+    /// ファイルシステムを参照して検証済み Config に変換
+    fn resolve(self) -> Result<Config, CliError> {
+        let path = self.input_path;
 
         if !path.exists() {
             Err(CliError::InputPathNotFound(path.display().to_string()))
         } else if path.is_dir() {
-            if output_file.is_some() {
+            if self.output_file.is_some() {
                 return Err(CliError::OutputWithDirectory);
             }
             Ok(Config::BatchDirectory { dir_path: path })
         } else if path.is_file() {
             Ok(Config::SingleFile {
                 file_path: path,
-                output_file,
+                output_file: self.output_file,
             })
         } else {
             Err(CliError::InvalidInputPath(path.display().to_string()))
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum Config {
+    SingleFile {
+        file_path: PathBuf,
+        output_file: Option<PathBuf>,
+    },
+    BatchDirectory {
+        dir_path: PathBuf,
+    },
+}
+
+impl Config {
+    pub fn build(args: impl Iterator<Item = String>) -> Result<Config, CliError> {
+        RawArgs::parse(args)?.resolve()
     }
 
     /// Config を処理単位（FileTask）のリストに変換
@@ -106,9 +128,69 @@ mod tests {
     use tempfile::tempdir;
 
     #[test]
-    fn config_build_no_input() {
+    fn raw_args_parse_no_input() {
         let args = vec!["program".to_string()];
-        let result = Config::build(args.into_iter());
+        let result = RawArgs::parse(args.into_iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn raw_args_parse_input_only() {
+        let args = vec!["program".to_string(), "input.csv".to_string()];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: None,
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_with_output() {
+        let args = vec![
+            "program".to_string(),
+            "input.csv".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: Some(PathBuf::from("out.json")),
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_output_before_input() {
+        let args = vec![
+            "program".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+            "input.csv".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: Some(PathBuf::from("out.json")),
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_unexpected_argument() {
+        let args = vec![
+            "program".to_string(),
+            "input.csv".to_string(),
+            "extra".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter());
         assert!(result.is_err());
     }
 
