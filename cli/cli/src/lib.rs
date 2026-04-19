@@ -9,7 +9,12 @@ pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
-pub fn run(config: Config) -> Result<(), CliError> {
+pub struct RunSummary {
+    pub processed: usize,
+    pub errors: usize,
+}
+
+pub fn run(config: Config) -> Result<RunSummary, CliError> {
     if let InputType::Directory(dir) = &config.input_type {
         println!("Scanning directory '{}' for CSV files...", dir);
     }
@@ -17,7 +22,10 @@ pub fn run(config: Config) -> Result<(), CliError> {
 
     if tasks.is_empty() {
         println!("No CSV files found to process");
-        return Ok(());
+        return Ok(RunSummary {
+            processed: 0,
+            errors: 0,
+        });
     }
 
     let is_batch = tasks.len() > 1;
@@ -53,5 +61,5 @@ pub fn run(config: Config) -> Result<(), CliError> {
         );
     }
 
-    Ok(())
+    Ok(RunSummary { processed, errors })
 }
