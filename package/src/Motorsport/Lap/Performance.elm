@@ -1,7 +1,7 @@
 module Motorsport.Lap.Performance exposing
     ( findPersonalBest, findFastest, findFastestBy, findSlowest
     , calculateMiniSectorFastest, LeMans2025MiniSectorFastest
-    , RatedTime, MiniSectorTime
+    , RatedTime
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
@@ -12,7 +12,7 @@ module Motorsport.Lap.Performance exposing
 @docs findPersonalBest, findFastest, findFastestBy, findSlowest
 @docs calculateMiniSectorFastest, LeMans2025MiniSectorFastest
 
-@docs RatedTime, MiniSectorTime
+@docs RatedTime
 
 @docs PerformanceLevel(..), performanceLevel
 @docs isStandard
@@ -57,11 +57,6 @@ type alias RatedTime =
     , performance : PerformanceLevel
     }
 
-
-type alias MiniSectorTime =
-    { time : Maybe Duration
-    , performance : Maybe PerformanceLevel
-    }
 
 
 

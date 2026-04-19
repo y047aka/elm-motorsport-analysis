@@ -37,7 +37,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, MiniSectorTime, PerformanceLevel(..), RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, PerformanceLevel(..), RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
@@ -71,21 +71,21 @@ type alias SectorPerformance =
 
 
 type alias MiniSectorPerformance =
-    { scl2 : MiniSectorTime
-    , z4 : MiniSectorTime
-    , ip1 : MiniSectorTime
-    , z12 : MiniSectorTime
-    , sclc : MiniSectorTime
-    , a7_1 : MiniSectorTime
-    , ip2 : MiniSectorTime
-    , a8_1 : MiniSectorTime
-    , sclb : MiniSectorTime
-    , porin : MiniSectorTime
-    , porout : MiniSectorTime
-    , pitref : MiniSectorTime
-    , scl1 : MiniSectorTime
-    , fordout : MiniSectorTime
-    , fl : MiniSectorTime
+    { scl2 : Maybe RatedTime
+    , z4 : Maybe RatedTime
+    , ip1 : Maybe RatedTime
+    , z12 : Maybe RatedTime
+    , sclc : Maybe RatedTime
+    , a7_1 : Maybe RatedTime
+    , ip2 : Maybe RatedTime
+    , a8_1 : Maybe RatedTime
+    , sclb : Maybe RatedTime
+    , porin : Maybe RatedTime
+    , porout : Maybe RatedTime
+    , pitref : Maybe RatedTime
+    , scl1 : Maybe RatedTime
+    , fordout : Maybe RatedTime
+    , fl : Maybe RatedTime
     }
 
 
@@ -344,32 +344,27 @@ extractMiniSectorPerformance fastest lap =
         |> Maybe.map
             (\ms ->
                 let
-                    toMiniSectorTime msd fastestTime =
-                        { time = msd.time
-                        , performance =
-                            case ( msd.time, msd.best ) of
-                                ( Just t, Just b ) ->
-                                    Just (performanceLevel { time = t, personalBest = b, fastest = fastestTime })
-
-                                _ ->
-                                    Nothing
-                        }
+                    rateMiniSector msd fastestTime =
+                        Maybe.map2
+                            (\t b -> rateTime fastestTime { time = t, personalBest = b })
+                            msd.time
+                            msd.best
                 in
-                { scl2 = toMiniSectorTime ms.scl2 fastest.miniSectorFastest.scl2
-                , z4 = toMiniSectorTime ms.z4 fastest.miniSectorFastest.z4
-                , ip1 = toMiniSectorTime ms.ip1 fastest.miniSectorFastest.ip1
-                , z12 = toMiniSectorTime ms.z12 fastest.miniSectorFastest.z12
-                , sclc = toMiniSectorTime ms.sclc fastest.miniSectorFastest.sclc
-                , a7_1 = toMiniSectorTime ms.a7_1 fastest.miniSectorFastest.a7_1
-                , ip2 = toMiniSectorTime ms.ip2 fastest.miniSectorFastest.ip2
-                , a8_1 = toMiniSectorTime ms.a8_1 fastest.miniSectorFastest.a8_1
-                , sclb = toMiniSectorTime ms.sclb fastest.miniSectorFastest.sclb
-                , porin = toMiniSectorTime ms.porin fastest.miniSectorFastest.porin
-                , porout = toMiniSectorTime ms.porout fastest.miniSectorFastest.porout
-                , pitref = toMiniSectorTime ms.pitref fastest.miniSectorFastest.pitref
-                , scl1 = toMiniSectorTime ms.scl1 fastest.miniSectorFastest.scl1
-                , fordout = toMiniSectorTime ms.fordout fastest.miniSectorFastest.fordout
-                , fl = toMiniSectorTime ms.fl fastest.miniSectorFastest.fl
+                { scl2 = rateMiniSector ms.scl2 fastest.miniSectorFastest.scl2
+                , z4 = rateMiniSector ms.z4 fastest.miniSectorFastest.z4
+                , ip1 = rateMiniSector ms.ip1 fastest.miniSectorFastest.ip1
+                , z12 = rateMiniSector ms.z12 fastest.miniSectorFastest.z12
+                , sclc = rateMiniSector ms.sclc fastest.miniSectorFastest.sclc
+                , a7_1 = rateMiniSector ms.a7_1 fastest.miniSectorFastest.a7_1
+                , ip2 = rateMiniSector ms.ip2 fastest.miniSectorFastest.ip2
+                , a8_1 = rateMiniSector ms.a8_1 fastest.miniSectorFastest.a8_1
+                , sclb = rateMiniSector ms.sclb fastest.miniSectorFastest.sclb
+                , porin = rateMiniSector ms.porin fastest.miniSectorFastest.porin
+                , porout = rateMiniSector ms.porout fastest.miniSectorFastest.porout
+                , pitref = rateMiniSector ms.pitref fastest.miniSectorFastest.pitref
+                , scl1 = rateMiniSector ms.scl1 fastest.miniSectorFastest.scl1
+                , fordout = rateMiniSector ms.fordout fastest.miniSectorFastest.fordout
+                , fl = rateMiniSector ms.fl fastest.miniSectorFastest.fl
                 }
             )
 

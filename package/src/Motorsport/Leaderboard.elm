@@ -697,13 +697,14 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell { performance } =
+        sectorCell maybeRatedTime =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
                     , property "background-color"
-                        (performance
+                        (maybeRatedTime
+                            |> Maybe.map .performance
                             |> Maybe.withDefault Performance.Standard
                             |> Performance.toColorVariable
                         )
