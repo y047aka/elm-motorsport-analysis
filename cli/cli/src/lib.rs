@@ -4,7 +4,7 @@ pub mod output;
 pub mod pipeline;
 pub mod preprocess;
 
-pub use config::{Config, InputType};
+pub use config::Config;
 pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
@@ -15,8 +15,8 @@ pub struct RunSummary {
 }
 
 pub fn run(config: Config) -> Result<RunSummary, CliError> {
-    if let InputType::Directory(dir) = &config.input_type {
-        log::info!("Scanning directory '{}' for CSV files...", dir.display());
+    if let Config::BatchDirectory { dir_path } = &config {
+        log::info!("Scanning directory '{}' for CSV files...", dir_path.display());
     }
     let tasks = config.into_tasks()?;
 

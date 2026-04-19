@@ -6,15 +6,14 @@ use crate::error::CliError;
 use crate::pipeline::FileTask;
 
 #[derive(Debug)]
-pub enum InputType {
-    File(PathBuf),
-    Directory(PathBuf),
-}
-
-#[derive(Debug)]
-pub struct Config {
-    pub input_type: InputType,
-    pub output_file: Option<PathBuf>,
+pub enum Config {
+    SingleFile {
+        file_path: PathBuf,
+        output_file: Option<PathBuf>,
+    },
+    BatchDirectory {
+        dir_path: PathBuf,
+    },
 }
 
 impl Config {
@@ -36,38 +35,38 @@ impl Config {
 
         let path = PathBuf::from(input_path.ok_or(CliError::MissingInputPath)?);
 
-        let input_type = if !path.exists() {
-            return Err(CliError::InputPathNotFound(path.display().to_string()));
+        if !path.exists() {
+            Err(CliError::InputPathNotFound(path.display().to_string()))
         } else if path.is_dir() {
-            InputType::Directory(path)
+            if output_file.is_some() {
+                return Err(CliError::OutputWithDirectory);
+            }
+            Ok(Config::BatchDirectory { dir_path: path })
         } else if path.is_file() {
-            InputType::File(path)
+            Ok(Config::SingleFile {
+                file_path: path,
+                output_file,
+            })
         } else {
-            return Err(CliError::InvalidInputPath(path.display().to_string()));
-        };
-
-        if output_file.is_some() && matches!(input_type, InputType::Directory(_)) {
-            return Err(CliError::OutputWithDirectory);
+            Err(CliError::InvalidInputPath(path.display().to_string()))
         }
-
-        Ok(Config {
-            input_type,
-            output_file,
-        })
     }
 
     /// Config を処理単位（FileTask）のリストに変換
     pub fn into_tasks(self) -> Result<Vec<FileTask>, CliError> {
-        match self.input_type {
-            InputType::File(file_path) => {
+        match self {
+            Config::SingleFile {
+                file_path,
+                output_file,
+            } => {
                 let (default_output, event_name) = Self::generate_output_names(&file_path);
                 Ok(vec![FileTask {
                     input_path: file_path,
-                    output_path: self.output_file.unwrap_or(default_output),
+                    output_path: output_file.unwrap_or(default_output),
                     event_name,
                 }])
             }
-            InputType::Directory(dir_path) => {
+            Config::BatchDirectory { dir_path } => {
                 let csv_files = find_csv_files(&dir_path)?;
                 let tasks = csv_files
                     .into_iter()
@@ -199,15 +198,18 @@ mod tests {
         ];
 
         let config = Config::build(args.into_iter()).unwrap();
-        match &config.input_type {
-            InputType::File(file_path) => {
+        match &config {
+            Config::SingleFile {
+                file_path,
+                output_file,
+            } => {
                 assert_eq!(file_path, &input_path);
+                // output_file は --output 未指定なので None
+                // 名前解決は into_tasks() で行われる
+                assert_eq!(output_file, &None);
             }
-            _ => panic!("Expected File input type"),
+            _ => panic!("Expected SingleFile config"),
         }
-        // output_file は --output 未指定なので None
-        // 名前解決は into_tasks() で行われる
-        assert_eq!(config.output_file, None);
     }
 
     #[test]
@@ -235,13 +237,11 @@ mod tests {
         ];
 
         let config = Config::build(args.into_iter()).unwrap();
-        match &config.input_type {
-            InputType::Directory(dir_path) => {
+        match &config {
+            Config::BatchDirectory { dir_path } => {
                 assert_eq!(dir_path, temp_dir.path());
             }
-            _ => panic!("Expected Directory input type"),
+            _ => panic!("Expected BatchDirectory config"),
         }
-        // ディレクトリの場合はoutput_fileはNoneになる
-        assert_eq!(config.output_file, None);
     }
 }

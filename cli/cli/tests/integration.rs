@@ -90,8 +90,8 @@ fn test_cli_end_to_end_execution() {
     fs::copy("../test_data.csv", test_input).expect("Failed to copy test data");
 
     // Create CLI configuration
-    let config = Config {
-        input_type: cli::InputType::File(test_input.into()),
+    let config = Config::SingleFile {
+        file_path: test_input.into(),
         output_file: Some(test_output.into()),
     };
 
