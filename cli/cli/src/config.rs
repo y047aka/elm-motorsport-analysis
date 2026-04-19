@@ -21,7 +21,9 @@ impl RawArgs {
 
         while let Some(arg) = args.next() {
             if arg == "--output" {
-                output_file = args.next().map(PathBuf::from);
+                output_file = Some(PathBuf::from(
+                    args.next().ok_or(CliError::MissingOutputValue)?,
+                ));
             } else if input_path.is_none() {
                 input_path = Some(arg);
             } else {
@@ -195,6 +197,17 @@ mod tests {
     }
 
     #[test]
+    fn raw_args_parse_output_without_value() {
+        let args = vec![
+            "program".to_string(),
+            "input.csv".to_string(),
+            "--output".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn config_build_nonexistent_file() {
         let args = vec!["program".to_string(), "nonexistent.csv".to_string()];
         let result = Config::build(args.into_iter());
@@ -202,49 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn file_task_default_output_basic() {
-        let task = FileTask::new(PathBuf::from("input.csv"), None);
-        assert_eq!(task.output_path(), Path::new("input.json"));
-        assert_eq!(task.event_name(), "input");
-    }
-
-    #[test]
-    fn file_task_default_output_with_path() {
-        let task = FileTask::new(PathBuf::from("/path/to/input.csv"), None);
-        assert_eq!(task.output_path(), Path::new("/path/to/input.json"));
-        assert_eq!(task.event_name(), "input");
-    }
-
-    #[test]
-    fn file_task_default_output_multiple_dots() {
-        let task = FileTask::new(PathBuf::from("my.test.file.csv"), None);
-        assert_eq!(task.output_path(), Path::new("my.test.file.json"));
-        assert_eq!(task.event_name(), "my.test.file");
-    }
-
-    #[test]
-    fn file_task_default_output_no_extension() {
-        let task = FileTask::new(PathBuf::from("input"), None);
-        assert_eq!(task.output_path(), Path::new("input.json"));
-        assert_eq!(task.event_name(), "input");
-    }
-
-    #[test]
-    fn file_task_default_output_relative_path() {
-        let task = FileTask::new(PathBuf::from("./data/input.csv"), None);
-        assert_eq!(task.output_path(), Path::new("./data/input.json"));
-        assert_eq!(task.event_name(), "input");
-    }
-
-    #[test]
-    fn file_task_with_output_override() {
-        let task = FileTask::new(PathBuf::from("input.csv"), Some(PathBuf::from("custom.json")));
-        assert_eq!(task.output_path(), Path::new("custom.json"));
-        assert_eq!(task.event_name(), "input");
-    }
-
-    #[test]
-    fn config_build_file_defers_name_resolution() {
+    fn config_build_single_file_without_output() {
         let temp_dir = tempdir().unwrap();
         let input_path = temp_dir.path().join("input.csv");
 

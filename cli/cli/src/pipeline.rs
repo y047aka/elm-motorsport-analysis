@@ -135,3 +135,50 @@ fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFile
         laps_path,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_task_default_output_basic() {
+        let task = FileTask::new(PathBuf::from("input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_default_output_with_path() {
+        let task = FileTask::new(PathBuf::from("/path/to/input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("/path/to/input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_default_output_multiple_dots() {
+        let task = FileTask::new(PathBuf::from("my.test.file.csv"), None);
+        assert_eq!(task.output_path(), Path::new("my.test.file.json"));
+        assert_eq!(task.event_name(), "my.test.file");
+    }
+
+    #[test]
+    fn file_task_default_output_no_extension() {
+        let task = FileTask::new(PathBuf::from("input"), None);
+        assert_eq!(task.output_path(), Path::new("input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_default_output_relative_path() {
+        let task = FileTask::new(PathBuf::from("./data/input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("./data/input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_with_output_override() {
+        let task = FileTask::new(PathBuf::from("input.csv"), Some(PathBuf::from("custom.json")));
+        assert_eq!(task.output_path(), Path::new("custom.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+}
