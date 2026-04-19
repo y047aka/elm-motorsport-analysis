@@ -1,6 +1,6 @@
-use std::error::Error;
 use std::fs;
 
+use crate::error::CliError;
 use crate::output;
 use crate::preprocess;
 
@@ -26,7 +26,7 @@ pub struct ProcessingReport {
 }
 
 /// パイプライン: read → transform+serialize → write
-pub fn process_file(task: &FileTask) -> Result<ProcessingReport, Box<dyn Error>> {
+pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     let csv_content = read_csv(&task.input_path)?;
     let output = transform_and_serialize(&csv_content, &task.event_name)?;
     let report = write_files(task, &output)?;
@@ -36,25 +36,33 @@ pub fn process_file(task: &FileTask) -> Result<ProcessingReport, Box<dyn Error>>
     })
 }
 
-fn read_csv(input_path: &str) -> Result<String, Box<dyn Error>> {
-    fs::read_to_string(input_path)
-        .map_err(|e| format!("Failed to read input file '{}': {}", input_path, e).into())
+fn read_csv(input_path: &str) -> Result<String, CliError> {
+    fs::read_to_string(input_path).map_err(|e| CliError::ReadFile {
+        path: input_path.to_string(),
+        source: e,
+    })
 }
 
 fn transform_and_serialize(
     csv_content: &str,
     event_name: &str,
-) -> Result<SerializedOutput, Box<dyn Error>> {
+) -> Result<SerializedOutput, CliError> {
     let laps_with_metadata = preprocess::parse_laps_from_csv(csv_content);
     let cars = preprocess::group_laps_by_car(laps_with_metadata.clone());
     let car_count = cars.len();
     let metadata = output::create_metadata_output(event_name, &cars);
     let laps = output::create_laps_output(&laps_with_metadata);
 
-    let metadata_json = serde_json::to_string_pretty(&metadata)
-        .map_err(|e| format!("Failed to serialize metadata to JSON: {e}"))?;
-    let laps_json = serde_json::to_string_pretty(&laps)
-        .map_err(|e| format!("Failed to serialize laps to JSON: {e}"))?;
+    let metadata_json = serde_json::to_string_pretty(&metadata).map_err(|e| {
+        CliError::Serialize {
+            context: "metadata",
+            source: e,
+        }
+    })?;
+    let laps_json = serde_json::to_string_pretty(&laps).map_err(|e| CliError::Serialize {
+        context: "laps",
+        source: e,
+    })?;
 
     Ok(SerializedOutput {
         metadata_json,
@@ -66,13 +74,17 @@ fn transform_and_serialize(
 fn write_files(
     task: &FileTask,
     output: &SerializedOutput,
-) -> Result<ProcessingReport, Box<dyn Error>> {
-    fs::write(&task.output_path, &output.metadata_json)
-        .map_err(|e| format!("Failed to write output file '{}': {e}", task.output_path))?;
+) -> Result<ProcessingReport, CliError> {
+    fs::write(&task.output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
+        path: task.output_path.clone(),
+        source: e,
+    })?;
 
     let laps_path = task.output_path.replace(".json", "_laps.json");
-    fs::write(&laps_path, &output.laps_json)
-        .map_err(|e| format!("Failed to write laps file '{}': {e}", laps_path))?;
+    fs::write(&laps_path, &output.laps_json).map_err(|e| CliError::WriteFile {
+        path: laps_path.clone(),
+        source: e,
+    })?;
 
     Ok(ProcessingReport {
         car_count: output.car_count,

@@ -1,15 +1,15 @@
-use std::error::Error;
-
 pub mod config;
+pub mod error;
 pub mod output;
 pub mod pipeline;
 pub mod preprocess;
 
 pub use config::{Config, InputType};
+pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+pub fn run(config: Config) -> Result<(), CliError> {
     if let InputType::Directory(dir) = &config.input_type {
         println!("Scanning directory '{}' for CSV files...", dir);
     }

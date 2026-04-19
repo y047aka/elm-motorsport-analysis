@@ -1,8 +1,8 @@
-use std::error::Error;
 use std::ffi::OsStr;
 use std::fs;
 use std::path::Path;
 
+use crate::error::CliError;
 use crate::pipeline::FileTask;
 
 #[derive(Debug)]
@@ -18,7 +18,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, Box<dyn Error>> {
+    pub fn build(mut args: impl Iterator<Item = String>) -> Result<Config, CliError> {
         args.next();
 
         let mut input_path = None;
@@ -30,22 +30,21 @@ impl Config {
             } else if input_path.is_none() {
                 input_path = Some(arg);
             } else {
-                return Err(format!("Unexpected argument: {arg}").into());
+                return Err(CliError::UnexpectedArgument(arg));
             }
         }
 
-        let input_path = input_path
-            .ok_or_else(|| -> Box<dyn Error> { "Missing required input path argument".into() })?;
+        let input_path = input_path.ok_or(CliError::MissingInputPath)?;
 
         let path = Path::new(&input_path);
         let input_type = if !path.exists() {
-            return Err(format!("Input path does not exist: {input_path}").into());
+            return Err(CliError::InputPathNotFound(input_path));
         } else if path.is_dir() {
             InputType::Directory(input_path)
         } else if path.is_file() {
             InputType::File(input_path)
         } else {
-            return Err(format!("Input path is neither a file nor directory: {input_path}").into());
+            return Err(CliError::InvalidInputPath(input_path));
         };
 
         Ok(Config {
@@ -55,7 +54,7 @@ impl Config {
     }
 
     /// Config を処理単位（FileTask）のリストに変換
-    pub fn into_tasks(self) -> Result<Vec<FileTask>, Box<dyn Error>> {
+    pub fn into_tasks(self) -> Result<Vec<FileTask>, CliError> {
         match self.input_type {
             InputType::File(file_path) => {
                 let (default_output, event_name) = Self::generate_output_names(&file_path);
@@ -99,13 +98,15 @@ impl Config {
 }
 
 /// ディレクトリ内のCSVファイルを再帰的に検索
-fn find_csv_files(dir_path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+fn find_csv_files(dir_path: &str) -> Result<Vec<String>, CliError> {
     let mut csv_files = Vec::new();
-    let entries = fs::read_dir(dir_path)
-        .map_err(|e| format!("Failed to read directory '{}': {}", dir_path, e))?;
+    let entries = fs::read_dir(dir_path).map_err(|e| CliError::ReadDir {
+        path: dir_path.to_string(),
+        source: e,
+    })?;
 
     for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let entry = entry.map_err(CliError::ReadDirEntry)?;
         let path = entry.path();
 
         if path.is_dir() {
