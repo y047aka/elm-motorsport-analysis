@@ -712,7 +712,10 @@ fn class_from(class_str: &str) -> Class {
         "HYPERCAR" => Class::HYPERCAR,
         "LMP2" => Class::LMP2,
         "LMGT3" => Class::LMGT3,
-        _ => Class::HYPERCAR, // デフォルト
+        unknown => {
+            eprintln!("Unknown class '{}', falling back to None", unknown);
+            Class::None
+        }
     }
 }
 
