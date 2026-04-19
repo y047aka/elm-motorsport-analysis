@@ -2,6 +2,8 @@ use std::error::Error;
 use std::ffi::OsStr;
 use std::path::Path;
 
+use crate::pipeline::{self, FileTask};
+
 #[derive(Debug)]
 pub enum InputType {
     File(String),
@@ -69,6 +71,36 @@ impl Config {
             output_file,
             event_name,
         })
+    }
+
+    /// Config を処理単位（FileTask）のリストに変換
+    pub fn into_tasks(self) -> Result<Vec<FileTask>, Box<dyn Error>> {
+        match self.input_type {
+            InputType::File(file_path) => {
+                let (default_output, default_event) = Self::generate_output_names(&file_path);
+                Ok(vec![FileTask {
+                    input_path: file_path,
+                    output_path: self.output_file.unwrap_or(default_output),
+                    event_name: self.event_name.unwrap_or(default_event),
+                }])
+            }
+            InputType::Directory(dir_path) => {
+                println!("Scanning directory '{}' for CSV files...", dir_path);
+                let csv_files = pipeline::find_csv_files(&dir_path)?;
+                let tasks = csv_files
+                    .into_iter()
+                    .map(|csv_file| {
+                        let (output, event) = Self::generate_output_names(&csv_file);
+                        FileTask {
+                            input_path: csv_file,
+                            output_path: output,
+                            event_name: event,
+                        }
+                    })
+                    .collect();
+                Ok(tasks)
+            }
+        }
     }
 
     /// 入力ファイル名から出力ファイル名とイベント名を生成

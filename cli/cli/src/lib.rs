@@ -1,152 +1,48 @@
 use std::error::Error;
-use std::fs;
-use std::path::Path;
 
 pub mod config;
 pub mod output;
+pub mod pipeline;
 pub mod preprocess;
 
 pub use config::{Config, InputType};
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
-/// Process a single CSV file and convert to JSON
-fn process_single_file(config: &Config) -> Result<(), Box<dyn Error>> {
-    // Extract input path and other parameters from config
-    let (input_path, output_path, event_name) = match &config.input_type {
-        InputType::File(file_path) => (
-            file_path.as_str(),
-            config.output_file.clone(),
-            config.event_name.as_deref(),
-        ),
-        InputType::Directory(_) => {
-            unreachable!("Directory config should not reach process_single_file")
+pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
+    let tasks = config.into_tasks()?;
+
+    if tasks.is_empty() {
+        println!("No CSV files found to process");
+        return Ok(());
+    }
+
+    let is_batch = tasks.len() > 1;
+    if is_batch {
+        println!("Found {} CSV file(s) to process", tasks.len());
+    }
+
+    let mut processed = 0;
+    let mut errors = 0;
+
+    for task in &tasks {
+        if is_batch {
+            println!("Processing: {}", task.input_path);
         }
-    };
-
-    let csv_content = fs::read_to_string(input_path)
-        .map_err(|e| format!("Failed to read input file '{}': {}", input_path, e))?;
-
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    println!("Read {} cars from CSV '{}'", cars.len(), input_path);
-
-    let event_name = event_name
-        .or_else(|| Path::new(input_path).file_stem().and_then(|s| s.to_str()))
-        .unwrap_or("test_event");
-
-    let output_metadata = create_metadata_output(event_name, &cars);
-    let output_laps = create_laps_output(&laps_with_metadata);
-
-    let metadata_json = serde_json::to_string_pretty(&output_metadata)
-        .map_err(|e| format!("Failed to serialize metadata to JSON: {e}"))?;
-
-    let laps_json = serde_json::to_string_pretty(&output_laps)
-        .map_err(|e| format!("Failed to serialize laps to JSON: {e}"))?;
-
-    let base_output_path = output_path.unwrap_or_else(|| {
-        Path::new(input_path)
-            .with_extension("json")
-            .to_string_lossy()
-            .into_owned()
-    });
-
-    fs::write(&base_output_path, &metadata_json)
-        .map_err(|e| format!("Failed to write output file '{}': {e}", base_output_path))?;
-
-    let base_path = Path::new(&base_output_path);
-    let laps_output_path = {
-        let stem = base_path.file_stem().unwrap_or_default().to_string_lossy();
-        let parent = base_path.parent().unwrap_or_else(|| Path::new(""));
-        parent
-            .join(format!("{}_laps.json", stem))
-            .to_string_lossy()
-            .into_owned()
-    };
-    fs::write(&laps_output_path, &laps_json)
-        .map_err(|e| format!("Failed to write laps file '{}': {e}", laps_output_path))?;
-
-    println!("Wrote metadata JSON to {}", base_output_path);
-    println!("Wrote laps JSON to {}", laps_output_path);
-    Ok(())
-}
-
-/// Find all CSV files in a directory recursively
-fn find_csv_files(dir_path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut csv_files = Vec::new();
-    let entries = fs::read_dir(dir_path)
-        .map_err(|e| format!("Failed to read directory '{}': {}", dir_path, e))?;
-
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            // Recursively search subdirectories
-            let subdir_path = path.to_string_lossy().to_string();
-            let mut subdir_files = find_csv_files(&subdir_path)?;
-            csv_files.append(&mut subdir_files);
-        } else if let Some(extension) = path.extension() {
-            if extension == "csv" {
-                csv_files.push(path.to_string_lossy().to_string());
+        match pipeline::process_file(task) {
+            Ok(_) => processed += 1,
+            Err(e) => {
+                eprintln!("Error processing '{}': {}", task.input_path, e);
+                errors += 1;
             }
         }
     }
 
-    Ok(csv_files)
-}
-
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    match &config.input_type {
-        InputType::File(_) => {
-            process_single_file(&config)?;
-        }
-        InputType::Directory(dir_path) => {
-            println!("Scanning directory '{}' for CSV files...", dir_path);
-            let csv_files = find_csv_files(dir_path)?;
-
-            if csv_files.is_empty() {
-                println!("No CSV files found in directory '{}'", dir_path);
-                return Ok(());
-            }
-
-            println!("Found {} CSV file(s) to process", csv_files.len());
-
-            let mut processed = 0;
-            let mut errors = 0;
-
-            for csv_file in &csv_files {
-                println!("Processing: {}", csv_file);
-
-                // Create a file-specific config for each CSV file
-                let file_config = Config {
-                    input_type: InputType::File(csv_file.clone()),
-                    output_file: Some(
-                        Path::new(csv_file)
-                            .with_extension("json")
-                            .to_string_lossy()
-                            .into_owned(),
-                    ),
-                    event_name: Path::new(csv_file)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string()),
-                };
-
-                match process_single_file(&file_config) {
-                    Ok(_) => processed += 1,
-                    Err(e) => {
-                        eprintln!("Error processing '{}': {}", csv_file, e);
-                        errors += 1;
-                    }
-                }
-            }
-
-            println!(
-                "Batch processing completed: {} processed, {} errors",
-                processed, errors
-            );
-        }
+    if is_batch {
+        println!(
+            "Batch processing completed: {} processed, {} errors",
+            processed, errors
+        );
     }
 
     Ok(())
