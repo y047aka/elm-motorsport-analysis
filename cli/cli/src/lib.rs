@@ -20,20 +20,18 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
     }
     let tasks = config.into_tasks()?;
 
-    let is_batch = tasks.len() > 1;
     if tasks.is_empty() {
         log::info!("No CSV files found to process");
-    } else if is_batch {
-        log::info!("Found {} CSV file(s) to process", tasks.len());
+        return Ok(RunSummary { processed: 0, errors: 0 });
     }
+
+    log::info!("Found {} CSV file(s) to process", tasks.len());
 
     let mut processed = 0;
     let mut errors = 0;
 
     for task in &tasks {
-        if is_batch {
-            log::info!("Processing: {}", task.input_path);
-        }
+        log::info!("Processing: {}", task.input_path);
         match pipeline::process_file(task) {
             Ok(report) => {
                 log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
@@ -48,12 +46,10 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
         }
     }
 
-    if is_batch {
-        log::info!(
-            "Batch processing completed: {} processed, {} errors",
-            processed, errors
-        );
-    }
+    log::info!(
+        "Processing completed: {} processed, {} errors",
+        processed, errors
+    );
 
     Ok(RunSummary { processed, errors })
 }
