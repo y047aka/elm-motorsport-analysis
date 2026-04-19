@@ -15,7 +15,6 @@ pub enum InputType {
 pub struct Config {
     pub input_type: InputType,
     pub output_file: Option<String>,
-    pub event_name: Option<String>,
 }
 
 impl Config {
@@ -52,7 +51,6 @@ impl Config {
         Ok(Config {
             input_type,
             output_file,
-            event_name: None,
         })
     }
 
@@ -60,11 +58,11 @@ impl Config {
     pub fn into_tasks(self) -> Result<Vec<FileTask>, Box<dyn Error>> {
         match self.input_type {
             InputType::File(file_path) => {
-                let (default_output, default_event) = Self::generate_output_names(&file_path);
+                let (default_output, event_name) = Self::generate_output_names(&file_path);
                 Ok(vec![FileTask {
                     input_path: file_path,
                     output_path: self.output_file.unwrap_or(default_output),
-                    event_name: self.event_name.unwrap_or(default_event),
+                    event_name,
                 }])
             }
             InputType::Directory(dir_path) => {
@@ -202,10 +200,9 @@ mod tests {
             }
             _ => panic!("Expected File input type"),
         }
-        // output_file は --output 未指定なので None、event_name は常に None
+        // output_file は --output 未指定なので None
         // 名前解決は into_tasks() で行われる
         assert_eq!(config.output_file, None);
-        assert_eq!(config.event_name, None);
     }
 
     #[test]
@@ -226,6 +223,5 @@ mod tests {
         }
         // ディレクトリの場合はoutput_fileはNoneになる
         assert_eq!(config.output_file, None);
-        assert_eq!(config.event_name, None);
     }
 }
