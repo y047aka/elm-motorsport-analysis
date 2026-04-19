@@ -1,7 +1,8 @@
 module Motorsport.Lap.Performance exposing
     ( findPersonalBest, findFastest, findFastestBy, findSlowest
     , calculateMiniSectorFastest, LeMans2025MiniSectorFastest
-    , PerformanceLevel, performanceLevel
+    , RatedTime
+    , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
     )
@@ -11,7 +12,9 @@ module Motorsport.Lap.Performance exposing
 @docs findPersonalBest, findFastest, findFastestBy, findSlowest
 @docs calculateMiniSectorFastest, LeMans2025MiniSectorFastest
 
-@docs PerformanceLevel, performanceLevel
+@docs RatedTime
+
+@docs PerformanceLevel(..), performanceLevel
 @docs isStandard
 @docs toColorVariable
 
@@ -46,6 +49,14 @@ findFastestBy getter laps =
         |> List.filterMap (List.filter (getter >> (/=) 0) >> List.Extra.minimumBy getter)
         |> List.Extra.minimumBy getter
         |> Maybe.map getter
+
+
+
+type alias RatedTime =
+    { time : Duration
+    , performance : PerformanceLevel
+    }
+
 
 
 

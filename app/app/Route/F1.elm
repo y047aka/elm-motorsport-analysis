@@ -15,7 +15,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.Standings as Standings exposing (StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -165,8 +165,15 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    ViewModel.init raceControl_F1
-                        |> Leaderboard.view (config analysis_F1) leaderboardState
+                    let
+                        standings =
+                            Standings.init analysis_F1
+                                { elapsed = Clock.getElapsed raceControl_F1.clock
+                                , lapCount = raceControl_F1.lapCount
+                                , cars = raceControl_F1.cars
+                                }
+                    in
+                    Leaderboard.view (config analysis_F1 standings) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -174,8 +181,8 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Leaderboard.Config ViewModelItem Msg
-config analysis =
+config : Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
+config analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -186,25 +193,24 @@ config analysis =
             , getter = .currentDriver >> Maybe.map .name >> Maybe.withDefault ""
             }
         , stringColumn { label = "Team", getter = .metadata >> .team }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , customColumn
             { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
+            , getter = .gapToLeader >> Gap.toString
             , sorter = compareBy .position
             }
         , lastLapColumn_F1
-            { getter = .lastLap
+            { getter = identity
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
             }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
+        , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = .history
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = .history
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

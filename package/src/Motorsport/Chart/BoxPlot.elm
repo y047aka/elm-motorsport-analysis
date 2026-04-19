@@ -7,11 +7,11 @@ import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra as ListExtra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Duration as Duration
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Statistics
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, rect, svg, text_)
@@ -56,7 +56,7 @@ type alias HourlyBoxPlot =
     , hourIndex : Int
     , stats : BoxStats
     , color : Color
-    , currentLap : Maybe Lap
+    , currentLapTime : Maybe Duration
     }
 
 
@@ -148,8 +148,8 @@ computeLayout size grouped =
         |> List.concat
 
 
-view : { width : Float, height : Float } -> Analysis -> List ViewModelItem -> Html msg
-view size analysis selectedCars =
+view : { width : Float, height : Float } -> Analysis -> Standings -> List StandingsEntry -> Html msg
+view size analysis standings selectedCars =
     let
         hourlyBoxPlots =
             selectedCars
@@ -163,7 +163,7 @@ view size analysis selectedCars =
                                 item.metadata.carNumber
 
                             groups =
-                                toHourlyGroups item.history
+                                toHourlyGroups (Standings.getCarHistory item.metadata.carNumber standings)
 
                             lastHourIndex =
                                 groups |> ListExtra.last |> Maybe.map .hourIndex
@@ -175,9 +175,9 @@ view size analysis selectedCars =
                                     , hourIndex = group.hourIndex
                                     , stats = computeStatistics group.laps
                                     , color = color
-                                    , currentLap =
+                                    , currentLapTime =
                                         if Just group.hourIndex == lastHourIndex then
-                                            item.currentLap
+                                            item.currentLapTime
 
                                         else
                                             Nothing
@@ -383,7 +383,7 @@ computeGlobalYScale size { fastestLapTime } hourlyBoxPlots =
 renderPositionedBoxPlot : ContinuousScale Float -> Analysis -> PositionedBoxPlot -> Svg msg
 renderPositionedBoxPlot yScale_ analysis { boxPlot, x, width } =
     let
-        { stats, color, currentLap } =
+        { stats, color, currentLapTime } =
             boxPlot
 
         center =
@@ -405,8 +405,8 @@ renderPositionedBoxPlot yScale_ analysis { boxPlot, x, width } =
             stats.outliers
                 |> List.map (Scale.convert yScale_ >> outlierCircle "#c44b4b" center)
 
-        colorForCurrent lap =
-            { time = lap.time
+        colorForCurrent time =
+            { time = time
             , personalBest = stats.min |> round
             , fastest = analysis.fastestLapTime
             }
@@ -414,8 +414,8 @@ renderPositionedBoxPlot yScale_ analysis { boxPlot, x, width } =
                 |> Performance.toColorVariable
 
         currentLapMarker =
-            currentLap
-                |> Maybe.map (\lap -> currentLapCircle (colorForCurrent lap) yScale_ center lap)
+            currentLapTime
+                |> Maybe.map (\time -> currentLapCircle (colorForCurrent time) yScale_ center time)
                 |> Maybe.map List.singleton
                 |> Maybe.withDefault []
     in
@@ -546,11 +546,11 @@ outlierCircle color x y =
         []
 
 
-currentLapCircle : String -> ContinuousScale Float -> Float -> Lap -> Svg msg
-currentLapCircle color yScale_ center lap =
+currentLapCircle : String -> ContinuousScale Float -> Float -> Duration -> Svg msg
+currentLapCircle color yScale_ center time =
     circle
         [ InPx.cx center
-        , InPx.cy (Scale.convert yScale_ (toFloat lap.time))
+        , InPx.cy (Scale.convert yScale_ (toFloat time))
         , InPx.r 2.5
         , SvgAttributes.fill color
         ]

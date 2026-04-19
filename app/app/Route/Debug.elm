@@ -10,20 +10,19 @@ import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Class
 import Motorsport.Clock as Clock
+import Motorsport.Manufacturer
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
-import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
-import Motorsport.Ordering as Ordering
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.RunningOrder as RunningOrder
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
-import SortedList
 import Task
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
@@ -167,24 +166,32 @@ view app { analysis, raceControl } { leaderboardState } =
                     , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
                     ]
                 ]
-            , DataView.view (config analysis) leaderboardState (SortedList.toList (raceControlToLeaderboard raceControl).items)
+            , let
+                standings =
+                    raceControl.cars
+                        |> RunningOrder.toList
+                        |> List.Extra.find (\car -> car.metadata.carNumber == "2")
+                        |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
+                        |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+              in
+              DataView.view (config analysis standings) leaderboardState (Standings.toList standings)
             ]
         }
 
 
-config : Analysis -> Leaderboard.Config ViewModelItem Msg
-config analysis =
+config : Analysis -> Standings -> Leaderboard.Config StandingsEntry Msg
+config analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec 2025 { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , sectorTimeColumn
             { label = "S1"
             , getter =
-                .currentLap
+                .currentLapSectors
                     >> Maybe.map
                         (\{ sector_1, s1_best } ->
                             { time = sector_1
@@ -196,13 +203,13 @@ config analysis =
             }
         , customColumn
             { label = "S1 Best"
-            , getter = .currentLap >> Maybe.map (.s1_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLap >> Maybe.map .s1_best >> Maybe.withDefault 0)
+            , getter = .currentLapSectors >> Maybe.map (.s1_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLapSectors >> Maybe.map .s1_best >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S2"
             , getter =
-                .currentLap
+                .currentLapSectors
                     >> Maybe.map
                         (\{ sector_2, s2_best } ->
                             { time = sector_2
@@ -214,13 +221,13 @@ config analysis =
             }
         , customColumn
             { label = "S2 Best"
-            , getter = .currentLap >> Maybe.map (.s2_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLap >> Maybe.map .s2_best >> Maybe.withDefault 0)
+            , getter = .currentLapSectors >> Maybe.map (.s2_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLapSectors >> Maybe.map .s2_best >> Maybe.withDefault 0)
             }
         , sectorTimeColumn
             { label = "S3"
             , getter =
-                .currentLap
+                .currentLapSectors
                     >> Maybe.map
                         (\{ sector_3, s3_best } ->
                             { time = sector_3
@@ -232,61 +239,15 @@ config analysis =
             }
         , customColumn
             { label = "S3 Best"
-            , getter = .currentLap >> Maybe.map (.s3_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLap >> Maybe.map .s3_best >> Maybe.withDefault 0)
+            , getter = .currentLapSectors >> Maybe.map (.s3_best >> Duration.toString) >> Maybe.withDefault ""
+            , sorter = compareBy (.currentLapSectors >> Maybe.map .s3_best >> Maybe.withDefault 0)
             }
         , lastLapColumn_F1
-            { getter = .lastLap
+            { getter = identity
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
             }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
+        , bestTimeColumn { getter = .bestLap }
         ]
     }
 
 
-raceControlToLeaderboard : RaceControl.Model -> ViewModel
-raceControlToLeaderboard { lapCount, cars } =
-    let
-        sortedItems =
-            cars
-                |> RunningOrder.toList
-                |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                |> Maybe.map
-                    (\car ->
-                        car.laps
-                            |> List.take lapCount
-                            |> List.indexedMap
-                                (\index lap ->
-                                    { position = index + 1
-                                    , positionInClass = index + 1
-                                    , status = car.status
-                                    , metadata = car.metadata
-                                    , lap = lap.lap
-                                    , timing =
-                                        { time = 0
-                                        , sector = Nothing
-                                        , miniSector = Nothing
-                                        , gap = Gap.None
-                                        , interval = Gap.None
-                                        }
-                                    , currentLap = Just lap
-                                    , lastLap = Just lap
-                                    , history = []
-                                    , currentDriver = Just lap.driver
-                                    }
-                                )
-                    )
-                |> Maybe.withDefault []
-                |> Ordering.byPosition
-
-        leadLapNumber =
-            sortedItems |> SortedList.head |> Maybe.map .lap |> Maybe.withDefault 0
-    in
-    { leadLapNumber = leadLapNumber
-    , items = sortedItems
-    , itemsByClass =
-        sortedItems
-            |> SortedList.gatherEqualsBy (.metadata >> .class)
-            |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-    }

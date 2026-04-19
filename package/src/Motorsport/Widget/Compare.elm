@@ -12,11 +12,10 @@ import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
-import SortedList
 
 
 
@@ -68,7 +67,7 @@ update msg model =
 
 type alias Props =
     { eventSummary : EventSummary
-    , viewModel : ViewModel
+    , standings : Standings
     , clock : Clock.Model
     , analysis : Analysis
     }
@@ -82,7 +81,7 @@ viewCharts : { width : Float, height : Float } -> Props -> Model -> Html Msg
 viewCharts size props model =
     let
         selectedCars =
-            resolveCars model.selectedCars props.viewModel
+            resolveCars model.selectedCars props.standings
                 |> List.sortBy .position
     in
     div
@@ -124,21 +123,21 @@ chartTabButton label chart isActive =
         [ text label ]
 
 
-viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List ViewModelItem -> Html Msg
+viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List StandingsEntry -> Html Msg
 viewActiveChart activeChart size props selectedCars =
     case activeChart of
         PositionProgressionChart ->
             PositionProgression.view
                 size
                 props.clock
-                props.viewModel
+                props.standings
                 selectedCars
 
         LapTimeProgressionChart ->
             LapTimeProgression.view
                 size
                 props.clock
-                props.viewModel
+                props.standings
                 selectedCars
 
         CloseBattlesChart ->
@@ -153,6 +152,7 @@ viewActiveChart activeChart size props selectedCars =
                         in
                         CloseBattles.closeBattleItem
                             size
+                            props.standings
                             { cars = cars
                             , position = leader.position
                             }
@@ -160,16 +160,15 @@ viewActiveChart activeChart size props selectedCars =
                 |> Maybe.withDefault (text "")
 
         BoxPlotChart ->
-            BoxPlot.view size props.analysis selectedCars
+            BoxPlot.view size props.analysis props.standings selectedCars
 
 
-resolveCars : List String -> ViewModel -> List ViewModelItem
-resolveCars carNumbers viewModel =
+resolveCars : List String -> Standings -> List StandingsEntry
+resolveCars carNumbers standings =
     carNumbers
         |> List.filterMap
             (\carNumber ->
-                viewModel.items
-                    |> SortedList.toList
+                Standings.toList standings
                     |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
             )
 
@@ -178,8 +177,7 @@ viewCarSelector : Props -> Model -> Html Msg
 viewCarSelector props model =
     let
         groupedByClass =
-            props.viewModel.items
-                |> SortedList.toList
+            Standings.toList props.standings
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
     in
@@ -194,7 +192,7 @@ viewCarSelector props model =
         (List.map (viewClassGroup model) groupedByClass)
 
 
-viewClassGroup : Model -> List ViewModelItem -> Html Msg
+viewClassGroup : Model -> List StandingsEntry -> Html Msg
 viewClassGroup model cars =
     case List.head cars of
         Nothing ->
@@ -243,7 +241,7 @@ viewClassGroup model cars =
                 ]
 
 
-carSelectorItem : Model -> ViewModelItem -> Html Msg
+carSelectorItem : Model -> StandingsEntry -> Html Msg
 carSelectorItem model item =
     let
         isSelected =

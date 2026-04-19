@@ -18,8 +18,7 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.RaceControl.ViewModel exposing (Timing, ViewModelItem)
+import Motorsport.Standings exposing (SectorProgress, MiniSectorProgress, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
 
 
@@ -156,32 +155,33 @@ buildMiniSectors miniSectors sectorStart miniRatio =
                 |> WithMiniSectors
 
 
-computeProgress : TrackConfig -> ViewModelItem -> Float
+computeProgress : TrackConfig -> StandingsEntry -> Float
 computeProgress config car =
-    case ( car.currentLap, car.timing.sector, car.timing.miniSector ) of
-        ( Just currentLap, _, _ ) ->
-            progressFromElapsed currentLap car.timing
+    if car.currentLapProgress > 0 then
+        car.currentLapProgress
 
-        ( _, Just sectorProgress, Nothing ) ->
-            progressFromSector config sectorProgress
+    else
+        case ( car.sector, car.miniSector ) of
+            ( _, Just miniSectorProgress ) ->
+                progressFromMiniSector config miniSectorProgress
 
-        ( _, _, Just miniSectorProgress ) ->
-            progressFromMiniSector config miniSectorProgress
+            ( Just sectorProgress, Nothing ) ->
+                progressFromSector config sectorProgress
 
-        ( Nothing, Nothing, Nothing ) ->
-            0
+            ( Nothing, Nothing ) ->
+                0
 
 
-progressFromSector : List SectorConfig -> ( Sector, Float ) -> Float
-progressFromSector sectors ( targetSector, progress ) =
+progressFromSector : List SectorConfig -> SectorProgress -> Float
+progressFromSector sectors { sector, progress } =
     sectors
-        |> List.Extra.find (\{ sector } -> sector == targetSector)
+        |> List.Extra.find (\sectorConfig -> sectorConfig.sector == sector)
         |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
         |> Maybe.withDefault 0
 
 
-progressFromMiniSector : TrackConfig -> ( LeMans2025MiniSector, Float ) -> Float
-progressFromMiniSector config ( miniSector, progress ) =
+progressFromMiniSector : TrackConfig -> MiniSectorProgress -> Float
+progressFromMiniSector config { miniSector, progress } =
     case findMiniSectorShare config miniSector of
         Just { start, share } ->
             start + progress * share
@@ -203,12 +203,6 @@ findMiniSectorShare sectors targetMini =
                         minis
             )
         |> List.Extra.find (\{ mini } -> mini == targetMini)
-
-
-progressFromElapsed : Lap -> Timing -> Float
-progressFromElapsed currentLap timing =
-    (toFloat timing.time / toFloat currentLap.time)
-        |> min 1.0
 
 
 calcSectorBoundaries : List SectorConfig -> List Float

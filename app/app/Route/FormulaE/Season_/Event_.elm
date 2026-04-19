@@ -17,7 +17,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModelItem)
+import Motorsport.Standings as Standings exposing (StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -178,18 +178,22 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
         , body =
             [ header shared
             , let
-                viewModel =
-                    ViewModel.init raceControl
+                standings =
+                    Standings.init analysis
+                        { elapsed = Clock.getElapsed raceControl.clock
+                        , lapCount = raceControl.lapCount
+                        , cars = raceControl.cars
+                        }
               in
               case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis) leaderboardState viewModel
+                    Leaderboard.view (config eventSummary.season analysis standings) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view { season = 2025, eventName = "" } analysis viewModel
+                    TrackerChart.view { season = 2025, eventName = "" } analysis standings
             ]
         }
 
@@ -260,43 +264,42 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Analysis -> Leaderboard.Config ViewModelItem Msg
-config season analysis =
+config : Int -> Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
+config season analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
         , carNumberColumn_Wec season { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
-        , intColumn { label = "Lap", getter = .lap }
+        , intColumn { label = "Lap", getter = .lapsCompleted }
         , customColumn
             { label = "Gap"
-            , getter = .timing >> .gap >> Gap.toString
+            , getter = .gapToLeader >> Gap.toString
             , sorter = compareBy .position
             }
         , customColumn
             { label = "Interval"
-            , getter = .timing >> .interval >> Gap.toString
+            , getter = .intervalToAhead >> Gap.toString
             , sorter = compareBy .position
             }
         , currentLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (.currentLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.currentLapTime >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , lastLapColumn_Wec
-            { getter = .lastLap
+            { getter = identity
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
             }
-        , bestTimeColumn { getter = .lastLap >> Maybe.map .best }
+        , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = .history
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = .history
+            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

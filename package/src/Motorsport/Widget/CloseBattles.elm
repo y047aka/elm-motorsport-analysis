@@ -12,7 +12,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel as ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -25,7 +25,7 @@ import TypedSvg.Types exposing (Transform(..))
 
 
 type alias CloseBattle =
-    { cars : NonEmpty ViewModelItem
+    { cars : NonEmpty StandingsEntry
     , position : Int
     }
 
@@ -59,12 +59,12 @@ paddingBottom =
     padding + 15
 
 
-view : { width : Float, height : Float } -> ViewModel -> Html msg
-view size viewModel =
+view : { width : Float, height : Float } -> Standings -> Html msg
+view size standings =
     let
         closeBattles =
-            if viewModel.leadLapNumber > 1 then
-                detectCloseBattles viewModel
+            if Standings.lapCount standings > 1 then
+                detectCloseBattles standings
 
             else
                 []
@@ -74,16 +74,16 @@ view size viewModel =
             Widget.emptyState "No close battles detected"
 
         else
-            div [] (List.map (closeBattleItem size) closeBattles)
+            div [] (List.map (closeBattleItem size standings) closeBattles)
 
 
-detectCloseBattles : ViewModel -> List CloseBattle
-detectCloseBattles viewModel =
-    ViewModel.groupCarsByCloseIntervals viewModel
+detectCloseBattles : Standings -> List CloseBattle
+detectCloseBattles standings =
+    Standings.groupCarsByCloseIntervals standings
         |> List.filterMap createCloseBattle
 
 
-createCloseBattle : List ViewModelItem -> Maybe CloseBattle
+createCloseBattle : List StandingsEntry -> Maybe CloseBattle
 createCloseBattle cars =
     NonEmpty.fromList cars
         |> Maybe.map
@@ -94,8 +94,8 @@ createCloseBattle cars =
             )
 
 
-closeBattleItem : { width : Float, height : Float } -> CloseBattle -> Html msg
-closeBattleItem size { cars } =
+closeBattleItem : { width : Float, height : Float } -> Standings -> CloseBattle -> Html msg
+closeBattleItem size standings { cars } =
     div
         [ css
             [ Css.property "display" "grid"
@@ -103,21 +103,21 @@ closeBattleItem size { cars } =
             , Css.fontSize (px 12)
             ]
         ]
-        [ battleChart size cars
-        , lapTimeComparison cars
+        [ battleChart size standings cars
+        , lapTimeComparison standings cars
         ]
 
 
-lapTimeComparison : NonEmpty ViewModelItem -> Html msg
-lapTimeComparison cars =
+lapTimeComparison : Standings -> NonEmpty StandingsEntry -> Html msg
+lapTimeComparison standings cars =
     let
         allRecentLaps =
             let
                 options =
-                    { leadLapNumber = NonEmpty.head cars |> .lap }
+                    { laps = NonEmpty.head cars |> .lapsCompleted }
             in
             cars
-                |> NonEmpty.map (\car -> ViewModel.getRecentLaps 9 options car.history)
+                |> NonEmpty.map (\car -> Standings.getRecentLaps { count = 9, currentLap = options.laps } (Standings.getCarHistory car.metadata.carNumber standings))
 
         headerLaps =
             NonEmpty.head allRecentLaps
@@ -152,7 +152,7 @@ lapTimeComparison cars =
         ]
 
 
-carTimeRow : ViewModelItem -> List Lap -> NonEmpty (List Lap) -> Html msg
+carTimeRow : StandingsEntry -> List Lap -> NonEmpty (List Lap) -> Html msg
 carTimeRow car carLaps allCarsLaps =
     let
         leaderLaps =
@@ -193,7 +193,7 @@ carTimeRow car carLaps allCarsLaps =
                         , Css.color (Css.hsl 0 0 1)
                         ]
                     ]
-                    [ text (Gap.toString car.timing.interval) ]
+                    [ text (Gap.toString car.intervalToAhead) ]
                 ]
     in
     Html.tr [ css [ children [ Css.Global.td [ Css.padding Css.zero ] ] ] ]
@@ -241,18 +241,18 @@ lapTimeCell { isFastest, groupLeader } lap =
         [ text displayText ]
 
 
-battleChart : { width : Float, height : Float } -> NonEmpty ViewModelItem -> Html msg
-battleChart size cars =
+battleChart : { width : Float, height : Float } -> Standings -> NonEmpty StandingsEntry -> Html msg
+battleChart size standings cars =
     let
         options =
-            { leadLapNumber = NonEmpty.head cars |> .lap }
+            { laps = NonEmpty.head cars |> .lapsCompleted }
 
         carProgressionData =
             cars
                 |> NonEmpty.map
                     (\car ->
                         { carNumber = car.metadata.carNumber
-                        , laps = ViewModel.getRecentLaps 20 options car.history
+                        , laps = Standings.getRecentLaps { count = 20, currentLap = options.laps } (Standings.getCarHistory car.metadata.carNumber standings)
                         , color = Manufacturer.toColorWithFallback car.metadata
                         }
                     )

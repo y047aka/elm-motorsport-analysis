@@ -7,10 +7,9 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
-import SortedList
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
 import Svg.Styled.Keyed as Keyed
@@ -94,8 +93,8 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view : { season : Int, eventName : String } -> Analysis -> ViewModel -> Svg msg
-view { season, eventName } analysis vm =
+view : { season : Int, eventName : String } -> Analysis -> Standings -> Svg msg
+view { season, eventName } analysis standings =
     let
         layout =
             if season == 2025 && eventName == "24 Hours of Le Mans" then
@@ -110,7 +109,7 @@ view { season, eventName } analysis vm =
         config =
             Config.buildConfig layout analysis
     in
-    viewWithConfig layout.direction config vm
+    viewWithConfig layout.direction config standings
 
 
 {-| Check if a circuit runs counter-clockwise
@@ -124,8 +123,8 @@ isCounterClockwiseCircuit eventName =
         ]
 
 
-viewWithConfig : Direction -> TrackConfig -> ViewModel -> Svg msg
-viewWithConfig direction config vm =
+viewWithConfig : Direction -> TrackConfig -> Standings -> Svg msg
+viewWithConfig direction config standings =
     let
         { w, h } =
             constants.viewBox
@@ -135,7 +134,7 @@ viewWithConfig direction config vm =
         , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
         ]
         [ Lazy.lazy2 track direction config
-        , renderCars direction config vm
+        , renderCars direction config standings
         ]
 
 
@@ -283,11 +282,11 @@ makeLabel direction { progress, radius, fontSize, color, label } =
         [ text label ]
 
 
-renderCars : Direction -> TrackConfig -> ViewModel -> Svg msg
-renderCars direction config viewModel =
+renderCars : Direction -> TrackConfig -> Standings -> Svg msg
+renderCars direction config standings =
     Keyed.node "g"
         []
-        (SortedList.toList viewModel.items
+        (Standings.toList standings
             |> List.reverse
             |> List.map
                 (\car ->
@@ -298,7 +297,7 @@ renderCars direction config viewModel =
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> ViewModelItem -> Svg msg
+renderCarOnTrack : Direction -> TrackConfig -> StandingsEntry -> Svg msg
 renderCarOnTrack direction config car =
     let
         coords =
@@ -307,7 +306,7 @@ renderCarOnTrack direction config car =
     renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> ViewModelItem -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> StandingsEntry -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -325,7 +324,7 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> ViewModelItem -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Direction -> StandingsEntry -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
         { carNumber, class } =

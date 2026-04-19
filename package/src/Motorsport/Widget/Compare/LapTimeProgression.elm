@@ -10,12 +10,11 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RaceControl.ViewModel exposing (ViewModel, ViewModelItem)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
-import SortedList
 import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (transform, viewBox)
@@ -54,9 +53,9 @@ type alias ClassProgressionData =
     { series : List LapTimeSeries }
 
 
-view : { width : Float, height : Float } -> Clock.Model -> ViewModel -> List ViewModelItem -> Html msg
-view size clock viewModel selectedCars =
-    case buildClassProgressionData clock viewModel selectedCars of
+view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
+view size clock standings selectedCars =
+    case buildClassProgressionData clock standings selectedCars of
         Err message ->
             Widget.emptyState message
 
@@ -64,17 +63,17 @@ view size clock viewModel selectedCars =
             lapTimeProgressionChart size classData.series
 
 
-buildClassProgressionData : Clock.Model -> ViewModel -> List ViewModelItem -> Result String ClassProgressionData
-buildClassProgressionData clock viewModel selectedCars =
+buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String ClassProgressionData
+buildClassProgressionData clock standings selectedCars =
     let
         selectedCarNumbers =
             selectedCars |> List.map (.metadata >> .carNumber)
 
-        carsInClass : List ViewModelItem
+        carsInClass : List StandingsEntry
         carsInClass =
-            viewModel.itemsByClass
+            Standings.toClassList standings
                 |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
-                |> Maybe.map (\( _, cars ) -> SortedList.toList cars)
+                |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
 
         series : List LapTimeSeries
@@ -87,7 +86,7 @@ buildClassProgressionData clock viewModel selectedCars =
                                 item.metadata.carNumber
                         in
                         { carNumber = carNumber
-                        , laps = extractLapDataForCar clock item.history
+                        , laps = extractLapDataForCar clock (Standings.getCarHistory item.metadata.carNumber standings)
                         , color = Manufacturer.toColorWithFallback item.metadata
                         , isSelected = List.member carNumber selectedCarNumbers
                         }
