@@ -33,7 +33,12 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             println!("Processing: {}", task.input_path);
         }
         match pipeline::process_file(task) {
-            Ok(_) => processed += 1,
+            Ok(report) => {
+                println!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
+                println!("Wrote metadata JSON to {}", report.metadata_path);
+                println!("Wrote laps JSON to {}", report.laps_path);
+                processed += 1;
+            }
             Err(e) => {
                 eprintln!("Error processing '{}': {}", task.input_path, e);
                 errors += 1;
