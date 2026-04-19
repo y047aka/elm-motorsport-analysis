@@ -66,27 +66,3 @@ fn write_outputs(
     println!("Wrote laps JSON to {}", laps_output_path);
     Ok(())
 }
-
-/// ディレクトリ内のCSVファイルを再帰的に検索
-pub fn find_csv_files(dir_path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut csv_files = Vec::new();
-    let entries = fs::read_dir(dir_path)
-        .map_err(|e| format!("Failed to read directory '{}': {}", dir_path, e))?;
-
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            let subdir_path = path.to_string_lossy().to_string();
-            let mut subdir_files = find_csv_files(&subdir_path)?;
-            csv_files.append(&mut subdir_files);
-        } else if let Some(extension) = path.extension() {
-            if extension == "csv" {
-                csv_files.push(path.to_string_lossy().to_string());
-            }
-        }
-    }
-
-    Ok(csv_files)
-}

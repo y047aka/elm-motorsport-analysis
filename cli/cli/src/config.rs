@@ -1,8 +1,9 @@
 use std::error::Error;
 use std::ffi::OsStr;
+use std::fs;
 use std::path::Path;
 
-use crate::pipeline::{self, FileTask};
+use crate::pipeline::FileTask;
 
 #[derive(Debug)]
 pub enum InputType {
@@ -67,7 +68,7 @@ impl Config {
                 }])
             }
             InputType::Directory(dir_path) => {
-                let csv_files = pipeline::find_csv_files(&dir_path)?;
+                let csv_files = find_csv_files(&dir_path)?;
                 let tasks = csv_files
                     .into_iter()
                     .map(|csv_file| {
@@ -97,6 +98,30 @@ impl Config {
 
         (output_file, event_name)
     }
+}
+
+/// ディレクトリ内のCSVファイルを再帰的に検索
+fn find_csv_files(dir_path: &str) -> Result<Vec<String>, Box<dyn Error>> {
+    let mut csv_files = Vec::new();
+    let entries = fs::read_dir(dir_path)
+        .map_err(|e| format!("Failed to read directory '{}': {}", dir_path, e))?;
+
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
+        let path = entry.path();
+
+        if path.is_dir() {
+            let subdir_path = path.to_string_lossy().to_string();
+            let mut subdir_files = find_csv_files(&subdir_path)?;
+            csv_files.append(&mut subdir_files);
+        } else if let Some(extension) = path.extension() {
+            if extension == "csv" {
+                csv_files.push(path.to_string_lossy().to_string());
+            }
+        }
+    }
+
+    Ok(csv_files)
 }
 
 #[cfg(test)]
@@ -156,7 +181,7 @@ mod tests {
     }
 
     #[test]
-    fn config_build_file_auto_names() {
+    fn config_build_file_defers_name_resolution() {
         let temp_dir = tempdir().unwrap();
         let input_path = temp_dir.path().join("input.csv");
 
