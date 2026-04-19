@@ -177,7 +177,7 @@ pub fn map_event_name(event_id: &str) -> &str {
         "bahrain_8h" => "8 Hours of Bahrain",
         "sao_paulo_6h" => "6 Hours of São Paulo",
         other => {
-            eprintln!("Unknown event ID '{}', using as-is", other);
+            log::warn!("Unknown event ID '{}', using as-is", other);
             other
         }
     }

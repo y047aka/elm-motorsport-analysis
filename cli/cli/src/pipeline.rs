@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 
 use crate::error::CliError;
 use crate::output;
@@ -29,10 +30,11 @@ pub struct ProcessingReport {
 pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     let csv_content = read_csv(&task.input_path)?;
     let output = transform_and_serialize(&csv_content, &task.event_name)?;
-    let report = write_files(task, &output)?;
+    let written = write_files(task, &output)?;
     Ok(ProcessingReport {
         car_count: output.car_count,
-        ..report
+        metadata_path: written.metadata_path,
+        laps_path: written.laps_path,
     })
 }
 
@@ -71,23 +73,30 @@ fn transform_and_serialize(
     })
 }
 
-fn write_files(
-    task: &FileTask,
-    output: &SerializedOutput,
-) -> Result<ProcessingReport, CliError> {
+struct WrittenFiles {
+    metadata_path: String,
+    laps_path: String,
+}
+
+fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFiles, CliError> {
     fs::write(&task.output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
         path: task.output_path.clone(),
         source: e,
     })?;
 
-    let laps_path = task.output_path.replace(".json", "_laps.json");
+    let laps_path = {
+        let p = Path::new(&task.output_path);
+        let stem = p.file_stem().unwrap_or_default().to_string_lossy();
+        p.with_file_name(format!("{}_laps.json", stem))
+            .to_string_lossy()
+            .into_owned()
+    };
     fs::write(&laps_path, &output.laps_json).map_err(|e| CliError::WriteFile {
         path: laps_path.clone(),
         source: e,
     })?;
 
-    Ok(ProcessingReport {
-        car_count: output.car_count,
+    Ok(WrittenFiles {
         metadata_path: task.output_path.clone(),
         laps_path,
     })
