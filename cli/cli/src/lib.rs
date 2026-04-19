@@ -16,12 +16,12 @@ pub struct RunSummary {
 
 pub fn run(config: Config) -> Result<RunSummary, CliError> {
     if let InputType::Directory(dir) = &config.input_type {
-        println!("Scanning directory '{}' for CSV files...", dir);
+        log::info!("Scanning directory '{}' for CSV files...", dir);
     }
     let tasks = config.into_tasks()?;
 
     if tasks.is_empty() {
-        println!("No CSV files found to process");
+        log::info!("No CSV files found to process");
         return Ok(RunSummary {
             processed: 0,
             errors: 0,
@@ -30,7 +30,7 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
 
     let is_batch = tasks.len() > 1;
     if is_batch {
-        println!("Found {} CSV file(s) to process", tasks.len());
+        log::info!("Found {} CSV file(s) to process", tasks.len());
     }
 
     let mut processed = 0;
@@ -38,24 +38,24 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
 
     for task in &tasks {
         if is_batch {
-            println!("Processing: {}", task.input_path);
+            log::info!("Processing: {}", task.input_path);
         }
         match pipeline::process_file(task) {
             Ok(report) => {
-                println!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
-                println!("Wrote metadata JSON to {}", report.metadata_path);
-                println!("Wrote laps JSON to {}", report.laps_path);
+                log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
+                log::info!("Wrote metadata JSON to {}", report.metadata_path);
+                log::info!("Wrote laps JSON to {}", report.laps_path);
                 processed += 1;
             }
             Err(e) => {
-                eprintln!("Error processing '{}': {}", task.input_path, e);
+                log::error!("Error processing '{}': {}", task.input_path, e);
                 errors += 1;
             }
         }
     }
 
     if is_batch {
-        println!(
+        log::info!(
             "Batch processing completed: {} processed, {} errors",
             processed, errors
         );
