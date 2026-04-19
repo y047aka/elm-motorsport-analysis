@@ -14,45 +14,44 @@ pub struct RunSummary {
     pub errors: usize,
 }
 
+fn process_task(task: &pipeline::FileTask) -> bool {
+    match pipeline::process_file(task) {
+        Ok(report) => {
+            log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
+            log::info!("Wrote metadata JSON to {}", report.metadata_path);
+            log::info!("Wrote laps JSON to {}", report.laps_path);
+            true
+        }
+        Err(e) => {
+            log::error!("Error processing '{}': {}", task.input_path, e);
+            false
+        }
+    }
+}
+
 pub fn run(config: Config) -> Result<RunSummary, CliError> {
     if let InputType::Directory(dir) = &config.input_type {
         log::info!("Scanning directory '{}' for CSV files...", dir);
     }
     let tasks = config.into_tasks()?;
 
+    let is_batch = tasks.len() > 1;
     if tasks.is_empty() {
         log::info!("No CSV files found to process");
-        return Ok(RunSummary {
-            processed: 0,
-            errors: 0,
-        });
-    }
-
-    let is_batch = tasks.len() > 1;
-    if is_batch {
+    } else if is_batch {
         log::info!("Found {} CSV file(s) to process", tasks.len());
     }
 
-    let mut processed = 0;
-    let mut errors = 0;
-
-    for task in &tasks {
-        if is_batch {
-            log::info!("Processing: {}", task.input_path);
-        }
-        match pipeline::process_file(task) {
-            Ok(report) => {
-                log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path);
-                log::info!("Wrote metadata JSON to {}", report.metadata_path);
-                log::info!("Wrote laps JSON to {}", report.laps_path);
-                processed += 1;
+    let processed = tasks
+        .iter()
+        .inspect(|task| {
+            if is_batch {
+                log::info!("Processing: {}", task.input_path);
             }
-            Err(e) => {
-                log::error!("Error processing '{}': {}", task.input_path, e);
-                errors += 1;
-            }
-        }
-    }
+        })
+        .filter(|task| process_task(task))
+        .count();
+    let errors = tasks.len() - processed;
 
     if is_batch {
         log::info!(
