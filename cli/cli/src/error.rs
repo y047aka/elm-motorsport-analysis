@@ -18,6 +18,9 @@ pub enum CliError {
     #[error("--output cannot be used with directory input")]
     OutputWithDirectory,
 
+    #[error("No CSV files found in directory: {0}")]
+    NoCsvFilesFound(String),
+
     // I/O errors (with path context)
     #[error("Failed to read directory '{path}': {source}")]
     ReadDir {

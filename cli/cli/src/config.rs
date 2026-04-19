@@ -68,6 +68,9 @@ impl Config {
             }
             Config::BatchDirectory { dir_path } => {
                 let csv_files = find_csv_files(&dir_path)?;
+                if csv_files.is_empty() {
+                    return Err(CliError::NoCsvFilesFound(dir_path.display().to_string()));
+                }
                 let tasks = csv_files
                     .into_iter()
                     .map(|csv_file| {

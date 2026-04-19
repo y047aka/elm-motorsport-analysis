@@ -19,12 +19,6 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
         log::info!("Scanning directory '{}' for CSV files...", dir_path.display());
     }
     let tasks = config.into_tasks()?;
-
-    if tasks.is_empty() {
-        log::info!("No CSV files found to process");
-        return Ok(RunSummary { processed: 0, errors: 0 });
-    }
-
     log::info!("Found {} CSV file(s) to process", tasks.len());
 
     let mut processed = 0;
