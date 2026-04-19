@@ -15,6 +15,9 @@ pub enum CliError {
     #[error("Input path is neither a file nor directory: {0}")]
     InvalidInputPath(String),
 
+    #[error("--output cannot be used with directory input")]
+    OutputWithDirectory,
+
     // I/O errors (with path context)
     #[error("Failed to read directory '{path}': {source}")]
     ReadDir {

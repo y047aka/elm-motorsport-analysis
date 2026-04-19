@@ -47,6 +47,10 @@ impl Config {
             return Err(CliError::InvalidInputPath(input_path));
         };
 
+        if output_file.is_some() && matches!(input_type, InputType::Directory(_)) {
+            return Err(CliError::OutputWithDirectory);
+        }
+
         Ok(Config {
             input_type,
             output_file,
@@ -204,6 +208,21 @@ mod tests {
         // output_file は --output 未指定なので None
         // 名前解決は into_tasks() で行われる
         assert_eq!(config.output_file, None);
+    }
+
+    #[test]
+    fn config_build_directory_with_output_is_error() {
+        let temp_dir = tempdir().unwrap();
+
+        let args = vec![
+            "program".to_string(),
+            temp_dir.path().to_string_lossy().to_string(),
+            "--output".to_string(),
+            "output.json".to_string(),
+        ];
+
+        let result = Config::build(args.into_iter());
+        assert!(result.is_err());
     }
 
     #[test]
