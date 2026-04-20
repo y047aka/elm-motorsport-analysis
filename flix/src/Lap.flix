@@ -1,5 +1,7 @@
 mod Lap {
 
+    use Json.JsonValue.{JsonObject, JsonString, JsonArray}
+
     pub type alias LapRecord = {
         carNumber = String,
         driverName = String,
@@ -11,18 +13,18 @@ mod Lap {
     }
 
     pub def toJson(record: LapRecord): Json.JsonValue =
-        Json.JsonValue.JsonObject(
-            ("carNumber",  Json.JsonValue.JsonString(record#carNumber)) ::
-            ("driverName", Json.JsonValue.JsonString(record#driverName)) ::
-            ("lapNumber",  Json.JsonValue.JsonString(record#lapNumber)) ::
-            ("lapTime",    Json.JsonValue.JsonString(record#lapTime)) ::
-            ("kph",        Json.JsonValue.JsonString(record#kph)) ::
-            ("class",      Json.JsonValue.JsonString(record#class)) ::
-            ("team",       Json.JsonValue.JsonString(record#team)) ::
+        JsonObject(
+            ("carNumber",  JsonString(record#carNumber)) ::
+            ("driverName", JsonString(record#driverName)) ::
+            ("lapNumber",  JsonString(record#lapNumber)) ::
+            ("lapTime",    JsonString(record#lapTime)) ::
+            ("kph",        JsonString(record#kph)) ::
+            ("class",      JsonString(record#class)) ::
+            ("team",       JsonString(record#team)) ::
             Nil
         )
 
     pub def toJsonArray(records: List[LapRecord]): Json.JsonValue =
-        Json.JsonValue.JsonArray(List.map(toJson, records))
+        JsonArray(List.map(toJson, records))
 
 }
