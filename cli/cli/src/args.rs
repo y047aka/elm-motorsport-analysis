@@ -14,27 +14,54 @@ struct RawArgs {
 impl RawArgs {
     /// 純粋な引数パース（I/O なし）
     fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, CliError> {
+        enum ParseState {
+            Ready {
+                input: Option<String>,
+                output: Option<PathBuf>,
+            },
+            ExpectingOutputValue {
+                input: Option<String>,
+            },
+        }
         args.next();
 
-        let mut input_path = None;
-        let mut output_file: Option<PathBuf> = None;
+        let final_state = args.try_fold(
+            ParseState::Ready {
+                input: None,
+                output: None,
+            },
+            |state, arg| match state {
+                ParseState::ExpectingOutputValue { input } => Ok(ParseState::Ready {
+                    input,
+                    output: Some(PathBuf::from(arg)),
+                }),
+                ParseState::Ready { input, .. } if arg == "--output" => {
+                    Ok(ParseState::ExpectingOutputValue { input })
+                }
+                ParseState::Ready {
+                    input: None,
+                    output,
+                } => Ok(ParseState::Ready {
+                    input: Some(arg),
+                    output,
+                }),
+                ParseState::Ready {
+                    input: Some(_), ..
+                } => Err(CliError::UnexpectedArgument(arg)),
+            },
+        )?;
 
-        while let Some(arg) = args.next() {
-            if arg == "--output" {
-                output_file = Some(PathBuf::from(
-                    args.next().ok_or(CliError::MissingOutputValue)?,
-                ));
-            } else if input_path.is_none() {
-                input_path = Some(arg);
-            } else {
-                return Err(CliError::UnexpectedArgument(arg));
-            }
+        match final_state {
+            ParseState::Ready {
+                input: Some(input),
+                output,
+            } => Ok(RawArgs {
+                input_path: PathBuf::from(input),
+                output_file: output,
+            }),
+            ParseState::Ready { input: None, .. } => Err(CliError::MissingInputPath),
+            ParseState::ExpectingOutputValue { .. } => Err(CliError::MissingOutputValue),
         }
-
-        Ok(RawArgs {
-            input_path: PathBuf::from(input_path.ok_or(CliError::MissingInputPath)?),
-            output_file,
-        })
     }
 
     /// ファイルシステムを参照して検証済み FileTask のリストに変換
