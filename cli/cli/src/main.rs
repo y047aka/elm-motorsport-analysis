@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-use cli::{FileResult, parse_args};
+use cli::parse_args;
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
@@ -14,29 +14,28 @@ fn main() {
         process::exit(1);
     });
 
-    let mut processed = 0;
-    let mut errors = 0;
-    for result in cli::run(tasks) {
-        match result {
-            FileResult::Processed {
-                input_path,
-                report,
-            } => {
+    let (processed, errors) = cli::run(tasks).fold((0u32, 0u32), |(processed, errors), outcome| {
+        match &outcome.result {
+            Ok(report) => {
                 log::info!(
                     "Read {} cars from CSV '{}'",
                     report.car_count,
-                    input_path.display()
+                    outcome.input_path.display()
                 );
                 log::info!("Wrote metadata JSON to {}", report.metadata_path.display());
                 log::info!("Wrote laps JSON to {}", report.laps_path.display());
-                processed += 1;
+                (processed + 1, errors)
             }
-            FileResult::Failed { input_path, error } => {
-                log::error!("Error processing '{}': {}", input_path.display(), error);
-                errors += 1;
+            Err(error) => {
+                log::error!(
+                    "Error processing '{}': {}",
+                    outcome.input_path.display(),
+                    error
+                );
+                (processed, errors + 1)
             }
         }
-    }
+    });
 
     log::info!(
         "Processing completed: {} processed, {} errors",

@@ -2,8 +2,8 @@ use std::fs;
 use std::path::Path;
 
 use cli::{
-    FileResult, FileTask, create_laps_output, create_metadata_output, group_laps_by_car,
-    parse_laps_from_csv, run,
+    FileTask, create_laps_output, create_metadata_output, group_laps_by_car, parse_laps_from_csv,
+    run,
 };
 
 // =============================================================================
@@ -96,9 +96,7 @@ fn test_cli_end_to_end_execution() {
     // Execute CLI
     let results: Vec<_> = run(tasks).collect();
     assert!(
-        results
-            .iter()
-            .all(|r| matches!(r, FileResult::Processed { .. })),
+        results.iter().all(|o| o.result.is_ok()),
         "CLI should process without errors"
     );
 

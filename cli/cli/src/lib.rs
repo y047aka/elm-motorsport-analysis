@@ -14,26 +14,15 @@ use std::path::PathBuf;
 
 use pipeline::ProcessingReport;
 
-pub enum FileResult {
-    Processed {
-        input_path: PathBuf,
-        report: ProcessingReport,
-    },
-    Failed {
-        input_path: PathBuf,
-        error: CliError,
-    },
+pub struct FileOutcome {
+    pub input_path: PathBuf,
+    pub result: Result<ProcessingReport, CliError>,
 }
 
-pub fn run(tasks: Vec<FileTask>) -> impl Iterator<Item = FileResult> {
+pub fn run(tasks: Vec<FileTask>) -> impl Iterator<Item = FileOutcome> {
     tasks.into_iter().map(|task| {
         let input_path = task.input_path().to_path_buf();
-        match pipeline::process_file(&task) {
-            Ok(report) => FileResult::Processed {
-                input_path,
-                report,
-            },
-            Err(error) => FileResult::Failed { input_path, error },
-        }
+        let result = pipeline::process_file(&task);
+        FileOutcome { input_path, result }
     })
 }
