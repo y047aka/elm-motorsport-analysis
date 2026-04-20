@@ -73,10 +73,18 @@
             '';
           };
 
+        flix = pkgs.flix.overrideAttrs (old: rec {
+          version = "0.71.0";
+          src = pkgs.fetchurl {
+            url = "https://github.com/flix/flix/releases/download/v${version}/flix.jar";
+            hash = "sha256-Ha5oRDpQ7YuGsaF/ZNx8b+HjTSroxZEjzI3zR3g7NXI=";
+          };
+        });
+
         mkFlixApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.flix ];
+            runtimeInputs = [ flix ];
             text = ''
               cd flix
               ${cmd}
@@ -85,7 +93,7 @@
 
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test flix ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
         });
 
         apps = {

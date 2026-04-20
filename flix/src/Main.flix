@@ -1,6 +1,10 @@
 def main(): Unit \ IO =
     let path = "../cli/test_data.csv";
-    let result = FileRead.runWithIO(() -> checked_ecast(FileRead.readLines(path)));
+    let result = Fs.FileRead.runWithIO(() ->
+        Fs.ReadLines.runWithFileRead(() ->
+            Fs.ReadLines.readLines(path)
+        )
+    );
     match result {
         case Ok(lines) =>
             let count = List.length(lines);
