@@ -43,6 +43,16 @@ impl FileTask {
     pub fn event_name(&self) -> &str {
         &self.event_name
     }
+
+    pub fn laps_path(&self) -> PathBuf {
+        let stem = self
+            .output_path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
+        self.output_path
+            .with_file_name(format!("{}_laps.json", stem))
+    }
 }
 
 /// 変換・直列化の結果（純粋な変換の出力）
@@ -83,10 +93,10 @@ fn transform_and_serialize(
     event_name: &str,
 ) -> Result<SerializedOutput, CliError> {
     let laps_with_metadata = preprocess::parse_laps_from_csv(csv_content);
-    let cars = preprocess::group_laps_by_car(laps_with_metadata.clone());
+    let laps = output::create_laps_output(&laps_with_metadata);
+    let cars = preprocess::group_laps_by_car(laps_with_metadata);
     let car_count = cars.len();
     let metadata = output::create_metadata_output(event_name, &cars);
-    let laps = output::create_laps_output(&laps_with_metadata);
 
     let metadata_json = serde_json::to_string_pretty(&metadata).map_err(|e| {
         CliError::Serialize {
@@ -113,18 +123,12 @@ struct WrittenFiles {
 
 fn write_files(task: &FileTask, output: &SerializedOutput) -> Result<WrittenFiles, CliError> {
     let output_path = task.output_path();
+    let laps_path = task.laps_path();
+
     fs::write(output_path, &output.metadata_json).map_err(|e| CliError::WriteFile {
         path: output_path.display().to_string(),
         source: e,
     })?;
-
-    let laps_path = {
-        let stem = output_path
-            .file_stem()
-            .unwrap_or_default()
-            .to_string_lossy();
-        output_path.with_file_name(format!("{}_laps.json", stem))
-    };
     fs::write(&laps_path, &output.laps_json).map_err(|e| CliError::WriteFile {
         path: laps_path.display().to_string(),
         source: e,
