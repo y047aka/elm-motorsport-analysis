@@ -10,7 +10,8 @@ def main(): Unit \ IO =
             match lines {
                 case _header :: dataLines =>
                     let records = Csv.parseLines(dataLines);
-                    println(Csv.formatTable(records))
+                    let json = Lap.toJsonArray(records);
+                    println(Json.render(json))
                 case Nil =>
                     println("Empty file")
             }
