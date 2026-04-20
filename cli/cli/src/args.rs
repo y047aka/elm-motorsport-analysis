@@ -68,31 +68,51 @@ impl RawArgs {
     fn resolve(self) -> Result<Vec<FileTask>, CliError> {
         let path = self.input_path;
 
-        if !path.exists() {
-            Err(CliError::InputPathNotFound(path.display().to_string()))
-        } else if path.is_dir() {
-            if self.output_file.is_some() {
-                return Err(CliError::OutputWithDirectory);
-            }
-            let csv_files = find_csv_files(&path)?;
-            if csv_files.is_empty() {
-                return Err(CliError::NoCsvFilesFound(path.display().to_string()));
-            }
-            Ok(csv_files
-                .into_iter()
-                .map(|f| FileTask::new(f, None))
-                .collect())
-        } else if path.is_file() {
-            Ok(vec![FileTask::new(path, self.output_file)])
-        } else {
-            Err(CliError::InvalidInputPath(path.display().to_string()))
+        match classify_path(&path) {
+            PathKind::NotFound => Err(CliError::InputPathNotFound(path.display().to_string())),
+            PathKind::File => Ok(vec![FileTask::new(path, self.output_file)]),
+            PathKind::Dir => resolve_dir(path, self.output_file),
+            PathKind::Other => Err(CliError::InvalidInputPath(path.display().to_string())),
         }
     }
+}
+
+fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTask>, CliError> {
+    if output_file.is_some() {
+        return Err(CliError::OutputWithDirectory);
+    }
+    let csv_files = find_csv_files(&path)?;
+    if csv_files.is_empty() {
+        return Err(CliError::NoCsvFilesFound(path.display().to_string()));
+    }
+    Ok(csv_files
+        .into_iter()
+        .map(|f| FileTask::new(f, None))
+        .collect())
 }
 
 /// CLI 引数をパースし、検証済みの処理タスクリストを返す
 pub fn parse_args(args: impl Iterator<Item = String>) -> Result<Vec<FileTask>, CliError> {
     RawArgs::parse(args)?.resolve()
+}
+
+enum PathKind {
+    NotFound,
+    File,
+    Dir,
+    Other,
+}
+
+fn classify_path(path: &Path) -> PathKind {
+    if !path.exists() {
+        PathKind::NotFound
+    } else if path.is_file() {
+        PathKind::File
+    } else if path.is_dir() {
+        PathKind::Dir
+    } else {
+        PathKind::Other
+    }
 }
 
 /// ディレクトリ内のCSVファイルを再帰的に検索
