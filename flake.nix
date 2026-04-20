@@ -111,7 +111,7 @@
           flix-init            = { type = "app"; program = "${mkFlixApp "flix-init"  "flix init"}/bin/flix-init";                                                     meta.description = "Initialize Flix project"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
-          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run"}/bin/flix-run";                                                       meta.description = "Run Flix project"; };
+          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../cli/test_data.csv"}/bin/flix-run";                               meta.description = "Run Flix project (CSV -> JSON)"; };
         };
       });
 }

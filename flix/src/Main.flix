@@ -1,6 +1,16 @@
-def main(): Unit \ IO =
-    let inputPath = "../cli/test_data.csv";
-    let outputPath = "../cli/test_data.json";
+use Sys.Env
+
+def main(): Unit \ {Env, IO} =
+    let args = Env.getArgs();
+    match Args.parse(args) {
+        case Err(e) =>
+            println("Error: ${e}");
+            println("Usage: flix-run <input.csv> [--output <output.json>]")
+        case Ok(parsed) =>
+            convert(parsed#inputPath, parsed#outputPath)
+    }
+
+def convert(inputPath: String, outputPath: String): Unit \ IO =
     let readResult = Fs.FileRead.runWithIO(() ->
         Fs.ReadLines.runWithFileRead(() ->
             Fs.ReadLines.readLines(inputPath)
