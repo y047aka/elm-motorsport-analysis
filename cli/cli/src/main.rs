@@ -14,14 +14,8 @@ fn main() {
         process::exit(1);
     });
 
-    match cli::run(config) {
-        Ok(summary) if summary.errors > 0 => {
-            process::exit(1);
-        }
-        Err(e) => {
-            eprintln!("Application error: {e}");
-            process::exit(1);
-        }
-        _ => {}
+    let summary = cli::run(config);
+    if summary.errors > 0 {
+        process::exit(1);
     }
 }

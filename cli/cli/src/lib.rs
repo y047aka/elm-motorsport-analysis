@@ -14,11 +14,8 @@ pub struct RunSummary {
     pub errors: usize,
 }
 
-pub fn run(config: Config) -> Result<RunSummary, CliError> {
-    if let Config::BatchDirectory { dir_path } = &config {
-        log::info!("Scanning directory '{}' for CSV files...", dir_path.display());
-    }
-    let tasks = config.into_tasks()?;
+pub fn run(config: Config) -> RunSummary {
+    let tasks = config.into_tasks();
     log::info!("Found {} CSV file(s) to process", tasks.len());
 
     let mut processed = 0;
@@ -45,5 +42,5 @@ pub fn run(config: Config) -> Result<RunSummary, CliError> {
         processed, errors
     );
 
-    Ok(RunSummary { processed, errors })
+    RunSummary { processed, errors }
 }

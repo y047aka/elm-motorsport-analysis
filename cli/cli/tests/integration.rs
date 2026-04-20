@@ -96,7 +96,7 @@ fn test_cli_end_to_end_execution() {
     };
 
     // Execute CLI
-    let summary = run(config).expect("CLI execution should succeed");
+    let summary = run(config);
     assert_eq!(summary.errors, 0, "CLI should process without errors");
 
     // Verify output file creation

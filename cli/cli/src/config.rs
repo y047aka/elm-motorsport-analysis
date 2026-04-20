@@ -47,7 +47,11 @@ impl RawArgs {
             if self.output_file.is_some() {
                 return Err(CliError::OutputWithDirectory);
             }
-            Ok(Config::BatchDirectory { dir_path: path })
+            let csv_files = find_csv_files(&path)?;
+            if csv_files.is_empty() {
+                return Err(CliError::NoCsvFilesFound(path.display().to_string()));
+            }
+            Ok(Config::BatchDirectory { csv_files })
         } else if path.is_file() {
             Ok(Config::SingleFile {
                 file_path: path,
@@ -66,7 +70,7 @@ pub enum Config {
         output_file: Option<PathBuf>,
     },
     BatchDirectory {
-        dir_path: PathBuf,
+        csv_files: Vec<PathBuf>,
     },
 }
 
@@ -75,24 +79,17 @@ impl Config {
         RawArgs::parse(args)?.resolve()
     }
 
-    /// Config を処理単位（FileTask）のリストに変換
-    pub fn into_tasks(self) -> Result<Vec<FileTask>, CliError> {
+    /// Config を処理単位（FileTask）のリストに変換（純粋な変換）
+    pub fn into_tasks(self) -> Vec<FileTask> {
         match self {
             Config::SingleFile {
                 file_path,
                 output_file,
-            } => Ok(vec![FileTask::new(file_path, output_file)]),
-            Config::BatchDirectory { dir_path } => {
-                let csv_files = find_csv_files(&dir_path)?;
-                if csv_files.is_empty() {
-                    return Err(CliError::NoCsvFilesFound(dir_path.display().to_string()));
-                }
-                let tasks = csv_files
-                    .into_iter()
-                    .map(|csv_file| FileTask::new(csv_file, None))
-                    .collect();
-                Ok(tasks)
-            }
+            } => vec![FileTask::new(file_path, output_file)],
+            Config::BatchDirectory { csv_files } => csv_files
+                .into_iter()
+                .map(|csv_file| FileTask::new(csv_file, None))
+                .collect(),
         }
     }
 }
@@ -260,8 +257,25 @@ mod tests {
     }
 
     #[test]
+    fn config_build_empty_directory_is_error() {
+        let temp_dir = tempdir().unwrap();
+
+        let args = vec![
+            "program".to_string(),
+            temp_dir.path().to_string_lossy().to_string(),
+        ];
+
+        let result = Config::build(args.into_iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn config_build_with_directory() {
         let temp_dir = tempdir().unwrap();
+        File::create(temp_dir.path().join("race.csv"))
+            .unwrap()
+            .write_all(b"test")
+            .unwrap();
 
         let args = vec![
             "program".to_string(),
@@ -270,8 +284,9 @@ mod tests {
 
         let config = Config::build(args.into_iter()).unwrap();
         match &config {
-            Config::BatchDirectory { dir_path } => {
-                assert_eq!(dir_path, temp_dir.path());
+            Config::BatchDirectory { csv_files } => {
+                assert_eq!(csv_files.len(), 1);
+                assert_eq!(csv_files[0], temp_dir.path().join("race.csv"));
             }
             _ => panic!("Expected BatchDirectory config"),
         }
