@@ -1,3 +1,11 @@
-// The main entry point.
 def main(): Unit \ IO =
-    println("Hello World!")
+    let path = "../cli/test_data.csv";
+    let result = FileRead.runWithIO(() -> checked_ecast(FileRead.readLines(path)));
+    match result {
+        case Ok(lines) =>
+            let count = List.length(lines);
+            println("File: ${path}");
+            println("Lines: ${count}")
+        case Err(e) =>
+            println("Error: ${e}")
+    }
