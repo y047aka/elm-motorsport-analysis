@@ -9,38 +9,30 @@ pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
-pub struct RunSummary {
-    pub processed: usize,
-    pub errors: usize,
+use std::path::PathBuf;
+
+use pipeline::ProcessingReport;
+
+pub enum FileResult {
+    Processed {
+        input_path: PathBuf,
+        report: ProcessingReport,
+    },
+    Failed {
+        input_path: PathBuf,
+        error: CliError,
+    },
 }
 
-pub fn run(config: Config) -> RunSummary {
-    let tasks = config.into_tasks();
-    log::info!("Found {} CSV file(s) to process", tasks.len());
-
-    let mut processed = 0;
-    let mut errors = 0;
-
-    for task in &tasks {
-        log::info!("Processing: {}", task.input_path().display());
-        match pipeline::process_file(task) {
-            Ok(report) => {
-                log::info!("Read {} cars from CSV '{}'", report.car_count, task.input_path().display());
-                log::info!("Wrote metadata JSON to {}", report.metadata_path.display());
-                log::info!("Wrote laps JSON to {}", report.laps_path.display());
-                processed += 1;
-            }
-            Err(e) => {
-                log::error!("Error processing '{}': {}", task.input_path().display(), e);
-                errors += 1;
-            }
+pub fn run(config: Config) -> impl Iterator<Item = FileResult> {
+    config.into_tasks().into_iter().map(|task| {
+        let input_path = task.input_path().to_path_buf();
+        match pipeline::process_file(&task) {
+            Ok(report) => FileResult::Processed {
+                input_path,
+                report,
+            },
+            Err(error) => FileResult::Failed { input_path, error },
         }
-    }
-
-    log::info!(
-        "Processing completed: {} processed, {} errors",
-        processed, errors
-    );
-
-    RunSummary { processed, errors }
+    })
 }
