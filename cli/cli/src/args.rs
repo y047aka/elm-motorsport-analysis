@@ -34,9 +34,13 @@ impl RawArgs {
                     input,
                     output: Some(PathBuf::from(arg)),
                 }),
-                ParseState::Ready { input, .. } if arg == "--output" => {
-                    Ok(ParseState::ExpectingOutputValue { input })
-                }
+                ParseState::Ready {
+                    input,
+                    output: None,
+                } if arg == "--output" => Ok(ParseState::ExpectingOutputValue { input }),
+                ParseState::Ready {
+                    output: Some(_), ..
+                } if arg == "--output" => Err(CliError::DuplicateOutput),
                 ParseState::Ready {
                     input: None,
                     output,
@@ -65,6 +69,25 @@ impl RawArgs {
 
     /// ファイルシステムを参照して検証済み FileTask のリストに変換
     fn resolve(self) -> Result<Vec<FileTask>, CliError> {
+        enum PathKind {
+            NotFound,
+            File,
+            Dir,
+            Other,
+        }
+
+        fn classify_path(path: &Path) -> PathKind {
+            if !path.exists() {
+                PathKind::NotFound
+            } else if path.is_file() {
+                PathKind::File
+            } else if path.is_dir() {
+                PathKind::Dir
+            } else {
+                PathKind::Other
+            }
+        }
+
         let path = self.input_path;
 
         match classify_path(&path) {
@@ -95,36 +118,18 @@ pub fn parse_args(args: impl Iterator<Item = String>) -> Result<Vec<FileTask>, C
     RawArgs::parse(args)?.resolve()
 }
 
-enum PathKind {
-    NotFound,
-    File,
-    Dir,
-    Other,
-}
-
-fn classify_path(path: &Path) -> PathKind {
-    if !path.exists() {
-        PathKind::NotFound
-    } else if path.is_file() {
-        PathKind::File
-    } else if path.is_dir() {
-        PathKind::Dir
-    } else {
-        PathKind::Other
-    }
-}
-
 /// ディレクトリ内のCSVファイルを再帰的に検索
 fn find_csv_files(dir_path: &Path) -> Result<Vec<PathBuf>, walkdir::Error> {
-    let paths: Vec<PathBuf> = walkdir::WalkDir::new(dir_path)
+    walkdir::WalkDir::new(dir_path)
         .into_iter()
         .map(|entry| entry.map(|e| e.into_path()))
-        .collect::<Result<Vec<_>, _>>()?;
-
-    Ok(paths
-        .into_iter()
-        .filter(|p| p.extension().is_some_and(|ext| ext == "csv"))
-        .collect())
+        .collect::<Result<Vec<_>, _>>()
+        .map(|paths| {
+            paths
+                .into_iter()
+                .filter(|p| p.extension().is_some_and(|ext| ext == "csv"))
+                .collect()
+        })
 }
 
 #[cfg(test)]
@@ -207,6 +212,20 @@ mod tests {
             "program".to_string(),
             "input.csv".to_string(),
             "--output".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn raw_args_parse_duplicate_output() {
+        let args = vec![
+            "program".to_string(),
+            "--output".to_string(),
+            "a.json".to_string(),
+            "--output".to_string(),
+            "b.json".to_string(),
+            "input.csv".to_string(),
         ];
         let result = RawArgs::parse(args.into_iter());
         assert!(result.is_err());

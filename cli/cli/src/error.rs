@@ -21,6 +21,9 @@ pub enum CliError {
     #[error("--output cannot be used with directory input")]
     OutputWithDirectory,
 
+    #[error("--output specified more than once")]
+    DuplicateOutput,
+
     #[error("No CSV files found in directory: {0}")]
     NoCsvFilesFound(String),
 
