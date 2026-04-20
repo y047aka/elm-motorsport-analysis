@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
+use crate::FileTask;
 use crate::error::CliError;
-use crate::pipeline::FileTask;
 
 /// 引数パース結果（ファイルシステム未検証）
 #[derive(Debug, PartialEq)]
