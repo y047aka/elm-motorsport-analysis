@@ -20,18 +20,15 @@ mod FileTask {
     pub def resolve(parsed: Args.ParsedArgs): Result[String, List[FileTask]] \ IO =
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
-        let existsResult = Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(path));
-        match existsResult {
-            case Ok(false) => Err("Input path not found: ${path}")
-            case Err(e)    => Err("Cannot access path: ${e}")
-            case Ok(true)  =>
-                let isDirResult = Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(path));
-                match isDirResult {
-                    case Ok(true)  => resolveDir(path, outputOverride)
-                    case Ok(false) => Ok(make(path, outputOverride) :: Nil)
-                    case Err(e)    => Err("Cannot check path type: ${e}")
-                }
-        }
+        forM(
+            exists <- Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(path))
+                        |> Result.mapErr(e -> "Cannot access path: ${e}");
+            _      <- if (exists) Ok(()) else Err("Input path not found: ${path}");
+            isDir  <- Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(path))
+                        |> Result.mapErr(e -> "Cannot check path type: ${e}");
+            tasks  <- if (isDir) resolveDir(path, outputOverride)
+                      else Ok(make(path, outputOverride) :: Nil)
+        ) yield tasks
 
     def resolveDir(dirPath: String, outputOverride: Option[String]): Result[String, List[FileTask]] \ IO =
         match outputOverride {
