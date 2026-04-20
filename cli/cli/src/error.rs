@@ -25,15 +25,8 @@ pub enum CliError {
     NoCsvFilesFound(String),
 
     // I/O errors (with path context)
-    #[error("Failed to read directory '{path}': {source}")]
-    ReadDir {
-        path: String,
-        #[source]
-        source: std::io::Error,
-    },
-
-    #[error("Failed to read directory entry: {0}")]
-    ReadDirEntry(#[source] std::io::Error),
+    #[error("Failed to walk directory: {0}")]
+    WalkDir(String),
 
     #[error("Failed to read input file '{path}': {source}")]
     ReadFile {

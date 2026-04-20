@@ -1,4 +1,3 @@
-use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::error::CliError;
@@ -81,7 +80,7 @@ fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTa
     if output_file.is_some() {
         return Err(CliError::OutputWithDirectory);
     }
-    let csv_files = find_csv_files(&path)?;
+    let csv_files = find_csv_files(&path).map_err(|e| CliError::WalkDir(e.to_string()))?;
     if csv_files.is_empty() {
         return Err(CliError::NoCsvFilesFound(path.display().to_string()));
     }
@@ -116,28 +115,16 @@ fn classify_path(path: &Path) -> PathKind {
 }
 
 /// ディレクトリ内のCSVファイルを再帰的に検索
-fn find_csv_files(dir_path: &Path) -> Result<Vec<PathBuf>, CliError> {
-    let mut csv_files = Vec::new();
-    let entries = fs::read_dir(dir_path).map_err(|e| CliError::ReadDir {
-        path: dir_path.display().to_string(),
-        source: e,
-    })?;
+fn find_csv_files(dir_path: &Path) -> Result<Vec<PathBuf>, walkdir::Error> {
+    let paths: Vec<PathBuf> = walkdir::WalkDir::new(dir_path)
+        .into_iter()
+        .map(|entry| entry.map(|e| e.into_path()))
+        .collect::<Result<Vec<_>, _>>()?;
 
-    for entry in entries {
-        let entry = entry.map_err(CliError::ReadDirEntry)?;
-        let path = entry.path();
-
-        if path.is_dir() {
-            let mut subdir_files = find_csv_files(&path)?;
-            csv_files.append(&mut subdir_files);
-        } else if let Some(extension) = path.extension() {
-            if extension == "csv" {
-                csv_files.push(path);
-            }
-        }
-    }
-
-    Ok(csv_files)
+    Ok(paths
+        .into_iter()
+        .filter(|p| p.extension().is_some_and(|ext| ext == "csv"))
+        .collect())
 }
 
 #[cfg(test)]
