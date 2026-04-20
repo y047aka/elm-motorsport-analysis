@@ -14,20 +14,6 @@ pub enum Class {
 }
 
 impl Class {
-    /// クラスを文字列に変換（ElmのtoStringと互換）
-    pub fn to_string(&self) -> &'static str {
-        match self {
-            Class::None => "None",
-            Class::HYPERCAR => "HYPERCAR",
-            Class::LMP1 => "LMP1",
-            Class::LMP2 => "LMP2",
-            Class::LMGTEPro => "LMGTE Pro",
-            Class::LMGTEAm => "LMGTE Am",
-            Class::LMGT3 => "LMGT3",
-            Class::InnovativeCar => "INNOVATIVE CAR",
-        }
-    }
-
     /// 文字列からクラスを生成（ElmのfromStringと互換）
     pub fn from_string(s: &str) -> Option<Self> {
         match s {
@@ -60,6 +46,21 @@ impl Class {
                 }
             }
             Class::InnovativeCar => "#00f",
+        }
+    }
+}
+
+impl std::fmt::Display for Class {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Class::None => write!(f, "None"),
+            Class::HYPERCAR => write!(f, "HYPERCAR"),
+            Class::LMP1 => write!(f, "LMP1"),
+            Class::LMP2 => write!(f, "LMP2"),
+            Class::LMGTEPro => write!(f, "LMGTE Pro"),
+            Class::LMGTEAm => write!(f, "LMGTE Am"),
+            Class::LMGT3 => write!(f, "LMGT3"),
+            Class::InnovativeCar => write!(f, "INNOVATIVE CAR"),
         }
     }
 }
@@ -118,7 +119,7 @@ mod tests {
 
         for class in classes {
             let string_repr = class.to_string();
-            let parsed_class = Class::from_string(string_repr);
+            let parsed_class = Class::from_string(&string_repr);
             assert_eq!(Some(class), parsed_class);
         }
     }

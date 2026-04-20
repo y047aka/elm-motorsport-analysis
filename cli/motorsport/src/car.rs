@@ -80,13 +80,15 @@ impl Status {
     pub fn has_retired(&self) -> bool {
         matches!(self, Status::Retired)
     }
+}
 
-    pub fn to_string(&self) -> &'static str {
+impl std::fmt::Display for Status {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Status::PreRace => "Pre-Race",
-            Status::Racing => "Racing",
-            Status::Checkered => "Checkered",
-            Status::Retired => "Retired",
+            Status::PreRace => write!(f, "Pre-Race"),
+            Status::Racing => write!(f, "Racing"),
+            Status::Checkered => write!(f, "Checkered"),
+            Status::Retired => write!(f, "Retired"),
         }
     }
 }

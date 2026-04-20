@@ -176,7 +176,10 @@ pub fn map_event_name(event_id: &str) -> &str {
         "fuji_6h" => "6 Hours of Fuji",
         "bahrain_8h" => "8 Hours of Bahrain",
         "sao_paulo_6h" => "6 Hours of São Paulo",
-        _ => "Encoding Error",
+        other => {
+            log::warn!("Unknown event ID '{}', using as-is", other);
+            other
+        }
     }
 }
 
@@ -233,7 +236,7 @@ mod tests {
         assert_eq!(map_event_name("fuji_6h"), "6 Hours of Fuji");
         assert_eq!(map_event_name("bahrain_8h"), "8 Hours of Bahrain");
         assert_eq!(map_event_name("sao_paulo_6h"), "6 Hours of São Paulo");
-        assert_eq!(map_event_name("unknown_event"), "Encoding Error");
+        assert_eq!(map_event_name("unknown_event"), "unknown_event");
     }
 
     #[test]

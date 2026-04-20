@@ -1,145 +1,96 @@
-use std::error::Error;
-use std::fs;
-use std::path::Path;
-
-pub mod config;
+pub mod args;
+pub mod error;
 pub mod output;
+pub mod pipeline;
 pub mod preprocess;
 
-pub use config::{Config, InputType};
+pub use args::parse_args;
+pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
-/// Process a single CSV file and convert to JSON
-fn process_single_file(config: &Config) -> Result<(), Box<dyn Error>> {
-    // Extract input path and other parameters from config
-    let (input_path, output_path, event_name) = match &config.input_type {
-        InputType::File(file_path) => (
-            file_path.as_str(),
-            config.output_file.clone(),
-            config.event_name.as_deref(),
-        ),
-        InputType::Directory(_) => {
-            unreachable!("Directory config should not reach process_single_file")
-        }
-    };
+use std::path::{Path, PathBuf};
 
-    let csv_content = fs::read_to_string(input_path)
-        .map_err(|e| format!("Failed to read input file '{}': {}", input_path, e))?;
+use pipeline::ProcessingReport;
 
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
-    println!("Read {} cars from CSV '{}'", cars.len(), input_path);
-
-    let event_name = event_name
-        .or_else(|| Path::new(input_path).file_stem().and_then(|s| s.to_str()))
-        .unwrap_or("test_event");
-
-    let output_metadata = create_metadata_output(event_name, &cars);
-    let output_laps = create_laps_output(&laps_with_metadata);
-
-    let metadata_json = serde_json::to_string_pretty(&output_metadata)
-        .map_err(|e| format!("Failed to serialize metadata to JSON: {e}"))?;
-
-    let laps_json = serde_json::to_string_pretty(&output_laps)
-        .map_err(|e| format!("Failed to serialize laps to JSON: {e}"))?;
-
-    let base_output_path = output_path.unwrap_or_else(|| {
-        Path::new(input_path)
-            .with_extension("json")
-            .to_string_lossy()
-            .into_owned()
-    });
-
-    fs::write(&base_output_path, &metadata_json)
-        .map_err(|e| format!("Failed to write output file '{}': {e}", base_output_path))?;
-
-    let laps_output_path = base_output_path.replace(".json", "_laps.json");
-    fs::write(&laps_output_path, &laps_json)
-        .map_err(|e| format!("Failed to write laps file '{}': {e}", laps_output_path))?;
-
-    println!("Wrote metadata JSON to {}", base_output_path);
-    println!("Wrote laps JSON to {}", laps_output_path);
-    Ok(())
+/// 1ファイルの処理に必要な情報
+pub struct FileTask {
+    input_path: PathBuf,
+    output_path: PathBuf,
+    event_name: String,
 }
 
-/// Find all CSV files in a directory recursively
-fn find_csv_files(dir_path: &str) -> Result<Vec<String>, Box<dyn Error>> {
-    let mut csv_files = Vec::new();
-    let entries = fs::read_dir(dir_path)
-        .map_err(|e| format!("Failed to read directory '{}': {}", dir_path, e))?;
+impl FileTask {
+    /// 入力ファイルパスから FileTask を生成する。
+    /// output_override が None の場合、入力ファイルの拡張子を .json に置換したパスを使う。
+    pub fn new(input_path: PathBuf, output_override: Option<PathBuf>) -> Self {
+        let stem = input_path
+            .file_stem()
+            .unwrap_or_else(|| std::ffi::OsStr::new("output"))
+            .to_string_lossy();
 
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("Failed to read directory entry: {}", e))?;
-        let path = entry.path();
+        let output_path = output_override
+            .unwrap_or_else(|| input_path.with_extension("json"));
+        let event_name = stem.to_string();
 
-        if path.is_dir() {
-            // Recursively search subdirectories
-            let subdir_path = path.to_string_lossy().to_string();
-            let mut subdir_files = find_csv_files(&subdir_path)?;
-            csv_files.append(&mut subdir_files);
-        } else if let Some(extension) = path.extension() {
-            if extension == "csv" {
-                csv_files.push(path.to_string_lossy().to_string());
-            }
+        Self {
+            input_path,
+            output_path,
+            event_name,
         }
     }
 
-    Ok(csv_files)
-}
-
-pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    match &config.input_type {
-        InputType::File(_) => {
-            process_single_file(&config)?;
-        }
-        InputType::Directory(dir_path) => {
-            println!("Scanning directory '{}' for CSV files...", dir_path);
-            let csv_files = find_csv_files(dir_path)?;
-
-            if csv_files.is_empty() {
-                println!("No CSV files found in directory '{}'", dir_path);
-                return Ok(());
-            }
-
-            println!("Found {} CSV file(s) to process", csv_files.len());
-
-            let mut processed = 0;
-            let mut errors = 0;
-
-            for csv_file in &csv_files {
-                println!("Processing: {}", csv_file);
-
-                // Create a file-specific config for each CSV file
-                let file_config = Config {
-                    input_type: InputType::File(csv_file.clone()),
-                    output_file: Some(
-                        Path::new(csv_file)
-                            .with_extension("json")
-                            .to_string_lossy()
-                            .into_owned(),
-                    ),
-                    event_name: Path::new(csv_file)
-                        .file_stem()
-                        .and_then(|s| s.to_str())
-                        .map(|s| s.to_string()),
-                };
-
-                match process_single_file(&file_config) {
-                    Ok(_) => processed += 1,
-                    Err(e) => {
-                        eprintln!("Error processing '{}': {}", csv_file, e);
-                        errors += 1;
-                    }
-                }
-            }
-
-            println!(
-                "Batch processing completed: {} processed, {} errors",
-                processed, errors
-            );
-        }
+    pub fn input_path(&self) -> &Path {
+        &self.input_path
     }
 
-    Ok(())
+    pub fn output_path(&self) -> &Path {
+        &self.output_path
+    }
+
+    pub fn event_name(&self) -> &str {
+        &self.event_name
+    }
+
+    pub fn laps_path(&self) -> PathBuf {
+        let stem = self
+            .output_path
+            .file_stem()
+            .unwrap_or_default()
+            .to_string_lossy();
+        self.output_path
+            .with_file_name(format!("{}_laps.json", stem))
+    }
+}
+
+pub struct FileOutcome {
+    pub input_path: PathBuf,
+    pub result: Result<ProcessingReport, CliError>,
+}
+
+pub fn run(tasks: Vec<FileTask>) -> impl Iterator<Item = FileOutcome> {
+    tasks.into_iter().map(|task| {
+        let input_path = task.input_path().to_path_buf();
+        let result = pipeline::process_file(&task);
+        FileOutcome { input_path, result }
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn file_task_default_output() {
+        let task = FileTask::new(PathBuf::from("input.csv"), None);
+        assert_eq!(task.output_path(), Path::new("input.json"));
+        assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_with_output_override() {
+        let task = FileTask::new(PathBuf::from("input.csv"), Some(PathBuf::from("custom.json")));
+        assert_eq!(task.output_path(), Path::new("custom.json"));
+        assert_eq!(task.event_name(), "input");
+    }
 }

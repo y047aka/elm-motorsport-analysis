@@ -190,7 +190,6 @@ mod tests {
 
     #[test]
     fn test_timeline_event_creation() {
-        // Red: TimelineEvent構造体がまだ存在しないため、このテストは失敗する
         let event = TimelineEvent {
             event_time: 0,
             event_type: EventType::RaceStart,
@@ -202,7 +201,6 @@ mod tests {
 
     #[test]
     fn test_event_type_variants() {
-        // Red: EventType enumがまだ存在しないため、このテストは失敗する
         let race_start = EventType::RaceStart;
         let car_event = EventType::CarEvent("12".to_string(), CarEventType::Retirement);
 
@@ -335,7 +333,6 @@ mod tests {
 
     #[test]
     fn test_calc_timeline_events_empty_cars() {
-        // Red: calc_timeline_events関数がまだ存在しないため、このテストは失敗する
         let cars = vec![];
         let time_limit = 7200000; // 2時間
 
@@ -349,7 +346,6 @@ mod tests {
 
     #[test]
     fn test_calc_timeline_events_single_car_with_laps() {
-        // Red: calc_timeline_events関数とテストヘルパーがないため、このテストは失敗する
         let car = create_test_car_with_laps();
         let cars = vec![car];
         let time_limit = 7200000; // 2時間
