@@ -7,9 +7,13 @@ def main(): Unit \ IO =
     );
     match result {
         case Ok(lines) =>
-            let count = List.length(lines);
-            println("File: ${path}");
-            println("Lines: ${count}")
+            match lines {
+                case _header :: dataLines =>
+                    let records = Csv.parseLines(dataLines);
+                    println(Csv.formatTable(records))
+                case Nil =>
+                    println("Empty file")
+            }
         case Err(e) =>
             println("Error: ${e}")
     }
