@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use cli::{
-    Config, FileResult, create_laps_output, create_metadata_output, group_laps_by_car,
+    FileResult, FileTask, create_laps_output, create_metadata_output, group_laps_by_car,
     parse_laps_from_csv, run,
 };
 
@@ -90,14 +90,11 @@ fn test_cli_end_to_end_execution() {
     // Copy test data to expected input filename
     fs::copy("../test_data.csv", test_input).expect("Failed to copy test data");
 
-    // Create CLI configuration
-    let config = Config::SingleFile {
-        file_path: test_input.into(),
-        output_file: Some(test_output.into()),
-    };
+    // Create task
+    let tasks = vec![FileTask::new(test_input.into(), Some(test_output.into()))];
 
     // Execute CLI
-    let results: Vec<_> = run(config).collect();
+    let results: Vec<_> = run(tasks).collect();
     assert!(
         results
             .iter()

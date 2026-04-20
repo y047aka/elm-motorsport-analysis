@@ -1,12 +1,13 @@
-pub mod config;
+pub mod args;
 pub mod error;
 pub mod output;
 pub mod pipeline;
 pub mod preprocess;
 
-pub use config::Config;
+pub use args::parse_args;
 pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
+pub use pipeline::FileTask;
 pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
 
 use std::path::PathBuf;
@@ -24,8 +25,8 @@ pub enum FileResult {
     },
 }
 
-pub fn run(config: Config) -> impl Iterator<Item = FileResult> {
-    config.into_tasks().into_iter().map(|task| {
+pub fn run(tasks: Vec<FileTask>) -> impl Iterator<Item = FileResult> {
+    tasks.into_iter().map(|task| {
         let input_path = task.input_path().to_path_buf();
         match pipeline::process_file(&task) {
             Ok(report) => FileResult::Processed {

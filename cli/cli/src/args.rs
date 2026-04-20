@@ -37,8 +37,8 @@ impl RawArgs {
         })
     }
 
-    /// ファイルシステムを参照して検証済み Config に変換
-    fn resolve(self) -> Result<Config, CliError> {
+    /// ファイルシステムを参照して検証済み FileTask のリストに変換
+    fn resolve(self) -> Result<Vec<FileTask>, CliError> {
         let path = self.input_path;
 
         if !path.exists() {
@@ -51,47 +51,21 @@ impl RawArgs {
             if csv_files.is_empty() {
                 return Err(CliError::NoCsvFilesFound(path.display().to_string()));
             }
-            Ok(Config::BatchDirectory { csv_files })
+            Ok(csv_files
+                .into_iter()
+                .map(|f| FileTask::new(f, None))
+                .collect())
         } else if path.is_file() {
-            Ok(Config::SingleFile {
-                file_path: path,
-                output_file: self.output_file,
-            })
+            Ok(vec![FileTask::new(path, self.output_file)])
         } else {
             Err(CliError::InvalidInputPath(path.display().to_string()))
         }
     }
 }
 
-#[derive(Debug)]
-pub enum Config {
-    SingleFile {
-        file_path: PathBuf,
-        output_file: Option<PathBuf>,
-    },
-    BatchDirectory {
-        csv_files: Vec<PathBuf>,
-    },
-}
-
-impl Config {
-    pub fn build(args: impl Iterator<Item = String>) -> Result<Config, CliError> {
-        RawArgs::parse(args)?.resolve()
-    }
-
-    /// Config を処理単位（FileTask）のリストに変換（純粋な変換）
-    pub fn into_tasks(self) -> Vec<FileTask> {
-        match self {
-            Config::SingleFile {
-                file_path,
-                output_file,
-            } => vec![FileTask::new(file_path, output_file)],
-            Config::BatchDirectory { csv_files } => csv_files
-                .into_iter()
-                .map(|csv_file| FileTask::new(csv_file, None))
-                .collect(),
-        }
-    }
+/// CLI 引数をパースし、検証済みの処理タスクリストを返す
+pub fn parse_args(args: impl Iterator<Item = String>) -> Result<Vec<FileTask>, CliError> {
+    RawArgs::parse(args)?.resolve()
 }
 
 /// ディレクトリ内のCSVファイルを再帰的に検索
@@ -205,14 +179,14 @@ mod tests {
     }
 
     #[test]
-    fn config_build_nonexistent_file() {
+    fn parse_args_nonexistent_file() {
         let args = vec!["program".to_string(), "nonexistent.csv".to_string()];
-        let result = Config::build(args.into_iter());
+        let result = parse_args(args.into_iter());
         assert!(result.is_err());
     }
 
     #[test]
-    fn config_build_single_file_without_output() {
+    fn parse_args_single_file_without_output() {
         let temp_dir = tempdir().unwrap();
         let input_path = temp_dir.path().join("input.csv");
 
@@ -226,23 +200,14 @@ mod tests {
             input_path.to_string_lossy().to_string(),
         ];
 
-        let config = Config::build(args.into_iter()).unwrap();
-        match &config {
-            Config::SingleFile {
-                file_path,
-                output_file,
-            } => {
-                assert_eq!(file_path, &input_path);
-                // output_file は --output 未指定なので None
-                // 名前解決は into_tasks() で行われる
-                assert_eq!(output_file, &None);
-            }
-            _ => panic!("Expected SingleFile config"),
-        }
+        let tasks = parse_args(args.into_iter()).unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].input_path(), &input_path);
+        assert_eq!(tasks[0].output_path(), input_path.with_extension("json"));
     }
 
     #[test]
-    fn config_build_directory_with_output_is_error() {
+    fn parse_args_directory_with_output_is_error() {
         let temp_dir = tempdir().unwrap();
 
         let args = vec![
@@ -252,12 +217,12 @@ mod tests {
             "output.json".to_string(),
         ];
 
-        let result = Config::build(args.into_iter());
+        let result = parse_args(args.into_iter());
         assert!(result.is_err());
     }
 
     #[test]
-    fn config_build_empty_directory_is_error() {
+    fn parse_args_empty_directory_is_error() {
         let temp_dir = tempdir().unwrap();
 
         let args = vec![
@@ -265,12 +230,12 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
         ];
 
-        let result = Config::build(args.into_iter());
+        let result = parse_args(args.into_iter());
         assert!(result.is_err());
     }
 
     #[test]
-    fn config_build_with_directory() {
+    fn parse_args_with_directory() {
         let temp_dir = tempdir().unwrap();
         File::create(temp_dir.path().join("race.csv"))
             .unwrap()
@@ -282,13 +247,8 @@ mod tests {
             temp_dir.path().to_string_lossy().to_string(),
         ];
 
-        let config = Config::build(args.into_iter()).unwrap();
-        match &config {
-            Config::BatchDirectory { csv_files } => {
-                assert_eq!(csv_files.len(), 1);
-                assert_eq!(csv_files[0], temp_dir.path().join("race.csv"));
-            }
-            _ => panic!("Expected BatchDirectory config"),
-        }
+        let tasks = parse_args(args.into_iter()).unwrap();
+        assert_eq!(tasks.len(), 1);
+        assert_eq!(tasks[0].input_path(), temp_dir.path().join("race.csv"));
     }
 }

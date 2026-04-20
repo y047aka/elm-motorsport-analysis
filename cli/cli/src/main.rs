@@ -1,7 +1,7 @@
 use std::env;
 use std::process;
 
-use cli::{Config, FileResult};
+use cli::{FileResult, parse_args};
 
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
@@ -9,14 +9,14 @@ fn main() {
         .format_target(false)
         .init();
 
-    let config = Config::build(env::args()).unwrap_or_else(|err| {
+    let tasks = parse_args(env::args()).unwrap_or_else(|err| {
         eprintln!("Problem parsing arguments: {err}");
         process::exit(1);
     });
 
     let mut processed = 0;
     let mut errors = 0;
-    for result in cli::run(config) {
+    for result in cli::run(tasks) {
         match result {
             FileResult::Processed {
                 input_path,
