@@ -5,15 +5,20 @@ def main(): Unit \ {Env, IO} =
     match Args.parse(args) {
         case Err(e) =>
             println("Error: ${e}");
-            println("Usage: flix-run <input.csv> [--output <output.json>]")
+            println("Usage: flix-run <input.csv|dir> [--output <output.json>]")
         case Ok(parsed) =>
-            convert(parsed#inputPath, parsed#outputPath)
+            match FileTask.resolve(parsed) {
+                case Err(e) =>
+                    println("Error: ${e}")
+                case Ok(tasks) =>
+                    List.forEach(convert, tasks)
+            }
     }
 
-def convert(inputPath: String, outputPath: String): Unit \ IO =
+def convert(task: FileTask.FileTask): Unit \ IO =
     let readResult = Fs.FileRead.runWithIO(() ->
         Fs.ReadLines.runWithFileRead(() ->
-            Fs.ReadLines.readLines(inputPath)
+            Fs.ReadLines.readLines(task#inputPath)
         )
     );
     match readResult {
@@ -24,16 +29,16 @@ def convert(inputPath: String, outputPath: String): Unit \ IO =
                     let json = Json.render(Lap.toJsonArray(records));
                     let writeResult = Fs.FileWrite.runWithIO(() ->
                         Fs.WriteFile.runWithFileWrite(() ->
-                            Fs.WriteFile.write({str = json}, outputPath)
+                            Fs.WriteFile.write({str = json}, task#outputPath)
                         )
                     );
                     match writeResult {
-                        case Ok(_)  => println("Written to ${outputPath}")
-                        case Err(e) => println("Write error: ${e}")
+                        case Ok(_)  => println("${task#eventName}: Written to ${task#outputPath}")
+                        case Err(e) => println("${task#eventName}: Write error: ${e}")
                     }
                 case Nil =>
-                    println("Empty file")
+                    println("${task#eventName}: Empty file")
             }
         case Err(e) =>
-            println("Read error: ${e}")
+            println("${task#eventName}: Read error: ${e}")
     }

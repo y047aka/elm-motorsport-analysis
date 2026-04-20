@@ -9,7 +9,7 @@ mod Args {
 
     pub type alias ParsedArgs = {
         inputPath = String,
-        outputPath = String
+        outputFile = Option[String]
     }
 
     enum ParseState {
@@ -41,20 +41,12 @@ mod Args {
 
     def resolve(state: ParseState): Result[ArgsError, ParsedArgs] =
         match state {
-            case ParseState.Ready(Some(input), Some(output)) =>
-                Ok({ inputPath = input, outputPath = output })
-            case ParseState.Ready(Some(input), None) =>
-                Ok({ inputPath = input, outputPath = defaultOutputPath(input) })
+            case ParseState.Ready(Some(input), output) =>
+                Ok({ inputPath = input, outputFile = output })
             case ParseState.Ready(None, _) =>
                 Err(ArgsError.MissingInputPath)
             case ParseState.ExpectingOutputValue(_) =>
                 Err(ArgsError.MissingOutputValue)
         }
-
-    def defaultOutputPath(inputPath: String): String =
-        if (String.endsWith({suffix = ".csv"}, inputPath))
-            String.dropRight(4, inputPath) + ".json"
-        else
-            inputPath + ".json"
 
 }

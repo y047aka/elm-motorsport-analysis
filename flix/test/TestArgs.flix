@@ -11,7 +11,7 @@ mod TestArgs {
         match result {
             case Ok(parsed) =>
                 Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(parsed#outputPath == "input.json")
+                Assert.assertTrue(Option.isEmpty(parsed#outputFile))
             case Err(_) =>
                 Assert.assertTrue(false)
         }
@@ -22,7 +22,7 @@ mod TestArgs {
         match result {
             case Ok(parsed) =>
                 Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(parsed#outputPath == "out.json")
+                Assert.assertTrue(parsed#outputFile == Some("out.json"))
             case Err(_) =>
                 Assert.assertTrue(false)
         }
@@ -33,7 +33,7 @@ mod TestArgs {
         match result {
             case Ok(parsed) =>
                 Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(parsed#outputPath == "out.json")
+                Assert.assertTrue(parsed#outputFile == Some("out.json"))
             case Err(_) =>
                 Assert.assertTrue(false)
         }
@@ -52,21 +52,5 @@ mod TestArgs {
     def testParseDuplicateOutput(): Unit \ Assert =
         let result = Args.parse("--output" :: "a.json" :: "--output" :: "b.json" :: "input.csv" :: Nil);
         Assert.assertTrue(Result.isErr(result))
-
-    @Test
-    def testDefaultOutputPathCsv(): Unit \ Assert =
-        let result = Args.parse("data/race.csv" :: Nil);
-        match result {
-            case Ok(parsed) => Assert.assertTrue(parsed#outputPath == "data/race.json")
-            case Err(_)     => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testDefaultOutputPathNonCsv(): Unit \ Assert =
-        let result = Args.parse("data/race.txt" :: Nil);
-        match result {
-            case Ok(parsed) => Assert.assertTrue(parsed#outputPath == "data/race.txt.json")
-            case Err(_)     => Assert.assertTrue(false)
-        }
 
 }
