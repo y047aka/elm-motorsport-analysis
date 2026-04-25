@@ -111,7 +111,7 @@ pub fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput 
     let timeline_events = calc_timeline_events(time_limit, cars);
 
     MetadataOutput {
-        name: map_event_name(event_name).to_string(),
+        name: crate::events::display_name(event_name).to_string(),
         starting_grid,
         timeline_events,
     }
@@ -167,24 +167,6 @@ fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
         .collect()
 }
 
-/// Event name mapping
-pub fn map_event_name(event_id: &str) -> &str {
-    match event_id {
-        "qatar_1812km" => "Qatar 1812km",
-        "imola_6h" => "6 Hours of Imola",
-        "spa_6h" => "6 Hours of Spa",
-        "le_mans_24h" => "24 Hours of Le Mans",
-        "cota_6h" => "Lone Star Le Mans",
-        "fuji_6h" => "6 Hours of Fuji",
-        "bahrain_8h" => "8 Hours of Bahrain",
-        "sao_paulo_6h" => "6 Hours of São Paulo",
-        other => {
-            log::warn!("Unknown event ID '{}', using as-is", other);
-            other
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -225,20 +207,6 @@ mod tests {
                 "Expected '{input}' to be formatted as '{expected}', but got: {result:?}"
             );
         }
-    }
-
-    #[test]
-    fn test_event_name_mapping() {
-        // イベント名マッピングのテスト（削除されたテストから移行）
-        assert_eq!(map_event_name("qatar_1812km"), "Qatar 1812km");
-        assert_eq!(map_event_name("imola_6h"), "6 Hours of Imola");
-        assert_eq!(map_event_name("spa_6h"), "6 Hours of Spa");
-        assert_eq!(map_event_name("le_mans_24h"), "24 Hours of Le Mans");
-        assert_eq!(map_event_name("cota_6h"), "Lone Star Le Mans");
-        assert_eq!(map_event_name("fuji_6h"), "6 Hours of Fuji");
-        assert_eq!(map_event_name("bahrain_8h"), "8 Hours of Bahrain");
-        assert_eq!(map_event_name("sao_paulo_6h"), "6 Hours of São Paulo");
-        assert_eq!(map_event_name("unknown_event"), "unknown_event");
     }
 
     #[test]

@@ -20,6 +20,7 @@ pub mod args;
 pub mod error;
 
 pub(crate) mod domain;
+pub(crate) mod events;
 pub(crate) mod stages;
 
 pub use args::parse_args;
