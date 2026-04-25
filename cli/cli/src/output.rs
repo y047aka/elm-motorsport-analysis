@@ -1,7 +1,7 @@
 use motorsport::{Car, TimelineEvent, calc_time_limit, calc_timeline_events, car, duration};
 use serde::{Serialize, Serializer};
 
-use crate::csv_input::LapWithMetadata;
+use crate::domain::LapRecord;
 
 /// セクタータイムのフォーマット
 fn format_sector_time(raw_time: &str, sector_duration: u32) -> String {
@@ -112,47 +112,43 @@ pub fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput 
 }
 
 /// ラップデータ出力データ作成関数（lapsのみ）
-pub fn create_laps_output(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
-    raw_laps_from(laps_with_metadata)
+pub fn create_laps_output(records: &[LapRecord]) -> Vec<RawLap> {
+    records.iter().map(raw_lap_from).collect()
 }
 
-/// LapWithMetadata から RawLap への変換
-fn raw_laps_from(laps_with_metadata: &[LapWithMetadata]) -> Vec<RawLap> {
-    laps_with_metadata
-        .iter()
-        .map(|lap_meta| {
-            let lap = &lap_meta.lap;
-            let meta = &lap_meta.metadata;
+/// LapRecord から RawLap への変換
+fn raw_lap_from(record: &LapRecord) -> RawLap {
+    let lap = &record.lap;
+    let car = &record.car;
+    let stats = &record.stats;
+    let sectors = &record.sectors;
 
-            RawLap {
-                car_number: lap.car_number.clone(),
-                driver_number: lap_meta.csv_data.driver_number,
-                lap_number: lap.lap,
-                lap_time: duration::to_string(lap.time),
-                lap_improvement: lap_meta.csv_data.lap_improvement,
-                crossing_finish_line_in_pit: lap_meta.csv_data.crossing_finish_line_in_pit.clone(),
-                s1: format_sector_time(&lap_meta.csv_data.s1_raw, lap.sector_1),
-                s1_improvement: lap_meta.csv_data.s1_improvement,
-                s2: format_sector_time(&lap_meta.csv_data.s2_raw, lap.sector_2),
-                s2_improvement: lap_meta.csv_data.s2_improvement,
-                s3: format_sector_time(&lap_meta.csv_data.s3_raw, lap.sector_3),
-                s3_improvement: lap_meta.csv_data.s3_improvement,
-                kph: (lap_meta.csv_data.kph * 10.0).round() / 10.0,
-                elapsed: duration::to_string(lap.elapsed),
-                hour: lap_meta.csv_data.hour.clone(),
-                top_speed: lap_meta.csv_data.top_speed.clone().unwrap_or_default(),
-                driver_name: lap.driver.clone(),
-                pit_time: lap_meta
-                    .csv_data
-                    .pit_time
-                    .map_or_else(String::new, duration::to_string),
-                class: meta.class.clone(),
-                group: meta.group.clone(),
-                team: meta.team.clone(),
-                manufacturer: meta.manufacturer.clone(),
-            }
-        })
-        .collect()
+    RawLap {
+        car_number: lap.car_number.clone(),
+        driver_number: stats.driver_number,
+        lap_number: lap.lap,
+        lap_time: duration::to_string(lap.time),
+        lap_improvement: stats.lap_improvement,
+        crossing_finish_line_in_pit: stats.crossing_finish_line_in_pit.clone(),
+        s1: format_sector_time(&sectors.s1, lap.sector_1),
+        s1_improvement: stats.s1_improvement,
+        s2: format_sector_time(&sectors.s2, lap.sector_2),
+        s2_improvement: stats.s2_improvement,
+        s3: format_sector_time(&sectors.s3, lap.sector_3),
+        s3_improvement: stats.s3_improvement,
+        kph: (stats.kph * 10.0).round() / 10.0,
+        elapsed: duration::to_string(lap.elapsed),
+        hour: stats.hour.clone(),
+        top_speed: stats.top_speed.clone().unwrap_or_default(),
+        driver_name: lap.driver.clone(),
+        pit_time: stats
+            .pit_time
+            .map_or_else(String::new, duration::to_string),
+        class: car.class.clone(),
+        group: car.group.clone(),
+        team: car.team.clone(),
+        manufacturer: car.manufacturer.clone(),
+    }
 }
 
 /// Car から StartingGrid への変換

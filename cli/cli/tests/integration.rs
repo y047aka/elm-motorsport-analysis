@@ -22,22 +22,22 @@ use cli::{
 fn test_csv_parsing_and_data_processing() {
     // CSV reading and parsing (integrated)
     let csv_content = fs::read_to_string("../test_data.csv").expect("Failed to read CSV file");
-    let laps_with_metadata = parse_laps_from_csv(&csv_content);
+    let records = parse_laps_from_csv(&csv_content);
     assert!(
-        !laps_with_metadata.is_empty(),
+        !records.is_empty(),
         "At least one lap should be parsed from CSV"
     );
 
     // Validate first lap content
-    let first_lap = &laps_with_metadata[0];
+    let first_lap = &records[0];
     assert_eq!(first_lap.lap.car_number, "12");
     assert_eq!(first_lap.lap.driver, "Will STEVENS");
-    assert_eq!(first_lap.metadata.team, "Hertz Team JOTA");
-    assert_eq!(first_lap.metadata.manufacturer, "Porsche");
-    assert_eq!(first_lap.metadata.class, "HYPERCAR");
+    assert_eq!(first_lap.car.team, "Hertz Team JOTA");
+    assert_eq!(first_lap.car.manufacturer, "Porsche");
+    assert_eq!(first_lap.car.class, "HYPERCAR");
 
     // Group by car
-    let cars = group_laps_by_car(laps_with_metadata);
+    let cars = group_laps_by_car(records);
     assert_eq!(cars.len(), 2, "Test data should contain 2 cars");
 
     // Validate car 12
@@ -245,13 +245,13 @@ fn test_real_wec_data_processing() {
         let csv_content = fs::read_to_string(csv_path)
             .unwrap_or_else(|_| panic!("Failed to read CSV for {race_name}"));
 
-        let laps_with_metadata = parse_laps_from_csv(&csv_content);
+        let records = parse_laps_from_csv(&csv_content);
         assert!(
-            !laps_with_metadata.is_empty(),
+            !records.is_empty(),
             "{race_name} should parse laps from CSV"
         );
 
-        let cars = group_laps_by_car(laps_with_metadata);
+        let cars = group_laps_by_car(records);
         assert!(!cars.is_empty(), "{race_name} should have cars grouped");
         assert!(
             cars.len() >= min_cars,
@@ -315,11 +315,11 @@ fn test_real_wec_data_processing() {
 fn test_elm_json_structure_and_field_compatibility() {
     // 包括的なElm互換JSON構造・フィールド・データ型テスト
     let csv_data = create_test_csv_data();
-    let laps_with_metadata = parse_laps_from_csv(&csv_data);
-    let cars = group_laps_by_car(laps_with_metadata.clone());
+    let records = parse_laps_from_csv(&csv_data);
+    let cars = group_laps_by_car(records.clone());
 
     let metadata_output = create_metadata_output("Test Event", &cars);
-    let laps_output = create_laps_output(&laps_with_metadata);
+    let laps_output = create_laps_output(&records);
     let metadata_json_value = serde_json::to_value(&metadata_output).unwrap();
     let laps_json_value = serde_json::to_value(&laps_output).unwrap();
 
@@ -438,8 +438,8 @@ fn test_racing_data_processing_compatibility() {
 007;1;35;2:03.956;0;;39.723;0;35.798;0;48.435;0;142.6;1:00:16.857;14:01:42.367;0:39.723;0:35.798;0:48.435;186.9;Harry TINCKNELL;1:28.944;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;39.723;35.798;48.435;
 007;1;36;1:35.123;0;;19.400;0;31.200;0;44.523;0;185.2;1:01:51.980;14:03:17.490;0:19.400;0:31.200;0:44.523;304.2;Harry TINCKNELL;45.678;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.400;31.200;44.523;"#.to_string();
 
-    let laps_with_metadata = parse_laps_from_csv(&csv_with_racing_data);
-    let laps_output = create_laps_output(&laps_with_metadata);
+    let records = parse_laps_from_csv(&csv_with_racing_data);
+    let laps_output = create_laps_output(&records);
     let json_value = serde_json::to_value(&laps_output).unwrap();
     let laps_array = json_value.as_array().unwrap();
 

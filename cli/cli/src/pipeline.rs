@@ -12,7 +12,8 @@
 use std::path::PathBuf;
 
 use crate::FileTask;
-use crate::csv_input::{self, LapWithMetadata};
+use crate::csv_input;
+use crate::domain::LapRecord;
 use crate::error::CliError;
 use crate::io;
 use crate::output;
@@ -25,41 +26,44 @@ pub struct ProcessingReport {
     pub laps_path: PathBuf,
 }
 
+/// シリアライズステージの成果物（純粋な文字列出力）。
+struct SerializedOutput {
+    metadata_json: String,
+    laps_json: String,
+    car_count: usize,
+}
+
 /// 1ファイル分のパイプライン: read → parse → transform → serialize → write
 pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     // Stage 1: read
     let csv_content = io::read_csv(task.input_path())?;
 
-    // Stage 2: parse (CSV → LapWithMetadata のリスト)
-    let laps_with_metadata = csv_input::parse_laps_from_csv(&csv_content);
+    // Stage 2: parse (CSV → LapRecord のリスト)
+    let records = csv_input::parse_laps_from_csv(&csv_content);
 
-    // Stage 3: serialize laps & transform (LapWithMetadata → Car のリスト)
+    // Stage 3: serialize (transform + JSON 化)
     //
-    // laps は LapWithMetadata から直接構築する。Car には集約済みの情報しか入らないため、
-    // ラップ単体の CSV 由来情報は transform 前に退避する必要がある。
-    let (metadata_json, laps_json, car_count) =
-        serialize(task.event_name(), &laps_with_metadata)?;
+    // laps は LapRecord から直接構築する。Car には集約済みの情報しか残らないため、
+    // ラップ単位の CSV 由来情報を transform 前に退避する必要がある。
+    let output = serialize(task.event_name(), records)?;
 
     // Stage 4: write
     let metadata_path = task.output_path().to_path_buf();
     let laps_path = task.laps_path();
-    io::write_json(&metadata_path, &metadata_json)?;
-    io::write_json(&laps_path, &laps_json)?;
+    io::write_json(&metadata_path, &output.metadata_json)?;
+    io::write_json(&laps_path, &output.laps_json)?;
 
     Ok(ProcessingReport {
-        car_count,
+        car_count: output.car_count,
         metadata_path,
         laps_path,
     })
 }
 
-/// LapWithMetadata のリストから metadata/laps の両 JSON を組み立てる（副作用なし）。
-fn serialize(
-    event_name: &str,
-    laps_with_metadata: &[LapWithMetadata],
-) -> Result<(String, String, usize), CliError> {
-    let laps = output::create_laps_output(laps_with_metadata);
-    let cars = transform::group_laps_by_car(laps_with_metadata.to_vec());
+/// LapRecord のリストから metadata / laps の両 JSON を組み立てる（副作用なし）。
+fn serialize(event_name: &str, records: Vec<LapRecord>) -> Result<SerializedOutput, CliError> {
+    let laps = output::create_laps_output(&records);
+    let cars = transform::group_laps_by_car(records);
     let car_count = cars.len();
     let metadata = output::create_metadata_output(event_name, &cars);
 
@@ -73,5 +77,9 @@ fn serialize(
         source: e,
     })?;
 
-    Ok((metadata_json, laps_json, car_count))
+    Ok(SerializedOutput {
+        metadata_json,
+        laps_json,
+        car_count,
+    })
 }
