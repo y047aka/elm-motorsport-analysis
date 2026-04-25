@@ -3,7 +3,17 @@
 //! CLI の入力ファイル名（stem）がイベント ID として機能する（例: `le_mans_24h.csv`
 //! → `"le_mans_24h"`）。このモジュールは ID → 表示名の変換表を所有する。
 
-/// 内部イベント ID を表示名に変換する。未知の ID は警告ログを出しつつ原値を返す。
+use std::collections::HashSet;
+use std::sync::{LazyLock, Mutex};
+
+static WARNED_UNKNOWN: LazyLock<Mutex<HashSet<String>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+
+/// 内部イベント ID を表示名に変換する。
+///
+/// 未知の ID は原値をそのまま返す。初めて遭遇した未知 ID はプロセス内で一度だけ
+/// 警告ログを出し、同じ ID が後続ファイルで再度現れても警告は繰り返さない
+/// （ディレクトリ一括処理時のログ洪水を避けるため）。
 pub fn display_name(event_id: &str) -> &str {
     match event_id {
         "qatar_1812km" => "Qatar 1812km",
@@ -15,9 +25,18 @@ pub fn display_name(event_id: &str) -> &str {
         "bahrain_8h" => "8 Hours of Bahrain",
         "sao_paulo_6h" => "6 Hours of São Paulo",
         other => {
-            log::warn!("Unknown event ID '{}', using as-is", other);
+            warn_once(other);
             other
         }
+    }
+}
+
+fn warn_once(event_id: &str) {
+    let mut warned = WARNED_UNKNOWN
+        .lock()
+        .expect("WARNED_UNKNOWN mutex poisoned");
+    if warned.insert(event_id.to_string()) {
+        log::warn!("Unknown event ID '{}', using as-is", event_id);
     }
 }
 

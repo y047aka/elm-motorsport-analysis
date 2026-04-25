@@ -197,7 +197,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
 #[doc(hidden)]
 pub mod for_testing {
     pub use crate::domain::LapRecord;
-    pub use crate::stages::output::{MetadataOutput, create_laps_output};
+    pub use crate::stages::output::MetadataOutput;
     pub use crate::stages::transform::{build_outputs, group_laps_by_car};
 
     /// CSV テキストからパース + 構造化の 2 ステージを束ねて [`LapRecord`] を得る。

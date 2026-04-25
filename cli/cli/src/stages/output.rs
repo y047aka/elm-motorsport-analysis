@@ -121,8 +121,11 @@ pub(super) fn create_metadata_output(
     }
 }
 
-/// ラップデータ出力データ作成関数（lapsのみ）
-pub fn create_laps_output(records: &[LapRecord]) -> Vec<RawLap> {
+/// ラップデータ出力データ作成関数（lapsのみ）。
+///
+/// 可視性は `pub(crate)` — `transform::build_outputs` と `for_testing` の
+/// 再エクスポート経由でのみ使われる。プロダクション公開 API ではない。
+pub(crate) fn create_laps_output(records: &[LapRecord]) -> Vec<RawLap> {
     records.iter().map(raw_lap_from).collect()
 }
 

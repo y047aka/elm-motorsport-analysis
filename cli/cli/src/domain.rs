@@ -12,12 +12,20 @@
 use motorsport::duration::{self, Duration};
 use motorsport::lap::Lap;
 
-/// 15 のミニセクター名を**唯一の信頼できる情報源**として宣言するマクロ。
+/// ドメイン型（[`MiniSectorTimes`] / [`MiniSectorBests`]）と `transform::build_mini_sectors`
+/// が共有するミニセクター名リストを 1 箇所で宣言するマクロ。
 ///
-/// 与えられたマクロ `$m` に、15 個のミニセクター名を Rust 識別子として順に渡す。
-/// 新しい区間を追加するときはこのマクロ本体を 1 箇所修正するだけで、
-/// [`MiniSectorTimes`] の構造、[`MiniSectorBests`] の構造・更新処理、
-/// `transform::build_mini_sectors` など、全ての呼び出し側が自動追従する。
+/// 与えられたマクロ `$m` に 15 個のミニセクター名を Rust 識別子として順に渡す。
+///
+/// **カバー範囲:** 本マクロ経由で自動追従するのはドメイン型の構造と `build_mini_sectors`
+/// のみ。以下の 2 サイトは CSV 側の連結が必要で、安定 Rust では外部クレート
+/// (`paste` など) なしに追従できないため手書きのまま:
+/// - `stages::csv_input::CsvRow` の 30 個の `#[serde(rename = ...)]` 属性
+///   （`A7-1_time` のようにダッシュを含むため単純な大文字化では作れない）
+/// - `stages::structure::lap_record_from` の `MiniSectorEntry { time: row.scl2_time,
+///   elapsed: row.scl2_elapsed }` 対応
+///
+/// 16 区間目を追加するときは、このマクロに加えて上記 2 サイトも手で更新する必要がある。
 macro_rules! with_mini_sector_names {
     ($m:ident) => {
         $m! {

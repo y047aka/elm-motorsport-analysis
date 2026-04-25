@@ -1,9 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cli::for_testing::{
-    build_outputs, create_laps_output, group_laps_by_car, parse_and_structure,
-};
+use cli::for_testing::{build_outputs, group_laps_by_car, parse_and_structure};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -199,6 +197,49 @@ fn test_cli_end_to_end_execution() {
     );
 
     // tempdir cleans up on drop
+}
+
+#[test]
+fn test_cli_run_reports_partial_failure() {
+    // 2 ファイルのうち 1 ファイルだけが読めない状況で、`run` が成功件数と失敗件数を
+    // 正しく集計し、exit_code() が FAILURE を返すことを確認する。
+    //
+    // 「読めない .csv」は、拡張子 .csv を持つ**ディレクトリ**で表現する。
+    // `parse_args` の walkdir は .csv 拡張子で entry をフィルタするだけで is_file は
+    // 見ないため、ディレクトリがタスクとして enumerate される。後段の
+    // `files::read_csv` がディレクトリに対する `read_to_string` に失敗し、該当
+    // タスクだけ `CliError::ReadFile` を返す。
+    let temp_dir = tempfile::tempdir().expect("create tempdir");
+
+    // 1 つ目: 正当な CSV
+    let valid_csv = temp_dir.path().join("valid.csv");
+    fs::copy("../test_data.csv", &valid_csv).expect("Failed to copy test data");
+
+    // 2 つ目: .csv 拡張子を持つディレクトリ（読み取り時に失敗する）
+    let broken_csv_dir = temp_dir.path().join("broken.csv");
+    fs::create_dir(&broken_csv_dir).expect("create broken.csv as directory");
+
+    let args = vec![
+        "cli".to_string(),
+        temp_dir.path().to_str().expect("UTF-8 path").to_string(),
+    ];
+    let summary = cli::run(args.into_iter()).expect("parse_args succeeds (path is a directory)");
+
+    assert_eq!(
+        summary.processed, 1,
+        "ちょうど 1 ファイル (valid.csv) が成功するはず"
+    );
+    assert_eq!(
+        summary.errors, 1,
+        "ちょうど 1 ファイル (broken.csv ディレクトリ) が失敗するはず"
+    );
+
+    // ExitCode は PartialEq が未実装なので Debug 文字列で比較する。
+    let exit = summary.exit_code();
+    assert!(
+        format!("{exit:?}").contains("1"),
+        "exit_code() は FAILURE (1) を返すべき: {exit:?}"
+    );
 }
 
 #[test]
@@ -428,7 +469,7 @@ fn test_racing_data_processing_compatibility() {
 007;1;36;1:35.123;0;;19.400;0;31.200;0;44.523;0;185.2;1:01:51.980;14:03:17.490;0:19.400;0:31.200;0:44.523;304.2;Harry TINCKNELL;45.678;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.400;31.200;44.523;"#.to_string();
 
     let records = parse_and_structure(&csv_with_racing_data);
-    let laps_output = create_laps_output(&records);
+    let (laps_output, _) = build_outputs(records, "Test Event");
     let json_value = serde_json::to_value(&laps_output).unwrap();
     let laps_array = json_value.as_array().unwrap();
 
