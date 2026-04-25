@@ -2,9 +2,17 @@ use std::fs;
 use std::path::Path;
 
 use cli::{
-    FileTask, create_laps_output, create_metadata_output, group_laps_by_car, parse_laps_from_csv,
-    run,
+    FileTask, create_laps_output, create_metadata_output, csv_input, group_laps_by_car, run,
+    structure,
 };
+
+/// テスト用ヘルパー: パース＋構造化の2段階をまとめて呼ぶ。
+///
+/// 旧 `parse_laps_from_csv` と同じ動作を提供する。プロダクションコードでは
+/// パイプライン上で各段階を明示的に呼ぶため、このヘルパーはテスト専用。
+fn parse_and_structure(csv: &str) -> Vec<cli::LapRecord> {
+    structure::structure(csv_input::parse(csv))
+}
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -22,7 +30,7 @@ use cli::{
 fn test_csv_parsing_and_data_processing() {
     // CSV reading and parsing (integrated)
     let csv_content = fs::read_to_string("../test_data.csv").expect("Failed to read CSV file");
-    let records = parse_laps_from_csv(&csv_content);
+    let records = parse_and_structure(&csv_content);
     assert!(
         !records.is_empty(),
         "At least one lap should be parsed from CSV"
@@ -215,12 +223,12 @@ fn test_cli_end_to_end_execution() {
 fn test_csv_parsing_edge_cases() {
     // 空のCSVデータのテスト
     let empty_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n";
-    let laps = parse_laps_from_csv(empty_csv);
+    let laps = parse_and_structure(empty_csv);
     assert_eq!(laps.len(), 0, "空のCSVからは0個のラップが解析されるはず");
 
     // 不正なデータを含むCSVのテスト（エラーハンドリング確認）
     let invalid_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;Will STEVENS;1;invalid_time;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
-    let laps = parse_laps_from_csv(invalid_csv);
+    let laps = parse_and_structure(invalid_csv);
     // 不正なデータは0に変換されるが、ラップ自体は作成される
     assert_eq!(laps.len(), 1, "不正データでも1個のラップが作成されるはず");
     assert_eq!(laps[0].lap.time, 0, "不正なタイムは0に変換されるはず");
@@ -245,7 +253,7 @@ fn test_real_wec_data_processing() {
         let csv_content = fs::read_to_string(csv_path)
             .unwrap_or_else(|_| panic!("Failed to read CSV for {race_name}"));
 
-        let records = parse_laps_from_csv(&csv_content);
+        let records = parse_and_structure(&csv_content);
         assert!(
             !records.is_empty(),
             "{race_name} should parse laps from CSV"
@@ -315,7 +323,7 @@ fn test_real_wec_data_processing() {
 fn test_elm_json_structure_and_field_compatibility() {
     // 包括的なElm互換JSON構造・フィールド・データ型テスト
     let csv_data = create_test_csv_data();
-    let records = parse_laps_from_csv(&csv_data);
+    let records = parse_and_structure(&csv_data);
     let cars = group_laps_by_car(records.clone());
 
     let metadata_output = create_metadata_output("Test Event", &cars);
@@ -438,7 +446,7 @@ fn test_racing_data_processing_compatibility() {
 007;1;35;2:03.956;0;;39.723;0;35.798;0;48.435;0;142.6;1:00:16.857;14:01:42.367;0:39.723;0:35.798;0:48.435;186.9;Harry TINCKNELL;1:28.944;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;39.723;35.798;48.435;
 007;1;36;1:35.123;0;;19.400;0;31.200;0;44.523;0;185.2;1:01:51.980;14:03:17.490;0:19.400;0:31.200;0:44.523;304.2;Harry TINCKNELL;45.678;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.400;31.200;44.523;"#.to_string();
 
-    let records = parse_laps_from_csv(&csv_with_racing_data);
+    let records = parse_and_structure(&csv_with_racing_data);
     let laps_output = create_laps_output(&records);
     let json_value = serde_json::to_value(&laps_output).unwrap();
     let laps_array = json_value.as_array().unwrap();

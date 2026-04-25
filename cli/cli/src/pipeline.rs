@@ -3,11 +3,12 @@
 //! 1ファイルを処理する際の流れ:
 //!
 //! ```text
-//! read_csv ──▶ parse_laps_from_csv ──▶ group_laps_by_car ──▶ serialize ──▶ write_json
+//! read_csv ─▶ parse ─▶ structure ─▶ group_laps_by_car ─▶ serialize ─▶ write_json
+//!   (io)    (csv_input) (structure)    (transform)         (output)      (io)
 //! ```
 //!
-//! 各ステージは [`io`] / [`csv_input`] / [`transform`] / [`output`] に分担されており、
-//! このモジュールはそれらを直列に繋ぐだけ。
+//! 各ステージは専用モジュールに分担されており、このモジュールはそれらを
+//! 直列に繋ぐだけの薄い層。
 
 use std::path::PathBuf;
 
@@ -17,6 +18,7 @@ use crate::domain::LapRecord;
 use crate::error::CliError;
 use crate::io;
 use crate::output;
+use crate::structure;
 use crate::transform;
 
 /// 処理完了の報告（呼び出し元がログに使う）
@@ -33,21 +35,24 @@ struct SerializedOutput {
     car_count: usize,
 }
 
-/// 1ファイル分のパイプライン: read → parse → transform → serialize → write
+/// 1ファイル分のパイプライン: read → parse → structure → transform → serialize → write
 pub fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     // Stage 1: read
     let csv_content = io::read_csv(task.input_path())?;
 
-    // Stage 2: parse (CSV → LapRecord のリスト)
-    let records = csv_input::parse_laps_from_csv(&csv_content);
+    // Stage 2: parse (CSV テキスト → CsvRow のリスト、字句的な読み取り)
+    let rows = csv_input::parse(&csv_content);
 
-    // Stage 3: serialize (transform + JSON 化)
+    // Stage 3: structure (CsvRow → LapRecord、意味論的な変換)
+    let records = structure::structure(rows);
+
+    // Stage 4: serialize (transform + JSON 化)
     //
     // laps は LapRecord から直接構築する。Car には集約済みの情報しか残らないため、
     // ラップ単位の CSV 由来情報を transform 前に退避する必要がある。
     let output = serialize(task.event_name(), records)?;
 
-    // Stage 4: write
+    // Stage 5: write
     let metadata_path = task.output_path().to_path_buf();
     let laps_path = task.laps_path();
     io::write_json(&metadata_path, &output.metadata_json)?;

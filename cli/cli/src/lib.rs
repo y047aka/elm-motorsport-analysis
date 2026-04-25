@@ -5,10 +5,10 @@ pub mod error;
 pub mod io;
 pub mod output;
 pub mod pipeline;
+pub mod structure;
 pub mod transform;
 
 pub use args::parse_args;
-pub use csv_input::parse_laps_from_csv;
 pub use domain::LapRecord;
 pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
