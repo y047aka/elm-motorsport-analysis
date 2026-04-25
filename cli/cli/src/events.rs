@@ -1,7 +1,7 @@
-//! モータースポーツイベントの識別と表示名マッピング。
+//! Event identification and display-name mapping.
 //!
-//! CLI の入力ファイル名（stem）がイベント ID として機能する（例: `le_mans_24h.csv`
-//! → `"le_mans_24h"`）。このモジュールは ID → 表示名の変換表を所有する。
+//! The CLI uses each input file's stem as an event id (e.g. `le_mans_24h.csv`
+//! → `"le_mans_24h"`). This module owns the id → display-name table.
 
 use std::collections::HashSet;
 use std::sync::{LazyLock, Mutex};
@@ -9,11 +9,11 @@ use std::sync::{LazyLock, Mutex};
 static WARNED_UNKNOWN: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
 
-/// 内部イベント ID を表示名に変換する。
+/// Maps an internal event id to a display name.
 ///
-/// 未知の ID は原値をそのまま返す。初めて遭遇した未知 ID はプロセス内で一度だけ
-/// 警告ログを出し、同じ ID が後続ファイルで再度現れても警告は繰り返さない
-/// （ディレクトリ一括処理時のログ洪水を避けるため）。
+/// Unknown ids are returned unchanged. The first occurrence of each unknown id
+/// emits a warning; subsequent occurrences stay silent to avoid log spam when
+/// processing a whole directory.
 pub fn display_name(event_id: &str) -> &str {
     match event_id {
         "qatar_1812km" => "Qatar 1812km",

@@ -1,31 +1,32 @@
-//! パイプラインを流れる中間表現のドメイン型。
+//! Intermediate domain types that flow through the pipeline.
 //!
-//! CSV と JSON 出力のあいだで使われる語彙を、役割ごとに分割して表現する:
+//! The vocabulary used between CSV input and JSON output, split by role:
 //!
-//! - `LapRecord`: 1ラップを完全に記述する（パース済み `ParsedLap` ＋ 補助情報）
-//! - `ParsedLap`: 字句変換が済んだラップの核心データ（ベストは未計算）
-//! - `CarInfo`: 車両単位で共有されるメタデータ
-//! - `LapStats`: CSV からのみ取れる追加メトリクス
-//! - `SectorPresence`: CSV の S1/S2/S3 が空欄だったかのフラグ（出力時の空欄維持用）
-//! - `MiniSectorTimes` / `MiniSectorEntry`: Le Mans 24h 固有の15区間ミニセクター
-//! - `BestTimes` / `MiniSectorBests`: ラップ走行中に累積更新されるベストタイム
+//! - `LapRecord`: a full lap description (`ParsedLap` + auxiliary data)
+//! - `ParsedLap`: the core lap fields after lexical conversion (no bests yet)
+//! - `CarInfo`: per-car metadata shared across every lap
+//! - `LapStats`: extra metrics that only come from the CSV
+//! - `SectorPresence`: flags for whether CSV S1/S2/S3 cells were non-empty
+//! - `MiniSectorTimes` / `MiniSectorEntry`: 15-sector Le Mans 24h data
+//! - `BestTimes` / `MiniSectorBests`: accumulators updated during a car's laps
 
 use motorsport::duration::{self, Duration};
 
-/// ドメイン型（[`MiniSectorTimes`] / [`MiniSectorBests`]）と `transform::build_mini_sectors`
-/// が共有するミニセクター名リストを 1 箇所で宣言するマクロ。
+/// Single source of the 15 mini-sector identifiers shared by `MiniSectorTimes`,
+/// `MiniSectorBests`, and `transform::build_mini_sectors`.
 ///
-/// 与えられたマクロ `$m` に 15 個のミニセクター名を Rust 識別子として順に渡す。
+/// Passes 15 mini-sector names as Rust identifiers to the given macro `$m`.
 ///
-/// **カバー範囲:** 本マクロ経由で自動追従するのはドメイン型の構造と `build_mini_sectors`
-/// のみ。以下の 2 サイトは CSV 側の連結が必要で、安定 Rust では外部クレート
-/// (`paste` など) なしに追従できないため手書きのまま:
-/// - `stages::csv_input::CsvRow` の 30 個の `#[serde(rename = ...)]` 属性
-///   （`A7-1_time` のようにダッシュを含むため単純な大文字化では作れない）
-/// - `stages::structure::lap_record_from` の `MiniSectorEntry { time: row.scl2_time,
-///   elapsed: row.scl2_elapsed }` 対応
+/// Not covered (requires CSV-side concatenation, which stable Rust can't do
+/// without an external crate like `paste`):
+/// - the 30 `#[serde(rename = ...)]` attributes on `stages::csv_input::CsvRow`
+///   (names like `A7-1_time` include a dash, so a straight uppercase rule
+///   wouldn't produce them)
+/// - the `MiniSectorEntry { time: row.scl2_time, elapsed: row.scl2_elapsed }`
+///   wiring in `stages::structure::lap_record_from`
 ///
-/// 16 区間目を追加するときは、このマクロに加えて上記 2 サイトも手で更新する必要がある。
+/// Adding a 16th sector therefore requires editing this macro plus those two
+/// sites by hand.
 macro_rules! with_mini_sector_names {
     ($m:ident) => {
         $m! {
@@ -37,7 +38,6 @@ macro_rules! with_mini_sector_names {
 }
 pub(crate) use with_mini_sector_names;
 
-/// パイプラインを流れる1ラップのドメインオブジェクト。
 #[derive(Debug, Clone)]
 pub struct LapRecord {
     pub lap: ParsedLap,
@@ -47,10 +47,10 @@ pub struct LapRecord {
     pub mini_sectors: Option<MiniSectorTimes>,
 }
 
-/// 字句変換まで済んだラップの核心データ。
+/// Lap fields after lexical conversion, before per-car best-time accumulation.
 ///
-/// 下流 (`transform::process_laps`) が `motorsport::Lap` を最終構築する際の入力。
-/// ベストタイム・順位は含まず、ダミー値を詰める必要がない。
+/// `transform::process_laps` consumes this to construct the final
+/// `motorsport::Lap` with real bests filled in.
 #[derive(Debug, Clone)]
 pub struct ParsedLap {
     pub car_number: String,
@@ -63,7 +63,6 @@ pub struct ParsedLap {
     pub elapsed: Duration,
 }
 
-/// 車両単位で共有されるメタデータ（各ラップに複製されて入ってくる）。
 #[derive(Debug, Clone)]
 pub struct CarInfo {
     pub class: String,
@@ -72,7 +71,6 @@ pub struct CarInfo {
     pub manufacturer: String,
 }
 
-/// CSV からのみ取れる補助メトリクス。
 #[derive(Debug, Clone)]
 pub struct LapStats {
     pub driver_number: u32,
@@ -87,14 +85,11 @@ pub struct LapStats {
     pub pit_time: Option<Duration>,
 }
 
-/// CSV の S1/S2/S3 列が**空欄だったか**のフラグ。
+/// Whether the CSV S1/S2/S3 columns were non-empty on a given row.
 ///
-/// `motorsport::Lap::sector_{1,2,3}` は `Duration`（`u32`）なので、「空欄」と
-/// 「0ms」を区別できない。JSON 出力時に空欄のセルは空文字列のまま残したいため、
-/// このフラグで空欄性を保持する。
-///
-/// 以前は CSV の生文字列（`String` × 3）を持っていたが、用途は `.is_empty()`
-/// 判定のみだったので `bool` × 3 に縮約した（String アロケーションを回避）。
+/// `motorsport::Lap::sector_{1,2,3}` is `Duration` (`u32`), so it cannot
+/// distinguish a blank cell from a legitimate 0 ms. We preserve that
+/// distinction here so the JSON output can keep blank cells blank.
 #[derive(Debug, Clone, Copy)]
 pub struct SectorPresence {
     pub s1: bool,
@@ -102,7 +97,6 @@ pub struct SectorPresence {
     pub s3: bool,
 }
 
-/// ミニセクター1区間の生データ。
 #[derive(Debug, Clone, Default)]
 pub struct MiniSectorEntry {
     pub time: Option<String>,
@@ -110,12 +104,10 @@ pub struct MiniSectorEntry {
 }
 
 impl MiniSectorEntry {
-    /// `time` を Duration としてパースする（None / パース失敗は 0）。
     pub fn parse_time(&self) -> Duration {
         parse_opt(&self.time)
     }
 
-    /// `elapsed` を Duration としてパースする（None / パース失敗は 0）。
     pub fn parse_elapsed(&self) -> Duration {
         parse_opt(&self.elapsed)
     }
@@ -138,14 +130,15 @@ fn is_meaningful(value: &Option<String>) -> bool {
 
 macro_rules! define_mini_sector_times {
     ($($name:ident),* $(,)?) => {
-        /// Le Mans 24h のミニセクター全15区間。
+        /// All 15 Le Mans 24h mini-sectors.
         #[derive(Debug, Clone, Default)]
         pub struct MiniSectorTimes {
             $(pub $name: MiniSectorEntry,)*
         }
 
         impl MiniSectorTimes {
-            /// 全エントリが空なら `None` を返す（ミニセクターを持たないイベント向け）。
+            /// Collapses to `None` if every entry is blank (for events that
+            /// don't provide mini-sector columns).
             pub fn into_optional(self) -> Option<Self> {
                 if self.has_any() { Some(self) } else { None }
             }
@@ -158,7 +151,7 @@ macro_rules! define_mini_sector_times {
 }
 with_mini_sector_names!(define_mini_sector_times);
 
-/// ラップ走行中に累積更新されるベストタイム。
+/// Accumulator updated as laps are processed for a single car.
 #[derive(Debug, Clone, Default)]
 pub struct BestTimes {
     pub lap: Option<Duration>,
@@ -169,7 +162,8 @@ pub struct BestTimes {
 }
 
 impl BestTimes {
-    /// 現在ラップ値でラップ・S1/S2/S3 ベストを更新する（0 は無視）。
+    /// Updates lap / S1 / S2 / S3 bests. Zero values are ignored (a zero
+    /// typically means "blank CSV cell", not an actual zero-duration lap).
     pub fn update_lap_and_sectors(
         &mut self,
         lap: Duration,
@@ -183,7 +177,6 @@ impl BestTimes {
         self.s3 = best(self.s3, s3);
     }
 
-    /// 現在ラップのミニセクター値でベストを更新する。
     pub fn update_mini(&mut self, mini: &MiniSectorTimes) {
         self.mini.update_from(mini);
     }
@@ -191,7 +184,6 @@ impl BestTimes {
 
 macro_rules! define_mini_sector_bests {
     ($($name:ident),* $(,)?) => {
-        /// 15区間すべてのミニセクターベストタイム。
         #[derive(Debug, Clone, Default)]
         pub struct MiniSectorBests {
             $(pub $name: Option<Duration>,)*
@@ -220,13 +212,11 @@ mod tests {
 
     #[test]
     fn mini_sector_times_default_collapses_to_none() {
-        // 全エントリが未設定の MiniSectorTimes は into_optional で None に縮約される
         assert!(MiniSectorTimes::default().into_optional().is_none());
     }
 
     #[test]
     fn mini_sector_times_with_whitespace_only_entries_collapses_to_none() {
-        // 文字列があっても trim 後が空なら「内容なし」として扱う
         let times = MiniSectorTimes {
             scl2: MiniSectorEntry {
                 time: Some("   ".to_string()),
@@ -239,7 +229,6 @@ mod tests {
 
     #[test]
     fn mini_sector_times_with_any_meaningful_entry_is_retained() {
-        // 1 区間でも意味のある値があれば Some として保持される
         let times = MiniSectorTimes {
             fl: MiniSectorEntry {
                 time: Some("8.112".to_string()),
@@ -253,7 +242,6 @@ mod tests {
 
     #[test]
     fn best_times_update_with_all_zero_leaves_state_untouched() {
-        // ベストは「0 は無視」のルールのため、全ゼロの更新では状態が変わらない
         let mut bests = BestTimes::default();
         bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
         let snapshot = bests.clone();
@@ -268,20 +256,18 @@ mod tests {
 
     #[test]
     fn best_times_update_keeps_the_minimum() {
-        // 新しい値が現ベストより小さい場合は置き換わる / 大きい場合は据え置き
         let mut bests = BestTimes::default();
         bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
         bests.update_lap_and_sectors(95_000, 35_000, 29_000, 40_000);
 
-        assert_eq!(bests.lap, Some(95_000)); // 小さくなったので置き換え
-        assert_eq!(bests.s1, Some(30_000)); // 据え置き
-        assert_eq!(bests.s2, Some(29_000)); // 置き換え
-        assert_eq!(bests.s3, Some(40_000)); // 同値
+        assert_eq!(bests.lap, Some(95_000));
+        assert_eq!(bests.s1, Some(30_000));
+        assert_eq!(bests.s2, Some(29_000));
+        assert_eq!(bests.s3, Some(40_000));
     }
 
     #[test]
     fn best_times_mini_update_skips_zero_sectors() {
-        // ミニセクター側も 0 は無視し、有効値のみベストを更新する
         let mut bests = BestTimes::default();
 
         let all_zeros = MiniSectorTimes::default();
@@ -297,7 +283,7 @@ mod tests {
             ..Default::default()
         };
         bests.update_mini(&only_fl);
-        assert_eq!(bests.mini.scl2, None); // 他区間は据え置き
+        assert_eq!(bests.mini.scl2, None);
         assert_eq!(bests.mini.fl, Some(8_112));
     }
 }

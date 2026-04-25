@@ -1,12 +1,10 @@
-//! ステージ2: [`CsvRow`] の列をドメイン表現の [`LapRecord`] の列に構造化する。
+//! Stage 3: turn a list of [`CsvRow`] into a list of [`LapRecord`].
 //!
-//! CSV の平坦な文字列表現に対して、以下のような **意味論的な変換** を行う:
-//! - `LAP_TIME` / `S1` / ... を [`Duration`](motorsport::duration::Duration) へ
-//! - 車両メタデータ（class, group, team, manufacturer）を [`CarInfo`] へ束ねる
-//! - 30個のフラットなミニセクター列を構造化された [`MiniSectorTimes`] へ
-//!   （全て空のイベントは `None` に縮約）
-//!
-//! 字句的な読み取りはこのモジュールでは行わない（[`csv_input`](super::csv_input) の責務）。
+//! Performs semantic conversion: parsing durations, bundling per-car metadata
+//! into [`CarInfo`], and collapsing 30 flat mini-sector columns into a
+//! structured [`MiniSectorTimes`] (with events that lack them reduced to
+//! `None`). Lexical reading is the caller's responsibility
+//! ([`csv_input`](super::csv_input)).
 
 use motorsport::duration::{self, Duration};
 
@@ -15,12 +13,10 @@ use crate::domain::{
     CarInfo, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap, SectorPresence,
 };
 
-/// [`CsvRow`] のリストをドメインの [`LapRecord`] のリストに構造化する。
 pub fn structure(rows: Vec<CsvRow>) -> Vec<LapRecord> {
     rows.into_iter().map(lap_record_from).collect()
 }
 
-/// 1ラップ分のパース済み必須 duration。
 struct ParsedDurations {
     time: Duration,
     s1: Duration,
@@ -29,10 +25,12 @@ struct ParsedDurations {
     elapsed: Duration,
 }
 
-/// 必須 duration 列をまとめてパースする。パース失敗時は警告ログを出して 0 に fallback。
+/// Parses the five required duration columns for one row, falling back to 0 on
+/// failure.
 ///
-/// 空文字列は「欠損」として 0 を返し警告は出さない（CSV ではよくあるため）。
-/// **非空で**パース不能な値は警告ログを残し、0 を返す。
+/// An empty / whitespace-only value is treated as "missing" and silently
+/// becomes 0 (a common shape in CSV exports). A non-empty value that fails to
+/// parse also becomes 0, but emits a warning log first.
 fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
     let parse = |field: &'static str, value: &str| -> Duration {
         let trimmed = value.trim();
@@ -63,7 +61,6 @@ fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
     }
 }
 
-/// CSV 1行をドメインの [`LapRecord`] に変換する純粋関数。
 fn lap_record_from(row: CsvRow) -> LapRecord {
     let parsed = parse_required_durations(&row);
     let pit_time_dur = row
@@ -196,11 +193,9 @@ mod tests {
         assert_eq!(r.lap.time, 95365); // 1:35.365 → 95365 ms
         assert_eq!(r.car.team, "Hertz Team JOTA");
         assert_eq!(r.car.class, "HYPERCAR");
-        // S1/S2/S3 の空欄性フラグ（パースされた値は ParsedLap 側に格納済み）
         assert!(r.sectors.s1);
         assert!(r.sectors.s2);
         assert!(r.sectors.s3);
-        // ミニセクター列が空のイベントは None に縮約される
         assert!(r.mini_sectors.is_none());
     }
 
@@ -215,8 +210,9 @@ mod tests {
         assert_eq!(mini.scl2.elapsed.as_deref(), Some("0:08.112"));
     }
 
-    /// 空文字列の必須 duration は警告なしで 0 に fallback する（CSV の欠損列は正当な入力）。
-    /// 非空でパース不能なケース（警告あり）は integration.rs 側でカバー。
+    /// Empty required-duration cells fall back to 0 without warning (a blank
+    /// column is a valid input shape). The non-empty unparseable case (which
+    /// does warn) is covered by an integration test.
     #[test]
     fn parse_required_durations_treats_empty_as_silent_zero() {
         let csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;1;;0;;;0;;0;;0;160.7;;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
@@ -230,7 +226,8 @@ mod tests {
         assert_eq!(records[0].lap.elapsed, 0);
     }
 
-    /// 前後空白付きの duration は警告なしで正しくパースされる（trim で救済）。
+    /// Whitespace-padded duration values parse cleanly via trim, with no
+    /// spurious warning.
     #[test]
     fn parse_required_durations_handles_whitespace_padded_values() {
         let csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;1; 1:35.365 ;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";

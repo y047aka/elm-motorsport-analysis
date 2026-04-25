@@ -1,19 +1,21 @@
+//! Stage 4b/5: JSON shape types and serialization helpers.
+//!
+//! The computation that fills these shapes lives in [`transform`](super::transform).
+
 use motorsport::{Car, TimelineEvent, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
 use crate::error::CliError;
 
-/// シリアライズ可能な値を整形済み JSON 文字列へ変換する（Stage 5）。
+/// Pretty-prints a serializable value as JSON (Stage 5).
 pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<String, CliError> {
     serde_json::to_string_pretty(value).map_err(|source| CliError::Serialize { context, source })
 }
 
-/// セクタータイムのフォーマット。
-///
-/// `present=false`（CSV で空欄だった）なら空文字列を維持、それ以外はパース済み
-/// duration を文字列化する。空欄性は [`SectorPresence`](crate::domain::SectorPresence)
-/// に保持されている。
+/// Formats a sector time. If the CSV cell was blank (`present = false`) the
+/// output stays blank; otherwise the parsed `Duration` is stringified. The
+/// presence bit comes from [`SectorPresence`](crate::domain::SectorPresence).
 fn format_sector_time(present: bool, sector_duration: u32) -> String {
     if present {
         duration::to_string(sector_duration)
@@ -22,12 +24,12 @@ fn format_sector_time(present: bool, sector_duration: u32) -> String {
     }
 }
 
-/// KPH値のシリアライゼーション（.0を除去して整数として表示）
+/// Serializes KPH as an integer when it has no fractional part, preserving the
+/// historical JSON shape.
 fn serialize_speed<S>(kph: &f32, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    // .0の場合は整数として出力、それ以外は元のf32として出力
     if kph.fract() == 0.0 {
         serializer.serialize_i32(*kph as i32)
     } else {
@@ -35,31 +37,27 @@ where
     }
 }
 
-/// TopSpeed値のシリアライゼーション（.0を除去して整数として表示）
+/// Serializes TopSpeed as a string, stripping a trailing `.0` when the raw
+/// value is numeric. Unparseable inputs pass through unchanged.
 fn serialize_top_speed<S>(top_speed: &str, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
-    // 空文字列の場合はそのまま文字列として出力
     if top_speed.is_empty() {
         return serializer.serialize_str(top_speed);
     }
 
-    // 数値として解析を試行
     if let Ok(speed) = top_speed.parse::<f32>() {
-        // .0の場合は整数文字列として出力、それ以外は元の文字列として出力
         if speed.fract() == 0.0 {
             serializer.serialize_str(&format!("{}", speed as i32))
         } else {
             serializer.serialize_str(top_speed)
         }
     } else {
-        // 解析できない場合は元の文字列をそのまま出力
         serializer.serialize_str(top_speed)
     }
 }
 
-/// メタデータ出力データ構造（name, startingGrid, timelineEvents）
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetadataOutput {
@@ -68,7 +66,7 @@ pub struct MetadataOutput {
     pub timeline_events: Vec<TimelineEvent>,
 }
 
-/// Raw lap data format (laps配列の要素)
+/// JSON shape for an element of the `laps` array.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RawLap {
@@ -98,7 +96,7 @@ pub struct RawLap {
     pub manufacturer: String,
 }
 
-/// Starting grid entry format (startingGrid配列の要素)
+/// JSON shape for an element of the `startingGrid` array.
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StartingGrid {
@@ -106,13 +104,9 @@ pub struct StartingGrid {
     pub car: car::MetaData,
 }
 
-/// メタデータ出力データ作成関数（name, startingGrid, timelineEvents）。
-///
-/// `timeline_events` は呼び出し側（[`transform`](super::transform) ステージ）
-/// が計算済みのものを渡す。このモジュールはドメイン計算は行わず、構造の組み立てのみ。
-///
-/// 可視性は `pub(super)` — 呼び出し元は `stages/` 内（現状は `transform::build_outputs`
-/// のみ）に限定される。
+/// Assembles the metadata output. `timeline_events` must be pre-computed by
+/// the [`transform`](super::transform) stage — this module performs no domain
+/// computation, only shape assembly.
 pub(super) fn create_metadata_output(
     event_name: &str,
     cars: &[Car],
@@ -125,15 +119,12 @@ pub(super) fn create_metadata_output(
     }
 }
 
-/// ラップデータ出力データ作成関数（lapsのみ）。
-///
-/// 可視性は `pub(crate)` — `transform::build_outputs` と `for_testing` の
-/// 再エクスポート経由でのみ使われる。プロダクション公開 API ではない。
+/// Projects `LapRecord`s into `RawLap`s. Called by `transform::build_outputs`
+/// and re-exported through `for_testing`; not part of the public API.
 pub(crate) fn create_laps_output(records: &[LapRecord]) -> Vec<RawLap> {
     records.iter().map(raw_lap_from).collect()
 }
 
-/// LapRecord から RawLap への変換
 fn raw_lap_from(record: &LapRecord) -> RawLap {
     let lap = &record.lap;
     let car = &record.car;
@@ -168,7 +159,6 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
     }
 }
 
-/// Car から StartingGrid への変換
 fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
     cars.iter()
         .map(|car| StartingGrid {
@@ -186,11 +176,11 @@ mod tests {
     fn test_serialize_speed() {
         use serde_json::Value;
 
-        // 整数値: .0を除去
+        // Integer value: trailing .0 is dropped.
         let result = serialize_speed(&186.0, serde_json::value::Serializer).unwrap();
         assert_eq!(result, Value::Number(186.into()));
 
-        // 小数値: そのまま保持
+        // Fractional value: kept as-is.
         let result = serialize_speed(&184.3, serde_json::value::Serializer).unwrap();
         if let Value::Number(n) = result {
             assert!((n.as_f64().unwrap() - 184.3).abs() < 0.001);
@@ -204,10 +194,10 @@ mod tests {
         use serde_json::value::Serializer;
 
         let test_cases = vec![
-            ("300.0", "300"),       // .0除去
-            ("288.8", "288.8"),     // 小数点保持
-            ("", ""),               // 空文字列保持
-            ("invalid", "invalid"), // 不正値はそのまま
+            ("300.0", "300"),       // trailing .0 dropped
+            ("288.8", "288.8"),     // fractional value preserved
+            ("", ""),               // empty string preserved
+            ("invalid", "invalid"), // unparseable value passes through
         ];
 
         for (input, expected) in test_cases {
@@ -224,7 +214,6 @@ mod tests {
     fn test_create_output_includes_timeline_events() {
         use motorsport::{Car, Class, Driver, Lap, MetaData};
 
-        // テスト用の車両データを作成
         let drivers = vec![Driver::new("Test Driver".to_string(), false)];
         let metadata = MetaData::new(
             "1".to_string(),
@@ -254,7 +243,7 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // 与えられた timeline_events がそのまま MetadataOutput に載ることを確認
+        // The provided timeline_events must be forwarded into MetadataOutput unchanged.
         let provided = vec![TimelineEvent {
             event_time: 0,
             event_type: motorsport::EventType::RaceStart,
@@ -273,7 +262,6 @@ mod tests {
     fn test_create_output_includes_starting_grid() {
         use motorsport::{Car, Class, Driver, Lap, MetaData};
 
-        // テスト用の車両データを作成
         let drivers = vec![Driver::new("Test Driver".to_string(), false)];
         let metadata = MetaData::new(
             "1".to_string(),
@@ -303,13 +291,10 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // create_metadata_output が starting_grid を Car から射影することを確認
         let output = create_metadata_output("test_event", &cars, vec![]);
 
-        // starting_gridフィールドが存在することを確認
         assert_eq!(output.starting_grid.len(), 1);
 
-        // starting_gridの構造を確認
         let grid_entry = &output.starting_grid[0];
         assert_eq!(grid_entry.position, 1);
         assert_eq!(grid_entry.car.car_number, "1");

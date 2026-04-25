@@ -1,16 +1,16 @@
-//! ステージ1: CSV テキストを行ごとに[`CsvRow`]へパースする。
+//! Stage 2: parse CSV text into a list of [`CsvRow`].
 //!
-//! このモジュールの責務は **CSV の字句・構文的な読み取り** だけ。意味論的な
-//! ドメイン表現への変換（[`LapRecord`](crate::domain::LapRecord)への構造化）は
-//! 後段の [`structure`](crate::structure) モジュールが担う。
+//! This module is responsible for lexical reading only. Converting rows into
+//! the domain representation ([`LapRecord`](crate::domain::LapRecord)) is the
+//! job of the next stage ([`structure`](super::structure)).
 
 use serde::Deserialize;
 
-/// CSV 1行の平坦な表現（パースステージの成果物）。
+/// Flat row representation produced by the parse stage.
 ///
-/// フィールドは CSV の列名に素直に対応しており、`Option<String>` は
-/// 当該列が欠損または空であることを表す。意味付け（0 デフォルト、
-/// Duration パース、空欄検知など）は一切行わない。
+/// Fields map directly to CSV columns. `Option<String>` indicates a column
+/// that may be missing or blank. No semantic conversion (zero defaults,
+/// duration parsing, blank detection) happens here.
 #[derive(Debug, Deserialize)]
 pub struct CsvRow {
     #[serde(rename = "NUMBER", alias = " NUMBER")]
@@ -60,7 +60,7 @@ pub struct CsvRow {
     pub team: String,
     #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
     pub manufacturer: String,
-    // Le Mans 24h 専用：ミニセクター列（存在しないイベントもあるため Option）
+    // Le Mans 24h mini-sector columns; `Option` because other events omit them.
     #[serde(rename = "SCL2_time", alias = " SCL2_time")]
     pub scl2_time: Option<String>,
     #[serde(rename = "SCL2_elapsed", alias = " SCL2_elapsed")]
@@ -123,10 +123,9 @@ pub struct CsvRow {
     pub fl_elapsed: Option<String>,
 }
 
-/// CSV テキストを行単位で [`CsvRow`] に読み取る。
-///
-/// パース失敗行はログに残したうえでスキップする。本関数の責務は **CSV の
-/// 字句・構文的な読み取り** のみで、意味論的な変換は行わない。
+/// Reads CSV text as a list of [`CsvRow`]. Unparseable rows are logged and
+/// skipped. Only lexical reading happens here; semantic conversion is deferred
+/// to the `structure` stage.
 pub fn parse(csv: &str) -> Vec<CsvRow> {
     csv::ReaderBuilder::new()
         .delimiter(b';')
@@ -152,15 +151,14 @@ mod tests {
         let rows = parse(csv);
         assert_eq!(rows.len(), 2);
 
-        // 1行目：raw 文字列のまま保持されている
+        // First row: raw strings are preserved as-is.
         assert_eq!(rows[0].car_number, "12");
         assert_eq!(rows[0].driver, "Will STEVENS");
         assert_eq!(rows[0].lap_time, "1:35.365");
         assert_eq!(rows[0].s1, "23.155");
         assert_eq!(rows[0].team, "Hertz Team JOTA");
-        assert_eq!(rows[0].top_speed, None); // 空欄は None
+        assert_eq!(rows[0].top_speed, None); // blank cell becomes None
 
-        // 2行目
         assert_eq!(rows[1].car_number, "7");
         assert_eq!(rows[1].driver, "Kamui KOBAYASHI");
         assert_eq!(rows[1].top_speed.as_deref(), Some("298.6"));

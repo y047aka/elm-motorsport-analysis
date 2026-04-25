@@ -1,13 +1,13 @@
-//! ステージ4: [`LapRecord`] のリストから出力向けの中間表現を構築する。
+//! Stage 4: build serializable intermediates from a list of [`LapRecord`].
 //!
-//! 本ステージは **ドメイン計算** を担う:
-//! - 車両単位でのグルーピング（CSV 出現順を保持）
-//! - ラップ走行中のベストタイム（ラップ/S1/S2/S3/ミニセクター）の累積更新
-//! - 各ラップの順位計算（スタートポジション含む）
-//! - タイムラインイベントの導出
+//! This stage owns the domain-level computation:
+//! - grouping laps by car (preserving CSV order)
+//! - accumulating best times (lap / S1 / S2 / S3 / mini-sector)
+//! - computing per-lap positions (including the starting grid)
+//! - deriving timeline events
 //!
-//! JSON シリアライズの shape（[`RawLap`] / [`MetadataOutput`]）は
-//! [`output`](super::output) が所有する。本モジュールはそれらを**埋める側**。
+//! The JSON shape types ([`RawLap`] / [`MetadataOutput`]) live in
+//! [`output`](super::output); this module fills them in.
 
 use std::collections::HashMap;
 
@@ -22,16 +22,17 @@ use crate::domain::{
     BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, ParsedLap, with_mini_sector_names,
 };
 
-/// Stage 4 全体: LapRecord のリストから「シリアライズ可能な中間表現一式」を生成する。
+/// Builds every serializable intermediate for one race from a list of
+/// [`LapRecord`].
 ///
-/// 内部で以下を順に行う:
-/// 1. `records` を参照してラップ単位の [`RawLap`] を射影
-/// 2. `records` を消費して車両単位に集約（[`Car`] の列）
-/// 3. 車両リストからタイムラインイベントを計算
-/// 4. イベント名・スターティンググリッド・タイムラインを [`MetadataOutput`] に詰める
+/// Internally this runs in order:
+/// 1. project each `LapRecord` into a [`RawLap`] (by reference)
+/// 2. consume `records` to aggregate by car into a [`Car`] list
+/// 3. derive timeline events from the cars
+/// 4. assemble [`MetadataOutput`] (event name + starting grid + timeline)
 ///
-/// ステップ 1 が `records` を参照している必要があるため、2 と順序依存するが、
-/// その依存はこの関数の内部に閉じている（呼び出し側は気にしない）。
+/// Step 1 borrows `records` while step 2 moves it, so the order matters — but
+/// the constraint is encapsulated here, not in the caller.
 pub fn build_outputs(
     records: Vec<LapRecord>,
     event_name: &str,
@@ -43,32 +44,26 @@ pub fn build_outputs(
     (raw_laps, metadata)
 }
 
-/// 車両リストからタイムラインイベントを計算する。
 fn calc_timeline(cars: &[Car]) -> Vec<TimelineEvent> {
     let time_limit = calc_time_limit(cars);
     calc_timeline_events(time_limit, cars)
 }
 
-/// [`LapRecord`] のリストから車両ごとの [`Car`] を構築する。
 pub fn group_laps_by_car(records: Vec<LapRecord>) -> Vec<Car> {
     let mut cars = build_cars(records);
     calculate_positions(&mut cars);
     cars
 }
 
-/// ラップレコードを車両単位にグループ化し、各車両ラップを確定する。
 fn build_cars(records: Vec<LapRecord>) -> Vec<Car> {
-    // CSV 出現順を保つためインデックス付きで集約する
+    // Index tags each entry with its first-seen position so CSV order can be
+    // restored after the HashMap scramble.
     let mut grouped: HashMap<String, (Vec<LapRecord>, Vec<String>, usize)> = HashMap::new();
 
     for (index, record) in records.into_iter().enumerate() {
         let car_number = record.lap.car_number.clone();
         let driver_name = record.lap.driver.clone();
 
-        // `or_insert_with` で空のスロットを用意してから `record` を move で push する。
-        // 以前の `and_modify`/`or_insert` 分岐は 2 つ目以降のラップで `record.clone()`
-        // を必要としていた（Le Mans 24h で ~5000 回の深い clone）が、このパターンでは
-        // record の move は常に 1 回だけ。
         let entry = grouped
             .entry(car_number)
             .or_insert_with(|| (Vec::new(), Vec::new(), index));
@@ -90,7 +85,6 @@ fn build_cars(records: Vec<LapRecord>) -> Vec<Car> {
     cars_with_index.into_iter().map(|(_, car)| car).collect()
 }
 
-/// グループ化されたデータから Car を作成する（ベストタイム付きラップを含む）。
 fn car_from_group(car_number: String, records: Vec<LapRecord>, driver_names: Vec<String>) -> Car {
     let drivers = drivers_from(driver_names);
     let car_info = &records[0].car;
@@ -131,7 +125,7 @@ fn class_from(class_str: &str) -> Class {
     }
 }
 
-/// ラップ番号順に走査しつつ、ベストタイムを累積しながら [`Lap`] を構築する。
+/// Walks laps in order, accumulating best times and materialising each [`Lap`].
 fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
     records.sort_by_key(|r| r.lap.lap_number);
 
@@ -140,7 +134,7 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
     records
         .into_iter()
         .map(|record| {
-            // (a) accumulator 更新 — 唯一の mutation 地点
+            // (a) accumulator update — the only mutation point per iteration
             bests.update_lap_and_sectors(
                 record.lap.time,
                 record.lap.sector_1,
@@ -151,7 +145,7 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
                 bests.update_mini(mini);
             }
 
-            // (b) 確定した bests を読み出して Lap を組み立てる — 純関数
+            // (b) pure readout — build the final Lap from the snapshotted bests
             let mini_sectors = record
                 .mini_sectors
                 .as_ref()
@@ -161,11 +155,11 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
         .collect()
 }
 
-/// 確定したベストタイムとミニセクター情報から最終的な [`Lap`] を構築する純関数。
+/// Assembles a `motorsport::Lap` from a parsed lap, the accumulated bests, and
+/// optional mini-sector data.
 ///
-/// 入力は [`ParsedLap`] — ベストフィールドを持たない素朴なラップデータ。
-/// ここで初めて `motorsport::Lap` が構築され、`best` / `s{1,2,3}_best` に
-/// 累積ベストが埋め込まれる。
+/// This is the only place where `motorsport::Lap` is constructed. `position`
+/// is left `None`; [`calculate_positions`] fills it in after grouping.
 fn finalized_lap(
     lap: ParsedLap,
     bests: &BestTimes,
@@ -176,7 +170,7 @@ fn finalized_lap(
         lap.car_number,
         lap.driver,
         lap.lap_number,
-        None, // position は後段の calculate_positions で埋める
+        None,
         lap.time,
         bests.lap.unwrap_or(0),
         lap.sector_1,
@@ -191,14 +185,13 @@ fn finalized_lap(
     )
 }
 
-/// 現在までのベストタイムと組み合わせてミニセクター情報を組み立てる。
-///
-/// 15 区間の列挙は [`with_mini_sector_names!`](crate::domain::with_mini_sector_names)
-/// に委譲しており、この関数内に名前の手書きは無い。
+/// Assembles [`MiniSectors`] by combining the current lap's times with the
+/// accumulated bests. The 15 sector names come from
+/// [`with_mini_sector_names!`](crate::domain::with_mini_sector_names).
 fn build_mini_sectors(times: &MiniSectorTimes, bests: &MiniSectorBests) -> MiniSectors {
-    // ローカル `mini_sectors_from!` マクロは外側スコープの `times` と `bests` を参照する。
-    // macro_rules! のハイジーンは名前を呼び出し元で解決する規則のため正しく動くが、
-    // この関数で変数名を変えるときはマクロ本体も合わせて更新すること。
+    // `mini_sectors_from!` reads `times` and `bests` from the enclosing scope
+    // — macro_rules! hygiene resolves those at the call site. Rename either
+    // variable and this macro body has to follow.
     macro_rules! mini_sectors_from {
         ($($name:ident),* $(,)?) => {
             MiniSectors {
@@ -213,16 +206,13 @@ fn build_mini_sectors(times: &MiniSectorTimes, bests: &MiniSectorBests) -> MiniS
     with_mini_sector_names!(mini_sectors_from)
 }
 
-/// 各車両の各ラップにおける順位を計算する。
 fn calculate_positions(cars: &mut [Car]) {
     if cars.is_empty() {
         return;
     }
 
-    // スタートポジション（1週目の経過時間順）
     start_positions(cars);
 
-    // 以降の各ラップの順位
     let max_lap = cars
         .iter()
         .flat_map(|car| &car.laps)
@@ -252,7 +242,7 @@ fn start_positions(cars: &mut [Car]) {
             .iter()
             .position(|(car_num, _)| car_num == &car.meta_data.car_number)
         {
-            // Elm 互換のため 0-based index をそのまま使用
+            // 0-based index, for parity with the Elm side.
             car.start_position = position as i32;
         }
     }
@@ -278,7 +268,7 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
                 .iter_mut()
                 .find(|l| l.lap == lap_num && l.car_number == *car_number)
             {
-                // Elm 互換のため 0-based index をそのまま使用
+                // 0-based index, for parity with the Elm side.
                 lap.position = Some(position as u32);
             }
         }

@@ -1,20 +1,20 @@
-//! Race timing CSV → analysis JSON コンバータ（CLI library）。
+//! Race timing CSV → analysis JSON converter (CLI library).
 //!
-//! # 公開 API
-//! - `run`: argv を受けてプログラム全体を実行する（TRPL スタイル）
-//! - `RunSummary`: 実行後のサマリ（成功・失敗件数）／ `exit_code()` で OS 終了コードに変換
-//! - `FileTask`: 1ファイル処理の単位
+//! # Public API
+//! - `run`: TRPL-style entry that consumes argv and drives the whole program
+//! - `RunSummary`: success / error counts; `exit_code()` maps to an OS exit
+//! - `FileTask`: one-file unit of work
 //! - `parse_args` / `CliError`
 //!
-//! # 1ファイルの処理フロー
+//! # Per-file pipeline
 //!
 //! ```text
 //! read ─▶ parse ─▶ structure ─▶ transform ─▶ serialize ─▶ write
 //! (Stage 1) (2)      (3)          (4)          (5)        (6)
 //! ```
 //!
-//! 各ステージの実装は [`stages`] モジュール以下。このファイルは `FileTask`
-//! の実行と 6 段階の合成（[`process_file`] 内）を担う。
+//! Each stage lives under [`stages`]. This file owns the `FileTask` orchestration
+//! and the six-stage composition in [`process_file`].
 
 pub mod args;
 pub mod error;
@@ -33,7 +33,6 @@ use std::process::ExitCode;
 // Public API types
 // ================================================================
 
-/// 1ファイルの処理に必要な情報
 pub struct FileTask {
     input_path: PathBuf,
     output_path: PathBuf,
@@ -41,8 +40,8 @@ pub struct FileTask {
 }
 
 impl FileTask {
-    /// 入力ファイルパスから FileTask を生成する。
-    /// output_override が None の場合、入力ファイルの拡張子を .json に置換したパスを使う。
+    /// `output_override = None` derives the output path from `input_path` by
+    /// swapping the extension to `.json`.
     pub fn new(input_path: PathBuf, output_override: Option<PathBuf>) -> Self {
         let stem = input_path
             .file_stem()
@@ -82,7 +81,6 @@ impl FileTask {
     }
 }
 
-/// プログラム全体の実行サマリ。
 #[derive(Debug, Default)]
 pub struct RunSummary {
     pub processed: u32,
@@ -90,7 +88,7 @@ pub struct RunSummary {
 }
 
 impl RunSummary {
-    /// OS 終了コードへ変換する。エラーが 1 件でもあれば `FAILURE`。
+    /// `FAILURE` if any file failed, `SUCCESS` otherwise.
     pub fn exit_code(&self) -> ExitCode {
         if self.errors == 0 {
             ExitCode::SUCCESS
@@ -100,7 +98,6 @@ impl RunSummary {
     }
 }
 
-/// 1ファイル処理の成功時レポート（内部用）。
 struct ProcessingReport {
     car_count: usize,
     metadata_path: PathBuf,
@@ -111,11 +108,12 @@ struct ProcessingReport {
 // Program entry point
 // ================================================================
 
-/// argv を受けてプログラム全体を実行する。
+/// Runs the whole program against `argv`.
 ///
-/// - 引数のパースに失敗した場合は [`Err`]（setup エラー）
-/// - 各ファイル処理は内部で完結し、成否は [`RunSummary`] に集約される
-///   - 個別ファイルの成功／失敗は `log` クレート経由で出力される
+/// - Argv parsing failures bubble up as `Err` (setup-phase error).
+/// - Per-file failures do not bubble up: they are logged via `log::error!` and
+///   counted in [`RunSummary::errors`]. Callers convert the summary to an OS
+///   exit code via [`RunSummary::exit_code`].
 pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
     let tasks = parse_args(args)?;
     let mut summary = RunSummary::default();
@@ -152,24 +150,23 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
 // Per-file execution
 // ================================================================
 
-/// 1ファイル分のパイプライン: read → parse → structure → transform → serialize → write
 fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     use stages::{csv_input, files, output, structure, transform};
 
     // Stage 1: read
     let csv_content = files::read_csv(task.input_path())?;
 
-    // Stage 2: parse (CSV テキスト → CsvRow のリスト、字句的な読み取り)
+    // Stage 2: parse — CSV text to `CsvRow` list
     let rows = csv_input::parse(&csv_content);
 
-    // Stage 3: structure (CsvRow → LapRecord、意味論的な変換)
+    // Stage 3: structure — `CsvRow` to `LapRecord`
     let records = structure::structure(rows);
 
-    // Stage 4: transform (LapRecord → シリアライズ前の中間表現)
+    // Stage 4: transform — `LapRecord` list to serializable shapes
     let (raw_laps, metadata) = transform::build_outputs(records, task.event_name());
     let car_count = metadata.starting_grid.len();
 
-    // Stage 5: serialize (中間表現 → JSON 文字列、純粋な文字列変換)
+    // Stage 5: serialize
     let metadata_json = output::to_json_pretty(&metadata, "metadata")?;
     let laps_json = output::to_json_pretty(&raw_laps, "laps")?;
 
@@ -190,17 +187,14 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
 // Test-only hooks
 // ================================================================
 
-/// Integration test 用の内部構造アクセス。プロダクションコードからは使用しない。
-///
-/// このモジュールは外部依存者向けの公開 API ではなく、同一クレート内の
-/// integration test がパイプラインの中間表現を直接観察するためのエントリポイント。
+/// Intra-crate access for integration tests. Not part of the public API.
 #[doc(hidden)]
 pub mod for_testing {
     pub use crate::domain::LapRecord;
     pub use crate::stages::output::MetadataOutput;
     pub use crate::stages::transform::{build_outputs, group_laps_by_car};
 
-    /// CSV テキストからパース + 構造化の 2 ステージを束ねて [`LapRecord`] を得る。
+    /// Runs the parse + structure stages in one call.
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {
         crate::stages::structure::structure(crate::stages::csv_input::parse(csv))
     }

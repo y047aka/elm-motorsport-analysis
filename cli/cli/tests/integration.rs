@@ -201,21 +201,21 @@ fn test_cli_end_to_end_execution() {
 
 #[test]
 fn test_cli_run_reports_partial_failure() {
-    // 2 ファイルのうち 1 ファイルだけが読めない状況で、`run` が成功件数と失敗件数を
-    // 正しく集計し、exit_code() が FAILURE を返すことを確認する。
+    // Verify `run` correctly accounts for mixed success/failure and that
+    // `exit_code()` returns FAILURE when any file failed.
     //
-    // 「読めない .csv」は、拡張子 .csv を持つ**ディレクトリ**で表現する。
-    // `parse_args` の walkdir は .csv 拡張子で entry をフィルタするだけで is_file は
-    // 見ないため、ディレクトリがタスクとして enumerate される。後段の
-    // `files::read_csv` がディレクトリに対する `read_to_string` に失敗し、該当
-    // タスクだけ `CliError::ReadFile` を返す。
+    // An "unreadable .csv" is represented by a **directory** whose name ends
+    // in `.csv`. `parse_args`'s walkdir only filters by extension and doesn't
+    // check `is_file`, so the directory is enumerated as a task. The
+    // downstream `files::read_csv` then fails with `CliError::ReadFile` when
+    // it tries to `read_to_string` a directory.
     let temp_dir = tempfile::tempdir().expect("create tempdir");
 
-    // 1 つ目: 正当な CSV
+    // Entry 1: a real CSV that should process cleanly.
     let valid_csv = temp_dir.path().join("valid.csv");
     fs::copy("../test_data.csv", &valid_csv).expect("Failed to copy test data");
 
-    // 2 つ目: .csv 拡張子を持つディレクトリ（読み取り時に失敗する）
+    // Entry 2: a directory ending in `.csv` — reading will fail.
     let broken_csv_dir = temp_dir.path().join("broken.csv");
     fs::create_dir(&broken_csv_dir).expect("create broken.csv as directory");
 
@@ -225,37 +225,34 @@ fn test_cli_run_reports_partial_failure() {
     ];
     let summary = cli::run(args.into_iter()).expect("parse_args succeeds (path is a directory)");
 
-    assert_eq!(
-        summary.processed, 1,
-        "ちょうど 1 ファイル (valid.csv) が成功するはず"
-    );
+    assert_eq!(summary.processed, 1, "exactly valid.csv should succeed");
     assert_eq!(
         summary.errors, 1,
-        "ちょうど 1 ファイル (broken.csv ディレクトリ) が失敗するはず"
+        "exactly the broken.csv directory should fail"
     );
 
-    // ExitCode は PartialEq が未実装なので Debug 文字列で比較する。
+    // ExitCode doesn't implement PartialEq, so compare via the Debug string.
     let exit = summary.exit_code();
     assert!(
         format!("{exit:?}").contains("1"),
-        "exit_code() は FAILURE (1) を返すべき: {exit:?}"
+        "exit_code() should be FAILURE (1): {exit:?}"
     );
 }
 
 #[test]
 fn test_csv_parsing_edge_cases() {
-    // 空のCSVデータのテスト
+    // Empty CSV: header only, no rows.
     let empty_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n";
     let laps = parse_and_structure(empty_csv);
-    assert_eq!(laps.len(), 0, "空のCSVからは0個のラップが解析されるはず");
+    assert_eq!(laps.len(), 0, "empty CSV should parse to zero laps");
 
-    // 不正なデータを含むCSVのテスト（エラーハンドリング確認）
+    // Non-empty but unparseable LAP_TIME: still produces a lap, with a warning
+    // logged by stages::structure::parse_required_durations and `time` falling
+    // back to 0.
     let invalid_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;Will STEVENS;1;invalid_time;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
     let laps = parse_and_structure(invalid_csv);
-    // 不正なデータは警告ログを出しつつ 0 に fallback（ラップ自体は作成される）。
-    // 警告は stages::structure::parse_required_durations から出力される。
-    assert_eq!(laps.len(), 1, "不正データでも1個のラップが作成されるはず");
-    assert_eq!(laps[0].lap.time, 0, "不正なタイムは0に fallback されるはず");
+    assert_eq!(laps.len(), 1, "invalid data still produces one lap");
+    assert_eq!(laps[0].lap.time, 0, "unparseable time falls back to 0");
 }
 
 #[test]
@@ -345,7 +342,8 @@ fn test_real_wec_data_processing() {
 
 #[test]
 fn test_elm_json_structure_and_field_compatibility() {
-    // 包括的なElm互換JSON構造・フィールド・データ型テスト
+    // End-to-end check of JSON structure, field presence, and types that the
+    // Elm frontend expects.
     let csv_data = create_test_csv_data();
     let records = parse_and_structure(&csv_data);
 
@@ -353,7 +351,7 @@ fn test_elm_json_structure_and_field_compatibility() {
     let metadata_json_value = serde_json::to_value(&metadata_output).unwrap();
     let laps_json_value = serde_json::to_value(&laps_output).unwrap();
 
-    // メタデータJSON構造のチェック
+    // Metadata JSON structure.
     assert!(
         metadata_json_value.is_object(),
         "Metadata JSON should be an object"
@@ -371,7 +369,7 @@ fn test_elm_json_structure_and_field_compatibility() {
         "timelineEvents field required"
     );
 
-    // ラップデータJSON構造のチェック（直接配列形式）
+    // Laps JSON is a bare array.
     assert!(laps_json_value.is_array(), "Laps JSON should be an array");
     assert!(
         metadata_json_value["name"].is_string(),
@@ -382,12 +380,11 @@ fn test_elm_json_structure_and_field_compatibility() {
         "startingGrid should be array"
     );
 
-    // ラップフィールドの完全性と型チェック
+    // Lap field completeness + types.
     let laps_array = laps_json_value.as_array().unwrap();
     if !laps_array.is_empty() {
         let lap = &laps_array[0];
 
-        // 文字列フィールド
         let string_fields = [
             "carNumber",
             "lapTime",
@@ -410,7 +407,6 @@ fn test_elm_json_structure_and_field_compatibility() {
             assert!(lap[field].is_string(), "{field} should be string");
         }
 
-        // 数値フィールド
         let number_fields = [
             "driverNumber",
             "lapNumber",
@@ -426,12 +422,11 @@ fn test_elm_json_structure_and_field_compatibility() {
         }
     }
 
-    // スターティンググリッドフィールドの完全性と型チェック
+    // Starting-grid field completeness + types.
     let starting_grid_array = metadata_json_value["startingGrid"].as_array().unwrap();
     if !starting_grid_array.is_empty() {
         let grid_entry = &starting_grid_array[0];
 
-        // グリッドエントリレベルフィールド
         assert!(
             grid_entry.get("position").is_some() && grid_entry["position"].is_number(),
             "position field required and should be number"
@@ -443,7 +438,6 @@ fn test_elm_json_structure_and_field_compatibility() {
 
         let car = &grid_entry["car"];
 
-        // 車両レベルフィールド
         assert!(
             car.get("carNumber").is_some() && car["carNumber"].is_string(),
             "carNumber field required and should be string"
@@ -461,7 +455,8 @@ fn test_elm_json_structure_and_field_compatibility() {
 
 #[test]
 fn test_racing_data_processing_compatibility() {
-    // 包括的なレースデータ処理テスト：改善フラグ、ピットストップ、ピットタイム
+    // End-to-end race-data processing: improvement flags, pit-entry marker,
+    // and pit-time formatting.
     let csv_with_racing_data = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
 007;1;26;1:34.552;2;;19.398;0;30.981;2;44.173;0;186.9;44:14.995;13:45:40.505;0:19.398;0:30.981;0:44.173;305.1;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.398;30.981;44.173;
 007;1;34;2:47.748;0;B;19.480;0;31.197;0;1:57.071;0;105.4;58:12.901;13:59:38.411;0:19.480;0:31.197;1:57.071;307.7;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.480;31.197;117.071;
