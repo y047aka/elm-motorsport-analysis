@@ -12,6 +12,23 @@
 use motorsport::duration::{self, Duration};
 use motorsport::lap::Lap;
 
+/// 15 のミニセクター名を**唯一の信頼できる情報源**として宣言するマクロ。
+///
+/// 与えられたマクロ `$m` に、15 個のミニセクター名を Rust 識別子として順に渡す。
+/// 新しい区間を追加するときはこのマクロ本体を 1 箇所修正するだけで、
+/// [`MiniSectorTimes`] の構造、[`MiniSectorBests`] の構造・更新処理、
+/// `transform::build_mini_sectors` など、全ての呼び出し側が自動追従する。
+macro_rules! with_mini_sector_names {
+    ($m:ident) => {
+        $m! {
+            scl2, z4, ip1, z12, sclc,
+            a7_1, ip2, a8_1, sclb, porin,
+            porout, pitref, scl1, fordout, fl
+        }
+    };
+}
+pub(crate) use with_mini_sector_names;
+
 /// パイプラインを流れる1ラップのドメインオブジェクト。
 #[derive(Debug, Clone)]
 pub struct LapRecord {
@@ -88,56 +105,27 @@ fn is_meaningful(value: &Option<String>) -> bool {
     value.as_ref().is_some_and(|s| !s.trim().is_empty())
 }
 
-/// Le Mans 24h のミニセクター全15区間。
-#[derive(Debug, Clone, Default)]
-pub struct MiniSectorTimes {
-    pub scl2: MiniSectorEntry,
-    pub z4: MiniSectorEntry,
-    pub ip1: MiniSectorEntry,
-    pub z12: MiniSectorEntry,
-    pub sclc: MiniSectorEntry,
-    pub a7_1: MiniSectorEntry,
-    pub ip2: MiniSectorEntry,
-    pub a8_1: MiniSectorEntry,
-    pub sclb: MiniSectorEntry,
-    pub porin: MiniSectorEntry,
-    pub porout: MiniSectorEntry,
-    pub pitref: MiniSectorEntry,
-    pub scl1: MiniSectorEntry,
-    pub fordout: MiniSectorEntry,
-    pub fl: MiniSectorEntry,
+macro_rules! define_mini_sector_times {
+    ($($name:ident),* $(,)?) => {
+        /// Le Mans 24h のミニセクター全15区間。
+        #[derive(Debug, Clone, Default)]
+        pub struct MiniSectorTimes {
+            $(pub $name: MiniSectorEntry,)*
+        }
+
+        impl MiniSectorTimes {
+            /// 全エントリが空なら `None` を返す（ミニセクターを持たないイベント向け）。
+            pub fn into_optional(self) -> Option<Self> {
+                if self.has_any() { Some(self) } else { None }
+            }
+
+            fn has_any(&self) -> bool {
+                false $(|| self.$name.has_content())*
+            }
+        }
+    };
 }
-
-impl MiniSectorTimes {
-    /// 全エントリが空なら `None` を返す（ミニセクターを持たないイベント向け）。
-    pub fn into_optional(self) -> Option<Self> {
-        if self.has_any() { Some(self) } else { None }
-    }
-
-    fn has_any(&self) -> bool {
-        self.entries().iter().any(|e| e.has_content())
-    }
-
-    fn entries(&self) -> [&MiniSectorEntry; 15] {
-        [
-            &self.scl2,
-            &self.z4,
-            &self.ip1,
-            &self.z12,
-            &self.sclc,
-            &self.a7_1,
-            &self.ip2,
-            &self.a8_1,
-            &self.sclb,
-            &self.porin,
-            &self.porout,
-            &self.pitref,
-            &self.scl1,
-            &self.fordout,
-            &self.fl,
-        ]
-    }
-}
+with_mini_sector_names!(define_mini_sector_times);
 
 /// ラップ走行中に累積更新されるベストタイム。
 #[derive(Debug, Clone, Default)]
@@ -170,45 +158,22 @@ impl BestTimes {
     }
 }
 
-/// 15区間すべてのミニセクターベストタイム。
-#[derive(Debug, Clone, Default)]
-pub struct MiniSectorBests {
-    pub scl2: Option<Duration>,
-    pub z4: Option<Duration>,
-    pub ip1: Option<Duration>,
-    pub z12: Option<Duration>,
-    pub sclc: Option<Duration>,
-    pub a7_1: Option<Duration>,
-    pub ip2: Option<Duration>,
-    pub a8_1: Option<Duration>,
-    pub sclb: Option<Duration>,
-    pub porin: Option<Duration>,
-    pub porout: Option<Duration>,
-    pub pitref: Option<Duration>,
-    pub scl1: Option<Duration>,
-    pub fordout: Option<Duration>,
-    pub fl: Option<Duration>,
-}
+macro_rules! define_mini_sector_bests {
+    ($($name:ident),* $(,)?) => {
+        /// 15区間すべてのミニセクターベストタイム。
+        #[derive(Debug, Clone, Default)]
+        pub struct MiniSectorBests {
+            $(pub $name: Option<Duration>,)*
+        }
 
-impl MiniSectorBests {
-    fn update_from(&mut self, mini: &MiniSectorTimes) {
-        self.scl2 = best(self.scl2, mini.scl2.parse_time());
-        self.z4 = best(self.z4, mini.z4.parse_time());
-        self.ip1 = best(self.ip1, mini.ip1.parse_time());
-        self.z12 = best(self.z12, mini.z12.parse_time());
-        self.sclc = best(self.sclc, mini.sclc.parse_time());
-        self.a7_1 = best(self.a7_1, mini.a7_1.parse_time());
-        self.ip2 = best(self.ip2, mini.ip2.parse_time());
-        self.a8_1 = best(self.a8_1, mini.a8_1.parse_time());
-        self.sclb = best(self.sclb, mini.sclb.parse_time());
-        self.porin = best(self.porin, mini.porin.parse_time());
-        self.porout = best(self.porout, mini.porout.parse_time());
-        self.pitref = best(self.pitref, mini.pitref.parse_time());
-        self.scl1 = best(self.scl1, mini.scl1.parse_time());
-        self.fordout = best(self.fordout, mini.fordout.parse_time());
-        self.fl = best(self.fl, mini.fl.parse_time());
-    }
+        impl MiniSectorBests {
+            fn update_from(&mut self, mini: &MiniSectorTimes) {
+                $(self.$name = best(self.$name, mini.$name.parse_time());)*
+            }
+        }
+    };
 }
+with_mini_sector_names!(define_mini_sector_bests);
 
 fn best(current_best: Option<Duration>, candidate: Duration) -> Option<Duration> {
     if candidate == 0 {

@@ -18,7 +18,7 @@ use motorsport::{
 };
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
-use crate::domain::{BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes};
+use crate::domain::{BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, with_mini_sector_names};
 
 /// Stage 4 全体: LapRecord のリストから「シリアライズ可能な中間表現一式」を生成する。
 ///
@@ -181,30 +181,22 @@ fn finalized_lap(
 }
 
 /// 現在までのベストタイムと組み合わせてミニセクター情報を組み立てる。
+///
+/// 15 区間の列挙は [`with_mini_sector_names!`](crate::domain::with_mini_sector_names)
+/// に委譲しており、この関数内に名前の手書きは無い。
 fn build_mini_sectors(times: &MiniSectorTimes, bests: &MiniSectorBests) -> MiniSectors {
-    let mk = |entry: &crate::domain::MiniSectorEntry, best: Option<u32>| MiniSector {
-        time: entry.parse_time(),
-        elapsed: entry.parse_elapsed(),
-        best: best.unwrap_or(0),
-    };
-
-    MiniSectors {
-        scl2: mk(&times.scl2, bests.scl2),
-        z4: mk(&times.z4, bests.z4),
-        ip1: mk(&times.ip1, bests.ip1),
-        z12: mk(&times.z12, bests.z12),
-        sclc: mk(&times.sclc, bests.sclc),
-        a7_1: mk(&times.a7_1, bests.a7_1),
-        ip2: mk(&times.ip2, bests.ip2),
-        a8_1: mk(&times.a8_1, bests.a8_1),
-        sclb: mk(&times.sclb, bests.sclb),
-        porin: mk(&times.porin, bests.porin),
-        porout: mk(&times.porout, bests.porout),
-        pitref: mk(&times.pitref, bests.pitref),
-        scl1: mk(&times.scl1, bests.scl1),
-        fordout: mk(&times.fordout, bests.fordout),
-        fl: mk(&times.fl, bests.fl),
+    macro_rules! mini_sectors_from {
+        ($($name:ident),* $(,)?) => {
+            MiniSectors {
+                $($name: MiniSector {
+                    time: times.$name.parse_time(),
+                    elapsed: times.$name.parse_elapsed(),
+                    best: bests.$name.unwrap_or(0),
+                },)*
+            }
+        };
     }
+    with_mini_sector_names!(mini_sectors_from)
 }
 
 /// 各車両の各ラップにおける順位を計算する。
