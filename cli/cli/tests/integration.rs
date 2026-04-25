@@ -1,18 +1,11 @@
 use std::fs;
 use std::path::Path;
 
-use cli::{
-    FileTask, create_laps_output, create_metadata_output, csv_input, group_laps_by_car, run,
-    structure,
+use cli::FileTask;
+use cli::for_testing::{
+    create_laps_output, create_metadata_output, group_laps_by_car, parse_and_structure,
 };
-
-/// テスト用ヘルパー: パース＋構造化の2段階をまとめて呼ぶ。
-///
-/// 旧 `parse_laps_from_csv` と同じ動作を提供する。プロダクションコードでは
-/// パイプライン上で各段階を明示的に呼ぶため、このヘルパーはテスト専用。
-fn parse_and_structure(csv: &str) -> Vec<cli::LapRecord> {
-    structure::structure(csv_input::parse(csv))
-}
+use cli::run;
 
 // =============================================================================
 // INTEGRATION TESTS

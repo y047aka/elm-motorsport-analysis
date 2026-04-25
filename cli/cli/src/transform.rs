@@ -249,7 +249,7 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, LapStats, MiniSectorTimes, SectorTimesRaw};
+    use crate::domain::{CarInfo, LapStats, SectorTimesRaw};
 
     fn test_car_info(team: &str, manufacturer: &str) -> CarInfo {
         CarInfo {
@@ -426,12 +426,5 @@ mod tests {
             assert_eq!(lap.s2_best, *expected_s2, "Lap {} S2 best mismatch", i + 1);
             assert_eq!(lap.s3_best, *expected_s3, "Lap {} S3 best mismatch", i + 1);
         }
-    }
-
-    #[test]
-    fn test_mini_sector_times_unused() {
-        // MiniSectorTimes::default() は has_any=false なので into_optional で None を返す
-        let empty = MiniSectorTimes::default();
-        assert!(empty.into_optional().is_none());
     }
 }

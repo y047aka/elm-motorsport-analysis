@@ -217,3 +217,91 @@ fn best(current_best: Option<Duration>, candidate: Duration) -> Option<Duration>
         Some(current_best.map_or(candidate, |b| b.min(candidate)))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mini_sector_times_default_collapses_to_none() {
+        // 全エントリが未設定の MiniSectorTimes は into_optional で None に縮約される
+        assert!(MiniSectorTimes::default().into_optional().is_none());
+    }
+
+    #[test]
+    fn mini_sector_times_with_whitespace_only_entries_collapses_to_none() {
+        // 文字列があっても trim 後が空なら「内容なし」として扱う
+        let times = MiniSectorTimes {
+            scl2: MiniSectorEntry {
+                time: Some("   ".to_string()),
+                elapsed: Some("\t".to_string()),
+            },
+            ..Default::default()
+        };
+        assert!(times.into_optional().is_none());
+    }
+
+    #[test]
+    fn mini_sector_times_with_any_meaningful_entry_is_retained() {
+        // 1 区間でも意味のある値があれば Some として保持される
+        let times = MiniSectorTimes {
+            fl: MiniSectorEntry {
+                time: Some("8.112".to_string()),
+                elapsed: None,
+            },
+            ..Default::default()
+        };
+        let retained = times.into_optional().expect("should be retained");
+        assert_eq!(retained.fl.time.as_deref(), Some("8.112"));
+    }
+
+    #[test]
+    fn best_times_update_with_all_zero_leaves_state_untouched() {
+        // ベストは「0 は無視」のルールのため、全ゼロの更新では状態が変わらない
+        let mut bests = BestTimes::default();
+        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
+        let snapshot = bests.clone();
+
+        bests.update_lap_and_sectors(0, 0, 0, 0);
+
+        assert_eq!(bests.lap, snapshot.lap);
+        assert_eq!(bests.s1, snapshot.s1);
+        assert_eq!(bests.s2, snapshot.s2);
+        assert_eq!(bests.s3, snapshot.s3);
+    }
+
+    #[test]
+    fn best_times_update_keeps_the_minimum() {
+        // 新しい値が現ベストより小さい場合は置き換わる / 大きい場合は据え置き
+        let mut bests = BestTimes::default();
+        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
+        bests.update_lap_and_sectors(95_000, 35_000, 29_000, 40_000);
+
+        assert_eq!(bests.lap, Some(95_000)); // 小さくなったので置き換え
+        assert_eq!(bests.s1, Some(30_000)); // 据え置き
+        assert_eq!(bests.s2, Some(29_000)); // 置き換え
+        assert_eq!(bests.s3, Some(40_000)); // 同値
+    }
+
+    #[test]
+    fn best_times_mini_update_skips_zero_sectors() {
+        // ミニセクター側も 0 は無視し、有効値のみベストを更新する
+        let mut bests = BestTimes::default();
+
+        let all_zeros = MiniSectorTimes::default();
+        bests.update_mini(&all_zeros);
+        assert_eq!(bests.mini.scl2, None);
+        assert_eq!(bests.mini.fl, None);
+
+        let only_fl = MiniSectorTimes {
+            fl: MiniSectorEntry {
+                time: Some("8.112".to_string()),
+                elapsed: None,
+            },
+            ..Default::default()
+        };
+        bests.update_mini(&only_fl);
+        assert_eq!(bests.mini.scl2, None); // 他区間は据え置き
+        assert_eq!(bests.mini.fl, Some(8_112));
+    }
+}
