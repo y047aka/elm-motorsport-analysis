@@ -74,27 +74,22 @@ fn test_csv_parsing_and_data_processing() {
 
 #[test]
 fn test_cli_end_to_end_execution() {
-    // Test output filename
-    let test_output = "test_integration_output.json";
-    let test_input = "test_integration_output.csv";
-
-    // Pre-cleanup check for existing test files
-    if fs::metadata(test_output).is_ok() {
-        fs::remove_file(test_output).expect("Failed to remove existing test file");
-    }
-    if fs::metadata(test_input).is_ok() {
-        fs::remove_file(test_input).expect("Failed to remove existing input file");
-    }
+    // Use tempdir to isolate test files and avoid races across parallel tests
+    let temp_dir = tempfile::tempdir().expect("create tempdir");
+    let test_input = temp_dir.path().join("input.csv");
+    let test_output = temp_dir.path().join("output.json");
+    let test_input_str = test_input.to_str().expect("UTF-8 path");
+    let test_output_str = test_output.to_str().expect("UTF-8 path");
 
     // Copy test data to expected input filename
-    fs::copy("../test_data.csv", test_input).expect("Failed to copy test data");
+    fs::copy("../test_data.csv", &test_input).expect("Failed to copy test data");
 
     // Execute CLI via argv
     let args = vec![
         "cli".to_string(),
-        test_input.to_string(),
+        test_input_str.to_string(),
         "--output".to_string(),
-        test_output.to_string(),
+        test_output_str.to_string(),
     ];
     let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
     assert_eq!(summary.errors, 0, "CLI should process without errors");
@@ -102,12 +97,12 @@ fn test_cli_end_to_end_execution() {
 
     // Verify output file creation
     assert!(
-        fs::metadata(test_output).is_ok(),
+        fs::metadata(&test_output).is_ok(),
         "Output file should be created"
     );
 
     // Validate output file content
-    let json_content = fs::read_to_string(test_output).expect("Failed to read output file");
+    let json_content = fs::read_to_string(&test_output).expect("Failed to read output file");
     assert!(!json_content.is_empty(), "JSON file should not be empty");
 
     // Verify valid JSON format
@@ -156,7 +151,7 @@ fn test_cli_end_to_end_execution() {
     }
 
     // Verify laps data file exists and has correct structure
-    let laps_output_path = test_output.replace(".json", "_laps.json");
+    let laps_output_path = test_output.with_file_name("output_laps.json");
     assert!(
         fs::metadata(&laps_output_path).is_ok(),
         "Laps data file should exist"
@@ -203,12 +198,7 @@ fn test_cli_end_to_end_execution() {
         "manufacturer field should exist"
     );
 
-    // Cleanup laps data file
-    fs::remove_file(&laps_output_path).expect("Failed to cleanup laps data file");
-
-    // Cleanup test files
-    fs::remove_file(test_output).expect("Failed to cleanup test output file");
-    fs::remove_file(test_input).expect("Failed to cleanup test input file");
+    // tempdir cleans up on drop
 }
 
 #[test]
