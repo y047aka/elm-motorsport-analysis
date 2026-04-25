@@ -100,33 +100,51 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
     records
         .into_iter()
         .map(|record| {
-            let lap = record.lap;
-            bests.update_lap_and_sectors(lap.time, lap.sector_1, lap.sector_2, lap.sector_3);
-
-            let mini_sectors = record.mini_sectors.as_ref().map(|mini| {
+            // (a) accumulator 更新 — 唯一の mutation 地点
+            bests.update_lap_and_sectors(
+                record.lap.time,
+                record.lap.sector_1,
+                record.lap.sector_2,
+                record.lap.sector_3,
+            );
+            if let Some(mini) = &record.mini_sectors {
                 bests.update_mini(mini);
-                build_mini_sectors(mini, &bests.mini)
-            });
+            }
 
-            Lap::new_with_mini_sectors(
-                lap.car_number,
-                lap.driver,
-                lap.lap,
-                lap.position,
-                lap.time,
-                bests.lap.unwrap_or(0),
-                lap.sector_1,
-                lap.sector_2,
-                lap.sector_3,
-                bests.s1.unwrap_or(0),
-                bests.s2.unwrap_or(0),
-                bests.s3.unwrap_or(0),
-                lap.elapsed,
-                record.stats.pit_time,
-                mini_sectors,
-            )
+            // (b) 確定した bests を読み出して Lap を組み立てる — 純関数
+            let mini_sectors = record
+                .mini_sectors
+                .as_ref()
+                .map(|mini| build_mini_sectors(mini, &bests.mini));
+            finalized_lap(record.lap, &bests, record.stats.pit_time, mini_sectors)
         })
         .collect()
+}
+
+/// 確定したベストタイムとミニセクター情報から最終的な [`Lap`] を構築する純関数。
+fn finalized_lap(
+    lap: Lap,
+    bests: &BestTimes,
+    pit_time: Option<motorsport::Duration>,
+    mini_sectors: Option<MiniSectors>,
+) -> Lap {
+    Lap::new_with_mini_sectors(
+        lap.car_number,
+        lap.driver,
+        lap.lap,
+        lap.position,
+        lap.time,
+        bests.lap.unwrap_or(0),
+        lap.sector_1,
+        lap.sector_2,
+        lap.sector_3,
+        bests.s1.unwrap_or(0),
+        bests.s2.unwrap_or(0),
+        bests.s3.unwrap_or(0),
+        lap.elapsed,
+        pit_time,
+        mini_sectors,
+    )
 }
 
 /// 現在までのベストタイムと組み合わせてミニセクター情報を組み立てる。
