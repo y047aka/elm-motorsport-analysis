@@ -9,11 +9,10 @@
 //! 字句的な読み取りはこのモジュールでは行わない（[`csv_input`](super::csv_input) の責務）。
 
 use motorsport::duration::{self, Duration};
-use motorsport::lap::Lap;
 
 use super::csv_input::CsvRow;
 use crate::domain::{
-    CarInfo, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, SectorTimesRaw,
+    CarInfo, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap, SectorPresence,
 };
 
 /// [`CsvRow`] のリストをドメインの [`LapRecord`] のリストに構造化する。
@@ -73,21 +72,22 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
         .filter(|s| !s.trim().is_empty())
         .and_then(motorsport::duration::from_string);
 
-    let lap = Lap::new(
-        row.car_number,
-        row.driver,
-        row.lap,
-        None,
-        parsed.time,
-        parsed.time,
-        parsed.s1,
-        parsed.s2,
-        parsed.s3,
-        parsed.s1,
-        parsed.s2,
-        parsed.s3,
-        parsed.elapsed,
-    );
+    let sectors = SectorPresence {
+        s1: !row.s1.trim().is_empty(),
+        s2: !row.s2.trim().is_empty(),
+        s3: !row.s3.trim().is_empty(),
+    };
+
+    let lap = ParsedLap {
+        car_number: row.car_number,
+        driver: row.driver,
+        lap_number: row.lap,
+        time: parsed.time,
+        sector_1: parsed.s1,
+        sector_2: parsed.s2,
+        sector_3: parsed.s3,
+        elapsed: parsed.elapsed,
+    };
 
     let mini_sectors = MiniSectorTimes {
         scl2: MiniSectorEntry {
@@ -173,11 +173,7 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
             top_speed: row.top_speed,
             pit_time: pit_time_dur,
         },
-        sectors: SectorTimesRaw {
-            s1: row.s1,
-            s2: row.s2,
-            s3: row.s3,
-        },
+        sectors,
         mini_sectors,
     }
 }
@@ -200,8 +196,10 @@ mod tests {
         assert_eq!(r.lap.time, 95365); // 1:35.365 → 95365 ms
         assert_eq!(r.car.team, "Hertz Team JOTA");
         assert_eq!(r.car.class, "HYPERCAR");
-        // S1/S2/S3 の生文字列は保持される（空欄検知用）
-        assert_eq!(r.sectors.s1, "23.155");
+        // S1/S2/S3 の空欄性フラグ（パースされた値は ParsedLap 側に格納済み）
+        assert!(r.sectors.s1);
+        assert!(r.sectors.s2);
+        assert!(r.sectors.s3);
         // ミニセクター列が空のイベントは None に縮約される
         assert!(r.mini_sectors.is_none());
     }

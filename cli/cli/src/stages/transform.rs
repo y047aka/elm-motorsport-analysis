@@ -18,7 +18,9 @@ use motorsport::{
 };
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
-use crate::domain::{BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, with_mini_sector_names};
+use crate::domain::{
+    BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, ParsedLap, with_mini_sector_names,
+};
 
 /// Stage 4 全体: LapRecord のリストから「シリアライズ可能な中間表現一式」を生成する。
 ///
@@ -63,15 +65,17 @@ fn build_cars(records: Vec<LapRecord>) -> Vec<Car> {
         let car_number = record.lap.car_number.clone();
         let driver_name = record.lap.driver.clone();
 
-        grouped
+        // `or_insert_with` で空のスロットを用意してから `record` を move で push する。
+        // 以前の `and_modify`/`or_insert` 分岐は 2 つ目以降のラップで `record.clone()`
+        // を必要としていた（Le Mans 24h で ~5000 回の深い clone）が、このパターンでは
+        // record の move は常に 1 回だけ。
+        let entry = grouped
             .entry(car_number)
-            .and_modify(|(laps, drivers, _)| {
-                laps.push(record.clone());
-                if !drivers.contains(&driver_name) {
-                    drivers.push(driver_name.clone());
-                }
-            })
-            .or_insert((vec![record], vec![driver_name], index));
+            .or_insert_with(|| (Vec::new(), Vec::new(), index));
+        entry.0.push(record);
+        if !entry.1.contains(&driver_name) {
+            entry.1.push(driver_name);
+        }
     }
 
     let mut cars_with_index: Vec<(usize, Car)> = grouped
@@ -129,7 +133,7 @@ fn class_from(class_str: &str) -> Class {
 
 /// ラップ番号順に走査しつつ、ベストタイムを累積しながら [`Lap`] を構築する。
 fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
-    records.sort_by_key(|r| r.lap.lap);
+    records.sort_by_key(|r| r.lap.lap_number);
 
     let mut bests = BestTimes::default();
 
@@ -158,8 +162,12 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
 }
 
 /// 確定したベストタイムとミニセクター情報から最終的な [`Lap`] を構築する純関数。
+///
+/// 入力は [`ParsedLap`] — ベストフィールドを持たない素朴なラップデータ。
+/// ここで初めて `motorsport::Lap` が構築され、`best` / `s{1,2,3}_best` に
+/// 累積ベストが埋め込まれる。
 fn finalized_lap(
-    lap: Lap,
+    lap: ParsedLap,
     bests: &BestTimes,
     pit_time: Option<motorsport::Duration>,
     mini_sectors: Option<MiniSectors>,
@@ -167,8 +175,8 @@ fn finalized_lap(
     Lap::new_with_mini_sectors(
         lap.car_number,
         lap.driver,
-        lap.lap,
-        lap.position,
+        lap.lap_number,
+        None, // position は後段の calculate_positions で埋める
         lap.time,
         bests.lap.unwrap_or(0),
         lap.sector_1,
@@ -280,7 +288,7 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, LapStats, SectorTimesRaw};
+    use crate::domain::{CarInfo, LapStats, SectorPresence};
 
     fn test_car_info(team: &str, manufacturer: &str) -> CarInfo {
         CarInfo {
@@ -311,11 +319,11 @@ mod tests {
         }
     }
 
-    fn test_sectors() -> SectorTimesRaw {
-        SectorTimesRaw {
-            s1: "23.155".to_string(),
-            s2: "29.928".to_string(),
-            s3: "42.282".to_string(),
+    fn test_sectors() -> SectorPresence {
+        SectorPresence {
+            s1: true,
+            s2: true,
+            s3: true,
         }
     }
 
@@ -323,28 +331,23 @@ mod tests {
         car_number: &str,
         driver: &str,
         lap_num: u32,
-        position: Option<u32>,
+        _position: Option<u32>,
         times: (u32, u32, u32, u32, u32),
         car: CarInfo,
         stats: LapStats,
     ) -> LapRecord {
         let (lap_time, s1, s2, s3, elapsed) = times;
         LapRecord {
-            lap: Lap::new(
-                car_number.to_string(),
-                driver.to_string(),
-                lap_num,
-                position,
-                lap_time,
-                lap_time,
-                s1,
-                s2,
-                s3,
-                s1,
-                s2,
-                s3,
+            lap: ParsedLap {
+                car_number: car_number.to_string(),
+                driver: driver.to_string(),
+                lap_number: lap_num,
+                time: lap_time,
+                sector_1: s1,
+                sector_2: s2,
+                sector_3: s3,
                 elapsed,
-            ),
+            },
             car,
             stats,
             sectors: test_sectors(),

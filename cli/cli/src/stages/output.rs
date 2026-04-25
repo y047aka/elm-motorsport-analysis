@@ -9,12 +9,16 @@ pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<
     serde_json::to_string_pretty(value).map_err(|source| CliError::Serialize { context, source })
 }
 
-/// セクタータイムのフォーマット
-fn format_sector_time(raw_time: &str, sector_duration: u32) -> String {
-    if raw_time.is_empty() {
-        String::new()
-    } else {
+/// セクタータイムのフォーマット。
+///
+/// `present=false`（CSV で空欄だった）なら空文字列を維持、それ以外はパース済み
+/// duration を文字列化する。空欄性は [`SectorPresence`](crate::domain::SectorPresence)
+/// に保持されている。
+fn format_sector_time(present: bool, sector_duration: u32) -> String {
+    if present {
         duration::to_string(sector_duration)
+    } else {
+        String::new()
     }
 }
 
@@ -139,15 +143,15 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
     RawLap {
         car_number: lap.car_number.clone(),
         driver_number: stats.driver_number,
-        lap_number: lap.lap,
+        lap_number: lap.lap_number,
         lap_time: duration::to_string(lap.time),
         lap_improvement: stats.lap_improvement,
         crossing_finish_line_in_pit: stats.crossing_finish_line_in_pit.clone(),
-        s1: format_sector_time(&sectors.s1, lap.sector_1),
+        s1: format_sector_time(sectors.s1, lap.sector_1),
         s1_improvement: stats.s1_improvement,
-        s2: format_sector_time(&sectors.s2, lap.sector_2),
+        s2: format_sector_time(sectors.s2, lap.sector_2),
         s2_improvement: stats.s2_improvement,
-        s3: format_sector_time(&sectors.s3, lap.sector_3),
+        s3: format_sector_time(sectors.s3, lap.sector_3),
         s3_improvement: stats.s3_improvement,
         kph: (stats.kph * 10.0).round() / 10.0,
         elapsed: duration::to_string(lap.elapsed),

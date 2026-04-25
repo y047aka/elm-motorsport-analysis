@@ -2,15 +2,15 @@
 //!
 //! CSV と JSON 出力のあいだで使われる語彙を、役割ごとに分割して表現する:
 //!
-//! - `LapRecord`: 1ラップを完全に記述する（`Lap` ＋ 補助情報）
+//! - `LapRecord`: 1ラップを完全に記述する（パース済み `ParsedLap` ＋ 補助情報）
+//! - `ParsedLap`: 字句変換が済んだラップの核心データ（ベストは未計算）
 //! - `CarInfo`: 車両単位で共有されるメタデータ
 //! - `LapStats`: CSV からのみ取れる追加メトリクス
-//! - `SectorTimesRaw`: CSV の S1/S2/S3 生文字列（空欄検知のため保持）
+//! - `SectorPresence`: CSV の S1/S2/S3 が空欄だったかのフラグ（出力時の空欄維持用）
 //! - `MiniSectorTimes` / `MiniSectorEntry`: Le Mans 24h 固有の15区間ミニセクター
 //! - `BestTimes` / `MiniSectorBests`: ラップ走行中に累積更新されるベストタイム
 
 use motorsport::duration::{self, Duration};
-use motorsport::lap::Lap;
 
 /// ドメイン型（[`MiniSectorTimes`] / [`MiniSectorBests`]）と `transform::build_mini_sectors`
 /// が共有するミニセクター名リストを 1 箇所で宣言するマクロ。
@@ -40,11 +40,27 @@ pub(crate) use with_mini_sector_names;
 /// パイプラインを流れる1ラップのドメインオブジェクト。
 #[derive(Debug, Clone)]
 pub struct LapRecord {
-    pub lap: Lap,
+    pub lap: ParsedLap,
     pub car: CarInfo,
     pub stats: LapStats,
-    pub sectors: SectorTimesRaw,
+    pub sectors: SectorPresence,
     pub mini_sectors: Option<MiniSectorTimes>,
+}
+
+/// 字句変換まで済んだラップの核心データ。
+///
+/// 下流 (`transform::process_laps`) が `motorsport::Lap` を最終構築する際の入力。
+/// ベストタイム・順位は含まず、ダミー値を詰める必要がない。
+#[derive(Debug, Clone)]
+pub struct ParsedLap {
+    pub car_number: String,
+    pub driver: String,
+    pub lap_number: u32,
+    pub time: Duration,
+    pub sector_1: Duration,
+    pub sector_2: Duration,
+    pub sector_3: Duration,
+    pub elapsed: Duration,
 }
 
 /// 車両単位で共有されるメタデータ（各ラップに複製されて入ってくる）。
@@ -71,12 +87,19 @@ pub struct LapStats {
     pub pit_time: Option<Duration>,
 }
 
-/// CSV の S1/S2/S3 列の生文字列。空欄検知のために保持する。
-#[derive(Debug, Clone)]
-pub struct SectorTimesRaw {
-    pub s1: String,
-    pub s2: String,
-    pub s3: String,
+/// CSV の S1/S2/S3 列が**空欄だったか**のフラグ。
+///
+/// `motorsport::Lap::sector_{1,2,3}` は `Duration`（`u32`）なので、「空欄」と
+/// 「0ms」を区別できない。JSON 出力時に空欄のセルは空文字列のまま残したいため、
+/// このフラグで空欄性を保持する。
+///
+/// 以前は CSV の生文字列（`String` × 3）を持っていたが、用途は `.is_empty()`
+/// 判定のみだったので `bool` × 3 に縮約した（String アロケーションを回避）。
+#[derive(Debug, Clone, Copy)]
+pub struct SectorPresence {
+    pub s1: bool,
+    pub s2: bool,
+    pub s3: bool,
 }
 
 /// ミニセクター1区間の生データ。
