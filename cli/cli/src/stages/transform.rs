@@ -1,15 +1,48 @@
-//! ステージ2: [`LapRecord`] のリストを車両ごとの [`Car`] に集約する。
+//! ステージ4: [`LapRecord`] のリストから出力向けの中間表現を構築する。
 //!
+//! 本ステージは **ドメイン計算** を担う:
 //! - 車両単位でのグルーピング（CSV 出現順を保持）
 //! - ラップ走行中のベストタイム（ラップ/S1/S2/S3/ミニセクター）の累積更新
 //! - 各ラップの順位計算（スタートポジション含む）
+//! - タイムラインイベントの導出
+//!
+//! JSON シリアライズの shape（[`RawLap`] / [`MetadataOutput`]）は
+//! [`output`](super::output) が所有する。本モジュールはそれらを**埋める側**。
 
 use std::collections::HashMap;
 
 use motorsport::car::Status;
-use motorsport::{Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors};
+use motorsport::{
+    Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors, TimelineEvent, calc_time_limit,
+    calc_timeline_events,
+};
 
+use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
 use crate::domain::{BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes};
+
+/// Stage 4 全体: LapRecord のリストから「シリアライズ可能な中間表現一式」を生成する。
+///
+/// 内部で以下を順に行う:
+/// 1. `records` を参照してラップ単位の [`RawLap`] を射影
+/// 2. `records` を消費して車両単位に集約（[`Car`] の列）
+/// 3. 車両リストからタイムラインイベントを計算
+/// 4. イベント名・スターティンググリッド・タイムラインを [`MetadataOutput`] に詰める
+///
+/// ステップ 1 が `records` を参照している必要があるため、2 と順序依存するが、
+/// その依存はこの関数の内部に閉じている（呼び出し側は気にしない）。
+pub fn apply(records: Vec<LapRecord>, event_name: &str) -> (Vec<RawLap>, MetadataOutput) {
+    let raw_laps = create_laps_output(&records);
+    let cars = group_laps_by_car(records);
+    let timeline_events = calc_timeline(&cars);
+    let metadata = create_metadata_output(event_name, &cars, timeline_events);
+    (raw_laps, metadata)
+}
+
+/// 車両リストからタイムラインイベントを計算する。
+fn calc_timeline(cars: &[Car]) -> Vec<TimelineEvent> {
+    let time_limit = calc_time_limit(cars);
+    calc_timeline_events(time_limit, cars)
+}
 
 /// [`LapRecord`] のリストから車両ごとの [`Car`] を構築する。
 pub fn group_laps_by_car(records: Vec<LapRecord>) -> Vec<Car> {

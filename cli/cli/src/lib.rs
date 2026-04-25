@@ -165,14 +165,9 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     // Stage 3: structure (CsvRow → LapRecord、意味論的な変換)
     let records = structure::structure(rows);
 
-    // Stage 4: transform (LapRecord → 出力可能な中間表現へ射影)
-    //
-    // laps は LapRecord から直接構築する。Car には集約済みの情報しか残らないため、
-    // ラップ単位の CSV 由来情報を transform 前に退避する必要がある。
-    let raw_laps = output::create_laps_output(&records);
-    let cars = transform::group_laps_by_car(records);
-    let metadata = output::create_metadata_output(task.event_name(), &cars);
-    let car_count = cars.len();
+    // Stage 4: transform (LapRecord → シリアライズ前の中間表現)
+    let (raw_laps, metadata) = transform::apply(records, task.event_name());
+    let car_count = metadata.starting_grid.len();
 
     // Stage 5: serialize (中間表現 → JSON 文字列、純粋な文字列変換)
     let metadata_json = output::to_json_pretty(&metadata, "metadata")?;
@@ -202,8 +197,8 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
 #[doc(hidden)]
 pub mod for_testing {
     pub use crate::domain::LapRecord;
-    pub use crate::stages::output::{MetadataOutput, create_laps_output, create_metadata_output};
-    pub use crate::stages::transform::group_laps_by_car;
+    pub use crate::stages::output::{MetadataOutput, create_laps_output};
+    pub use crate::stages::transform::{apply as apply_transform, group_laps_by_car};
 
     /// CSV テキストからパース + 構造化の 2 ステージを束ねて [`LapRecord`] を得る。
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {

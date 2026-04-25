@@ -1,4 +1,4 @@
-use motorsport::{Car, TimelineEvent, calc_time_limit, calc_timeline_events, car, duration};
+use motorsport::{Car, TimelineEvent, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
@@ -102,17 +102,18 @@ pub struct StartingGrid {
     pub car: car::MetaData,
 }
 
-/// メタデータ出力データ作成関数（name, startingGrid, timelineEvents）
-pub fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput {
-    let starting_grid = starting_grid_from(cars);
-
-    // タイムラインイベントを計算
-    let time_limit = calc_time_limit(cars);
-    let timeline_events = calc_timeline_events(time_limit, cars);
-
+/// メタデータ出力データ作成関数（name, startingGrid, timelineEvents）。
+///
+/// `timeline_events` は呼び出し側（[`transform`](crate::stages::transform) ステージ）
+/// が計算済みのものを渡す。このモジュールはドメイン計算は行わず、構造の組み立てのみ。
+pub fn create_metadata_output(
+    event_name: &str,
+    cars: &[Car],
+    timeline_events: Vec<TimelineEvent>,
+) -> MetadataOutput {
     MetadataOutput {
         name: crate::events::display_name(event_name).to_string(),
-        starting_grid,
+        starting_grid: starting_grid_from(cars),
         timeline_events,
     }
 }
@@ -243,13 +244,14 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // create_metadata_output関数でtimeline_eventsが含まれることをテスト
-        let output = create_metadata_output("test_event", &cars);
+        // 与えられた timeline_events がそのまま MetadataOutput に載ることを確認
+        let provided = vec![TimelineEvent {
+            event_time: 0,
+            event_type: motorsport::EventType::RaceStart,
+        }];
+        let output = create_metadata_output("test_event", &cars, provided);
 
-        // timeline_eventsフィールドが存在することを確認
-        assert!(!output.timeline_events.is_empty());
-
-        // 最初のイベントはレーススタートである
+        assert_eq!(output.timeline_events.len(), 1);
         assert_eq!(output.timeline_events[0].event_time, 0);
         assert_eq!(
             output.timeline_events[0].event_type,
@@ -291,8 +293,8 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        // create_metadata_output関数でstarting_gridが含まれることをテスト
-        let output = create_metadata_output("test_event", &cars);
+        // create_metadata_output が starting_grid を Car から射影することを確認
+        let output = create_metadata_output("test_event", &cars, vec![]);
 
         // starting_gridフィールドが存在することを確認
         assert_eq!(output.starting_grid.len(), 1);
