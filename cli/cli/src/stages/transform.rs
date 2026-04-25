@@ -30,7 +30,10 @@ use crate::domain::{BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, with
 ///
 /// ステップ 1 が `records` を参照している必要があるため、2 と順序依存するが、
 /// その依存はこの関数の内部に閉じている（呼び出し側は気にしない）。
-pub fn apply(records: Vec<LapRecord>, event_name: &str) -> (Vec<RawLap>, MetadataOutput) {
+pub fn build_outputs(
+    records: Vec<LapRecord>,
+    event_name: &str,
+) -> (Vec<RawLap>, MetadataOutput) {
     let raw_laps = create_laps_output(&records);
     let cars = group_laps_by_car(records);
     let timeline_events = calc_timeline(&cars);
@@ -185,6 +188,9 @@ fn finalized_lap(
 /// 15 区間の列挙は [`with_mini_sector_names!`](crate::domain::with_mini_sector_names)
 /// に委譲しており、この関数内に名前の手書きは無い。
 fn build_mini_sectors(times: &MiniSectorTimes, bests: &MiniSectorBests) -> MiniSectors {
+    // ローカル `mini_sectors_from!` マクロは外側スコープの `times` と `bests` を参照する。
+    // macro_rules! のハイジーンは名前を呼び出し元で解決する規則のため正しく動くが、
+    // この関数で変数名を変えるときはマクロ本体も合わせて更新すること。
     macro_rules! mini_sectors_from {
         ($($name:ident),* $(,)?) => {
             MiniSectors {

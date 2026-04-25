@@ -166,7 +166,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     let records = structure::structure(rows);
 
     // Stage 4: transform (LapRecord → シリアライズ前の中間表現)
-    let (raw_laps, metadata) = transform::apply(records, task.event_name());
+    let (raw_laps, metadata) = transform::build_outputs(records, task.event_name());
     let car_count = metadata.starting_grid.len();
 
     // Stage 5: serialize (中間表現 → JSON 文字列、純粋な文字列変換)
@@ -198,7 +198,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
 pub mod for_testing {
     pub use crate::domain::LapRecord;
     pub use crate::stages::output::{MetadataOutput, create_laps_output};
-    pub use crate::stages::transform::{apply as apply_transform, group_laps_by_car};
+    pub use crate::stages::transform::{build_outputs, group_laps_by_car};
 
     /// CSV テキストからパース + 構造化の 2 ステージを束ねて [`LapRecord`] を得る。
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {

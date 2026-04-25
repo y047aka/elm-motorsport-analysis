@@ -40,7 +40,7 @@ fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
         if trimmed.is_empty() {
             return 0;
         }
-        match duration::from_string(value) {
+        match duration::from_string(trimmed) {
             Some(d) => d,
             None => {
                 log::warn!(
@@ -215,5 +215,29 @@ mod tests {
         let mini = records[0].mini_sectors.as_ref().expect("should be Some");
         assert_eq!(mini.scl2.time.as_deref(), Some("8.112"));
         assert_eq!(mini.scl2.elapsed.as_deref(), Some("0:08.112"));
+    }
+
+    /// 空文字列の必須 duration は警告なしで 0 に fallback する（CSV の欠損列は正当な入力）。
+    /// 非空でパース不能なケース（警告あり）は integration.rs 側でカバー。
+    #[test]
+    fn parse_required_durations_treats_empty_as_silent_zero() {
+        let csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;1;;0;;;0;;0;;0;160.7;;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
+        let rows = csv_input::parse(csv);
+        let records = structure(rows);
+        assert_eq!(records.len(), 1);
+        assert_eq!(records[0].lap.time, 0);
+        assert_eq!(records[0].lap.sector_1, 0);
+        assert_eq!(records[0].lap.sector_2, 0);
+        assert_eq!(records[0].lap.sector_3, 0);
+        assert_eq!(records[0].lap.elapsed, 0);
+    }
+
+    /// 前後空白付きの duration は警告なしで正しくパースされる（trim で救済）。
+    #[test]
+    fn parse_required_durations_handles_whitespace_padded_values() {
+        let csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;1; 1:35.365 ;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
+        let rows = csv_input::parse(csv);
+        let records = structure(rows);
+        assert_eq!(records[0].lap.time, 95365);
     }
 }

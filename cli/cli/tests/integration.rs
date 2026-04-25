@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use cli::for_testing::{
-    apply_transform, create_laps_output, group_laps_by_car, parse_and_structure,
+    build_outputs, create_laps_output, group_laps_by_car, parse_and_structure,
 };
 
 // =============================================================================
@@ -308,7 +308,7 @@ fn test_elm_json_structure_and_field_compatibility() {
     let csv_data = create_test_csv_data();
     let records = parse_and_structure(&csv_data);
 
-    let (laps_output, metadata_output) = apply_transform(records, "Test Event");
+    let (laps_output, metadata_output) = build_outputs(records, "Test Event");
     let metadata_json_value = serde_json::to_value(&metadata_output).unwrap();
     let laps_json_value = serde_json::to_value(&laps_output).unwrap();
 

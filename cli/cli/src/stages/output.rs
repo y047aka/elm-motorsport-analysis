@@ -104,9 +104,12 @@ pub struct StartingGrid {
 
 /// メタデータ出力データ作成関数（name, startingGrid, timelineEvents）。
 ///
-/// `timeline_events` は呼び出し側（[`transform`](crate::stages::transform) ステージ）
+/// `timeline_events` は呼び出し側（[`transform`](super::transform) ステージ）
 /// が計算済みのものを渡す。このモジュールはドメイン計算は行わず、構造の組み立てのみ。
-pub fn create_metadata_output(
+///
+/// 可視性は `pub(super)` — 呼び出し元は `stages/` 内（現状は `transform::build_outputs`
+/// のみ）に限定される。
+pub(super) fn create_metadata_output(
     event_name: &str,
     cars: &[Car],
     timeline_events: Vec<TimelineEvent>,
