@@ -2,6 +2,12 @@ use motorsport::{Car, TimelineEvent, calc_time_limit, calc_timeline_events, car,
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
+use crate::error::CliError;
+
+/// シリアライズ可能な値を整形済み JSON 文字列へ変換する（Stage 5）。
+pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<String, CliError> {
+    serde_json::to_string_pretty(value).map_err(|source| CliError::Serialize { context, source })
+}
 
 /// セクタータイムのフォーマット
 fn format_sector_time(raw_time: &str, sector_duration: u32) -> String {

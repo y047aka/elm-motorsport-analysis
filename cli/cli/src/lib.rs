@@ -2,16 +2,15 @@
 //!
 //! # 公開 API
 //! - `run`: argv を受けてプログラム全体を実行する（TRPL スタイル）
-//! - `RunSummary`: 実行後のサマリ（成功・失敗件数）
-//! - `FileTask` / `FileOutcome` / `ProcessingReport`: タスク単位の型
+//! - `RunSummary`: 実行後のサマリ（成功・失敗件数）／ `exit_code()` で OS 終了コードに変換
+//! - `FileTask`: 1ファイル処理の単位
 //! - `parse_args` / `CliError`
 //!
 //! # 1ファイルの処理フロー
 //!
 //! ```text
-//! read_csv ─▶ parse ─▶ structure ─▶ transform ─▶ serialize ─▶ write_json
-//!   (io)    (csv_input) (structure)   (transform+              (io)
-//!                                      output)
+//! read ─▶ parse ─▶ structure ─▶ transform ─▶ serialize ─▶ write
+//! (Stage 1) (2)      (3)          (4)          (5)        (6)
 //! ```
 //!
 //! 各ステージの実装は [`stages`] モジュール以下。このファイルは `FileTask`
@@ -27,8 +26,7 @@ pub use args::parse_args;
 pub use error::CliError;
 
 use std::path::{Path, PathBuf};
-
-use serde::Serialize;
+use std::process::ExitCode;
 
 // ================================================================
 // Public API types
@@ -83,24 +81,29 @@ impl FileTask {
     }
 }
 
-/// 1ファイル処理の結果（成功／失敗のいずれでも返る）。
-pub struct FileOutcome {
-    pub input_path: PathBuf,
-    pub result: Result<ProcessingReport, CliError>,
-}
-
-/// 1ファイル処理が成功したときの報告。
-pub struct ProcessingReport {
-    pub car_count: usize,
-    pub metadata_path: PathBuf,
-    pub laps_path: PathBuf,
-}
-
 /// プログラム全体の実行サマリ。
 #[derive(Debug, Default)]
 pub struct RunSummary {
     pub processed: u32,
     pub errors: u32,
+}
+
+impl RunSummary {
+    /// OS 終了コードへ変換する。エラーが 1 件でもあれば `FAILURE`。
+    pub fn exit_code(&self) -> ExitCode {
+        if self.errors == 0 {
+            ExitCode::SUCCESS
+        } else {
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// 1ファイル処理の成功時レポート（内部用）。
+struct ProcessingReport {
+    car_count: usize,
+    metadata_path: PathBuf,
+    laps_path: PathBuf,
 }
 
 // ================================================================
@@ -117,24 +120,20 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
     let mut summary = RunSummary::default();
 
     for task in tasks {
-        let outcome = execute_task(task);
-        match &outcome.result {
+        let input_path = task.input_path().to_path_buf();
+        match process_file(&task) {
             Ok(report) => {
                 log::info!(
                     "Read {} cars from CSV '{}'",
                     report.car_count,
-                    outcome.input_path.display()
+                    input_path.display()
                 );
                 log::info!("Wrote metadata JSON to {}", report.metadata_path.display());
                 log::info!("Wrote laps JSON to {}", report.laps_path.display());
                 summary.processed += 1;
             }
             Err(error) => {
-                log::error!(
-                    "Error processing '{}': {}",
-                    outcome.input_path.display(),
-                    error
-                );
+                log::error!("Error processing '{}': {}", input_path.display(), error);
                 summary.errors += 1;
             }
         }
@@ -152,18 +151,12 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
 // Per-file execution
 // ================================================================
 
-fn execute_task(task: FileTask) -> FileOutcome {
-    let input_path = task.input_path().to_path_buf();
-    let result = process_file(&task);
-    FileOutcome { input_path, result }
-}
-
 /// 1ファイル分のパイプライン: read → parse → structure → transform → serialize → write
 fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
-    use stages::{csv_input, io, output, structure, transform};
+    use stages::{csv_input, files, output, structure, transform};
 
     // Stage 1: read
-    let csv_content = io::read_csv(task.input_path())?;
+    let csv_content = files::read_csv(task.input_path())?;
 
     // Stage 2: parse (CSV テキスト → CsvRow のリスト、字句的な読み取り)
     let rows = csv_input::parse(&csv_content);
@@ -181,14 +174,14 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     let car_count = cars.len();
 
     // Stage 5: serialize (中間表現 → JSON 文字列、純粋な文字列変換)
-    let metadata_json = to_json_pretty(&metadata, "metadata")?;
-    let laps_json = to_json_pretty(&raw_laps, "laps")?;
+    let metadata_json = output::to_json_pretty(&metadata, "metadata")?;
+    let laps_json = output::to_json_pretty(&raw_laps, "laps")?;
 
     // Stage 6: write
     let metadata_path = task.output_path().to_path_buf();
     let laps_path = task.laps_path();
-    io::write_json(&metadata_path, &metadata_json)?;
-    io::write_json(&laps_path, &laps_json)?;
+    files::write_json(&metadata_path, &metadata_json)?;
+    files::write_json(&laps_path, &laps_json)?;
 
     Ok(ProcessingReport {
         car_count,
@@ -197,15 +190,15 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
     })
 }
 
-fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<String, CliError> {
-    serde_json::to_string_pretty(value).map_err(|source| CliError::Serialize { context, source })
-}
-
 // ================================================================
 // Test-only hooks
 // ================================================================
 
 /// Integration test 用の内部構造アクセス。プロダクションコードからは使用しない。
+///
+/// このモジュールは外部依存者向けの公開 API ではなく、同一クレート内の
+/// integration test がパイプラインの中間表現を直接観察するためのエントリポイント。
+#[doc(hidden)]
 pub mod for_testing {
     pub use crate::domain::LapRecord;
     pub use crate::stages::output::{MetadataOutput, create_laps_output, create_metadata_output};

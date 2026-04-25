@@ -8,10 +8,9 @@ fn main() -> ExitCode {
         .init();
 
     match cli::run(env::args()) {
-        Ok(summary) if summary.errors == 0 => ExitCode::SUCCESS,
-        Ok(_) => ExitCode::FAILURE,
+        Ok(summary) => summary.exit_code(),
         Err(err) => {
-            eprintln!("Problem parsing arguments: {err}");
+            eprintln!("{err}");
             ExitCode::FAILURE
         }
     }
