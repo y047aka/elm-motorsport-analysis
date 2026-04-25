@@ -1,11 +1,9 @@
 use std::fs;
 use std::path::Path;
 
-use cli::FileTask;
 use cli::for_testing::{
     create_laps_output, create_metadata_output, group_laps_by_car, parse_and_structure,
 };
-use cli::run;
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -91,15 +89,16 @@ fn test_cli_end_to_end_execution() {
     // Copy test data to expected input filename
     fs::copy("../test_data.csv", test_input).expect("Failed to copy test data");
 
-    // Create task
-    let tasks = vec![FileTask::new(test_input.into(), Some(test_output.into()))];
-
-    // Execute CLI
-    let results: Vec<_> = run(tasks).collect();
-    assert!(
-        results.iter().all(|o| o.result.is_ok()),
-        "CLI should process without errors"
-    );
+    // Execute CLI via argv
+    let args = vec![
+        "cli".to_string(),
+        test_input.to_string(),
+        "--output".to_string(),
+        test_output.to_string(),
+    ];
+    let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
+    assert_eq!(summary.errors, 0, "CLI should process without errors");
+    assert_eq!(summary.processed, 1, "one task should succeed");
 
     // Verify output file creation
     assert!(

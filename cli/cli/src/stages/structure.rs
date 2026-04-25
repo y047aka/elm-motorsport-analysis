@@ -142,7 +142,7 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline::csv_input;
+    use crate::stages::csv_input;
 
     #[test]
     fn structure_maps_car_metadata_and_lap_basics() {
