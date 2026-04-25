@@ -211,9 +211,10 @@ fn test_csv_parsing_edge_cases() {
     // 不正なデータを含むCSVのテスト（エラーハンドリング確認）
     let invalid_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n12;1;Will STEVENS;1;invalid_time;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
     let laps = parse_and_structure(invalid_csv);
-    // 不正なデータは0に変換されるが、ラップ自体は作成される
+    // 不正なデータは警告ログを出しつつ 0 に fallback（ラップ自体は作成される）。
+    // 警告は stages::structure::parse_required_durations から出力される。
     assert_eq!(laps.len(), 1, "不正データでも1個のラップが作成されるはず");
-    assert_eq!(laps[0].lap.time, 0, "不正なタイムは0に変換されるはず");
+    assert_eq!(laps[0].lap.time, 0, "不正なタイムは0に fallback されるはず");
 }
 
 #[test]

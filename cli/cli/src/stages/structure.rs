@@ -8,7 +8,7 @@
 //!
 //! 字句的な読み取りはこのモジュールでは行わない（[`csv_input`](super::csv_input) の責務）。
 
-use motorsport::duration;
+use motorsport::duration::{self, Duration};
 use motorsport::lap::Lap;
 
 use super::csv_input::CsvRow;
@@ -21,29 +21,72 @@ pub fn structure(rows: Vec<CsvRow>) -> Vec<LapRecord> {
     rows.into_iter().map(lap_record_from).collect()
 }
 
+/// 1ラップ分のパース済み必須 duration。
+struct ParsedDurations {
+    time: Duration,
+    s1: Duration,
+    s2: Duration,
+    s3: Duration,
+    elapsed: Duration,
+}
+
+/// 必須 duration 列をまとめてパースする。パース失敗時は警告ログを出して 0 に fallback。
+///
+/// 空文字列は「欠損」として 0 を返し警告は出さない（CSV ではよくあるため）。
+/// **非空で**パース不能な値は警告ログを残し、0 を返す。
+fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
+    let parse = |field: &'static str, value: &str| -> Duration {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return 0;
+        }
+        match duration::from_string(value) {
+            Some(d) => d,
+            None => {
+                log::warn!(
+                    "car {} lap {}: unparseable {} value '{}', treating as 0",
+                    row.car_number,
+                    row.lap,
+                    field,
+                    value
+                );
+                0
+            }
+        }
+    };
+
+    ParsedDurations {
+        time: parse("LAP_TIME", &row.lap_time),
+        s1: parse("S1", &row.s1),
+        s2: parse("S2", &row.s2),
+        s3: parse("S3", &row.s3),
+        elapsed: parse("ELAPSED", &row.elapsed),
+    }
+}
+
 /// CSV 1行をドメインの [`LapRecord`] に変換する純粋関数。
 fn lap_record_from(row: CsvRow) -> LapRecord {
-    let time = duration::from_string(&row.lap_time).unwrap_or(0);
-    let s1_dur = duration::from_string(&row.s1).unwrap_or(0);
-    let s2_dur = duration::from_string(&row.s2).unwrap_or(0);
-    let s3_dur = duration::from_string(&row.s3).unwrap_or(0);
-    let elapsed_dur = duration::from_string(&row.elapsed).unwrap_or(0);
-    let pit_time_dur = row.pit_time.as_ref().and_then(|s| duration::from_string(s));
+    let parsed = parse_required_durations(&row);
+    let pit_time_dur = row
+        .pit_time
+        .as_deref()
+        .filter(|s| !s.trim().is_empty())
+        .and_then(motorsport::duration::from_string);
 
     let lap = Lap::new(
         row.car_number,
         row.driver,
         row.lap,
         None,
-        time,
-        time,
-        s1_dur,
-        s2_dur,
-        s3_dur,
-        s1_dur,
-        s2_dur,
-        s3_dur,
-        elapsed_dur,
+        parsed.time,
+        parsed.time,
+        parsed.s1,
+        parsed.s2,
+        parsed.s3,
+        parsed.s1,
+        parsed.s2,
+        parsed.s3,
+        parsed.elapsed,
     );
 
     let mini_sectors = MiniSectorTimes {
