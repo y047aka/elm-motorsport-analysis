@@ -1,13 +1,16 @@
 pub mod args;
+pub mod csv_input;
 pub mod error;
+pub mod io;
 pub mod output;
 pub mod pipeline;
-pub mod preprocess;
+pub mod transform;
 
 pub use args::parse_args;
+pub use csv_input::{LapWithMetadata, parse_laps_from_csv};
 pub use error::CliError;
 pub use output::{MetadataOutput, create_laps_output, create_metadata_output};
-pub use preprocess::{LapWithMetadata, group_laps_by_car, parse_laps_from_csv};
+pub use transform::group_laps_by_car;
 
 use std::path::{Path, PathBuf};
 
