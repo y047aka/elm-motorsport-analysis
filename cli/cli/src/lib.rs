@@ -3,20 +3,16 @@
 //! - [`parse_args`] で `Vec<FileTask>` を argv から構築
 //! - エラー型は [`CliError`]
 //!
-//! 内部のパイプラインステージ（`csv_input` / `structure` / `transform` /
-//! `output` など）はプロダクションコードから直接呼ぶためのものではなく、
-//! integration test 用に [`for_testing`] からアクセスする。
+//! 内部のパイプラインステージ（`pipeline::csv_input` / `pipeline::structure` /
+//! `pipeline::transform` / `pipeline::output` など）はプロダクションコードから
+//! 直接呼ぶためのものではなく、integration test 用に [`for_testing`] から
+//! アクセスする。
 
 pub mod args;
 pub mod error;
-pub mod io;
 pub mod pipeline;
 
-pub(crate) mod csv_input;
 pub(crate) mod domain;
-pub(crate) mod output;
-pub(crate) mod structure;
-pub(crate) mod transform;
 
 pub use args::parse_args;
 pub use error::CliError;
@@ -28,11 +24,11 @@ pub use pipeline::{FileOutcome, FileTask, ProcessingReport, run};
 /// を直接観察したりするためのエントリポイント。
 pub mod for_testing {
     pub use crate::domain::LapRecord;
-    pub use crate::output::{MetadataOutput, create_laps_output, create_metadata_output};
-    pub use crate::transform::group_laps_by_car;
+    pub use crate::pipeline::output::{MetadataOutput, create_laps_output, create_metadata_output};
+    pub use crate::pipeline::transform::group_laps_by_car;
 
     /// CSV テキストからパース + 構造化の 2 ステージを束ねて [`LapRecord`] を得る。
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {
-        crate::structure::structure(crate::csv_input::parse(csv))
+        crate::pipeline::structure::structure(crate::pipeline::csv_input::parse(csv))
     }
 }

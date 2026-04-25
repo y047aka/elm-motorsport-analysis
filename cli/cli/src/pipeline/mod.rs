@@ -13,19 +13,21 @@
 //! - **タスクの実行**: [`run`]（複数タスク）／ [`process_file`]（1タスク）
 //! - **ステージの直列合成**: 6段階の合成ロジック
 //!
-//! を担う。各ステージは専用モジュール（`io` / `csv_input` / `structure` /
-//! `transform` / `output`）に分担されており、ここではそれらを直列に繋ぐ。
+//! を担う。各ステージは専用サブモジュール（[`io`] / [`csv_input`] /
+//! [`structure`] / [`transform`] / [`output`]）に分担されており、ここでは
+//! それらを直列に繋ぐ。
+
+pub(crate) mod csv_input;
+pub(crate) mod io;
+pub(crate) mod output;
+pub(crate) mod structure;
+pub(crate) mod transform;
 
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
 
-use crate::csv_input;
 use crate::error::CliError;
-use crate::io;
-use crate::output;
-use crate::structure;
-use crate::transform;
 
 /// 1ファイルの処理に必要な情報
 pub struct FileTask {

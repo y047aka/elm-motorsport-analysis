@@ -6,12 +6,12 @@
 //! - 30個のフラットなミニセクター列を構造化された [`MiniSectorTimes`] へ
 //!   （全て空のイベントは `None` に縮約）
 //!
-//! 字句的な読み取りはこのモジュールでは行わない（[`csv_input`](crate::csv_input) の責務）。
+//! 字句的な読み取りはこのモジュールでは行わない（[`csv_input`](super::csv_input) の責務）。
 
 use motorsport::duration;
 use motorsport::lap::Lap;
 
-use crate::csv_input::CsvRow;
+use super::csv_input::CsvRow;
 use crate::domain::{
     CarInfo, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, SectorTimesRaw,
 };
@@ -142,7 +142,7 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::csv_input;
+    use crate::pipeline::csv_input;
 
     #[test]
     fn structure_maps_car_metadata_and_lap_basics() {
