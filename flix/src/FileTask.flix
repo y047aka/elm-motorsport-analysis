@@ -1,5 +1,7 @@
 mod FileTask {
 
+    use Cli.CliError
+
     pub type alias FileTask = {
         inputPath = String,
         outputPath = String,
@@ -17,32 +19,32 @@ mod FileTask {
             eventName   = eventName(inputPath)
         }
 
-    pub def resolve(parsed: Args.ParsedArgs): Result[String, List[FileTask]] \ IO =
+    pub def resolve(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
         forM(
             exists <- Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(path))
-                        |> Result.mapErr(e -> "Cannot access path: ${e}");
-            _      <- if (exists) Ok(()) else Err("Input path not found: ${path}");
+                        |> Result.mapErr(e -> CliError.PathAccessError("${e}"));
+            _      <- if (exists) Ok(()) else Err(CliError.PathNotFound(path));
             isDir  <- Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(path))
-                        |> Result.mapErr(e -> "Cannot check path type: ${e}");
+                        |> Result.mapErr(e -> CliError.PathAccessError("${e}"));
             tasks  <- if (isDir) resolveDir(path, outputOverride)
                       else Ok(make(path, outputOverride) :: Nil)
         ) yield tasks
 
-    def resolveDir(dirPath: String, outputOverride: Option[String]): Result[String, List[FileTask]] \ IO =
+    def resolveDir(dirPath: String, outputOverride: Option[String]): Result[CliError, List[FileTask]] \ IO =
         match outputOverride {
-            case Some(_) => Err("--output cannot be used with a directory input")
+            case Some(_) => Err(CliError.OutputWithDirectory)
             case None    =>
                 let listResult = Fs.DirList.runWithIO(() -> Fs.DirList.list(dirPath));
                 match listResult {
-                    case Err(e) => Err("Cannot list directory: ${e}")
+                    case Err(e) => Err(CliError.ListDirError("${e}"))
                     case Ok(entries) =>
                         let csvFiles = entries
                             |> List.filter(e -> String.endsWith({suffix = ".csv"}, e))
                             |> List.map(e -> make("${dirPath}/${e}", None));
                         if (List.isEmpty(csvFiles))
-                            Err("No CSV files found in: ${dirPath}")
+                            Err(CliError.NoCsvFiles(dirPath))
                         else
                             Ok(csvFiles)
                 }

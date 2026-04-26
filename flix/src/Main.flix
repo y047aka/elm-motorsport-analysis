@@ -1,4 +1,5 @@
 use Sys.Env
+use Cli.CliError
 
 pub type alias ProcessingReport = {
     lapCount = Int32,
@@ -28,23 +29,25 @@ def convert(task: FileTask.FileTask): Unit \ IO =
             println("${task#eventName}: ${e}")
     }
 
-def processFile(task: FileTask.FileTask): Result[String, ProcessingReport] \ IO =
+def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ IO =
+    let inputPath = task#inputPath;
+    let outputPath = task#outputPath;
     forM(
         lines     <- Fs.FileRead.runWithIO(() ->
                         Fs.ReadLines.runWithFileRead(() ->
-                            Fs.ReadLines.readLines(task#inputPath)
-                     )) |> Result.mapErr(e -> "Read error: ${e}");
+                            Fs.ReadLines.readLines(inputPath)
+                     )) |> Result.mapErr(e -> CliError.ReadFile(inputPath, "${e}"));
         dataLines <- match lines {
                         case _ :: rest => Ok(rest)
-                        case Nil       => Err("Empty file")
+                        case Nil       => Err(CliError.EmptyFile(inputPath))
                      };
         processed <- Ok(Pipeline.process(dataLines));
         _         <- Fs.FileWrite.runWithIO(() ->
                         Fs.WriteFile.runWithFileWrite(() ->
-                            Fs.WriteFile.write({str = processed#json}, task#outputPath)
+                            Fs.WriteFile.write({str = processed#json}, outputPath)
                         )
-                     ) |> Result.mapErr(e -> "Write error: ${e}")
+                     ) |> Result.mapErr(e -> CliError.WriteFile(outputPath, "${e}"))
     ) yield {
         lapCount   = processed#lapCount,
-        outputPath = task#outputPath
+        outputPath = outputPath
     }
