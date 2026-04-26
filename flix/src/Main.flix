@@ -6,6 +6,11 @@ pub type alias ProcessingReport = {
     outputPath = String
 }
 
+pub type alias RunSummary = {
+    processed = Int32,
+    errors = Int32
+}
+
 def main(): Unit \ {Env, IO} =
     let args = Env.getArgs();
     match Args.parse(args) {
@@ -17,17 +22,24 @@ def main(): Unit \ {Env, IO} =
                 case Err(e) =>
                     println("Error: ${e}")
                 case Ok(tasks) =>
-                    List.forEach(convert, tasks)
+                    let summary = runTasks(tasks);
+                    println("Processing completed: ${summary#processed} processed, ${summary#errors} errors")
             }
     }
 
-def convert(task: FileTask.FileTask): Unit \ IO =
-    match processFile(task) {
-        case Ok(report) =>
-            println("${task#eventName}: Wrote ${report#lapCount} laps to ${report#outputPath}")
-        case Err(e) =>
-            println("${task#eventName}: ${e}")
-    }
+def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
+    List.foldLeft(
+        (summary, task) -> match processFile(task) {
+            case Ok(report) =>
+                println("${task#eventName}: Wrote ${report#lapCount} laps to ${report#outputPath}");
+                { processed = summary#processed + 1, errors = summary#errors }
+            case Err(e) =>
+                println("${task#eventName}: ${e}");
+                { processed = summary#processed, errors = summary#errors + 1 }
+        },
+        { processed = 0, errors = 0 },
+        tasks
+    )
 
 def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ IO =
     let inputPath = task#inputPath;
