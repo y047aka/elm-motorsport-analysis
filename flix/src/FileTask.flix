@@ -23,11 +23,9 @@ mod FileTask {
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
         forM(
-            exists <- Fs.FileStat.runWithIO(() -> Fs.FileStat.exists(path))
-                        |> Result.mapErr(e -> CliError.PathAccessError("${e}"));
+            exists <- Files.exists(path);
             _      <- if (exists) Ok(()) else Err(CliError.PathNotFound(path));
-            isDir  <- Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(path))
-                        |> Result.mapErr(e -> CliError.PathAccessError("${e}"));
+            isDir  <- Files.isDirectory(path);
             tasks  <- if (isDir) resolveDir(path, outputOverride)
                       else Ok(make(path, outputOverride) :: Nil)
         ) yield tasks
@@ -36,18 +34,16 @@ mod FileTask {
         match outputOverride {
             case Some(_) => Err(CliError.OutputWithDirectory)
             case None    =>
-                let listResult = Fs.DirList.runWithIO(() -> Fs.DirList.list(dirPath));
-                match listResult {
-                    case Err(e) => Err(CliError.ListDirError("${e}"))
-                    case Ok(entries) =>
-                        let csvFiles = entries
-                            |> List.filter(e -> String.endsWith({suffix = ".csv"}, e))
-                            |> List.map(e -> make("${dirPath}/${e}", None));
-                        if (List.isEmpty(csvFiles))
-                            Err(CliError.NoCsvFiles(dirPath))
-                        else
-                            Ok(csvFiles)
-                }
+                forM(
+                    entries <- Files.listDir(dirPath);
+                    csvFiles <- Ok(entries
+                                    |> List.filter(e -> String.endsWith({suffix = ".csv"}, e))
+                                    |> List.map(e -> make("${dirPath}/${e}", None)));
+                    result   <- if (List.isEmpty(csvFiles))
+                                    Err(CliError.NoCsvFiles(dirPath))
+                                else
+                                    Ok(csvFiles)
+                ) yield result
         }
 
     def defaultOutputPath(inputPath: String): String =
