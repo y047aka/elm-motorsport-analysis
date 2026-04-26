@@ -25,8 +25,8 @@ def convert(task: FileTask.FileTask): Unit \ IO =
                         case _ :: rest => Ok(rest)
                         case Nil       => Err("Empty file")
                      };
+        json      <- Ok(Pipeline.process(dataLines));
         _         <- Fs.FileWrite.runWithIO(() ->
-                        let json = Json.render(Lap.toJsonArray(Csv.parseLines(dataLines)));
                         Fs.WriteFile.runWithFileWrite(() ->
                             Fs.WriteFile.write({str = json}, task#outputPath)
                         )
