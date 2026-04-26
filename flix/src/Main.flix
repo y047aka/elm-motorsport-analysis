@@ -13,19 +13,23 @@ pub type alias RunSummary = {
 
 def main(): Unit \ {Env, IO} =
     let args = Env.getArgs();
-    match Args.parse(args) {
+    let code = match Args.parse(args) {
         case Err(e) =>
-            println("Error: ${e}");
-            println("Usage: flix-run <input.csv|dir> [--output <output.json>]")
+            Cli.eprintln("Error: ${e}");
+            Cli.eprintln("Usage: flix-run <input.csv|dir> [--output <output.json>]");
+            1
         case Ok(parsed) =>
             match FileTask.resolve(parsed) {
                 case Err(e) =>
-                    println("Error: ${e}")
+                    Cli.eprintln("Error: ${e}");
+                    1
                 case Ok(tasks) =>
                     let summary = runTasks(tasks);
-                    println("Processing completed: ${summary#processed} processed, ${summary#errors} errors")
+                    println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
+                    summaryExitCode(summary)
             }
-    }
+    };
+    Cli.exit(code)
 
 def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
     List.foldLeft(
@@ -34,7 +38,7 @@ def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
                 println("${task#eventName}: Wrote ${report#lapCount} laps to ${report#outputPath}");
                 { processed = summary#processed + 1, errors = summary#errors }
             case Err(e) =>
-                println("${task#eventName}: ${e}");
+                Cli.eprintln("${task#eventName}: ${e}");
                 { processed = summary#processed, errors = summary#errors + 1 }
         },
         { processed = 0, errors = 0 },
@@ -63,3 +67,6 @@ def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ I
         lapCount   = processed#lapCount,
         outputPath = outputPath
     }
+
+def summaryExitCode(summary: RunSummary): Int32 =
+    if (summary#errors == 0) 0 else 1
