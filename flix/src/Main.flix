@@ -1,5 +1,10 @@
 use Sys.Env
 
+pub type alias ProcessingReport = {
+    lapCount = Int32,
+    outputPath = String
+}
+
 def main(): Unit \ {Env, IO} =
     let args = Env.getArgs();
     match Args.parse(args) {
@@ -16,7 +21,15 @@ def main(): Unit \ {Env, IO} =
     }
 
 def convert(task: FileTask.FileTask): Unit \ IO =
-    let result = forM(
+    match processFile(task) {
+        case Ok(report) =>
+            println("${task#eventName}: Wrote ${report#lapCount} laps to ${report#outputPath}")
+        case Err(e) =>
+            println("${task#eventName}: ${e}")
+    }
+
+def processFile(task: FileTask.FileTask): Result[String, ProcessingReport] \ IO =
+    forM(
         lines     <- Fs.FileRead.runWithIO(() ->
                         Fs.ReadLines.runWithFileRead(() ->
                             Fs.ReadLines.readLines(task#inputPath)
@@ -25,14 +38,13 @@ def convert(task: FileTask.FileTask): Unit \ IO =
                         case _ :: rest => Ok(rest)
                         case Nil       => Err("Empty file")
                      };
-        json      <- Ok(Pipeline.process(dataLines));
+        processed <- Ok(Pipeline.process(dataLines));
         _         <- Fs.FileWrite.runWithIO(() ->
                         Fs.WriteFile.runWithFileWrite(() ->
-                            Fs.WriteFile.write({str = json}, task#outputPath)
+                            Fs.WriteFile.write({str = processed#json}, task#outputPath)
                         )
                      ) |> Result.mapErr(e -> "Write error: ${e}")
-    ) yield ();
-    match result {
-        case Ok(_)  => println("${task#eventName}: Written to ${task#outputPath}")
-        case Err(e) => println("${task#eventName}: ${e}")
+    ) yield {
+        lapCount   = processed#lapCount,
+        outputPath = task#outputPath
     }
