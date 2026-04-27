@@ -13,7 +13,7 @@ mod Duration {
             case wholePart :: msPart :: Nil =>
                 forM(
                     seconds <- parseHmsToSeconds(wholePart);
-                    millis  <- Int32.fromString(padMilliseconds(msPart))
+                    millis  <- Int32.fromString(padFractionalToMs(msPart))
                 ) yield seconds * 1000 + millis
             case wholeOnly :: Nil =>
                 Option.map(secs -> secs * 1000, parseHmsToSeconds(wholeOnly))
@@ -63,7 +63,7 @@ mod Duration {
             case _ => None
         }
 
-    def padMilliseconds(s: String): String =
+    def padFractionalToMs(s: String): String =
         let len = String.length(s);
         if (len >= 3) String.take(3, s)
         else s + String.repeat(3 - len, "0")

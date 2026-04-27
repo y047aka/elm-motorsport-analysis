@@ -1,4 +1,4 @@
-/// CSV 行を `xxx_laps.json` 出力用の `LapRecord` に整形するモジュール。
+/// CSV 行を `xxx_laps.json` 出力用の `RawLap` に整形するモジュール。
 /// 出力 JSON 形状は Rust 版 CLI の
 /// `motorsport::cli::stages::output::RawLap` (`#[serde(rename_all =
 /// "camelCase")]`) と一致する 22 フィールドの camelCase キー:
@@ -11,11 +11,11 @@
 /// で正規形 (`"0:01:41.031"` -> `"1:41.031"` 等) に整形される。一方
 /// `hour` は CSV 上の時刻表記 (`"HH:MM:SS.sss"`) — duration ではないので
 /// 正規化を通さず文字列そのままを保持する。
-mod Lap {
+mod RawLap {
 
     use Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
-    pub type alias LapRecord = {
+    pub type alias RawLap = {
         carNumber = String,
         driverNumber = Int32,
         lapNumber = Int32,
@@ -40,7 +40,7 @@ mod Lap {
         manufacturer = String
     }
 
-    pub def fromCsvRow(row: Csv.CsvRow): Option[LapRecord] =
+    pub def fromCsvRow(row: Csv.CsvRow): Option[RawLap] =
         forM(
             carNumber               <- List.nth(0, row);
             driverNumberStr         <- List.nth(1, row);
@@ -66,17 +66,17 @@ mod Lap {
             manufacturer            <- List.nth(24, row)
         ) yield {
             carNumber               = carNumber,
-            driverNumber            = parseInt(driverNumberStr),
-            lapNumber               = parseInt(lapNumberStr),
+            driverNumber            = parseIntOrZero(driverNumberStr),
+            lapNumber               = parseIntOrZero(lapNumberStr),
             lapTime                 = Duration.normalize(lapTime),
-            lapImprovement          = parseInt(lapImprovementStr),
+            lapImprovement          = parseIntOrZero(lapImprovementStr),
             crossingFinishLineInPit = crossingFinishLineInPit,
             s1                      = Duration.normalize(s1),
-            s1Improvement           = parseInt(s1ImprovementStr),
+            s1Improvement           = parseIntOrZero(s1ImprovementStr),
             s2                      = Duration.normalize(s2),
-            s2Improvement           = parseInt(s2ImprovementStr),
+            s2Improvement           = parseIntOrZero(s2ImprovementStr),
             s3                      = Duration.normalize(s3),
-            s3Improvement           = parseInt(s3ImprovementStr),
+            s3Improvement           = parseIntOrZero(s3ImprovementStr),
             kph                     = kph,
             elapsed                 = Duration.normalize(elapsed),
             hour                    = hour,
@@ -89,38 +89,38 @@ mod Lap {
             manufacturer            = manufacturer
         }
 
-    pub def fromCsvRows(rows: List[Csv.CsvRow]): List[LapRecord] =
+    pub def fromCsvRows(rows: List[Csv.CsvRow]): List[RawLap] =
         rows |> List.filterMap(fromCsvRow)
 
-    pub def toJson(record: LapRecord): Json.JsonValue =
+    pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
-            ("carNumber",               JsonString(record#carNumber)) ::
-            ("driverNumber",            JsonInt(record#driverNumber)) ::
-            ("lapNumber",               JsonInt(record#lapNumber)) ::
-            ("lapTime",                 JsonString(record#lapTime)) ::
-            ("lapImprovement",          JsonInt(record#lapImprovement)) ::
-            ("crossingFinishLineInPit", JsonString(record#crossingFinishLineInPit)) ::
-            ("s1",                      JsonString(record#s1)) ::
-            ("s1Improvement",           JsonInt(record#s1Improvement)) ::
-            ("s2",                      JsonString(record#s2)) ::
-            ("s2Improvement",           JsonInt(record#s2Improvement)) ::
-            ("s3",                      JsonString(record#s3)) ::
-            ("s3Improvement",           JsonInt(record#s3Improvement)) ::
-            ("kph",                     kphValue(record#kph)) ::
-            ("elapsed",                 JsonString(record#elapsed)) ::
-            ("hour",                    JsonString(record#hour)) ::
-            ("topSpeed",                JsonString(record#topSpeed)) ::
-            ("driverName",              JsonString(record#driverName)) ::
-            ("pitTime",                 JsonString(record#pitTime)) ::
-            ("class",                   JsonString(record#class)) ::
-            ("group",                   JsonString(record#group)) ::
-            ("team",                    JsonString(record#team)) ::
-            ("manufacturer",            JsonString(record#manufacturer)) ::
+            ("carNumber",               JsonString(rawLap#carNumber)) ::
+            ("driverNumber",            JsonInt(rawLap#driverNumber)) ::
+            ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
+            ("lapTime",                 JsonString(rawLap#lapTime)) ::
+            ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
+            ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
+            ("s1",                      JsonString(rawLap#s1)) ::
+            ("s1Improvement",           JsonInt(rawLap#s1Improvement)) ::
+            ("s2",                      JsonString(rawLap#s2)) ::
+            ("s2Improvement",           JsonInt(rawLap#s2Improvement)) ::
+            ("s3",                      JsonString(rawLap#s3)) ::
+            ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
+            ("kph",                     kphValue(rawLap#kph)) ::
+            ("elapsed",                 JsonString(rawLap#elapsed)) ::
+            ("hour",                    JsonString(rawLap#hour)) ::
+            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
+            ("driverName",              JsonString(rawLap#driverName)) ::
+            ("pitTime",                 JsonString(rawLap#pitTime)) ::
+            ("class",                   JsonString(rawLap#class)) ::
+            ("group",                   JsonString(rawLap#group)) ::
+            ("team",                    JsonString(rawLap#team)) ::
+            ("manufacturer",            JsonString(rawLap#manufacturer)) ::
             Nil
         )
 
-    pub def toJsonArray(records: List[LapRecord]): Json.JsonValue =
-        JsonArray(List.map(toJson, records))
+    pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
+        JsonArray(List.map(toJson, rawLaps))
 
     /// 文字列が `.0` で終わっていればその2文字を落とす。それ以外はそのまま。
     /// 例: `"86.0"` -> `"86"`、`"116.3"` -> `"116.3"`、`""` -> `""`。
@@ -144,7 +144,9 @@ mod Lap {
                 }
         }
 
-    def parseInt(s: String): Int32 =
+    /// 10進整数としてパースし、失敗時は 0 を返す。`driverNumber` や
+    /// `lapImprovement` のような「空セル/不正値はゼロ扱い」の CSV 列で使う。
+    def parseIntOrZero(s: String): Int32 =
         match Int32.parse(10, s) {
             case Ok(n)  => n
             case Err(_) => 0

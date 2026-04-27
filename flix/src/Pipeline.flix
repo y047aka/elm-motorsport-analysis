@@ -1,15 +1,15 @@
 mod Pipeline {
 
-    pub type alias Result = {
+    pub type alias Output = {
         lapCount = Int32,
         json = String
     }
 
-    pub def process(dataLines: List[String]): Result =
-        let records = dataLines |> Csv.parse |> Lap.fromCsvRows;
-        let json = Json.render(Lap.toJsonArray(records));
+    pub def process(dataLines: List[String]): Output =
+        let rawLaps = dataLines |> Csv.parse |> RawLap.fromCsvRows;
+        let json = Json.render(RawLap.toJsonArray(rawLaps));
         {
-            lapCount = List.length(records),
+            lapCount = List.length(rawLaps),
             json     = json
         }
 
