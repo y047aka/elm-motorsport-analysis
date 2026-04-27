@@ -2,7 +2,7 @@ mod Duration {
 
     /// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の文字列を ms 単位の Int32 にパースする。
     /// 不正フォーマットは `None` を返す。
-    pub def parse(s: String): Option[Int32] =
+    def parse(s: String): Option[Int32] =
         match String.split({regex = "\\."}, s) {
             case wholePart :: msPart :: Nil =>
                 forM(
@@ -16,7 +16,7 @@ mod Duration {
 
     /// ms 単位の Int32 を `H:MM:SS.sss` / `M:SS.sss` / `S.sss` 形式に整形する。
     /// 桁ぞろえ規則は Rust 版 `motorsport::duration::to_string` と同じ。
-    pub def format(ms: Int32): String =
+    def format(ms: Int32): String =
         let totalSec = ms / 1000;
         let msPart   = ms - totalSec * 1000;
         let h        = totalSec / 3600;

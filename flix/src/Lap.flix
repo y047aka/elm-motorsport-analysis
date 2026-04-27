@@ -28,56 +28,53 @@ mod Lap {
     }
 
     pub def fromCsvRow(row: Csv.CsvRow): Option[LapRecord] =
-        if (List.length(row) >= 25)
-            forM(
-                carNumber               <- List.nth(0, row);
-                driverNumberStr         <- List.nth(1, row);
-                lapNumberStr            <- List.nth(2, row);
-                lapTime                 <- List.nth(3, row);
-                lapImprovementStr       <- List.nth(4, row);
-                crossingFinishLineInPit <- List.nth(5, row);
-                s1                      <- List.nth(6, row);
-                s1ImprovementStr        <- List.nth(7, row);
-                s2                      <- List.nth(8, row);
-                s2ImprovementStr        <- List.nth(9, row);
-                s3                      <- List.nth(10, row);
-                s3ImprovementStr        <- List.nth(11, row);
-                kph                     <- List.nth(12, row);
-                elapsed                 <- List.nth(13, row);
-                hour                    <- List.nth(14, row);
-                topSpeed                <- List.nth(18, row);
-                driverName              <- List.nth(19, row);
-                pitTime                 <- List.nth(20, row);
-                class                   <- List.nth(21, row);
-                group                   <- List.nth(22, row);
-                team                    <- List.nth(23, row);
-                manufacturer            <- List.nth(24, row)
-            ) yield {
-                carNumber               = carNumber,
-                driverNumber            = parseInt(driverNumberStr),
-                lapNumber               = parseInt(lapNumberStr),
-                lapTime                 = Duration.normalize(lapTime),
-                lapImprovement          = parseInt(lapImprovementStr),
-                crossingFinishLineInPit = crossingFinishLineInPit,
-                s1                      = Duration.normalize(s1),
-                s1Improvement           = parseInt(s1ImprovementStr),
-                s2                      = Duration.normalize(s2),
-                s2Improvement           = parseInt(s2ImprovementStr),
-                s3                      = Duration.normalize(s3),
-                s3Improvement           = parseInt(s3ImprovementStr),
-                kph                     = kph,
-                elapsed                 = Duration.normalize(elapsed),
-                hour                    = hour,
-                topSpeed                = stripTrailingDotZero(topSpeed),
-                driverName              = driverName,
-                pitTime                 = Duration.normalize(pitTime),
-                class                   = class,
-                group                   = group,
-                team                    = team,
-                manufacturer            = manufacturer
-            }
-        else
-            None
+        forM(
+            carNumber               <- List.nth(0, row);
+            driverNumberStr         <- List.nth(1, row);
+            lapNumberStr            <- List.nth(2, row);
+            lapTime                 <- List.nth(3, row);
+            lapImprovementStr       <- List.nth(4, row);
+            crossingFinishLineInPit <- List.nth(5, row);
+            s1                      <- List.nth(6, row);
+            s1ImprovementStr        <- List.nth(7, row);
+            s2                      <- List.nth(8, row);
+            s2ImprovementStr        <- List.nth(9, row);
+            s3                      <- List.nth(10, row);
+            s3ImprovementStr        <- List.nth(11, row);
+            kph                     <- List.nth(12, row);
+            elapsed                 <- List.nth(13, row);
+            hour                    <- List.nth(14, row);
+            topSpeed                <- List.nth(18, row);
+            driverName              <- List.nth(19, row);
+            pitTime                 <- List.nth(20, row);
+            class                   <- List.nth(21, row);
+            group                   <- List.nth(22, row);
+            team                    <- List.nth(23, row);
+            manufacturer            <- List.nth(24, row)
+        ) yield {
+            carNumber               = carNumber,
+            driverNumber            = parseInt(driverNumberStr),
+            lapNumber               = parseInt(lapNumberStr),
+            lapTime                 = Duration.normalize(lapTime),
+            lapImprovement          = parseInt(lapImprovementStr),
+            crossingFinishLineInPit = crossingFinishLineInPit,
+            s1                      = Duration.normalize(s1),
+            s1Improvement           = parseInt(s1ImprovementStr),
+            s2                      = Duration.normalize(s2),
+            s2Improvement           = parseInt(s2ImprovementStr),
+            s3                      = Duration.normalize(s3),
+            s3Improvement           = parseInt(s3ImprovementStr),
+            kph                     = kph,
+            elapsed                 = Duration.normalize(elapsed),
+            hour                    = hour,
+            topSpeed                = stripTrailingDotZero(topSpeed),
+            driverName              = driverName,
+            pitTime                 = Duration.normalize(pitTime),
+            class                   = class,
+            group                   = group,
+            team                    = team,
+            manufacturer            = manufacturer
+        }
 
     pub def fromCsvRows(rows: List[Csv.CsvRow]): List[LapRecord] =
         rows |> List.filterMap(fromCsvRow)
@@ -114,7 +111,7 @@ mod Lap {
 
     /// 文字列が `.0` で終わっていればその2文字を落とす。それ以外はそのまま。
     /// 例: `"86.0"` -> `"86"`、`"116.3"` -> `"116.3"`、`""` -> `""`。
-    pub def stripTrailingDotZero(s: String): String =
+    def stripTrailingDotZero(s: String): String =
         if (String.endsWith({suffix = ".0"}, s))
             String.dropRight(2, s)
         else
@@ -123,7 +120,7 @@ mod Lap {
     /// CSV の KPH 文字列を JSON 数値に変換する。
     /// 末尾が `.0` の値や整数表記は `JsonInt` に、それ以外で Float としてパースできれば `JsonFloat` に、
     /// パース不能の場合は文字列のまま `JsonString` で返す (フェイルセーフ)。
-    pub def kphValue(s: String): Json.JsonValue =
+    def kphValue(s: String): Json.JsonValue =
         let trimmed = stripTrailingDotZero(s);
         match Int32.parse(10, trimmed) {
             case Ok(n)  => JsonInt(n)

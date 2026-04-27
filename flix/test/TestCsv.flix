@@ -67,18 +67,29 @@ mod TestCsv {
         Assert.assertTrue(Option.isEmpty(Lap.fromCsvRow(row)))
 
     @Test
-    def testStripTrailingDotZero(): Unit \ Assert =
-        Assert.assertTrue(Lap.stripTrailingDotZero("150.0") == "150");
-        Assert.assertTrue(Lap.stripTrailingDotZero("116.3") == "116.3");
-        Assert.assertTrue(Lap.stripTrailingDotZero("") == "")
+    def testToJsonRendersWholeKphAsInt(): Unit \ Assert =
+        // kph (列12) "86.0" は JsonInt として "86" に整形される。
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                let json = Json.render(Lap.toJson(r));
+                Assert.assertTrue(String.contains({substr = "\"kph\": 86,"}, json));
+                Assert.assertTrue(not String.contains({substr = "\"kph\": 86.0"}, json))
+            case None =>
+                Assert.assertTrue(false)
+        }
 
     @Test
-    def testKphValueWhole(): Unit \ Assert =
-        Assert.assertTrue(Json.render(Lap.kphValue("86.0")) == "86")
-
-    @Test
-    def testKphValueDecimal(): Unit \ Assert =
-        Assert.assertTrue(Json.render(Lap.kphValue("107.1")) == "107.1")
+    def testToJsonRendersDecimalKphAsFloat(): Unit \ Assert =
+        // kph (列12) "107.1" は JsonFloat として "107.1" に整形される。
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;107.1;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                let json = Json.render(Lap.toJson(r));
+                Assert.assertTrue(String.contains({substr = "\"kph\": 107.1"}, json))
+            case None =>
+                Assert.assertTrue(false)
+        }
 
     @Test
     def testFromCsvRowNormalizesPitTime(): Unit \ Assert =
