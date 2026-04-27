@@ -24,7 +24,7 @@ pub(crate) mod events;
 pub(crate) mod stages;
 
 pub use args::parse_args;
-pub use error::{FileError, SetupError};
+pub use error::{FileError, SetupError, WithChain};
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -119,20 +119,19 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, SetupError>
     let mut summary = RunSummary::default();
 
     for task in tasks {
-        let input_path = task.input_path().to_path_buf();
         match process_file(&task) {
             Ok(report) => {
                 log::info!(
                     "Read {} cars from CSV '{}'",
                     report.car_count,
-                    input_path.display()
+                    task.input_path().display()
                 );
                 log::info!("Wrote metadata JSON to {}", report.metadata_path.display());
                 log::info!("Wrote laps JSON to {}", report.laps_path.display());
                 summary.processed += 1;
             }
             Err(error) => {
-                log::error!("Error processing '{}': {}", input_path.display(), error);
+                log::error!("{}", WithChain(&error));
                 summary.errors += 1;
             }
         }

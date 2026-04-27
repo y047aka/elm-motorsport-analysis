@@ -10,7 +10,7 @@ fn main() -> ExitCode {
     match cli::run(env::args()) {
         Ok(summary) => summary.exit_code(),
         Err(err) => {
-            eprintln!("{err}");
+            eprintln!("{}", cli::WithChain(&err));
             ExitCode::FAILURE
         }
     }
