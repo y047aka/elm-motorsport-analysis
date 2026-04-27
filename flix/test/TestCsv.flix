@@ -23,12 +23,35 @@ mod TestCsv {
         match Lap.fromCsvRow(row) {
             case Some(r) =>
                 Assert.assertTrue(r#carNumber == "12");
-                Assert.assertTrue(r#driverName == "Will STEVENS");
-                Assert.assertTrue(r#lapNumber == "3");
+                Assert.assertTrue(r#driverNumber == 1);
+                Assert.assertTrue(r#lapNumber == 3);
                 Assert.assertTrue(r#lapTime == "2:41.963");
+                Assert.assertTrue(r#lapImprovement == 0);
+                Assert.assertTrue(r#crossingFinishLineInPit == "");
+                Assert.assertTrue(r#s1 == "41.805");
+                Assert.assertTrue(r#s1Improvement == 0);
+                Assert.assertTrue(r#s2 == "1:03.483");
+                Assert.assertTrue(r#s3 == "56.675");
                 Assert.assertTrue(r#kph == "101.4");
+                Assert.assertTrue(r#elapsed == "6:10.938");
+                Assert.assertTrue(r#hour == "11:06:38.429");
+                Assert.assertTrue(r#topSpeed == "88.5");
+                Assert.assertTrue(r#driverName == "Will STEVENS");
+                Assert.assertTrue(r#pitTime == "");
                 Assert.assertTrue(r#class == "HYPERCAR");
-                Assert.assertTrue(r#team == "Hertz Team JOTA")
+                Assert.assertTrue(r#group == "H");
+                Assert.assertTrue(r#team == "Hertz Team JOTA");
+                Assert.assertTrue(r#manufacturer == "Porsche")
+            case None =>
+                Assert.assertTrue(false)
+        }
+
+    @Test
+    def testFromCsvRowStripsTopSpeedTrailingDotZero(): Unit \ Assert =
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;150.0;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                Assert.assertTrue(r#topSpeed == "150")
             case None =>
                 Assert.assertTrue(false)
         }
@@ -42,6 +65,23 @@ mod TestCsv {
     def testFromCsvRowEmpty(): Unit \ Assert =
         let row = Csv.parseRow("");
         Assert.assertTrue(Option.isEmpty(Lap.fromCsvRow(row)))
+
+    @Test
+    def testStripTrailingDotZero(): Unit \ Assert =
+        Assert.assertTrue(Lap.stripTrailingDotZero("150.0") == "150");
+        Assert.assertTrue(Lap.stripTrailingDotZero("116.3") == "116.3");
+        Assert.assertTrue(Lap.stripTrailingDotZero("") == "")
+
+    @Test
+    def testKphValueWhole(): Unit \ Assert =
+        let v = Lap.kphValue("86.0");
+        Assert.assertTrue(String.contains({substr = "86"}, Json.render(v)));
+        Assert.assertTrue(not String.contains({substr = "."}, Json.render(v)))
+
+    @Test
+    def testKphValueDecimal(): Unit \ Assert =
+        let rendered = Json.render(Lap.kphValue("107.1"));
+        Assert.assertTrue(String.contains({substr = "107.1"}, rendered))
 
     @Test
     def testFromCsvRowsSkipsInvalid(): Unit \ Assert =
