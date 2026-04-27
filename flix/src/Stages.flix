@@ -1,4 +1,4 @@
-mod Pipeline {
+mod Stages {
 
     pub type alias Output = {
         lapCount = Int32,

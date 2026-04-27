@@ -54,7 +54,7 @@ def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ I
                         case _ :: rest => Ok(rest)
                         case Nil       => Err(CliError.EmptyFile(inputPath))
                      };
-        processed <- Ok(Pipeline.process(dataLines));
+        processed <- Ok(Stages.process(dataLines));
         _         <- Files.writeFile(outputPath, processed#json)
     ) yield {
         lapCount   = processed#lapCount,
