@@ -28,4 +28,26 @@ mod Files {
         Fs.DirList.runWithIO(() -> Fs.DirList.list(path))
             |> Result.mapErr(e -> CliError.ListDirError("${e}"))
 
+    /// 指定ディレクトリ配下を再帰的に走査し、`.csv` で終わるファイルパスを
+    /// すべて返す。サブディレクトリには深さ制限なしで降りる。
+    pub def walkCsvFiles(dirPath: String): Result[CliError, List[String]] \ IO =
+        forM(
+            entries <- listDir(dirPath);
+            result  <- gatherCsvs(dirPath, entries)
+        ) yield result
+
+    def gatherCsvs(dirPath: String, entries: List[String]): Result[CliError, List[String]] \ IO =
+        match entries {
+            case Nil => Ok(Nil)
+            case e :: rest =>
+                let fullPath = "${dirPath}/${e}";
+                forM(
+                    isDir <- isDirectory(fullPath);
+                    head  <- if (isDir) walkCsvFiles(fullPath)
+                             else if (String.endsWith({suffix = ".csv"}, fullPath)) Ok(fullPath :: Nil)
+                             else Ok(Nil);
+                    tail  <- gatherCsvs(dirPath, rest)
+                ) yield List.append(head, tail)
+        }
+
 }

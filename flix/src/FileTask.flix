@@ -35,10 +35,8 @@ mod FileTask {
             case Some(_) => Err(CliError.OutputWithDirectory)
             case None    =>
                 forM(
-                    entries <- Files.listDir(dirPath);
-                    csvFiles <- Ok(entries
-                                    |> List.filter(e -> String.endsWith({suffix = ".csv"}, e))
-                                    |> List.map(e -> make("${dirPath}/${e}", None)));
+                    csvPaths <- Files.walkCsvFiles(dirPath);
+                    csvFiles <- Ok(csvPaths |> List.map(p -> make(p, None)));
                     result   <- if (List.isEmpty(csvFiles))
                                     Err(CliError.NoCsvFiles(dirPath))
                                 else
