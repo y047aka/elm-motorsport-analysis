@@ -108,7 +108,6 @@
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
           cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
           cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2025"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
-          flix-init            = { type = "app"; program = "${mkFlixApp "flix-init"  "flix init"}/bin/flix-init";                                                     meta.description = "Initialize Flix project"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
           flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../cli/test_data.csv"}/bin/flix-run";                               meta.description = "Run Flix project (CSV -> JSON)"; };
