@@ -1,3 +1,9 @@
+/// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の時間文字列を ms 単位の
+/// `Int32` と相互変換する。Rust 版 `motorsport::duration` と同じ規則:
+/// 1時間以上は `H:MM:SS.sss`、1分以上は `M:SS.sss`、それ未満は `S.sss`。
+///
+/// 公開 API は `normalize` のみ (入力を一度パースして正規形に整形し直す)。
+/// `parse` / `format` は `normalize` 内部の実装詳細として private に保つ。
 mod Duration {
 
     /// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の文字列を ms 単位の Int32 にパースする。

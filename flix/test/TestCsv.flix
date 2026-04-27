@@ -111,6 +111,41 @@ mod TestCsv {
             "7;1;1;1:35.421;0;;23.277;0;29.848;0;42.296;0;160.5;1:35.421;11:02:02.912;0:23.277;0:29.848;0:42.296;;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.277;29.848;42.296;" ::
             Nil;
         let records = lines |> Csv.parse |> Lap.fromCsvRows;
-        Assert.assertTrue(List.length(records) == 2)
+        Assert.assertTrue(List.length(records) == 2);
+        // 無効行スキップ後も最初のレコードは新フィールド (group/manufacturer) まで埋まっている。
+        match List.head(records) {
+            case Some(r) =>
+                Assert.assertTrue(r#carNumber == "12");
+                Assert.assertTrue(r#driverNumber == 1);
+                Assert.assertTrue(r#group == "H");
+                Assert.assertTrue(r#manufacturer == "Porsche")
+            case None =>
+                Assert.assertTrue(false)
+        }
+
+    @Test
+    def testFromCsvRowEmptyTopSpeed(): Unit \ Assert =
+        // CSV 列18 (TOP_SPEED) が空の行 — 非ピットラップで頻出。`stripTrailingDotZero("")` が
+        // 空文字列をそのまま返し、JSON 上も `"topSpeed": ""` になることを確認する。
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                Assert.assertTrue(r#topSpeed == "")
+            case None =>
+                Assert.assertTrue(false)
+        }
+
+    @Test
+    def testToJsonHandlesUnparseableKphAsString(): Unit \ Assert =
+        // kph が Int32/Float64 のいずれにもパースできない場合のフェイルセーフ経路。
+        // kphValue は JsonString に落ち、`"kph": "not-a-number"` として出力される。
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;not-a-number;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                let json = Json.render(Lap.toJson(r));
+                Assert.assertTrue(String.contains({substr = "\"kph\": \"not-a-number\""}, json))
+            case None =>
+                Assert.assertTrue(false)
+        }
 
 }

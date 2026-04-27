@@ -1,3 +1,16 @@
+/// CSV 行を `xxx_laps.json` 出力用の `LapRecord` に整形するモジュール。
+/// 出力 JSON 形状は Rust 版 CLI の
+/// `motorsport::cli::stages::output::RawLap` (`#[serde(rename_all =
+/// "camelCase")]`) と一致する 22 フィールドの camelCase キー:
+///   carNumber, driverNumber, lapNumber, lapTime, lapImprovement,
+///   crossingFinishLineInPit, s1, s1Improvement, s2, s2Improvement,
+///   s3, s3Improvement, kph, elapsed, hour, topSpeed, driverName,
+///   pitTime, class, group, team, manufacturer
+///
+/// `lapTime` / `s1` / `s2` / `s3` / `elapsed` / `pitTime` は `Duration`
+/// で正規形 (`"0:01:41.031"` -> `"1:41.031"` 等) に整形される。一方
+/// `hour` は CSV 上の時刻表記 (`"HH:MM:SS.sss"`) — duration ではないので
+/// 正規化を通さず文字列そのままを保持する。
 mod Lap {
 
     use Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
