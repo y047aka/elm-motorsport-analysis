@@ -74,14 +74,23 @@ mod TestCsv {
 
     @Test
     def testKphValueWhole(): Unit \ Assert =
-        let v = Lap.kphValue("86.0");
-        Assert.assertTrue(String.contains({substr = "86"}, Json.render(v)));
-        Assert.assertTrue(not String.contains({substr = "."}, Json.render(v)))
+        Assert.assertTrue(Json.render(Lap.kphValue("86.0")) == "86")
 
     @Test
     def testKphValueDecimal(): Unit \ Assert =
-        let rendered = Json.render(Lap.kphValue("107.1"));
-        Assert.assertTrue(String.contains({substr = "107.1"}, rendered))
+        Assert.assertTrue(Json.render(Lap.kphValue("107.1")) == "107.1")
+
+    @Test
+    def testFromCsvRowNormalizesPitTime(): Unit \ Assert =
+        // pitTime (列20) に正規形でない "0:01:41.031" を仕込み、Duration.normalize が
+        // fromCsvRow 経由で適用されて "1:41.031" になることを確認する。
+        let row = Csv.parseRow("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;0:01:41.031;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;");
+        match Lap.fromCsvRow(row) {
+            case Some(r) =>
+                Assert.assertTrue(r#pitTime == "1:41.031")
+            case None =>
+                Assert.assertTrue(false)
+        }
 
     @Test
     def testFromCsvRowsSkipsInvalid(): Unit \ Assert =

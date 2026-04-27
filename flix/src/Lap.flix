@@ -128,7 +128,7 @@ mod Lap {
         match Int32.parse(10, trimmed) {
             case Ok(n)  => JsonInt(n)
             case Err(_) =>
-                match Float64.fromString(s) {
+                match Float64.fromString(trimmed) {
                     case Some(f) => JsonFloat(f)
                     case None    => JsonString(s)
                 }
