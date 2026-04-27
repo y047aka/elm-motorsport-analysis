@@ -73,9 +73,27 @@
             '';
           };
 
+        flix = pkgs.flix.overrideAttrs (old: rec {
+          version = "0.71.0";
+          src = pkgs.fetchurl {
+            url = "https://github.com/flix/flix/releases/download/v${version}/flix.jar";
+            hash = "sha256-Ha5oRDpQ7YuGsaF/ZNx8b+HjTSroxZEjzI3zR3g7NXI=";
+          };
+        });
+
+        mkFlixApp = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ flix ];
+            text = ''
+              cd flix
+              ${cmd}
+            '';
+          };
+
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
         });
 
         apps = {
@@ -90,6 +108,9 @@
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
           cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
           cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2025"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
+          flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
+          flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
+          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../cli/test_data.csv"}/bin/flix-run";                               meta.description = "Run Flix project (CSV -> JSON)"; };
         };
       });
 }
