@@ -4,7 +4,7 @@
 //! - `run`: TRPL-style entry that consumes argv and drives the whole program
 //! - `RunSummary`: success / error counts; `exit_code()` maps to an OS exit
 //! - `FileTask`: one-file unit of work
-//! - `parse_args` / `SetupError` / `FileError`
+//! - `parse_args` / `SetupError` / `FileError` / `WithChain`
 //!
 //! # Per-file pipeline
 //!
