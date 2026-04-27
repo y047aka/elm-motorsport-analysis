@@ -6,11 +6,11 @@ use motorsport::{Car, TimelineEvent, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
-use crate::error::CliError;
+use crate::error::FileError;
 
 /// Pretty-prints a serializable value as JSON (Stage 5).
-pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<String, CliError> {
-    serde_json::to_string_pretty(value).map_err(|source| CliError::Serialize { context, source })
+pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<String, FileError> {
+    serde_json::to_string_pretty(value).map_err(|source| FileError::Serialize { context, source })
 }
 
 /// Formats a sector time. If the CSV cell was blank (`present = false`) the

@@ -1,19 +1,22 @@
+use std::path::PathBuf;
+
 use thiserror::Error;
 
+/// Errors raised during the setup phase: argv parsing and input-path
+/// resolution. Surfaced as `Err` from [`run`](crate::run).
 #[derive(Debug, Error)]
-pub enum CliError {
-    // Config errors
+pub enum SetupError {
     #[error("Missing required input path argument")]
     MissingInputPath,
 
     #[error("Unexpected argument: {0}")]
     UnexpectedArgument(String),
 
-    #[error("Input path does not exist: {0}")]
-    InputPathNotFound(String),
+    #[error("Input path does not exist: {}", .0.display())]
+    InputPathNotFound(PathBuf),
 
-    #[error("Input path is neither a file nor directory: {0}")]
-    InvalidInputPath(String),
+    #[error("Input path is neither a file nor directory: {}", .0.display())]
+    InvalidInputPath(PathBuf),
 
     #[error("--output requires a value")]
     MissingOutputValue,
@@ -24,28 +27,36 @@ pub enum CliError {
     #[error("--output specified more than once")]
     DuplicateOutput,
 
-    #[error("No CSV files found in directory: {0}")]
-    NoCsvFilesFound(String),
+    #[error("No CSV files found in directory: {}", .0.display())]
+    NoCsvFilesFound(PathBuf),
 
-    // I/O errors (with path context)
-    #[error("Failed to walk directory: {0}")]
-    WalkDir(String),
+    #[error("Failed to walk directory '{}': {source}", path.display())]
+    WalkDir {
+        path: PathBuf,
+        #[source]
+        source: walkdir::Error,
+    },
+}
 
-    #[error("Failed to read input file '{path}': {source}")]
+/// Errors raised while processing a single file. Logged and counted in
+/// [`RunSummary`](crate::RunSummary) rather than bubbled up from
+/// [`run`](crate::run).
+#[derive(Debug, Error)]
+pub enum FileError {
+    #[error("Failed to read input file '{}': {source}", path.display())]
     ReadFile {
-        path: String,
+        path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    #[error("Failed to write file '{path}': {source}")]
+    #[error("Failed to write file '{}': {source}", path.display())]
     WriteFile {
-        path: String,
+        path: PathBuf,
         #[source]
         source: std::io::Error,
     },
 
-    // Serialization
     #[error("Failed to serialize {context} to JSON: {source}")]
     Serialize {
         context: &'static str,

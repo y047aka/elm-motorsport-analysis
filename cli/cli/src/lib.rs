@@ -4,7 +4,7 @@
 //! - `run`: TRPL-style entry that consumes argv and drives the whole program
 //! - `RunSummary`: success / error counts; `exit_code()` maps to an OS exit
 //! - `FileTask`: one-file unit of work
-//! - `parse_args` / `CliError`
+//! - `parse_args` / `SetupError` / `FileError`
 //!
 //! # Per-file pipeline
 //!
@@ -24,7 +24,7 @@ pub(crate) mod events;
 pub(crate) mod stages;
 
 pub use args::parse_args;
-pub use error::CliError;
+pub use error::{FileError, SetupError};
 
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
@@ -114,7 +114,7 @@ struct ProcessingReport {
 /// - Per-file failures do not bubble up: they are logged via `log::error!` and
 ///   counted in [`RunSummary::errors`]. Callers convert the summary to an OS
 ///   exit code via [`RunSummary::exit_code`].
-pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
+pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, SetupError> {
     let tasks = parse_args(args)?;
     let mut summary = RunSummary::default();
 
@@ -150,7 +150,7 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, CliError> {
 // Per-file execution
 // ================================================================
 
-fn process_file(task: &FileTask) -> Result<ProcessingReport, CliError> {
+fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
     use stages::{csv_input, files, output, structure, transform};
 
     // Stage 1: read

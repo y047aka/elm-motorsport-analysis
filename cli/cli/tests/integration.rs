@@ -207,7 +207,7 @@ fn test_cli_run_reports_partial_failure() {
     // An "unreadable .csv" is represented by a **directory** whose name ends
     // in `.csv`. `parse_args`'s walkdir only filters by extension and doesn't
     // check `is_file`, so the directory is enumerated as a task. The
-    // downstream `files::read_csv` then fails with `CliError::ReadFile` when
+    // downstream `files::read_csv` then fails with `FileError::ReadFile` when
     // it tries to `read_to_string` a directory.
     let temp_dir = tempfile::tempdir().expect("create tempdir");
 

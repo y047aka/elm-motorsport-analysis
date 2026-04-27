@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::FileTask;
-use crate::error::CliError;
+use crate::error::SetupError;
 
 /// 引数パース結果（ファイルシステム未検証）
 #[derive(Debug, PartialEq)]
@@ -12,7 +12,7 @@ struct RawArgs {
 
 impl RawArgs {
     /// 純粋な引数パース（I/O なし）
-    fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, CliError> {
+    fn parse(mut args: impl Iterator<Item = String>) -> Result<Self, SetupError> {
         enum ParseState {
             Ready {
                 input: Option<String>,
@@ -40,7 +40,7 @@ impl RawArgs {
                 } if arg == "--output" => Ok(ParseState::ExpectingOutputValue { input }),
                 ParseState::Ready {
                     output: Some(_), ..
-                } if arg == "--output" => Err(CliError::DuplicateOutput),
+                } if arg == "--output" => Err(SetupError::DuplicateOutput),
                 ParseState::Ready {
                     input: None,
                     output,
@@ -50,7 +50,7 @@ impl RawArgs {
                 }),
                 ParseState::Ready {
                     input: Some(_), ..
-                } => Err(CliError::UnexpectedArgument(arg)),
+                } => Err(SetupError::UnexpectedArgument(arg)),
             },
         )?;
 
@@ -62,13 +62,13 @@ impl RawArgs {
                 input_path: PathBuf::from(input),
                 output_file: output,
             }),
-            ParseState::Ready { input: None, .. } => Err(CliError::MissingInputPath),
-            ParseState::ExpectingOutputValue { .. } => Err(CliError::MissingOutputValue),
+            ParseState::Ready { input: None, .. } => Err(SetupError::MissingInputPath),
+            ParseState::ExpectingOutputValue { .. } => Err(SetupError::MissingOutputValue),
         }
     }
 
     /// ファイルシステムを参照して検証済み FileTask のリストに変換
-    fn resolve(self) -> Result<Vec<FileTask>, CliError> {
+    fn resolve(self) -> Result<Vec<FileTask>, SetupError> {
         enum PathKind {
             NotFound,
             File,
@@ -91,21 +91,24 @@ impl RawArgs {
         let path = self.input_path;
 
         match classify_path(&path) {
-            PathKind::NotFound => Err(CliError::InputPathNotFound(path.display().to_string())),
+            PathKind::NotFound => Err(SetupError::InputPathNotFound(path)),
             PathKind::File => Ok(vec![FileTask::new(path, self.output_file)]),
             PathKind::Dir => resolve_dir(path, self.output_file),
-            PathKind::Other => Err(CliError::InvalidInputPath(path.display().to_string())),
+            PathKind::Other => Err(SetupError::InvalidInputPath(path)),
         }
     }
 }
 
-fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTask>, CliError> {
+fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTask>, SetupError> {
     if output_file.is_some() {
-        return Err(CliError::OutputWithDirectory);
+        return Err(SetupError::OutputWithDirectory);
     }
-    let csv_files = find_csv_files(&path).map_err(|e| CliError::WalkDir(e.to_string()))?;
+    let csv_files = find_csv_files(&path).map_err(|source| SetupError::WalkDir {
+        path: path.clone(),
+        source,
+    })?;
     if csv_files.is_empty() {
-        return Err(CliError::NoCsvFilesFound(path.display().to_string()));
+        return Err(SetupError::NoCsvFilesFound(path));
     }
     Ok(csv_files
         .into_iter()
@@ -114,7 +117,7 @@ fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTa
 }
 
 /// CLI 引数をパースし、検証済みの処理タスクリストを返す
-pub fn parse_args(args: impl Iterator<Item = String>) -> Result<Vec<FileTask>, CliError> {
+pub fn parse_args(args: impl Iterator<Item = String>) -> Result<Vec<FileTask>, SetupError> {
     RawArgs::parse(args)?.resolve()
 }
 
