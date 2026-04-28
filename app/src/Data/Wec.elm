@@ -17,13 +17,11 @@ import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 type alias Event =
     { name : String
     , startingGrid : List StartingGridItem
-    , timelineEvents : List TimelineEvent
     }
 
 
@@ -39,10 +37,9 @@ type alias StartingGridItem =
 
 eventDecoder : Decoder Event
 eventDecoder =
-    Decode.map3 Event
+    Decode.map2 Event
         (field "name" string)
         (field "startingGrid" (list startingGridItemDecoder))
-        (field "timelineEvents" (list TimelineEvent.decoder))
 
 
 startingGridItemDecoder : Decoder StartingGridItem

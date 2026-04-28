@@ -11,14 +11,14 @@ import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.FormulaE
 import Data.Series.Wec
 import Data.Wec as Wec
+import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
-import Motorsport.Car as Car
-import Motorsport.LapExtractor as LapExtractor
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 import Pages.Flags
@@ -54,6 +54,7 @@ type alias Model =
     , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
+    , pendingWecCars : Maybe (List Car)
     }
 
 
@@ -76,6 +77,7 @@ init flags maybePagePath =
       , raceControl = RaceControl.placeholder
       , analysis_F1 = Analysis.finished RaceControl.placeholder
       , analysis = Analysis.finished RaceControl.placeholder
+      , pendingWecCars = Nothing
       }
     , Effect.none
     )
@@ -90,6 +92,7 @@ type Msg
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
     | FetchJson_FormulaE { season : String, event : String }
     | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
@@ -143,27 +146,49 @@ update msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 cars =
-                    decoded.startingGrid
-                        |> List.map Car.fromStartingGrid
-                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
-
-                rcNew =
-                    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
-                        |> Maybe.withDefault RaceControl.placeholder
+                    decoded.startingGrid |> List.map Car.fromStartingGrid
 
                 modelEventSummary =
                     m.eventSummary
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl = rcNew
-                , analysis = Analysis.finished rcNew
+                , pendingWecCars = Just cars
               }
-            , Effect.none
+            , Effect.fromCmd <|
+                Http.get
+                    { url = lapsPathFor m.eventSummary.jsonPath
+                    , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
+                    }
             )
 
         JsonLoaded_Wec (Err _) ->
             ( m, Effect.none )
+
+        LapsLoaded_Wec (Ok rawLaps) ->
+            case m.pendingWecCars of
+                Just cars ->
+                    let
+                        carsWithLaps =
+                            WecLaps.attach rawLaps cars
+
+                        rcNew =
+                            RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
+                                |> Maybe.withDefault RaceControl.placeholder
+                    in
+                    ( { m
+                        | raceControl = rcNew
+                        , analysis = Analysis.finished rcNew
+                        , pendingWecCars = Nothing
+                      }
+                    , Effect.none
+                    )
+
+                Nothing ->
+                    ( m, Effect.none )
+
+        LapsLoaded_Wec (Err _) ->
+            ( { m | pendingWecCars = Nothing }, Effect.none )
 
         FetchJson_FormulaE options ->
             let
@@ -185,7 +210,7 @@ update msg m =
                 cars =
                     decoded.startingGrid
                         |> List.map Car.fromStartingGrid
-                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
+                        |> FormulaE.attachLaps decoded.laps
 
                 rcNew =
                     RaceControl.fromCars (TimelineEvent.fromCars cars) cars
@@ -229,6 +254,16 @@ update msg m =
             , Effect.none
             )
 
+
+
+
+lapsPathFor : String -> String
+lapsPathFor jsonPath =
+    if String.endsWith ".json" jsonPath then
+        String.dropRight 5 jsonPath ++ "_laps.json"
+
+    else
+        jsonPath ++ "_laps.json"
 
 
 
