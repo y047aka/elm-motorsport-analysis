@@ -1,4 +1,4 @@
-// Rust 版は未知 ID に log::warn! を出す (warn_once) が、純関数性を保つため省略。
+// The Rust version emits log::warn! (warn_once) for unknown IDs, omitted here to keep this pure.
 pub mod Motorsport.Events {
 
     pub def displayName(eventId: String): String =

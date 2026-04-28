@@ -3,7 +3,7 @@ pub mod Util.Files {
     pub enum FileError with ToString {
         case ReadError(String, String)   // path, underlying message
         case WriteError(String, String)
-        case AccessError(String)         // path stat / existence の取得失敗
+        case AccessError(String)         // failure to obtain path stat / existence
         case ListDirError(String)
     }
 
@@ -33,8 +33,8 @@ pub mod Util.Files {
         Fs.DirList.runWithIO(() -> Fs.DirList.list(path))
             |> Result.mapErr(e -> FileError.ListDirError("${e}"))
 
-    /// 指定ディレクトリ配下を再帰的に走査し、`.csv` で終わるファイルパスを
-    /// すべて返す。サブディレクトリには深さ制限なしで降りる。
+    /// Recursively walks the given directory and returns every path ending in `.csv`.
+    /// Descends into subdirectories without a depth limit.
     pub def walkCsvFiles(dirPath: String): Result[FileError, List[String]] \ IO =
         forM(
             entries <- listDir(dirPath);

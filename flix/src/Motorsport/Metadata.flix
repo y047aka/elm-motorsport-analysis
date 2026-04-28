@@ -41,7 +41,7 @@ pub mod Motorsport.Metadata {
             List.append(acc, buildFromLap(lap) :: Nil)
 
     def buildFromLap(lap: RawLap): CarBuild =
-        // Rust 版は未知 class を Class::None に正規化するが、Elm 側が生値を消費するため省略。
+        // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
         let car: Car = {
             carNumber    = lap#carNumber,
             drivers      = lap#driverName :: Nil,
