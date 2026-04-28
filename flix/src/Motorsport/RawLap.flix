@@ -1,16 +1,3 @@
-/// CSV 行を `xxx_laps.json` 出力用の `RawLap` に整形するモジュール。
-/// 出力 JSON 形状は Rust 版 CLI の
-/// `motorsport::cli::stages::output::RawLap` (`#[serde(rename_all =
-/// "camelCase")]`) と一致する 22 フィールドの camelCase キー:
-///   carNumber, driverNumber, lapNumber, lapTime, lapImprovement,
-///   crossingFinishLineInPit, s1, s1Improvement, s2, s2Improvement,
-///   s3, s3Improvement, kph, elapsed, hour, topSpeed, driverName,
-///   pitTime, class, group, team, manufacturer
-///
-/// `lapTime` / `s1` / `s2` / `s3` / `elapsed` / `pitTime` は `Duration`
-/// で正規形 (`"0:01:41.031"` -> `"1:41.031"` 等) に整形される。一方
-/// `hour` は CSV 上の時刻表記 (`"HH:MM:SS.sss"`) — duration ではないので
-/// 正規化を通さず文字列そのままを保持する。
 pub mod Motorsport.RawLap {
 
     use Util.Csv
@@ -125,17 +112,12 @@ pub mod Motorsport.RawLap {
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
 
-    /// 文字列が `.0` で終わっていればその2文字を落とす。それ以外はそのまま。
-    /// 例: `"86.0"` -> `"86"`、`"116.3"` -> `"116.3"`、`""` -> `""`。
     def stripTrailingDotZero(s: String): String =
         if (String.endsWith({suffix = ".0"}, s))
             String.dropRight(2, s)
         else
             s
 
-    /// CSV の KPH 文字列を JSON 数値に変換する。
-    /// 末尾が `.0` の値や整数表記は `JsonInt` に、それ以外で Float としてパースできれば `JsonFloat` に、
-    /// パース不能の場合は文字列のまま `JsonString` で返す (フェイルセーフ)。
     def kphValue(s: String): Json.JsonValue =
         let trimmed = stripTrailingDotZero(s);
         match Int32.parse(10, trimmed) {
@@ -147,8 +129,6 @@ pub mod Motorsport.RawLap {
                 }
         }
 
-    /// 10進整数としてパースし、失敗時は 0 を返す。`driverNumber` や
-    /// `lapImprovement` のような「空セル/不正値はゼロ扱い」の CSV 列で使う。
     def parseIntOrZero(s: String): Int32 =
         match Int32.parse(10, s) {
             case Ok(n)  => n

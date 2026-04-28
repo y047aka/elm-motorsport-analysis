@@ -1,10 +1,5 @@
-/// 汎用ファイル I/O ユーティリティ。エラーは `Util` 内で完結する独自型
-/// `FileError` で表現し、CLI レイヤや特定アプリのエラー型には依存しない
-/// (依存方向は Cli → Util の片方向のみ)。
 pub mod Util.Files {
 
-    /// ファイル I/O 操作で発生しうる低レベルエラー。CLI 側はこれを
-    /// `Cli.Errors.CliError.File(_)` でラップして扱う。
     pub enum FileError with ToString {
         case ReadError(String, String)   // path, underlying message
         case WriteError(String, String)

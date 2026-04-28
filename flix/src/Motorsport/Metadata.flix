@@ -1,8 +1,3 @@
-/// メタデータ JSON (`{stem}.json`) のドメインモデルとレンダラ。
-/// Rust 版 `cli::stages::output::MetadataOutput` + `StartingGrid`
-/// (cli/src/stages/output.rs L61-112) と
-/// `cli::stages::transform::build_cars` / `start_positions`
-/// (transform.rs L46-74, L212-233) を 1 モジュールに合体させたもの。
 pub mod Motorsport.Metadata {
 
     use Util.Duration
@@ -22,7 +17,6 @@ pub mod Motorsport.Metadata {
         startingGrid = List[StartingGrid]
     }
 
-    /// CSV 行から作った `RawLap[]` と event id から `Metadata` を組み立てる。
     pub def fromRawLaps(eventId: String, rawLaps: List[RawLap]): Metadata =
         let builds = buildCars(rawLaps);
         {
@@ -30,15 +24,11 @@ pub mod Motorsport.Metadata {
             startingGrid = assignStartPositions(builds)
         }
 
-    /// `Car` (純ドメイン) に「スタートグリッド計算用の lap1 elapsed」を添えた
-    /// 内部用の中間型。`Metadata.flix` の外には漏れない。
     type alias CarBuild = {
         car         = Car,
         lap1Elapsed = Option[Int32]
     }
 
-    /// CSV 出現順を保ったまま `RawLap[]` を `CarBuild[]` に集約する。
-    /// 同じ `carNumber` の追加ラップは drivers と lap1Elapsed を更新する。
     def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
         rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
 
@@ -51,10 +41,7 @@ pub mod Motorsport.Metadata {
             List.append(acc, buildFromLap(lap) :: Nil)
 
     def buildFromLap(lap: RawLap): CarBuild =
-        // 注: class/group/team/manufacturer は初出ラップの値をそのまま使う。
-        // Rust 版 `transform.rs` L102-112 では未知 class 文字列を `Class::None`
-        // に丸める正規化があるが、flix 版は CSV 生値をそのまま保持する
-        // (Elm 側で生値消費しても問題ないため初版では非対応)。
+        // Rust 版は未知 class を Class::None に正規化するが、Elm 側が生値を消費するため省略。
         let car: Car = {
             carNumber    = lap#carNumber,
             drivers      = lap#driverName :: Nil,
@@ -81,9 +68,6 @@ pub mod Motorsport.Metadata {
         if (List.exists(s -> s == x, xs)) xs
         else List.append(xs, x :: Nil)
 
-    /// ラップ1 の elapsed (ms) で 0-based 順位を割り当て、
-    /// `CarBuild[]` を出力用 `StartingGrid[]` に変換する。
-    /// ラップ1 が無い車は `position = 0` (Rust transform.rs L224-232 と同挙動)。
     def assignStartPositions(builds: List[CarBuild]): List[StartingGrid] =
         let withLap1 = builds |> List.filterMap(b ->
             match b#lap1Elapsed {
@@ -106,7 +90,6 @@ pub mod Motorsport.Metadata {
         let (result, _) = List.foldLeft(step, (Nil, 0), xs);
         List.reverse(result)
 
-    /// メタデータを JSON (Rust `serde_json` 構造体宣言順と同じキー順) に変換。
     pub def toJson(meta: Metadata): Json.JsonValue =
         JsonObject(
             ("name",         JsonString(meta#name)) ::
