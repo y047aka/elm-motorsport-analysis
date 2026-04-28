@@ -1,7 +1,7 @@
 module Motorsport.TimelineEventTest exposing (suite)
 
 import Expect
-import Motorsport.Car exposing (Car, Status(..))
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -212,7 +212,7 @@ carWithLaps laps =
     , laps = laps
     , currentLap = Nothing
     , lastLap = Nothing
-    , status = PreRace
+    , status = Car.PreRace
     , currentDriver = Nothing
     }
 
