@@ -45,6 +45,12 @@ mod Duration {
                 case None     => s
             }
 
+    /// 入力文字列を Duration としてパースし ms 単位の Int32 を返す。
+    /// 不正フォーマット・空文字列は `None`。スタートグリッドのソート等で使用。
+    pub def toMillis(s: String): Option[Int32] =
+        if (String.isEmpty(s)) None
+        else parse(s)
+
     def parseHmsToSeconds(s: String): Option[Int32] =
         match String.split({regex = ":"}, s) {
             case h :: m :: sec :: Nil =>

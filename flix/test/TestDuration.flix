@@ -28,4 +28,20 @@ mod TestDuration {
     def testNormalizeInvalidPassthrough(): Unit \ Assert =
         Assert.assertTrue(Duration.normalize("not-a-duration") == "not-a-duration")
 
+    @Test
+    def testToMillisEmpty(): Unit \ Assert =
+        Assert.assertTrue(Duration.toMillis("") == None)
+
+    @Test
+    def testToMillisMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.toMillis("1:35.365") == Some(95365))
+
+    @Test
+    def testToMillisHoursMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.toMillis("6:10.938") == Some(370938))
+
+    @Test
+    def testToMillisInvalid(): Unit \ Assert =
+        Assert.assertTrue(Duration.toMillis("not-a-duration") == None)
+
 }
