@@ -4,18 +4,13 @@
 //! - grouping laps by car (preserving CSV order)
 //! - accumulating best times (lap / S1 / S2 / S3 / mini-sector)
 //! - computing per-lap positions (including the starting grid)
-//! - deriving timeline events
 //!
 //! The JSON shape types ([`RawLap`] / [`MetadataOutput`]) live in
 //! [`output`](super::output); this module fills them in.
 
 use std::collections::HashMap;
 
-use motorsport::car::Status;
-use motorsport::{
-    Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors, TimelineEvent, calc_time_limit,
-    calc_timeline_events,
-};
+use motorsport::{Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors};
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
 use crate::domain::{
@@ -28,8 +23,7 @@ use crate::domain::{
 /// Internally this runs in order:
 /// 1. project each `LapRecord` into a [`RawLap`] (by reference)
 /// 2. consume `records` to aggregate by car into a [`Car`] list
-/// 3. derive timeline events from the cars
-/// 4. assemble [`MetadataOutput`] (event name + starting grid + timeline)
+/// 3. assemble [`MetadataOutput`] (event name + starting grid)
 ///
 /// Step 1 borrows `records` while step 2 moves it, so the order matters — but
 /// the constraint is encapsulated here, not in the caller.
@@ -39,14 +33,8 @@ pub fn build_outputs(
 ) -> (Vec<RawLap>, MetadataOutput) {
     let raw_laps = create_laps_output(&records);
     let cars = group_laps_by_car(records);
-    let timeline_events = calc_timeline(&cars);
-    let metadata = create_metadata_output(event_name, &cars, timeline_events);
+    let metadata = create_metadata_output(event_name, &cars);
     (raw_laps, metadata)
-}
-
-fn calc_timeline(cars: &[Car]) -> Vec<TimelineEvent> {
-    let time_limit = calc_time_limit(cars);
-    calc_timeline_events(time_limit, cars)
 }
 
 pub fn group_laps_by_car(records: Vec<LapRecord>) -> Vec<Car> {
@@ -100,9 +88,7 @@ fn car_from_group(car_number: String, records: Vec<LapRecord>, driver_names: Vec
 
     let processed_laps = process_laps(records);
 
-    let mut car = Car::new(meta, 1, processed_laps);
-    car.status = Status::Racing;
-    car
+    Car::new(meta, 1, processed_laps)
 }
 
 fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
@@ -150,7 +136,7 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
                 .mini_sectors
                 .as_ref()
                 .map(|mini| build_mini_sectors(mini, &bests.mini));
-            finalized_lap(record.lap, &bests, record.stats.pit_time, mini_sectors)
+            finalized_lap(record.lap, &bests, mini_sectors)
         })
         .collect()
 }
@@ -163,7 +149,6 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
 fn finalized_lap(
     lap: ParsedLap,
     bests: &BestTimes,
-    pit_time: Option<motorsport::Duration>,
     mini_sectors: Option<MiniSectors>,
 ) -> Lap {
     Lap::new_with_mini_sectors(
@@ -180,7 +165,6 @@ fn finalized_lap(
         bests.s2.unwrap_or(0),
         bests.s3.unwrap_or(0),
         lap.elapsed,
-        pit_time,
         mini_sectors,
     )
 }

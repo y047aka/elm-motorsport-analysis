@@ -126,6 +126,7 @@ preprocess_ { carNumber, driver, laps, startPositions, ordersByLap } =
                             laps
                                 |> List.take (count + 1)
                                 |> List.foldl (.time >> (+)) 0
+                        , pitTime = Nothing
                         , miniSectors = Nothing
                         }
                     )

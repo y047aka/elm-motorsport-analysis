@@ -11,15 +11,16 @@ import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.FormulaE
 import Data.Series.Wec
 import Data.Wec as Wec
+import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
-import Motorsport.Car as Car
-import Motorsport.LapExtractor as LapExtractor
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.TimelineEvent as TimelineEvent
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
@@ -53,6 +54,8 @@ type alias Model =
     , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
+    , pendingWecCars : Maybe (List Car)
+    , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
 
 
@@ -75,6 +78,8 @@ init flags maybePagePath =
       , raceControl = RaceControl.placeholder
       , analysis_F1 = Analysis.finished RaceControl.placeholder
       , analysis = Analysis.finished RaceControl.placeholder
+      , pendingWecCars = Nothing
+      , pendingWecLaps = Nothing
       }
     , Effect.none
     )
@@ -89,6 +94,7 @@ type Msg
     | JsonLoaded (Result Http.Error (List F1.Car))
     | FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
+    | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
     | FetchJson_FormulaE { season : String, event : String }
     | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg_F1 RaceControl.Msg
@@ -131,35 +137,45 @@ update msg m =
                         |> Maybe.andThen Series.toEventSummary
                         |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
             in
-            ( { m | eventSummary = eventSummary }
+            ( { m
+                | eventSummary = eventSummary
+                , pendingWecCars = Nothing
+                , pendingWecLaps = Nothing
+              }
             , Effect.fromCmd <|
-                Http.get
-                    { url = eventSummary.jsonPath
-                    , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
-                    }
+                Cmd.batch
+                    [ Http.get
+                        { url = eventSummary.jsonPath
+                        , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
+                        }
+                    , Http.get
+                        { url = lapsPathFor eventSummary.jsonPath
+                        , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
+                        }
+                    ]
             )
 
         JsonLoaded_Wec (Ok decoded) ->
             let
-                rcNew =
-                    decoded.startingGrid
-                        |> List.map Car.fromStartingGrid
-                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
-                        |> RaceControl.fromCars decoded.timelineEvents
-                        |> Maybe.withDefault RaceControl.placeholder
+                cars =
+                    decoded.startingGrid |> List.map Car.fromStartingGrid
 
                 modelEventSummary =
                     m.eventSummary
             in
-            ( { m
-                | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl = rcNew
-                , analysis = Analysis.finished rcNew
-              }
-            , Effect.none
-            )
+            finalizeWecIfReady
+                { m
+                    | eventSummary = { modelEventSummary | name = decoded.name }
+                    , pendingWecCars = Just cars
+                }
 
         JsonLoaded_Wec (Err _) ->
+            ( m, Effect.none )
+
+        LapsLoaded_Wec (Ok rawLaps) ->
+            finalizeWecIfReady { m | pendingWecLaps = Just rawLaps }
+
+        LapsLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
         FetchJson_FormulaE options ->
@@ -179,11 +195,13 @@ update msg m =
 
         JsonLoaded_FormulaE (Ok decoded) ->
             let
-                rcNew =
+                cars =
                     decoded.startingGrid
                         |> List.map Car.fromStartingGrid
-                        |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
-                        |> RaceControl.fromCars decoded.timelineEvents
+                        |> FormulaE.attachLaps decoded.laps
+
+                rcNew =
+                    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -224,6 +242,41 @@ update msg m =
             , Effect.none
             )
 
+
+
+
+lapsPathFor : String -> String
+lapsPathFor jsonPath =
+    if String.endsWith ".json" jsonPath then
+        String.dropRight 5 jsonPath ++ "_laps.json"
+
+    else
+        jsonPath ++ "_laps.json"
+
+
+finalizeWecIfReady : Model -> ( Model, Effect Msg )
+finalizeWecIfReady m =
+    case ( m.pendingWecCars, m.pendingWecLaps ) of
+        ( Just cars, Just rawLaps ) ->
+            let
+                carsWithLaps =
+                    WecLaps.attach rawLaps cars
+
+                rcNew =
+                    RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
+                        |> Maybe.withDefault RaceControl.placeholder
+            in
+            ( { m
+                | raceControl = rcNew
+                , analysis = Analysis.finished rcNew
+                , pendingWecCars = Nothing
+                , pendingWecLaps = Nothing
+              }
+            , Effect.none
+            )
+
+        _ ->
+            ( m, Effect.none )
 
 
 

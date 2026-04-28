@@ -1,15 +1,14 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::lap::Lap;
 use crate::{Class, Driver};
 
 /// 車両情報（ElmのCar型と互換）
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct Car {
     pub meta_data: MetaData,
     pub start_position: i32,
     pub laps: Vec<Lap>,
-    pub status: Status,
 }
 
 impl Car {
@@ -19,21 +18,12 @@ impl Car {
             meta_data,
             start_position,
             laps,
-            status: Status::PreRace,
         }
-    }
-
-    pub fn has_retired(&self) -> bool {
-        self.status.has_retired()
-    }
-
-    pub fn set_status(&mut self, status: Status) {
-        self.status = status;
     }
 }
 
 /// 車両メタデータ
-#[derive(Debug, Clone, PartialEq, Deserialize, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetaData {
     pub car_number: CarNumber,
@@ -67,51 +57,9 @@ impl MetaData {
 /// 車両番号の型エイリアス
 pub type CarNumber = String;
 
-/// 車両のステータス
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub enum Status {
-    PreRace,
-    Racing,
-    Checkered,
-    Retired,
-}
-
-impl Status {
-    pub fn has_retired(&self) -> bool {
-        matches!(self, Status::Retired)
-    }
-}
-
-impl std::fmt::Display for Status {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Status::PreRace => write!(f, "Pre-Race"),
-            Status::Racing => write!(f, "Racing"),
-            Status::Checkered => write!(f, "Checkered"),
-            Status::Retired => write!(f, "Retired"),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_status_has_retired() {
-        assert!(!Status::PreRace.has_retired());
-        assert!(!Status::Racing.has_retired());
-        assert!(!Status::Checkered.has_retired());
-        assert!(Status::Retired.has_retired());
-    }
-
-    #[test]
-    fn test_status_to_string() {
-        assert_eq!(Status::PreRace.to_string(), "Pre-Race");
-        assert_eq!(Status::Racing.to_string(), "Racing");
-        assert_eq!(Status::Checkered.to_string(), "Checkered");
-        assert_eq!(Status::Retired.to_string(), "Retired");
-    }
 
     #[test]
     fn test_metadata_creation() {
@@ -193,8 +141,6 @@ mod tests {
         assert_eq!(car.meta_data.class, Class::HYPERCAR);
         assert_eq!(car.start_position, 3);
         assert_eq!(car.laps.len(), 2);
-        assert_eq!(car.status, Status::PreRace);
-        assert!(!car.has_retired());
     }
 
     #[test]
@@ -212,20 +158,10 @@ mod tests {
 
         let car = Car::new(metadata, 1, vec![]);
 
-        // JSONシリアライゼーションのテスト
-        let json = serde_json::to_string(&car);
-        assert!(json.is_ok());
-
-        // JSONデシリアライゼーションのテスト
-        let json_str = json.unwrap();
-        let deserialized_car: Result<Car, _> = serde_json::from_str(&json_str);
-        assert!(deserialized_car.is_ok());
-
-        let deserialized = deserialized_car.unwrap();
-        assert_eq!(deserialized.meta_data.car_number, car.meta_data.car_number);
-        assert_eq!(deserialized.meta_data.team, car.meta_data.team);
-        assert_eq!(deserialized.meta_data.class, car.meta_data.class);
-        assert_eq!(deserialized.start_position, car.start_position);
-        assert_eq!(deserialized.status, car.status);
+        let json = serde_json::to_string(&car).unwrap();
+        assert!(json.contains("\"carNumber\":\"12\""));
+        assert!(json.contains("\"team\":\"Hertz Team JOTA\""));
+        assert!(json.contains("\"manufacturer\":\"Porsche\""));
+        assert!(json.contains("\"start_position\":1"));
     }
 }

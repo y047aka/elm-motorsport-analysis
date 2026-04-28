@@ -41,6 +41,7 @@ type alias Lap =
     , s2_best : Duration
     , s3_best : Duration
     , elapsed : Duration
+    , pitTime : Maybe Duration
     , miniSectors : Maybe MiniSectors
     }
 
@@ -86,6 +87,7 @@ empty =
     , s3_best = 0
     , best = 0
     , elapsed = 0
+    , pitTime = Nothing
     , miniSectors = Nothing
     }
 

@@ -1,169 +1,102 @@
-module Data.FormulaE exposing
-    ( Event
-    , eventDecoder, lapDecoder
-    , attachLaps
+module Data.Wec.Laps exposing
+    ( RawLap
+    , decoder
+    , attach
     )
 
 {-|
 
-@docs Event
-@docs eventDecoder, lapDecoder
-@docs attachLaps
+@docs RawLap
+@docs decoder
+@docs attach
 
 -}
 
 import Dict exposing (Dict)
-import Json.Decode as Decode exposing (Decoder, bool, field, float, int, list, string)
+import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (hardcoded, required)
+import Json.Decode.Pipeline exposing (required)
 import List.Extra
-import Motorsport.Car as Car exposing (Car, CarNumber, Status(..))
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Car exposing (Car, CarNumber)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap as MotorsportLap
-import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Lap exposing (Lap)
 
 
-type alias Event =
-    { name : String
-    , laps : List Lap
-    , startingGrid : List StartingGridItem
-    }
-
-
-type alias StartingGridItem =
-    { position : Int
-    , car : Car.Metadata
-    }
-
-
-type alias Lap =
+type alias RawLap =
     { carNumber : String
-    , driverNumber : Int
-    , lapNumber : Int
-    , lapTime : RaceClock
-    , lapImprovement : Int
-    , crossingFinishLineInPit : String
-    , s1 : Maybe RaceClock
-    , s1Improvement : Int
-    , s2 : Maybe RaceClock
-    , s2Improvement : Int
-    , s3 : Maybe RaceClock
-    , s3Improvement : Int
-    , kph : Float
-    , elapsed : RaceClock
-    , hour : RaceClock
-    , s1Large : String
-    , s2Large : String
-    , s3Large : String
-    , topSpeed : Maybe Float
     , driverName : String
-    , pitTime : Maybe RaceClock
-    , team : String
-    , manufacturer : String
-    , power : String
-    , fanboost : Bool
-    , attackMode : Bool
+    , lapNumber : Int
+    , lapTime : Duration
+    , s1 : Maybe Duration
+    , s2 : Maybe Duration
+    , s3 : Maybe Duration
+    , elapsed : Duration
+    , pitTime : Maybe Duration
     }
 
 
-type alias RaceClock =
-    Duration
+
+-- DECODE
 
 
-
--- DECODER
-
-
-eventDecoder : Decoder Event
-eventDecoder =
-    Decode.map3 Event
-        (field "name" string)
-        (field "laps" (list lapDecoder))
-        (field "startingGrid" (list startingGridItemDecoder))
+decoder : Decoder (List RawLap)
+decoder =
+    Decode.list rawLapDecoder
 
 
-startingGridItemDecoder : Decoder StartingGridItem
-startingGridItemDecoder =
-    Decode.map2 StartingGridItem
-        (field "position" int)
-        (field "car" carMetadataDecoder)
-
-
-lapDecoder : Decoder Lap
-lapDecoder =
-    Decode.succeed Lap
+rawLapDecoder : Decoder RawLap
+rawLapDecoder =
+    Decode.succeed RawLap
         |> required "carNumber" string
-        |> required "driverNumber" int
-        |> required "lapNumber" int
-        |> required "lapTime" raceClockDecoder
-        |> required "lapImprovement" int
-        |> required "crossingFinishLineInPit" string
-        |> required "s1" (Decode.maybe raceClockDecoder)
-        |> required "s1Improvement" int
-        |> required "s2" (Decode.maybe raceClockDecoder)
-        |> required "s2Improvement" int
-        |> required "s3" (Decode.maybe raceClockDecoder)
-        |> required "s3Improvement" int
-        |> required "kph" float
-        |> required "elapsed" raceClockDecoder
-        |> required "hour" raceClockDecoder
-        -- TODO: 不要であれば削除
-        |> hardcoded "s1Large"
-        |> hardcoded "s2Large"
-        |> hardcoded "s3Large"
-        |> required "topSpeed" (Decode.map String.toFloat string)
         |> required "driverName" string
-        |> required "pitTime" (Decode.maybe raceClockDecoder)
-        |> required "team" string
-        |> required "manufacturer" string
-        |> required "power" string
-        |> required "fanboost" bool
-        |> required "attackMode" bool
+        |> required "lapNumber" int
+        |> required "lapTime" durationDecoder
+        |> required "s1" optionalDurationDecoder
+        |> required "s2" optionalDurationDecoder
+        |> required "s3" optionalDurationDecoder
+        |> required "elapsed" durationDecoder
+        |> required "pitTime" optionalDurationDecoder
 
 
-raceClockDecoder : Decoder Duration
-raceClockDecoder =
-    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a RaceClock")
+durationDecoder : Decoder Duration
+durationDecoder =
+    string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
 
 
-classDecoder : Decoder Class
-classDecoder =
-    -- Formula Eではクラスがないので常にNoneにしておく
-    Decode.succeed Class.none
+optionalDurationDecoder : Decoder (Maybe Duration)
+optionalDurationDecoder =
+    string
+        |> Decode.map
+            (\s ->
+                if String.isEmpty s then
+                    Nothing
 
-
-carMetadataDecoder : Decoder Car.Metadata
-carMetadataDecoder =
-    Decode.succeed Car.Metadata
-        |> required "carNumber" string
-        |> required "drivers" (Decode.list driverDecoder)
-        |> required "class" classDecoder
-        |> required "group" string
-        |> required "team" string
-        |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
-
-
-driverDecoder : Decoder Driver
-driverDecoder =
-    Decode.map Driver
-        (field "name" string)
+                else
+                    Duration.fromString s
+            )
 
 
 
 -- ATTACH
 
 
-{-| Attach laps to cars: per car, accumulate best lap / sector times and assign
-0-based per-lap positions across all cars.
+{-| Attach raw laps to cars.
+
+Per car: groups raws by `carNumber`, sorts by `lapNumber`, and accumulates
+best lap / sector times. Then assigns 0-based per-lap positions across all
+cars by sorting `elapsed` ascending for each lap number.
+
+Mirrors the Rust CLI's `process_laps` + `position_for_lap`
+(`cli/cli/src/stages/transform.rs`).
+
 -}
-attachLaps : List Lap -> List Car -> List Car
-attachLaps laps cars =
+attach : List RawLap -> List Car -> List Car
+attach rawLaps cars =
     let
-        lapsByCarNumber : Dict CarNumber (List MotorsportLap.Lap)
+        lapsByCarNumber : Dict CarNumber (List Lap)
         lapsByCarNumber =
-            laps
+            rawLaps
                 |> groupBy .carNumber
                 |> Dict.map (\_ raws -> finalizeCarLaps raws)
     in
@@ -196,7 +129,7 @@ groupBy keyFn list =
         list
 
 
-finalizeCarLaps : List Lap -> List MotorsportLap.Lap
+finalizeCarLaps : List RawLap -> List Lap
 finalizeCarLaps raws =
     raws
         |> List.sortBy .lapNumber
@@ -231,7 +164,7 @@ minMaybe current new =
             Just (Basics.min c n)
 
 
-accumulate : Lap -> ( Bests, List MotorsportLap.Lap ) -> ( Bests, List MotorsportLap.Lap )
+accumulate : RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
 accumulate raw ( bests, acc ) =
     let
         newBests =
@@ -260,6 +193,10 @@ accumulate raw ( bests, acc ) =
             }
     in
     ( newBests, lap :: acc )
+
+
+
+-- POSITIONS
 
 
 assignPositions : List Car -> List Car

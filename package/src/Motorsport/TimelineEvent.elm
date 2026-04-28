@@ -1,11 +1,13 @@
 module Motorsport.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
+    , fromCars
     , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
     )
 
 {-|
 
 @docs TimelineEvent, EventType, CarEventType
+@docs fromCars
 @docs decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
 
 -}
@@ -13,7 +15,8 @@ module Motorsport.TimelineEvent exposing
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Car exposing (CarNumber)
+import List.Extra
+import Motorsport.Car exposing (Car, CarNumber)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
@@ -35,6 +38,158 @@ type CarEventType
     | PitOut { lapNumber : Int, duration : Duration }
     | Retirement
     | Checkered
+
+
+
+-- BUILD
+
+
+{-| Build a sorted list of timeline events from a list of cars.
+
+Emits, in this order:
+
+1.  RaceStart at time 0
+2.  Per-car Start events at time 0 (with `pitTime` stripped from the embedded lap)
+3.  Per-lap LapCompleted events for non-final laps (with `pitTime` stripped from `nextLap`)
+4.  PitIn / PitOut events for laps whose `pitTime` is `Just`
+5.  Retirement / Checkered for the final lap, depending on the rounded time limit
+
+The result is sorted by `eventTime` (stable).
+
+-}
+fromCars : List Car -> List TimelineEvent
+fromCars cars =
+    let
+        timeLimit =
+            calcTimeLimit cars
+
+        events =
+            [ raceStartEvent ]
+                ++ startEvents cars
+                ++ lapCompletedEvents cars
+                ++ pitEvents cars
+                ++ terminalEvents timeLimit cars
+    in
+    List.sortBy .eventTime events
+
+
+calcTimeLimit : List Car -> Duration
+calcTimeLimit cars =
+    cars
+        |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
+        |> List.maximum
+        |> Maybe.map (\t -> (t // (60 * 60 * 1000)) * 60 * 60 * 1000)
+        |> Maybe.withDefault 0
+
+
+raceStartEvent : TimelineEvent
+raceStartEvent =
+    { eventTime = 0, eventType = RaceStart }
+
+
+startEvents : List Car -> List TimelineEvent
+startEvents cars =
+    cars
+        |> List.filterMap
+            (\car ->
+                List.head car.laps
+                    |> Maybe.map
+                        (\firstLap ->
+                            { eventTime = 0
+                            , eventType =
+                                CarEvent car.metadata.carNumber
+                                    (Start { currentLap = stripPitTime firstLap })
+                            }
+                        )
+            )
+
+
+lapCompletedEvents : List Car -> List TimelineEvent
+lapCompletedEvents cars =
+    cars
+        |> List.concatMap
+            (\car ->
+                let
+                    laps =
+                        car.laps
+
+                    pairs =
+                        List.map2 Tuple.pair laps (List.drop 1 laps)
+                in
+                pairs
+                    |> List.map
+                        (\( lap, nextLap ) ->
+                            { eventTime = lap.elapsed
+                            , eventType =
+                                CarEvent car.metadata.carNumber
+                                    (LapCompleted lap.lap { nextLap = stripPitTime nextLap })
+                            }
+                        )
+            )
+
+
+pitEvents : List Car -> List TimelineEvent
+pitEvents cars =
+    cars
+        |> List.concatMap
+            (\car ->
+                car.laps
+                    |> List.concatMap
+                        (\lap ->
+                            case lap.pitTime of
+                                Just pitDuration ->
+                                    let
+                                        pitInTime =
+                                            Basics.max 0 (lap.elapsed - pitDuration)
+                                    in
+                                    [ { eventTime = pitInTime
+                                      , eventType =
+                                            CarEvent car.metadata.carNumber
+                                                (PitIn { lapNumber = lap.lap, duration = pitDuration })
+                                      }
+                                    , { eventTime = lap.elapsed
+                                      , eventType =
+                                            CarEvent car.metadata.carNumber
+                                                (PitOut { lapNumber = lap.lap, duration = pitDuration })
+                                      }
+                                    ]
+
+                                Nothing ->
+                                    []
+                        )
+            )
+
+
+terminalEvents : Duration -> List Car -> List TimelineEvent
+terminalEvents timeLimit cars =
+    cars
+        |> List.filterMap
+            (\car ->
+                List.Extra.last car.laps
+                    |> Maybe.map
+                        (\finalLap ->
+                            let
+                                carEventType =
+                                    if finalLap.elapsed < timeLimit then
+                                        Retirement
+
+                                    else
+                                        Checkered
+                            in
+                            { eventTime = finalLap.elapsed
+                            , eventType = CarEvent car.metadata.carNumber carEventType
+                            }
+                        )
+            )
+
+
+stripPitTime : Lap -> Lap
+stripPitTime lap =
+    { lap | pitTime = Nothing }
+
+
+
+-- DECODE
 
 
 decoder : Decoder TimelineEvent
@@ -99,6 +254,7 @@ lapDecoder =
         |> required "s2_best" durationDecoder
         |> required "s3_best" durationDecoder
         |> required "elapsed" durationDecoder
+        |> optional "pit_time" (Decode.maybe durationDecoder) Nothing
         |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
 
 
