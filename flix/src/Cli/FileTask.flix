@@ -2,6 +2,7 @@ pub mod Cli.FileTask {
 
     use Cli.Args
     use Cli.Errors.CliError
+    use Cli.Errors.liftFile
     use Util.Files
 
     pub type alias FileTask = {
@@ -27,9 +28,9 @@ pub mod Cli.FileTask {
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
         forM(
-            exists <- Files.exists(path);
+            exists <- liftFile(Files.exists(path));
             _      <- if (exists) Ok(()) else Err(CliError.PathNotFound(path));
-            isDir  <- Files.isDirectory(path);
+            isDir  <- liftFile(Files.isDirectory(path));
             tasks  <- if (isDir) resolveDir(path, outputOverride)
                       else Ok(make(path, outputOverride) :: Nil)
         ) yield tasks
@@ -39,7 +40,7 @@ pub mod Cli.FileTask {
             case Some(_) => Err(CliError.OutputWithDirectory)
             case None    =>
                 forM(
-                    csvPaths <- Files.walkCsvFiles(dirPath);
+                    csvPaths <- liftFile(Files.walkCsvFiles(dirPath));
                     csvFiles <- Ok(csvPaths |> List.map(p -> make(p, None)));
                     result   <- if (List.isEmpty(csvFiles))
                                     Err(CliError.NoCsvFiles(dirPath))
