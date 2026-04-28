@@ -48,13 +48,13 @@ mod TestMetadata {
             mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
-        // startingGrid は CSV 出現順 (12, 7) のまま、各々の startPosition を更新済み。
+        // startingGrid は CSV 出現順 (12, 7) のまま、各々の position を更新済み。
         match meta#startingGrid {
-            case car12 :: car7 :: Nil =>
-                Assert.assertTrue(car12#carNumber == "12");
-                Assert.assertTrue(car12#startPosition == 1);
-                Assert.assertTrue(car7#carNumber == "7");
-                Assert.assertTrue(car7#startPosition == 0)
+            case e12 :: e7 :: Nil =>
+                Assert.assertTrue(e12#car#carNumber == "12");
+                Assert.assertTrue(e12#position == 1);
+                Assert.assertTrue(e7#car#carNumber == "7");
+                Assert.assertTrue(e7#position == 0)
             case _ => Assert.assertTrue(false)
         }
 
@@ -66,8 +66,8 @@ mod TestMetadata {
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         match meta#startingGrid {
-            case car :: Nil =>
-                Assert.assertTrue(car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
+            case entry :: Nil =>
+                Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
             case _ => Assert.assertTrue(false)
         }
 
@@ -80,8 +80,8 @@ mod TestMetadata {
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         match meta#startingGrid {
-            case car :: Nil =>
-                Assert.assertTrue(car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
+            case entry :: Nil =>
+                Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
             case _ => Assert.assertTrue(false)
         }
 
@@ -92,24 +92,24 @@ mod TestMetadata {
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         match meta#startingGrid {
-            case car :: Nil =>
-                Assert.assertTrue(car#class == "HYPERCAR");
-                Assert.assertTrue(car#group == "H");
-                Assert.assertTrue(car#team == "Toyota Gazoo Racing");
-                Assert.assertTrue(car#manufacturer == "Toyota")
+            case entry :: Nil =>
+                Assert.assertTrue(entry#car#class == "HYPERCAR");
+                Assert.assertTrue(entry#car#group == "H");
+                Assert.assertTrue(entry#car#team == "Toyota Gazoo Racing");
+                Assert.assertTrue(entry#car#manufacturer == "Toyota")
             case _ => Assert.assertTrue(false)
         }
 
     @Test
     def testCarWithoutLap1KeepsZeroPosition(): Unit \ Assert =
-        // ラップ 1 が無い車 (lap 2 のみ) は startPosition = 0 のままになる。
+        // ラップ 1 が無い車 (lap 2 のみ) は position = 0 のままになる。
         let laps =
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         match meta#startingGrid {
-            case car :: Nil =>
-                Assert.assertTrue(car#startPosition == 0)
+            case entry :: Nil =>
+                Assert.assertTrue(entry#position == 0)
             case _ => Assert.assertTrue(false)
         }
 

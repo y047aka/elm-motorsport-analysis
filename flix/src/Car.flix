@@ -1,17 +1,16 @@
-/// スタートグリッド計算用の車両集約型。1 つの `carNumber` ごとに
-/// ドライバー一覧 (CSV 出現順) と車両メタを保持する。
-/// Rust 版 `motorsport::car::Car` + `MetaData` の組合せに対応する。
+/// 車両のドメインメタデータ。Rust 版 `motorsport::car::MetaData`
+/// (cli/motorsport/src/car.rs L26-35) に対応する純粋なドメイン型。
+/// スタートグリッド計算用の中間状態 (lap1 elapsed, position) は
+/// `Metadata.flix` 側の専用型に分離されており、ここには含まれない。
 mod Car {
 
     pub type alias Car = {
-        carNumber     = String,
-        drivers       = List[String],
-        class         = String,
-        group         = String,
-        team          = String,
-        manufacturer  = String,
-        lap1Elapsed   = Option[Int32],
-        startPosition = Int32
+        carNumber    = String,
+        drivers      = List[String],
+        class        = String,
+        group        = String,
+        team         = String,
+        manufacturer = String
     }
 
 }

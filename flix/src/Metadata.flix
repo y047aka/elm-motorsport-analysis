@@ -1,6 +1,7 @@
 /// メタデータ JSON (`{stem}.json`) のドメインモデルとレンダラ。
-/// Rust 版 `cli::stages::output::MetadataOutput` (cli/src/stages/output.rs
-/// L61-112) と `cli::stages::transform::build_cars` / `start_positions`
+/// Rust 版 `cli::stages::output::MetadataOutput` + `StartingGrid`
+/// (cli/src/stages/output.rs L61-112) と
+/// `cli::stages::transform::build_cars` / `start_positions`
 /// (transform.rs L46-74, L212-233) を 1 モジュールに合体させたもの。
 mod Metadata {
 
@@ -8,56 +9,66 @@ mod Metadata {
     use Car.Car
     use RawLap.RawLap
 
+    pub type alias StartingGrid = {
+        position = Int32,
+        car      = Car
+    }
+
     pub type alias Metadata = {
         name         = String,
-        startingGrid = List[Car]
+        startingGrid = List[StartingGrid]
     }
 
     /// CSV 行から作った `RawLap[]` と event id から `Metadata` を組み立てる。
     pub def fromRawLaps(eventId: String, rawLaps: List[RawLap]): Metadata =
-        let cars = buildCars(rawLaps);
-        let withPositions = assignStartPositions(cars);
+        let builds = buildCars(rawLaps);
         {
             name         = Events.displayName(eventId),
-            startingGrid = withPositions
+            startingGrid = assignStartPositions(builds)
         }
 
-    /// CSV 出現順を保ったまま `RawLap[]` を `Car[]` に集約する。
-    /// 同じ `carNumber` の追加ラップは drivers と lap1Elapsed を更新する。
-    def buildCars(rawLaps: List[RawLap]): List[Car] =
-        rawLaps |> List.foldLeft((acc, lap) -> upsertCar(acc, lap), Nil)
+    /// `Car` (純ドメイン) に「スタートグリッド計算用の lap1 elapsed」を添えた
+    /// 内部用の中間型。`Metadata.flix` の外には漏れない。
+    type alias CarBuild = {
+        car         = Car,
+        lap1Elapsed = Option[Int32]
+    }
 
-    def upsertCar(acc: List[Car], lap: RawLap): List[Car] =
-        if (List.exists(c -> c#carNumber == lap#carNumber, acc))
-            acc |> List.map(c ->
-                if (c#carNumber == lap#carNumber) updateCarWithLap(c, lap) else c
+    /// CSV 出現順を保ったまま `RawLap[]` を `CarBuild[]` に集約する。
+    /// 同じ `carNumber` の追加ラップは drivers と lap1Elapsed を更新する。
+    def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
+        rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
+
+    def upsertBuild(acc: List[CarBuild], lap: RawLap): List[CarBuild] =
+        if (List.exists(b -> b#car#carNumber == lap#carNumber, acc))
+            acc |> List.map(b ->
+                if (b#car#carNumber == lap#carNumber) updateBuildWithLap(b, lap) else b
             )
         else
-            List.append(acc, carFromLap(lap) :: Nil)
+            List.append(acc, buildFromLap(lap) :: Nil)
 
-    def carFromLap(lap: RawLap): Car =
+    def buildFromLap(lap: RawLap): CarBuild =
         // 注: class/group/team/manufacturer は初出ラップの値をそのまま使う。
         // Rust 版 `transform.rs` L102-112 では未知 class 文字列を `Class::None`
         // に丸める正規化があるが、flix 版は CSV 生値をそのまま保持する
         // (Elm 側で生値消費しても問題ないため初版では非対応)。
-        {
-            carNumber     = lap#carNumber,
-            drivers       = lap#driverName :: Nil,
-            class         = lap#class,
-            group         = lap#group,
-            team          = lap#team,
-            manufacturer  = lap#manufacturer,
-            lap1Elapsed   = lap1Elapsed(lap),
-            startPosition = 0
-        }
+        let car: Car = {
+            carNumber    = lap#carNumber,
+            drivers      = lap#driverName :: Nil,
+            class        = lap#class,
+            group        = lap#group,
+            team         = lap#team,
+            manufacturer = lap#manufacturer
+        };
+        { car = car, lap1Elapsed = lap1Elapsed(lap) }
 
-    def updateCarWithLap(car: Car, lap: RawLap): Car =
-        let newDrivers = appendUnique(car#drivers, lap#driverName);
-        let newLap1 = match car#lap1Elapsed {
-            case Some(_) => car#lap1Elapsed
+    def updateBuildWithLap(build: CarBuild, lap: RawLap): CarBuild =
+        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driverName) | build#car };
+        let newLap1 = match build#lap1Elapsed {
+            case Some(_) => build#lap1Elapsed
             case None    => lap1Elapsed(lap)
         };
-        { drivers = newDrivers, lap1Elapsed = newLap1 | car }
+        { car = updatedCar, lap1Elapsed = newLap1 }
 
     def lap1Elapsed(lap: RawLap): Option[Int32] =
         if (lap#lapNumber == 1) Duration.toMillis(lap#elapsed)
@@ -67,22 +78,24 @@ mod Metadata {
         if (List.exists(s -> s == x, xs)) xs
         else List.append(xs, x :: Nil)
 
-    /// ラップ1 の elapsed (ms) で 0-based 順位を割り当てる。
-    /// ラップ1 が無い車は `startPosition = 0` のまま (Rust transform.rs L224-232 と同挙動)。
-    def assignStartPositions(cars: List[Car]): List[Car] =
-        let withLap1 = cars |> List.filterMap(c ->
-            match c#lap1Elapsed {
-                case Some(ms) => Some((c#carNumber, ms))
+    /// ラップ1 の elapsed (ms) で 0-based 順位を割り当て、
+    /// `CarBuild[]` を出力用 `StartingGrid[]` に変換する。
+    /// ラップ1 が無い車は `position = 0` (Rust transform.rs L224-232 と同挙動)。
+    def assignStartPositions(builds: List[CarBuild]): List[StartingGrid] =
+        let withLap1 = builds |> List.filterMap(b ->
+            match b#lap1Elapsed {
+                case Some(ms) => Some((b#car#carNumber, ms))
                 case None     => None
             }
         );
         let sorted = List.sortBy(p -> match p { case (_, ms) => ms }, withLap1);
         let positions = List.map(p -> match p { case (i, (cn, _)) => (cn, i) }, withIndex(sorted));
-        cars |> List.map(c ->
-            match List.find(p -> match p { case (cn, _) => cn == c#carNumber }, positions) {
-                case Some((_, p)) => { startPosition = p | c }
-                case None         => c
-            }
+        builds |> List.map(b ->
+            let pos = match List.find(p -> match p { case (cn, _) => cn == b#car#carNumber }, positions) {
+                case Some((_, p)) => p
+                case None         => 0
+            };
+            { position = pos, car = b#car }
         )
 
     def withIndex(xs: List[a]): List[(Int32, a)] =
@@ -94,14 +107,14 @@ mod Metadata {
     pub def toJson(meta: Metadata): Json.JsonValue =
         JsonObject(
             ("name",         JsonString(meta#name)) ::
-            ("startingGrid", JsonArray(meta#startingGrid |> List.map(toGridEntry))) ::
+            ("startingGrid", JsonArray(meta#startingGrid |> List.map(toGridEntryJson))) ::
             Nil
         )
 
-    def toGridEntry(car: Car): Json.JsonValue =
+    def toGridEntryJson(entry: StartingGrid): Json.JsonValue =
         JsonObject(
-            ("position", JsonInt(car#startPosition)) ::
-            ("car",      carToJson(car)) ::
+            ("position", JsonInt(entry#position)) ::
+            ("car",      carToJson(entry#car)) ::
             Nil
         )
 
