@@ -1,4 +1,6 @@
-mod TestDuration {
+mod Util.TestDuration {
+
+    use Util.Duration
 
     @Test
     def testNormalizeKeepsSecondsOnly(): Unit \ Assert =

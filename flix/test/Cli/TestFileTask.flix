@@ -1,4 +1,6 @@
-mod TestFileTask {
+mod Cli.TestFileTask {
+
+    use Cli.FileTask
 
     @Test
     def testMakeWithOutputOverride(): Unit \ Assert =

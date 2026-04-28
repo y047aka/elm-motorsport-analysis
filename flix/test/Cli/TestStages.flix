@@ -1,4 +1,6 @@
-mod TestStages {
+mod Cli.TestStages {
+
+    use Cli.Stages
 
     /// Rust 側 integration.rs L500-505 の create_test_csv_data と同等の 3 行データ。
     /// セミコロン区切り、22 列以上のフィールド。

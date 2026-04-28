@@ -1,4 +1,6 @@
-mod TestEvents {
+mod Domain.TestEvents {
+
+    use Domain.Events
 
     @Test
     def testQatar(): Unit \ Assert =

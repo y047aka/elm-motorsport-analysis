@@ -1,6 +1,8 @@
-mod FileTask {
+mod Cli.FileTask {
 
-    use Cli.CliError
+    use Cli.Args
+    use Cli.Errors.CliError
+    use Util.Files
 
     pub type alias FileTask = {
         inputPath = String,

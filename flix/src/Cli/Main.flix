@@ -1,5 +1,11 @@
 use Sys.Env
-use Cli.CliError
+use Cli.Args
+use Cli.Errors.CliError
+use Cli.Exit
+use Cli.FileTask
+use Cli.Log
+use Cli.Stages
+use Util.Files
 
 pub type alias ProcessingReport = {
     lapCount = Int32,
@@ -30,7 +36,7 @@ def main(): Unit \ {Env, IO} =
                     summaryExitCode(summary)
             }
     };
-    Cli.exit(code)
+    Exit.exit(code)
 
 def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
     List.foldLeft(

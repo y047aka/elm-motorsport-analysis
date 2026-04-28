@@ -1,4 +1,4 @@
-mod Csv {
+mod Util.Csv {
 
     pub type alias CsvRow = List[String]
 

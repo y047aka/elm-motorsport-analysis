@@ -1,6 +1,6 @@
-mod Cli {
-
-    import java.lang.System
+/// CLI 全体で共有するエラー型。各サブモジュール (`Cli.FileTask`,
+/// `Util.Files` 等) はここで定義された `CliError` を `Result` の Err 側に詰める。
+mod Cli.Errors {
 
     pub enum CliError with ToString {
         case PathNotFound(String)
@@ -12,10 +12,5 @@ mod Cli {
         case EmptyFile(String)
         case WriteFile(String, String)
     }
-
-    /// JVM を即時終了。`def main(): Int32` で値を返しても stdout に印字
-    /// されるだけで OS exit code にならないため、明示的に呼ぶ必要がある。
-    pub def exit(code: Int32): Unit \ IO =
-        System.exit(code)
 
 }

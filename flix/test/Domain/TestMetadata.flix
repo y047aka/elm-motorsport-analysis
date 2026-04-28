@@ -1,4 +1,8 @@
-mod TestMetadata {
+mod Domain.TestMetadata {
+
+    use Domain.Metadata
+    use Domain.RawLap
+    use Util.Json
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
     def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap.RawLap =

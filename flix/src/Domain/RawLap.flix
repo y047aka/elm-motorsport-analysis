@@ -11,9 +11,12 @@
 /// で正規形 (`"0:01:41.031"` -> `"1:41.031"` 等) に整形される。一方
 /// `hour` は CSV 上の時刻表記 (`"HH:MM:SS.sss"`) — duration ではないので
 /// 正規化を通さず文字列そのままを保持する。
-mod RawLap {
+mod Domain.RawLap {
 
-    use Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
+    use Util.Csv
+    use Util.Duration
+    use Util.Json
+    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
     pub type alias RawLap = {
         carNumber = String,

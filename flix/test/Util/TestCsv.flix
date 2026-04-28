@@ -1,4 +1,8 @@
-mod TestCsv {
+mod Util.TestCsv {
+
+    use Util.Csv
+    use Util.Json
+    use Domain.RawLap
 
     @Test
     def testParseRowSplitsBySemicolon(): Unit \ Assert =

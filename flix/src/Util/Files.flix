@@ -1,6 +1,6 @@
-mod Files {
+mod Util.Files {
 
-    use Cli.CliError
+    use Cli.Errors.CliError
 
     pub def readLines(path: String): Result[CliError, List[String]] \ IO =
         Fs.FileRead.runWithIO(() ->

@@ -5,7 +5,7 @@
 /// Rust 版との差異: Rust 版は未知 ID 初出時に `log::warn!` を出力する
 /// (events.rs L34-41 の `warn_once`)。flix 版は純関数性を保つため警告を
 /// 省略しており、未知 ID は静かに pass-through する。
-mod Events {
+mod Domain.Events {
 
     pub def displayName(eventId: String): String =
         match eventId {
