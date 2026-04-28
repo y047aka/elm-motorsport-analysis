@@ -36,6 +36,10 @@ mod Metadata {
             List.append(acc, carFromLap(lap) :: Nil)
 
     def carFromLap(lap: RawLap): Car =
+        // 注: class/group/team/manufacturer は初出ラップの値をそのまま使う。
+        // Rust 版 `transform.rs` L102-112 では未知 class 文字列を `Class::None`
+        // に丸める正規化があるが、flix 版は CSV 生値をそのまま保持する
+        // (Elm 側で生値消費しても問題ないため初版では非対応)。
         {
             carNumber     = lap#carNumber,
             drivers       = lap#driverName :: Nil,
@@ -72,39 +76,19 @@ mod Metadata {
                 case None     => None
             }
         );
-        let sorted = List.sortBy(pairMs, withLap1);
-        let positions = List.map(toPosEntry, withIndex(sorted));
+        let sorted = List.sortBy(p -> match p { case (_, ms) => ms }, withLap1);
+        let positions = List.map(p -> match p { case (i, (cn, _)) => (cn, i) }, withIndex(sorted));
         cars |> List.map(c ->
-            match List.find(p -> matchCarNumber(p, c#carNumber), positions) {
-                case Some(found) => { startPosition = pairSnd(found) | c }
-                case None        => c
+            match List.find(p -> match p { case (cn, _) => cn == c#carNumber }, positions) {
+                case Some((_, p)) => { startPosition = p | c }
+                case None         => c
             }
         )
 
-    def pairMs(p: (String, Int32)): Int32 =
-        let (_, ms) = p;
-        ms
-
-    def pairSnd(p: (String, Int32)): Int32 =
-        let (_, n) = p;
-        n
-
-    def matchCarNumber(p: (String, Int32), carNumber: String): Bool =
-        let (cn, _) = p;
-        cn == carNumber
-
-    def toPosEntry(p: (Int32, (String, Int32))): (String, Int32) =
-        let (i, pair) = p;
-        let (cn, _) = pair;
-        (cn, i)
-
     def withIndex(xs: List[a]): List[(Int32, a)] =
-        let (result, _) = List.foldLeft(withIndexStep, (Nil, 0), xs);
+        let step = (state, x) -> match state { case (acc, i) => ((i, x) :: acc, i + 1) };
+        let (result, _) = List.foldLeft(step, (Nil, 0), xs);
         List.reverse(result)
-
-    def withIndexStep(state: (List[(Int32, a)], Int32), x: a): (List[(Int32, a)], Int32) =
-        let (acc, i) = state;
-        ((i, x) :: acc, i + 1)
 
     /// メタデータを JSON (Rust `serde_json` 構造体宣言順と同じキー順) に変換。
     pub def toJson(meta: Metadata): Json.JsonValue =
