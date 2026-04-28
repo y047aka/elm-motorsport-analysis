@@ -1,7 +1,6 @@
 use Sys.Env
 use Cli.Args
 use Cli.Errors.CliError
-use Cli.Errors.liftFile
 use Cli.Exit
 use Cli.FileTask
 use Cli.Log
@@ -61,14 +60,14 @@ def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ I
     let lapsPath = task#lapsPath;
     let eventName = task#eventName;
     forM(
-        lines     <- liftFile(Files.readLines(inputPath));
+        lines     <- Files.readLines(inputPath) |> Result.mapErr(CliError.File);
         dataLines <- match lines {
                         case _ :: rest => Ok(rest)
                         case Nil       => Err(CliError.EmptyFile(inputPath))
                      };
         processed <- Ok(Stages.process(eventName, dataLines));
-        _         <- liftFile(Files.writeFile(outputPath, processed#metadataJson));
-        _         <- liftFile(Files.writeFile(lapsPath, processed#lapsJson))
+        _         <- Files.writeFile(outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
+        _         <- Files.writeFile(lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
     ) yield {
         lapCount   = processed#lapCount,
         outputPath = outputPath,

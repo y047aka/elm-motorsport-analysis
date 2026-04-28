@@ -4,7 +4,7 @@
 pub mod Util.Files {
 
     /// ファイル I/O 操作で発生しうる低レベルエラー。CLI 側はこれを
-    /// `Cli.Errors.CliError` に変換 (`Cli.Errors.liftFile`) して扱う。
+    /// `Cli.Errors.CliError.File(_)` でラップして扱う。
     pub enum FileError with ToString {
         case ReadError(String, String)   // path, underlying message
         case WriteError(String, String)
