@@ -20,6 +20,7 @@ import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car
 import Motorsport.LapExtractor as LapExtractor
 import Motorsport.RaceControl as RaceControl
+import Motorsport.TimelineEvent as TimelineEvent
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
@@ -141,11 +142,13 @@ update msg m =
 
         JsonLoaded_Wec (Ok decoded) ->
             let
-                rcNew =
+                cars =
                     decoded.startingGrid
                         |> List.map Car.fromStartingGrid
                         |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
-                        |> RaceControl.fromCars decoded.timelineEvents
+
+                rcNew =
+                    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =
@@ -179,11 +182,13 @@ update msg m =
 
         JsonLoaded_FormulaE (Ok decoded) ->
             let
-                rcNew =
+                cars =
                     decoded.startingGrid
                         |> List.map Car.fromStartingGrid
                         |> LapExtractor.extractLapsFromTimelineEvents decoded.timelineEvents
-                        |> RaceControl.fromCars decoded.timelineEvents
+
+                rcNew =
+                    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
                         |> Maybe.withDefault RaceControl.placeholder
 
                 modelEventSummary =

@@ -36,6 +36,7 @@ suite =
                                             , s2_best = 29928
                                             , s3_best = 42282
                                             , elapsed = 95365
+                                            , pitTime = Nothing
                                             , miniSectors = Nothing
                                             }
                                         }
@@ -59,6 +60,7 @@ suite =
                                             , s2_best = 29000
                                             , s3_best = 42210
                                             , elapsed = 189575 -- 3:09.575
+                                            , pitTime = Nothing
                                             , miniSectors = Nothing
                                             }
                                         }
