@@ -5,6 +5,7 @@ mod FileTask {
     pub type alias FileTask = {
         inputPath = String,
         outputPath = String,
+        lapsPath = String,
         eventName = String
     }
 
@@ -16,6 +17,7 @@ mod FileTask {
         {
             inputPath   = inputPath,
             outputPath  = outputPath,
+            lapsPath    = derivedLapsPath(outputPath),
             eventName   = eventName(inputPath)
         }
 
@@ -49,6 +51,28 @@ mod FileTask {
             String.dropRight(4, inputPath) + ".json"
         else
             inputPath + ".json"
+
+    /// `output.json` -> `output_laps.json`、`x.bin` -> `x_laps.json`、
+    /// 拡張子なし `x` -> `x_laps.json`。Rust 版 `cli::FileTask::laps_path`
+    /// (cli/src/lib.rs L73-81) と同じく拡張子に関わらず `_laps.json` を付与。
+    def derivedLapsPath(outputPath: String): String =
+        let pathParts = String.split({regex = "/"}, outputPath);
+        let baseName = pathParts |> List.last |> Option.getWithDefault(outputPath);
+        let dirPart = match pathParts {
+            case _ :: _ :: _ =>
+                let dirs = pathParts |> List.reverse |> List.drop(1) |> List.reverse;
+                List.join("/", dirs) + "/"
+            case _ => ""
+        };
+        let stem = stripLastExtension(baseName);
+        "${dirPart}${stem}_laps.json"
+
+    def stripLastExtension(name: String): String =
+        let segments = String.split({regex = "\\."}, name);
+        match segments {
+            case _ :: _ :: _ => segments |> List.reverse |> List.drop(1) |> List.reverse |> List.join(".")
+            case _           => name
+        }
 
     def eventName(inputPath: String): String =
         let parts = String.split({regex = "/"}, inputPath);

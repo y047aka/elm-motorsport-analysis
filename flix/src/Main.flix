@@ -3,7 +3,8 @@ use Cli.CliError
 
 pub type alias ProcessingReport = {
     lapCount = Int32,
-    outputPath = String
+    outputPath = String,
+    lapsPath = String
 }
 
 pub type alias RunSummary = {
@@ -35,7 +36,9 @@ def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
     List.foldLeft(
         (summary, task) -> match processFile(task) {
             case Ok(report) =>
-                Log.info("${task#eventName}: Wrote ${report#lapCount} laps to ${report#outputPath}");
+                Log.info("${task#eventName}: Wrote ${report#lapCount} laps");
+                Log.info("${task#eventName}: Metadata -> ${report#outputPath}");
+                Log.info("${task#eventName}: Laps     -> ${report#lapsPath}");
                 { processed = summary#processed + 1, errors = summary#errors }
             case Err(e) =>
                 Log.error("${task#eventName}: ${e}");
@@ -48,17 +51,21 @@ def runTasks(tasks: List[FileTask.FileTask]): RunSummary \ IO =
 def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ IO =
     let inputPath = task#inputPath;
     let outputPath = task#outputPath;
+    let lapsPath = task#lapsPath;
+    let eventName = task#eventName;
     forM(
         lines     <- Files.readLines(inputPath);
         dataLines <- match lines {
                         case _ :: rest => Ok(rest)
                         case Nil       => Err(CliError.EmptyFile(inputPath))
                      };
-        processed <- Ok(Stages.process(dataLines));
-        _         <- Files.writeFile(outputPath, processed#json)
+        processed <- Ok(Stages.process(eventName, dataLines));
+        _         <- Files.writeFile(outputPath, processed#metadataJson);
+        _         <- Files.writeFile(lapsPath, processed#lapsJson)
     ) yield {
         lapCount   = processed#lapCount,
-        outputPath = outputPath
+        outputPath = outputPath,
+        lapsPath   = lapsPath
     }
 
 def summaryExitCode(summary: RunSummary): Int32 =
