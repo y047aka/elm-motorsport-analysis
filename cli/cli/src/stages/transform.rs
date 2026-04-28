@@ -10,7 +10,6 @@
 
 use std::collections::HashMap;
 
-use motorsport::car::Status;
 use motorsport::{Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors};
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
@@ -89,9 +88,7 @@ fn car_from_group(car_number: String, records: Vec<LapRecord>, driver_names: Vec
 
     let processed_laps = process_laps(records);
 
-    let mut car = Car::new(meta, 1, processed_laps);
-    car.status = Status::Racing;
-    car
+    Car::new(meta, 1, processed_laps)
 }
 
 fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {

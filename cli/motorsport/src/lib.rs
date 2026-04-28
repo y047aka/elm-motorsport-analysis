@@ -4,7 +4,7 @@ pub mod driver;
 pub mod duration;
 pub mod lap;
 
-pub use car::{Car, CarNumber, MetaData, Status};
+pub use car::{Car, CarNumber, MetaData};
 pub use class::Class;
 pub use driver::Driver;
 pub use duration::Duration;
