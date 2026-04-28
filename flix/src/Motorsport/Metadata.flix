@@ -65,7 +65,7 @@ mod Motorsport.Metadata {
         else None
 
     def appendUnique(xs: List[String], x: String): List[String] =
-        if (List.exists(s -> s == x, xs)) xs
+        if (List.memberOf(x, xs)) xs
         else List.append(xs, x :: Nil)
 
     def assignStartPositions(builds: List[CarBuild]): List[StartingGrid] =
@@ -76,7 +76,7 @@ mod Motorsport.Metadata {
             }
         );
         let sorted = List.sortBy(p -> match p { case (_, ms) => ms }, withLap1);
-        let positions = List.map(p -> match p { case (i, (cn, _)) => (cn, i) }, withIndex(sorted));
+        let positions = List.map(p -> match p { case (i, (cn, _)) => (cn, i) }, List.zipWithIndex(sorted));
         builds |> List.map(b ->
             let pos = match List.find(p -> match p { case (cn, _) => cn == b#car#carNumber }, positions) {
                 case Some((_, p)) => p
@@ -84,11 +84,6 @@ mod Motorsport.Metadata {
             };
             { position = pos, car = b#car }
         )
-
-    def withIndex(xs: List[a]): List[(Int32, a)] =
-        let step = (state, x) -> match state { case (acc, i) => ((i, x) :: acc, i + 1) };
-        let (result, _) = List.foldLeft(step, (Nil, 0), xs);
-        List.reverse(result)
 
     pub def toJson(meta: Metadata): Json.JsonValue =
         JsonObject(

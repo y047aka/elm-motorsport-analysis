@@ -12,10 +12,7 @@ mod Cli.FileTask {
     }
 
     pub def make(inputPath: String, outputOverride: Option[String]): FileTask =
-        let outputPath = match outputOverride {
-            case Some(p) => p
-            case None    => defaultOutputPath(inputPath)
-        };
+        let outputPath = outputOverride |> Option.getWithDefault(defaultOutputPath(inputPath));
         {
             inputPath   = inputPath,
             outputPath  = outputPath,
@@ -76,10 +73,6 @@ mod Cli.FileTask {
     def eventName(inputPath: String): String =
         let parts = String.split({regex = "/"}, inputPath);
         let fileName = parts |> List.last |> Option.getWithDefault(inputPath);
-        let segments = String.split({regex = "\\."}, fileName);
-        match segments {
-            case _ :: _ :: _ => segments |> List.reverse |> List.drop(1) |> List.reverse |> List.join(".")
-            case _           => fileName
-        }
+        stripLastExtension(fileName)
 
 }
