@@ -1,6 +1,6 @@
 /// JVM プロセス終了処理。`Cli.Main` の `def main` が最後に終了コードを
 /// 渡して呼び出す。
-mod Cli.Exit {
+pub mod Cli.Exit {
 
     import java.lang.System
 

@@ -1,4 +1,4 @@
-mod Cli.Log {
+pub mod Cli.Log {
 
     import java.lang.System
 

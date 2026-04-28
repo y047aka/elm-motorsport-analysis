@@ -1,4 +1,4 @@
-mod Cli.Stages {
+pub mod Cli.Stages {
 
     use Util.Csv
     use Util.Json

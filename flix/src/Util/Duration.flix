@@ -4,7 +4,7 @@
 ///
 /// 公開 API は `normalize` のみ (入力を一度パースして正規形に整形し直す)。
 /// `parse` / `format` は `normalize` 内部の実装詳細として private に保つ。
-mod Util.Duration {
+pub mod Util.Duration {
 
     /// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の文字列を ms 単位の Int32 にパースする。
     /// 不正フォーマットは `None` を返す。
