@@ -43,20 +43,21 @@ suite =
                     events =
                         TimelineEvent.fromCars [ car ]
 
-                    -- final lap elapsed = 189575 < 3600000, so terminal event is Retirement
-                    terminal =
+                    -- timeLimit = (189575 // 3600000) * 3600000 = 0
+                    -- final_lap.elapsed = 189575 >= 0, so terminal event is Checkered
+                    checkered =
                         events
                             |> List.filter
                                 (\e ->
                                     case e.eventType of
-                                        CarEvent _ Retirement ->
+                                        CarEvent _ Checkered ->
                                             True
 
                                         _ ->
                                             False
                                 )
                 in
-                Expect.equal 1 (List.length terminal)
+                Expect.equal 1 (List.length checkered)
         , test "calcTimeLimit rounds 2.5h to 2h (Checkered branch)" <|
             \_ ->
                 let
