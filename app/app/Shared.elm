@@ -55,6 +55,7 @@ type alias Model =
     , analysis_F1 : Analysis
     , analysis : Analysis
     , pendingWecCars : Maybe (List Car)
+    , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
 
 
@@ -78,6 +79,7 @@ init flags maybePagePath =
       , analysis_F1 = Analysis.finished RaceControl.placeholder
       , analysis = Analysis.finished RaceControl.placeholder
       , pendingWecCars = Nothing
+      , pendingWecLaps = Nothing
       }
     , Effect.none
     )
@@ -135,12 +137,22 @@ update msg m =
                         |> Maybe.andThen Series.toEventSummary
                         |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
             in
-            ( { m | eventSummary = eventSummary }
+            ( { m
+                | eventSummary = eventSummary
+                , pendingWecCars = Nothing
+                , pendingWecLaps = Nothing
+              }
             , Effect.fromCmd <|
-                Http.get
-                    { url = eventSummary.jsonPath
-                    , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
-                    }
+                Cmd.batch
+                    [ Http.get
+                        { url = eventSummary.jsonPath
+                        , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
+                        }
+                    , Http.get
+                        { url = lapsPathFor eventSummary.jsonPath
+                        , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
+                        }
+                    ]
             )
 
         JsonLoaded_Wec (Ok decoded) ->
@@ -151,44 +163,20 @@ update msg m =
                 modelEventSummary =
                     m.eventSummary
             in
-            ( { m
-                | eventSummary = { modelEventSummary | name = decoded.name }
-                , pendingWecCars = Just cars
-              }
-            , Effect.fromCmd <|
-                Http.get
-                    { url = lapsPathFor m.eventSummary.jsonPath
-                    , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
-                    }
-            )
+            finalizeWecIfReady
+                { m
+                    | eventSummary = { modelEventSummary | name = decoded.name }
+                    , pendingWecCars = Just cars
+                }
 
         JsonLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
         LapsLoaded_Wec (Ok rawLaps) ->
-            case m.pendingWecCars of
-                Just cars ->
-                    let
-                        carsWithLaps =
-                            WecLaps.attach rawLaps cars
-
-                        rcNew =
-                            RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
-                                |> Maybe.withDefault RaceControl.placeholder
-                    in
-                    ( { m
-                        | raceControl = rcNew
-                        , analysis = Analysis.finished rcNew
-                        , pendingWecCars = Nothing
-                      }
-                    , Effect.none
-                    )
-
-                Nothing ->
-                    ( m, Effect.none )
+            finalizeWecIfReady { m | pendingWecLaps = Just rawLaps }
 
         LapsLoaded_Wec (Err _) ->
-            ( { m | pendingWecCars = Nothing }, Effect.none )
+            ( m, Effect.none )
 
         FetchJson_FormulaE options ->
             let
@@ -264,6 +252,31 @@ lapsPathFor jsonPath =
 
     else
         jsonPath ++ "_laps.json"
+
+
+finalizeWecIfReady : Model -> ( Model, Effect Msg )
+finalizeWecIfReady m =
+    case ( m.pendingWecCars, m.pendingWecLaps ) of
+        ( Just cars, Just rawLaps ) ->
+            let
+                carsWithLaps =
+                    WecLaps.attach rawLaps cars
+
+                rcNew =
+                    RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
+                        |> Maybe.withDefault RaceControl.placeholder
+            in
+            ( { m
+                | raceControl = rcNew
+                , analysis = Analysis.finished rcNew
+                , pendingWecCars = Nothing
+                , pendingWecLaps = Nothing
+              }
+            , Effect.none
+            )
+
+        _ ->
+            ( m, Effect.none )
 
 
 
