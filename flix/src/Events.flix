@@ -1,6 +1,10 @@
 /// CSV ファイルステム (`le_mans_24h` 等) を表示名 (`"24 Hours of Le Mans"`)
 /// に変換する。Rust 版 `cli::events::display_name` (cli/src/events.rs L17-32)
 /// と同じテーブルを保持する。未知の ID はそのまま返す (フェイルセーフ)。
+///
+/// Rust 版との差異: Rust 版は未知 ID 初出時に `log::warn!` を出力する
+/// (events.rs L34-41 の `warn_once`)。flix 版は純関数性を保つため警告を
+/// 省略しており、未知 ID は静かに pass-through する。
 mod Events {
 
     pub def displayName(eventId: String): String =
