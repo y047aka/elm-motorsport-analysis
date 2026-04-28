@@ -2,7 +2,7 @@
 /// (cli/motorsport/src/car.rs L26-35) に対応する純粋なドメイン型。
 /// スタートグリッド計算用の中間状態 (lap1 elapsed, position) は
 /// `Metadata.flix` 側の専用型に分離されており、ここには含まれない。
-pub mod Domain.Car {
+pub mod Motorsport.Car {
 
     pub type alias Car = {
         carNumber    = String,

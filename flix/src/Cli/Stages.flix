@@ -2,8 +2,8 @@ pub mod Cli.Stages {
 
     use Util.Csv
     use Util.Json
-    use Domain.Metadata
-    use Domain.RawLap
+    use Motorsport.Metadata
+    use Motorsport.RawLap
 
     pub type alias Output = {
         lapCount     = Int32,

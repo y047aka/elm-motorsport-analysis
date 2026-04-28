@@ -3,14 +3,14 @@
 /// (cli/src/stages/output.rs L61-112) と
 /// `cli::stages::transform::build_cars` / `start_positions`
 /// (transform.rs L46-74, L212-233) を 1 モジュールに合体させたもの。
-pub mod Domain.Metadata {
+pub mod Motorsport.Metadata {
 
     use Util.Duration
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
-    use Domain.Car.Car
-    use Domain.Events
-    use Domain.RawLap.RawLap
+    use Motorsport.Car.Car
+    use Motorsport.Events
+    use Motorsport.RawLap.RawLap
 
     pub type alias StartingGrid = {
         position = Int32,

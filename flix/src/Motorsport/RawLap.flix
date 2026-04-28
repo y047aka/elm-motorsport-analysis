@@ -11,7 +11,7 @@
 /// で正規形 (`"0:01:41.031"` -> `"1:41.031"` 等) に整形される。一方
 /// `hour` は CSV 上の時刻表記 (`"HH:MM:SS.sss"`) — duration ではないので
 /// 正規化を通さず文字列そのままを保持する。
-pub mod Domain.RawLap {
+pub mod Motorsport.RawLap {
 
     use Util.Csv
     use Util.Duration

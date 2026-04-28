@@ -2,7 +2,7 @@ mod Util.TestCsv {
 
     use Util.Csv
     use Util.Json
-    use Domain.RawLap
+    use Motorsport.RawLap
 
     @Test
     def testParseRowSplitsBySemicolon(): Unit \ Assert =

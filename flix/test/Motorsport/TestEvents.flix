@@ -1,6 +1,6 @@
-mod Domain.TestEvents {
+mod Motorsport.TestEvents {
 
-    use Domain.Events
+    use Motorsport.Events
 
     @Test
     def testQatar(): Unit \ Assert =
