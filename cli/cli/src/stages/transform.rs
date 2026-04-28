@@ -4,7 +4,6 @@
 //! - grouping laps by car (preserving CSV order)
 //! - accumulating best times (lap / S1 / S2 / S3 / mini-sector)
 //! - computing per-lap positions (including the starting grid)
-//! - deriving timeline events
 //!
 //! The JSON shape types ([`RawLap`] / [`MetadataOutput`]) live in
 //! [`output`](super::output); this module fills them in.
@@ -25,8 +24,7 @@ use crate::domain::{
 /// Internally this runs in order:
 /// 1. project each `LapRecord` into a [`RawLap`] (by reference)
 /// 2. consume `records` to aggregate by car into a [`Car`] list
-/// 3. derive timeline events from the cars
-/// 4. assemble [`MetadataOutput`] (event name + starting grid + timeline)
+/// 3. assemble [`MetadataOutput`] (event name + starting grid)
 ///
 /// Step 1 borrows `records` while step 2 moves it, so the order matters — but
 /// the constraint is encapsulated here, not in the caller.
