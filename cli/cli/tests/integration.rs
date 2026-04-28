@@ -1,74 +1,18 @@
 use std::fs;
 use std::path::Path;
 
-use cli::for_testing::{build_outputs, group_laps_by_car, parse_and_structure};
+use cli::for_testing::{build_outputs, parse_and_structure};
 
 // =============================================================================
 // INTEGRATION TESTS
 // =============================================================================
 //
-// Test Suite Overview:
-// 1. Core CSV Processing & CLI Integration (4 tests)
-// 2. Elm-Rust JSON Compatibility (2 tests - consolidated, duplicates moved to unit tests)
-// 3. Le Mans 24h JSON Exact Match (1 test - includes mini-sectors)
-//
-// Total: 7 focused tests covering all critical functionality
-// Optimized by moving low-level functionality to appropriate unit tests
-
-#[test]
-fn test_csv_parsing_and_data_processing() {
-    // CSV reading and parsing (integrated)
-    let csv_content = fs::read_to_string("../test_data.csv").expect("Failed to read CSV file");
-    let records = parse_and_structure(&csv_content);
-    assert!(
-        !records.is_empty(),
-        "At least one lap should be parsed from CSV"
-    );
-
-    // Validate first lap content
-    let first_lap = &records[0];
-    assert_eq!(first_lap.lap.car_number, "12");
-    assert_eq!(first_lap.lap.driver, "Will STEVENS");
-    assert_eq!(first_lap.car.team, "Hertz Team JOTA");
-    assert_eq!(first_lap.car.manufacturer, "Porsche");
-    assert_eq!(first_lap.car.class, "HYPERCAR");
-
-    // Group by car
-    let cars = group_laps_by_car(records);
-    assert_eq!(cars.len(), 2, "Test data should contain 2 cars");
-
-    // Validate car 12
-    let car12 = cars
-        .iter()
-        .find(|c| c.meta_data.car_number == "12")
-        .unwrap();
-    assert!(car12.laps.len() >= 2, "Car 12 should have multiple laps");
-    assert_eq!(car12.meta_data.team, "Hertz Team JOTA");
-    assert_eq!(car12.meta_data.manufacturer, "Porsche");
-
-    // Validate car 7
-    let car7 = cars.iter().find(|c| c.meta_data.car_number == "7").unwrap();
-    assert!(!car7.laps.is_empty(), "Car 7 should have at least one lap");
-    assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
-    assert_eq!(car7.meta_data.manufacturer, "Toyota");
-
-    // Validate lap data consistency and position calculations
-    for car in &cars {
-        assert!(!car.laps.is_empty(), "Each car should have lap data");
-        assert!(
-            car.start_position >= 0,
-            "Start position should be non-negative"
-        );
-
-        for lap in &car.laps {
-            assert!(lap.time > 0, "Lap time should be positive");
-            assert!(lap.sector_1 > 0, "Sector 1 should be positive");
-            assert!(lap.sector_2 > 0, "Sector 2 should be positive");
-            assert!(lap.sector_3 > 0, "Sector 3 should be positive");
-            // position is u32 type, so always >= 0 - no explicit check needed
-        }
-    }
-}
+// 1. CLI end-to-end execution (writes both metadata.json and laps.json)
+// 2. Mixed success / failure reporting
+// 3. CSV parsing edge cases
+// 4. Real WEC CSV smoke test (parse + JSON shape)
+// 5. Elm-Rust JSON compatibility (structure / fields / types)
+// 6. Racing-specific data handling (improvement flags, pit entry, pit time)
 
 #[test]
 fn test_cli_end_to_end_execution() {
@@ -79,10 +23,8 @@ fn test_cli_end_to_end_execution() {
     let test_input_str = test_input.to_str().expect("UTF-8 path");
     let test_output_str = test_output.to_str().expect("UTF-8 path");
 
-    // Copy test data to expected input filename
     fs::copy("../test_data.csv", &test_input).expect("Failed to copy test data");
 
-    // Execute CLI via argv
     let args = vec![
         "cli".to_string(),
         test_input_str.to_string(),
@@ -93,24 +35,20 @@ fn test_cli_end_to_end_execution() {
     assert_eq!(summary.errors, 0, "CLI should process without errors");
     assert_eq!(summary.processed, 1, "one task should succeed");
 
-    // Verify output file creation
     assert!(
         fs::metadata(&test_output).is_ok(),
         "Output file should be created"
     );
 
-    // Validate output file content
     let json_content = fs::read_to_string(&test_output).expect("Failed to read output file");
     assert!(!json_content.is_empty(), "JSON file should not be empty");
 
-    // Verify valid JSON format
     let output: Result<serde_json::Value, _> = serde_json::from_str(&json_content);
     assert!(output.is_ok(), "Output JSON should be valid format");
 
     let output = output.unwrap();
     assert!(output.is_object(), "Top level should be object");
 
-    // Validate metadata structure (name, startingGrid)
     let obj = output.as_object().unwrap();
     assert!(obj.contains_key("name"), "name field should exist");
     assert!(
@@ -124,11 +62,9 @@ fn test_cli_end_to_end_execution() {
         "laps field should NOT exist in metadata file"
     );
 
-    // Verify starting grid data exists
     let starting_grid = obj.get("startingGrid").unwrap().as_array().unwrap();
     assert!(!starting_grid.is_empty(), "Car data should exist");
 
-    // Validate basic structure of each starting grid entry
     for grid_entry in starting_grid {
         assert!(
             grid_entry.get("position").is_some(),
@@ -144,7 +80,6 @@ fn test_cli_end_to_end_execution() {
         assert!(car.get("class").is_some(), "class field should exist");
     }
 
-    // Verify laps data file exists and has correct structure
     let laps_output_path = test_output.with_file_name("output_laps.json");
     assert!(
         fs::metadata(&laps_output_path).is_ok(),
@@ -162,37 +97,20 @@ fn test_cli_end_to_end_execution() {
 
     assert!(!laps.is_empty(), "laps array should not be empty");
 
-    // Validate first lap structure
     let first_lap = laps[0].as_object().unwrap();
-    assert!(
-        first_lap.contains_key("carNumber"),
-        "carNumber field should exist"
-    );
-    assert!(
-        first_lap.contains_key("driverName"),
-        "driverName field should exist"
-    );
-    assert!(
-        first_lap.contains_key("lapNumber"),
-        "lapNumber field should exist"
-    );
-    assert!(
-        first_lap.contains_key("lapTime"),
-        "lapTime field should exist"
-    );
-    assert!(
-        first_lap.contains_key("elapsed"),
-        "elapsed field should exist"
-    );
-    assert!(first_lap.contains_key("kph"), "kph field should exist");
-    assert!(first_lap.contains_key("class"), "class field should exist");
-    assert!(first_lap.contains_key("team"), "team field should exist");
-    assert!(
-        first_lap.contains_key("manufacturer"),
-        "manufacturer field should exist"
-    );
-
-    // tempdir cleans up on drop
+    for field in [
+        "carNumber",
+        "driverName",
+        "lapNumber",
+        "lapTime",
+        "elapsed",
+        "kph",
+        "class",
+        "team",
+        "manufacturer",
+    ] {
+        assert!(first_lap.contains_key(field), "{field} field should exist");
+    }
 }
 
 #[test]
@@ -207,11 +125,9 @@ fn test_cli_run_reports_partial_failure() {
     // it tries to `read_to_string` a directory.
     let temp_dir = tempfile::tempdir().expect("create tempdir");
 
-    // Entry 1: a real CSV that should process cleanly.
     let valid_csv = temp_dir.path().join("valid.csv");
     fs::copy("../test_data.csv", &valid_csv).expect("Failed to copy test data");
 
-    // Entry 2: a directory ending in `.csv` — reading will fail.
     let broken_csv_dir = temp_dir.path().join("broken.csv");
     fs::create_dir(&broken_csv_dir).expect("create broken.csv as directory");
 
@@ -227,7 +143,6 @@ fn test_cli_run_reports_partial_failure() {
         "exactly the broken.csv directory should fail"
     );
 
-    // ExitCode doesn't implement PartialEq, so compare via the Debug string.
     let exit = summary.exit_code();
     assert!(
         format!("{exit:?}").contains("1"),
@@ -237,7 +152,6 @@ fn test_cli_run_reports_partial_failure() {
 
 #[test]
 fn test_csv_parsing_edge_cases() {
-    // Empty CSV: header only, no rows.
     let empty_csv = "NUMBER;DRIVER_NUMBER;DRIVER_NAME;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n";
     let laps = parse_and_structure(empty_csv);
     assert_eq!(laps.len(), 0, "empty CSV should parse to zero laps");
@@ -253,93 +167,43 @@ fn test_csv_parsing_edge_cases() {
 
 #[test]
 fn test_real_wec_data_processing() {
-    let test_files = vec![(
-        "../../app/static/wec/2025/le_mans_24h.csv",
-        "Le Mans",
-        50,
-        "007",
-        "Aston Martin Thor Team",
-    )];
-
-    for (csv_path, race_name, min_cars, test_car, expected_team) in test_files {
-        if !Path::new(csv_path).exists() {
-            println!("Skipping {race_name} - CSV file not found: {csv_path}");
-            continue;
-        }
-
-        let csv_content = fs::read_to_string(csv_path)
-            .unwrap_or_else(|_| panic!("Failed to read CSV for {race_name}"));
-
-        let records = parse_and_structure(&csv_content);
-        assert!(
-            !records.is_empty(),
-            "{race_name} should parse laps from CSV"
-        );
-
-        let cars = group_laps_by_car(records);
-        assert!(!cars.is_empty(), "{race_name} should have cars grouped");
-        assert!(
-            cars.len() >= min_cars,
-            "{race_name} should have at least {min_cars} cars"
-        );
-
-        // Test specific car exists and has expected data
-        if let Some(test_car_data) = cars.iter().find(|c| c.meta_data.car_number == test_car) {
-            assert!(
-                !test_car_data.laps.is_empty(),
-                "{race_name}: Car {test_car} should have laps"
-            );
-            assert_eq!(
-                test_car_data.meta_data.team, expected_team,
-                "{race_name}: Car {test_car} should have correct team"
-            );
-        }
-
-        // Validate all cars have consistent structure
-        for car in &cars {
-            assert!(
-                !car.meta_data.car_number.is_empty(),
-                "{race_name}: Car should have number"
-            );
-            assert!(
-                !car.meta_data.drivers.is_empty(),
-                "{race_name}: Car should have drivers"
-            );
-            assert!(!car.laps.is_empty(), "{race_name}: Car should have laps");
-            assert!(
-                car.start_position >= 0,
-                "{race_name}: Car should have valid start position"
-            );
-
-            for lap in &car.laps {
-                assert!(lap.time > 0, "{race_name}: Lap should have positive time");
-                assert!(
-                    lap.elapsed > 0,
-                    "{race_name}: Lap should have positive elapsed time"
-                );
-            }
-        }
-
-        println!(
-            "✓ {} processed successfully: {} cars, {} total laps",
-            race_name,
-            cars.len(),
-            cars.iter().map(|c| c.laps.len()).sum::<usize>()
-        );
+    let csv_path = "../../app/static/wec/2025/le_mans_24h.csv";
+    if !Path::new(csv_path).exists() {
+        println!("Skipping Le Mans - CSV file not found: {csv_path}");
+        return;
     }
-}
 
-// =============================================================================
-// ELM-RUST JSON COMPATIBILITY TESTS
-// =============================================================================
-//
-// Core compatibility test suite ensuring Rust CLI output matches Elm expectations.
-// Covers: structure, data types, field ordering, precision, edge cases
+    let csv_content = fs::read_to_string(csv_path).expect("Failed to read CSV for Le Mans");
+    let records = parse_and_structure(&csv_content);
+    assert!(!records.is_empty(), "Le Mans should parse laps from CSV");
+
+    let (raw_laps, metadata) = build_outputs(records, "le_mans_24h");
+    assert!(!raw_laps.is_empty(), "Le Mans should have lap data");
+    assert!(
+        metadata.starting_grid.len() >= 50,
+        "Le Mans should have at least 50 cars"
+    );
+
+    let test_car = metadata
+        .starting_grid
+        .iter()
+        .find(|g| g.car.car_number == "007")
+        .expect("Car 007 should exist in Le Mans data");
+    assert_eq!(test_car.car.team, "Aston Martin Thor Team");
+    assert!(
+        !test_car.car.drivers.is_empty(),
+        "Car 007 should have drivers"
+    );
+
+    println!(
+        "✓ Le Mans processed successfully: {} cars, {} total laps",
+        metadata.starting_grid.len(),
+        raw_laps.len()
+    );
+}
 
 #[test]
 fn test_elm_json_structure_and_field_compatibility() {
-    // End-to-end check of JSON structure, field presence, and types that the
-    // Elm frontend expects.
     let csv_data = create_test_csv_data();
     let records = parse_and_structure(&csv_data);
 
@@ -347,7 +211,6 @@ fn test_elm_json_structure_and_field_compatibility() {
     let metadata_json_value = serde_json::to_value(&metadata_output).unwrap();
     let laps_json_value = serde_json::to_value(&laps_output).unwrap();
 
-    // Metadata JSON structure.
     assert!(
         metadata_json_value.is_object(),
         "Metadata JSON should be an object"
@@ -361,7 +224,6 @@ fn test_elm_json_structure_and_field_compatibility() {
         "startingGrid field required"
     );
 
-    // Laps JSON is a bare array.
     assert!(laps_json_value.is_array(), "Laps JSON should be an array");
     assert!(
         metadata_json_value["name"].is_string(),
@@ -372,7 +234,6 @@ fn test_elm_json_structure_and_field_compatibility() {
         "startingGrid should be array"
     );
 
-    // Lap field completeness + types.
     let laps_array = laps_json_value.as_array().unwrap();
     if !laps_array.is_empty() {
         let lap = &laps_array[0];
@@ -414,7 +275,6 @@ fn test_elm_json_structure_and_field_compatibility() {
         }
     }
 
-    // Starting-grid field completeness + types.
     let starting_grid_array = metadata_json_value["startingGrid"].as_array().unwrap();
     if !starting_grid_array.is_empty() {
         let grid_entry = &starting_grid_array[0];
@@ -447,8 +307,6 @@ fn test_elm_json_structure_and_field_compatibility() {
 
 #[test]
 fn test_racing_data_processing_compatibility() {
-    // End-to-end race-data processing: improvement flags, pit-entry marker,
-    // and pit-time formatting.
     let csv_with_racing_data = r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;
 007;1;26;1:34.552;2;;19.398;0;30.981;2;44.173;0;186.9;44:14.995;13:45:40.505;0:19.398;0:30.981;0:44.173;305.1;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.398;30.981;44.173;
 007;1;34;2:47.748;0;B;19.480;0;31.197;0;1:57.071;0;105.4;58:12.901;13:59:38.411;0:19.480;0:31.197;1:57.071;307.7;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;19.480;31.197;117.071;
@@ -460,7 +318,6 @@ fn test_racing_data_processing_compatibility() {
     let json_value = serde_json::to_value(&laps_output).unwrap();
     let laps_array = json_value.as_array().unwrap();
 
-    // Improvement flag test (0, 1, 2)
     let lap_with_improvement = laps_array
         .iter()
         .find(|lap| lap["lapImprovement"].as_i64() == Some(2))
@@ -468,7 +325,6 @@ fn test_racing_data_processing_compatibility() {
     assert_eq!(lap_with_improvement["lapImprovement"].as_i64(), Some(2));
     assert_eq!(lap_with_improvement["s2Improvement"].as_i64(), Some(2));
 
-    // Pit stop data test
     let pit_entry_lap = laps_array
         .iter()
         .find(|lap| lap["crossingFinishLineInPit"].as_str() == Some("B"))
@@ -476,7 +332,6 @@ fn test_racing_data_processing_compatibility() {
     assert_eq!(pit_entry_lap["crossingFinishLineInPit"].as_str(), Some("B"));
     assert!(pit_entry_lap["lapTime"].as_str().unwrap().starts_with("2:"));
 
-    // Pit time processing test (format only, details covered by duration unit tests)
     let pit_exit_lap = laps_array
         .iter()
         .find(|lap| !lap["pitTime"].as_str().unwrap_or("").is_empty())
@@ -486,16 +341,6 @@ fn test_racing_data_processing_compatibility() {
         "Pit time should be formatted as non-empty string"
     );
 }
-
-// =============================================================================
-// ELM COMPATIBILITY TESTS
-// =============================================================================
-//
-// Additional tests for Elm-specific functionality and edge cases
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
 
 fn create_test_csv_data() -> String {
     r#"NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS;

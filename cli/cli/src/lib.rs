@@ -191,7 +191,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
 pub mod for_testing {
     pub use crate::domain::LapRecord;
     pub use crate::stages::output::MetadataOutput;
-    pub use crate::stages::transform::{build_outputs, group_laps_by_car};
+    pub use crate::stages::transform::build_outputs;
 
     /// Runs the parse + structure stages in one call.
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {

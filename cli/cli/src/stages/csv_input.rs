@@ -60,67 +60,6 @@ pub struct CsvRow {
     pub team: String,
     #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
     pub manufacturer: String,
-    // Le Mans 24h mini-sector columns; `Option` because other events omit them.
-    #[serde(rename = "SCL2_time", alias = " SCL2_time")]
-    pub scl2_time: Option<String>,
-    #[serde(rename = "SCL2_elapsed", alias = " SCL2_elapsed")]
-    pub scl2_elapsed: Option<String>,
-    #[serde(rename = "Z4_time", alias = " Z4_time")]
-    pub z4_time: Option<String>,
-    #[serde(rename = "Z4_elapsed", alias = " Z4_elapsed")]
-    pub z4_elapsed: Option<String>,
-    #[serde(rename = "IP1_time", alias = " IP1_time")]
-    pub ip1_time: Option<String>,
-    #[serde(rename = "IP1_elapsed", alias = " IP1_elapsed")]
-    pub ip1_elapsed: Option<String>,
-    #[serde(rename = "Z12_time", alias = " Z12_time")]
-    pub z12_time: Option<String>,
-    #[serde(rename = "Z12_elapsed", alias = " Z12_elapsed")]
-    pub z12_elapsed: Option<String>,
-    #[serde(rename = "SCLC_time", alias = " SCLC_time")]
-    pub sclc_time: Option<String>,
-    #[serde(rename = "SCLC_elapsed", alias = " SCLC_elapsed")]
-    pub sclc_elapsed: Option<String>,
-    #[serde(rename = "A7-1_time", alias = " A7-1_time")]
-    pub a7_1_time: Option<String>,
-    #[serde(rename = "A7-1_elapsed", alias = " A7-1_elapsed")]
-    pub a7_1_elapsed: Option<String>,
-    #[serde(rename = "IP2_time", alias = " IP2_time")]
-    pub ip2_time: Option<String>,
-    #[serde(rename = "IP2_elapsed", alias = " IP2_elapsed")]
-    pub ip2_elapsed: Option<String>,
-    #[serde(rename = "A8-1_time", alias = " A8-1_time")]
-    pub a8_1_time: Option<String>,
-    #[serde(rename = "A8-1_elapsed", alias = " A8-1_elapsed")]
-    pub a8_1_elapsed: Option<String>,
-    #[serde(rename = "SCLB_time", alias = " SCLB_time")]
-    pub sclb_time: Option<String>,
-    #[serde(rename = "SCLB_elapsed", alias = " SCLB_elapsed")]
-    pub sclb_elapsed: Option<String>,
-    #[serde(rename = "PORIN_time", alias = " PORIN_time")]
-    pub porin_time: Option<String>,
-    #[serde(rename = "PORIN_elapsed", alias = " PORIN_elapsed")]
-    pub porin_elapsed: Option<String>,
-    #[serde(rename = "POROUT_time", alias = " POROUT_time")]
-    pub porout_time: Option<String>,
-    #[serde(rename = "POROUT_elapsed", alias = " POROUT_elapsed")]
-    pub porout_elapsed: Option<String>,
-    #[serde(rename = "PITREF_time", alias = " PITREF_time")]
-    pub pitref_time: Option<String>,
-    #[serde(rename = "PITREF_elapsed", alias = " PITREF_elapsed")]
-    pub pitref_elapsed: Option<String>,
-    #[serde(rename = "SCL1_time", alias = " SCL1_time")]
-    pub scl1_time: Option<String>,
-    #[serde(rename = "SCL1_elapsed", alias = " SCL1_elapsed")]
-    pub scl1_elapsed: Option<String>,
-    #[serde(rename = "FORDOUT_time", alias = " FORDOUT_time")]
-    pub fordout_time: Option<String>,
-    #[serde(rename = "FORDOUT_elapsed", alias = " FORDOUT_elapsed")]
-    pub fordout_elapsed: Option<String>,
-    #[serde(rename = "FL_time", alias = " FL_time")]
-    pub fl_time: Option<String>,
-    #[serde(rename = "FL_elapsed", alias = " FL_elapsed")]
-    pub fl_elapsed: Option<String>,
 }
 
 /// Reads CSV text as a list of [`CsvRow`]. Unparseable rows are logged and
