@@ -4,9 +4,9 @@ mod Cli.Stages {
     use Util.Files
     use Util.Json
     use Motorsport.Metadata
+    use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Log
 
     pub type alias Output = {
         lapCount     = Int32,
@@ -36,22 +36,22 @@ mod Cli.Stages {
             lapsJson     = lapsJson
         }
 
-    pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ IO =
+    pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
                 case Ok(report) =>
-                    Log.info("${task#eventName}: Wrote ${report#lapCount} laps");
-                    Log.info("${task#eventName}: Metadata -> ${report#outputPath}");
-                    Log.info("${task#eventName}: Laps     -> ${report#lapsPath}");
+                    Console.println("${task#eventName}: Wrote ${report#lapCount} laps");
+                    Console.println("${task#eventName}: Metadata -> ${report#outputPath}");
+                    Console.println("${task#eventName}: Laps     -> ${report#lapsPath}");
                     { processed = acc#processed + 1, errors = acc#errors }
                 case Err(e) =>
-                    Log.error("${task#eventName}: ${e}");
+                    Console.eprintln("${task#eventName}: ${e}");
                     { processed = acc#processed, errors = acc#errors + 1 }
             },
             { processed = 0, errors = 0 },
             tasks
         );
-        Log.info("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
+        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
         if (summary#errors == 0) 0 else 1
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ IO =
