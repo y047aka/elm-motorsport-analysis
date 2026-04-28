@@ -72,22 +72,39 @@ mod Metadata {
                 case None     => None
             }
         );
-        let sorted = withLap1 |> List.sortBy(match (_, ms) -> ms);
-        let positions = withIndex(sorted) |> List.map(match (i, (cn, _)) -> (cn, i));
+        let sorted = List.sortBy(pairMs, withLap1);
+        let positions = List.map(toPosEntry, withIndex(sorted));
         cars |> List.map(c ->
-            match List.find(match (cn, _) -> cn == c#carNumber, positions) {
-                case Some((_, p)) => { startPosition = p | c }
-                case None         => c
+            match List.find(p -> matchCarNumber(p, c#carNumber), positions) {
+                case Some(found) => { startPosition = pairSnd(found) | c }
+                case None        => c
             }
         )
 
+    def pairMs(p: (String, Int32)): Int32 =
+        let (_, ms) = p;
+        ms
+
+    def pairSnd(p: (String, Int32)): Int32 =
+        let (_, n) = p;
+        n
+
+    def matchCarNumber(p: (String, Int32), carNumber: String): Bool =
+        let (cn, _) = p;
+        cn == carNumber
+
+    def toPosEntry(p: (Int32, (String, Int32))): (String, Int32) =
+        let (i, pair) = p;
+        let (cn, _) = pair;
+        (cn, i)
+
     def withIndex(xs: List[a]): List[(Int32, a)] =
-        let (result, _) = List.foldLeft(
-            match ((acc, i), x) -> ((i, x) :: acc, i + 1),
-            (Nil, 0),
-            xs
-        );
+        let (result, _) = List.foldLeft(withIndexStep, (Nil, 0), xs);
         List.reverse(result)
+
+    def withIndexStep(state: (List[(Int32, a)], Int32), x: a): (List[(Int32, a)], Int32) =
+        let (acc, i) = state;
+        ((i, x) :: acc, i + 1)
 
     /// メタデータを JSON (Rust `serde_json` 構造体宣言順と同じキー順) に変換。
     pub def toJson(meta: Metadata): Json.JsonValue =
