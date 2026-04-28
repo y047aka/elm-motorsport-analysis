@@ -2,7 +2,6 @@ mod TestRawLap {
 
     use Util.Csv
     use Util.Json
-    use RawLap
 
     @Test
     def testFromCsvRowValid(): Unit \ Assert =

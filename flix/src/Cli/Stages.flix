@@ -7,7 +7,6 @@ mod Cli.Stages {
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Log
-    use RawLap
 
     pub type alias Output = {
         lapCount     = Int32,
