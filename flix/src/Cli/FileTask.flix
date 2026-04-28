@@ -1,4 +1,4 @@
-pub mod Cli.FileTask {
+mod Cli.FileTask {
 
     use Cli.Args
     use Cli.Errors.CliError

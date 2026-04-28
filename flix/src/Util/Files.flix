@@ -1,4 +1,4 @@
-pub mod Util.Files {
+mod Util.Files {
 
     pub enum FileError with ToString {
         case ReadError(String, String)   // path, underlying message

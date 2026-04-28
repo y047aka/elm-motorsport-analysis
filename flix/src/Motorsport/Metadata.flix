@@ -1,4 +1,4 @@
-pub mod Motorsport.Metadata {
+mod Motorsport.Metadata {
 
     use Util.Duration
     use Util.Json

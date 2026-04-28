@@ -1,4 +1,4 @@
-pub mod Cli.Exit {
+mod Cli.Exit {
 
     import java.lang.System
 

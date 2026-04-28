@@ -1,4 +1,4 @@
-pub mod Util.Duration {
+mod Util.Duration {
 
     def parse(s: String): Option[Int32] =
         match String.split({regex = "\\."}, s) {

@@ -1,4 +1,4 @@
-pub mod Motorsport.RawLap {
+mod Motorsport.RawLap {
 
     use Util.Csv
     use Util.Duration

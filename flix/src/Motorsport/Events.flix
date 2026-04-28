@@ -1,5 +1,5 @@
 // The Rust version emits log::warn! (warn_once) for unknown IDs, omitted here to keep this pure.
-pub mod Motorsport.Events {
+mod Motorsport.Events {
 
     pub def displayName(eventId: String): String =
         match eventId {
