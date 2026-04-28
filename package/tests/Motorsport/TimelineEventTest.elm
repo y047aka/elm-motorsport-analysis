@@ -219,7 +219,11 @@ carWithLaps laps =
 
 lapAt : Int -> Int -> Lap
 lapAt lapNumber elapsed =
-    { Lap.empty
+    let
+        base =
+            Lap.empty
+    in
+    { base
         | carNumber = "1"
         , driver = Driver "Test Driver"
         , lap = lapNumber
