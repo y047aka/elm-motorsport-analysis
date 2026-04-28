@@ -12,10 +12,7 @@
 use std::collections::HashMap;
 
 use motorsport::car::Status;
-use motorsport::{
-    Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors, TimelineEvent, calc_time_limit,
-    calc_timeline_events,
-};
+use motorsport::{Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors};
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
 use crate::domain::{
@@ -39,14 +36,8 @@ pub fn build_outputs(
 ) -> (Vec<RawLap>, MetadataOutput) {
     let raw_laps = create_laps_output(&records);
     let cars = group_laps_by_car(records);
-    let timeline_events = calc_timeline(&cars);
-    let metadata = create_metadata_output(event_name, &cars, timeline_events);
+    let metadata = create_metadata_output(event_name, &cars);
     (raw_laps, metadata)
-}
-
-fn calc_timeline(cars: &[Car]) -> Vec<TimelineEvent> {
-    let time_limit = calc_time_limit(cars);
-    calc_timeline_events(time_limit, cars)
 }
 
 pub fn group_laps_by_car(records: Vec<LapRecord>) -> Vec<Car> {

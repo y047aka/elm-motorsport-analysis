@@ -110,16 +110,12 @@ fn test_cli_end_to_end_execution() {
     let output = output.unwrap();
     assert!(output.is_object(), "Top level should be object");
 
-    // Validate metadata structure (name, startingGrid, timelineEvents)
+    // Validate metadata structure (name, startingGrid)
     let obj = output.as_object().unwrap();
     assert!(obj.contains_key("name"), "name field should exist");
     assert!(
         obj.contains_key("startingGrid"),
         "startingGrid field should exist"
-    );
-    assert!(
-        obj.contains_key("timelineEvents"),
-        "timelineEvents field should exist"
     );
 
     // Verify that laps field is NOT in metadata file (moved to separate laps file)
@@ -363,10 +359,6 @@ fn test_elm_json_structure_and_field_compatibility() {
     assert!(
         metadata_json_value.get("startingGrid").is_some(),
         "startingGrid field required"
-    );
-    assert!(
-        metadata_json_value.get("timelineEvents").is_some(),
-        "timelineEvents field required"
     );
 
     // Laps JSON is a bare array.

@@ -2,7 +2,7 @@
 //!
 //! The computation that fills these shapes lives in [`transform`](super::transform).
 
-use motorsport::{Car, TimelineEvent, car, duration};
+use motorsport::{Car, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
@@ -63,7 +63,6 @@ where
 pub struct MetadataOutput {
     pub name: String,
     pub starting_grid: Vec<StartingGrid>,
-    pub timeline_events: Vec<TimelineEvent>,
 }
 
 /// JSON shape for an element of the `laps` array.
@@ -104,18 +103,12 @@ pub struct StartingGrid {
     pub car: car::MetaData,
 }
 
-/// Assembles the metadata output. `timeline_events` must be pre-computed by
-/// the [`transform`](super::transform) stage — this module performs no domain
-/// computation, only shape assembly.
-pub(super) fn create_metadata_output(
-    event_name: &str,
-    cars: &[Car],
-    timeline_events: Vec<TimelineEvent>,
-) -> MetadataOutput {
+/// Assembles the metadata output. This module performs no domain computation,
+/// only shape assembly.
+pub(super) fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput {
     MetadataOutput {
         name: crate::events::display_name(event_name).to_string(),
         starting_grid: starting_grid_from(cars),
-        timeline_events,
     }
 }
 
@@ -211,54 +204,6 @@ mod tests {
     }
 
     #[test]
-    fn test_create_output_includes_timeline_events() {
-        use motorsport::{Car, Class, Driver, Lap, MetaData};
-
-        let drivers = vec![Driver::new("Test Driver".to_string(), false)];
-        let metadata = MetaData::new(
-            "1".to_string(),
-            drivers,
-            Class::HYPERCAR,
-            "H".to_string(),
-            "Test Team".to_string(),
-            "Test Manufacturer".to_string(),
-        );
-
-        let laps = vec![Lap::new(
-            "1".to_string(),
-            "Test Driver".to_string(),
-            1,
-            Some(1),
-            95365,
-            95365,
-            23155,
-            29928,
-            42282,
-            23155,
-            29928,
-            42282,
-            95365,
-        )];
-
-        let car = Car::new(metadata, 1, laps);
-        let cars = vec![car];
-
-        // The provided timeline_events must be forwarded into MetadataOutput unchanged.
-        let provided = vec![TimelineEvent {
-            event_time: 0,
-            event_type: motorsport::EventType::RaceStart,
-        }];
-        let output = create_metadata_output("test_event", &cars, provided);
-
-        assert_eq!(output.timeline_events.len(), 1);
-        assert_eq!(output.timeline_events[0].event_time, 0);
-        assert_eq!(
-            output.timeline_events[0].event_type,
-            motorsport::EventType::RaceStart
-        );
-    }
-
-    #[test]
     fn test_create_output_includes_starting_grid() {
         use motorsport::{Car, Class, Driver, Lap, MetaData};
 
@@ -291,7 +236,7 @@ mod tests {
         let car = Car::new(metadata, 1, laps);
         let cars = vec![car];
 
-        let output = create_metadata_output("test_event", &cars, vec![]);
+        let output = create_metadata_output("test_event", &cars);
 
         assert_eq!(output.starting_grid.len(), 1);
 
