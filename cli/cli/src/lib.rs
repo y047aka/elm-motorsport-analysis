@@ -22,6 +22,7 @@ pub mod error;
 pub(crate) mod domain;
 pub(crate) mod events;
 pub(crate) mod stages;
+pub(crate) mod validation;
 
 pub use args::parse_args;
 pub use error::{FileError, SetupError, WithChain};
@@ -37,12 +38,13 @@ pub struct FileTask {
     input_path: PathBuf,
     output_path: PathBuf,
     event_name: String,
+    validate: bool,
 }
 
 impl FileTask {
     /// `output_override = None` derives the output path from `input_path` by
     /// swapping the extension to `.json`.
-    pub fn new(input_path: PathBuf, output_override: Option<PathBuf>) -> Self {
+    pub fn new(input_path: PathBuf, output_override: Option<PathBuf>, validate: bool) -> Self {
         let stem = input_path
             .file_stem()
             .unwrap_or_else(|| std::ffi::OsStr::new("output"))
@@ -55,6 +57,7 @@ impl FileTask {
             input_path,
             output_path,
             event_name,
+            validate,
         }
     }
 
@@ -68,6 +71,10 @@ impl FileTask {
 
     pub fn event_name(&self) -> &str {
         &self.event_name
+    }
+
+    pub fn validate(&self) -> bool {
+        self.validate
     }
 
     pub fn laps_path(&self) -> PathBuf {
@@ -161,6 +168,13 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
     // Stage 3: structure — `CsvRow` to `LapRecord`
     let records = structure::structure(rows);
 
+    // Optional validation: borrow before transform consumes records.
+    let validation_report = if task.validate() {
+        Some(validation::validate(&records))
+    } else {
+        None
+    };
+
     // Stage 4: transform — `LapRecord` list to serializable shapes
     let (raw_laps, metadata) = transform::build_outputs(records, task.event_name());
     let car_count = metadata.starting_grid.len();
@@ -174,6 +188,18 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
     let laps_path = task.laps_path();
     files::write_json(&metadata_path, &metadata_json)?;
     files::write_json(&laps_path, &laps_json)?;
+
+    // Surface validation issues only after JSON is on disk so failures don't
+    // suppress the conversion output.
+    if let Some(report) = validation_report {
+        report.log_details(task.input_path());
+        if !report.is_clean() {
+            return Err(FileError::ValidationFailed {
+                path: task.input_path().to_path_buf(),
+                count: report.issue_count(),
+            });
+        }
+    }
 
     Ok(ProcessingReport {
         car_count,
@@ -205,15 +231,26 @@ mod tests {
 
     #[test]
     fn file_task_default_output() {
-        let task = FileTask::new(PathBuf::from("input.csv"), None);
+        let task = FileTask::new(PathBuf::from("input.csv"), None, false);
         assert_eq!(task.output_path(), Path::new("input.json"));
         assert_eq!(task.event_name(), "input");
+        assert!(!task.validate());
     }
 
     #[test]
     fn file_task_with_output_override() {
-        let task = FileTask::new(PathBuf::from("input.csv"), Some(PathBuf::from("custom.json")));
+        let task = FileTask::new(
+            PathBuf::from("input.csv"),
+            Some(PathBuf::from("custom.json")),
+            false,
+        );
         assert_eq!(task.output_path(), Path::new("custom.json"));
         assert_eq!(task.event_name(), "input");
+    }
+
+    #[test]
+    fn file_task_with_validate_flag() {
+        let task = FileTask::new(PathBuf::from("input.csv"), None, true);
+        assert!(task.validate());
     }
 }

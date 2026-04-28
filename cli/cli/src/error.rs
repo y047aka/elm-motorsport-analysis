@@ -65,6 +65,9 @@ pub enum FileError {
         #[source]
         source: serde_json::Error,
     },
+
+    #[error("Validation failed for '{}': {count} issue(s)", path.display())]
+    ValidationFailed { path: PathBuf, count: usize },
 }
 
 /// Display adapter that renders an error and its full `source()` chain.

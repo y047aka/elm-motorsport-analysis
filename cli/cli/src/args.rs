@@ -8,6 +8,7 @@ use crate::error::SetupError;
 struct RawArgs {
     input_path: PathBuf,
     output_file: Option<PathBuf>,
+    validate: bool,
 }
 
 impl RawArgs {
@@ -24,6 +25,8 @@ impl RawArgs {
         }
         args.next();
 
+        let mut validate = false;
+
         let final_state = args.try_fold(
             ParseState::Ready {
                 input: None,
@@ -34,6 +37,10 @@ impl RawArgs {
                     input,
                     output: Some(PathBuf::from(arg)),
                 }),
+                ParseState::Ready { input, output } if arg == "--validate" => {
+                    validate = true;
+                    Ok(ParseState::Ready { input, output })
+                }
                 ParseState::Ready {
                     input,
                     output: None,
@@ -61,6 +68,7 @@ impl RawArgs {
             } => Ok(RawArgs {
                 input_path: PathBuf::from(input),
                 output_file: output,
+                validate,
             }),
             ParseState::Ready { input: None, .. } => Err(SetupError::MissingInputPath),
             ParseState::ExpectingOutputValue { .. } => Err(SetupError::MissingOutputValue),
@@ -92,14 +100,18 @@ impl RawArgs {
 
         match classify_path(&path) {
             PathKind::NotFound => Err(SetupError::InputPathNotFound(path)),
-            PathKind::File => Ok(vec![FileTask::new(path, self.output_file)]),
-            PathKind::Dir => resolve_dir(path, self.output_file),
+            PathKind::File => Ok(vec![FileTask::new(path, self.output_file, self.validate)]),
+            PathKind::Dir => resolve_dir(path, self.output_file, self.validate),
             PathKind::Other => Err(SetupError::InvalidInputPath(path)),
         }
     }
 }
 
-fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTask>, SetupError> {
+fn resolve_dir(
+    path: PathBuf,
+    output_file: Option<PathBuf>,
+    validate: bool,
+) -> Result<Vec<FileTask>, SetupError> {
     if output_file.is_some() {
         return Err(SetupError::OutputWithDirectory);
     }
@@ -112,7 +124,7 @@ fn resolve_dir(path: PathBuf, output_file: Option<PathBuf>) -> Result<Vec<FileTa
     }
     Ok(csv_files
         .into_iter()
-        .map(|f| FileTask::new(f, None))
+        .map(|f| FileTask::new(f, None, validate))
         .collect())
 }
 
@@ -158,6 +170,7 @@ mod tests {
             RawArgs {
                 input_path: PathBuf::from("input.csv"),
                 output_file: None,
+                validate: false,
             }
         );
     }
@@ -176,6 +189,7 @@ mod tests {
             RawArgs {
                 input_path: PathBuf::from("input.csv"),
                 output_file: Some(PathBuf::from("out.json")),
+                validate: false,
             }
         );
     }
@@ -194,6 +208,63 @@ mod tests {
             RawArgs {
                 input_path: PathBuf::from("input.csv"),
                 output_file: Some(PathBuf::from("out.json")),
+                validate: false,
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_with_validate_flag() {
+        let args = vec![
+            "program".to_string(),
+            "input.csv".to_string(),
+            "--validate".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: None,
+                validate: true,
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_validate_before_input() {
+        let args = vec![
+            "program".to_string(),
+            "--validate".to_string(),
+            "input.csv".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: None,
+                validate: true,
+            }
+        );
+    }
+
+    #[test]
+    fn raw_args_parse_validate_with_output() {
+        let args = vec![
+            "program".to_string(),
+            "--validate".to_string(),
+            "input.csv".to_string(),
+            "--output".to_string(),
+            "out.json".to_string(),
+        ];
+        let result = RawArgs::parse(args.into_iter()).unwrap();
+        assert_eq!(
+            result,
+            RawArgs {
+                input_path: PathBuf::from("input.csv"),
+                output_file: Some(PathBuf::from("out.json")),
+                validate: true,
             }
         );
     }
