@@ -7,13 +7,13 @@ use Cli.Log
 use Cli.Stages
 use Util.Files
 
-pub type alias ProcessingReport = {
+type alias ProcessingReport = {
     lapCount = Int32,
     outputPath = String,
     lapsPath = String
 }
 
-pub type alias RunSummary = {
+type alias RunSummary = {
     processed = Int32,
     errors = Int32
 }

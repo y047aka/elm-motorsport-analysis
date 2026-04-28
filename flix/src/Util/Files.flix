@@ -29,7 +29,7 @@ pub mod Util.Files {
         Fs.FileStat.runWithIO(() -> Fs.FileStat.isDirectory(path))
             |> Result.mapErr(e -> FileError.AccessError("${e}"))
 
-    pub def listDir(path: String): Result[FileError, List[String]] \ IO =
+    def listDir(path: String): Result[FileError, List[String]] \ IO =
         Fs.DirList.runWithIO(() -> Fs.DirList.list(path))
             |> Result.mapErr(e -> FileError.ListDirError("${e}"))
 
