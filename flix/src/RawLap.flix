@@ -1,4 +1,4 @@
-mod Motorsport.RawLap {
+mod RawLap {
 
     use Util.Csv
     use Util.Duration

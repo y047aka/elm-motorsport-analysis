@@ -3,7 +3,7 @@ mod Cli.Stages {
     use Util.Csv
     use Util.Json
     use Motorsport.Metadata
-    use Motorsport.RawLap
+    use RawLap
 
     pub type alias Output = {
         lapCount     = Int32,

@@ -1,7 +1,7 @@
 mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
-    use Motorsport.RawLap
+    use RawLap
     use Util.Json
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
