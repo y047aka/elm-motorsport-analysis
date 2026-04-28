@@ -46,7 +46,7 @@ type CarEventType
 
 {-| Build a sorted list of timeline events from a list of cars.
 
-Mirrors the Rust CLI's `calc_timeline_events` (`cli/motorsport/src/timeline.rs`):
+Emits, in this order:
 
 1.  RaceStart at time 0
 2.  Per-car Start events at time 0 (with `pitTime` stripped from the embedded lap)
