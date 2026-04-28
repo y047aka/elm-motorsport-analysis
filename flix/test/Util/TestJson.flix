@@ -1,6 +1,7 @@
-mod TestJson {
+mod Util.TestJson {
 
-    use Json.JsonValue.{JsonNull, JsonBool, JsonInt, JsonFloat, JsonString, JsonArray, JsonObject}
+    use Util.Json
+    use Util.Json.JsonValue.{JsonNull, JsonBool, JsonInt, JsonFloat, JsonString, JsonArray, JsonObject}
 
     @Test
     def testRenderNull(): Unit \ Assert =

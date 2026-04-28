@@ -1,4 +1,4 @@
-mod Json {
+mod Util.Json {
 
     pub enum JsonValue with ToString {
         case JsonNull

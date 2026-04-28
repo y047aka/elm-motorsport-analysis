@@ -110,7 +110,7 @@
           cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2025"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
-          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec/2025/cota_6h.csv --output ../app/static/wec/2025/cota_6h_laps.json"}/bin/flix-run"; meta.description = "Run Flix project (CSV -> JSON)"; };
+          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec/2025"}/bin/flix-run";                             meta.description = "Run Flix project (CSV -> JSON)"; };
         };
       });
 }

@@ -1,4 +1,4 @@
-mod Args {
+mod Cli.Args {
 
     pub enum ArgsError with ToString {
         case MissingInputPath

@@ -1,4 +1,6 @@
-mod TestArgs {
+mod Cli.TestArgs {
+
+    use Cli.Args
 
     @Test
     def testParseNoArgs(): Unit \ Assert =

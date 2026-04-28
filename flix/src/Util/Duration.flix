@@ -1,13 +1,5 @@
-/// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の時間文字列を ms 単位の
-/// `Int32` と相互変換する。Rust 版 `motorsport::duration` と同じ規則:
-/// 1時間以上は `H:MM:SS.sss`、1分以上は `M:SS.sss`、それ未満は `S.sss`。
-///
-/// 公開 API は `normalize` のみ (入力を一度パースして正規形に整形し直す)。
-/// `parse` / `format` は `normalize` 内部の実装詳細として private に保つ。
-mod Duration {
+mod Util.Duration {
 
-    /// `H:MM:SS.sss` / `MM:SS.sss` / `SS.sss` 形式の文字列を ms 単位の Int32 にパースする。
-    /// 不正フォーマットは `None` を返す。
     def parse(s: String): Option[Int32] =
         match String.split({regex = "\\."}, s) {
             case wholePart :: msPart :: Nil =>
@@ -20,8 +12,6 @@ mod Duration {
             case _ => None
         }
 
-    /// ms 単位の Int32 を `H:MM:SS.sss` / `M:SS.sss` / `S.sss` 形式に整形する。
-    /// 桁ぞろえ規則は Rust 版 `motorsport::duration::to_string` と同じ。
     def format(ms: Int32): String =
         let totalSec = ms / 1000;
         let msPart   = ms - totalSec * 1000;
@@ -35,8 +25,6 @@ mod Duration {
         else
             "${s}.${zeroPad3(msPart)}"
 
-    /// 入力文字列を Duration として読み直し、正規形式で再フォーマットする。
-    /// 空文字列はそのまま、パース不能はそのまま返す (フェイルセーフ)。
     pub def normalize(s: String): String =
         if (String.isEmpty(s)) s
         else
@@ -44,6 +32,10 @@ mod Duration {
                 case Some(ms) => format(ms)
                 case None     => s
             }
+
+    pub def toMillis(s: String): Option[Int32] =
+        if (String.isEmpty(s)) None
+        else parse(s)
 
     def parseHmsToSeconds(s: String): Option[Int32] =
         match String.split({regex = ":"}, s) {
