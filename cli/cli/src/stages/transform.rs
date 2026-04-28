@@ -139,7 +139,7 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
                 .mini_sectors
                 .as_ref()
                 .map(|mini| build_mini_sectors(mini, &bests.mini));
-            finalized_lap(record.lap, &bests, record.stats.pit_time, mini_sectors)
+            finalized_lap(record.lap, &bests, mini_sectors)
         })
         .collect()
 }
@@ -152,7 +152,6 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
 fn finalized_lap(
     lap: ParsedLap,
     bests: &BestTimes,
-    pit_time: Option<motorsport::Duration>,
     mini_sectors: Option<MiniSectors>,
 ) -> Lap {
     Lap::new_with_mini_sectors(
@@ -169,7 +168,6 @@ fn finalized_lap(
         bests.s2.unwrap_or(0),
         bests.s3.unwrap_or(0),
         lap.elapsed,
-        pit_time,
         mini_sectors,
     )
 }
