@@ -12,7 +12,7 @@ mod Util.Duration {
             case _ => None
         }
 
-    def format(ms: Int32): String =
+    pub def format(ms: Int32): String =
         let totalSec = ms / 1000;
         let msPart   = ms - totalSec * 1000;
         let h        = totalSec / 3600;

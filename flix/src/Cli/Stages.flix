@@ -7,6 +7,8 @@ mod Cli.Stages {
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
+    use Cli.Validation
+    use RawLap.RawLap
 
     pub type alias Output = {
         lapCount     = Int32,
@@ -26,7 +28,10 @@ mod Cli.Stages {
     }
 
     pub def process(eventId: String, dataLines: List[String]): Output =
-        let rawLaps      = dataLines |> Csv.parse |> RawLap.fromCsvRows;
+        let rawLaps = dataLines |> Csv.parse |> RawLap.fromCsvRows;
+        processRawLaps(eventId, rawLaps)
+
+    pub def processRawLaps(eventId: String, rawLaps: List[RawLap]): Output =
         let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
         let metadataJson = Json.render(Metadata.toJson(metadata));
         let lapsJson     = Json.render(RawLap.toJsonArray(rawLaps));
@@ -54,14 +59,16 @@ mod Cli.Stages {
         Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
         if (summary#errors == 0) 0 else 1
 
-    def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ IO =
+    def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         forM(
             lines     <- Files.readLines(task#inputPath) |> Result.mapErr(CliError.File);
             dataLines <- match lines {
                             case _ :: rest => Ok(rest)
                             case Nil       => Err(CliError.EmptyFile(task#inputPath))
                          };
-            processed <- Ok(process(task#eventName, dataLines));
+            rawLaps   <- Ok(dataLines |> Csv.parse |> RawLap.fromCsvRows);
+            _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
+            processed <- Ok(processRawLaps(task#eventName, rawLaps));
             _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
             _         <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
         ) yield {
@@ -69,5 +76,8 @@ mod Cli.Stages {
             outputPath = task#outputPath,
             lapsPath   = task#lapsPath
         }
+
+    def reportViolations(violations: List[String]): Unit \ Console =
+        violations |> List.forEach(Console.eprintln)
 
 }
