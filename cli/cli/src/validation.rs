@@ -164,75 +164,83 @@ impl ValidationReport {
 }
 
 pub fn validate(records: &[LapRecord]) -> ValidationReport {
-    let mut report = ValidationReport::default();
     if records.is_empty() {
-        return report;
+        return ValidationReport::default();
     }
-    check_sector_sum(records, &mut report);
-    check_elapsed_accumulation(records, &mut report);
-    check_hour_elapsed_correspondence(records, &mut report);
-    report
+    ValidationReport {
+        issues: [
+            check_sector_sum(records),
+            check_elapsed_accumulation(records),
+            check_hour_elapsed_correspondence(records),
+        ]
+        .concat(),
+    }
 }
 
-fn check_sector_sum(records: &[LapRecord], report: &mut ValidationReport) {
-    for r in records {
-        let sum = sector_duration(&r.lap.sector_1)
-            .saturating_add(sector_duration(&r.lap.sector_2))
-            .saturating_add(sector_duration(&r.lap.sector_3));
-        if sum != r.lap.time {
-            report.issues.push(Issue::SectorSum {
+fn check_sector_sum(records: &[LapRecord]) -> Vec<Issue> {
+    records
+        .iter()
+        .filter_map(|r| {
+            let sum = sector_duration(&r.lap.sector_1)
+                .saturating_add(sector_duration(&r.lap.sector_2))
+                .saturating_add(sector_duration(&r.lap.sector_3));
+            (sum != r.lap.time).then(|| Issue::SectorSum {
                 car_number: r.lap.car_number.clone(),
                 lap_number: r.lap.lap_number,
                 lap_time_ms: r.lap.time,
                 sectors_sum_ms: sum,
                 blank_sectors: blank_sector_labels(&r.lap),
-            });
-        }
-    }
+            })
+        })
+        .collect()
 }
 
 fn blank_sector_labels(lap: &ParsedLap) -> Vec<&'static str> {
-    let mut blanks = Vec::new();
-    if lap.sector_1.is_err() {
-        blanks.push("s1");
-    }
-    if lap.sector_2.is_err() {
-        blanks.push("s2");
-    }
-    if lap.sector_3.is_err() {
-        blanks.push("s3");
-    }
-    blanks
+    [
+        (&lap.sector_1, "s1"),
+        (&lap.sector_2, "s2"),
+        (&lap.sector_3, "s3"),
+    ]
+    .into_iter()
+    .filter_map(|(sector, name)| sector.is_err().then_some(name))
+    .collect()
 }
 
-fn check_elapsed_accumulation(records: &[LapRecord], report: &mut ValidationReport) {
-    for (_, laps) in group_by_car(records) {
-        let mut sorted = laps;
-        sorted.sort_by_key(|r| r.lap.lap_number);
-
-        let mut running: u32 = 0;
-        for r in sorted {
-            running = running.saturating_add(r.lap.time);
-            if running != r.lap.elapsed {
-                report.issues.push(Issue::ElapsedDrift {
-                    car_number: r.lap.car_number.clone(),
-                    lap_number: r.lap.lap_number,
-                    expected_ms: running,
-                    actual_ms: r.lap.elapsed,
-                });
-            }
-        }
-    }
+fn check_elapsed_accumulation(records: &[LapRecord]) -> Vec<Issue> {
+    group_by_car(records)
+        .into_iter()
+        .flat_map(|(_, laps)| check_per_car_elapsed(laps))
+        .collect()
 }
 
-fn check_hour_elapsed_correspondence(records: &[LapRecord], report: &mut ValidationReport) {
+/// Walks one car's laps in order, emitting one `ElapsedDrift` per row whose
+/// recorded `elapsed` disagrees with the running sum of `lap.time`.
+fn check_per_car_elapsed(mut laps: Vec<&LapRecord>) -> Vec<Issue> {
+    laps.sort_by_key(|r| r.lap.lap_number);
+    laps.into_iter()
+        .scan(0u32, |running, r| {
+            *running = running.saturating_add(r.lap.time);
+            Some((*running, r))
+        })
+        .filter(|&(running, r)| running != r.lap.elapsed)
+        .map(|(running, r)| Issue::ElapsedDrift {
+            car_number: r.lap.car_number.clone(),
+            lap_number: r.lap.lap_number,
+            expected_ms: running,
+            actual_ms: r.lap.elapsed,
+        })
+        .collect()
+}
+
+fn check_hour_elapsed_correspondence(records: &[LapRecord]) -> Vec<Issue> {
+    let mut issues = Vec::new();
     let mut reference: Option<u32> = None;
 
     for r in records {
         let hour = match &r.stats.hour {
             Ok(h) => *h,
             Err(raw) => {
-                report.issues.push(Issue::HourUnparseable {
+                issues.push(Issue::HourUnparseable {
                     car_number: r.lap.car_number.clone(),
                     lap_number: r.lap.lap_number,
                     raw: raw.clone(),
@@ -245,7 +253,7 @@ fn check_hour_elapsed_correspondence(records: &[LapRecord], report: &mut Validat
         match reference {
             None => reference = Some(offset),
             Some(expected) if expected != offset => {
-                report.issues.push(Issue::HourOffset {
+                issues.push(Issue::HourOffset {
                     car_number: r.lap.car_number.clone(),
                     lap_number: r.lap.lap_number,
                     expected_offset_ms: expected,
@@ -255,6 +263,7 @@ fn check_hour_elapsed_correspondence(records: &[LapRecord], report: &mut Validat
             _ => {}
         }
     }
+    issues
 }
 
 /// Groups laps by car number in O(n), preserving CSV first-seen order so

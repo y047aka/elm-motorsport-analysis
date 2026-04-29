@@ -123,15 +123,11 @@ impl Hour {
     /// preserved for output and validation reporting.
     pub fn parse(raw: &str) -> Result<Self, String> {
         let trimmed = raw.trim();
-        // Hour-of-day must have three components — otherwise "11:02" would
-        // silently parse as 11 minutes 2 seconds.
-        if trimmed.split(':').count() != 3 {
-            return Err(raw.to_string());
-        }
-        match duration::from_string(trimmed) {
-            Some(ms) if ms < DAY_MS => Ok(Hour(ms)),
-            _ => Err(raw.to_string()),
-        }
+        duration::from_string(trimmed)
+            .filter(|_| trimmed.split(':').count() == 3)
+            .filter(|&ms| ms < DAY_MS)
+            .map(Hour)
+            .ok_or_else(|| raw.to_string())
     }
 
     pub fn ms_since_midnight(self) -> u32 {
