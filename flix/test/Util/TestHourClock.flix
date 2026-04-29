@@ -19,7 +19,7 @@ mod Util.TestHourClock {
 
     @Test
     def testParseTwoComponentRejected(): Unit \ Assert =
-        // M:SS は時刻ではないので Err
+        // M:SS is not a time-of-day, so Err is expected
         match HourClock.parse("3:38.404") {
             case Err(_) => Assert.assertTrue(true)
             case Ok(_)  => Assert.assertTrue(false)

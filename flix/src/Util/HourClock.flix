@@ -1,13 +1,13 @@
 /// Wall-clock time-of-day in milliseconds since midnight.
 ///
-/// 不変条件: 0 <= ms < DAY_MS。`Util.Duration.toMillis` は `H:MM:SS` / `M:SS` /
-/// `SS` を区別なく受け入れるが、Hour は時刻として「コロンが 2 個」かつ
-/// `< 24h` の値のみを受理する。
+/// Invariant: 0 <= ms < DAY_MS. `Util.Duration.toMillis` accepts `H:MM:SS`,
+/// `M:SS`, and `SS` interchangeably; Hour, in contrast, only accepts strict
+/// time-of-day values with two colons and a result below 24h.
 ///
-/// `offsetFrom(elapsedMs)` は `(hourMs - elapsedMs) mod 24h` を計算するため、
-/// エンデュランスレースで日跨ぎ(hour が 24h で wrap、elapsed は単調増加)
-/// しても呼び出し側は wrap を意識せずに「レーススタート時刻のオフセット」を
-/// 比較できる。
+/// `offsetFrom(elapsedMs)` computes `(hourMs - elapsedMs) mod 24h`, so an
+/// endurance-race day-rollover (hour wraps at 24h while elapsed keeps
+/// growing) is handled internally — callers can compare offsets directly
+/// without thinking about midnight.
 mod Util.HourClock {
 
     use Util.Duration
@@ -18,9 +18,9 @@ mod Util.HourClock {
         case Hour(Int32)
     }
 
-    /// `H:MM:SS.mmm` 形式 (コロン 2 個) のみ受理する。
-    /// 空欄、`MM:SS`、`SS`、24h 以上、その他パース不能なら Err(raw)。
-    /// Err は元の文字列をそのまま保持し、診断時に出力できるようにする。
+    /// Accepts only `H:MM:SS.mmm` (two colons). Empty, `MM:SS`, `SS`, values
+    /// >= 24h, and any other unparseable text return `Err(raw)` so the
+    /// original input can be reported.
     pub def parse(raw: String): Result[String, Hour] =
         let trimmed = String.trim(raw);
         let parts = String.split({regex = ":"}, trimmed);
@@ -38,9 +38,9 @@ mod Util.HourClock {
             case Hour.Hour(ms) => ms
         }
 
-    /// `(self - elapsedMs) mod 24h`。結果は `[0, 24h)` の範囲に正規化される。
-    /// Flix の整数除算は 0 方向への切り捨て(truncated toward zero)なので、
-    /// 負の余りが出た場合は dayMs を加えて非負化する。
+    /// `(self - elapsedMs) mod 24h`, normalized to `[0, 24h)`. Flix integer
+    /// division truncates toward zero, so a negative remainder is shifted
+    /// up by dayMs.
     pub def offsetFrom(h: Hour, elapsedMs: Int32): Int32 =
         match h {
             case Hour.Hour(ms) =>
@@ -51,9 +51,10 @@ mod Util.HourClock {
                 if (r < 0) r + d else r
         }
 
-    /// `HH:MM:SS.mmm` 形式 (時を 2 桁ゼロパディング) で文字列化する。
-    /// `Util.Duration.format` は `0:01:35.365` のように先頭 0 時を省略するため、
-    /// CSV 入力(常に 2 桁時)との byte-identity を保つには専用整形が必要。
+    /// Renders as `HH:MM:SS.mmm` with the hour zero-padded to two digits.
+    /// `Util.Duration.format` strips a leading zero hour (e.g. `0:01:35.365`),
+    /// which would break byte-identity against WEC CSVs that always use
+    /// two-digit hours.
     pub def format(h: Hour): String =
         match h {
             case Hour.Hour(ms) =>

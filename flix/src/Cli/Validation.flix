@@ -1,23 +1,26 @@
-/// CSV → JSON 変換時に走る入力データ整合性チェック。
+/// Source-data integrity checks run during CSV → JSON conversion.
 ///
-/// 検査ルールはすべて 0ms 厳密一致で、違反は警告として返すのみ
-/// (exit code には影響しない)。Stages.processFile 側で stderr に出力される。
+/// All rules use strict 0 ms equality. Violations are returned as warnings
+/// only; they do not affect the exit code. Stages.processFile prints them
+/// to stderr.
 ///
-/// ルール:
+/// Rules:
 ///   1. SectorSum         — `s1 + s2 + s3 == lapTime` (per row)
-///   2. ElapsedDrift      — 同一カーで `elapsed[n] == sum(lapTime[1..=n])`
-///                          (累積和ベース: 最初に drift した行以降を全て報告)
-///   3. HourElapsedOffset — CSV 全体で `(hour - elapsed) mod 24h` が一定
-///   4. HourUnparseable   — hour 列がパース不能(空欄・H:MM:SS 形式以外)
+///   2. ElapsedDrift      — per car, `elapsed[n] == sum(lapTime[1..=n])`
+///                          (cumulative-sum: every row from the first drift
+///                          onward is reported)
+///   3. HourElapsedOffset — across the CSV, `(hour - elapsed) mod 24h` is
+///                          constant
+///   4. HourUnparseable   — hour cell cannot be parsed as H:MM:SS.mmm
 ///
-/// 設計メモ:
-///   - HourElapsedOffset の baseline は **CSV 全体の最初の有効な行** を採用
-///     (per-car ではなく race-wide)。1 カーの lap 1 が壊れていても他カーへ
-///     波及しない。
-///   - 24h wrap は `Util.HourClock.offsetFrom` が内蔵しており、検証側は
-///     baseline と offset を直接 `==` で比較するだけでよい。
-///   - レポート順は CSV 出現順を保持(per-lap は naturally CSV 順、per-car は
-///     first-seen-index で car グループをソート)。
+/// Design notes:
+///   - HourElapsedOffset's baseline is the **first valid row in the whole
+///     CSV** (race-wide, not per-car). A bad lap 1 on one car does not
+///     cascade across the rest of that car.
+///   - 24h wrap is folded into `Util.HourClock.offsetFrom`, so the validator
+///     just compares offsets with `==`.
+///   - Report order follows CSV appearance (per-lap is naturally CSV order;
+///     per-car uses first-seen-index to sort the car groups).
 mod Cli.Validation {
 
     use Util.Duration
@@ -27,29 +30,29 @@ mod Cli.Validation {
     use RawLap.Sector
 
     pub enum Violation {
-        /// `s1 + s2 + s3 == lapTime` を満たさない。
-        /// 引数: 該当ラップ / lapTime(ms) / 合算値(ms) / 空欄だったセクタ名のリスト
+        /// `s1 + s2 + s3 != lapTime`.
+        /// Args: lap / lapTime ms / sector sum ms / labels of blank sectors.
         case SectorSum(RawLap, Int32, Int32, List[String])
 
-        /// `elapsed[n] == sum(lapTime[1..=n])` を満たさない。累積和ベースなので、
-        /// 一度 drift が起きた以降のラップは続けて違反になる(消えない drift)。
-        /// 引数: 該当ラップ / 期待値=累積和(ms) / 実測値=elapsed(ms)
+        /// `elapsed[n] != sum(lapTime[1..=n])`. Cumulative-sum based, so
+        /// every row from the first drift onward is reported (sticky drift).
+        /// Args: lap / expected = running sum (ms) / actual = elapsed (ms).
         case ElapsedDrift(RawLap, Int32, Int32)
 
-        /// `(hour - elapsed) mod 24h` が baseline と一致しない。
-        /// 引数: 該当ラップ / 基準オフセット(ms) / 実測オフセット(ms)
+        /// `(hour - elapsed) mod 24h` does not match the baseline.
+        /// Args: lap / baseline offset (ms) / actual offset (ms).
         case HourElapsedOffset(RawLap, Int32, Int32)
 
-        /// hour 列が H:MM:SS.mmm 形式でパースできない。
-        /// 引数: 該当ラップ / 元の生の文字列
+        /// hour cell could not be parsed as H:MM:SS.mmm.
+        /// Args: lap / original raw string.
         case HourUnparseable(RawLap, String)
     }
 
-    /// イベント名と違反のリストから、stderr 用の文字列メッセージを生成する。
+    /// Runs all rules and renders each violation as a stderr-ready string.
     pub def validate(eventName: String, laps: List[RawLap]): List[String] =
         detect(laps) |> List.map(v -> formatViolation(eventName, v))
 
-    /// すべてのルールを実行し、検出された Violation のリストを返す純粋関数。
+    /// Runs all rules and returns the structured violation list (pure).
     pub def detect(laps: List[RawLap]): List[Violation] =
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
         let perCar = perCarViolations(laps);
@@ -62,8 +65,8 @@ mod Cli.Validation {
             case Err(v) => Some(v)
         }
 
-    /// per-car の elapsed-drift チェックを CSV 出現順 (first-seen index) で
-    /// 流す。各カー内は lapNumber 昇順にソート。
+    /// Walks per-car elapsed-drift checks in CSV order (first-seen index).
+    /// Each car's laps are sorted by lapNumber before the check.
     def perCarViolations(laps: List[RawLap]): List[Violation] =
         groupByCar(laps) |> List.flatMap(pair -> match pair {
             case (_, carLaps) =>
@@ -71,10 +74,10 @@ mod Cli.Validation {
                 checkElapsedDrift(sorted)
         })
 
-    /// CSV 出現順を保つ groupByCar:
-    ///   1. 1 パス目で carNumber → first-seen-index のマップを作る
-    ///   2. 2 パス目で carNumber → 全ラップ のマップを作る
-    ///   3. first-seen-index でソートしてリスト化
+    /// Groups laps by carNumber while preserving CSV appearance order:
+    ///   1. first pass records carNumber → first-seen index
+    ///   2. second pass collects carNumber → all laps
+    ///   3. flatten, sorted by first-seen index
     def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
         let firstSeen = laps |> List.foldLeft(
             (acc, lap) ->
@@ -109,22 +112,21 @@ mod Cli.Validation {
                     Err(Violation.SectorSum(lap, lapMs, sum, blanks))
         }
 
-    /// Sector (Result[String, Int32]) を (ms, blank-label-or-None) に展開。
-    /// Err は「パース不能 (空欄含む)」を意味するので 0ms 扱いにし、
-    /// セクタ名(s1/s2/s3)を blank ラベルとして返して合算違反メッセージに添付する。
+    /// Unpacks a Sector into (ms, blank-label-or-None). Err is treated as
+    /// 0 ms and the field name is returned so it can be attached to the
+    /// violation message.
     def sectorMs(sector: Sector, name: String): (Int32, Option[String]) =
         match sector {
             case Ok(ms)  => (ms, None)
             case Err(_)  => (0, Some(name))
         }
 
-    /// 累積和ベースの elapsed-drift チェック (Rust 版の `scan` と同等)。
-    /// 各ラップで `running = sum(lapTime[1..=n])` を更新し、`elapsed` と一致しなければ違反。
-    /// blank/未パースの lapTime / elapsed は 0 として扱う(Rust 側の挙動に合わせる)。
-    /// 一度 drift が始まると以降のラップも続けて違反として報告される(隣接差分版より
-    /// ノイズは多いが、相殺ドリフトを見逃さない)。
-    ///
-    /// 実装: `(running, acc)` のタプルを `foldLeft` で運び、最後にアキュムレータを反転。
+    /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).
+    /// Each lap updates `running = sum(lapTime[1..=n])` and is flagged if
+    /// `elapsed` disagrees. Blank/unparseable lapTime and elapsed are
+    /// treated as 0 ms (matches Rust's behaviour). Once a drift starts,
+    /// every subsequent lap is reported — noisier than adjacent-diff, but
+    /// catches compensating drift.
     def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
@@ -141,17 +143,13 @@ mod Cli.Validation {
             case (_, acc) => List.reverse(acc)
         }
 
-    /// hour-elapsed の race-wide ベースラインチェック。
-    /// baseline は CSV 出現順で最初に Hour.parse が成功した行から確定する。
-    /// それ以前の行で Hour.parse が失敗した場合も `HourUnparseable` として
-    /// 報告する(silent skip しない)。
+    /// Race-wide hour-elapsed baseline check. The baseline is the first row
+    /// in CSV order whose hour parses successfully; rows whose hour fails to
+    /// parse are reported as HourUnparseable rather than silently skipped.
     def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
-        // 1 パス目: baseline 確定(最初の有効な (offset, _) を探す)
         let baseline = findBaseline(laps);
-        // 2 パス目: 全行をチェック
         match baseline {
             case None       =>
-                // ファイル中に有効な hour が 1 行もない: HourUnparseable のみ報告
                 laps |> List.filterMap(lap -> hourUnparseableOf(lap))
             case Some(base) =>
                 laps |> List.filterMap(lap -> resultToOption(checkHourLine(lap, base)))
@@ -182,7 +180,6 @@ mod Cli.Validation {
                 }
         }
 
-    /// baseline が見つからないケース専用の HourUnparseable 抽出。
     def hourUnparseableOf(lap: RawLap): Option[Violation] =
         match lap#hour {
             case Err(raw) => Some(Violation.HourUnparseable(lap, raw))
@@ -204,8 +201,9 @@ mod Cli.Validation {
                 "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
         }
 
-    /// `{eventName}: [car X #N] kind: expected={fmt} ({ms}ms) actual={fmt} ({ms}ms)`
-    /// raw ms を併記して grep 容易性と差分計算を両立(Rust 版と同形式)。
+    /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
+    /// The raw ms is included alongside the formatted Duration to keep the
+    /// output both human-readable and grep-friendly (matches Rust output).
     def formatExpectedActual(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
         "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
 

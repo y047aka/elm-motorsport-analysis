@@ -7,12 +7,13 @@ mod RawLap {
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
-    /// セクターセル: 成功時は Ok(ms)、空欄/未パース時は Err(raw)。
-    /// Err は元 CSV 文字列を保持し、JSON 出力で round-trip する。
+    /// Sector cell: `Ok(ms)` on success, `Err(raw)` for blank or
+    /// unparseable input. Err preserves the original CSV string so JSON
+    /// output round-trips it verbatim.
     pub type alias Sector = Result[String, Int32]
 
-    /// 時刻セル: 成功時は Ok(Hour)、空欄/未パース時は Err(raw)。
-    /// Err は元 CSV 文字列を保持し、JSON 出力で round-trip する。
+    /// Hour-of-day cell: `Ok(Hour)` on success, `Err(raw)` otherwise.
+    /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
     pub type alias RawLap = {
@@ -122,25 +123,27 @@ mod RawLap {
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
 
-    /// CSV のセクターセルを Sector(Result) に変換。
-    /// 空欄や非数値はそのまま Err(raw) として保持し、JSON 出力で原文を round-trip。
+    /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
+    /// are kept as `Err(raw)` so the original text can round-trip to JSON.
     def parseSector(raw: String): Sector =
         match Duration.toMillis(raw) {
             case Some(ms) => Ok(ms)
             case None     => Err(raw)
         }
 
-    /// Sector を JSON 出力する。Ok は Duration.format で正規化、Err は raw のまま。
-    /// 結果は変更前 (Duration.normalize 経由の文字列) と byte-identical になる。
+    /// Renders a Sector as JSON. Ok is normalized through Duration.format,
+    /// Err is emitted verbatim. The output is byte-identical with the
+    /// pre-refactor result (which went through Duration.normalize).
     def sectorJson(s: Sector): Json.JsonValue =
         match s {
             case Ok(ms)   => JsonString(Duration.format(ms))
             case Err(raw) => JsonString(raw)
         }
 
-    /// HourCell を JSON 出力する。Ok は HourClock.format (HH:MM:SS.mmm) で
-    /// 正規化、Err は raw のまま。WEC CSV はゼロパディング 2 桁時を採用しており、
-    /// 結果は変更前(hour 列をそのまま JSON 出力)と byte-identical。
+    /// Renders an HourCell as JSON. Ok is normalized through HourClock.format
+    /// (`HH:MM:SS.mmm`), Err is emitted verbatim. WEC CSVs use zero-padded
+    /// two-digit hours, so the output is byte-identical with the
+    /// pre-refactor result (which echoed the hour cell directly).
     def hourJson(h: HourCell): Json.JsonValue =
         match h {
             case Ok(hour) => JsonString(HourClock.format(hour))

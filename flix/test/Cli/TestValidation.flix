@@ -12,7 +12,7 @@ mod Cli.TestValidation {
             case None    => unreachable!()
         }
 
-    /// 各バリアントの先頭引数 RawLap から carNumber を取り出す共通ヘルパー。
+    /// Pulls carNumber off the leading RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
         case Violation.SectorSum(lap, _, _, _)      => lap#carNumber
         case Violation.ElapsedDrift(lap, _, _) => lap#carNumber
@@ -50,7 +50,7 @@ mod Cli.TestValidation {
     @Test
     def testSectorSumMismatchDetected(): Unit \ Assert =
         // s1+s2+s3 = 30.000+60.000+30.001 = 2:00.001, lapTime = 2:00.000 -> 1ms diff.
-        // elapsed と hour は lapTime に整合させて、SectorSum 単独違反になるよう調整。
+        // elapsed and hour are aligned with lapTime so SectorSum is the only violation.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
         let violations = Validation.detect(lap :: Nil);
         Assert.assertTrue(List.length(violations) == 1);
@@ -71,17 +71,18 @@ mod Cli.TestValidation {
 
     @Test
     def testElapsedDriftCumulativeReportsTrailingLaps(): Unit \ Assert =
-        // 累積和ベース: lap 2 で 500ms drift したら、lap 3 が「lap 2 基準では正しい」
-        // (= 隣接差分なら無違反になる)場合でも、lap 3 の elapsed は累積和と一致しないため
-        // 続けて違反となる。Rust 実装と同じ挙動を検証する。
+        // Cumulative-sum: when lap 2 drifts by 500ms, lap 3 is "consistent
+        // relative to lap 2" (an adjacent-diff check would clear it) but still
+        // disagrees with the running sum, so it must be reported too. This
+        // mirrors the Rust implementation's behaviour.
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
         let l3 = buildLap("7", 3, "2:00.000", "30.000", "60.000", "30.000", "6:00.500", "14:06:00.500");
         let violations = Validation.detect(l1 :: l2 :: l3 :: Nil)
             |> List.filter(isElapsedDrift);
         Assert.assertTrue(List.length(violations) == 2);
-        // 1 件目: lap 2、期待値=4:00.000(累積和)、実測=4:00.500
-        // 2 件目: lap 3、期待値=6:00.000(累積和)、実測=6:00.500
+        // 1st: lap 2, expected=4:00.000 (running sum), actual=4:00.500
+        // 2nd: lap 3, expected=6:00.000 (running sum), actual=6:00.500
         match violations {
             case v1 :: v2 :: Nil =>
                 match (v1, v2) {
@@ -168,13 +169,14 @@ mod Cli.TestValidation {
 
     @Test
     def testRaceWideBaselineIsolatesBadFirstLap(): Unit \ Assert =
-        // race-wide baseline は CSV 全体の最初の有効な行を採用するので、
-        // car "8" の lap 1 の hour が 1ms ズレていても、car "7" の lap 1 が
-        // baseline になり、car "8" の lap 1 だけが違反になる(lap 2 は壊れていない)。
+        // The race-wide baseline is taken from the first valid row in the
+        // whole CSV, so even if car "8" lap 1's hour is 1 ms off, car "7"
+        // lap 1 anchors the baseline and only car "8" lap 1 is flagged
+        // (car "8" lap 2 is consistent and therefore clean).
         let c7l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        // car 8 lap 1 の hour が 1ms 進んでいる
+        // car 8 lap 1 hour is 1 ms ahead
         let c8l1 = buildLap("8", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.001");
-        // car 8 lap 2 は baseline と一致(elapsed=4:00.000、hour=14:04:00.000)
+        // car 8 lap 2 matches baseline (elapsed=4:00.000, hour=14:04:00.000)
         let c8l2 = buildLap("8", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "14:04:00.000");
         let violations = Validation.detect(c7l1 :: c8l1 :: c8l2 :: Nil)
             |> List.filter(isHourElapsedOffset);
@@ -188,18 +190,20 @@ mod Cli.TestValidation {
 
     @Test
     def testCsvOrderPreservedInReport(): Unit \ Assert =
-        // car "10" が先、car "7" が後で CSV 出現する。違反は出現順で並ぶこと。
-        // (Map.toList は辞書順 "10" < "7" なので、明示的にソートしないと逆になる)
+        // car "10" appears before car "7" in the CSV; violations should
+        // come back in that same order. (Map.toList orders by key, so
+        // "10" < "7" lexically — without an explicit sort the report
+        // would be reversed.)
         let c10l1 = buildLap("10", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        // car "10" lap 2 で elapsed が 1ms ズレ
+        // car "10" lap 2 elapsed is off by 1 ms
         let c10l2 = buildLap("10", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.001", "14:04:00.001");
         let c7l1  = buildLap("7",  1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        // car "7" lap 2 でも elapsed が 1ms ズレ
+        // car "7" lap 2 elapsed is also off by 1 ms
         let c7l2  = buildLap("7",  2, "2:00.000", "30.000", "60.000", "30.000", "4:00.001", "14:04:00.001");
         let violations = Validation.detect(c10l1 :: c10l2 :: c7l1 :: c7l2 :: Nil)
             |> List.filter(isElapsedDrift);
         Assert.assertTrue(List.length(violations) == 2);
-        // 1 件目は car "10"、2 件目は car "7"(CSV 出現順)
+        // First violation should be car "10", second car "7" (CSV order).
         match violations {
             case v1 :: v2 :: Nil =>
                 Assert.assertTrue(violationCar(v1) == "10");
@@ -209,8 +213,9 @@ mod Cli.TestValidation {
 
     @Test
     def testValidateRendersFormattedString(): Unit \ Assert =
-        // 新フォーマット: "sector-sum" slug + "expected=...ms... actual=...ms..."
-        // elapsed/hour は lapTime に整合させ、メッセージ整形は SectorSum で検証する。
+        // New format: "sector-sum" slug + "expected=...ms... actual=...ms...".
+        // elapsed and hour are aligned with lapTime so the formatted output
+        // is validated solely against the SectorSum case.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
         let messages = Validation.validate("test", lap :: Nil);
         Assert.assertTrue(List.length(messages) == 1);
