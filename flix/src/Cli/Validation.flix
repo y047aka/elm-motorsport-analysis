@@ -23,6 +23,7 @@ mod Cli.Validation {
     use Util.HourClock
     use Util.HourClock.Hour
     use RawLap.RawLap
+    use RawLap.Sector
 
     pub enum Violation {
         /// `s1 + s2 + s3 == lapTime` を満たさない。
@@ -106,10 +107,13 @@ mod Cli.Validation {
                     Err(Violation.SectorSum(lap, lapMs, sum, blanks))
         }
 
-    def sectorMs(value: String, name: String): (Int32, Option[String]) =
-        match Duration.toMillis(value) {
-            case Some(ms) => (ms, None)
-            case None     => (0, Some(name))
+    /// Sector (Result[String, Int32]) を (ms, blank-label-or-None) に展開。
+    /// Err は「パース不能 (空欄含む)」を意味するので 0ms 扱いにし、
+    /// セクタ名(s1/s2/s3)を blank ラベルとして返して合算違反メッセージに添付する。
+    def sectorMs(sector: Sector, name: String): (Int32, Option[String]) =
+        match sector {
+            case Ok(ms)  => (ms, None)
+            case Err(_)  => (0, Some(name))
         }
 
     def checkElapsedCumulative(sortedLaps: List[RawLap]): List[Violation] =

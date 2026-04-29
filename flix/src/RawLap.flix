@@ -5,6 +5,10 @@ mod RawLap {
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
+    /// セクターセル: 成功時は Ok(ms)、空欄/未パース時は Err(raw)。
+    /// Err は元 CSV 文字列を保持し、JSON 出力で round-trip する。
+    pub type alias Sector = Result[String, Int32]
+
     pub type alias RawLap = {
         carNumber = String,
         driverNumber = Int32,
@@ -12,11 +16,11 @@ mod RawLap {
         lapTime = String,
         lapImprovement = Int32,
         crossingFinishLineInPit = String,
-        s1 = String,
+        s1 = Sector,
         s1Improvement = Int32,
-        s2 = String,
+        s2 = Sector,
         s2Improvement = Int32,
-        s3 = String,
+        s3 = Sector,
         s3Improvement = Int32,
         kph = String,
         elapsed = String,
@@ -61,11 +65,11 @@ mod RawLap {
             lapTime                 = Duration.normalize(lapTime),
             lapImprovement          = parseIntOrZero(lapImprovementStr),
             crossingFinishLineInPit = crossingFinishLineInPit,
-            s1                      = Duration.normalize(s1),
+            s1                      = parseSector(s1),
             s1Improvement           = parseIntOrZero(s1ImprovementStr),
-            s2                      = Duration.normalize(s2),
+            s2                      = parseSector(s2),
             s2Improvement           = parseIntOrZero(s2ImprovementStr),
-            s3                      = Duration.normalize(s3),
+            s3                      = parseSector(s3),
             s3Improvement           = parseIntOrZero(s3ImprovementStr),
             kph                     = kph,
             elapsed                 = Duration.normalize(elapsed),
@@ -90,11 +94,11 @@ mod RawLap {
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
             ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      JsonString(rawLap#s1)) ::
+            ("s1",                      sectorJson(rawLap#s1)) ::
             ("s1Improvement",           JsonInt(rawLap#s1Improvement)) ::
-            ("s2",                      JsonString(rawLap#s2)) ::
+            ("s2",                      sectorJson(rawLap#s2)) ::
             ("s2Improvement",           JsonInt(rawLap#s2Improvement)) ::
-            ("s3",                      JsonString(rawLap#s3)) ::
+            ("s3",                      sectorJson(rawLap#s3)) ::
             ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
@@ -111,6 +115,22 @@ mod RawLap {
 
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
+
+    /// CSV のセクターセルを Sector(Result) に変換。
+    /// 空欄や非数値はそのまま Err(raw) として保持し、JSON 出力で原文を round-trip。
+    def parseSector(raw: String): Sector =
+        match Duration.toMillis(raw) {
+            case Some(ms) => Ok(ms)
+            case None     => Err(raw)
+        }
+
+    /// Sector を JSON 出力する。Ok は Duration.format で正規化、Err は raw のまま。
+    /// 結果は変更前 (Duration.normalize 経由の文字列) と byte-identical になる。
+    def sectorJson(s: Sector): Json.JsonValue =
+        match s {
+            case Ok(ms)   => JsonString(Duration.format(ms))
+            case Err(raw) => JsonString(raw)
+        }
 
     def stripTrailingDotZero(s: String): String =
         if (String.endsWith({suffix = ".0"}, s))
