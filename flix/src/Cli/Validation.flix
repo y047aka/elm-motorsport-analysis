@@ -1,10 +1,29 @@
+/// CSV → JSON 変換時に走る入力データ整合性チェック。
+///
+/// 検査ルールはすべて 0ms 厳密一致で、違反は警告として返すのみ
+/// (exit code には影響しない)。Stages.processFile 側で stderr に出力される。
+///
+/// ルール:
+///   1. SectorSum         — `s1 + s2 + s3 == lapTime` (per row)
+///   2. ElapsedCumulative — 同一カーで `elapsed[n] == elapsed[n-1] + lapTime[n]`
+///   3. HourElapsedOffset — CSV 全体で `(hour - elapsed) mod 24h` が一定
+///   4. HourUnparseable   — hour 列がパース不能(空欄・H:MM:SS 形式以外)
+///
+/// 設計メモ:
+///   - HourElapsedOffset の baseline は **CSV 全体の最初の有効な行** を採用
+///     (per-car ではなく race-wide)。1 カーの lap 1 が壊れていても他カーへ
+///     波及しない。
+///   - 24h wrap は `Util.HourClock.offsetFrom` が内蔵しており、検証側は
+///     baseline と offset を直接 `==` で比較するだけでよい。
+///   - レポート順は CSV 出現順を保持(per-lap は naturally CSV 順、per-car は
+///     first-seen-index で car グループをソート)。
 mod Cli.Validation {
 
     use Util.Duration
+    use Util.HourClock
+    use Util.HourClock.Hour
     use RawLap.RawLap
 
-    /// データ整合性チェックで検出される違反種別。
-    /// 各バリアントは違反発生ラップと、ルール固有の期待値・実測値を保持する。
     pub enum Violation {
         /// `s1 + s2 + s3 == lapTime` を満たさない。
         /// 引数: 該当ラップ / lapTime(ms) / 合算値(ms) / 空欄だったセクタ名のリスト
@@ -14,9 +33,13 @@ mod Cli.Validation {
         /// 引数: 該当ラップ / 期待値(ms) / 実測値(ms)
         case ElapsedCumulative(RawLap, Int32, Int32)
 
-        /// 同一カー内の `hourMs - elapsedMs` が一定でない(24h 単位の wrap は許容)。
+        /// `(hour - elapsed) mod 24h` が baseline と一致しない。
         /// 引数: 該当ラップ / 基準オフセット(ms) / 実測オフセット(ms)
         case HourElapsedOffset(RawLap, Int32, Int32)
+
+        /// hour 列が H:MM:SS.mmm 形式でパースできない。
+        /// 引数: 該当ラップ / 元の生の文字列
+        case HourUnparseable(RawLap, String)
     }
 
     /// イベント名と違反のリストから、stderr 用の文字列メッセージを生成する。
@@ -26,16 +49,9 @@ mod Cli.Validation {
     /// すべてのルールを実行し、検出された Violation のリストを返す純粋関数。
     pub def detect(laps: List[RawLap]): List[Violation] =
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
-        let grouped = groupByCar(laps);
-        let perCar = grouped |> List.flatMap(pair -> match pair {
-            case (_, carLaps) =>
-                let sorted = List.sortBy(l -> l#lapNumber, carLaps);
-                List.append(
-                    checkElapsedCumulative(sorted),
-                    checkHourElapsedConsistency(sorted)
-                )
-        });
-        List.append(perLap, perCar)
+        let perCar = perCarViolations(laps);
+        let perRace = checkHourElapsedRaceWide(laps);
+        List.append(perLap, List.append(perCar, perRace))
 
     def resultToOption(r: Result[Violation, Unit]): Option[Violation] =
         match r {
@@ -43,19 +59,38 @@ mod Cli.Validation {
             case Err(v) => Some(v)
         }
 
+    /// per-car の elapsed cumulative チェックを CSV 出現順 (first-seen index) で
+    /// 流す。各カー内は lapNumber 昇順にソート。
+    def perCarViolations(laps: List[RawLap]): List[Violation] =
+        groupByCar(laps) |> List.flatMap(pair -> match pair {
+            case (_, carLaps) =>
+                let sorted = List.sortBy(l -> l#lapNumber, carLaps);
+                checkElapsedCumulative(sorted)
+        })
+
+    /// CSV 出現順を保つ groupByCar:
+    ///   1. 1 パス目で carNumber → first-seen-index のマップを作る
+    ///   2. 2 パス目で carNumber → 全ラップ のマップを作る
+    ///   3. first-seen-index でソートしてリスト化
     def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
-        // Per-car validation sorts by lapNumber, so the order within each group does not matter.
-        laps
-            |> List.foldLeft(
-                (acc, lap) -> Map.insertWith(
-                    (existing, fresh) -> List.append(fresh, existing),
-                    lap#carNumber,
-                    lap :: Nil,
-                    acc
-                ),
-                Map.empty()
-            )
-            |> Map.toList
+        let firstSeen = laps |> List.foldLeft(
+            (acc, lap) ->
+                if (Map.memberOf(lap#carNumber, acc)) acc
+                else Map.insert(lap#carNumber, Map.size(acc), acc),
+            Map.empty()
+        );
+        let grouped = laps |> List.foldLeft(
+            (acc, lap) -> Map.insertWith(
+                (existing, fresh) -> List.append(fresh, existing),
+                lap#carNumber,
+                lap :: Nil,
+                acc
+            ),
+            Map.empty()
+        );
+        Map.toList(grouped) |> List.sortBy(entry -> match entry {
+            case (car, _) => Map.get(car, firstSeen) |> Option.getWithDefault(0)
+        })
 
     def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
         match Duration.toMillis(lap#lapTime) {
@@ -99,31 +134,53 @@ mod Cli.Validation {
             case _ => Ok(())
         }
 
-    def checkHourElapsedConsistency(sortedLaps: List[RawLap]): List[Violation] =
-        let offsets = sortedLaps |> List.filterMap(l ->
-            match (Duration.toMillis(l#hour), Duration.toMillis(l#elapsed)) {
-                case (Some(hourMs), Some(elapsedMs)) => Some((l, hourMs - elapsedMs))
-                case _                               => None
-            }
-        );
-        match offsets {
-            case Nil               => Nil
-            case (_, base) :: rest =>
-                rest |> List.filterMap(pair -> match pair {
-                    case (lap, offset) => resultToOption(checkHourOffset(lap, base, offset))
-                })
+    /// hour-elapsed の race-wide ベースラインチェック。
+    /// baseline は CSV 出現順で最初に Hour.parse が成功した行から確定する。
+    /// それ以前の行で Hour.parse が失敗した場合も `HourUnparseable` として
+    /// 報告する(silent skip しない)。
+    def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
+        // 1 パス目: baseline 確定(最初の有効な (offset, _) を探す)
+        let baseline = findBaseline(laps);
+        // 2 パス目: 全行をチェック
+        match baseline {
+            case None       =>
+                // ファイル中に有効な hour が 1 行もない: HourUnparseable のみ報告
+                laps |> List.filterMap(lap -> hourUnparseableOf(lap))
+            case Some(base) =>
+                laps |> List.filterMap(lap -> resultToOption(checkHourLine(lap, base)))
         }
 
-    def checkHourOffset(lap: RawLap, base: Int32, offset: Int32): Result[Violation, Unit] =
-        if (sameWallClockDay(offset, base)) Ok(())
-        else Err(Violation.HourElapsedOffset(lap, base, offset))
+    def findBaseline(laps: List[RawLap]): Option[Int32] =
+        match laps {
+            case Nil          => None
+            case lap :: rest  =>
+                match (HourClock.parse(lap#hour), Duration.toMillis(lap#elapsed)) {
+                    case (Ok(h), Some(elapsedMs)) =>
+                        Some(HourClock.offsetFrom(h, elapsedMs))
+                    case _ => findBaseline(rest)
+                }
+        }
 
-    def sameWallClockDay(offset: Int32, base: Int32): Bool =
-        // Endurance races may cross midnight, so hour wraps by 24h while elapsed keeps growing.
-        let dayMs = 86400000;
-        let diff = offset - base;
-        let q = diff / dayMs;
-        diff - q * dayMs == 0
+    def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
+        match HourClock.parse(lap#hour) {
+            case Err(raw) =>
+                Err(Violation.HourUnparseable(lap, raw))
+            case Ok(h) =>
+                match Duration.toMillis(lap#elapsed) {
+                    case None => Ok(())
+                    case Some(elapsedMs) =>
+                        let offset = HourClock.offsetFrom(h, elapsedMs);
+                        if (offset == base) Ok(())
+                        else Err(Violation.HourElapsedOffset(lap, base, offset))
+                }
+        }
+
+    /// baseline が見つからないケース専用の HourUnparseable 抽出。
+    def hourUnparseableOf(lap: RawLap): Option[Violation] =
+        match HourClock.parse(lap#hour) {
+            case Err(raw) => Some(Violation.HourUnparseable(lap, raw))
+            case Ok(_)    => None
+        }
 
     pub def formatViolation(eventName: String, v: Violation): String =
         match v {
@@ -131,15 +188,19 @@ mod Cli.Validation {
                 let suffix =
                     if (List.isEmpty(blanks)) ""
                     else " (blank: ${List.join(",", blanks)})";
-                formatLine(eventName, lap, "sector sum", formatMs(lapMs), formatMs(sum)) + suffix
+                formatExpectedActual(eventName, lap, "sector-sum", lapMs, sum) + suffix
             case Violation.ElapsedCumulative(lap, expected, actual) =>
-                formatLine(eventName, lap, "elapsed cumulative", formatMs(expected), formatMs(actual))
+                formatExpectedActual(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
-                formatLine(eventName, lap, "hour-elapsed offset", formatMs(base), formatMs(offset))
+                formatExpectedActual(eventName, lap, "hour-offset", base, offset)
+            case Violation.HourUnparseable(lap, raw) =>
+                "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
         }
 
-    def formatLine(eventName: String, lap: RawLap, rule: String, expected: String, actual: String): String =
-        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${rule}: expected ${expected}, got ${actual}"
+    /// `{eventName}: [car X #N] kind: expected={fmt} ({ms}ms) actual={fmt} ({ms}ms)`
+    /// raw ms を併記して grep 容易性と差分計算を両立(Rust 版と同形式)。
+    def formatExpectedActual(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
+        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
 
     def formatMs(ms: Int32): String =
         if (ms < 0) "-" + Duration.format(0 - ms)
