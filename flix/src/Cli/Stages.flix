@@ -27,11 +27,7 @@ mod Cli.Stages {
         errors    = Int32
     }
 
-    pub def process(eventId: String, dataLines: List[String]): Output =
-        let rawLaps = dataLines |> Csv.parse |> RawLap.fromCsvRows;
-        processRawLaps(eventId, rawLaps)
-
-    pub def processRawLaps(eventId: String, rawLaps: List[RawLap]): Output =
+    pub def process(eventId: String, rawLaps: List[RawLap]): Output =
         let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
         let metadataJson = Json.render(Metadata.toJson(metadata));
         let lapsJson     = Json.render(RawLap.toJsonArray(rawLaps));
@@ -68,7 +64,7 @@ mod Cli.Stages {
                          };
             rawLaps   <- Ok(dataLines |> Csv.parse |> RawLap.fromCsvRows);
             _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
-            processed <- Ok(processRawLaps(task#eventName, rawLaps));
+            processed <- Ok(process(task#eventName, rawLaps));
             _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
             _         <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
         ) yield {
