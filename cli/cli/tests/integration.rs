@@ -494,14 +494,14 @@ fn test_racing_data_processing_compatibility() {
 // Additional tests for Elm-specific functionality and edge cases
 
 // =============================================================================
-// VALIDATION FLAG TESTS
+// VALIDATION TESTS
 // =============================================================================
+//
+// Validation runs unconditionally on every file. Violations are warnings only
+// — they never affect the exit code.
 
 #[test]
-fn cli_validate_flag_passes_for_clean_test_data() {
-    // The bundled test_data.csv was hand-verified to satisfy all three
-    // validation rules: sectors sum to lap_time, elapsed accumulates lap times,
-    // and (hour - elapsed) is constant across laps.
+fn cli_validation_does_not_affect_exit_code_for_clean_data() {
     let temp_dir = tempfile::tempdir().expect("create tempdir");
     let test_input = temp_dir.path().join("input.csv");
     let test_output = temp_dir.path().join("output.json");
@@ -513,76 +513,40 @@ fn cli_validate_flag_passes_for_clean_test_data() {
         test_input.to_str().expect("UTF-8 path").to_string(),
         "--output".to_string(),
         test_output.to_str().expect("UTF-8 path").to_string(),
-        "--validate".to_string(),
-    ];
-    let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
-    assert_eq!(summary.errors, 0, "clean data should produce no errors");
-    assert_eq!(summary.processed, 1);
-}
-
-#[test]
-fn cli_validate_flag_fails_when_data_inconsistent_but_writes_json() {
-    // Synthesize a CSV where lap-2 elapsed is 100 ms ahead of the running sum.
-    // The CLI must write JSON output AND report a validation failure.
-    let temp_dir = tempfile::tempdir().expect("create tempdir");
-    let test_input = temp_dir.path().join("input.csv");
-    let test_output = temp_dir.path().join("output.json");
-
-    let inconsistent_csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n\
-12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n\
-12;1;2;1:53.610;0;;26.770;0;29.296;0;57.544;0;144.6;3:29.075;11:03:56.466;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
-    fs::write(&test_input, inconsistent_csv).expect("write csv");
-
-    let args = vec![
-        "cli".to_string(),
-        test_input.to_str().expect("UTF-8 path").to_string(),
-        "--output".to_string(),
-        test_output.to_str().expect("UTF-8 path").to_string(),
-        "--validate".to_string(),
-    ];
-    let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
-    assert_eq!(summary.errors, 1, "inconsistent data should fail validation");
-    assert_eq!(summary.processed, 0);
-
-    // JSON output must still be on disk.
-    assert!(
-        fs::metadata(&test_output).is_ok(),
-        "metadata JSON should be written even when validation fails"
-    );
-    let laps_path = test_output.with_file_name("output_laps.json");
-    assert!(
-        fs::metadata(&laps_path).is_ok(),
-        "laps JSON should be written even when validation fails"
-    );
-
-    let exit = summary.exit_code();
-    assert!(
-        format!("{exit:?}").contains("1"),
-        "exit_code() should be FAILURE: {exit:?}"
-    );
-}
-
-#[test]
-fn cli_without_validate_flag_passes_inconsistent_data() {
-    // Same inconsistent CSV; without --validate the CLI must succeed.
-    let temp_dir = tempfile::tempdir().expect("create tempdir");
-    let test_input = temp_dir.path().join("input.csv");
-    let test_output = temp_dir.path().join("output.json");
-
-    let inconsistent_csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n\
-12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n\
-12;1;2;1:53.610;0;;26.770;0;29.296;0;57.544;0;144.6;3:29.075;11:03:56.466;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
-    fs::write(&test_input, inconsistent_csv).expect("write csv");
-
-    let args = vec![
-        "cli".to_string(),
-        test_input.to_str().expect("UTF-8 path").to_string(),
-        "--output".to_string(),
-        test_output.to_str().expect("UTF-8 path").to_string(),
     ];
     let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
     assert_eq!(summary.errors, 0);
     assert_eq!(summary.processed, 1);
+}
+
+#[test]
+fn cli_succeeds_with_warnings_for_inconsistent_data() {
+    // Synthesize a CSV where lap-2 elapsed is 100 ms ahead of the running sum.
+    // The CLI must still succeed (exit 0) and write JSON output; the
+    // inconsistency should only surface as a warning in the log.
+    let temp_dir = tempfile::tempdir().expect("create tempdir");
+    let test_input = temp_dir.path().join("input.csv");
+    let test_output = temp_dir.path().join("output.json");
+
+    let inconsistent_csv = "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER\n\
+12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n\
+12;1;2;1:53.610;0;;26.770;0;29.296;0;57.544;0;144.6;3:29.075;11:03:56.466;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche\n";
+    fs::write(&test_input, inconsistent_csv).expect("write csv");
+
+    let args = vec![
+        "cli".to_string(),
+        test_input.to_str().expect("UTF-8 path").to_string(),
+        "--output".to_string(),
+        test_output.to_str().expect("UTF-8 path").to_string(),
+    ];
+    let summary = cli::run(args.into_iter()).expect("CLI should accept the arguments");
+    assert_eq!(summary.errors, 0, "validation issues must not increment errors");
+    assert_eq!(summary.processed, 1);
+
+    // JSON output must still be on disk.
+    assert!(fs::metadata(&test_output).is_ok());
+    let laps_path = test_output.with_file_name("output_laps.json");
+    assert!(fs::metadata(&laps_path).is_ok());
 }
 
 // =============================================================================
