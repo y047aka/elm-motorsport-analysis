@@ -14,7 +14,7 @@ mod Util.HourClock {
 
     pub def dayMs(): Int32 = 86400000
 
-    pub enum Hour {
+    pub enum Hour with Eq {
         case Hour(Int32)
     }
 
@@ -50,5 +50,27 @@ mod Util.HourClock {
                 let r = diff - q * d;
                 if (r < 0) r + d else r
         }
+
+    /// `HH:MM:SS.mmm` 形式 (時を 2 桁ゼロパディング) で文字列化する。
+    /// `Util.Duration.format` は `0:01:35.365` のように先頭 0 時を省略するため、
+    /// CSV 入力(常に 2 桁時)との byte-identity を保つには専用整形が必要。
+    pub def format(h: Hour): String =
+        match h {
+            case Hour.Hour(ms) =>
+                let totalSec = ms / 1000;
+                let msPart = ms - totalSec * 1000;
+                let hr = totalSec / 3600;
+                let m = (totalSec - hr * 3600) / 60;
+                let s = totalSec - hr * 3600 - m * 60;
+                "${pad2(hr)}:${pad2(m)}:${pad2(s)}.${pad3(msPart)}"
+        }
+
+    def pad2(n: Int32): String =
+        if (n < 10) "0${n}" else "${n}"
+
+    def pad3(n: Int32): String =
+        if (n < 10) "00${n}"
+        else if (n < 100) "0${n}"
+        else "${n}"
 
 }

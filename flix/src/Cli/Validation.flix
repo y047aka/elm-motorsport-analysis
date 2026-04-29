@@ -158,7 +158,7 @@ mod Cli.Validation {
         match laps {
             case Nil          => None
             case lap :: rest  =>
-                match (HourClock.parse(lap#hour), Duration.toMillis(lap#elapsed)) {
+                match (lap#hour, Duration.toMillis(lap#elapsed)) {
                     case (Ok(h), Some(elapsedMs)) =>
                         Some(HourClock.offsetFrom(h, elapsedMs))
                     case _ => findBaseline(rest)
@@ -166,7 +166,7 @@ mod Cli.Validation {
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        match HourClock.parse(lap#hour) {
+        match lap#hour {
             case Err(raw) =>
                 Err(Violation.HourUnparseable(lap, raw))
             case Ok(h) =>
@@ -181,7 +181,7 @@ mod Cli.Validation {
 
     /// baseline が見つからないケース専用の HourUnparseable 抽出。
     def hourUnparseableOf(lap: RawLap): Option[Violation] =
-        match HourClock.parse(lap#hour) {
+        match lap#hour {
             case Err(raw) => Some(Violation.HourUnparseable(lap, raw))
             case Ok(_)    => None
         }

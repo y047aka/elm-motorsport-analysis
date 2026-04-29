@@ -2,12 +2,18 @@ mod RawLap {
 
     use Util.Csv
     use Util.Duration
+    use Util.HourClock
+    use Util.HourClock.Hour
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
     /// セクターセル: 成功時は Ok(ms)、空欄/未パース時は Err(raw)。
     /// Err は元 CSV 文字列を保持し、JSON 出力で round-trip する。
     pub type alias Sector = Result[String, Int32]
+
+    /// 時刻セル: 成功時は Ok(Hour)、空欄/未パース時は Err(raw)。
+    /// Err は元 CSV 文字列を保持し、JSON 出力で round-trip する。
+    pub type alias HourCell = Result[String, Hour]
 
     pub type alias RawLap = {
         carNumber = String,
@@ -24,7 +30,7 @@ mod RawLap {
         s3Improvement = Int32,
         kph = String,
         elapsed = String,
-        hour = String,
+        hour = HourCell,
         topSpeed = String,
         driverName = String,
         pitTime = String,
@@ -73,7 +79,7 @@ mod RawLap {
             s3Improvement           = parseIntOrZero(s3ImprovementStr),
             kph                     = kph,
             elapsed                 = Duration.normalize(elapsed),
-            hour                    = hour,
+            hour                    = HourClock.parse(hour),
             topSpeed                = stripTrailingDotZero(topSpeed),
             driverName              = driverName,
             pitTime                 = Duration.normalize(pitTime),
@@ -102,7 +108,7 @@ mod RawLap {
             ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
-            ("hour",                    JsonString(rawLap#hour)) ::
+            ("hour",                    hourJson(rawLap#hour)) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
@@ -129,6 +135,15 @@ mod RawLap {
     def sectorJson(s: Sector): Json.JsonValue =
         match s {
             case Ok(ms)   => JsonString(Duration.format(ms))
+            case Err(raw) => JsonString(raw)
+        }
+
+    /// HourCell を JSON 出力する。Ok は HourClock.format (HH:MM:SS.mmm) で
+    /// 正規化、Err は raw のまま。WEC CSV はゼロパディング 2 桁時を採用しており、
+    /// 結果は変更前(hour 列をそのまま JSON 出力)と byte-identical。
+    def hourJson(h: HourCell): Json.JsonValue =
+        match h {
+            case Ok(hour) => JsonString(HourClock.format(hour))
             case Err(raw) => JsonString(raw)
         }
 

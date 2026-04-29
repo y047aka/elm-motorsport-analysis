@@ -20,7 +20,7 @@ mod Motorsport.TestMetadata {
             s3Improvement           = 0,
             kph                     = "0",
             elapsed                 = elapsed,
-            hour                    = "",
+            hour                    = Err(""),
             topSpeed                = "",
             driverName              = driverName,
             pitTime                 = "",

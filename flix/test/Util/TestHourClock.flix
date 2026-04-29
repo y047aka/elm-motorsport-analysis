@@ -40,6 +40,20 @@ mod Util.TestHourClock {
         }
 
     @Test
+    def testFormatProducesZeroPaddedHms(): Unit \ Assert =
+        match HourClock.parse("00:00:00.036") {
+            case Ok(h)  => Assert.assertTrue(HourClock.format(h) == "00:00:00.036")
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testFormatLargeHour(): Unit \ Assert =
+        match HourClock.parse("23:59:00.000") {
+            case Ok(h)  => Assert.assertTrue(HourClock.format(h) == "23:59:00.000")
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
     def testOffsetFromBasic(): Unit \ Assert =
         // 14:02:00.000 - 2:00.000 = 14:00:00.000 = 50400000 ms
         match HourClock.parse("14:02:00.000") {
