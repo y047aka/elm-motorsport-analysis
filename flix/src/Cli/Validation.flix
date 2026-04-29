@@ -23,15 +23,26 @@ mod Cli.Validation {
         )
 
     def checkSectorSum(eventName: String, lap: RawLap): Option[String] =
-        match (Duration.toMillis(lap#lapTime),
-               Duration.toMillis(lap#s1),
-               Duration.toMillis(lap#s2),
-               Duration.toMillis(lap#s3)) {
-            case (Some(lapMs), Some(s1Ms), Some(s2Ms), Some(s3Ms)) =>
+        match Duration.toMillis(lap#lapTime) {
+            case None        => None
+            case Some(lapMs) =>
+                let (s1Ms, s1Blank) = sectorMs(lap#s1, "s1");
+                let (s2Ms, s2Blank) = sectorMs(lap#s2, "s2");
+                let (s3Ms, s3Blank) = sectorMs(lap#s3, "s3");
                 let sum = s1Ms + s2Ms + s3Ms;
                 if (sum == lapMs) None
-                else Some(formatViolation(eventName, lap, "sector sum", lap#lapTime, formatMs(sum)))
-            case _ => None
+                else
+                    let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
+                    let suffix =
+                        if (List.isEmpty(blanks)) ""
+                        else " (blank: ${List.join(",", blanks)})";
+                    Some(formatViolation(eventName, lap, "sector sum", lap#lapTime, formatMs(sum)) + suffix)
+        }
+
+    def sectorMs(value: String, name: String): (Int32, Option[String]) =
+        match Duration.toMillis(value) {
+            case Some(ms) => (ms, None)
+            case None     => (0, Some(name))
         }
 
     def checkElapsedCumulative(eventName: String, sortedLaps: List[RawLap]): List[String] =

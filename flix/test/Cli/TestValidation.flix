@@ -58,9 +58,21 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testEmptyFieldsSkipped(): Unit \ Assert =
-        // empty s2 means sector sum cannot be computed -> no violation
+    def testBlankSectorTreatedAsZeroAndAnnotated(): Unit \ Assert =
+        // empty s2: sum = 30+0+30 = 1:00.000, lapTime = 2:00.000 -> violation with (blank: s2)
         let lap = buildLap("7", 1, "2:00.000", "30.000", "", "30.000", "2:00.000", "14:02:00.000");
+        let violations = Validation.validate("test", lap :: Nil)
+            |> List.filter(m -> String.contains({substr = "sector sum"}, m));
+        Assert.assertTrue(List.length(violations) == 1);
+        match List.head(violations) {
+            case Some(msg) => Assert.assertTrue(String.contains({substr = "(blank: s2)"}, msg))
+            case None      => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testBlankLapTimeSkipped(): Unit \ Assert =
+        // lapTime missing means we have no expected value -> nothing to compare
+        let lap = buildLap("7", 1, "", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let violations = Validation.validate("test", lap :: Nil)
             |> List.filter(m -> String.contains({substr = "sector sum"}, m));
         Assert.assertTrue(List.isEmpty(violations))
