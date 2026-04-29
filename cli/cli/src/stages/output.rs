@@ -5,7 +5,7 @@
 use motorsport::{Car, car, duration};
 use serde::{Serialize, Serializer};
 
-use crate::domain::LapRecord;
+use crate::domain::{LapRecord, Sector};
 use crate::error::FileError;
 
 /// Pretty-prints a serializable value as JSON (Stage 5).
@@ -13,14 +13,12 @@ pub fn to_json_pretty<T: Serialize>(value: &T, context: &'static str) -> Result<
     serde_json::to_string_pretty(value).map_err(|source| FileError::Serialize { context, source })
 }
 
-/// Formats a sector time. If the CSV cell was blank (`present = false`) the
-/// output stays blank; otherwise the parsed `Duration` is stringified. The
-/// presence bit comes from [`SectorPresence`](crate::domain::SectorPresence).
-fn format_sector_time(present: bool, sector_duration: u32) -> String {
-    if present {
-        duration::to_string(sector_duration)
-    } else {
-        String::new()
+/// Formats a sector time. `Sector::Blank` yields an empty string so blank CSV
+/// cells round-trip back to blank; `Sector::Present` is stringified.
+fn format_sector_time(sector: Sector) -> String {
+    match sector {
+        Sector::Present(d) => duration::to_string(d),
+        Sector::Blank => String::new(),
     }
 }
 
@@ -122,7 +120,6 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
     let lap = &record.lap;
     let car = &record.car;
     let stats = &record.stats;
-    let sectors = &record.sectors;
 
     RawLap {
         car_number: lap.car_number.clone(),
@@ -131,15 +128,18 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         lap_time: duration::to_string(lap.time),
         lap_improvement: stats.lap_improvement,
         crossing_finish_line_in_pit: stats.crossing_finish_line_in_pit.clone(),
-        s1: format_sector_time(sectors.s1, lap.sector_1),
+        s1: format_sector_time(lap.sector_1),
         s1_improvement: stats.s1_improvement,
-        s2: format_sector_time(sectors.s2, lap.sector_2),
+        s2: format_sector_time(lap.sector_2),
         s2_improvement: stats.s2_improvement,
-        s3: format_sector_time(sectors.s3, lap.sector_3),
+        s3: format_sector_time(lap.sector_3),
         s3_improvement: stats.s3_improvement,
         kph: (stats.kph * 10.0).round() / 10.0,
         elapsed: duration::to_string(lap.elapsed),
-        hour: stats.hour.clone(),
+        hour: match &stats.hour {
+            Ok(h) => h.to_string(),
+            Err(raw) => raw.clone(),
+        },
         top_speed: stats.top_speed.clone().unwrap_or_default(),
         driver_name: lap.driver.clone(),
         pit_time: stats

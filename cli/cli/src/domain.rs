@@ -6,11 +6,17 @@
 //! - `ParsedLap`: the core lap fields after lexical conversion (no bests yet)
 //! - `CarInfo`: per-car metadata shared across every lap
 //! - `LapStats`: extra metrics that only come from the CSV
-//! - `SectorPresence`: flags for whether CSV S1/S2/S3 cells were non-empty
+//! - `Sector`: a per-row sector cell (parsed duration or blank)
+//! - `Hour`: wall-clock time-of-day, ms-since-midnight
 //! - `MiniSectorTimes` / `MiniSectorEntry`: 15-sector Le Mans 24h data
 //! - `BestTimes` / `MiniSectorBests`: accumulators updated during a car's laps
 
+use std::fmt;
+
 use motorsport::duration::{self, Duration};
+
+/// One day in milliseconds. `Hour` values are kept folded into `[0, DAY_MS)`.
+pub const DAY_MS: u32 = 86_400_000;
 
 /// Single source of the 15 mini-sector identifiers shared by `MiniSectorTimes`,
 /// `MiniSectorBests`, and `transform::build_mini_sectors`.
@@ -43,7 +49,6 @@ pub struct LapRecord {
     pub lap: ParsedLap,
     pub car: CarInfo,
     pub stats: LapStats,
-    pub sectors: SectorPresence,
     pub mini_sectors: Option<MiniSectorTimes>,
 }
 
@@ -57,9 +62,9 @@ pub struct ParsedLap {
     pub driver: String,
     pub lap_number: u32,
     pub time: Duration,
-    pub sector_1: Duration,
-    pub sector_2: Duration,
-    pub sector_3: Duration,
+    pub sector_1: Sector,
+    pub sector_2: Sector,
+    pub sector_3: Sector,
     pub elapsed: Duration,
 }
 
@@ -80,21 +85,82 @@ pub struct LapStats {
     pub s2_improvement: i32,
     pub s3_improvement: i32,
     pub kph: f32,
-    pub hour: String,
+    /// Parsed wall-clock time-of-day. `Err` carries the original raw CSV
+    /// value (empty string for blank cells) so it can round-trip to JSON
+    /// output and be reported by validation.
+    pub hour: Result<Hour, String>,
     pub top_speed: Option<String>,
     pub pit_time: Option<Duration>,
 }
 
-/// Whether the CSV S1/S2/S3 columns were non-empty on a given row.
+/// One sector cell from the CSV, with the blank/non-blank distinction kept at
+/// the type level so downstream code does not have to reach into a separate
+/// presence struct.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Sector {
+    /// A successfully parsed sector duration.
+    Present(Duration),
+    /// CSV cell was empty, whitespace-only, or unparseable. The duration is
+    /// effectively unknown; downstream code treats it as 0 ms for arithmetic
+    /// and as blank for output.
+    Blank,
+}
+
+impl Sector {
+    /// Returns the parsed duration, or 0 ms if the cell was blank.
+    pub fn duration(self) -> Duration {
+        match self {
+            Sector::Present(d) => d,
+            Sector::Blank => 0,
+        }
+    }
+
+    pub fn is_present(self) -> bool {
+        matches!(self, Sector::Present(_))
+    }
+}
+
+/// Wall-clock time-of-day, stored as milliseconds since midnight.
 ///
-/// `motorsport::Lap::sector_{1,2,3}` is `Duration` (`u32`), so it cannot
-/// distinguish a blank cell from a legitimate 0 ms. We preserve that
-/// distinction here so the JSON output can keep blank cells blank.
-#[derive(Debug, Clone, Copy)]
-pub struct SectorPresence {
-    pub s1: bool,
-    pub s2: bool,
-    pub s3: bool,
+/// The CLI never crosses a date boundary inside a single CSV (24h races wrap
+/// once, which the `validation` module folds via mod 24h). A bare ms-since-
+/// midnight value is therefore enough — no chrono dependency needed for what
+/// is essentially a duration-since-midnight.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Hour(u32);
+
+impl Hour {
+    /// Parses an `H:MM:SS.mmm` cell. Anything else (empty, two-component, or
+    /// 24h or more) becomes `Err(raw.to_string())` so the original input is
+    /// preserved for output and validation reporting.
+    pub fn parse(raw: &str) -> Result<Self, String> {
+        let trimmed = raw.trim();
+        // Hour-of-day must have three components — otherwise "11:02" would
+        // silently parse as 11 minutes 2 seconds.
+        if trimmed.split(':').count() != 3 {
+            return Err(raw.to_string());
+        }
+        match duration::from_string(trimmed) {
+            Some(ms) if ms < DAY_MS => Ok(Hour(ms)),
+            _ => Err(raw.to_string()),
+        }
+    }
+
+    pub fn ms_since_midnight(self) -> u32 {
+        self.0
+    }
+
+    /// `(self - elapsed) mod 24h`. Used by validation to check the race-start
+    /// invariant across midnight wrap.
+    pub fn offset_from(self, elapsed: Duration) -> u32 {
+        (i64::from(self.0) - i64::from(elapsed)).rem_euclid(i64::from(DAY_MS)) as u32
+    }
+}
+
+impl fmt::Display for Hour {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(&duration::to_string(self.0))
+    }
 }
 
 #[derive(Debug, Clone, Default)]

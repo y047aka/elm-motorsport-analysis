@@ -123,9 +123,9 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
             // (a) accumulator update — the only mutation point per iteration
             bests.update_lap_and_sectors(
                 record.lap.time,
-                record.lap.sector_1,
-                record.lap.sector_2,
-                record.lap.sector_3,
+                record.lap.sector_1.duration(),
+                record.lap.sector_2.duration(),
+                record.lap.sector_3.duration(),
             );
             if let Some(mini) = &record.mini_sectors {
                 bests.update_mini(mini);
@@ -158,9 +158,9 @@ fn finalized_lap(
         None,
         lap.time,
         bests.lap.unwrap_or(0),
-        lap.sector_1,
-        lap.sector_2,
-        lap.sector_3,
+        lap.sector_1.duration(),
+        lap.sector_2.duration(),
+        lap.sector_3.duration(),
         bests.s1.unwrap_or(0),
         bests.s2.unwrap_or(0),
         bests.s3.unwrap_or(0),
@@ -262,7 +262,7 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, LapStats, SectorPresence};
+    use crate::domain::{CarInfo, Hour, LapStats, Sector};
 
     fn test_car_info(team: &str, manufacturer: &str) -> CarInfo {
         CarInfo {
@@ -287,17 +287,9 @@ mod tests {
             s2_improvement: 0,
             s3_improvement: 0,
             kph,
-            hour: "11:02:02.856".to_string(),
+            hour: Hour::parse("11:02:02.856"),
             top_speed: top_speed.map(|s| s.to_string()),
             pit_time: None,
-        }
-    }
-
-    fn test_sectors() -> SectorPresence {
-        SectorPresence {
-            s1: true,
-            s2: true,
-            s3: true,
         }
     }
 
@@ -317,14 +309,13 @@ mod tests {
                 driver: driver.to_string(),
                 lap_number: lap_num,
                 time: lap_time,
-                sector_1: s1,
-                sector_2: s2,
-                sector_3: s3,
+                sector_1: Sector::Present(s1),
+                sector_2: Sector::Present(s2),
+                sector_3: Sector::Present(s3),
                 elapsed,
             },
             car,
             stats,
-            sectors: test_sectors(),
             mini_sectors: None,
         }
     }

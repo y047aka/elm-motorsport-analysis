@@ -10,80 +10,81 @@ use motorsport::duration::{self, Duration};
 
 use super::csv_input::CsvRow;
 use crate::domain::{
-    CarInfo, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap, SectorPresence,
+    CarInfo, Hour, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap, Sector,
 };
 
 pub fn structure(rows: Vec<CsvRow>) -> Vec<LapRecord> {
     rows.into_iter().map(lap_record_from).collect()
 }
 
-struct ParsedDurations {
-    time: Duration,
-    s1: Duration,
-    s2: Duration,
-    s3: Duration,
-    elapsed: Duration,
+/// Parses an optional `Duration` cell. Empty / whitespace becomes 0 silently
+/// (a valid CSV shape); non-empty unparseable values become 0 with a warning.
+fn parse_duration_cell(row: &CsvRow, field: &'static str, value: &str) -> Duration {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return 0;
+    }
+    match duration::from_string(trimmed) {
+        Some(d) => d,
+        None => {
+            log::warn!(
+                "car {} lap {}: unparseable {} value '{}', treating as 0",
+                row.car_number,
+                row.lap,
+                field,
+                value,
+            );
+            0
+        }
+    }
 }
 
-/// Parses the five required duration columns for one row, falling back to 0 on
-/// failure.
-///
-/// An empty / whitespace-only value is treated as "missing" and silently
-/// becomes 0 (a common shape in CSV exports). A non-empty value that fails to
-/// parse also becomes 0, but emits a warning log first.
-fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
-    let parse = |field: &'static str, value: &str| -> Duration {
-        let trimmed = value.trim();
-        if trimmed.is_empty() {
-            return 0;
+/// Parses a `Sector` cell. Empty/blank/unparseable all collapse to
+/// `Sector::Blank`; non-empty unparseable values still warn.
+fn parse_sector_cell(row: &CsvRow, field: &'static str, value: &str) -> Sector {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Sector::Blank;
+    }
+    match duration::from_string(trimmed) {
+        Some(d) => Sector::Present(d),
+        None => {
+            log::warn!(
+                "car {} lap {}: unparseable {} value '{}', treating as blank",
+                row.car_number,
+                row.lap,
+                field,
+                value,
+            );
+            Sector::Blank
         }
-        match duration::from_string(trimmed) {
-            Some(d) => d,
-            None => {
-                log::warn!(
-                    "car {} lap {}: unparseable {} value '{}', treating as 0",
-                    row.car_number,
-                    row.lap,
-                    field,
-                    value
-                );
-                0
-            }
-        }
-    };
-
-    ParsedDurations {
-        time: parse("LAP_TIME", &row.lap_time),
-        s1: parse("S1", &row.s1),
-        s2: parse("S2", &row.s2),
-        s3: parse("S3", &row.s3),
-        elapsed: parse("ELAPSED", &row.elapsed),
     }
 }
 
 fn lap_record_from(row: CsvRow) -> LapRecord {
-    let parsed = parse_required_durations(&row);
+    let time = parse_duration_cell(&row, "LAP_TIME", &row.lap_time);
+    let elapsed = parse_duration_cell(&row, "ELAPSED", &row.elapsed);
+    let sector_1 = parse_sector_cell(&row, "S1", &row.s1);
+    let sector_2 = parse_sector_cell(&row, "S2", &row.s2);
+    let sector_3 = parse_sector_cell(&row, "S3", &row.s3);
+
     let pit_time_dur = row
         .pit_time
         .as_deref()
         .filter(|s| !s.trim().is_empty())
         .and_then(motorsport::duration::from_string);
 
-    let sectors = SectorPresence {
-        s1: !row.s1.trim().is_empty(),
-        s2: !row.s2.trim().is_empty(),
-        s3: !row.s3.trim().is_empty(),
-    };
+    let hour = Hour::parse(&row.hour);
 
     let lap = ParsedLap {
         car_number: row.car_number,
         driver: row.driver,
         lap_number: row.lap,
-        time: parsed.time,
-        sector_1: parsed.s1,
-        sector_2: parsed.s2,
-        sector_3: parsed.s3,
-        elapsed: parsed.elapsed,
+        time,
+        sector_1,
+        sector_2,
+        sector_3,
+        elapsed,
     };
 
     let mini_sectors = MiniSectorTimes {
@@ -166,11 +167,10 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
             s2_improvement: row.s2_improvement,
             s3_improvement: row.s3_improvement,
             kph: row.kph,
-            hour: row.hour,
+            hour,
             top_speed: row.top_speed,
             pit_time: pit_time_dur,
         },
-        sectors,
         mini_sectors,
     }
 }
@@ -193,9 +193,9 @@ mod tests {
         assert_eq!(r.lap.time, 95365); // 1:35.365 → 95365 ms
         assert_eq!(r.car.team, "Hertz Team JOTA");
         assert_eq!(r.car.class, "HYPERCAR");
-        assert!(r.sectors.s1);
-        assert!(r.sectors.s2);
-        assert!(r.sectors.s3);
+        assert!(r.lap.sector_1.is_present());
+        assert!(r.lap.sector_2.is_present());
+        assert!(r.lap.sector_3.is_present());
         assert!(r.mini_sectors.is_none());
     }
 
@@ -220,9 +220,9 @@ mod tests {
         let records = structure(rows);
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].lap.time, 0);
-        assert_eq!(records[0].lap.sector_1, 0);
-        assert_eq!(records[0].lap.sector_2, 0);
-        assert_eq!(records[0].lap.sector_3, 0);
+        assert_eq!(records[0].lap.sector_1, Sector::Blank);
+        assert_eq!(records[0].lap.sector_2, Sector::Blank);
+        assert_eq!(records[0].lap.sector_3, Sector::Blank);
         assert_eq!(records[0].lap.elapsed, 0);
     }
 

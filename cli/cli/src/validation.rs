@@ -17,11 +17,7 @@ use std::path::Path;
 
 use motorsport::duration;
 
-use crate::domain::LapRecord;
-
-/// One day in milliseconds. Used to fold hour/elapsed offsets so 24h races
-/// crossing midnight stay on a single equivalence class.
-const DAY_MS: u32 = 86_400_000;
+use crate::domain::{LapRecord, Sector};
 
 #[derive(Debug, Default)]
 pub struct ValidationReport {
@@ -180,35 +176,30 @@ pub fn validate(records: &[LapRecord]) -> ValidationReport {
 
 fn check_sector_sum(records: &[LapRecord], report: &mut ValidationReport) {
     for r in records {
-        let sum = r
-            .lap
-            .sector_1
-            .saturating_add(r.lap.sector_2)
-            .saturating_add(r.lap.sector_3);
+        let sectors = [r.lap.sector_1, r.lap.sector_2, r.lap.sector_3];
+        let sum = sectors
+            .iter()
+            .map(|s| s.duration())
+            .fold(0u32, u32::saturating_add);
         if sum != r.lap.time {
             report.issues.push(Issue::SectorSum {
                 car_number: r.lap.car_number.clone(),
                 lap_number: r.lap.lap_number,
                 lap_time_ms: r.lap.time,
                 sectors_sum_ms: sum,
-                blank_sectors: blank_sector_labels(r),
+                blank_sectors: blank_sector_labels(sectors),
             });
         }
     }
 }
 
-fn blank_sector_labels(r: &LapRecord) -> Vec<&'static str> {
-    let mut blanks = Vec::new();
-    if !r.sectors.s1 {
-        blanks.push("s1");
-    }
-    if !r.sectors.s2 {
-        blanks.push("s2");
-    }
-    if !r.sectors.s3 {
-        blanks.push("s3");
-    }
-    blanks
+fn blank_sector_labels(sectors: [Sector; 3]) -> Vec<&'static str> {
+    const NAMES: [&str; 3] = ["s1", "s2", "s3"];
+    sectors
+        .iter()
+        .zip(NAMES)
+        .filter_map(|(sector, name)| (!sector.is_present()).then_some(name))
+        .collect()
 }
 
 fn check_elapsed_accumulation(records: &[LapRecord], report: &mut ValidationReport) {
@@ -235,26 +226,19 @@ fn check_hour_elapsed_correspondence(records: &[LapRecord], report: &mut Validat
     let mut reference: Option<u32> = None;
 
     for r in records {
-        let hour_str = r.stats.hour.trim();
-        if hour_str.is_empty() {
-            report.issues.push(Issue::HourUnparseable {
-                car_number: r.lap.car_number.clone(),
-                lap_number: r.lap.lap_number,
-                raw: r.stats.hour.clone(),
-            });
-            continue;
-        }
-        let Some(hour_ms) = duration::from_string(hour_str) else {
-            report.issues.push(Issue::HourUnparseable {
-                car_number: r.lap.car_number.clone(),
-                lap_number: r.lap.lap_number,
-                raw: r.stats.hour.clone(),
-            });
-            continue;
+        let hour = match &r.stats.hour {
+            Ok(h) => *h,
+            Err(raw) => {
+                report.issues.push(Issue::HourUnparseable {
+                    car_number: r.lap.car_number.clone(),
+                    lap_number: r.lap.lap_number,
+                    raw: raw.clone(),
+                });
+                continue;
+            }
         };
 
-        let offset = (i64::from(hour_ms) - i64::from(r.lap.elapsed)).rem_euclid(i64::from(DAY_MS))
-            as u32;
+        let offset = hour.offset_from(r.lap.elapsed);
         match reference {
             None => reference = Some(offset),
             Some(expected) if expected != offset => {
@@ -294,18 +278,26 @@ fn group_by_car(records: &[LapRecord]) -> Vec<(&str, Vec<&LapRecord>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, LapStats, ParsedLap, SectorPresence};
+    use crate::domain::{CarInfo, Hour, LapStats, ParsedLap};
+
+    /// Test sector layout. `Some(d)` means `Sector::Present(d)`; `None` means
+    /// `Sector::Blank`.
+    type Sectors = (Option<u32>, Option<u32>, Option<u32>);
+
+    fn to_sector(value: Option<u32>) -> Sector {
+        match value {
+            Some(d) => Sector::Present(d),
+            None => Sector::Blank,
+        }
+    }
 
     fn record(
         car_number: &str,
         lap_number: u32,
         time: u32,
-        s1: u32,
-        s2: u32,
-        s3: u32,
+        sectors: Sectors,
         elapsed: u32,
         hour: &str,
-        sectors: SectorPresence,
     ) -> LapRecord {
         LapRecord {
             lap: ParsedLap {
@@ -313,9 +305,9 @@ mod tests {
                 driver: "Driver".to_string(),
                 lap_number,
                 time,
-                sector_1: s1,
-                sector_2: s2,
-                sector_3: s3,
+                sector_1: to_sector(sectors.0),
+                sector_2: to_sector(sectors.1),
+                sector_3: to_sector(sectors.2),
                 elapsed,
             },
             car: CarInfo {
@@ -332,21 +324,16 @@ mod tests {
                 s2_improvement: 0,
                 s3_improvement: 0,
                 kph: 0.0,
-                hour: hour.to_string(),
+                hour: Hour::parse(hour),
                 top_speed: None,
                 pit_time: None,
             },
-            sectors,
             mini_sectors: None,
         }
     }
 
-    fn all_present() -> SectorPresence {
-        SectorPresence {
-            s1: true,
-            s2: true,
-            s3: true,
-        }
+    fn all_present(s1: u32, s2: u32, s3: u32) -> Sectors {
+        (Some(s1), Some(s2), Some(s3))
     }
 
     #[test]
@@ -361,12 +348,9 @@ mod tests {
             "12",
             1,
             95365,
-            23155,
-            29928,
-            42282,
+            all_present(23155, 29928, 42282),
             95365,
             "11:02:02.856",
-            all_present(),
         );
         let report = validate(&[r]);
         assert!(
@@ -383,12 +367,9 @@ mod tests {
             "12",
             1,
             95365,
-            23155,
-            29928,
-            42283, // off by 1 ms
+            all_present(23155, 29928, 42283), // S3 off by 1 ms
             95365,
             "11:02:02.856",
-            all_present(),
         );
         let report = validate(&[r]);
         let issue = report
@@ -420,16 +401,9 @@ mod tests {
             "12",
             1,
             95365,
-            0, // blank S1 → 0
-            29928,
-            42282,
+            (None, Some(29928), Some(42282)), // S1 blank
             95365,
             "11:02:02.856",
-            SectorPresence {
-                s1: false,
-                s2: true,
-                s3: true,
-            },
         );
         let report = validate(&[r]);
         let issue = report
@@ -452,23 +426,17 @@ mod tests {
                 "12",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "11:02:02.856",
-                all_present(),
             ),
             record(
                 "12",
                 2,
                 113610,
-                26770,
-                29296,
-                57544,
+                all_present(26770, 29296, 57544),
                 208975,
                 "11:03:56.466",
-                all_present(),
             ),
         ];
         let report = validate(&records);
@@ -488,46 +456,34 @@ mod tests {
                 "A",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "11:02:02.856",
-                all_present(),
             ),
             record(
                 "A",
                 2,
                 113610,
-                26770,
-                29296,
-                57544,
+                all_present(26770, 29296, 57544),
                 208975,
                 "11:03:56.466",
-                all_present(),
             ),
             // Car B: lap 2 elapsed off by 100 ms.
             record(
                 "B",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "11:02:02.856",
-                all_present(),
             ),
             record(
                 "B",
                 2,
                 113610,
-                26770,
-                29296,
-                57544,
+                all_present(26770, 29296, 57544),
                 209075, // expected 208975
                 "11:03:56.566",
-                all_present(),
             ),
         ];
         let report = validate(&records);
@@ -560,23 +516,17 @@ mod tests {
                 "12",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "11:02:02.856",
-                all_present(),
             ),
             record(
                 "7",
                 1,
                 95421,
-                23277,
-                29848,
-                42296,
+                all_present(23277, 29848, 42296),
                 95421,
                 "11:02:02.912",
-                all_present(),
             ),
         ];
         let report = validate(&records);
@@ -598,23 +548,17 @@ mod tests {
                 "12",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "16:01:35.365",
-                all_present(),
             ),
             record(
                 "12",
                 2,
                 28_704_635,
-                0,
-                0,
-                0,
+                all_present(0, 0, 0),
                 28_800_000,
                 "00:00:00.000",
-                all_present(),
             ),
         ];
         let report = validate(&records);
@@ -635,23 +579,17 @@ mod tests {
                 "12",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "11:02:02.856",
-                all_present(),
             ),
             record(
                 "12",
                 2,
                 113610,
-                26770,
-                29296,
-                57544,
+                all_present(26770, 29296, 57544),
                 208975,
                 "11:03:56.566", // 100 ms late vs reference
-                all_present(),
             ),
         ];
         let report = validate(&records);
@@ -682,23 +620,17 @@ mod tests {
                 "12",
                 1,
                 95365,
-                23155,
-                29928,
-                42282,
+                all_present(23155, 29928, 42282),
                 95365,
                 "", // empty
-                all_present(),
             ),
             record(
                 "12",
                 2,
                 113610,
-                26770,
-                29296,
-                57544,
+                all_present(26770, 29296, 57544),
                 208975,
                 "not-a-time",
-                all_present(),
             ),
         ];
         let report = validate(&records);
