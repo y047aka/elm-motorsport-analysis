@@ -10,7 +10,7 @@ use motorsport::duration::{self, Duration};
 
 use super::csv_input::CsvRow;
 use crate::domain::{
-    CarInfo, Hour, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap, Sector,
+    CarInfo, Hour, LapRecord, LapStats, MiniSectorEntry, MiniSectorTimes, ParsedLap,
 };
 
 pub fn structure(rows: Vec<CsvRow>) -> Vec<LapRecord> {
@@ -39,15 +39,16 @@ fn parse_duration_cell(row: &CsvRow, field: &'static str, value: &str) -> Durati
     }
 }
 
-/// Parses a `Sector` cell. Empty/blank/unparseable all collapse to
-/// `Sector::Blank`; non-empty unparseable values still warn.
-fn parse_sector_cell(row: &CsvRow, field: &'static str, value: &str) -> Sector {
+/// Parses a sector cell. `Ok(Duration)` on success; `Err(raw)` preserves the
+/// original CSV value for blank or unparseable cells so it can round-trip to
+/// JSON output. Non-empty unparseable values also warn.
+fn parse_sector_cell(row: &CsvRow, field: &'static str, value: &str) -> Result<Duration, String> {
     let trimmed = value.trim();
     if trimmed.is_empty() {
-        return Sector::Blank;
+        return Err(value.to_string());
     }
     match duration::from_string(trimmed) {
-        Some(d) => Sector::Present(d),
+        Some(d) => Ok(d),
         None => {
             log::warn!(
                 "car {} lap {}: unparseable {} value '{}', treating as blank",
@@ -56,7 +57,7 @@ fn parse_sector_cell(row: &CsvRow, field: &'static str, value: &str) -> Sector {
                 field,
                 value,
             );
-            Sector::Blank
+            Err(value.to_string())
         }
     }
 }
@@ -193,9 +194,9 @@ mod tests {
         assert_eq!(r.lap.time, 95365); // 1:35.365 → 95365 ms
         assert_eq!(r.car.team, "Hertz Team JOTA");
         assert_eq!(r.car.class, "HYPERCAR");
-        assert!(r.lap.sector_1.is_present());
-        assert!(r.lap.sector_2.is_present());
-        assert!(r.lap.sector_3.is_present());
+        assert!(r.lap.sector_1.is_ok());
+        assert!(r.lap.sector_2.is_ok());
+        assert!(r.lap.sector_3.is_ok());
         assert!(r.mini_sectors.is_none());
     }
 
@@ -220,9 +221,9 @@ mod tests {
         let records = structure(rows);
         assert_eq!(records.len(), 1);
         assert_eq!(records[0].lap.time, 0);
-        assert_eq!(records[0].lap.sector_1, Sector::Blank);
-        assert_eq!(records[0].lap.sector_2, Sector::Blank);
-        assert_eq!(records[0].lap.sector_3, Sector::Blank);
+        assert!(records[0].lap.sector_1.is_err());
+        assert!(records[0].lap.sector_2.is_err());
+        assert!(records[0].lap.sector_3.is_err());
         assert_eq!(records[0].lap.elapsed, 0);
     }
 

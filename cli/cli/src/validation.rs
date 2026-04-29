@@ -17,7 +17,7 @@ use std::path::Path;
 
 use motorsport::duration;
 
-use crate::domain::{LapRecord, Sector};
+use crate::domain::{LapRecord, ParsedLap, sector_duration};
 
 #[derive(Debug, Default)]
 pub struct ValidationReport {
@@ -176,30 +176,33 @@ pub fn validate(records: &[LapRecord]) -> ValidationReport {
 
 fn check_sector_sum(records: &[LapRecord], report: &mut ValidationReport) {
     for r in records {
-        let sectors = [r.lap.sector_1, r.lap.sector_2, r.lap.sector_3];
-        let sum = sectors
-            .iter()
-            .map(|s| s.duration())
-            .fold(0u32, u32::saturating_add);
+        let sum = sector_duration(&r.lap.sector_1)
+            .saturating_add(sector_duration(&r.lap.sector_2))
+            .saturating_add(sector_duration(&r.lap.sector_3));
         if sum != r.lap.time {
             report.issues.push(Issue::SectorSum {
                 car_number: r.lap.car_number.clone(),
                 lap_number: r.lap.lap_number,
                 lap_time_ms: r.lap.time,
                 sectors_sum_ms: sum,
-                blank_sectors: blank_sector_labels(sectors),
+                blank_sectors: blank_sector_labels(&r.lap),
             });
         }
     }
 }
 
-fn blank_sector_labels(sectors: [Sector; 3]) -> Vec<&'static str> {
-    const NAMES: [&str; 3] = ["s1", "s2", "s3"];
-    sectors
-        .iter()
-        .zip(NAMES)
-        .filter_map(|(sector, name)| (!sector.is_present()).then_some(name))
-        .collect()
+fn blank_sector_labels(lap: &ParsedLap) -> Vec<&'static str> {
+    let mut blanks = Vec::new();
+    if lap.sector_1.is_err() {
+        blanks.push("s1");
+    }
+    if lap.sector_2.is_err() {
+        blanks.push("s2");
+    }
+    if lap.sector_3.is_err() {
+        blanks.push("s3");
+    }
+    blanks
 }
 
 fn check_elapsed_accumulation(records: &[LapRecord], report: &mut ValidationReport) {
@@ -278,17 +281,15 @@ fn group_by_car(records: &[LapRecord]) -> Vec<(&str, Vec<&LapRecord>)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, Hour, LapStats, ParsedLap};
+    use crate::domain::{CarInfo, Hour, LapStats};
+    use motorsport::duration::Duration;
 
-    /// Test sector layout. `Some(d)` means `Sector::Present(d)`; `None` means
-    /// `Sector::Blank`.
+    /// Test sector layout. `Some(d)` means a parsed duration; `None` means a
+    /// blank cell (`Err(String::new())`).
     type Sectors = (Option<u32>, Option<u32>, Option<u32>);
 
-    fn to_sector(value: Option<u32>) -> Sector {
-        match value {
-            Some(d) => Sector::Present(d),
-            None => Sector::Blank,
-        }
+    fn to_sector(value: Option<u32>) -> Result<Duration, String> {
+        value.ok_or_else(String::new)
     }
 
     fn record(

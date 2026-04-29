@@ -6,8 +6,12 @@
 //! - `ParsedLap`: the core lap fields after lexical conversion (no bests yet)
 //! - `CarInfo`: per-car metadata shared across every lap
 //! - `LapStats`: extra metrics that only come from the CSV
-//! - `Sector`: a per-row sector cell (parsed duration or blank)
 //! - `Hour`: wall-clock time-of-day, ms-since-midnight
+//!
+//! Sector cells (`ParsedLap.sector_{1,2,3}`) and the hour stat both use
+//! `Result<T, String>`: `Ok` is the parsed value, `Err` carries the raw CSV
+//! input (empty string, whitespace, or unparseable text) so output can
+//! round-trip it and validation can report what was there.
 //! - `MiniSectorTimes` / `MiniSectorEntry`: 15-sector Le Mans 24h data
 //! - `BestTimes` / `MiniSectorBests`: accumulators updated during a car's laps
 
@@ -62,9 +66,13 @@ pub struct ParsedLap {
     pub driver: String,
     pub lap_number: u32,
     pub time: Duration,
-    pub sector_1: Sector,
-    pub sector_2: Sector,
-    pub sector_3: Sector,
+    /// `Ok(d)` is a successfully parsed sector duration. `Err(raw)` preserves
+    /// the original CSV cell (empty string for blank cells, raw text for
+    /// unparseable cells) so it can round-trip to JSON output and be reported
+    /// by validation.
+    pub sector_1: Result<Duration, String>,
+    pub sector_2: Result<Duration, String>,
+    pub sector_3: Result<Duration, String>,
     pub elapsed: Duration,
 }
 
@@ -93,31 +101,11 @@ pub struct LapStats {
     pub pit_time: Option<Duration>,
 }
 
-/// One sector cell from the CSV, with the blank/non-blank distinction kept at
-/// the type level so downstream code does not have to reach into a separate
-/// presence struct.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Sector {
-    /// A successfully parsed sector duration.
-    Present(Duration),
-    /// CSV cell was empty, whitespace-only, or unparseable. The duration is
-    /// effectively unknown; downstream code treats it as 0 ms for arithmetic
-    /// and as blank for output.
-    Blank,
-}
-
-impl Sector {
-    /// Returns the parsed duration, or 0 ms if the cell was blank.
-    pub fn duration(self) -> Duration {
-        match self {
-            Sector::Present(d) => d,
-            Sector::Blank => 0,
-        }
-    }
-
-    pub fn is_present(self) -> bool {
-        matches!(self, Sector::Present(_))
-    }
+/// Reads a sector cell as a duration, treating blank or unparseable cells as
+/// 0 ms. Used by transform and validation when summing or comparing sectors;
+/// `output` keeps the `Result` form to round-trip the original CSV value.
+pub fn sector_duration(s: &Result<Duration, String>) -> Duration {
+    s.as_ref().copied().unwrap_or(0)
 }
 
 /// Wall-clock time-of-day, stored as milliseconds since midnight.

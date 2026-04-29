@@ -14,7 +14,8 @@ use motorsport::{Car, Class, Driver, Lap, MetaData, MiniSector, MiniSectors};
 
 use super::output::{MetadataOutput, RawLap, create_laps_output, create_metadata_output};
 use crate::domain::{
-    BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, ParsedLap, with_mini_sector_names,
+    BestTimes, LapRecord, MiniSectorBests, MiniSectorTimes, ParsedLap, sector_duration,
+    with_mini_sector_names,
 };
 
 /// Builds every serializable intermediate for one race from a list of
@@ -123,9 +124,9 @@ fn process_laps(mut records: Vec<LapRecord>) -> Vec<Lap> {
             // (a) accumulator update — the only mutation point per iteration
             bests.update_lap_and_sectors(
                 record.lap.time,
-                record.lap.sector_1.duration(),
-                record.lap.sector_2.duration(),
-                record.lap.sector_3.duration(),
+                sector_duration(&record.lap.sector_1),
+                sector_duration(&record.lap.sector_2),
+                sector_duration(&record.lap.sector_3),
             );
             if let Some(mini) = &record.mini_sectors {
                 bests.update_mini(mini);
@@ -158,9 +159,9 @@ fn finalized_lap(
         None,
         lap.time,
         bests.lap.unwrap_or(0),
-        lap.sector_1.duration(),
-        lap.sector_2.duration(),
-        lap.sector_3.duration(),
+        sector_duration(&lap.sector_1),
+        sector_duration(&lap.sector_2),
+        sector_duration(&lap.sector_3),
         bests.s1.unwrap_or(0),
         bests.s2.unwrap_or(0),
         bests.s3.unwrap_or(0),
@@ -262,7 +263,7 @@ fn position_for_lap(cars: &mut [Car], lap_num: u32) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::{CarInfo, Hour, LapStats, Sector};
+    use crate::domain::{CarInfo, Hour, LapStats};
 
     fn test_car_info(team: &str, manufacturer: &str) -> CarInfo {
         CarInfo {
@@ -309,9 +310,9 @@ mod tests {
                 driver: driver.to_string(),
                 lap_number: lap_num,
                 time: lap_time,
-                sector_1: Sector::Present(s1),
-                sector_2: Sector::Present(s2),
-                sector_3: Sector::Present(s3),
+                sector_1: Ok(s1),
+                sector_2: Ok(s2),
+                sector_3: Ok(s3),
                 elapsed,
             },
             car,
