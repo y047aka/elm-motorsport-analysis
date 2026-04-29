@@ -1,6 +1,8 @@
 mod TestRawLap {
 
     use Util.Csv
+    use Util.HourClock
+    use Util.HourClock.Hour
     use Util.Json
 
     @Test
@@ -14,13 +16,13 @@ mod TestRawLap {
                 Assert.assertTrue(r#lapTime == "2:41.963");
                 Assert.assertTrue(r#lapImprovement == 0);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
-                Assert.assertTrue(r#s1 == "41.805");
+                Assert.assertTrue(r#s1 == Ok(41805));
                 Assert.assertTrue(r#s1Improvement == 0);
-                Assert.assertTrue(r#s2 == "1:03.483");
-                Assert.assertTrue(r#s3 == "56.675");
+                Assert.assertTrue(r#s2 == Ok(63483));
+                Assert.assertTrue(r#s3 == Ok(56675));
                 Assert.assertTrue(r#kph == "101.4");
                 Assert.assertTrue(r#elapsed == "6:10.938");
-                Assert.assertTrue(r#hour == "11:06:38.429");
+                Assert.assertTrue(r#hour == Ok(Hour.Hour(39998429)));
                 Assert.assertTrue(r#topSpeed == "88.5");
                 Assert.assertTrue(r#driverName == "Will STEVENS");
                 Assert.assertTrue(r#pitTime == "");

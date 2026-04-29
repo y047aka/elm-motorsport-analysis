@@ -2,8 +2,19 @@ mod RawLap {
 
     use Util.Csv
     use Util.Duration
+    use Util.HourClock
+    use Util.HourClock.Hour
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
+
+    /// Sector cell: `Ok(ms)` on success, `Err(raw)` for blank or
+    /// unparseable input. Err preserves the original CSV string so JSON
+    /// output round-trips it verbatim.
+    pub type alias Sector = Result[String, Int32]
+
+    /// Hour-of-day cell: `Ok(Hour)` on success, `Err(raw)` otherwise.
+    /// Err preserves the original CSV string so JSON output round-trips it.
+    pub type alias HourCell = Result[String, Hour]
 
     pub type alias RawLap = {
         carNumber = String,
@@ -12,15 +23,15 @@ mod RawLap {
         lapTime = String,
         lapImprovement = Int32,
         crossingFinishLineInPit = String,
-        s1 = String,
+        s1 = Sector,
         s1Improvement = Int32,
-        s2 = String,
+        s2 = Sector,
         s2Improvement = Int32,
-        s3 = String,
+        s3 = Sector,
         s3Improvement = Int32,
         kph = String,
         elapsed = String,
-        hour = String,
+        hour = HourCell,
         topSpeed = String,
         driverName = String,
         pitTime = String,
@@ -61,15 +72,15 @@ mod RawLap {
             lapTime                 = Duration.normalize(lapTime),
             lapImprovement          = parseIntOrZero(lapImprovementStr),
             crossingFinishLineInPit = crossingFinishLineInPit,
-            s1                      = Duration.normalize(s1),
+            s1                      = parseSector(s1),
             s1Improvement           = parseIntOrZero(s1ImprovementStr),
-            s2                      = Duration.normalize(s2),
+            s2                      = parseSector(s2),
             s2Improvement           = parseIntOrZero(s2ImprovementStr),
-            s3                      = Duration.normalize(s3),
+            s3                      = parseSector(s3),
             s3Improvement           = parseIntOrZero(s3ImprovementStr),
             kph                     = kph,
             elapsed                 = Duration.normalize(elapsed),
-            hour                    = hour,
+            hour                    = HourClock.parse(hour),
             topSpeed                = stripTrailingDotZero(topSpeed),
             driverName              = driverName,
             pitTime                 = Duration.normalize(pitTime),
@@ -90,15 +101,15 @@ mod RawLap {
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
             ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      JsonString(rawLap#s1)) ::
+            ("s1",                      sectorJson(rawLap#s1)) ::
             ("s1Improvement",           JsonInt(rawLap#s1Improvement)) ::
-            ("s2",                      JsonString(rawLap#s2)) ::
+            ("s2",                      sectorJson(rawLap#s2)) ::
             ("s2Improvement",           JsonInt(rawLap#s2Improvement)) ::
-            ("s3",                      JsonString(rawLap#s3)) ::
+            ("s3",                      sectorJson(rawLap#s3)) ::
             ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
-            ("hour",                    JsonString(rawLap#hour)) ::
+            ("hour",                    hourJson(rawLap#hour)) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
@@ -111,6 +122,33 @@ mod RawLap {
 
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
+
+    /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
+    /// are kept as `Err(raw)` so the original text can round-trip to JSON.
+    def parseSector(raw: String): Sector =
+        match Duration.toMillis(raw) {
+            case Some(ms) => Ok(ms)
+            case None     => Err(raw)
+        }
+
+    /// Renders a Sector as JSON. Ok is normalized through Duration.format,
+    /// Err is emitted verbatim. The output is byte-identical with the
+    /// pre-refactor result (which went through Duration.normalize).
+    def sectorJson(s: Sector): Json.JsonValue =
+        match s {
+            case Ok(ms)   => JsonString(Duration.format(ms))
+            case Err(raw) => JsonString(raw)
+        }
+
+    /// Renders an HourCell as JSON. Ok is normalized through HourClock.format
+    /// (`HH:MM:SS.mmm`), Err is emitted verbatim. WEC CSVs use zero-padded
+    /// two-digit hours, so the output is byte-identical with the
+    /// pre-refactor result (which echoed the hour cell directly).
+    def hourJson(h: HourCell): Json.JsonValue =
+        match h {
+            case Ok(hour) => JsonString(HourClock.format(hour))
+            case Err(raw) => JsonString(raw)
+        }
 
     def stripTrailingDotZero(s: String): String =
         if (String.endsWith({suffix = ".0"}, s))
