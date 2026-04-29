@@ -233,58 +233,57 @@ fn check_per_car_elapsed(mut laps: Vec<&LapRecord>) -> Vec<Issue> {
 }
 
 fn check_hour_elapsed_correspondence(records: &[LapRecord]) -> Vec<Issue> {
-    let mut issues = Vec::new();
-    let mut reference: Option<u32> = None;
-
-    for r in records {
-        let hour = match &r.stats.hour {
-            Ok(h) => *h,
-            Err(raw) => {
-                issues.push(Issue::HourUnparseable {
+    records
+        .iter()
+        .scan(None::<u32>, |reference, r| {
+            Some(match &r.stats.hour {
+                Err(raw) => Some(Issue::HourUnparseable {
                     car_number: r.lap.car_number.clone(),
                     lap_number: r.lap.lap_number,
                     raw: raw.clone(),
-                });
-                continue;
-            }
-        };
-
-        let offset = hour.offset_from(r.lap.elapsed);
-        match reference {
-            None => reference = Some(offset),
-            Some(expected) if expected != offset => {
-                issues.push(Issue::HourOffset {
-                    car_number: r.lap.car_number.clone(),
-                    lap_number: r.lap.lap_number,
-                    expected_offset_ms: expected,
-                    actual_offset_ms: offset,
-                });
-            }
-            _ => {}
-        }
-    }
-    issues
+                }),
+                Ok(h) => {
+                    let offset = h.offset_from(r.lap.elapsed);
+                    match *reference {
+                        None => {
+                            *reference = Some(offset);
+                            None
+                        }
+                        Some(expected) if expected != offset => Some(Issue::HourOffset {
+                            car_number: r.lap.car_number.clone(),
+                            lap_number: r.lap.lap_number,
+                            expected_offset_ms: expected,
+                            actual_offset_ms: offset,
+                        }),
+                        Some(_) => None,
+                    }
+                }
+            })
+        })
+        .flatten()
+        .collect()
 }
 
 /// Groups laps by car number in O(n), preserving CSV first-seen order so
 /// reports match the ordering humans see in the source file.
 fn group_by_car(records: &[LapRecord]) -> Vec<(&str, Vec<&LapRecord>)> {
-    let mut indices: HashMap<&str, usize> = HashMap::new();
-    let mut order: Vec<&str> = Vec::new();
-    let mut groups: Vec<Vec<&LapRecord>> = Vec::new();
+    let grouped: HashMap<&str, (usize, Vec<&LapRecord>)> = records
+        .iter()
+        .enumerate()
+        .fold(HashMap::new(), |mut acc, (index, r)| {
+            acc.entry(r.lap.car_number.as_str())
+                .or_insert_with(|| (index, Vec::new()))
+                .1
+                .push(r);
+            acc
+        });
 
-    for r in records {
-        let key = r.lap.car_number.as_str();
-        if let Some(&idx) = indices.get(key) {
-            groups[idx].push(r);
-        } else {
-            indices.insert(key, groups.len());
-            order.push(key);
-            groups.push(vec![r]);
-        }
-    }
-
-    order.into_iter().zip(groups).collect()
+    let mut entries: Vec<_> = grouped.into_iter().collect();
+    entries.sort_by_key(|(_, (first_seen, _))| *first_seen);
+    entries
+        .into_iter()
+        .map(|(key, (_, laps))| (key, laps))
+        .collect()
 }
 
 #[cfg(test)]
