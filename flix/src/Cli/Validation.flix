@@ -17,10 +17,18 @@ mod Cli.Validation {
         List.append(perLap, perCar)
 
     def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
-        let carNumbers = laps |> List.map(l -> l#carNumber) |> List.distinct;
-        carNumbers |> List.map(cn ->
-            (cn, laps |> List.filter(l -> l#carNumber == cn))
-        )
+        // Per-car validation sorts by lapNumber, so the order within each group does not matter.
+        laps
+            |> List.foldLeft(
+                (acc, lap) -> Map.insertWith(
+                    (existing, fresh) -> List.append(fresh, existing),
+                    lap#carNumber,
+                    lap :: Nil,
+                    acc
+                ),
+                Map.empty()
+            )
+            |> Map.toList
 
     def checkSectorSum(eventName: String, lap: RawLap): Option[String] =
         match Duration.toMillis(lap#lapTime) {
