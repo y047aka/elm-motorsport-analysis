@@ -56,21 +56,21 @@ mod Cli.Stages {
         if (summary#errors == 0) 0 else 1
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        match Files.readLines(task#inputPath) |> Result.mapErr(CliError.File) {
-            case Err(e)             => Err(e)
-            case Ok(Nil)            => Err(CliError.EmptyFile(task#inputPath))
-            case Ok(_ :: dataLines) =>
-                let rawLaps = dataLines |> Csv.parse |> RawLap.fromCsvRows;
-                reportViolations(Validation.validate(task#eventName, rawLaps));
-                let processed = process(task#eventName, rawLaps);
-                forM(
-                    _ <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
-                    _ <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
-                ) yield {
-                    lapCount   = processed#lapCount,
-                    outputPath = task#outputPath,
-                    lapsPath   = task#lapsPath
-                }
+        forM(
+            lines     <- Files.readLines(task#inputPath) |> Result.mapErr(CliError.File);
+            dataLines <- match lines {
+                            case _ :: rest => Ok(rest)
+                            case Nil       => Err(CliError.EmptyFile(task#inputPath))
+                         };
+            rawLaps   <- Ok(dataLines |> Csv.parse |> RawLap.fromCsvRows);
+            _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
+            processed <- Ok(process(task#eventName, rawLaps));
+            _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
+            _         <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
+        ) yield {
+            lapCount   = processed#lapCount,
+            outputPath = task#outputPath,
+            lapsPath   = task#lapsPath
         }
 
     def reportViolations(violations: List[String]): Unit \ Console =
