@@ -119,24 +119,26 @@ mod Cli.Validation {
         }
 
     /// 累積和ベースの elapsed-drift チェック (Rust 版の `scan` と同等)。
-    /// 各ラップで running = sum(lapTime[1..=n]) を更新し、`elapsed` と一致しなければ違反。
+    /// 各ラップで `running = sum(lapTime[1..=n])` を更新し、`elapsed` と一致しなければ違反。
     /// blank/未パースの lapTime / elapsed は 0 として扱う(Rust 側の挙動に合わせる)。
     /// 一度 drift が始まると以降のラップも続けて違反として報告される(隣接差分版より
     /// ノイズは多いが、相殺ドリフトを見逃さない)。
+    ///
+    /// 実装: `(running, acc)` のタプルを `foldLeft` で運び、最後にアキュムレータを反転。
     def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
-        accumulateElapsed(sortedLaps, 0, Nil)
-
-    def accumulateElapsed(laps: List[RawLap], running: Int32, acc: List[Violation]): List[Violation] =
-        match laps {
-            case Nil         => List.reverse(acc)
-            case lap :: rest =>
-                let lapMs    = Duration.toMillis(lap#lapTime) |> Option.getWithDefault(0);
-                let newRun   = running + lapMs;
-                let elapsed  = Duration.toMillis(lap#elapsed) |> Option.getWithDefault(0);
-                if (newRun == elapsed)
-                    accumulateElapsed(rest, newRun, acc)
-                else
-                    accumulateElapsed(rest, newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
+        let folded = sortedLaps |> List.foldLeft(
+            (state, lap) -> match state {
+                case (running, acc) =>
+                    let lapMs   = Duration.toMillis(lap#lapTime) |> Option.getWithDefault(0);
+                    let newRun  = running + lapMs;
+                    let elapsed = Duration.toMillis(lap#elapsed) |> Option.getWithDefault(0);
+                    if (newRun == elapsed) (newRun, acc)
+                    else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
+            },
+            (0, Nil)
+        );
+        match folded {
+            case (_, acc) => List.reverse(acc)
         }
 
     /// hour-elapsed の race-wide ベースラインチェック。
@@ -187,7 +189,7 @@ mod Cli.Validation {
             case Ok(_)    => None
         }
 
-    pub def formatViolation(eventName: String, v: Violation): String =
+    def formatViolation(eventName: String, v: Violation): String =
         match v {
             case Violation.SectorSum(lap, lapMs, sum, blanks) =>
                 let suffix =
