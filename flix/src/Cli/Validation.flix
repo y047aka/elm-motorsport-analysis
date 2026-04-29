@@ -5,7 +5,8 @@
 ///
 /// ルール:
 ///   1. SectorSum         — `s1 + s2 + s3 == lapTime` (per row)
-///   2. ElapsedCumulative — 同一カーで `elapsed[n] == elapsed[n-1] + lapTime[n]`
+///   2. ElapsedDrift      — 同一カーで `elapsed[n] == sum(lapTime[1..=n])`
+///                          (累積和ベース: 最初に drift した行以降を全て報告)
 ///   3. HourElapsedOffset — CSV 全体で `(hour - elapsed) mod 24h` が一定
 ///   4. HourUnparseable   — hour 列がパース不能(空欄・H:MM:SS 形式以外)
 ///
@@ -30,9 +31,10 @@ mod Cli.Validation {
         /// 引数: 該当ラップ / lapTime(ms) / 合算値(ms) / 空欄だったセクタ名のリスト
         case SectorSum(RawLap, Int32, Int32, List[String])
 
-        /// `elapsed[n] == elapsed[n-1] + lapTime[n]` を満たさない。
-        /// 引数: 該当ラップ / 期待値(ms) / 実測値(ms)
-        case ElapsedCumulative(RawLap, Int32, Int32)
+        /// `elapsed[n] == sum(lapTime[1..=n])` を満たさない。累積和ベースなので、
+        /// 一度 drift が起きた以降のラップは続けて違反になる(消えない drift)。
+        /// 引数: 該当ラップ / 期待値=累積和(ms) / 実測値=elapsed(ms)
+        case ElapsedDrift(RawLap, Int32, Int32)
 
         /// `(hour - elapsed) mod 24h` が baseline と一致しない。
         /// 引数: 該当ラップ / 基準オフセット(ms) / 実測オフセット(ms)
@@ -60,13 +62,13 @@ mod Cli.Validation {
             case Err(v) => Some(v)
         }
 
-    /// per-car の elapsed cumulative チェックを CSV 出現順 (first-seen index) で
+    /// per-car の elapsed-drift チェックを CSV 出現順 (first-seen index) で
     /// 流す。各カー内は lapNumber 昇順にソート。
     def perCarViolations(laps: List[RawLap]): List[Violation] =
         groupByCar(laps) |> List.flatMap(pair -> match pair {
             case (_, carLaps) =>
                 let sorted = List.sortBy(l -> l#lapNumber, carLaps);
-                checkElapsedCumulative(sorted)
+                checkElapsedDrift(sorted)
         })
 
     /// CSV 出現順を保つ groupByCar:
@@ -116,26 +118,25 @@ mod Cli.Validation {
             case Err(_)  => (0, Some(name))
         }
 
-    def checkElapsedCumulative(sortedLaps: List[RawLap]): List[Violation] =
-        match sortedLaps {
-            case Nil      => Nil
-            case _ :: Nil => Nil
-            case _ :: rest =>
-                let pairs = List.zip(sortedLaps, rest);
-                pairs |> List.filterMap(pair -> match pair {
-                    case (prev, curr) => resultToOption(checkAdjacentElapsed(prev, curr))
-                })
-        }
+    /// 累積和ベースの elapsed-drift チェック (Rust 版の `scan` と同等)。
+    /// 各ラップで running = sum(lapTime[1..=n]) を更新し、`elapsed` と一致しなければ違反。
+    /// blank/未パースの lapTime / elapsed は 0 として扱う(Rust 側の挙動に合わせる)。
+    /// 一度 drift が始まると以降のラップも続けて違反として報告される(隣接差分版より
+    /// ノイズは多いが、相殺ドリフトを見逃さない)。
+    def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
+        accumulateElapsed(sortedLaps, 0, Nil)
 
-    def checkAdjacentElapsed(prev: RawLap, curr: RawLap): Result[Violation, Unit] =
-        match (Duration.toMillis(prev#elapsed),
-               Duration.toMillis(curr#elapsed),
-               Duration.toMillis(curr#lapTime)) {
-            case (Some(prevElapsed), Some(currElapsed), Some(currLapMs)) =>
-                let expected = prevElapsed + currLapMs;
-                if (expected == currElapsed) Ok(())
-                else Err(Violation.ElapsedCumulative(curr, expected, currElapsed))
-            case _ => Ok(())
+    def accumulateElapsed(laps: List[RawLap], running: Int32, acc: List[Violation]): List[Violation] =
+        match laps {
+            case Nil         => List.reverse(acc)
+            case lap :: rest =>
+                let lapMs    = Duration.toMillis(lap#lapTime) |> Option.getWithDefault(0);
+                let newRun   = running + lapMs;
+                let elapsed  = Duration.toMillis(lap#elapsed) |> Option.getWithDefault(0);
+                if (newRun == elapsed)
+                    accumulateElapsed(rest, newRun, acc)
+                else
+                    accumulateElapsed(rest, newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
         }
 
     /// hour-elapsed の race-wide ベースラインチェック。
@@ -193,7 +194,7 @@ mod Cli.Validation {
                     if (List.isEmpty(blanks)) ""
                     else " (blank: ${List.join(",", blanks)})";
                 formatExpectedActual(eventName, lap, "sector-sum", lapMs, sum) + suffix
-            case Violation.ElapsedCumulative(lap, expected, actual) =>
+            case Violation.ElapsedDrift(lap, expected, actual) =>
                 formatExpectedActual(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
                 formatExpectedActual(eventName, lap, "hour-offset", base, offset)

@@ -15,7 +15,7 @@ mod Cli.TestValidation {
     /// 各バリアントの先頭引数 RawLap から carNumber を取り出す共通ヘルパー。
     def violationCar(v: Violation): String = match v {
         case Violation.SectorSum(lap, _, _, _)      => lap#carNumber
-        case Violation.ElapsedCumulative(lap, _, _) => lap#carNumber
+        case Violation.ElapsedDrift(lap, _, _) => lap#carNumber
         case Violation.HourElapsedOffset(lap, _, _) => lap#carNumber
         case Violation.HourUnparseable(lap, _)      => lap#carNumber
     }
@@ -25,8 +25,8 @@ mod Cli.TestValidation {
         case _                               => false
     }
 
-    def isElapsedCumulative(v: Violation): Bool = match v {
-        case Violation.ElapsedCumulative(_, _, _) => true
+    def isElapsedDrift(v: Violation): Bool = match v {
+        case Violation.ElapsedDrift(_, _, _) => true
         case _                                    => false
     }
 
@@ -49,8 +49,9 @@ mod Cli.TestValidation {
 
     @Test
     def testSectorSumMismatchDetected(): Unit \ Assert =
-        // s1+s2+s3 = 30.000+60.000+30.001 = 2:00.001, lapTime = 2:00.000 -> 1ms diff
-        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.001", "14:02:00.001");
+        // s1+s2+s3 = 30.000+60.000+30.001 = 2:00.001, lapTime = 2:00.000 -> 1ms diff.
+        // elapsed と hour は lapTime に整合させて、SectorSum 単独違反になるよう調整。
+        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
         let violations = Validation.detect(lap :: Nil);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -61,12 +62,41 @@ mod Cli.TestValidation {
         }
 
     @Test
-    def testElapsedCumulativeMismatchDetected(): Unit \ Assert =
+    def testElapsedDriftMismatchDetected(): Unit \ Assert =
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         // lap2 elapsed should be 4:00.000 but is 4:00.500
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
         let violations = Validation.detect(l1 :: l2 :: Nil);
-        Assert.assertTrue(List.exists(isElapsedCumulative, violations))
+        Assert.assertTrue(List.exists(isElapsedDrift, violations))
+
+    @Test
+    def testElapsedDriftCumulativeReportsTrailingLaps(): Unit \ Assert =
+        // 累積和ベース: lap 2 で 500ms drift したら、lap 3 が「lap 2 基準では正しい」
+        // (= 隣接差分なら無違反になる)場合でも、lap 3 の elapsed は累積和と一致しないため
+        // 続けて違反となる。Rust 実装と同じ挙動を検証する。
+        let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
+        let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
+        let l3 = buildLap("7", 3, "2:00.000", "30.000", "60.000", "30.000", "6:00.500", "14:06:00.500");
+        let violations = Validation.detect(l1 :: l2 :: l3 :: Nil)
+            |> List.filter(isElapsedDrift);
+        Assert.assertTrue(List.length(violations) == 2);
+        // 1 件目: lap 2、期待値=4:00.000(累積和)、実測=4:00.500
+        // 2 件目: lap 3、期待値=6:00.000(累積和)、実測=6:00.500
+        match violations {
+            case v1 :: v2 :: Nil =>
+                match (v1, v2) {
+                    case (Violation.ElapsedDrift(lap1, exp1, act1),
+                          Violation.ElapsedDrift(lap2, exp2, act2)) =>
+                        Assert.assertTrue(lap1#lapNumber == 2);
+                        Assert.assertTrue(exp1 == 240000);
+                        Assert.assertTrue(act1 == 240500);
+                        Assert.assertTrue(lap2#lapNumber == 3);
+                        Assert.assertTrue(exp2 == 360000);
+                        Assert.assertTrue(act2 == 360500)
+                    case _ => Assert.assertTrue(false)
+                }
+            case _ => Assert.assertTrue(false)
+        }
 
     @Test
     def testHourElapsedMismatchDetected(): Unit \ Assert =
@@ -167,7 +197,7 @@ mod Cli.TestValidation {
         // car "7" lap 2 でも elapsed が 1ms ズレ
         let c7l2  = buildLap("7",  2, "2:00.000", "30.000", "60.000", "30.000", "4:00.001", "14:04:00.001");
         let violations = Validation.detect(c10l1 :: c10l2 :: c7l1 :: c7l2 :: Nil)
-            |> List.filter(isElapsedCumulative);
+            |> List.filter(isElapsedDrift);
         Assert.assertTrue(List.length(violations) == 2);
         // 1 件目は car "10"、2 件目は car "7"(CSV 出現順)
         match violations {
@@ -180,7 +210,8 @@ mod Cli.TestValidation {
     @Test
     def testValidateRendersFormattedString(): Unit \ Assert =
         // 新フォーマット: "sector-sum" slug + "expected=...ms... actual=...ms..."
-        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.001", "14:02:00.001");
+        // elapsed/hour は lapTime に整合させ、メッセージ整形は SectorSum で検証する。
+        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
         let messages = Validation.validate("test", lap :: Nil);
         Assert.assertTrue(List.length(messages) == 1);
         match List.head(messages) {
