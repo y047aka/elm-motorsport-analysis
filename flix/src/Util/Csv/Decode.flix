@@ -277,9 +277,9 @@ mod Util.Csv.Decode {
             case Error.NoFieldNamesOnFirstRow =>
                 "I expected to see field names on the first row, but there were none."
             case Error.DecodingErrors(errs)   =>
-                match errs {
+                match dedupeErrs(errs) {
                     case Nil =>
-                        "Something went wrong, but I got a blank error list so I don't know what it was."
+                        "Something went wrong, but I got an blank error list so I don't know what it was. Please open an issue!"
                     case only :: Nil =>
                         topLevelErrString(only)
                     case multiple =>
@@ -296,16 +296,29 @@ mod Util.Csv.Decode {
                 "On row ${row} in the source, there were additional characters in a field after a closing quote."
         }
 
-    def topLevelErrString(err: DecodingError): String =
-        match err {
-            case DecodingError.FieldDecodingError(r, _, _) =>
-                "There was a problem on row ${r}, ${errString(err)}"
-            case DecodingError.OneOfDecodingError(r, _) =>
-                "There was a problem on row ${r} - ${errString(err)}"
-            case DecodingError.FieldNotProvided(_) =>
-                "There was a problem in the header: ${errString(err)}"
-            case DecodingError.NoFieldNamesProvided =>
-                errString(err)
+    def problemString(p: Problem): String =
+        match p {
+            case Problem.ColumnNotFound(i)    => "I couldn't find column #${i}."
+            case Problem.FieldNotFound(n)     => "I couldn't find the `${n}` column."
+            case Problem.ExpectedOneColumn(i) => "I expected exactly one column, but there were ${i}."
+            case Problem.ExpectedInt(s)       => "I could not parse an int from `${s}`."
+            case Problem.ExpectedFloat(s)     => "I could not parse a float from `${s}`."
+            case Problem.Failure(msg)         => msg
+        }
+
+    def columnString(c: Column): String =
+        match c {
+            case Column.Column(i)         => "column ${i}"
+            case Column.Field(n, None)    => "in the `${n}` field"
+            case Column.Field(n, Some(i)) => "in the `${n}` field (column ${i})"
+            case Column.OnlyColumn        => "column 0 (the only column present)"
+        }
+
+    def rowString(startRow: Int32, endRow: Int32): String =
+        match endRow - startRow {
+            case 0 => "row ${startRow}"
+            case 1 => "rows ${startRow} and ${endRow}"
+            case _ => "rows ${startRow}–${endRow}"
         }
 
     def errString(err: DecodingError): String =
@@ -325,23 +338,91 @@ mod Util.Csv.Decode {
                 "Asked for available fields, but none were provided"
         }
 
-    def columnString(c: Column): String =
-        match c {
-            case Column.Column(i)         => "column ${i}"
-            case Column.Field(n, None)    => "in the `${n}` field"
-            case Column.Field(n, Some(i)) => "in the `${n}` field (column ${i})"
-            case Column.OnlyColumn        => "column 0 (the only column present)"
+    def topLevelErrString(err: {startRow = Int32, endRow = Int32, error = DecodingError}): String =
+        (match err#error {
+            case DecodingError.FieldDecodingError(_, _, _) =>
+                "There was a problem on ${rowString(err#startRow, err#endRow)}, "
+            case DecodingError.OneOfDecodingError(_, _) =>
+                "There was a problem on ${rowString(err#startRow, err#endRow)} - "
+            case DecodingError.FieldNotProvided(_) =>
+                "There was a problem in the header: "
+            case DecodingError.NoFieldNamesProvided =>
+                ""
+        }) + errString(err#error)
+
+    def isContiguous(errA: DecodingError, errB: DecodingError): Bool =
+        match (errA, errB) {
+            case (DecodingError.FieldDecodingError(ra, ca, pa), DecodingError.FieldDecodingError(rb, cb, pb)) =>
+                pa == pb and ra + 1 == rb and ca == cb
+            case (DecodingError.OneOfDecodingError(aRow, aList), DecodingError.OneOfDecodingError(bRow, bList)) =>
+                aRow + 1 == bRow and
+                List.length(aList) == List.length(bList) and
+                List.zip(aList, bList)
+                    |> List.foldLeft((acc, pair) -> match pair { case (a, b) => acc and isContiguous(a, b) }, true)
+            case (DecodingError.FieldNotProvided(a), DecodingError.FieldNotProvided(b)) => a == b
+            case (DecodingError.NoFieldNamesProvided, DecodingError.NoFieldNamesProvided) => true
+            case _ => false
         }
 
-    def problemString(p: Problem): String =
-        match p {
-            case Problem.ColumnNotFound(i)    => "I couldn't find column #${i}."
-            case Problem.FieldNotFound(n)     => "I couldn't find the `${n}` column."
-            case Problem.ExpectedOneColumn(i) => "I expected exactly one column, but there were ${i}."
-            case Problem.ExpectedInt(s)       => "I could not parse an int from `${s}`."
-            case Problem.ExpectedFloat(s)     => "I could not parse a float from `${s}`."
-            case Problem.Failure(msg)         => msg
+    def getRow(err: DecodingError): Int32 =
+        match err {
+            case DecodingError.FieldDecodingError(r, _, _) => r
+            case DecodingError.OneOfDecodingError(r, _)    => r
+            case DecodingError.FieldNotProvided(_)          => 0
+            case DecodingError.NoFieldNamesProvided         => 0
         }
+
+    def dedupeHelp(
+        soFar: List[{startRow = Int32, endRow = Int32, error = DecodingError}],
+        prevGroup: List[DecodingError],
+        errors: List[DecodingError]
+    ): List[{startRow = Int32, endRow = Int32, error = DecodingError}] =
+        match errors {
+            case Nil =>
+                match prevGroup {
+                    case Nil => List.reverse(soFar)
+                    case head :: tail =>
+                        let startRow = match List.head(List.reverse(tail)) {
+                            case Some(first) => getRow(first)
+                            case None        => getRow(head)
+                        };
+                        List.reverse({startRow = startRow, endRow = getRow(head), error = head} :: soFar)
+                }
+            case err :: rest =>
+                match prevGroup {
+                    case Nil =>
+                        dedupeHelp(soFar, err :: Nil, rest)
+                    case head :: tail =>
+                        if (isContiguous(head, err))
+                            dedupeHelp(soFar, err :: prevGroup, rest)
+                        else
+                            let startRow = match List.head(List.reverse(tail)) {
+                                case Some(first) => getRow(first)
+                                case None        => getRow(head)
+                            };
+                            let newGroup = {startRow = startRow, endRow = getRow(head), error = head};
+                            dedupeHelp(newGroup :: soFar, err :: Nil, rest)
+                }
+        }
+
+    def dedupeErrs(errs: List[DecodingError]): List[{startRow = Int32, endRow = Int32, error = DecodingError}] =
+        let sortKey = err -> match err {
+            case DecodingError.FieldDecodingError(r, _, p) =>
+                match p {
+                    case Problem.ColumnNotFound(_)      => (1, "", r)
+                    case Problem.FieldNotFound(name)    => (2, name, r)
+                    case Problem.ExpectedOneColumn(n)   => (3, "${n}", r)
+                    case Problem.ExpectedInt(s)         => (4, s, r)
+                    case Problem.ExpectedFloat(s)       => (5, s, r)
+                    case Problem.Failure(msg)           => (6, msg, r)
+                }
+            case DecodingError.OneOfDecodingError(r, lst) => (7, "${List.length(lst)}", r)
+            case DecodingError.FieldNotProvided(name)     => (8, name, 0)
+            case DecodingError.NoFieldNamesProvided       => (9, "", 0)
+        };
+        let sorted = List.sortBy(sortKey, errs);
+        let grouped = dedupeHelp(Nil, Nil, sorted);
+        List.sortBy(g -> g#startRow, grouped)
 
     ///
     /// ===== MAPPING =====
