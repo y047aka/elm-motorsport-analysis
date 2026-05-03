@@ -58,7 +58,7 @@ mod Util.Csv.TestDecode {
         match Decode.decodeCsv(FieldNames.FieldNamesFromFirstRow, d, "id,name\n1,Alice") {
             case Err(Error.DecodingErrors(es)) =>
                 match List.head(es) {
-                    case Some(DecodingError.FieldDecodingError(_, _, Problem.FieldNotFound("missing"))) => Assert.assertTrue(true)
+                    case Some(DecodingError.FieldNotProvided("missing")) => Assert.assertTrue(true)
                     case _ => Assert.assertTrue(false)
                 }
             case _ => Assert.assertTrue(false)
@@ -204,7 +204,7 @@ mod Util.Csv.TestDecode {
                 let msg = Decode.errorToString(e);
                 Assert.assertTrue(String.contains({substr = "row 0"}, msg));
                 Assert.assertTrue(String.contains({substr = "column 0"}, msg));
-                Assert.assertTrue(String.contains({substr = "expected an int"}, msg))
+                Assert.assertTrue(String.contains({substr = "could not parse an int"}, msg))
             case Ok(_) => Assert.assertTrue(false)
         }
 
