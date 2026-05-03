@@ -6,15 +6,18 @@ mod TestRawLap {
     use Util.Json
     use RawLap.RawLap
 
-    /// Decodes a single semicolon-separated CSV line and pulls the first
-    /// (and only) record out of the result. Tests that previously used
-    /// `Csv.parseRow + RawLap.fromCsvRow` go through this helper instead.
+    def header(): String =
+        "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER"
+
+    /// Decodes a single semicolon-separated CSV line (without header) and
+    /// pulls the first record out of the result. The header row is prepended
+    /// automatically so the decoder can resolve field names.
     def decodeOne(line: String): Result[Error, RawLap] =
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
-            FieldNames.NoFieldNames,
+            FieldNames.FieldNamesFromFirstRow,
             RawLap.decoder(),
-            line
+            header() + "\n" + line
         ) {
             case Ok(r :: _) => Ok(r)
             case Ok(Nil)    => Err(Error.DecodingErrors(Nil))
@@ -59,7 +62,7 @@ mod TestRawLap {
     def testFromCsvRowShortLineFails(): Unit \ Assert =
         // Strict elm-csv-style decoding rejects rows whose column count
         // is too small. The legacy `fromCsvRow` returned `None` here; the
-        // new decoder returns a `ColumnNotFound` error.
+        // new decoder returns a field-not-found error.
         match decodeOne("12;1;3") {
             case Err(_) => Assert.assertTrue(true)
             case Ok(_)  => Assert.assertTrue(false)
@@ -67,11 +70,12 @@ mod TestRawLap {
 
     @Test
     def testEmptyInputDecodesToEmptyList(): Unit \ Assert =
+        // A header-only CSV (no data rows) decodes to an empty list.
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
-            FieldNames.NoFieldNames,
+            FieldNames.FieldNamesFromFirstRow,
             RawLap.decoder(),
-            ""
+            header()
         ) {
             case Ok(rs) => Assert.assertTrue(List.isEmpty(rs))
             case Err(_) => Assert.assertTrue(false)
@@ -79,7 +83,7 @@ mod TestRawLap {
 
     @Test
     def testToJsonRendersWholeKphAsInt(): Unit \ Assert =
-        // kph (column 12) "86.0" is rendered as JsonInt "86".
+        // KPH "86.0" is rendered as JsonInt 86.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
                 let json = Json.render(RawLap.toJson(r));
@@ -90,7 +94,7 @@ mod TestRawLap {
 
     @Test
     def testToJsonRendersDecimalKphAsFloat(): Unit \ Assert =
-        // kph (column 12) "107.1" is rendered as JsonFloat "107.1".
+        // KPH "107.1" is rendered as JsonFloat 107.1.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;107.1;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
                 let json = Json.render(RawLap.toJson(r));
@@ -100,7 +104,7 @@ mod TestRawLap {
 
     @Test
     def testFromCsvRowNormalizesPitTime(): Unit \ Assert =
-        // pitTime (column 20) "0:01:41.031" is normalised through Duration.normalize
+        // PIT_TIME "0:01:41.031" is normalised through Duration.normalize
         // to "1:41.031" by the decoder.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;0:01:41.031;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r)  => Assert.assertTrue(r#pitTime == "1:41.031")
@@ -112,10 +116,11 @@ mod TestRawLap {
         // A short line in the middle of an otherwise-valid file aborts
         // the entire decode (strict elm-csv semantics).
         let csv =
+            header() + "\n" +
             "12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;0:23.155;0:29.928;0:42.282;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;23.155;29.928;42.282;\nshort line\n7;1;1;1:35.421;0;;23.277;0;29.848;0;42.296;0;160.5;1:35.421;11:02:02.912;0:23.277;0:29.848;0:42.296;;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.277;29.848;42.296;";
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
-            FieldNames.NoFieldNames,
+            FieldNames.FieldNamesFromFirstRow,
             RawLap.decoder(),
             csv
         ) {
@@ -126,13 +131,14 @@ mod TestRawLap {
     @Test
     def testFromCsvRowsAllValid(): Unit \ Assert =
         // Two well-formed lines decode into two records, preserving
-        // CSV order and fully populating every field including the new
+        // CSV order and fully populating every field including the
         // `group`/`manufacturer` columns.
         let csv =
+            header() + "\n" +
             "12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;0:23.155;0:29.928;0:42.282;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;23.155;29.928;42.282;\n7;1;1;1:35.421;0;;23.277;0;29.848;0;42.296;0;160.5;1:35.421;11:02:02.912;0:23.277;0:29.848;0:42.296;;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.277;29.848;42.296;";
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
-            FieldNames.NoFieldNames,
+            FieldNames.FieldNamesFromFirstRow,
             RawLap.decoder(),
             csv
         ) {
@@ -151,8 +157,8 @@ mod TestRawLap {
 
     @Test
     def testFromCsvRowEmptyTopSpeed(): Unit \ Assert =
-        // CSV column 18 (TOP_SPEED) blank — common on non-pit laps. The
-        // empty string round-trips to JSON unchanged.
+        // TOP_SPEED blank — common on non-pit laps. The empty string
+        // round-trips to JSON unchanged.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r)  => Assert.assertTrue(r#topSpeed == "")
             case Err(_) => Assert.assertTrue(false)
@@ -160,7 +166,7 @@ mod TestRawLap {
 
     @Test
     def testToJsonHandlesUnparseableKphAsString(): Unit \ Assert =
-        // kph that parses as neither Int32 nor Float64 falls back to
+        // KPH that parses as neither Int32 nor Float64 falls back to
         // JsonString "not-a-number".
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;not-a-number;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>

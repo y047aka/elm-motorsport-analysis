@@ -6,9 +6,13 @@ mod Cli.TestValidation {
     use Cli.Validation.Violation
     use RawLap.RawLap
 
+    def header(): String =
+        "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER"
+
     def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap =
-        let csv = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;0.0;0.0;0.0;";
-        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.NoFieldNames, RawLap.decoder(), csv) {
+        let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;0.0;0.0;0.0;";
+        let csv = header() + "\n" + row;
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }

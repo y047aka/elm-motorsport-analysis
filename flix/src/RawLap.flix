@@ -43,11 +43,11 @@ mod RawLap {
     }
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
-    /// and columns 15-17 (S*_LARGE) are skipped. Numeric columns whose
-    /// raw text is empty or unparseable degrade to `0` rather than
-    /// failing the whole row, matching the legacy `parseIntOrZero`
-    /// behaviour. Sector cells round-trip the raw text on parse failure
-    /// via `Sector = Result[String, Int32]`.
+    /// with a header row; columns are identified by name so ordering and
+    /// extra columns (e.g. S*_LARGE) are ignored automatically. Numeric
+    /// columns whose raw text is empty or unparseable degrade to `0`.
+    /// Sector cells round-trip the raw text on parse failure via
+    /// `Sector = Result[String, Int32]`.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
@@ -79,28 +79,28 @@ mod RawLap {
                     manufacturer = manufacturer
                 }
         )
-            |> Decode.pipeline(stringColumn(0))
-            |> Decode.pipeline(intOrZero(1))
-            |> Decode.pipeline(intOrZero(2))
-            |> Decode.pipeline(mapColumn(3, Duration.normalize))
-            |> Decode.pipeline(intOrZero(4))
-            |> Decode.pipeline(stringColumn(5))
-            |> Decode.pipeline(mapColumn(6, parseSector))
-            |> Decode.pipeline(intOrZero(7))
-            |> Decode.pipeline(mapColumn(8, parseSector))
-            |> Decode.pipeline(intOrZero(9))
-            |> Decode.pipeline(mapColumn(10, parseSector))
-            |> Decode.pipeline(intOrZero(11))
-            |> Decode.pipeline(stringColumn(12))
-            |> Decode.pipeline(mapColumn(13, Duration.normalize))
-            |> Decode.pipeline(mapColumn(14, HourClock.parse))
-            |> Decode.pipeline(mapColumn(18, stripTrailingDotZero))
-            |> Decode.pipeline(stringColumn(19))
-            |> Decode.pipeline(mapColumn(20, Duration.normalize))
-            |> Decode.pipeline(stringColumn(21))
-            |> Decode.pipeline(stringColumn(22))
-            |> Decode.pipeline(stringColumn(23))
-            |> Decode.pipeline(stringColumn(24))
+            |> Decode.pipeline(stringField("NUMBER"))
+            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(intField("LAP_NUMBER"))
+            |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
+            |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
+            |> Decode.pipeline(Decode.field("S1", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S1_IMPROVEMENT"))
+            |> Decode.pipeline(Decode.field("S2", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S2_IMPROVEMENT"))
+            |> Decode.pipeline(Decode.field("S3", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S3_IMPROVEMENT"))
+            |> Decode.pipeline(stringField("KPH"))
+            |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
+            |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
+            |> Decode.pipeline(stringField("DRIVER_NAME"))
+            |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(stringField("CLASS"))
+            |> Decode.pipeline(stringField("GROUP"))
+            |> Decode.pipeline(stringField("TEAM"))
+            |> Decode.pipeline(stringField("MANUFACTURER"))
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
@@ -132,23 +132,11 @@ mod RawLap {
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
 
-    /// Helper: a column read as a `String`.
-    def stringColumn(idx: Int32): Decoder[String] =
-        Decode.column(idx, Decode.string())
+    def stringField(name: String): Decoder[String] =
+        Decode.field(name, Decode.string())
 
-    /// Helper: a column read as a `String` then mapped through `f`.
-    def mapColumn(idx: Int32, f: String -> a): Decoder[a] =
-        stringColumn(idx) |> Decode.map(f)
-
-    /// Helper: a column parsed as `Int32`, falling back to `0` when
-    /// the raw cell is empty or unparseable.
-    def intOrZero(idx: Int32): Decoder[Int32] =
-        stringColumn(idx) |> Decode.map(s ->
-            match Int32.parse(10, s) {
-                case Ok(n)  => n
-                case Err(_) => 0
-            }
-        )
+    def intField(name: String): Decoder[Int32] =
+        Decode.field(name, Decode.int())
 
     /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
     /// are kept as `Err(raw)` so the original text can round-trip to JSON.

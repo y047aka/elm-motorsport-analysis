@@ -63,14 +63,20 @@ mod Cli.Stages {
                             case Nil => Err(CliError.EmptyFile(task#inputPath))
                             case _   => Ok(())
                          };
-            // The first line is the WEC header; FieldNamesFromFirstRow
-            // consumes it. RawLap.decoder reads the remaining rows by
-            // column index, so the actual header text is unused.
+            // Some CSV files are saved with a UTF-8 BOM (\uFEFF) by Windows
+            // tools. Strip it here at the I/O boundary before decoding so
+            // the CSV library stays agnostic about file encoding details.
+            // FieldNamesFromFirstRow consumes the first line as column names,
+            // making them available for field-based decoding in RawLap.decoder.
+            content   <- Ok({
+                            let raw = List.join("\n", lines);
+                            if (String.startsWith({prefix = "\uFEFF"}, raw)) String.dropLeft(1, raw) else raw
+                         });
             rawLaps   <- Decode.decodeCustom(
                             {fieldSeparator = ';'},
                             FieldNames.FieldNamesFromFirstRow,
                             RawLap.decoder(),
-                            List.join("\n", lines)
+                            content
                          ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)));
             _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
             processed <- Ok(process(task#eventName, rawLaps));
