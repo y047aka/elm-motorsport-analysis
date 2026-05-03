@@ -3,91 +3,106 @@
 /// source so the two implementations can be reviewed side by side.
 mod Util.Csv.Parser {
 
+    /// Something went wrong during parsing! What was it?
+    ///
+    /// - `SourceEndedWithoutClosingQuote`: we started parsing a quoted field,
+    ///   but the file ended before we saw a closing quote. If you meant to have
+    ///   a literal quote in your data, quote the whole field and then escape the
+    ///   literal quote by replacing it with `""`. For example, `": double prime`
+    ///   would be encoded as `""": double prime"`.
+    /// - `AdditionalCharactersAfterClosingQuote`: we found the closing pair of a
+    ///   quoted field, but there was data after it but before a separator or the
+    ///   end of the file. Follow the quote-escaping advice above to get around this.
     pub enum Problem with Eq, ToString {
         case SourceEndedWithoutClosingQuote(Int32)
         case AdditionalCharactersAfterClosingQuote(Int32)
     }
 
-    pub def parse(opts: {fieldSeparator = Char}, src: String): Result[Problem, List[List[String]]] =
-        if (String.isEmpty(src))
+    /// Turn a CSV string into a list of rows.
+    pub def parse(config: {fieldSeparator = Char}, source: String): Result[Problem, List[List[String]]] =
+        if (String.isEmpty(source))
             Ok(Nil)
-        else if (opts#fieldSeparator == ',')
-            parseComma(String.toList(src), Nil, Nil, Nil)
-        else if (opts#fieldSeparator == ';')
-            parseSemicolon(String.toList(src), Nil, Nil, Nil)
         else
-            parseHelp(c -> c == opts#fieldSeparator, String.toList(src), Nil, Nil, Nil)
+            let finalLength = String.length(source);
+            if (config#fieldSeparator == ',')
+                parseComma(source, finalLength, Nil, Nil, 0, 0)
+            else if (config#fieldSeparator == ';')
+                parseSemicolon(source, finalLength, Nil, Nil, 0, 0)
+            else
+                parseHelp(c -> c == config#fieldSeparator, source, finalLength, Nil, Nil, 0, 0)
 
     def parseQuotedField(
-        isFieldSep: Char -> Bool,
-        fieldRev: List[Char],
-        chars: List[Char]
-    ): Result[Int32 -> Problem, (String, List[Char], Bool)] =
-        match chars {
-            case Nil =>
-                Err(n -> Problem.SourceEndedWithoutClosingQuote(n))
-            case '"' :: '"' :: rest =>
-                parseQuotedField(isFieldSep, '"' :: fieldRev, rest)
-            case '"' :: rest =>
-                let value = listToString(fieldRev);
-                match rest {
-                    case Nil => Ok((value, Nil, false))
-                    case c :: rest2 =>
-                        if (isFieldSep(c))
-                            Ok((value, rest2, false))
-                        else if (c == '\n')
-                            Ok((value, rest2, true))
-                        else if (c == '\r')
-                            match rest2 {
-                                case '\n' :: rest3 => Ok((value, rest3, true))
-                                case _ => Err(n -> Problem.AdditionalCharactersAfterClosingQuote(n))
-                            }
-                        else
-                            Err(n -> Problem.AdditionalCharactersAfterClosingQuote(n))
-                }
-            case c :: rest =>
-                parseQuotedField(isFieldSep, c :: fieldRev, rest)
-        }
+        isFieldSeparator: Char -> Bool,
+        source: String,
+        finalLength: Int32,
+        soFar: String,
+        startOffset: Int32,
+        endOffset: Int32
+    ): Result[Int32 -> Problem, (String, Int32, Bool)] =
+        if (endOffset >= finalLength)
+            Err(n -> Problem.SourceEndedWithoutClosingQuote(n))
+        else if (String.charAt(endOffset, source) == '"')
+            let segment = String.slice({start = startOffset}, {end = endOffset}, source);
+            if (endOffset + 1 >= finalLength)
+                Ok((soFar + segment, endOffset + 1, false))
+            else
+                let next = String.charAt(endOffset + 1, source);
+                if (next == '"')
+                    // "" is a quoted ". Unescape it and keep going.
+                    let newPos = endOffset + 2;
+                    parseQuotedField(isFieldSeparator, source, finalLength, soFar + segment + "\"", newPos, newPos)
+                else if (isFieldSeparator(next))
+                    Ok((soFar + segment, endOffset + 2, false))
+                else if (next == '\n')
+                    Ok((soFar + segment, endOffset + 2, true))
+                else if (next == '\r' and endOffset + 2 < finalLength and String.charAt(endOffset + 2, source) == '\n')
+                    Ok((soFar + segment, endOffset + 3, true))
+                else
+                    Err(n -> Problem.AdditionalCharactersAfterClosingQuote(n))
+        else
+            parseQuotedField(isFieldSeparator, source, finalLength, soFar, startOffset, endOffset + 1)
 
     def parseHelp(
-        isFieldSep: Char -> Bool,
-        chars: List[Char],
-        fieldRev: List[Char],
+        isFieldSeparator: Char -> Bool,
+        source: String,
+        finalLength: Int32,
         row: List[String],
-        rows: List[List[String]]
+        rows: List[List[String]],
+        startOffset: Int32,
+        endOffset: Int32
     ): Result[Problem, List[List[String]]] =
-        match chars {
-            case Nil =>
-                let finalField = listToString(fieldRev);
-                if (finalField == "" and List.isEmpty(row))
-                    Ok(List.reverse(rows))
-                else
-                    Ok(List.reverse(List.reverse(finalField :: row) :: rows))
-            case c :: rest =>
-                if (isFieldSep(c))
-                    parseHelp(isFieldSep, rest, Nil, listToString(fieldRev) :: row, rows)
-                else if (c == '\n')
-                    parseHelp(isFieldSep, rest, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                else if (c == '\r')
-                    match rest {
-                        case '\n' :: rest2 =>
-                            parseHelp(isFieldSep, rest2, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                        case _ =>
-                            parseHelp(isFieldSep, rest, c :: fieldRev, row, rows)
-                    }
-                else if (c == '"')
-                    match parseQuotedField(isFieldSep, Nil, rest) {
-                        case Ok((value, remaining, rowEnded)) =>
-                            if (rowEnded)
-                                parseHelp(isFieldSep, remaining, Nil, Nil, List.reverse(value :: row) :: rows)
-                            else
-                                parseHelp(isFieldSep, remaining, Nil, value :: row, rows)
-                        case Err(problem) =>
-                            Err(problem(List.length(rows) + 1))
-                    }
-                else
-                    parseHelp(isFieldSep, rest, c :: fieldRev, row, rows)
-        }
+        if (endOffset >= finalLength)
+            let finalField = String.slice({start = startOffset}, {end = endOffset}, source);
+            if (finalField == "" and row == Nil)
+                Ok(List.reverse(rows))
+            else
+                Ok(List.reverse(List.reverse(finalField :: row) :: rows))
+        else
+            let first = String.charAt(endOffset, source);
+            if (isFieldSeparator(first))
+                let newPos = endOffset + 1;
+                parseHelp(isFieldSeparator, source, finalLength, String.slice({start = startOffset}, {end = endOffset}, source) :: row, rows, newPos, newPos)
+            else if (first == '\n')
+                let newPos = endOffset + 1;
+                parseHelp(isFieldSeparator, source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '\r' and endOffset + 1 < finalLength and String.charAt(endOffset + 1, source) == '\n')
+                let newPos = endOffset + 2;
+                parseHelp(isFieldSeparator, source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '"')
+                let newPos = endOffset + 1;
+                match parseQuotedField(isFieldSeparator, source, finalLength, "", newPos, newPos) {
+                    case Ok((value, afterQuotedField, rowEnded)) =>
+                        if (afterQuotedField >= finalLength)
+                            Ok(List.reverse(List.reverse(value :: row) :: rows))
+                        else if (rowEnded)
+                            parseHelp(isFieldSeparator, source, finalLength, Nil, List.reverse(value :: row) :: rows, afterQuotedField, afterQuotedField)
+                        else
+                            parseHelp(isFieldSeparator, source, finalLength, value :: row, rows, afterQuotedField, afterQuotedField)
+                    case Err(problem) =>
+                        Err(problem(List.length(rows) + 1))
+                }
+            else
+                parseHelp(isFieldSeparator, source, finalLength, row, rows, startOffset, endOffset + 1)
 
     /// `parseComma` and `parseSemicolon` are specialised copies of
     /// `parseHelp` for the two most common CSV separators. In the
@@ -96,89 +111,85 @@ mod Util.Csv.Parser {
     /// On the JVM that codegen rationale does not apply, but the
     /// duplication is kept here for parity with the original.
     def parseComma(
-        chars: List[Char],
-        fieldRev: List[Char],
+        source: String,
+        finalLength: Int32,
         row: List[String],
-        rows: List[List[String]]
+        rows: List[List[String]],
+        startOffset: Int32,
+        endOffset: Int32
     ): Result[Problem, List[List[String]]] =
-        match chars {
-            case Nil =>
-                let finalField = listToString(fieldRev);
-                if (finalField == "" and List.isEmpty(row))
-                    Ok(List.reverse(rows))
-                else
-                    Ok(List.reverse(List.reverse(finalField :: row) :: rows))
-            case c :: rest =>
-                if (c == ',')
-                    parseComma(rest, Nil, listToString(fieldRev) :: row, rows)
-                else if (c == '\n')
-                    parseComma(rest, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                else if (c == '\r')
-                    match rest {
-                        case '\n' :: rest2 =>
-                            parseComma(rest2, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                        case _ =>
-                            parseComma(rest, c :: fieldRev, row, rows)
-                    }
-                else if (c == '"')
-                    match parseQuotedField(ch -> ch == ',', Nil, rest) {
-                        case Ok((value, remaining, rowEnded)) =>
-                            if (rowEnded)
-                                parseComma(remaining, Nil, Nil, List.reverse(value :: row) :: rows)
-                            else
-                                parseComma(remaining, Nil, value :: row, rows)
-                        case Err(problem) =>
-                            Err(problem(List.length(rows) + 1))
-                    }
-                else
-                    parseComma(rest, c :: fieldRev, row, rows)
-        }
+        if (endOffset >= finalLength)
+            let finalField = String.slice({start = startOffset}, {end = endOffset}, source);
+            if (finalField == "" and row == Nil)
+                Ok(List.reverse(rows))
+            else
+                Ok(List.reverse(List.reverse(finalField :: row) :: rows))
+        else
+            let first = String.charAt(endOffset, source);
+            if (first == ',')
+                let newPos = endOffset + 1;
+                parseComma(source, finalLength, String.slice({start = startOffset}, {end = endOffset}, source) :: row, rows, newPos, newPos)
+            else if (first == '\n')
+                let newPos = endOffset + 1;
+                parseComma(source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '\r' and endOffset + 1 < finalLength and String.charAt(endOffset + 1, source) == '\n')
+                let newPos = endOffset + 2;
+                parseComma(source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '"')
+                let newPos = endOffset + 1;
+                match parseQuotedField(c -> c == ',', source, finalLength, "", newPos, newPos) {
+                    case Ok((value, afterQuotedField, rowEnded)) =>
+                        if (afterQuotedField >= finalLength)
+                            Ok(List.reverse(List.reverse(value :: row) :: rows))
+                        else if (rowEnded)
+                            parseComma(source, finalLength, Nil, List.reverse(value :: row) :: rows, afterQuotedField, afterQuotedField)
+                        else
+                            parseComma(source, finalLength, value :: row, rows, afterQuotedField, afterQuotedField)
+                    case Err(problem) =>
+                        Err(problem(List.length(rows) + 1))
+                }
+            else
+                parseComma(source, finalLength, row, rows, startOffset, endOffset + 1)
 
     def parseSemicolon(
-        chars: List[Char],
-        fieldRev: List[Char],
+        source: String,
+        finalLength: Int32,
         row: List[String],
-        rows: List[List[String]]
+        rows: List[List[String]],
+        startOffset: Int32,
+        endOffset: Int32
     ): Result[Problem, List[List[String]]] =
-        match chars {
-            case Nil =>
-                let finalField = listToString(fieldRev);
-                if (finalField == "" and List.isEmpty(row))
-                    Ok(List.reverse(rows))
-                else
-                    Ok(List.reverse(List.reverse(finalField :: row) :: rows))
-            case c :: rest =>
-                if (c == ';')
-                    parseSemicolon(rest, Nil, listToString(fieldRev) :: row, rows)
-                else if (c == '\n')
-                    parseSemicolon(rest, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                else if (c == '\r')
-                    match rest {
-                        case '\n' :: rest2 =>
-                            parseSemicolon(rest2, Nil, Nil, List.reverse(listToString(fieldRev) :: row) :: rows)
-                        case _ =>
-                            parseSemicolon(rest, c :: fieldRev, row, rows)
-                    }
-                else if (c == '"')
-                    match parseQuotedField(ch -> ch == ';', Nil, rest) {
-                        case Ok((value, remaining, rowEnded)) =>
-                            if (rowEnded)
-                                parseSemicolon(remaining, Nil, Nil, List.reverse(value :: row) :: rows)
-                            else
-                                parseSemicolon(remaining, Nil, value :: row, rows)
-                        case Err(problem) =>
-                            Err(problem(List.length(rows) + 1))
-                    }
-                else
-                    parseSemicolon(rest, c :: fieldRev, row, rows)
-        }
-
-    /// `List[Char]` -> `String`. Flix-specific helper: the original
-    /// Elm parser uses `String.slice` on the source instead of
-    /// accumulating a buffer, so it has no equivalent.
-    def listToString(charsRev: List[Char]): String =
-        charsRev
-            |> List.reverse
-            |> List.foldLeft((acc, c) -> acc + Char.toString(c), "")
+        if (endOffset >= finalLength)
+            let finalField = String.slice({start = startOffset}, {end = endOffset}, source);
+            if (finalField == "" and row == Nil)
+                Ok(List.reverse(rows))
+            else
+                Ok(List.reverse(List.reverse(finalField :: row) :: rows))
+        else
+            let first = String.charAt(endOffset, source);
+            if (first == ';')
+                let newPos = endOffset + 1;
+                parseSemicolon(source, finalLength, String.slice({start = startOffset}, {end = endOffset}, source) :: row, rows, newPos, newPos)
+            else if (first == '\n')
+                let newPos = endOffset + 1;
+                parseSemicolon(source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '\r' and endOffset + 1 < finalLength and String.charAt(endOffset + 1, source) == '\n')
+                let newPos = endOffset + 2;
+                parseSemicolon(source, finalLength, Nil, List.reverse(String.slice({start = startOffset}, {end = endOffset}, source) :: row) :: rows, newPos, newPos)
+            else if (first == '"')
+                let newPos = endOffset + 1;
+                match parseQuotedField(c -> c == ';', source, finalLength, "", newPos, newPos) {
+                    case Ok((value, afterQuotedField, rowEnded)) =>
+                        if (afterQuotedField >= finalLength)
+                            Ok(List.reverse(List.reverse(value :: row) :: rows))
+                        else if (rowEnded)
+                            parseSemicolon(source, finalLength, Nil, List.reverse(value :: row) :: rows, afterQuotedField, afterQuotedField)
+                        else
+                            parseSemicolon(source, finalLength, value :: row, rows, afterQuotedField, afterQuotedField)
+                    case Err(problem) =>
+                        Err(problem(List.length(rows) + 1))
+                }
+            else
+                parseSemicolon(source, finalLength, row, rows, startOffset, endOffset + 1)
 
 }
