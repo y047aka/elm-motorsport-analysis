@@ -1,6 +1,7 @@
 mod RawLap {
 
-    use Util.Csv
+    use Util.Csv.Decode
+    use Util.Csv.Decode.Decoder
     use Util.Duration
     use Util.HourClock
     use Util.HourClock.Hour
@@ -41,57 +42,65 @@ mod RawLap {
         manufacturer = String
     }
 
-    pub def fromCsvRow(row: Csv.CsvRow): Option[RawLap] =
-        forM(
-            carNumber               <- List.nth(0, row);
-            driverNumberStr         <- List.nth(1, row);
-            lapNumberStr            <- List.nth(2, row);
-            lapTime                 <- List.nth(3, row);
-            lapImprovementStr       <- List.nth(4, row);
-            crossingFinishLineInPit <- List.nth(5, row);
-            s1                      <- List.nth(6, row);
-            s1ImprovementStr        <- List.nth(7, row);
-            s2                      <- List.nth(8, row);
-            s2ImprovementStr        <- List.nth(9, row);
-            s3                      <- List.nth(10, row);
-            s3ImprovementStr        <- List.nth(11, row);
-            kph                     <- List.nth(12, row);
-            elapsed                 <- List.nth(13, row);
-            hour                    <- List.nth(14, row);
-            topSpeed                <- List.nth(18, row);
-            driverName              <- List.nth(19, row);
-            pitTime                 <- List.nth(20, row);
-            class                   <- List.nth(21, row);
-            group                   <- List.nth(22, row);
-            team                    <- List.nth(23, row);
-            manufacturer            <- List.nth(24, row)
-        ) yield {
-            carNumber               = carNumber,
-            driverNumber            = parseIntOrZero(driverNumberStr),
-            lapNumber               = parseIntOrZero(lapNumberStr),
-            lapTime                 = Duration.normalize(lapTime),
-            lapImprovement          = parseIntOrZero(lapImprovementStr),
-            crossingFinishLineInPit = crossingFinishLineInPit,
-            s1                      = parseSector(s1),
-            s1Improvement           = parseIntOrZero(s1ImprovementStr),
-            s2                      = parseSector(s2),
-            s2Improvement           = parseIntOrZero(s2ImprovementStr),
-            s3                      = parseSector(s3),
-            s3Improvement           = parseIntOrZero(s3ImprovementStr),
-            kph                     = kph,
-            elapsed                 = Duration.normalize(elapsed),
-            hour                    = HourClock.parse(hour),
-            topSpeed                = stripTrailingDotZero(topSpeed),
-            driverName              = driverName,
-            pitTime                 = Duration.normalize(pitTime),
-            class                   = class,
-            group                   = group,
-            team                    = team,
-            manufacturer            = manufacturer
-        }
-
-    pub def fromCsvRows(rows: List[Csv.CsvRow]): List[RawLap] =
-        rows |> List.filterMap(fromCsvRow)
+    /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
+    /// with a header row; columns are identified by name so ordering and
+    /// extra columns (e.g. S*_LARGE) are ignored automatically. Numeric
+    /// columns whose raw text is empty or unparseable degrade to `0`.
+    /// Sector cells round-trip the raw text on parse failure via
+    /// `Sector = Result[String, Int32]`.
+    pub def decoder(): Decoder[RawLap] =
+        Decode.intoRecord(
+            carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
+            crossingFinishLineInPit -> s1 -> s1Improvement -> s2 -> s2Improvement ->
+            s3 -> s3Improvement -> kph -> elapsed -> hour ->
+            topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
+                {
+                    carNumber = carNumber,
+                    driverNumber = driverNumber,
+                    lapNumber = lapNumber,
+                    lapTime = lapTime,
+                    lapImprovement = lapImprovement,
+                    crossingFinishLineInPit = crossingFinishLineInPit,
+                    s1 = s1,
+                    s1Improvement = s1Improvement,
+                    s2 = s2,
+                    s2Improvement = s2Improvement,
+                    s3 = s3,
+                    s3Improvement = s3Improvement,
+                    kph = kph,
+                    elapsed = elapsed,
+                    hour = hour,
+                    topSpeed = topSpeed,
+                    driverName = driverName,
+                    pitTime = pitTime,
+                    class = class,
+                    group = group,
+                    team = team,
+                    manufacturer = manufacturer
+                }
+        )
+            |> Decode.pipeline(stringField("NUMBER"))
+            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(intField("LAP_NUMBER"))
+            |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
+            |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
+            |> Decode.pipeline(Decode.field("S1", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S1_IMPROVEMENT"))
+            |> Decode.pipeline(Decode.field("S2", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S2_IMPROVEMENT"))
+            |> Decode.pipeline(Decode.field("S3", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(intField("S3_IMPROVEMENT"))
+            |> Decode.pipeline(stringField("KPH"))
+            |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
+            |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
+            |> Decode.pipeline(stringField("DRIVER_NAME"))
+            |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(stringField("CLASS"))
+            |> Decode.pipeline(stringField("GROUP"))
+            |> Decode.pipeline(stringField("TEAM"))
+            |> Decode.pipeline(stringField("MANUFACTURER"))
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
@@ -122,6 +131,12 @@ mod RawLap {
 
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
+
+    def stringField(name: String): Decoder[String] =
+        Decode.field(name, Decode.string())
+
+    def intField(name: String): Decoder[Int32] =
+        Decode.field(name, Decode.int())
 
     /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
     /// are kept as `Err(raw)` so the original text can round-trip to JSON.
@@ -165,12 +180,6 @@ mod RawLap {
                     case Some(f) => JsonFloat(f)
                     case None    => JsonString(s)
                 }
-        }
-
-    def parseIntOrZero(s: String): Int32 =
-        match Int32.parse(10, s) {
-            case Ok(n)  => n
-            case Err(_) => 0
         }
 
 }

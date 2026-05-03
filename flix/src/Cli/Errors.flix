@@ -8,6 +8,7 @@ mod Cli.Errors {
         case OutputWithDirectory
         case EmptyFile(String)
         case File(FileError)
+        case Csv(String)
     }
 
 }
