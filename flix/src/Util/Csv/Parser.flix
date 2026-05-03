@@ -1,11 +1,14 @@
+/// CSV parser modelled after BrianHicks/elm-csv's `Csv.Parser`.
+/// Function names and call structure mirror the elm-csv 4.0.1
+/// source so the two implementations can be reviewed side by side.
 mod Util.Csv.Parser {
 
-    pub enum ParseProblem with Eq, ToString {
+    pub enum Problem with Eq, ToString {
         case SourceEndedWithoutClosingQuote(Int32)
         case AdditionalCharactersAfterClosingQuote(Int32)
     }
 
-    pub def parse(opts: {fieldSeparator = Char}, src: String): Result[ParseProblem, List[List[String]]] =
+    pub def parse(opts: {fieldSeparator = Char}, src: String): Result[Problem, List[List[String]]] =
         if (String.isEmpty(src))
             Ok(Nil)
         else if (opts#fieldSeparator == ',')
@@ -19,10 +22,10 @@ mod Util.Csv.Parser {
         isFieldSep: Char -> Bool,
         fieldRev: List[Char],
         chars: List[Char]
-    ): Result[Int32 -> ParseProblem, (String, List[Char], Bool)] =
+    ): Result[Int32 -> Problem, (String, List[Char], Bool)] =
         match chars {
             case Nil =>
-                Err(n -> ParseProblem.SourceEndedWithoutClosingQuote(n))
+                Err(n -> Problem.SourceEndedWithoutClosingQuote(n))
             case '"' :: '"' :: rest =>
                 parseQuotedField(isFieldSep, '"' :: fieldRev, rest)
             case '"' :: rest =>
@@ -37,10 +40,10 @@ mod Util.Csv.Parser {
                         else if (c == '\r')
                             match rest2 {
                                 case '\n' :: rest3 => Ok((value, rest3, true))
-                                case _ => Err(n -> ParseProblem.AdditionalCharactersAfterClosingQuote(n))
+                                case _ => Err(n -> Problem.AdditionalCharactersAfterClosingQuote(n))
                             }
                         else
-                            Err(n -> ParseProblem.AdditionalCharactersAfterClosingQuote(n))
+                            Err(n -> Problem.AdditionalCharactersAfterClosingQuote(n))
                 }
             case c :: rest =>
                 parseQuotedField(isFieldSep, c :: fieldRev, rest)
@@ -52,7 +55,7 @@ mod Util.Csv.Parser {
         fieldRev: List[Char],
         row: List[String],
         rows: List[List[String]]
-    ): Result[ParseProblem, List[List[String]]] =
+    ): Result[Problem, List[List[String]]] =
         match chars {
             case Nil =>
                 let finalField = listToString(fieldRev);
@@ -86,12 +89,18 @@ mod Util.Csv.Parser {
                     parseHelp(isFieldSep, rest, c :: fieldRev, row, rows)
         }
 
+    /// `parseComma` and `parseSemicolon` are specialised copies of
+    /// `parseHelp` for the two most common CSV separators. In the
+    /// original Elm source this duplication exists so the compiler
+    /// emits literal `===` comparisons in the generated JavaScript.
+    /// On the JVM that codegen rationale does not apply, but the
+    /// duplication is kept here for parity with the original.
     def parseComma(
         chars: List[Char],
         fieldRev: List[Char],
         row: List[String],
         rows: List[List[String]]
-    ): Result[ParseProblem, List[List[String]]] =
+    ): Result[Problem, List[List[String]]] =
         match chars {
             case Nil =>
                 let finalField = listToString(fieldRev);
@@ -130,7 +139,7 @@ mod Util.Csv.Parser {
         fieldRev: List[Char],
         row: List[String],
         rows: List[List[String]]
-    ): Result[ParseProblem, List[List[String]]] =
+    ): Result[Problem, List[List[String]]] =
         match chars {
             case Nil =>
                 let finalField = listToString(fieldRev);
@@ -164,6 +173,9 @@ mod Util.Csv.Parser {
                     parseSemicolon(rest, c :: fieldRev, row, rows)
         }
 
+    /// `List[Char]` -> `String`. Flix-specific helper: the original
+    /// Elm parser uses `String.slice` on the source instead of
+    /// accumulating a buffer, so it has no equivalent.
     def listToString(charsRev: List[Char]): String =
         charsRev
             |> List.reverse

@@ -1,7 +1,7 @@
 mod Util.Csv.TestParser {
 
     use Util.Csv.Parser
-    use Util.Csv.Parser.ParseProblem
+    use Util.Csv.Parser.Problem
 
     def csv(): {fieldSeparator = Char} = {fieldSeparator = ','}
 
@@ -92,14 +92,14 @@ mod Util.Csv.TestParser {
     @Test
     def testUnclosedQuoteError(): Unit \ Assert =
         match Parser.parse(csv(), "\"abc") {
-            case Err(ParseProblem.SourceEndedWithoutClosingQuote(_)) => Assert.assertTrue(true)
+            case Err(Problem.SourceEndedWithoutClosingQuote(_)) => Assert.assertTrue(true)
             case _                                                   => Assert.assertTrue(false)
         }
 
     @Test
     def testGarbageAfterClosingQuoteError(): Unit \ Assert =
         match Parser.parse(csv(), "\"abc\"x") {
-            case Err(ParseProblem.AdditionalCharactersAfterClosingQuote(_)) => Assert.assertTrue(true)
+            case Err(Problem.AdditionalCharactersAfterClosingQuote(_)) => Assert.assertTrue(true)
             case _                                                          => Assert.assertTrue(false)
         }
 

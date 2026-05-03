@@ -237,7 +237,7 @@ mod Util.Csv.Decode {
         }
 
     pub enum Error with ToString {
-        case ParsingError(Parser.ParseProblem)
+        case ParsingError(Parser.Problem)
         case NoFieldNamesOnFirstRow
         case DecodingErrors(List[DecodingError])
     }
@@ -288,11 +288,15 @@ mod Util.Csv.Decode {
                 }
         }
 
-    def parseProblemToString(p: Parser.ParseProblem): String =
+    /// ----- `errorToString` helpers -----
+    /// In the original elm-csv these are nested `let`-bindings inside
+    /// `errorToString`. Flix requires recursive helpers (`isContiguous`,
+    /// `dedupeHelp`) at module scope, so all of them are hoisted here.
+    def parseProblemToString(p: Parser.Problem): String =
         match p {
-            case Parser.ParseProblem.SourceEndedWithoutClosingQuote(row) =>
+            case Parser.Problem.SourceEndedWithoutClosingQuote(row) =>
                 "The source ended on row ${row} in a quoted field without a closing quote."
-            case Parser.ParseProblem.AdditionalCharactersAfterClosingQuote(row) =>
+            case Parser.Problem.AdditionalCharactersAfterClosingQuote(row) =>
                 "On row ${row} in the source, there were additional characters in a field after a closing quote."
         }
 
