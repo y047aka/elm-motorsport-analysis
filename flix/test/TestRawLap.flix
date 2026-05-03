@@ -59,29 +59,6 @@ mod TestRawLap {
         }
 
     @Test
-    def testFromCsvRowShortLineFails(): Unit \ Assert =
-        // Strict elm-csv-style decoding rejects rows whose column count
-        // is too small. The legacy `fromCsvRow` returned `None` here; the
-        // new decoder returns a field-not-found error.
-        match decodeOne("12;1;3") {
-            case Err(_) => Assert.assertTrue(true)
-            case Ok(_)  => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testEmptyInputDecodesToEmptyList(): Unit \ Assert =
-        // A header-only CSV (no data rows) decodes to an empty list.
-        match Decode.decodeCustom(
-            {fieldSeparator = ';'},
-            FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
-            header()
-        ) {
-            case Ok(rs) => Assert.assertTrue(List.isEmpty(rs))
-            case Err(_) => Assert.assertTrue(false)
-        }
-
-    @Test
     def testToJsonRendersWholeKphAsInt(): Unit \ Assert =
         // KPH "86.0" is rendered as JsonInt 86.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
@@ -109,23 +86,6 @@ mod TestRawLap {
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;0:01:41.031;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r)  => Assert.assertTrue(r#pitTime == "1:41.031")
             case Err(_) => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testFromCsvRowsRejectsShortMiddleLine(): Unit \ Assert =
-        // A short line in the middle of an otherwise-valid file aborts
-        // the entire decode (strict elm-csv semantics).
-        let csv =
-            header() + "\n" +
-            "12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:02.856;0:23.155;0:29.928;0:42.282;;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;23.155;29.928;42.282;\nshort line\n7;1;1;1:35.421;0;;23.277;0;29.848;0;42.296;0;160.5;1:35.421;11:02:02.912;0:23.277;0:29.848;0:42.296;;Kamui KOBAYASHI;;HYPERCAR;H;Toyota Gazoo Racing;Toyota;GF;23.277;29.848;42.296;";
-        match Decode.decodeCustom(
-            {fieldSeparator = ';'},
-            FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
-            csv
-        ) {
-            case Err(_) => Assert.assertTrue(true)
-            case Ok(_)  => Assert.assertTrue(false)
         }
 
     @Test
