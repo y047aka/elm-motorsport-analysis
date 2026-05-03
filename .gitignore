@@ -14,6 +14,9 @@ node_modules/
 .DS_Store
 *.pem
 
+# Flix compiler scratch dir if invoked from repo root
+/build/
+
 # elm-verify-examples generated files
 VerifyExamples
 
