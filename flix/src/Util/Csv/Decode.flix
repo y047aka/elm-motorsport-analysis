@@ -89,7 +89,20 @@ mod Util.Csv.Decode {
     pub def blank(decoder: Decoder[a]): Decoder[Option[a]] =
         andThen(
             maybeBlank ->
-                if (String.isEmpty(String.trim(maybeBlank)))
+                let isUnicodeWhitespace = c -> {
+                    let cp = Char.toBmpCodePoint(c);
+                    Char.isWhitespace(c)
+                        or cp == 0x00A0
+                        or cp == 0x2007
+                        or cp == 0x202F
+                        or cp == 0x1680
+                        or (cp >= 0x2000 and cp <= 0x200A)
+                        or cp == 0x2028
+                        or cp == 0x2029
+                        or cp == 0x205F
+                        or cp == 0x3000
+                };
+                if (List.forAll(isUnicodeWhitespace, String.toList(maybeBlank)))
                     succeed(None)
                 else
                     map(Some, decoder),
@@ -237,7 +250,7 @@ mod Util.Csv.Decode {
     ///   - `ParsingError`: a problem parsing the CSV intoRecord rows and columns (quoting issues).
     ///   - `NoFieldNamesOnFirstRow`: tried to get field names from the first row but found none.
     ///   - `DecodingErrors`: one or more rows failed to decode.
-    pub enum Error {
+    pub enum Error with Eq, ToString {
         case ParsingError(Util.Csv.Parser.Problem)
         case NoFieldNamesOnFirstRow
         case DecodingErrors(List[DecodingError])
@@ -249,7 +262,7 @@ mod Util.Csv.Decode {
     ///   - `OneOfDecodingError(row, errors)`: all branches of `oneOf` failed.
     ///   - `FieldNotProvided(name)`: the named column was not in the header.
     ///   - `NoFieldNamesProvided`: `availableFields` used with `NoFieldNames`.
-    pub enum DecodingError with Eq {
+    pub enum DecodingError with Eq, ToString {
         case FieldDecodingError(Int32, Column, Problem)
         case OneOfDecodingError(Int32, List[DecodingError])
         case FieldNotProvided(String)
@@ -261,7 +274,7 @@ mod Util.Csv.Decode {
     ///   - `Column(n)`: at the given column number.
     ///   - `Field(name, maybeCol)`: at the given named column (with optional column number).
     ///   - `OnlyColumn`: at the only column in the row.
-    pub enum Column with Eq {
+    pub enum Column with Eq, ToString {
         case Column(Int32)
         case Field(String, Option[Int32])
         case OnlyColumn
@@ -281,7 +294,7 @@ mod Util.Csv.Decode {
     ///   - `ExpectedOneColumn(n)`: basic decoders need exactly one column; found `n`.
     ///   - `ExpectedInt(s)` / `ExpectedFloat(s)`: failed to parse a number.
     ///   - `Failure(msg)`: custom failure from `fail`.
-    pub enum Problem with Eq {
+    pub enum Problem with Eq, ToString {
         case ColumnNotFound(Int32)
         case FieldNotFound(String)
         case ExpectedOneColumn(Int32)
@@ -410,7 +423,7 @@ mod Util.Csv.Decode {
                     es
                         |> List.sortBy(sortKey)
                         |> dedupeHelp(Nil, Nil)
-                        |> List.sortBy(match (startRow, _, _) -> startRow);
+                        |> List.sortBy(match (startRow, _, err) -> (startRow, sortKey(err)));
                 match dedupeErrs(errs) {
                     case Nil =>
                         "Something went wrong, but I got an blank error list so I don't know what it was. Please open an issue!"
