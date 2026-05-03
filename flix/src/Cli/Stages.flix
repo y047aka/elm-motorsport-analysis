@@ -1,6 +1,7 @@
 mod Cli.Stages {
 
-    use Util.Csv
+    use Util.Csv.Decode
+    use Util.Csv.Decode.FieldNames
     use Util.Files
     use Util.Json
     use Motorsport.Metadata
@@ -58,11 +59,19 @@ mod Cli.Stages {
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         forM(
             lines     <- Files.readLines(task#inputPath) |> Result.mapErr(CliError.File);
-            dataLines <- match lines {
-                            case _ :: rest => Ok(rest)
-                            case Nil       => Err(CliError.EmptyFile(task#inputPath))
+            _         <- match lines {
+                            case Nil => Err(CliError.EmptyFile(task#inputPath))
+                            case _   => Ok(())
                          };
-            rawLaps   <- Ok(dataLines |> Csv.parse |> RawLap.fromCsvRows);
+            // The first line is the WEC header; FieldNamesFromFirstRow
+            // consumes it. RawLap.decoder reads the remaining rows by
+            // column index, so the actual header text is unused.
+            rawLaps   <- Decode.decodeCustom(
+                            {fieldSeparator = ';'},
+                            FieldNames.FieldNamesFromFirstRow,
+                            RawLap.decoder(),
+                            List.join("\n", lines)
+                         ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)));
             _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
             processed <- Ok(process(task#eventName, rawLaps));
             _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);

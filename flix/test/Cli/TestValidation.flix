@@ -1,15 +1,16 @@
 mod Cli.TestValidation {
 
-    use Util.Csv
+    use Util.Csv.Decode
+    use Util.Csv.Decode.FieldNames
     use Cli.Validation
     use Cli.Validation.Violation
     use RawLap.RawLap
 
     def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap =
-        let row = Csv.parseRow("${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;0.0;0.0;0.0;");
-        match RawLap.fromCsvRow(row) {
-            case Some(r) => r
-            case None    => unreachable!()
+        let csv = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;0.0;0.0;0.0;";
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.NoFieldNames, RawLap.decoder(), csv) {
+            case Ok(r :: _) => r
+            case _          => unreachable!()
         }
 
     /// Pulls carNumber off the leading RawLap arg shared by every variant.
