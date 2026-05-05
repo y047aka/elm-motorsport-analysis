@@ -27,9 +27,6 @@ mod RawLap {
         improvement = Int32
     }
 
-    /// Car identity fields. These are constant across every lap of a
-    /// given car, so it's natural to group them rather than repeating
-    /// five flat fields on each `RawLap`.
     pub type alias RawCar = {
         carNumber = String,
         class = String,
@@ -104,8 +101,6 @@ mod RawLap {
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
-    /// Decoder for the five car-identity columns. Reads NUMBER, CLASS,
-    /// GROUP, TEAM, and MANUFACTURER and assembles them into a RawCar.
     def carDecoder(): Decoder[RawCar] =
         Decode.intoRecord(
             carNumber -> class -> group -> team -> manufacturer ->
@@ -160,16 +155,9 @@ mod RawLap {
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
 
-    /// Decoder for one sector's four CSV columns (value, large duplicate,
-    /// raw seconds, improvement flag). Bundling them keeps the outer
-    /// pipeline aligned with logical sector grouping rather than the
-    /// scattered CSV column order.
-    ///
-    /// Also asserts the data-format invariant: `value`, `large`, and
-    /// `seconds` are three encodings of the same elapsed time. The
-    /// decoder fails if the parseable representations disagree, so a
-    /// surprising CSV layout surfaces immediately rather than silently
-    /// corrupting downstream JSON.
+    /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
+    /// the same elapsed time, failing the decode otherwise so an
+    /// unfamiliar CSV layout surfaces immediately.
     def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
         Decode.intoRecord(
             value -> large -> seconds -> improvement ->
@@ -189,10 +177,8 @@ mod RawLap {
                 case Err(msg) => Decode.fail(msg)
             })
 
-    /// Verify the per-sector triple agrees. Each parseable representation
-    /// is reduced to milliseconds; if two or more are present and any
-    /// disagree, returns Err with a diagnostic. Blank/unparseable cells
-    /// are skipped (they round-trip via the Err side of `Sector`).
+    /// Blank/unparseable cells are skipped, so a row with all three
+    /// blank is treated as consistent.
     def checkSectorConsistency(name: String, s: RawSector): Result[String, Unit] =
         let valueMs   = Result.toOption(s#value);
         let largeMs   = Result.toOption(s#large);
@@ -207,8 +193,6 @@ mod RawLap {
                     Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
         }
 
-    /// Parse the `S*_SECONDS` raw text (e.g. `"41.805"`) as milliseconds.
-    /// Returns `None` for blank or non-numeric input.
     def secondsToMillis(raw: String): Option[Int32] =
         if (raw == "") None
         else match Float64.fromString(raw) {
