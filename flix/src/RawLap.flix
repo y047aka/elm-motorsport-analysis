@@ -81,10 +81,11 @@ mod RawLap {
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
     /// with a header row; columns are identified by name so ordering and
-    /// extra columns (e.g. S*_LARGE) are ignored automatically. Blank or
-    /// unparseable required cells (LAP_TIME, ELAPSED, HOUR, IMPROVEMENT)
-    /// fail the decode immediately. Sector time cells are `None` when
-    /// blank, `Some(d)` otherwise.
+    /// extra columns (e.g. S*_LARGE) are ignored automatically. Required
+    /// cells (LAP_TIME, ELAPSED, HOUR, *_IMPROVEMENT, FLAG_AT_FL,
+    /// CROSSING_FINISH_LINE_IN_PIT, KPH) fail decode immediately on blank
+    /// or unparseable input. Sector time cells are `None` when blank,
+    /// `Some(d)` otherwise.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             car -> driver -> lapNumber -> lapTime -> lapImprovement ->
@@ -159,7 +160,7 @@ mod RawLap {
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
-            ("crossingFinishLineInPit", JsonString(if (rawLap#crossingFinishLineInPit) "B" else "")) ::
+            ("crossingFinishLineInPit", JsonString(boxToString(rawLap#crossingFinishLineInPit))) ::
             ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
             ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
             ("s2",                      optionalDurationJson(rawLap#s2#value)) ::
@@ -189,13 +190,10 @@ mod RawLap {
     /// Accepts any value parseable as Float64 or blank; non-numeric
     /// non-blank input fails decode. Raw string preserved unchanged.
     def numericOrBlankStringField(name: String): Decoder[String] =
-        Decode.oneOf(
-            numericStringField(name),
-            stringField(name) |> Decode.andThen(s ->
-                if (s == "") Decode.succeed(s)
-                else Decode.fail("${name}: expected numeric or blank but got \"${s}\""))
-            :: Nil
-        )
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "" => Decode.succeed(s)
+            case _  => Decode.fromResult(parseNumericString(name, s))
+        })
 
     /// Accepts any value parseable as Float64; fails decode on blank or
     /// non-numeric input. The raw string is preserved unchanged in RawLap.
@@ -257,6 +255,9 @@ mod RawLap {
             case ""  => Decode.succeed(false)
             case _   => Decode.fail("${name}: expected \"B\" or blank but got \"${s}\"")
         })
+
+    def boxToString(b: Bool): String =
+        if (b) "B" else ""
 
     def flagField(name: String): Decoder[Flag] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
@@ -335,7 +336,6 @@ mod RawLap {
             case None => Err("${name}: expected seconds but got \"${raw}\"")
         }
 
-
     /// Renders an `Option[Duration]` as JSON: `Some(d)` → formatted string,
     /// `None` → empty string.
     def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
@@ -343,6 +343,5 @@ mod RawLap {
             case Some(ms) => JsonString(Util.Duration.format(ms))
             case None     => JsonString("")
         }
-
 
 }
