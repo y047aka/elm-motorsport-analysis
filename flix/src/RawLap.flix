@@ -18,7 +18,7 @@ mod RawLap {
     ///   CarBest     = fastest across every driver of this car so far
     ///   OverallBest = fastest of every running car so far (at most once
     ///                 per race per column)
-    pub enum Improvement with Eq, ToString {
+    pub enum Improvement with Eq {
         case None
         case DriverBest
         case CarBest
@@ -188,10 +188,10 @@ mod RawLap {
     /// Blank → `None`. Numeric input → `Some(d)`. Anything else fails the
     /// decode so unfamiliar formatting surfaces immediately.
     def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
-        if (raw == "") Ok(None)
-        else match Duration.fromString(raw) {
-            case Some(d) => Ok(Some(d))
-            case None    => Err("${name}: expected duration but got \"${raw}\"")
+        match Duration.fromString(raw) {
+            case Some(d)           => Ok(Some(d))
+            case None if raw == "" => Ok(None)
+            case None              => Err("${name}: expected duration but got \"${raw}\"")
         }
 
     def intField(name: String): Decoder[Int32] =
@@ -242,27 +242,35 @@ mod RawLap {
             |> Decode.andThen(sector ->
                 Decode.fromResult(checkSectorConsistency(name, sector) |> Result.map(_ -> sector)))
 
-    /// Blank/unparseable cells are skipped, so a row with all three
-    /// blank is treated as consistent.
+    /// Blank cells are skipped, so a row with all three blank is treated
+    /// as consistent. Unparseable `S_SECONDS` fails the decode.
     def checkSectorConsistency(name: String, s: RawSector): Result[String, Unit] =
-        let valueMs   = s#value;
-        let largeMs   = s#large;
-        let secondsMs = secondsToMillis(s#seconds);
-        let observed  = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
-        match observed {
-            case Nil           => Ok(())
-            case first :: rest =>
-                if (List.forAll(x -> x == first, rest))
-                    Ok(())
-                else
-                    Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
+        match secondsToMillis(name, s#seconds) {
+            case Err(e)       => Err(e)
+            case Ok(secondsMs) =>
+                let valueMs  = s#value;
+                let largeMs  = s#large;
+                let observed = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
+                match observed {
+                    case Nil           => Ok(())
+                    case first :: rest =>
+                        if (List.forAll(x -> x == first, rest))
+                            Ok(())
+                        else
+                            Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
+                }
         }
 
-    def secondsToMillis(raw: String): Option[Duration] =
-        if (raw == "") None
+    /// Blank → `None`. Numeric seconds → `Some(d)`. Anything else fails
+    /// the decode so unfamiliar `S_SECONDS` formatting surfaces immediately.
+    def secondsToMillis(name: String, raw: String): Result[String, Option[Duration]] =
+        if (raw == "") Ok(None)
         else match Float64.fromString(raw) {
-            case Some(f) => Float64.tryToInt32(Float64.round(f * 1000.0)) |> Option.map(Duration.fromMillis)
-            case None    => None
+            case Some(f) => match Float64.tryToInt32(Float64.round(f * 1000.0)) {
+                case Some(ms) => Ok(Some(Duration.fromMillis(ms)))
+                case None     => Err("${name}: seconds out of range \"${raw}\"")
+            }
+            case None => Err("${name}: expected seconds but got \"${raw}\"")
         }
 
 
