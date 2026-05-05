@@ -26,17 +26,17 @@ mod RawLap {
 
     /// Race flag state at the finish line when each lap was completed.
     /// Observed values across all WEC CSV files:
-    ///   Green           = GF  — normal racing conditions
-    ///   SlowZone        = SF  — safety car or local slow zone active
+    ///   Green            = GF  — normal racing conditions
+    ///   SlowZone         = SF  — safety car or local slow zone active
     ///   FullCourseYellow = FCY — full-course yellow, no overtaking
-    ///   Finish          = FF  — chequered flag (race end)
-    ///   Red             = RF  — race suspended
+    ///   Red              = RF  — race suspended
+    ///   Finish           = FF  — chequered flag (race end)
     pub enum Flag with Eq {
         case Green
         case SlowZone
         case FullCourseYellow
-        case Finish
         case Red
+        case Finish
     }
 
     /// Per-sector data parsed from the four CSV columns describing one
