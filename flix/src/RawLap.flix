@@ -66,9 +66,10 @@ mod RawLap {
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
     /// with a header row; columns are identified by name so ordering and
-    /// extra columns (e.g. S*_LARGE) are ignored automatically. Numeric
-    /// columns whose raw text is empty or unparseable degrade to `0`.
-    /// Sector cells are `None` when blank/unparseable, `Some(ms)` otherwise.
+    /// extra columns (e.g. S*_LARGE) are ignored automatically. Blank or
+    /// unparseable required cells (LAP_TIME, ELAPSED, HOUR, IMPROVEMENT)
+    /// fail the decode immediately. Sector time cells are `None` when
+    /// blank, `Some(d)` otherwise.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             car -> driver -> lapNumber -> lapTime -> lapImprovement ->
@@ -173,7 +174,7 @@ mod RawLap {
     def durationField(name: String): Decoder[Duration] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
 
-    /// Numeric input → `Duration`. Blank or unparseable input fails the decode.
+    /// Duration-formatted input → `Duration`. Blank or unparseable input fails the decode.
     def parseDuration(name: String, raw: String): Result[String, Duration] =
         match Util.Duration.fromString(raw) {
             case Some(d) => Ok(d)
@@ -268,8 +269,8 @@ mod RawLap {
         }
 
 
-    /// Renders an `Option[Duration]` cell as JSON. Some is normalized
-    /// through Util.Duration.format, None becomes an empty string.
+    /// Renders an `Option[Duration]` as JSON: `Some(d)` → formatted string,
+    /// `None` → empty string.
     def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
         match d {
             case Some(ms) => JsonString(Util.Duration.format(ms))
