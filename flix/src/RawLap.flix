@@ -17,6 +17,9 @@ mod RawLap {
     /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
+    /// Improvement flag (0 = none, 1 = personal best, 2 = overall best).
+    pub type alias Improvement = Int32
+
     /// Per-sector data bundling the four CSV columns describing one
     /// sector (S1/S2/S3): the parsed time, the long-form duplicate, the
     /// raw seconds-only column, and the improvement flag.
@@ -24,7 +27,7 @@ mod RawLap {
         value = Sector,
         large = Sector,
         seconds = String,
-        improvement = Int32
+        improvement = Improvement
     }
 
     pub type alias RawCar = {
@@ -45,7 +48,7 @@ mod RawLap {
         driver = RawDriver,
         lapNumber = Int32,
         lapTime = String,
-        lapImprovement = Int32,
+        lapImprovement = Improvement,
         crossingFinishLineInPit = String,
         s1 = RawSector,
         s2 = RawSector,
