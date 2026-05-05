@@ -21,13 +21,20 @@ mod Motorsport.TestMetadata {
             kph                     = "0",
             elapsed                 = elapsed,
             hour                    = Err(""),
+            s1Large                 = Err(""),
+            s2Large                 = Err(""),
+            s3Large                 = Err(""),
             topSpeed                = "",
             driverName              = driverName,
             pitTime                 = "",
             class                   = class,
             group                   = group,
             team                    = team,
-            manufacturer            = manufacturer
+            manufacturer            = manufacturer,
+            flagAtFl                = "",
+            s1Seconds               = "",
+            s2Seconds               = "",
+            s3Seconds               = ""
         }
 
     @Test
