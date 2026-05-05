@@ -13,7 +13,10 @@ mod Motorsport.TestMetadata {
                 team         = team,
                 manufacturer = manufacturer
             },
-            driverNumber            = 1,
+            driver = {
+                driverNumber = 1,
+                driverName   = driverName
+            },
             lapNumber               = lapNumber,
             lapTime                 = "1:30.000",
             lapImprovement          = 0,
@@ -25,7 +28,6 @@ mod Motorsport.TestMetadata {
             elapsed                 = elapsed,
             hour                    = Err(""),
             topSpeed                = "",
-            driverName              = driverName,
             pitTime                 = "",
             flagAtFl                = ""
         }

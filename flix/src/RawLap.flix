@@ -35,9 +35,14 @@ mod RawLap {
         manufacturer = String
     }
 
+    pub type alias RawDriver = {
+        driverNumber = Int32,
+        driverName = String
+    }
+
     pub type alias RawLap = {
         car = RawCar,
-        driverNumber = Int32,
+        driver = RawDriver,
         lapNumber = Int32,
         lapTime = String,
         lapImprovement = Int32,
@@ -49,7 +54,6 @@ mod RawLap {
         elapsed = String,
         hour = HourCell,
         topSpeed = String,
-        driverName = String,
         pitTime = String,
         flagAtFl = String
     }
@@ -62,12 +66,12 @@ mod RawLap {
     /// `Sector = Result[String, Int32]`.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
-            car -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
+            car -> driver -> lapNumber -> lapTime -> lapImprovement ->
             crossingFinishLineInPit -> s1 -> s2 -> s3 -> kph -> elapsed -> hour ->
-            topSpeed -> driverName -> pitTime -> flagAtFl ->
+            topSpeed -> pitTime -> flagAtFl ->
                 {
                     car = car,
-                    driverNumber = driverNumber,
+                    driver = driver,
                     lapNumber = lapNumber,
                     lapTime = lapTime,
                     lapImprovement = lapImprovement,
@@ -79,13 +83,12 @@ mod RawLap {
                     elapsed = elapsed,
                     hour = hour,
                     topSpeed = topSpeed,
-                    driverName = driverName,
                     pitTime = pitTime,
                     flagAtFl = flagAtFl
                 }
         )
             |> Decode.pipeline(carDecoder())
-            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(driverDecoder())
             |> Decode.pipeline(intField("LAP_NUMBER"))
             |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
@@ -97,7 +100,6 @@ mod RawLap {
             |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
-            |> Decode.pipeline(stringField("DRIVER_NAME"))
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
@@ -118,10 +120,21 @@ mod RawLap {
             |> Decode.pipeline(stringField("TEAM"))
             |> Decode.pipeline(stringField("MANUFACTURER"))
 
+    def driverDecoder(): Decoder[RawDriver] =
+        Decode.intoRecord(
+            driverNumber -> driverName ->
+                {
+                    driverNumber = driverNumber,
+                    driverName = driverName
+                }
+        )
+            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(stringField("DRIVER_NAME"))
+
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
-            ("driverNumber",            JsonInt(rawLap#driverNumber)) ::
+            ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
             ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
@@ -136,7 +149,7 @@ mod RawLap {
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
             ("hour",                    hourJson(rawLap#hour)) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
-            ("driverName",              JsonString(rawLap#driverName)) ::
+            ("driverName",              JsonString(rawLap#driver#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
             ("class",                   JsonString(rawLap#car#class)) ::
             ("group",                   JsonString(rawLap#car#group)) ::
