@@ -105,7 +105,7 @@ mod RawLap {
             |> Decode.pipeline(numericStringField("KPH"))
             |> Decode.pipeline(durationField("ELAPSED"))
             |> Decode.pipeline(hourField("HOUR"))
-            |> Decode.pipeline(numericStringField("TOP_SPEED"))
+            |> Decode.pipeline(numericOrBlankStringField("TOP_SPEED"))
             |> Decode.pipeline(optionalDurationField("PIT_TIME"))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
@@ -171,14 +171,24 @@ mod RawLap {
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
 
-    /// Accepts blank or any value parseable as Int32 or Float64; fails decode
-    /// on anything else. The raw string is preserved unchanged in RawLap.
+    /// Accepts any value parseable as Float64 or blank; non-numeric
+    /// non-blank input fails decode. Raw string preserved unchanged.
+    def numericOrBlankStringField(name: String): Decoder[String] =
+        Decode.oneOf(
+            numericStringField(name),
+            stringField(name) |> Decode.andThen(s ->
+                if (s == "") Decode.succeed(s)
+                else Decode.fail("${name}: expected numeric or blank but got \"${s}\""))
+            :: Nil
+        )
+
+    /// Accepts any value parseable as Float64; fails decode on blank or
+    /// non-numeric input. The raw string is preserved unchanged in RawLap.
     def numericStringField(name: String): Decoder[String] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
 
     def parseNumericString(name: String, s: String): Result[String, String] =
-        if (s == "") Ok(s)
-        else match Float64.fromString(s) {
+        match Float64.fromString(s) {
             case Some(_) => Ok(s)
             case None    => Err("${name}: expected numeric but got \"${s}\"")
         }
