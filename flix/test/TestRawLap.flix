@@ -49,7 +49,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#group == "H");
                 Assert.assertTrue(r#car#team == "Hertz Team JOTA");
                 Assert.assertTrue(r#car#manufacturer == "Porsche");
-                Assert.assertTrue(r#flagAtFl == RawLap.Flag.Green)
+                Assert.assertTrue(r#flagAtFl == RawLap.Flag.SlowZone)
             case Err(_) => Assert.assertTrue(false)
         }
 
