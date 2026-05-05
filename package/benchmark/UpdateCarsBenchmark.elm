@@ -4,7 +4,7 @@ import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture.Json as Fixture
 import List.Extra
-import Motorsport.Car exposing (Car, Status(..))
+import Motorsport.Car exposing (Car)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.RaceControl as RaceControl
@@ -26,24 +26,7 @@ suite =
             calcTimeLimit cars
     in
     describe "RaceControl.updateCars" <|
-        [ Benchmark.scale "old"
-            ([ 25 -- 5,338
-             , 50 -- 5,282
-             , 75 -- 5,186
-             ]
-                |> List.map
-                    (\size ->
-                        ( String.fromInt size ++ "%"
-                        , \_ ->
-                            let
-                                clock =
-                                    { elapsed = floor (toFloat timeLimit * toFloat size / 100) }
-                            in
-                            updateCars timeLimit clock cars
-                        )
-                    )
-            )
-        , Benchmark.scale "new"
+        [ Benchmark.scale "new"
             ([ 25 -- 10,812
              , 50 -- 10,994
              , 75 -- 12,744
@@ -68,75 +51,6 @@ suite =
                     )
             )
         ]
-
-
-
--- OLD
-
-
-updateCars : Duration -> { elapsed : Duration } -> List Car -> List Car
-updateCars timeLimit raceClock cars =
-    cars
-        |> List.map (updateWithClock { elapsed = raceClock.elapsed, timeLimit = timeLimit })
-        |> List.sortWith
-            (\a b ->
-                Maybe.map2 (Lap.compareAt raceClock) a.currentLap b.currentLap
-                    |> Maybe.withDefault EQ
-            )
-
-
-updateWithClock : { elapsed : Duration, timeLimit : Duration } -> Car -> Car
-updateWithClock raceClock car =
-    { car
-        | currentLap = Lap.findCurrentLap { elapsed = raceClock.elapsed } car.laps
-        , lastLap = Lap.findLastLapAt { elapsed = raceClock.elapsed } car.laps
-    }
-        |> (\updatedCar ->
-                { updatedCar
-                    | status =
-                        case ( updatedCar.status, hasCompletedAllLaps raceClock updatedCar, isOnFinalLap raceClock updatedCar ) of
-                            ( PreRace, _, _ ) ->
-                                Racing
-
-                            ( Racing, True, True ) ->
-                                Checkered
-
-                            ( Racing, True, False ) ->
-                                Retired
-
-                            ( Racing, False, _ ) ->
-                                Racing
-
-                            ( Checkered, _, _ ) ->
-                                Checkered
-
-                            ( Retired, _, _ ) ->
-                                Retired
-
-                            ( InPit, _, _ ) ->
-                                InPit
-                }
-           )
-
-
-isOnFinalLap : { elapsed : Duration, timeLimit : Duration } -> Car -> Bool
-isOnFinalLap raceClock car =
-    let
-        finishedAfterTimeLimit =
-            raceClock.timeLimit <= raceClock.elapsed
-
-        hasReachedFinalLap =
-            Maybe.map2 (==) car.currentLap (List.Extra.last car.laps)
-                |> Maybe.withDefault False
-    in
-    hasReachedFinalLap && finishedAfterTimeLimit
-
-
-hasCompletedAllLaps : { a | elapsed : Duration } -> Car -> Bool
-hasCompletedAllLaps raceClock car =
-    List.Extra.last car.laps
-        |> Maybe.map (\finalLap -> finalLap.elapsed <= raceClock.elapsed)
-        |> Maybe.withDefault False
 
 
 
