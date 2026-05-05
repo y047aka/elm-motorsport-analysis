@@ -17,15 +17,21 @@ mod RawLap {
     /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
-    /// Improvement flag.
-    ///   0 = no improvement (slower than this driver's personal best)
-    ///   1 = driver best (this driver's PB, but another driver on the
-    ///       same car has already been faster; sector-only — never
-    ///       observed on LAP_IMPROVEMENT)
-    ///   2 = car best (fastest across every driver of this car so far)
-    ///   3 = overall best (fastest of every running car so far; appears
-    ///       at most once per race per column)
-    pub type alias Improvement = Int32
+    /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
+    /// columns. Semantics derived from empirical CSV analysis:
+    ///   None        = slower than this driver's personal best
+    ///   DriverBest  = this driver's PB, but another driver on the same
+    ///                 car has already been faster (sector-only — never
+    ///                 observed on LAP_IMPROVEMENT)
+    ///   CarBest     = fastest across every driver of this car so far
+    ///   OverallBest = fastest of every running car so far (at most once
+    ///                 per race per column)
+    pub enum Improvement with Eq, ToString {
+        case None
+        case DriverBest
+        case CarBest
+        case OverallBest
+    }
 
     /// Per-sector data bundling the four CSV columns describing one
     /// sector (S1/S2/S3): the parsed time, the long-form duplicate, the
@@ -147,14 +153,14 @@ mod RawLap {
             ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
-            ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
+            ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
             ("s1",                      sectorJson(rawLap#s1#value)) ::
-            ("s1Improvement",           JsonInt(rawLap#s1#improvement)) ::
+            ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
             ("s2",                      sectorJson(rawLap#s2#value)) ::
-            ("s2Improvement",           JsonInt(rawLap#s2#improvement)) ::
+            ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
             ("s3",                      sectorJson(rawLap#s3#value)) ::
-            ("s3Improvement",           JsonInt(rawLap#s3#improvement)) ::
+            ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
             ("hour",                    hourJson(rawLap#hour)) ::
@@ -180,12 +186,20 @@ mod RawLap {
 
     def improvementField(name: String): Decoder[Improvement] =
         stringField(name) |> Decode.andThen(s -> match s {
-            case "0" => Decode.succeed(0)
-            case "1" => Decode.succeed(1)
-            case "2" => Decode.succeed(2)
-            case "3" => Decode.succeed(3)
+            case "0" => Decode.succeed(Improvement.None)
+            case "1" => Decode.succeed(Improvement.DriverBest)
+            case "2" => Decode.succeed(Improvement.CarBest)
+            case "3" => Decode.succeed(Improvement.OverallBest)
             case _   => Decode.fail("${name}: expected 0/1/2/3 but got \"${s}\"")
         })
+
+    def improvementToInt(imp: Improvement): Int32 =
+        match imp {
+            case Improvement.None        => 0
+            case Improvement.DriverBest  => 1
+            case Improvement.CarBest     => 2
+            case Improvement.OverallBest => 3
+        }
 
     /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
     /// the same elapsed time, failing the decode otherwise so an

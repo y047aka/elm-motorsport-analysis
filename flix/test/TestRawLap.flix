@@ -32,10 +32,10 @@ mod TestRawLap {
                 Assert.assertTrue(r#driver#driverNumber == 1);
                 Assert.assertTrue(r#lapNumber == 3);
                 Assert.assertTrue(r#lapTime == "2:41.963");
-                Assert.assertTrue(r#lapImprovement == 0);
+                Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
                 Assert.assertTrue(r#s1#value == Ok(41805));
-                Assert.assertTrue(r#s1#improvement == 0);
+                Assert.assertTrue(r#s1#improvement == RawLap.Improvement.None);
                 Assert.assertTrue(r#s2#value == Ok(63483));
                 Assert.assertTrue(r#s3#value == Ok(56675));
                 Assert.assertTrue(r#kph == "101.4");
