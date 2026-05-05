@@ -100,17 +100,17 @@ mod RawLap {
             |> Decode.pipeline(carDecoder())
             |> Decode.pipeline(driverDecoder())
             |> Decode.pipeline(intField("LAP_NUMBER"))
-            |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(durationField("LAP_TIME"))
             |> Decode.pipeline(improvementField("LAP_IMPROVEMENT"))
             |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
             |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
             |> Decode.pipeline(stringField("KPH"))
-            |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(durationField("ELAPSED"))
             |> Decode.pipeline(hourField("HOUR"))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
-            |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(durationField("PIT_TIME"))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
     def carDecoder(): Decoder[RawCar] =
@@ -174,6 +174,9 @@ mod RawLap {
 
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
+
+    def durationField(name: String): Decoder[String] =
+        Decode.field(name, Decode.map(Duration.normalize, Decode.string()))
 
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
