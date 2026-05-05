@@ -2,8 +2,9 @@ mod Util.Duration {
 
     pub type alias Duration = Int32
 
-    def parse(s: String): Option[Int32] =
-        match String.split({regex = "\\."}, s) {
+    pub def toMillis(s: String): Option[Int32] =
+        if (String.isEmpty(s)) None
+        else match String.split({regex = "\\."}, s) {
             case wholePart :: msPart :: Nil =>
                 forM(
                     seconds <- parseHmsToSeconds(wholePart);
@@ -26,18 +27,6 @@ mod Util.Duration {
             "${m}:${zeroPad2(s)}.${zeroPad3(msPart)}"
         else
             "${s}.${zeroPad3(msPart)}"
-
-    pub def normalize(s: String): String =
-        if (String.isEmpty(s)) s
-        else
-            match parse(s) {
-                case Some(ms) => format(ms)
-                case None     => s
-            }
-
-    pub def toMillis(s: String): Option[Int32] =
-        if (String.isEmpty(s)) None
-        else parse(s)
 
     def parseHmsToSeconds(s: String): Option[Int32] =
         match String.split({regex = ":"}, s) {

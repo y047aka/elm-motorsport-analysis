@@ -3,36 +3,12 @@ mod Util.TestDuration {
     use Util.Duration
 
     @Test
-    def testNormalizeKeepsSecondsOnly(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("23.155") == "23.155")
-
-    @Test
-    def testNormalizeKeepsMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("3:38.404") == "3:38.404")
-
-    @Test
-    def testNormalizeKeepsHoursMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("1:02:05.001") == "1:02:05.001")
-
-    @Test
-    def testNormalizeStripsLeadingZeroHour(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("0:01:41.031") == "1:41.031")
-
-    @Test
-    def testNormalizeStripsLeadingZeroHourAndMinute(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("0:00:48.666") == "48.666")
-
-    @Test
-    def testNormalizeEmpty(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("") == "")
-
-    @Test
-    def testNormalizeInvalidPassthrough(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("not-a-duration") == "not-a-duration")
-
-    @Test
     def testToMillisEmpty(): Unit \ Assert =
         Assert.assertTrue(Duration.toMillis("") == None)
+
+    @Test
+    def testToMillisSecondsOnly(): Unit \ Assert =
+        Assert.assertTrue(Duration.toMillis("23.155") == Some(23155))
 
     @Test
     def testToMillisMinutesSeconds(): Unit \ Assert =
@@ -40,10 +16,26 @@ mod Util.TestDuration {
 
     @Test
     def testToMillisHoursMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.toMillis("6:10.938") == Some(370938))
+        Assert.assertTrue(Duration.toMillis("1:02:05.001") == Some(3725001))
 
     @Test
     def testToMillisInvalid(): Unit \ Assert =
         Assert.assertTrue(Duration.toMillis("not-a-duration") == None)
+
+    @Test
+    def testFormatSecondsOnly(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(23155) == "23.155")
+
+    @Test
+    def testFormatStripsLeadingZeroHour(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(101031) == "1:41.031")
+
+    @Test
+    def testFormatStripsLeadingZeroHourAndMinute(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(48666) == "48.666")
+
+    @Test
+    def testFormatHoursMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(3725001) == "1:02:05.001")
 
 }
