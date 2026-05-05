@@ -181,19 +181,21 @@ mod RawLap {
         Decode.field(name, Decode.int())
 
     def hourField(name: String): Decoder[Hour] =
-        stringField(name) |> Decode.andThen(s -> match HourClock.parse(s) {
-            case Ok(h)    => Decode.succeed(h)
-            case Err(_)   => Decode.fail("${name}: expected H:MM:SS.mmm but got \"${s}\"")
-        })
+        stringField(name) |> Decode.andThen(s ->
+            Decode.fromResult(HourClock.parse(s)
+                |> Result.mapErr(_ -> "${name}: expected H:MM:SS.mmm but got \"${s}\"")))
 
     def improvementField(name: String): Decoder[Improvement] =
-        stringField(name) |> Decode.andThen(s -> match s {
-            case "0" => Decode.succeed(Improvement.None)
-            case "1" => Decode.succeed(Improvement.DriverBest)
-            case "2" => Decode.succeed(Improvement.CarBest)
-            case "3" => Decode.succeed(Improvement.OverallBest)
-            case _   => Decode.fail("${name}: expected 0/1/2/3 but got \"${s}\"")
-        })
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseImprovement(name, s)))
+
+    def parseImprovement(name: String, s: String): Result[String, Improvement] =
+        match s {
+            case "0" => Ok(Improvement.None)
+            case "1" => Ok(Improvement.DriverBest)
+            case "2" => Ok(Improvement.CarBest)
+            case "3" => Ok(Improvement.OverallBest)
+            case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
+        }
 
     def improvementToInt(imp: Improvement): Int32 =
         match imp {
@@ -220,10 +222,8 @@ mod RawLap {
             |> Decode.pipeline(Decode.field(largeName, Decode.map(parseSector, Decode.string())))
             |> Decode.pipeline(stringField(secondsName))
             |> Decode.pipeline(improvementField(improvementName))
-            |> Decode.andThen(sector -> match checkSectorConsistency(name, sector) {
-                case Ok(())   => Decode.succeed(sector)
-                case Err(msg) => Decode.fail(msg)
-            })
+            |> Decode.andThen(sector ->
+                Decode.fromResult(checkSectorConsistency(name, sector) |> Result.map(_ -> sector)))
 
     /// Blank/unparseable cells are skipped, so a row with all three
     /// blank is treated as consistent.
