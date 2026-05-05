@@ -6,7 +6,7 @@ mod RawLap {
     use Util.HourClock
     use Util.HourClock.Hour
     use Util.Json
-    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
+    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
 
     /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
     /// columns. Semantics derived from empirical CSV analysis:
@@ -102,10 +102,10 @@ mod RawLap {
             |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
-            |> Decode.pipeline(stringField("KPH"))
+            |> Decode.pipeline(numericStringField("KPH"))
             |> Decode.pipeline(durationField("ELAPSED"))
             |> Decode.pipeline(hourField("HOUR"))
-            |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
+            |> Decode.pipeline(numericStringField("TOP_SPEED"))
             |> Decode.pipeline(optionalDurationField("PIT_TIME"))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
@@ -151,7 +151,7 @@ mod RawLap {
             ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
             ("s3",                      optionalDurationJson(rawLap#s3#value)) ::
             ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
-            ("kph",                     kphValue(rawLap#kph)) ::
+            ("kph",                     JsonString(rawLap#kph)) ::
             ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
             ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
@@ -170,6 +170,22 @@ mod RawLap {
 
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
+
+    /// Accepts blank or any value parseable as Int32 or Float64; fails decode
+    /// on anything else. The raw string is preserved unchanged in RawLap.
+    def numericStringField(name: String): Decoder[String] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
+
+    def parseNumericString(name: String, s: String): Result[String, String] =
+        if (s == "") Ok(s)
+        else match Int32.parse(10, s) {
+            case Ok(_) => Ok(s)
+            case Err(_) =>
+                match Float64.fromString(s) {
+                    case Some(_) => Ok(s)
+                    case None    => Err("${name}: expected numeric but got \"${s}\"")
+                }
+        }
 
     def durationField(name: String): Decoder[Duration] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
@@ -277,21 +293,5 @@ mod RawLap {
             case None     => JsonString("")
         }
 
-    def stripTrailingDotZero(s: String): String =
-        if (String.endsWith({suffix = ".0"}, s))
-            String.dropRight(2, s)
-        else
-            s
-
-    def kphValue(s: String): Json.JsonValue =
-        let trimmed = stripTrailingDotZero(s);
-        match Int32.parse(10, trimmed) {
-            case Ok(n)  => JsonInt(n)
-            case Err(_) =>
-                match Float64.fromString(trimmed) {
-                    case Some(f) => JsonFloat(f)
-                    case None    => JsonString(s)
-                }
-        }
 
 }

@@ -53,30 +53,20 @@ mod TestRawLap {
         }
 
     @Test
-    def testFromCsvRowStripsTopSpeedTrailingDotZero(): Unit \ Assert =
+    def testTopSpeedPreservedAsIs(): Unit \ Assert =
+        // TOP_SPEED "150.0" is kept as-is (no .0 stripping).
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;150.0;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
-            case Ok(r)  => Assert.assertTrue(r#topSpeed == "150")
+            case Ok(r)  => Assert.assertTrue(r#topSpeed == "150.0")
             case Err(_) => Assert.assertTrue(false)
         }
 
     @Test
-    def testToJsonRendersWholeKphAsInt(): Unit \ Assert =
-        // KPH "86.0" is rendered as JsonInt 86.
+    def testToJsonRendersKphAsString(): Unit \ Assert =
+        // KPH is rendered as a JSON string, preserving the CSV value.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
                 let json = Json.render(RawLap.toJson(r));
-                Assert.assertTrue(String.contains({substr = "\"kph\": 86,"}, json));
-                Assert.assertTrue(not String.contains({substr = "\"kph\": 86.0"}, json))
-            case Err(_) => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testToJsonRendersDecimalKphAsFloat(): Unit \ Assert =
-        // KPH "107.1" is rendered as JsonFloat 107.1.
-        match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;107.1;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
-            case Ok(r) =>
-                let json = Json.render(RawLap.toJson(r));
-                Assert.assertTrue(String.contains({substr = "\"kph\": 107.1"}, json))
+                Assert.assertTrue(String.contains({substr = "\"kph\": \"86.0\""}, json))
             case Err(_) => Assert.assertTrue(false)
         }
 
@@ -126,14 +116,11 @@ mod TestRawLap {
         }
 
     @Test
-    def testToJsonHandlesUnparseableKphAsString(): Unit \ Assert =
-        // KPH that parses as neither Int32 nor Float64 falls back to
-        // JsonString "not-a-number".
+    def testUnparseableKphFailsDecode(): Unit \ Assert =
+        // KPH that parses as neither Int32 nor Float64 fails decode.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;not-a-number;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
-            case Ok(r) =>
-                let json = Json.render(RawLap.toJson(r));
-                Assert.assertTrue(String.contains({substr = "\"kph\": \"not-a-number\""}, json))
-            case Err(_) => Assert.assertTrue(false)
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
         }
 
 }
