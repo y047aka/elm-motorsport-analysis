@@ -112,6 +112,9 @@ updateWithClock raceClock car =
 
                             ( Retired, _, _ ) ->
                                 Retired
+
+                            ( InPit, _, _ ) ->
+                                InPit
                 }
            )
 
