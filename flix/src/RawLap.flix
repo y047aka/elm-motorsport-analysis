@@ -17,8 +17,14 @@ mod RawLap {
     /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
-    /// Improvement flag. Observed values: 0/1/2/3 (semantics
-    /// undocumented; 3 appears occasionally in real WEC CSVs).
+    /// Improvement flag.
+    ///   0 = no improvement (slower than this driver's personal best)
+    ///   1 = driver best (this driver's PB, but another driver on the
+    ///       same car has already been faster; sector-only — never
+    ///       observed on LAP_IMPROVEMENT)
+    ///   2 = car best (fastest across every driver of this car so far)
+    ///   3 = overall best (fastest of every running car so far; appears
+    ///       at most once per race per column)
     pub type alias Improvement = Int32
 
     /// Per-sector data bundling the four CSV columns describing one
