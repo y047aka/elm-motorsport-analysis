@@ -19,10 +19,10 @@ mod Cli.TestValidation {
 
     /// Pulls carNumber off the leading RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
-        case Violation.SectorSum(lap, _, _, _)      => lap#carNumber
-        case Violation.ElapsedDrift(lap, _, _) => lap#carNumber
-        case Violation.HourElapsedOffset(lap, _, _) => lap#carNumber
-        case Violation.HourUnparseable(lap, _)      => lap#carNumber
+        case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
+        case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber
+        case Violation.HourElapsedOffset(lap, _, _) => lap#car#carNumber
+        case Violation.HourUnparseable(lap, _)      => lap#car#carNumber
     }
 
     def isSectorSum(v: Violation): Bool = match v {
@@ -188,7 +188,7 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.HourElapsedOffset(lap, _, _)) =>
-                Assert.assertTrue(lap#carNumber == "8");
+                Assert.assertTrue(lap#car#carNumber == "8");
                 Assert.assertTrue(lap#lapNumber == 1)
             case _ => Assert.assertTrue(false)
         }

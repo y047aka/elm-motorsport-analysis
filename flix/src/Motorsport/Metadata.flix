@@ -33,9 +33,9 @@ mod Motorsport.Metadata {
         rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
 
     def upsertBuild(acc: List[CarBuild], lap: RawLap): List[CarBuild] =
-        if (List.exists(b -> b#car#carNumber == lap#carNumber, acc))
+        if (List.exists(b -> b#car#carNumber == lap#car#carNumber, acc))
             acc |> List.map(b ->
-                if (b#car#carNumber == lap#carNumber) updateBuildWithLap(b, lap) else b
+                if (b#car#carNumber == lap#car#carNumber) updateBuildWithLap(b, lap) else b
             )
         else
             List.append(acc, buildFromLap(lap) :: Nil)
@@ -43,12 +43,12 @@ mod Motorsport.Metadata {
     def buildFromLap(lap: RawLap): CarBuild =
         // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
         let car: Car = {
-            carNumber    = lap#carNumber,
+            carNumber    = lap#car#carNumber,
             drivers      = lap#driverName :: Nil,
-            class        = lap#class,
-            group        = lap#group,
-            team         = lap#team,
-            manufacturer = lap#manufacturer
+            class        = lap#car#class,
+            group        = lap#car#group,
+            team         = lap#car#team,
+            manufacturer = lap#car#manufacturer
         };
         { car = car, lap1Elapsed = lap1Elapsed(lap) }
 

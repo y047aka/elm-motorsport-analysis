@@ -6,7 +6,13 @@ mod Motorsport.TestMetadata {
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
     def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap.RawLap =
         {
-            carNumber               = carNumber,
+            car = {
+                carNumber    = carNumber,
+                class        = class,
+                group        = group,
+                team         = team,
+                manufacturer = manufacturer
+            },
             driverNumber            = 1,
             lapNumber               = lapNumber,
             lapTime                 = "1:30.000",
@@ -21,10 +27,6 @@ mod Motorsport.TestMetadata {
             topSpeed                = "",
             driverName              = driverName,
             pitTime                 = "",
-            class                   = class,
-            group                   = group,
-            team                    = team,
-            manufacturer            = manufacturer,
             flagAtFl                = ""
         }
 

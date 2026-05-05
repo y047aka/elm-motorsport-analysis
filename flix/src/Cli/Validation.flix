@@ -81,14 +81,14 @@ mod Cli.Validation {
     def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
         let firstSeen = laps |> List.foldLeft(
             (acc, lap) ->
-                if (Map.memberOf(lap#carNumber, acc)) acc
-                else Map.insert(lap#carNumber, Map.size(acc), acc),
+                if (Map.memberOf(lap#car#carNumber, acc)) acc
+                else Map.insert(lap#car#carNumber, Map.size(acc), acc),
             Map.empty()
         );
         let grouped = laps |> List.foldLeft(
             (acc, lap) -> Map.insertWith(
                 (existing, fresh) -> List.append(fresh, existing),
-                lap#carNumber,
+                lap#car#carNumber,
                 lap :: Nil,
                 acc
             ),
@@ -198,14 +198,14 @@ mod Cli.Validation {
             case Violation.HourElapsedOffset(lap, base, offset) =>
                 formatExpectedActual(eventName, lap, "hour-offset", base, offset)
             case Violation.HourUnparseable(lap, raw) =>
-                "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
+                "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
         }
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
     def formatExpectedActual(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
-        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
 
     def formatMs(ms: Int32): String =
         if (ms < 0) "-" + Duration.format(0 - ms)

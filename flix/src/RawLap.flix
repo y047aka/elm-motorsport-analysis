@@ -27,8 +27,19 @@ mod RawLap {
         improvement = Int32
     }
 
-    pub type alias RawLap = {
+    /// Car identity fields. These are constant across every lap of a
+    /// given car, so it's natural to group them rather than repeating
+    /// five flat fields on each `RawLap`.
+    pub type alias RawCar = {
         carNumber = String,
+        class = String,
+        group = String,
+        team = String,
+        manufacturer = String
+    }
+
+    pub type alias RawLap = {
+        car = RawCar,
         driverNumber = Int32,
         lapNumber = Int32,
         lapTime = String,
@@ -43,10 +54,6 @@ mod RawLap {
         topSpeed = String,
         driverName = String,
         pitTime = String,
-        class = String,
-        group = String,
-        team = String,
-        manufacturer = String,
         flagAtFl = String
     }
 
@@ -63,7 +70,13 @@ mod RawLap {
             topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
             flagAtFl ->
                 {
-                    carNumber = carNumber,
+                    car = {
+                        carNumber = carNumber,
+                        class = class,
+                        group = group,
+                        team = team,
+                        manufacturer = manufacturer
+                    },
                     driverNumber = driverNumber,
                     lapNumber = lapNumber,
                     lapTime = lapTime,
@@ -78,10 +91,6 @@ mod RawLap {
                     topSpeed = topSpeed,
                     driverName = driverName,
                     pitTime = pitTime,
-                    class = class,
-                    group = group,
-                    team = team,
-                    manufacturer = manufacturer,
                     flagAtFl = flagAtFl
                 }
         )
@@ -108,7 +117,7 @@ mod RawLap {
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
-            ("carNumber",               JsonString(rawLap#carNumber)) ::
+            ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
@@ -126,10 +135,10 @@ mod RawLap {
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
-            ("class",                   JsonString(rawLap#class)) ::
-            ("group",                   JsonString(rawLap#group)) ::
-            ("team",                    JsonString(rawLap#team)) ::
-            ("manufacturer",            JsonString(rawLap#manufacturer)) ::
+            ("class",                   JsonString(rawLap#car#class)) ::
+            ("group",                   JsonString(rawLap#car#group)) ::
+            ("team",                    JsonString(rawLap#car#team)) ::
+            ("manufacturer",            JsonString(rawLap#car#manufacturer)) ::
             ("flagAtFl",                JsonString(rawLap#flagAtFl)) ::
             Nil
         )
