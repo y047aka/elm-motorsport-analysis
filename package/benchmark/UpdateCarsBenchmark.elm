@@ -8,6 +8,7 @@ import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.RaceControl as RaceControl
+import Motorsport.TimelineEvent as TimelineEvent
 
 
 main : BenchmarkProgram
@@ -47,7 +48,7 @@ suite =
              , 50 -- 10,994
              , 75 -- 12,744
              ]
-                |> List.map (\size -> ( size, RaceControl.calcEvents timeLimit cars ))
+                |> List.map (\size -> ( size, TimelineEvent.fromCars cars ))
                 |> List.map
                     (\( size, events ) ->
                         ( String.fromInt size ++ "%"
