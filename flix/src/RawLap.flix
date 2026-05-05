@@ -172,11 +172,11 @@ mod RawLap {
         Decode.field(name, Decode.int())
 
     def improvementField(name: String): Decoder[Improvement] =
-        intField(name) |> Decode.andThen(n -> match n {
-            case 0 => Decode.succeed(n)
-            case 1 => Decode.succeed(n)
-            case 2 => Decode.succeed(n)
-            case _ => Decode.fail("${name}: expected 0/1/2 but got ${n}")
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "0" => Decode.succeed(0)
+            case "1" => Decode.succeed(1)
+            case "2" => Decode.succeed(2)
+            case _   => Decode.fail("${name}: expected 0/1/2 but got \"${s}\"")
         })
 
     /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
