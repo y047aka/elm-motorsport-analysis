@@ -22,7 +22,6 @@
 ///     per-car uses first-seen-index to sort the car groups).
 mod Cli.Validation {
 
-    use Util.Duration
     use Util.Duration.Duration
     use Util.HourClock
     use RawLap.RawLap
@@ -97,7 +96,7 @@ mod Cli.Validation {
         let (s1, s1Blank) = sectorOrZero(lap#s1#value, "s1");
         let (s2, s2Blank) = sectorOrZero(lap#s2#value, "s2");
         let (s3, s3Blank) = sectorOrZero(lap#s3#value, "s3");
-        let sum = Duration.add(Duration.add(s1, s2), s3);
+        let sum = Util.Duration.add(Util.Duration.add(s1, s2), s3);
         if (sum == lapTime) Ok(())
         else
             let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
@@ -108,7 +107,7 @@ mod Cli.Validation {
     def sectorOrZero(sector: Option[Duration], name: String): (Duration, Option[String]) =
         match sector {
             case Some(d) => (d, None)
-            case None    => (Duration.zero(), Some(name))
+            case None    => (Util.Duration.zero(), Some(name))
         }
 
     /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).
@@ -121,12 +120,12 @@ mod Cli.Validation {
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
-                    let newRun  = Duration.add(running, lap#lapTime);
+                    let newRun  = Util.Duration.add(running, lap#lapTime);
                     let elapsed = lap#elapsed;
                     if (newRun == elapsed) (newRun, acc)
                     else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
             },
-            (Duration.zero(), Nil)
+            (Util.Duration.zero(), Nil)
         );
         match folded {
             case (_, acc) => List.reverse(acc)
@@ -138,12 +137,12 @@ mod Cli.Validation {
         match laps {
             case Nil         => Nil
             case lap :: _ =>
-                let base = HourClock.offsetFrom(lap#hour, Duration.millis(lap#elapsed));
+                let base = HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed));
                 laps |> List.filterMap(l -> resultToOption(checkHourLine(l, base)))
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        let offset = HourClock.offsetFrom(lap#hour, Duration.millis(lap#elapsed));
+        let offset = HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed));
         if (offset == base) Ok(())
         else Err(Violation.HourElapsedOffset(lap, base, offset))
 
@@ -164,13 +163,13 @@ mod Cli.Validation {
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
     def formatDurationPair(eventName: String, lap: RawLap, kind: String, expected: Duration, actual: Duration): String =
-        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${expected} (${Duration.millis(expected)}ms) actual=${actual} (${Duration.millis(actual)}ms)"
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${expected} (${Util.Duration.millis(expected)}ms) actual=${actual} (${Util.Duration.millis(actual)}ms)"
 
     def formatSignedMsPair(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
         "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
 
     def formatSignedMs(ms: Int32): String =
-        if (ms < 0) "-" + Duration.formatMillis(0 - ms)
-        else Duration.formatMillis(ms)
+        if (ms < 0) "-" + Util.Duration.formatMillis(0 - ms)
+        else Util.Duration.formatMillis(ms)
 
 }

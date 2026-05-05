@@ -2,7 +2,6 @@ mod RawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
-    use Util.Duration
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
@@ -143,7 +142,7 @@ mod RawLap {
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
-            ("lapTime",                 JsonString(Duration.format(rawLap#lapTime))) ::
+            ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
             ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
@@ -153,7 +152,7 @@ mod RawLap {
             ("s3",                      optionalDurationJson(rawLap#s3#value)) ::
             ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
             ("kph",                     kphValue(rawLap#kph)) ::
-            ("elapsed",                 JsonString(Duration.format(rawLap#elapsed))) ::
+            ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
             ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driver#driverName)) ::
@@ -177,7 +176,7 @@ mod RawLap {
 
     /// Numeric input → `Duration`. Blank or unparseable input fails the decode.
     def parseDuration(name: String, raw: String): Result[String, Duration] =
-        match Duration.fromString(raw) {
+        match Util.Duration.fromString(raw) {
             case Some(d) => Ok(d)
             case None    => Err("${name}: expected duration but got \"${raw}\"")
         }
@@ -188,7 +187,7 @@ mod RawLap {
     /// Blank → `None`. Numeric input → `Some(d)`. Anything else fails the
     /// decode so unfamiliar formatting surfaces immediately.
     def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
-        match Duration.fromString(raw) {
+        match Util.Duration.fromString(raw) {
             case Some(d)           => Ok(Some(d))
             case None if raw == "" => Ok(None)
             case None              => Err("${name}: expected duration but got \"${raw}\"")
@@ -267,7 +266,7 @@ mod RawLap {
         if (raw == "") Ok(None)
         else match Float64.fromString(raw) {
             case Some(f) => match Float64.tryToInt32(Float64.round(f * 1000.0)) {
-                case Some(ms) => Ok(Some(Duration.fromMillis(ms)))
+                case Some(ms) => Ok(Some(Util.Duration.fromMillis(ms)))
                 case None     => Err("${name}: seconds out of range \"${raw}\"")
             }
             case None => Err("${name}: expected seconds but got \"${raw}\"")
@@ -275,10 +274,10 @@ mod RawLap {
 
 
     /// Renders an `Option[Duration]` cell as JSON. Some is normalized
-    /// through Duration.format, None becomes an empty string.
+    /// through Util.Duration.format, None becomes an empty string.
     def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
         match d {
-            case Some(ms) => JsonString(Duration.format(ms))
+            case Some(ms) => JsonString(Util.Duration.format(ms))
             case None     => JsonString("")
         }
 

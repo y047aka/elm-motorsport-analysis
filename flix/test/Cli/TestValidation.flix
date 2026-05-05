@@ -2,6 +2,7 @@ mod Cli.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
+    use Util.Duration
     use Cli.Validation
     use Cli.Validation.Violation
     use RawLap.RawLap
@@ -55,8 +56,8 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.SectorSum(_, lapMs, sum, _)) =>
-                Assert.assertTrue(lapMs == 120000);
-                Assert.assertTrue(sum == 120001)
+                Assert.assertTrue(lapMs == Duration.fromMillis(120000));
+                Assert.assertTrue(sum == Duration.fromMillis(120001))
             case _ => Assert.assertTrue(false)
         }
 
@@ -88,11 +89,11 @@ mod Cli.TestValidation {
                     case (Violation.ElapsedDrift(lap1, exp1, act1),
                           Violation.ElapsedDrift(lap2, exp2, act2)) =>
                         Assert.assertTrue(lap1#lapNumber == 2);
-                        Assert.assertTrue(exp1 == 240000);
-                        Assert.assertTrue(act1 == 240500);
+                        Assert.assertTrue(exp1 == Duration.fromMillis(240000));
+                        Assert.assertTrue(act1 == Duration.fromMillis(240500));
                         Assert.assertTrue(lap2#lapNumber == 3);
-                        Assert.assertTrue(exp2 == 360000);
-                        Assert.assertTrue(act2 == 360500)
+                        Assert.assertTrue(exp2 == Duration.fromMillis(360000));
+                        Assert.assertTrue(act2 == Duration.fromMillis(360500))
                     case _ => Assert.assertTrue(false)
                 }
             case _ => Assert.assertTrue(false)
