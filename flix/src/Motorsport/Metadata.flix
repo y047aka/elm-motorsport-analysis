@@ -1,6 +1,5 @@
 mod Motorsport.Metadata {
 
-    use Util.Duration
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
@@ -61,7 +60,7 @@ mod Motorsport.Metadata {
         { car = updatedCar, lap1Elapsed = newLap1 }
 
     def lap1Elapsed(lap: RawLap): Option[Int32] =
-        if (lap#lapNumber == 1) Duration.toMillis(lap#elapsed)
+        if (lap#lapNumber == 1) lap#elapsed
         else None
 
     def appendUnique(xs: List[String], x: String): List[String] =

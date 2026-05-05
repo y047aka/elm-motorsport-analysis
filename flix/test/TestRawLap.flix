@@ -31,7 +31,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#carNumber == "12");
                 Assert.assertTrue(r#driver#driverNumber == 1);
                 Assert.assertTrue(r#lapNumber == 3);
-                Assert.assertTrue(r#lapTime == "2:41.963");
+                Assert.assertTrue(r#lapTime == Some(161963));
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
                 Assert.assertTrue(r#s1#value == Some(41805));
@@ -39,11 +39,11 @@ mod TestRawLap {
                 Assert.assertTrue(r#s2#value == Some(63483));
                 Assert.assertTrue(r#s3#value == Some(56675));
                 Assert.assertTrue(r#kph == "101.4");
-                Assert.assertTrue(r#elapsed == "6:10.938");
+                Assert.assertTrue(r#elapsed == Some(370938));
                 Assert.assertTrue(r#hour == Hour.Hour(39998429));
                 Assert.assertTrue(r#topSpeed == "88.5");
                 Assert.assertTrue(r#driver#driverName == "Will STEVENS");
-                Assert.assertTrue(r#pitTime == "");
+                Assert.assertTrue(r#pitTime == None);
                 Assert.assertTrue(r#car#class == "HYPERCAR");
                 Assert.assertTrue(r#car#group == "H");
                 Assert.assertTrue(r#car#team == "Hertz Team JOTA");
@@ -84,7 +84,7 @@ mod TestRawLap {
         // PIT_TIME "0:01:41.031" is normalised through Duration.normalize
         // to "1:41.031" by the decoder.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;0:01:41.031;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
-            case Ok(r)  => Assert.assertTrue(r#pitTime == "1:41.031")
+            case Ok(r)  => Assert.assertTrue(r#pitTime == Some(101031))
             case Err(_) => Assert.assertTrue(false)
         }
 

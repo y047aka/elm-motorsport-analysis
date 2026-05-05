@@ -55,17 +55,17 @@ mod RawLap {
         car = RawCar,
         driver = RawDriver,
         lapNumber = Int32,
-        lapTime = String,
+        lapTime = Option[Int32],
         lapImprovement = Improvement,
         crossingFinishLineInPit = String,
         s1 = RawSector,
         s2 = RawSector,
         s3 = RawSector,
         kph = String,
-        elapsed = String,
+        elapsed = Option[Int32],
         hour = Hour,
         topSpeed = String,
-        pitTime = String,
+        pitTime = Option[Int32],
         flagAtFl = String
     }
 
@@ -146,21 +146,21 @@ mod RawLap {
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
-            ("lapTime",                 JsonString(rawLap#lapTime)) ::
+            ("lapTime",                 durationJson(rawLap#lapTime)) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      sectorJson(rawLap#s1#value)) ::
+            ("s1",                      durationJson(rawLap#s1#value)) ::
             ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
-            ("s2",                      sectorJson(rawLap#s2#value)) ::
+            ("s2",                      durationJson(rawLap#s2#value)) ::
             ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
-            ("s3",                      sectorJson(rawLap#s3#value)) ::
+            ("s3",                      durationJson(rawLap#s3#value)) ::
             ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
             ("kph",                     kphValue(rawLap#kph)) ::
-            ("elapsed",                 JsonString(rawLap#elapsed)) ::
+            ("elapsed",                 durationJson(rawLap#elapsed)) ::
             ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driver#driverName)) ::
-            ("pitTime",                 JsonString(rawLap#pitTime)) ::
+            ("pitTime",                 durationJson(rawLap#pitTime)) ::
             ("class",                   JsonString(rawLap#car#class)) ::
             ("group",                   JsonString(rawLap#car#group)) ::
             ("team",                    JsonString(rawLap#car#team)) ::
@@ -175,15 +175,15 @@ mod RawLap {
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
 
-    def durationField(name: String): Decoder[String] =
+    def durationField(name: String): Decoder[Option[Int32]] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
 
-    /// Blank → `""`. Numeric input → normalized `H:MM:SS.mmm` text. Anything
-    /// else fails the decode so unfamiliar formatting surfaces immediately.
-    def parseDuration(name: String, raw: String): Result[String, String] =
-        if (raw == "") Ok("")
+    /// Blank → `None`. Numeric input → `Some(ms)`. Anything else fails the
+    /// decode so unfamiliar formatting surfaces immediately.
+    def parseDuration(name: String, raw: String): Result[String, Option[Int32]] =
+        if (raw == "") Ok(None)
         else match Duration.toMillis(raw) {
-            case Some(ms) => Ok(Duration.format(ms))
+            case Some(ms) => Ok(Some(ms))
             case None     => Err("${name}: expected duration but got \"${raw}\"")
         }
 
@@ -270,9 +270,9 @@ mod RawLap {
             case None     => Err("${name}: expected duration but got \"${raw}\"")
         }
 
-    /// Renders a Sector as JSON. Some is normalized through Duration.format,
-    /// None becomes an empty string.
-    def sectorJson(s: Sector): Json.JsonValue =
+    /// Renders an `Option[Int32]` duration cell as JSON. Some is normalized
+    /// through Duration.format, None becomes an empty string.
+    def durationJson(s: Option[Int32]): Json.JsonValue =
         match s {
             case Some(ms) => JsonString(Duration.format(ms))
             case None     => JsonString("")

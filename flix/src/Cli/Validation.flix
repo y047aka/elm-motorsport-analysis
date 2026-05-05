@@ -94,7 +94,7 @@ mod Cli.Validation {
         })
 
     def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
-        match Duration.toMillis(lap#lapTime) {
+        match lap#lapTime {
             case None        => Ok(())
             case Some(lapMs) =>
                 let (s1Ms, s1Blank) = sectorMs(lap#s1#value, "s1");
@@ -126,9 +126,9 @@ mod Cli.Validation {
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
-                    let lapMs   = Duration.toMillis(lap#lapTime) |> Option.getWithDefault(0);
+                    let lapMs   = lap#lapTime |> Option.getWithDefault(0);
                     let newRun  = running + lapMs;
-                    let elapsed = Duration.toMillis(lap#elapsed) |> Option.getWithDefault(0);
+                    let elapsed = lap#elapsed |> Option.getWithDefault(0);
                     if (newRun == elapsed) (newRun, acc)
                     else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
             },
@@ -151,7 +151,7 @@ mod Cli.Validation {
         match laps {
             case Nil          => None
             case lap :: rest  =>
-                match Duration.toMillis(lap#elapsed) {
+                match lap#elapsed {
                     case Some(elapsedMs) =>
                         Some(HourClock.offsetFrom(lap#hour, elapsedMs))
                     case None => findBaseline(rest)
@@ -159,7 +159,7 @@ mod Cli.Validation {
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        match Duration.toMillis(lap#elapsed) {
+        match lap#elapsed {
             case None => Ok(())
             case Some(elapsedMs) =>
                 let offset = HourClock.offsetFrom(lap#hour, elapsedMs);

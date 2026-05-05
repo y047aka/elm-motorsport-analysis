@@ -1,6 +1,7 @@
 mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
+    use Util.Duration
     use Util.HourClock.Hour
     use Util.Json
 
@@ -19,17 +20,17 @@ mod Motorsport.TestMetadata {
                 driverName   = driverName
             },
             lapNumber               = lapNumber,
-            lapTime                 = "1:30.000",
+            lapTime                 = Duration.toMillis("1:30.000"),
             lapImprovement          = RawLap.Improvement.None,
             crossingFinishLineInPit = "",
             s1                      = { value = None, large = None, seconds = "", improvement = RawLap.Improvement.None },
             s2                      = { value = None, large = None, seconds = "", improvement = RawLap.Improvement.None },
             s3                      = { value = None, large = None, seconds = "", improvement = RawLap.Improvement.None },
             kph                     = "0",
-            elapsed                 = elapsed,
+            elapsed                 = Duration.toMillis(elapsed),
             hour                    = Hour.Hour(0),
             topSpeed                = "",
-            pitTime                 = "",
+            pitTime                 = None,
             flagAtFl                = ""
         }
 
