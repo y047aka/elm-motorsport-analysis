@@ -17,6 +17,16 @@ mod RawLap {
     /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
+    /// Per-sector data bundling the four CSV columns describing one
+    /// sector (S1/S2/S3): the parsed time, the long-form duplicate, the
+    /// raw seconds-only column, and the improvement flag.
+    pub type alias RawSector = {
+        value = Sector,
+        large = Sector,
+        seconds = String,
+        improvement = Int32
+    }
+
     pub type alias RawLap = {
         carNumber = String,
         driverNumber = Int32,
@@ -24,18 +34,12 @@ mod RawLap {
         lapTime = String,
         lapImprovement = Int32,
         crossingFinishLineInPit = String,
-        s1 = Sector,
-        s1Improvement = Int32,
-        s2 = Sector,
-        s2Improvement = Int32,
-        s3 = Sector,
-        s3Improvement = Int32,
+        s1 = RawSector,
+        s2 = RawSector,
+        s3 = RawSector,
         kph = String,
         elapsed = String,
         hour = HourCell,
-        s1Large = Sector,
-        s2Large = Sector,
-        s3Large = Sector,
         topSpeed = String,
         driverName = String,
         pitTime = String,
@@ -43,10 +47,7 @@ mod RawLap {
         group = String,
         team = String,
         manufacturer = String,
-        flagAtFl = String,
-        s1Seconds = String,
-        s2Seconds = String,
-        s3Seconds = String
+        flagAtFl = String
     }
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
@@ -58,11 +59,9 @@ mod RawLap {
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
-            crossingFinishLineInPit -> s1 -> s1Improvement -> s2 -> s2Improvement ->
-            s3 -> s3Improvement -> kph -> elapsed -> hour ->
-            s1Large -> s2Large -> s3Large ->
+            crossingFinishLineInPit -> s1 -> s2 -> s3 -> kph -> elapsed -> hour ->
             topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
-            flagAtFl -> s1Seconds -> s2Seconds -> s3Seconds ->
+            flagAtFl ->
                 {
                     carNumber = carNumber,
                     driverNumber = driverNumber,
@@ -71,17 +70,11 @@ mod RawLap {
                     lapImprovement = lapImprovement,
                     crossingFinishLineInPit = crossingFinishLineInPit,
                     s1 = s1,
-                    s1Improvement = s1Improvement,
                     s2 = s2,
-                    s2Improvement = s2Improvement,
                     s3 = s3,
-                    s3Improvement = s3Improvement,
                     kph = kph,
                     elapsed = elapsed,
                     hour = hour,
-                    s1Large = s1Large,
-                    s2Large = s2Large,
-                    s3Large = s3Large,
                     topSpeed = topSpeed,
                     driverName = driverName,
                     pitTime = pitTime,
@@ -89,10 +82,7 @@ mod RawLap {
                     group = group,
                     team = team,
                     manufacturer = manufacturer,
-                    flagAtFl = flagAtFl,
-                    s1Seconds = s1Seconds,
-                    s2Seconds = s2Seconds,
-                    s3Seconds = s3Seconds
+                    flagAtFl = flagAtFl
                 }
         )
             |> Decode.pipeline(stringField("NUMBER"))
@@ -101,18 +91,12 @@ mod RawLap {
             |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
             |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
-            |> Decode.pipeline(Decode.field("S1", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S1_IMPROVEMENT"))
-            |> Decode.pipeline(Decode.field("S2", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S2_IMPROVEMENT"))
-            |> Decode.pipeline(Decode.field("S3", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S3_IMPROVEMENT"))
+            |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
+            |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
+            |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
             |> Decode.pipeline(stringField("KPH"))
             |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
-            |> Decode.pipeline(Decode.field("S1_LARGE", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(Decode.field("S2_LARGE", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(Decode.field("S3_LARGE", Decode.map(parseSector, Decode.string())))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
             |> Decode.pipeline(stringField("DRIVER_NAME"))
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
@@ -121,9 +105,6 @@ mod RawLap {
             |> Decode.pipeline(stringField("TEAM"))
             |> Decode.pipeline(stringField("MANUFACTURER"))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
-            |> Decode.pipeline(stringField("S1_SECONDS"))
-            |> Decode.pipeline(stringField("S2_SECONDS"))
-            |> Decode.pipeline(stringField("S3_SECONDS"))
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
@@ -133,18 +114,15 @@ mod RawLap {
             ("lapTime",                 JsonString(rawLap#lapTime)) ::
             ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      sectorJson(rawLap#s1)) ::
-            ("s1Improvement",           JsonInt(rawLap#s1Improvement)) ::
-            ("s2",                      sectorJson(rawLap#s2)) ::
-            ("s2Improvement",           JsonInt(rawLap#s2Improvement)) ::
-            ("s3",                      sectorJson(rawLap#s3)) ::
-            ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
+            ("s1",                      sectorJson(rawLap#s1#value)) ::
+            ("s1Improvement",           JsonInt(rawLap#s1#improvement)) ::
+            ("s2",                      sectorJson(rawLap#s2#value)) ::
+            ("s2Improvement",           JsonInt(rawLap#s2#improvement)) ::
+            ("s3",                      sectorJson(rawLap#s3#value)) ::
+            ("s3Improvement",           JsonInt(rawLap#s3#improvement)) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
             ("hour",                    hourJson(rawLap#hour)) ::
-            ("s1Large",                 sectorJson(rawLap#s1Large)) ::
-            ("s2Large",                 sectorJson(rawLap#s2Large)) ::
-            ("s3Large",                 sectorJson(rawLap#s3Large)) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
@@ -153,9 +131,6 @@ mod RawLap {
             ("team",                    JsonString(rawLap#team)) ::
             ("manufacturer",            JsonString(rawLap#manufacturer)) ::
             ("flagAtFl",                JsonString(rawLap#flagAtFl)) ::
-            ("s1Seconds",               JsonString(rawLap#s1Seconds)) ::
-            ("s2Seconds",               JsonString(rawLap#s2Seconds)) ::
-            ("s3Seconds",               JsonString(rawLap#s3Seconds)) ::
             Nil
         )
 
@@ -167,6 +142,62 @@ mod RawLap {
 
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
+
+    /// Decoder for one sector's four CSV columns (value, large duplicate,
+    /// raw seconds, improvement flag). Bundling them keeps the outer
+    /// pipeline aligned with logical sector grouping rather than the
+    /// scattered CSV column order.
+    ///
+    /// Also asserts the data-format invariant: `value`, `large`, and
+    /// `seconds` are three encodings of the same elapsed time. The
+    /// decoder fails if the parseable representations disagree, so a
+    /// surprising CSV layout surfaces immediately rather than silently
+    /// corrupting downstream JSON.
+    def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
+        Decode.intoRecord(
+            value -> large -> seconds -> improvement ->
+                {
+                    value = value,
+                    large = large,
+                    seconds = seconds,
+                    improvement = improvement
+                }
+        )
+            |> Decode.pipeline(Decode.field(name, Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(Decode.field(largeName, Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(stringField(secondsName))
+            |> Decode.pipeline(intField(improvementName))
+            |> Decode.andThen(sector -> match checkSectorConsistency(name, sector) {
+                case Ok(())   => Decode.succeed(sector)
+                case Err(msg) => Decode.fail(msg)
+            })
+
+    /// Verify the per-sector triple agrees. Each parseable representation
+    /// is reduced to milliseconds; if two or more are present and any
+    /// disagree, returns Err with a diagnostic. Blank/unparseable cells
+    /// are skipped (they round-trip via the Err side of `Sector`).
+    def checkSectorConsistency(name: String, s: RawSector): Result[String, Unit] =
+        let valueMs   = Result.toOption(s#value);
+        let largeMs   = Result.toOption(s#large);
+        let secondsMs = secondsToMillis(s#seconds);
+        let observed  = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
+        match observed {
+            case Nil           => Ok(())
+            case first :: rest =>
+                if (List.forAll(x -> x == first, rest))
+                    Ok(())
+                else
+                    Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
+        }
+
+    /// Parse the `S*_SECONDS` raw text (e.g. `"41.805"`) as milliseconds.
+    /// Returns `None` for blank or non-numeric input.
+    def secondsToMillis(raw: String): Option[Int32] =
+        if (raw == "") None
+        else match Float64.fromString(raw) {
+            case Some(f) => Float64.tryToInt32(Float64.round(f * 1000.0))
+            case None    => None
+        }
 
     /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
     /// are kept as `Err(raw)` so the original text can round-trip to JSON.

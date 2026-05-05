@@ -102,9 +102,9 @@ mod Cli.Validation {
         match Duration.toMillis(lap#lapTime) {
             case None        => Ok(())
             case Some(lapMs) =>
-                let (s1Ms, s1Blank) = sectorMs(lap#s1, "s1");
-                let (s2Ms, s2Blank) = sectorMs(lap#s2, "s2");
-                let (s3Ms, s3Blank) = sectorMs(lap#s3, "s3");
+                let (s1Ms, s1Blank) = sectorMs(lap#s1#value, "s1");
+                let (s2Ms, s2Blank) = sectorMs(lap#s2#value, "s2");
+                let (s3Ms, s3Blank) = sectorMs(lap#s3#value, "s3");
                 let sum = s1Ms + s2Ms + s3Ms;
                 if (sum == lapMs) Ok(())
                 else

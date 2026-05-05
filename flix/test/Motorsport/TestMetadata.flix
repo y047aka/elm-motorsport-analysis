@@ -12,18 +12,12 @@ mod Motorsport.TestMetadata {
             lapTime                 = "1:30.000",
             lapImprovement          = 0,
             crossingFinishLineInPit = "",
-            s1                      = Err(""),
-            s1Improvement           = 0,
-            s2                      = Err(""),
-            s2Improvement           = 0,
-            s3                      = Err(""),
-            s3Improvement           = 0,
+            s1                      = { value = Err(""), large = Err(""), seconds = "", improvement = 0 },
+            s2                      = { value = Err(""), large = Err(""), seconds = "", improvement = 0 },
+            s3                      = { value = Err(""), large = Err(""), seconds = "", improvement = 0 },
             kph                     = "0",
             elapsed                 = elapsed,
             hour                    = Err(""),
-            s1Large                 = Err(""),
-            s2Large                 = Err(""),
-            s3Large                 = Err(""),
             topSpeed                = "",
             driverName              = driverName,
             pitTime                 = "",
@@ -31,10 +25,7 @@ mod Motorsport.TestMetadata {
             group                   = group,
             team                    = team,
             manufacturer            = manufacturer,
-            flagAtFl                = "",
-            s1Seconds               = "",
-            s2Seconds               = "",
-            s3Seconds               = ""
+            flagAtFl                = ""
         }
 
     @Test
