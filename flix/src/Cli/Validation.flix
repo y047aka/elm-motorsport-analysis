@@ -41,11 +41,9 @@ mod Cli.Validation {
         case HourElapsedOffset(RawLap, Int32, Int32)
     }
 
-    /// Runs all rules and renders each violation as a stderr-ready string.
     pub def validate(eventName: String, laps: List[RawLap]): List[String] =
         detect(laps) |> List.map(v -> formatViolation(eventName, v))
 
-    /// Runs all rules and returns the structured violation list (pure).
     pub def detect(laps: List[RawLap]): List[Violation] =
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
         let perCar = perCarViolations(laps);
@@ -102,8 +100,6 @@ mod Cli.Validation {
             let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
             Err(Violation.SectorSum(lap, lapTime, sum, blanks))
 
-    /// Unpacks an Option[Duration] sector. None is treated as zero and the
-    /// field name is returned so it can be attached to the violation message.
     def sectorOrZero(sector: Option[Duration], name: String): (Duration, Option[String]) =
         match sector {
             case Some(d) => (d, None)
@@ -130,8 +126,6 @@ mod Cli.Validation {
             case (_, acc) => List.reverse(acc)
         }
 
-    /// Race-wide hour-elapsed baseline check. The baseline is the first row
-    /// in the CSV.
     def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
         match laps {
             case Nil         => Nil

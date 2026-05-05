@@ -39,10 +39,6 @@ mod RawLap {
         case Finish
     }
 
-    /// Per-sector data parsed from the four CSV columns describing one
-    /// sector (S/S_LARGE/S_SECONDS/S_IMPROVEMENT). The three time columns
-    /// are cross-checked at decode time but only the canonical value is
-    /// retained.
     pub type alias RawSector = {
         value = Option[Duration],
         improvement = Improvement
@@ -79,13 +75,6 @@ mod RawLap {
         flagAtFl = Flag
     }
 
-    /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
-    /// with a header row; columns are identified by name so ordering and
-    /// extra columns (e.g. S*_LARGE) are ignored automatically. Required
-    /// cells (LAP_TIME, ELAPSED, HOUR, *_IMPROVEMENT, FLAG_AT_FL,
-    /// CROSSING_FINISH_LINE_IN_PIT, KPH) fail decode immediately on blank
-    /// or unparseable input. Sector time cells are `None` when blank,
-    /// `Some(d)` otherwise.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             car -> driver -> lapNumber -> lapTime -> lapImprovement ->
@@ -187,16 +176,12 @@ mod RawLap {
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
 
-    /// Accepts any value parseable as Float64 or blank; non-numeric
-    /// non-blank input fails decode. Raw string preserved unchanged.
     def numericOrBlankStringField(name: String): Decoder[String] =
         stringField(name) |> Decode.andThen(s -> match s {
             case "" => Decode.succeed(s)
             case _  => Decode.fromResult(parseNumericString(name, s))
         })
 
-    /// Accepts any value parseable as Float64; fails decode on blank or
-    /// non-numeric input. The raw string is preserved unchanged in RawLap.
     def numericStringField(name: String): Decoder[String] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
 
@@ -209,7 +194,6 @@ mod RawLap {
     def durationField(name: String): Decoder[Duration] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
 
-    /// Duration-formatted input → `Duration`. Blank or unparseable input fails the decode.
     def parseDuration(name: String, raw: String): Result[String, Duration] =
         match Util.Duration.fromString(raw) {
             case Some(d) => Ok(d)
@@ -219,8 +203,6 @@ mod RawLap {
     def optionalDurationField(name: String): Decoder[Option[Duration]] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
 
-    /// Blank → `None`. Numeric input → `Some(d)`. Anything else fails the
-    /// decode so unfamiliar formatting surfaces immediately.
     def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
         match Util.Duration.fromString(raw) {
             case Some(d)           => Ok(Some(d))
@@ -248,7 +230,6 @@ mod RawLap {
             case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
         }
 
-    /// "B" (Box) → true, blank → false, anything else fails decode.
     def boxField(name: String): Decoder[Bool] =
         stringField(name) |> Decode.andThen(s -> match s {
             case "B" => Decode.succeed(true)
@@ -289,10 +270,6 @@ mod RawLap {
             case Improvement.OverallBest => 3
         }
 
-    /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
-    /// the same elapsed time, failing the decode otherwise so an
-    /// unfamiliar CSV layout surfaces immediately. Only the canonical
-    /// value (and improvement flag) survive into RawSector.
     def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
         Decode.intoRecord(
             value -> large -> seconds -> improvement ->
@@ -307,8 +284,6 @@ mod RawLap {
                     Decode.fromResult(checkSectorConsistency(name, value, large, seconds, improvement))
             })
 
-    /// Blank cells are skipped, so a row with all three blank is treated
-    /// as consistent. Unparseable `S_SECONDS` fails the decode.
     def checkSectorConsistency(name: String, valueMs: Option[Duration], largeMs: Option[Duration], secondsRaw: String, improvement: Improvement): Result[String, RawSector] =
         match secondsToMillis(name, secondsRaw) {
             case Err(e)       => Err(e)
@@ -324,8 +299,6 @@ mod RawLap {
                 }
         }
 
-    /// Blank → `None`. Numeric seconds → `Some(d)`. Anything else fails
-    /// the decode so unfamiliar `S_SECONDS` formatting surfaces immediately.
     def secondsToMillis(name: String, raw: String): Result[String, Option[Duration]] =
         if (raw == "") Ok(None)
         else match Float64.fromString(raw) {
@@ -336,8 +309,6 @@ mod RawLap {
             case None => Err("${name}: expected seconds but got \"${raw}\"")
         }
 
-    /// Renders an `Option[Duration]` as JSON: `Some(d)` → formatted string,
-    /// `None` → empty string.
     def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
         match d {
             case Some(ms) => JsonString(Util.Duration.format(ms))
