@@ -114,34 +114,6 @@ mod RawLap {
             |> Decode.pipeline(optionalDurationField("PIT_TIME"))
             |> Decode.pipeline(flagField("FLAG_AT_FL"))
 
-    def carDecoder(): Decoder[RawCar] =
-        Decode.intoRecord(
-            carNumber -> class -> group -> team -> manufacturer ->
-                {
-                    carNumber = carNumber,
-                    class = class,
-                    group = group,
-                    team = team,
-                    manufacturer = manufacturer
-                }
-        )
-            |> Decode.pipeline(stringField("NUMBER"))
-            |> Decode.pipeline(stringField("CLASS"))
-            |> Decode.pipeline(stringField("GROUP"))
-            |> Decode.pipeline(stringField("TEAM"))
-            |> Decode.pipeline(stringField("MANUFACTURER"))
-
-    def driverDecoder(): Decoder[RawDriver] =
-        Decode.intoRecord(
-            number -> name ->
-                {
-                    number = number,
-                    name = name
-                }
-        )
-            |> Decode.pipeline(intField("DRIVER_NUMBER"))
-            |> Decode.pipeline(stringField("DRIVER_NAME"))
-
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
@@ -173,102 +145,33 @@ mod RawLap {
     pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
         JsonArray(List.map(toJson, rawLaps))
 
-    def stringField(name: String): Decoder[String] =
-        Decode.field(name, Decode.string())
+    def carDecoder(): Decoder[RawCar] =
+        Decode.intoRecord(
+            carNumber -> class -> group -> team -> manufacturer ->
+                {
+                    carNumber = carNumber,
+                    class = class,
+                    group = group,
+                    team = team,
+                    manufacturer = manufacturer
+                }
+        )
+            |> Decode.pipeline(stringField("NUMBER"))
+            |> Decode.pipeline(stringField("CLASS"))
+            |> Decode.pipeline(stringField("GROUP"))
+            |> Decode.pipeline(stringField("TEAM"))
+            |> Decode.pipeline(stringField("MANUFACTURER"))
 
-    def numericOrBlankStringField(name: String): Decoder[String] =
-        stringField(name) |> Decode.andThen(s -> match s {
-            case "" => Decode.succeed(s)
-            case _  => Decode.fromResult(parseNumericString(name, s))
-        })
-
-    def numericStringField(name: String): Decoder[String] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
-
-    def parseNumericString(name: String, s: String): Result[String, String] =
-        match Float64.fromString(s) {
-            case Some(_) => Ok(s)
-            case None    => Err("${name}: expected numeric but got \"${s}\"")
-        }
-
-    def durationField(name: String): Decoder[Duration] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
-
-    def parseDuration(name: String, raw: String): Result[String, Duration] =
-        match Util.Duration.fromString(raw) {
-            case Some(d) => Ok(d)
-            case None    => Err("${name}: expected duration but got \"${raw}\"")
-        }
-
-    def optionalDurationField(name: String): Decoder[Option[Duration]] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
-
-    def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
-        match Util.Duration.fromString(raw) {
-            case Some(d)           => Ok(Some(d))
-            case None if raw == "" => Ok(None)
-            case None              => Err("${name}: expected duration but got \"${raw}\"")
-        }
-
-    def intField(name: String): Decoder[Int32] =
-        Decode.field(name, Decode.int())
-
-    def hourField(name: String): Decoder[Hour] =
-        stringField(name) |> Decode.andThen(s ->
-            Decode.fromResult(HourClock.parse(s)
-                |> Result.mapErr(_ -> "${name}: expected H:MM:SS.mmm but got \"${s}\"")))
-
-    def improvementField(name: String): Decoder[Improvement] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseImprovement(name, s)))
-
-    def parseImprovement(name: String, s: String): Result[String, Improvement] =
-        match s {
-            case "0" => Ok(Improvement.None)
-            case "1" => Ok(Improvement.DriverBest)
-            case "2" => Ok(Improvement.CarBest)
-            case "3" => Ok(Improvement.OverallBest)
-            case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
-        }
-
-    def boxField(name: String): Decoder[Bool] =
-        stringField(name) |> Decode.andThen(s -> match s {
-            case "B" => Decode.succeed(true)
-            case ""  => Decode.succeed(false)
-            case _   => Decode.fail("${name}: expected \"B\" or blank but got \"${s}\"")
-        })
-
-    def boxToString(b: Bool): String =
-        if (b) "B" else ""
-
-    def flagField(name: String): Decoder[Flag] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
-
-    def parseFlag(name: String, s: String): Result[String, Flag] =
-        match s {
-            case "GF"  => Ok(Flag.Green)
-            case "SF"  => Ok(Flag.SlowZone)
-            case "FCY" => Ok(Flag.FullCourseYellow)
-            case "FF"  => Ok(Flag.Finish)
-            case "RF"  => Ok(Flag.Red)
-            case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
-        }
-
-    def flagToString(flag: Flag): String =
-        match flag {
-            case Flag.Green           => "GF"
-            case Flag.SlowZone        => "SF"
-            case Flag.FullCourseYellow => "FCY"
-            case Flag.Finish          => "FF"
-            case Flag.Red             => "RF"
-        }
-
-    def improvementToInt(imp: Improvement): Int32 =
-        match imp {
-            case Improvement.None        => 0
-            case Improvement.DriverBest  => 1
-            case Improvement.CarBest     => 2
-            case Improvement.OverallBest => 3
-        }
+    def driverDecoder(): Decoder[RawDriver] =
+        Decode.intoRecord(
+            number -> name ->
+                {
+                    number = number,
+                    name = name
+                }
+        )
+            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(stringField("DRIVER_NAME"))
 
     def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
         Decode.intoRecord(
@@ -307,6 +210,103 @@ mod RawLap {
                 case None     => Err("${name}: seconds out of range \"${raw}\"")
             }
             case None => Err("${name}: expected seconds but got \"${raw}\"")
+        }
+
+    def stringField(name: String): Decoder[String] =
+        Decode.field(name, Decode.string())
+
+    def numericStringField(name: String): Decoder[String] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
+
+    def numericOrBlankStringField(name: String): Decoder[String] =
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "" => Decode.succeed(s)
+            case _  => Decode.fromResult(parseNumericString(name, s))
+        })
+
+    def parseNumericString(name: String, s: String): Result[String, String] =
+        match Float64.fromString(s) {
+            case Some(_) => Ok(s)
+            case None    => Err("${name}: expected numeric but got \"${s}\"")
+        }
+
+    def intField(name: String): Decoder[Int32] =
+        Decode.field(name, Decode.int())
+
+    def durationField(name: String): Decoder[Duration] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
+
+    def parseDuration(name: String, raw: String): Result[String, Duration] =
+        match Util.Duration.fromString(raw) {
+            case Some(d) => Ok(d)
+            case None    => Err("${name}: expected duration but got \"${raw}\"")
+        }
+
+    def optionalDurationField(name: String): Decoder[Option[Duration]] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
+
+    def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
+        match Util.Duration.fromString(raw) {
+            case Some(d)           => Ok(Some(d))
+            case None if raw == "" => Ok(None)
+            case None              => Err("${name}: expected duration but got \"${raw}\"")
+        }
+
+    def hourField(name: String): Decoder[Hour] =
+        stringField(name) |> Decode.andThen(s ->
+            Decode.fromResult(HourClock.parse(s)
+                |> Result.mapErr(_ -> "${name}: expected H:MM:SS.mmm but got \"${s}\"")))
+
+    def improvementField(name: String): Decoder[Improvement] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseImprovement(name, s)))
+
+    def parseImprovement(name: String, s: String): Result[String, Improvement] =
+        match s {
+            case "0" => Ok(Improvement.None)
+            case "1" => Ok(Improvement.DriverBest)
+            case "2" => Ok(Improvement.CarBest)
+            case "3" => Ok(Improvement.OverallBest)
+            case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
+        }
+
+    def boxField(name: String): Decoder[Bool] =
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "B" => Decode.succeed(true)
+            case ""  => Decode.succeed(false)
+            case _   => Decode.fail("${name}: expected \"B\" or blank but got \"${s}\"")
+        })
+
+    def flagField(name: String): Decoder[Flag] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
+
+    def parseFlag(name: String, s: String): Result[String, Flag] =
+        match s {
+            case "GF"  => Ok(Flag.Green)
+            case "SF"  => Ok(Flag.SlowZone)
+            case "FCY" => Ok(Flag.FullCourseYellow)
+            case "FF"  => Ok(Flag.Finish)
+            case "RF"  => Ok(Flag.Red)
+            case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
+        }
+
+    def improvementToInt(imp: Improvement): Int32 =
+        match imp {
+            case Improvement.None        => 0
+            case Improvement.DriverBest  => 1
+            case Improvement.CarBest     => 2
+            case Improvement.OverallBest => 3
+        }
+
+    def boxToString(b: Bool): String =
+        if (b) "B" else ""
+
+    def flagToString(flag: Flag): String =
+        match flag {
+            case Flag.Green            => "GF"
+            case Flag.SlowZone         => "SF"
+            case Flag.FullCourseYellow => "FCY"
+            case Flag.Finish           => "FF"
+            case Flag.Red              => "RF"
         }
 
     def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
