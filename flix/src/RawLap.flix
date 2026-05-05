@@ -178,13 +178,9 @@ mod RawLap {
 
     def parseNumericString(name: String, s: String): Result[String, String] =
         if (s == "") Ok(s)
-        else match Int32.parse(10, s) {
-            case Ok(_) => Ok(s)
-            case Err(_) =>
-                match Float64.fromString(s) {
-                    case Some(_) => Ok(s)
-                    case None    => Err("${name}: expected numeric but got \"${s}\"")
-                }
+        else match Float64.fromString(s) {
+            case Some(_) => Ok(s)
+            case None    => Err("${name}: expected numeric but got \"${s}\"")
         }
 
     def durationField(name: String): Decoder[Duration] =
