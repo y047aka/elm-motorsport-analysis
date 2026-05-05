@@ -216,8 +216,8 @@ mod RawLap {
                     improvement = improvement
                 }
         )
-            |> Decode.pipeline(Decode.field(name, Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(Decode.field(largeName, Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(sectorField(name))
+            |> Decode.pipeline(sectorField(largeName))
             |> Decode.pipeline(stringField(secondsName))
             |> Decode.pipeline(improvementField(improvementName))
             |> Decode.andThen(sector ->
@@ -246,8 +246,17 @@ mod RawLap {
             case None    => None
         }
 
-    def parseSector(raw: String): Sector =
-        Duration.toMillis(raw)
+    def sectorField(name: String): Decoder[Sector] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseSector(name, s)))
+
+    /// Blank → `None`. Numeric input → `Some(ms)`. Anything else fails
+    /// the decode so unfamiliar formatting surfaces immediately.
+    def parseSector(name: String, raw: String): Result[String, Sector] =
+        if (raw == "") Ok(None)
+        else match Duration.toMillis(raw) {
+            case Some(ms) => Ok(Some(ms))
+            case None     => Err("${name}: expected duration but got \"${raw}\"")
+        }
 
     /// Renders a Sector as JSON. Some is normalized through Duration.format,
     /// None becomes an empty string.
