@@ -5,7 +5,7 @@
     "start": "pnpm --filter app start",
     "build": "pnpm --filter app build",
     "test": "pnpm --filter package test",
-    "benchmark": "pnpm --filter cli benchmark"
+    "benchmark": "pnpm --filter package benchmark"
   },
   "pnpm": {
     "ignoredBuiltDependencies": [
