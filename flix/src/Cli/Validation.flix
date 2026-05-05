@@ -170,7 +170,7 @@ mod Cli.Validation {
         "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
 
     def formatSignedMs(ms: Int32): String =
-        if (ms < 0) "-" + Duration.format(Duration.fromMillis(0 - ms))
-        else Duration.format(Duration.fromMillis(ms))
+        if (ms < 0) "-" + Duration.formatMillis(0 - ms)
+        else Duration.formatMillis(ms)
 
 }

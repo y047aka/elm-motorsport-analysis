@@ -33,7 +33,9 @@ mod Util.Duration {
         }
 
     pub def format(d: Duration): String =
-        let ms       = millis(d);
+        formatMillis(millis(d))
+
+    pub def formatMillis(ms: Int32): String =
         let totalSec = ms / 1000;
         let msPart   = ms - totalSec * 1000;
         let h        = totalSec / 3600;
