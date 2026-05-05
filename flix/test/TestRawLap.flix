@@ -48,7 +48,8 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#class == "HYPERCAR");
                 Assert.assertTrue(r#car#group == "H");
                 Assert.assertTrue(r#car#team == "Hertz Team JOTA");
-                Assert.assertTrue(r#car#manufacturer == "Porsche")
+                Assert.assertTrue(r#car#manufacturer == "Porsche");
+                Assert.assertTrue(r#flagAtFl == RawLap.Flag.Green)
             case Err(_) => Assert.assertTrue(false)
         }
 

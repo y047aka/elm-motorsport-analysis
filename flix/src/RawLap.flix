@@ -24,6 +24,21 @@ mod RawLap {
         case OverallBest
     }
 
+    /// Race flag state at the finish line when each lap was completed.
+    /// Observed values across all WEC CSV files:
+    ///   Green           = GF  — normal racing conditions
+    ///   SlowZone        = SF  — safety car or local slow zone active
+    ///   FullCourseYellow = FCY — full-course yellow, no overtaking
+    ///   Finish          = FF  — chequered flag (race end)
+    ///   Red             = RF  — race suspended
+    pub enum Flag with Eq {
+        case Green
+        case SlowZone
+        case FullCourseYellow
+        case Finish
+        case Red
+    }
+
     /// Per-sector data parsed from the four CSV columns describing one
     /// sector (S/S_LARGE/S_SECONDS/S_IMPROVEMENT). The three time columns
     /// are cross-checked at decode time but only the canonical value is
@@ -61,7 +76,7 @@ mod RawLap {
         hour = Hour,
         topSpeed = String,
         pitTime = Option[Duration],
-        flagAtFl = String
+        flagAtFl = Flag
     }
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
@@ -107,7 +122,7 @@ mod RawLap {
             |> Decode.pipeline(hourField("HOUR"))
             |> Decode.pipeline(numericOrBlankStringField("TOP_SPEED"))
             |> Decode.pipeline(optionalDurationField("PIT_TIME"))
-            |> Decode.pipeline(stringField("FLAG_AT_FL"))
+            |> Decode.pipeline(flagField("FLAG_AT_FL"))
 
     def carDecoder(): Decoder[RawCar] =
         Decode.intoRecord(
@@ -161,7 +176,7 @@ mod RawLap {
             ("group",                   JsonString(rawLap#car#group)) ::
             ("team",                    JsonString(rawLap#car#team)) ::
             ("manufacturer",            JsonString(rawLap#car#manufacturer)) ::
-            ("flagAtFl",                JsonString(rawLap#flagAtFl)) ::
+            ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
             Nil
         )
 
@@ -233,6 +248,28 @@ mod RawLap {
             case "2" => Ok(Improvement.CarBest)
             case "3" => Ok(Improvement.OverallBest)
             case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
+        }
+
+    def flagField(name: String): Decoder[Flag] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
+
+    def parseFlag(name: String, s: String): Result[String, Flag] =
+        match s {
+            case "GF"  => Ok(Flag.Green)
+            case "SF"  => Ok(Flag.SlowZone)
+            case "FCY" => Ok(Flag.FullCourseYellow)
+            case "FF"  => Ok(Flag.Finish)
+            case "RF"  => Ok(Flag.Red)
+            case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
+        }
+
+    def flagToString(flag: Flag): String =
+        match flag {
+            case Flag.Green           => "GF"
+            case Flag.SlowZone        => "SF"
+            case Flag.FullCourseYellow => "FCY"
+            case Flag.Finish          => "FF"
+            case Flag.Red             => "RF"
         }
 
     def improvementToInt(imp: Improvement): Int32 =
