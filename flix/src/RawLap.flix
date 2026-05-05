@@ -17,7 +17,8 @@ mod RawLap {
     /// Err preserves the original CSV string so JSON output round-trips it.
     pub type alias HourCell = Result[String, Hour]
 
-    /// Improvement flag (0 = none, 1 = personal best, 2 = overall best).
+    /// Improvement flag. Observed values: 0/1/2/3 (semantics
+    /// undocumented; 3 appears occasionally in real WEC CSVs).
     pub type alias Improvement = Int32
 
     /// Per-sector data bundling the four CSV columns describing one
@@ -176,7 +177,8 @@ mod RawLap {
             case "0" => Decode.succeed(0)
             case "1" => Decode.succeed(1)
             case "2" => Decode.succeed(2)
-            case _   => Decode.fail("${name}: expected 0/1/2 but got \"${s}\"")
+            case "3" => Decode.succeed(3)
+            case _   => Decode.fail("${name}: expected 0/1/2/3 but got \"${s}\"")
         })
 
     /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
