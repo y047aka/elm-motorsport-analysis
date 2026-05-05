@@ -4,6 +4,7 @@ mod Cli.Stages {
     use Util.Csv.Decode.FieldNames
     use Util.Files
     use Util.Json
+    use Util.Json.JsonValue.JsonArray
     use Motorsport.Metadata
     use Sys.Console
     use Cli.Errors.CliError
@@ -31,7 +32,7 @@ mod Cli.Stages {
     pub def process(eventId: String, rawLaps: List[RawLap]): Output =
         let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
         let metadataJson = Json.render(Metadata.toJson(metadata));
-        let lapsJson     = Json.render(RawLap.toJsonArray(rawLaps));
+        let lapsJson     = Json.render(JsonArray(List.map(RawLap.toJson, rawLaps)));
         {
             lapCount     = List.length(rawLaps),
             metadataJson = metadataJson,

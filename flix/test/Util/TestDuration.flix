@@ -3,47 +3,53 @@ mod Util.TestDuration {
     use Util.Duration
 
     @Test
-    def testNormalizeKeepsSecondsOnly(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("23.155") == "23.155")
+    def testFromStringEmpty(): Unit \ Assert =
+        Assert.assertTrue(Duration.fromString("") == None)
 
     @Test
-    def testNormalizeKeepsMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("3:38.404") == "3:38.404")
+    def testFromStringSecondsOnly(): Unit \ Assert =
+        Assert.assertTrue(Duration.fromString("23.155") == Some(Duration.fromMillis(23155)))
 
     @Test
-    def testNormalizeKeepsHoursMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("1:02:05.001") == "1:02:05.001")
+    def testFromStringMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.fromString("1:35.365") == Some(Duration.fromMillis(95365)))
 
     @Test
-    def testNormalizeStripsLeadingZeroHour(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("0:01:41.031") == "1:41.031")
+    def testFromStringHoursMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.fromString("1:02:05.001") == Some(Duration.fromMillis(3725001)))
 
     @Test
-    def testNormalizeStripsLeadingZeroHourAndMinute(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("0:00:48.666") == "48.666")
+    def testFromStringInvalid(): Unit \ Assert =
+        Assert.assertTrue(Duration.fromString("not-a-duration") == None)
 
     @Test
-    def testNormalizeEmpty(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("") == "")
+    def testFormatSecondsOnly(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(Duration.fromMillis(23155)) == "23.155")
 
     @Test
-    def testNormalizeInvalidPassthrough(): Unit \ Assert =
-        Assert.assertTrue(Duration.normalize("not-a-duration") == "not-a-duration")
+    def testFormatStripsLeadingZeroHour(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(Duration.fromMillis(101031)) == "1:41.031")
 
     @Test
-    def testToMillisEmpty(): Unit \ Assert =
-        Assert.assertTrue(Duration.toMillis("") == None)
+    def testFormatStripsLeadingZeroHourAndMinute(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(Duration.fromMillis(48666)) == "48.666")
 
     @Test
-    def testToMillisMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.toMillis("1:35.365") == Some(95365))
+    def testFormatHoursMinutesSeconds(): Unit \ Assert =
+        Assert.assertTrue(Duration.format(Duration.fromMillis(3725001)) == "1:02:05.001")
 
     @Test
-    def testToMillisHoursMinutesSeconds(): Unit \ Assert =
-        Assert.assertTrue(Duration.toMillis("6:10.938") == Some(370938))
+    def testToStringInstance(): Unit \ Assert =
+        Assert.assertTrue("${Duration.fromMillis(95365)}" == "1:35.365")
 
     @Test
-    def testToMillisInvalid(): Unit \ Assert =
-        Assert.assertTrue(Duration.toMillis("not-a-duration") == None)
+    def testAdd(): Unit \ Assert =
+        let a = Duration.fromMillis(30000);
+        let b = Duration.fromMillis(60000);
+        Assert.assertTrue(Duration.add(a, b) == Duration.fromMillis(90000))
+
+    @Test
+    def testZero(): Unit \ Assert =
+        Assert.assertTrue(Duration.zero() == Duration.fromMillis(0))
 
 }

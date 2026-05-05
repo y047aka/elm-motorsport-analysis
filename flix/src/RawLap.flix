@@ -2,77 +2,151 @@ mod RawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
-    use Util.Duration
+    use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
     use Util.Json
-    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
+    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
 
-    /// Sector cell: `Ok(ms)` on success, `Err(raw)` for blank or
-    /// unparseable input. Err preserves the original CSV string so JSON
-    /// output round-trips it verbatim.
-    pub type alias Sector = Result[String, Int32]
+    /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
+    /// columns. Semantics derived from empirical CSV analysis:
+    ///   None        = slower than this driver's personal best
+    ///   DriverBest  = this driver's PB, but another driver on the same
+    ///                 car has already been faster (sector-only — never
+    ///                 observed on LAP_IMPROVEMENT)
+    ///   CarBest     = fastest across every driver of this car so far
+    ///   OverallBest = fastest of every running car so far (at most once
+    ///                 per race per column)
+    pub enum Improvement with Eq {
+        case None
+        case DriverBest
+        case CarBest
+        case OverallBest
+    }
 
-    /// Hour-of-day cell: `Ok(Hour)` on success, `Err(raw)` otherwise.
-    /// Err preserves the original CSV string so JSON output round-trips it.
-    pub type alias HourCell = Result[String, Hour]
+    /// Race flag state at the finish line when each lap was completed.
+    /// Observed values across all WEC CSV files:
+    ///   Green            = GF  — normal racing conditions
+    ///   SlowZone         = SF  — safety car or local slow zone active
+    ///   FullCourseYellow = FCY — full-course yellow, no overtaking
+    ///   Red              = RF  — race suspended
+    ///   Finish           = FF  — chequered flag (race end)
+    pub enum Flag with Eq {
+        case Green
+        case SlowZone
+        case FullCourseYellow
+        case Red
+        case Finish
+    }
 
-    pub type alias RawLap = {
+    pub type alias RawSector = {
+        value = Option[Duration],
+        improvement = Improvement
+    }
+
+    pub type alias RawCar = {
         carNumber = String,
-        driverNumber = Int32,
-        lapNumber = Int32,
-        lapTime = String,
-        lapImprovement = Int32,
-        crossingFinishLineInPit = String,
-        s1 = Sector,
-        s1Improvement = Int32,
-        s2 = Sector,
-        s2Improvement = Int32,
-        s3 = Sector,
-        s3Improvement = Int32,
-        kph = String,
-        elapsed = String,
-        hour = HourCell,
-        topSpeed = String,
-        driverName = String,
-        pitTime = String,
         class = String,
         group = String,
         team = String,
         manufacturer = String
     }
 
-    /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
-    /// with a header row; columns are identified by name so ordering and
-    /// extra columns (e.g. S*_LARGE) are ignored automatically. Numeric
-    /// columns whose raw text is empty or unparseable degrade to `0`.
-    /// Sector cells round-trip the raw text on parse failure via
-    /// `Sector = Result[String, Int32]`.
+    pub type alias RawDriver = {
+        number = Int32,
+        name = String
+    }
+
+    pub type alias RawLap = {
+        car = RawCar,
+        driver = RawDriver,
+        lapNumber = Int32,
+        lapTime = Duration,
+        lapImprovement = Improvement,
+        crossingFinishLineInPit = Bool,
+        s1 = RawSector,
+        s2 = RawSector,
+        s3 = RawSector,
+        kph = String,
+        elapsed = Duration,
+        hour = Hour,
+        topSpeed = String,
+        pitTime = Option[Duration],
+        flagAtFl = Flag
+    }
+
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
-            carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
-            crossingFinishLineInPit -> s1 -> s1Improvement -> s2 -> s2Improvement ->
-            s3 -> s3Improvement -> kph -> elapsed -> hour ->
-            topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
+            car -> driver -> lapNumber -> lapTime -> lapImprovement ->
+            crossingFinishLineInPit -> s1 -> s2 -> s3 -> kph -> elapsed -> hour ->
+            topSpeed -> pitTime -> flagAtFl ->
                 {
-                    carNumber = carNumber,
-                    driverNumber = driverNumber,
+                    car = car,
+                    driver = driver,
                     lapNumber = lapNumber,
                     lapTime = lapTime,
                     lapImprovement = lapImprovement,
                     crossingFinishLineInPit = crossingFinishLineInPit,
                     s1 = s1,
-                    s1Improvement = s1Improvement,
                     s2 = s2,
-                    s2Improvement = s2Improvement,
                     s3 = s3,
-                    s3Improvement = s3Improvement,
                     kph = kph,
                     elapsed = elapsed,
                     hour = hour,
                     topSpeed = topSpeed,
-                    driverName = driverName,
                     pitTime = pitTime,
+                    flagAtFl = flagAtFl
+                }
+        )
+            |> Decode.pipeline(carDecoder())
+            |> Decode.pipeline(driverDecoder())
+            |> Decode.pipeline(intField("LAP_NUMBER"))
+            |> Decode.pipeline(durationField("LAP_TIME"))
+            |> Decode.pipeline(improvementField("LAP_IMPROVEMENT"))
+            |> Decode.pipeline(boxField("CROSSING_FINISH_LINE_IN_PIT"))
+            |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
+            |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
+            |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
+            |> Decode.pipeline(numericStringField("KPH"))
+            |> Decode.pipeline(durationField("ELAPSED"))
+            |> Decode.pipeline(hourField("HOUR"))
+            |> Decode.pipeline(numericOrBlankStringField("TOP_SPEED"))
+            |> Decode.pipeline(optionalDurationField("PIT_TIME"))
+            |> Decode.pipeline(flagField("FLAG_AT_FL"))
+
+    pub def toJson(rawLap: RawLap): Json.JsonValue =
+        JsonObject(
+            ("carNumber",               JsonString(rawLap#car#carNumber)) ::
+            ("driverNumber",            JsonInt(rawLap#driver#number)) ::
+            ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
+            ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
+            ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
+            ("crossingFinishLineInPit", JsonString(boxToString(rawLap#crossingFinishLineInPit))) ::
+            ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
+            ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
+            ("s2",                      optionalDurationJson(rawLap#s2#value)) ::
+            ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
+            ("s3",                      optionalDurationJson(rawLap#s3#value)) ::
+            ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
+            ("kph",                     JsonString(rawLap#kph)) ::
+            ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
+            ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
+            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
+            ("driverName",              JsonString(rawLap#driver#name)) ::
+            ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
+            ("class",                   JsonString(rawLap#car#class)) ::
+            ("group",                   JsonString(rawLap#car#group)) ::
+            ("team",                    JsonString(rawLap#car#team)) ::
+            ("manufacturer",            JsonString(rawLap#car#manufacturer)) ::
+            ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
+            Nil
+        )
+
+    def carDecoder(): Decoder[RawCar] =
+        Decode.intoRecord(
+            carNumber -> class -> group -> team -> manufacturer ->
+                {
+                    carNumber = carNumber,
                     class = class,
                     group = group,
                     team = team,
@@ -80,106 +154,162 @@ mod RawLap {
                 }
         )
             |> Decode.pipeline(stringField("NUMBER"))
-            |> Decode.pipeline(intField("DRIVER_NUMBER"))
-            |> Decode.pipeline(intField("LAP_NUMBER"))
-            |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
-            |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
-            |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
-            |> Decode.pipeline(Decode.field("S1", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S1_IMPROVEMENT"))
-            |> Decode.pipeline(Decode.field("S2", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S2_IMPROVEMENT"))
-            |> Decode.pipeline(Decode.field("S3", Decode.map(parseSector, Decode.string())))
-            |> Decode.pipeline(intField("S3_IMPROVEMENT"))
-            |> Decode.pipeline(stringField("KPH"))
-            |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
-            |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
-            |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
-            |> Decode.pipeline(stringField("DRIVER_NAME"))
-            |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(stringField("CLASS"))
             |> Decode.pipeline(stringField("GROUP"))
             |> Decode.pipeline(stringField("TEAM"))
             |> Decode.pipeline(stringField("MANUFACTURER"))
 
-    pub def toJson(rawLap: RawLap): Json.JsonValue =
-        JsonObject(
-            ("carNumber",               JsonString(rawLap#carNumber)) ::
-            ("driverNumber",            JsonInt(rawLap#driverNumber)) ::
-            ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
-            ("lapTime",                 JsonString(rawLap#lapTime)) ::
-            ("lapImprovement",          JsonInt(rawLap#lapImprovement)) ::
-            ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      sectorJson(rawLap#s1)) ::
-            ("s1Improvement",           JsonInt(rawLap#s1Improvement)) ::
-            ("s2",                      sectorJson(rawLap#s2)) ::
-            ("s2Improvement",           JsonInt(rawLap#s2Improvement)) ::
-            ("s3",                      sectorJson(rawLap#s3)) ::
-            ("s3Improvement",           JsonInt(rawLap#s3Improvement)) ::
-            ("kph",                     kphValue(rawLap#kph)) ::
-            ("elapsed",                 JsonString(rawLap#elapsed)) ::
-            ("hour",                    hourJson(rawLap#hour)) ::
-            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
-            ("driverName",              JsonString(rawLap#driverName)) ::
-            ("pitTime",                 JsonString(rawLap#pitTime)) ::
-            ("class",                   JsonString(rawLap#class)) ::
-            ("group",                   JsonString(rawLap#group)) ::
-            ("team",                    JsonString(rawLap#team)) ::
-            ("manufacturer",            JsonString(rawLap#manufacturer)) ::
-            Nil
+    def driverDecoder(): Decoder[RawDriver] =
+        Decode.intoRecord(
+            number -> name ->
+                {
+                    number = number,
+                    name = name
+                }
         )
+            |> Decode.pipeline(intField("DRIVER_NUMBER"))
+            |> Decode.pipeline(stringField("DRIVER_NAME"))
 
-    pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
-        JsonArray(List.map(toJson, rawLaps))
+    def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
+        Decode.intoRecord(
+            value -> large -> seconds -> improvement ->
+                (value, large, seconds, improvement)
+        )
+            |> Decode.pipeline(optionalDurationField(name))
+            |> Decode.pipeline(optionalDurationField(largeName))
+            |> Decode.pipeline(stringField(secondsName))
+            |> Decode.pipeline(improvementField(improvementName))
+            |> Decode.andThen(parts -> match parts {
+                case (value, large, seconds, improvement) =>
+                    Decode.fromResult(checkSectorConsistency(name, value, large, seconds, improvement))
+            })
+
+    def checkSectorConsistency(name: String, valueMs: Option[Duration], largeMs: Option[Duration], secondsRaw: String, improvement: Improvement): Result[String, RawSector] =
+        match secondsToMillis(name, secondsRaw) {
+            case Err(e)       => Err(e)
+            case Ok(secondsMs) =>
+                let observed = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
+                match observed {
+                    case Nil           => Ok({ value = valueMs, improvement = improvement })
+                    case first :: rest =>
+                        if (List.forAll(x -> x == first, rest))
+                            Ok({ value = valueMs, improvement = improvement })
+                        else
+                            Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
+                }
+        }
+
+    def secondsToMillis(name: String, raw: String): Result[String, Option[Duration]] =
+        if (raw == "") Ok(None)
+        else match Float64.fromString(raw) {
+            case Some(f) => match Float64.tryToInt32(Float64.round(f * 1000.0)) {
+                case Some(ms) => Ok(Some(Util.Duration.fromMillis(ms)))
+                case None     => Err("${name}: seconds out of range \"${raw}\"")
+            }
+            case None => Err("${name}: expected seconds but got \"${raw}\"")
+        }
 
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
 
+    def numericStringField(name: String): Decoder[String] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseNumericString(name, s)))
+
+    def numericOrBlankStringField(name: String): Decoder[String] =
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "" => Decode.succeed(s)
+            case _  => Decode.fromResult(parseNumericString(name, s))
+        })
+
+    def parseNumericString(name: String, s: String): Result[String, String] =
+        match Float64.fromString(s) {
+            case Some(_) => Ok(s)
+            case None    => Err("${name}: expected numeric but got \"${s}\"")
+        }
+
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
 
-    /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
-    /// are kept as `Err(raw)` so the original text can round-trip to JSON.
-    def parseSector(raw: String): Sector =
-        match Duration.toMillis(raw) {
-            case Some(ms) => Ok(ms)
-            case None     => Err(raw)
+    def durationField(name: String): Decoder[Duration] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
+
+    def parseDuration(name: String, raw: String): Result[String, Duration] =
+        match Util.Duration.fromString(raw) {
+            case Some(d) => Ok(d)
+            case None    => Err("${name}: expected duration but got \"${raw}\"")
         }
 
-    /// Renders a Sector as JSON. Ok is normalized through Duration.format,
-    /// Err is emitted verbatim. The output is byte-identical with the
-    /// pre-refactor result (which went through Duration.normalize).
-    def sectorJson(s: Sector): Json.JsonValue =
+    def optionalDurationField(name: String): Decoder[Option[Duration]] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
+
+    def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
+        match Util.Duration.fromString(raw) {
+            case Some(d)           => Ok(Some(d))
+            case None if raw == "" => Ok(None)
+            case None              => Err("${name}: expected duration but got \"${raw}\"")
+        }
+
+    def hourField(name: String): Decoder[Hour] =
+        stringField(name) |> Decode.andThen(s ->
+            Decode.fromResult(HourClock.parse(s)
+                |> Result.mapErr(_ -> "${name}: expected H:MM:SS.mmm but got \"${s}\"")))
+
+    def improvementField(name: String): Decoder[Improvement] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseImprovement(name, s)))
+
+    def parseImprovement(name: String, s: String): Result[String, Improvement] =
         match s {
-            case Ok(ms)   => JsonString(Duration.format(ms))
-            case Err(raw) => JsonString(raw)
+            case "0" => Ok(Improvement.None)
+            case "1" => Ok(Improvement.DriverBest)
+            case "2" => Ok(Improvement.CarBest)
+            case "3" => Ok(Improvement.OverallBest)
+            case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
         }
 
-    /// Renders an HourCell as JSON. Ok is normalized through HourClock.format
-    /// (`HH:MM:SS.mmm`), Err is emitted verbatim. WEC CSVs use zero-padded
-    /// two-digit hours, so the output is byte-identical with the
-    /// pre-refactor result (which echoed the hour cell directly).
-    def hourJson(h: HourCell): Json.JsonValue =
-        match h {
-            case Ok(hour) => JsonString(HourClock.format(hour))
-            case Err(raw) => JsonString(raw)
+    def boxField(name: String): Decoder[Bool] =
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "B" => Decode.succeed(true)
+            case ""  => Decode.succeed(false)
+            case _   => Decode.fail("${name}: expected \"B\" or blank but got \"${s}\"")
+        })
+
+    def flagField(name: String): Decoder[Flag] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
+
+    def parseFlag(name: String, s: String): Result[String, Flag] =
+        match s {
+            case "GF"  => Ok(Flag.Green)
+            case "SF"  => Ok(Flag.SlowZone)
+            case "FCY" => Ok(Flag.FullCourseYellow)
+            case "FF"  => Ok(Flag.Finish)
+            case "RF"  => Ok(Flag.Red)
+            case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
         }
 
-    def stripTrailingDotZero(s: String): String =
-        if (String.endsWith({suffix = ".0"}, s))
-            String.dropRight(2, s)
-        else
-            s
+    def improvementToInt(imp: Improvement): Int32 =
+        match imp {
+            case Improvement.None        => 0
+            case Improvement.DriverBest  => 1
+            case Improvement.CarBest     => 2
+            case Improvement.OverallBest => 3
+        }
 
-    def kphValue(s: String): Json.JsonValue =
-        let trimmed = stripTrailingDotZero(s);
-        match Int32.parse(10, trimmed) {
-            case Ok(n)  => JsonInt(n)
-            case Err(_) =>
-                match Float64.fromString(trimmed) {
-                    case Some(f) => JsonFloat(f)
-                    case None    => JsonString(s)
-                }
+    def boxToString(b: Bool): String =
+        if (b) "B" else ""
+
+    def flagToString(flag: Flag): String =
+        match flag {
+            case Flag.Green            => "GF"
+            case Flag.SlowZone         => "SF"
+            case Flag.FullCourseYellow => "FCY"
+            case Flag.Finish           => "FF"
+            case Flag.Red              => "RF"
+        }
+
+    def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
+        match d {
+            case Some(ms) => JsonString(Util.Duration.format(ms))
+            case None     => JsonString("")
         }
 
 }

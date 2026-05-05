@@ -11,7 +11,6 @@
 ///                          onward is reported)
 ///   3. HourElapsedOffset — across the CSV, `(hour - elapsed) mod 24h` is
 ///                          constant
-///   4. HourUnparseable   — hour cell cannot be parsed as H:MM:SS.mmm
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -23,36 +22,28 @@
 ///     per-car uses first-seen-index to sort the car groups).
 mod Cli.Validation {
 
-    use Util.Duration
+    use Util.Duration.Duration
     use Util.HourClock
-    use Util.HourClock.Hour
     use RawLap.RawLap
-    use RawLap.Sector
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
-        /// Args: lap / lapTime ms / sector sum ms / labels of blank sectors.
-        case SectorSum(RawLap, Int32, Int32, List[String])
+        /// Args: lap / lapTime / sector sum / labels of blank sectors.
+        case SectorSum(RawLap, Duration, Duration, List[String])
 
         /// `elapsed[n] != sum(lapTime[1..=n])`. Cumulative-sum based, so
         /// every row from the first drift onward is reported (sticky drift).
-        /// Args: lap / expected = running sum (ms) / actual = elapsed (ms).
-        case ElapsedDrift(RawLap, Int32, Int32)
+        /// Args: lap / expected = running sum / actual = elapsed.
+        case ElapsedDrift(RawLap, Duration, Duration)
 
         /// `(hour - elapsed) mod 24h` does not match the baseline.
-        /// Args: lap / baseline offset (ms) / actual offset (ms).
+        /// Args: lap / baseline offset (ms, signed) / actual offset (ms, signed).
         case HourElapsedOffset(RawLap, Int32, Int32)
-
-        /// hour cell could not be parsed as H:MM:SS.mmm.
-        /// Args: lap / original raw string.
-        case HourUnparseable(RawLap, String)
     }
 
-    /// Runs all rules and renders each violation as a stderr-ready string.
     pub def validate(eventName: String, laps: List[RawLap]): List[String] =
         detect(laps) |> List.map(v -> formatViolation(eventName, v))
 
-    /// Runs all rules and returns the structured violation list (pure).
     pub def detect(laps: List[RawLap]): List[Violation] =
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
         let perCar = perCarViolations(laps);
@@ -81,14 +72,14 @@ mod Cli.Validation {
     def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
         let firstSeen = laps |> List.foldLeft(
             (acc, lap) ->
-                if (Map.memberOf(lap#carNumber, acc)) acc
-                else Map.insert(lap#carNumber, Map.size(acc), acc),
+                if (Map.memberOf(lap#car#carNumber, acc)) acc
+                else Map.insert(lap#car#carNumber, Map.size(acc), acc),
             Map.empty()
         );
         let grouped = laps |> List.foldLeft(
             (acc, lap) -> Map.insertWith(
                 (existing, fresh) -> List.append(fresh, existing),
-                lap#carNumber,
+                lap#car#carNumber,
                 lap :: Nil,
                 acc
             ),
@@ -99,116 +90,79 @@ mod Cli.Validation {
         })
 
     def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
-        match Duration.toMillis(lap#lapTime) {
-            case None        => Ok(())
-            case Some(lapMs) =>
-                let (s1Ms, s1Blank) = sectorMs(lap#s1, "s1");
-                let (s2Ms, s2Blank) = sectorMs(lap#s2, "s2");
-                let (s3Ms, s3Blank) = sectorMs(lap#s3, "s3");
-                let sum = s1Ms + s2Ms + s3Ms;
-                if (sum == lapMs) Ok(())
-                else
-                    let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
-                    Err(Violation.SectorSum(lap, lapMs, sum, blanks))
-        }
+        let lapTime = lap#lapTime;
+        let (s1, s1Blank) = sectorOrZero(lap#s1#value, "s1");
+        let (s2, s2Blank) = sectorOrZero(lap#s2#value, "s2");
+        let (s3, s3Blank) = sectorOrZero(lap#s3#value, "s3");
+        let sum = Util.Duration.add(Util.Duration.add(s1, s2), s3);
+        if (sum == lapTime) Ok(())
+        else
+            let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
+            Err(Violation.SectorSum(lap, lapTime, sum, blanks))
 
-    /// Unpacks a Sector into (ms, blank-label-or-None). Err is treated as
-    /// 0 ms and the field name is returned so it can be attached to the
-    /// violation message.
-    def sectorMs(sector: Sector, name: String): (Int32, Option[String]) =
+    def sectorOrZero(sector: Option[Duration], name: String): (Duration, Option[String]) =
         match sector {
-            case Ok(ms)  => (ms, None)
-            case Err(_)  => (0, Some(name))
+            case Some(d) => (d, None)
+            case None    => (Util.Duration.zero(), Some(name))
         }
 
     /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).
     /// Each lap updates `running = sum(lapTime[1..=n])` and is flagged if
-    /// `elapsed` disagrees. Blank/unparseable lapTime and elapsed are
-    /// treated as 0 ms (matches Rust's behaviour). Once a drift starts,
-    /// every subsequent lap is reported — noisier than adjacent-diff, but
-    /// catches compensating drift.
+    /// `elapsed` disagrees. Once a drift starts, every subsequent lap is
+    /// reported — noisier than adjacent-diff, but catches compensating
+    /// drift.
     def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
-                    let lapMs   = Duration.toMillis(lap#lapTime) |> Option.getWithDefault(0);
-                    let newRun  = running + lapMs;
-                    let elapsed = Duration.toMillis(lap#elapsed) |> Option.getWithDefault(0);
+                    let newRun  = Util.Duration.add(running, lap#lapTime);
+                    let elapsed = lap#elapsed;
                     if (newRun == elapsed) (newRun, acc)
                     else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
             },
-            (0, Nil)
+            (Util.Duration.zero(), Nil)
         );
         match folded {
             case (_, acc) => List.reverse(acc)
         }
 
-    /// Race-wide hour-elapsed baseline check. The baseline is the first row
-    /// in CSV order whose hour parses successfully; rows whose hour fails to
-    /// parse are reported as HourUnparseable rather than silently skipped.
     def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
-        let baseline = findBaseline(laps);
-        match baseline {
-            case None       =>
-                laps |> List.filterMap(lap -> hourUnparseableOf(lap))
-            case Some(base) =>
-                laps |> List.filterMap(lap -> resultToOption(checkHourLine(lap, base)))
-        }
-
-    def findBaseline(laps: List[RawLap]): Option[Int32] =
         match laps {
-            case Nil          => None
-            case lap :: rest  =>
-                match (lap#hour, Duration.toMillis(lap#elapsed)) {
-                    case (Ok(h), Some(elapsedMs)) =>
-                        Some(HourClock.offsetFrom(h, elapsedMs))
-                    case _ => findBaseline(rest)
-                }
+            case Nil         => Nil
+            case lap :: _ =>
+                let base = HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed));
+                laps |> List.filterMap(l -> resultToOption(checkHourLine(l, base)))
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        match lap#hour {
-            case Err(raw) =>
-                Err(Violation.HourUnparseable(lap, raw))
-            case Ok(h) =>
-                match Duration.toMillis(lap#elapsed) {
-                    case None => Ok(())
-                    case Some(elapsedMs) =>
-                        let offset = HourClock.offsetFrom(h, elapsedMs);
-                        if (offset == base) Ok(())
-                        else Err(Violation.HourElapsedOffset(lap, base, offset))
-                }
-        }
-
-    def hourUnparseableOf(lap: RawLap): Option[Violation] =
-        match lap#hour {
-            case Err(raw) => Some(Violation.HourUnparseable(lap, raw))
-            case Ok(_)    => None
-        }
+        let offset = HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed));
+        if (offset == base) Ok(())
+        else Err(Violation.HourElapsedOffset(lap, base, offset))
 
     def formatViolation(eventName: String, v: Violation): String =
         match v {
-            case Violation.SectorSum(lap, lapMs, sum, blanks) =>
+            case Violation.SectorSum(lap, lapTime, sum, blanks) =>
                 let suffix =
                     if (List.isEmpty(blanks)) ""
                     else " (blank: ${List.join(",", blanks)})";
-                formatExpectedActual(eventName, lap, "sector-sum", lapMs, sum) + suffix
+                formatDurationPair(eventName, lap, "sector-sum", lapTime, sum) + suffix
             case Violation.ElapsedDrift(lap, expected, actual) =>
-                formatExpectedActual(eventName, lap, "elapsed-drift", expected, actual)
+                formatDurationPair(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
-                formatExpectedActual(eventName, lap, "hour-offset", base, offset)
-            case Violation.HourUnparseable(lap, raw) =>
-                "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
+                formatSignedMsPair(eventName, lap, "hour-offset", base, offset)
         }
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
-    def formatExpectedActual(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
-        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
+    def formatDurationPair(eventName: String, lap: RawLap, kind: String, expected: Duration, actual: Duration): String =
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${expected} (${Util.Duration.millis(expected)}ms) actual=${actual} (${Util.Duration.millis(actual)}ms)"
 
-    def formatMs(ms: Int32): String =
-        if (ms < 0) "-" + Duration.format(0 - ms)
-        else Duration.format(ms)
+    def formatSignedMsPair(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
+
+    def formatSignedMs(ms: Int32): String =
+        if (ms < 0) "-" + Util.Duration.formatMillis(0 - ms)
+        else Util.Duration.formatMillis(ms)
 
 }

@@ -1,6 +1,6 @@
 mod Motorsport.Metadata {
 
-    use Util.Duration
+    use Util.Duration.Duration
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
@@ -26,16 +26,16 @@ mod Motorsport.Metadata {
 
     type alias CarBuild = {
         car         = Car,
-        lap1Elapsed = Option[Int32]
+        lap1Elapsed = Option[Duration]
     }
 
     def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
         rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
 
     def upsertBuild(acc: List[CarBuild], lap: RawLap): List[CarBuild] =
-        if (List.exists(b -> b#car#carNumber == lap#carNumber, acc))
+        if (List.exists(b -> b#car#carNumber == lap#car#carNumber, acc))
             acc |> List.map(b ->
-                if (b#car#carNumber == lap#carNumber) updateBuildWithLap(b, lap) else b
+                if (b#car#carNumber == lap#car#carNumber) updateBuildWithLap(b, lap) else b
             )
         else
             List.append(acc, buildFromLap(lap) :: Nil)
@@ -43,25 +43,25 @@ mod Motorsport.Metadata {
     def buildFromLap(lap: RawLap): CarBuild =
         // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
         let car: Car = {
-            carNumber    = lap#carNumber,
-            drivers      = lap#driverName :: Nil,
-            class        = lap#class,
-            group        = lap#group,
-            team         = lap#team,
-            manufacturer = lap#manufacturer
+            carNumber    = lap#car#carNumber,
+            drivers      = lap#driver#name :: Nil,
+            class        = lap#car#class,
+            group        = lap#car#group,
+            team         = lap#car#team,
+            manufacturer = lap#car#manufacturer
         };
         { car = car, lap1Elapsed = lap1Elapsed(lap) }
 
     def updateBuildWithLap(build: CarBuild, lap: RawLap): CarBuild =
-        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driverName) | build#car };
+        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driver#name) | build#car };
         let newLap1 = match build#lap1Elapsed {
             case Some(_) => build#lap1Elapsed
             case None    => lap1Elapsed(lap)
         };
         { car = updatedCar, lap1Elapsed = newLap1 }
 
-    def lap1Elapsed(lap: RawLap): Option[Int32] =
-        if (lap#lapNumber == 1) Duration.toMillis(lap#elapsed)
+    def lap1Elapsed(lap: RawLap): Option[Duration] =
+        if (lap#lapNumber == 1) Some(lap#elapsed)
         else None
 
     def appendUnique(xs: List[String], x: String): List[String] =

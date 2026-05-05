@@ -2,15 +2,16 @@ mod Cli.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
+    use Util.Duration
     use Cli.Validation
     use Cli.Validation.Violation
     use RawLap.RawLap
 
     def header(): String =
-        "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER"
+        "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
 
     def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap =
-        let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;0.0;0.0;0.0;";
+        let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};";
         let csv = header() + "\n" + row;
         match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
             case Ok(r :: _) => r
@@ -19,10 +20,9 @@ mod Cli.TestValidation {
 
     /// Pulls carNumber off the leading RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
-        case Violation.SectorSum(lap, _, _, _)      => lap#carNumber
-        case Violation.ElapsedDrift(lap, _, _) => lap#carNumber
-        case Violation.HourElapsedOffset(lap, _, _) => lap#carNumber
-        case Violation.HourUnparseable(lap, _)      => lap#carNumber
+        case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
+        case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber
+        case Violation.HourElapsedOffset(lap, _, _) => lap#car#carNumber
     }
 
     def isSectorSum(v: Violation): Bool = match v {
@@ -38,11 +38,6 @@ mod Cli.TestValidation {
     def isHourElapsedOffset(v: Violation): Bool = match v {
         case Violation.HourElapsedOffset(_, _, _) => true
         case _                                    => false
-    }
-
-    def isHourUnparseable(v: Violation): Bool = match v {
-        case Violation.HourUnparseable(_, _) => true
-        case _                               => false
     }
 
     @Test
@@ -61,8 +56,8 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.SectorSum(_, lapMs, sum, _)) =>
-                Assert.assertTrue(lapMs == 120000);
-                Assert.assertTrue(sum == 120001)
+                Assert.assertTrue(lapMs == Duration.fromMillis(120000));
+                Assert.assertTrue(sum == Duration.fromMillis(120001))
             case _ => Assert.assertTrue(false)
         }
 
@@ -94,11 +89,11 @@ mod Cli.TestValidation {
                     case (Violation.ElapsedDrift(lap1, exp1, act1),
                           Violation.ElapsedDrift(lap2, exp2, act2)) =>
                         Assert.assertTrue(lap1#lapNumber == 2);
-                        Assert.assertTrue(exp1 == 240000);
-                        Assert.assertTrue(act1 == 240500);
+                        Assert.assertTrue(exp1 == Duration.fromMillis(240000));
+                        Assert.assertTrue(act1 == Duration.fromMillis(240500));
                         Assert.assertTrue(lap2#lapNumber == 3);
-                        Assert.assertTrue(exp2 == 360000);
-                        Assert.assertTrue(act2 == 360500)
+                        Assert.assertTrue(exp2 == Duration.fromMillis(360000));
+                        Assert.assertTrue(act2 == Duration.fromMillis(360500))
                     case _ => Assert.assertTrue(false)
                 }
             case _ => Assert.assertTrue(false)
@@ -138,14 +133,6 @@ mod Cli.TestValidation {
         }
 
     @Test
-    def testBlankLapTimeSkipped(): Unit \ Assert =
-        // lapTime missing means we have no expected value -> nothing to compare
-        let lap = buildLap("7", 1, "", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        let violations = Validation.detect(lap :: Nil)
-            |> List.filter(isSectorSum);
-        Assert.assertTrue(List.isEmpty(violations))
-
-    @Test
     def testMultipleCarsGroupedSeparately(): Unit \ Assert =
         // car 7 ok, car 8 has elapsed mismatch on lap 2
         let c7l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
@@ -157,20 +144,6 @@ mod Cli.TestValidation {
         let car8Issues = violations |> List.filter(v -> violationCar(v) == "8");
         Assert.assertTrue(List.isEmpty(car7Issues));
         Assert.assertTrue(not List.isEmpty(car8Issues))
-
-    @Test
-    def testHourUnparseableReported(): Unit \ Assert =
-        // lap 2 has unparseable hour ("not-a-time") — should produce HourUnparseable
-        let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "not-a-time");
-        let violations = Validation.detect(l1 :: l2 :: Nil)
-            |> List.filter(isHourUnparseable);
-        Assert.assertTrue(List.length(violations) == 1);
-        match List.head(violations) {
-            case Some(Violation.HourUnparseable(_, raw)) =>
-                Assert.assertTrue(raw == "not-a-time")
-            case _ => Assert.assertTrue(false)
-        }
 
     @Test
     def testRaceWideBaselineIsolatesBadFirstLap(): Unit \ Assert =
@@ -188,7 +161,7 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.HourElapsedOffset(lap, _, _)) =>
-                Assert.assertTrue(lap#carNumber == "8");
+                Assert.assertTrue(lap#car#carNumber == "8");
                 Assert.assertTrue(lap#lapNumber == 1)
             case _ => Assert.assertTrue(false)
         }
@@ -230,18 +203,6 @@ mod Cli.TestValidation {
                 Assert.assertTrue(String.contains({substr = "[car 7 #1]"}, msg));
                 Assert.assertTrue(String.contains({substr = "expected=2:00.000 (120000ms)"}, msg));
                 Assert.assertTrue(String.contains({substr = "actual=2:00.001 (120001ms)"}, msg))
-            case None => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testHourUnparseableRendersRawString(): Unit \ Assert =
-        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "garbage");
-        let messages = Validation.validate("test", lap :: Nil)
-            |> List.filter(m -> String.contains({substr = "hour-unparseable"}, m));
-        Assert.assertTrue(List.length(messages) == 1);
-        match List.head(messages) {
-            case Some(msg) =>
-                Assert.assertTrue(String.contains({substr = "raw=\"garbage\""}, msg))
             case None => Assert.assertTrue(false)
         }
 
