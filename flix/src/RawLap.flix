@@ -3,14 +3,11 @@ mod RawLap {
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
     use Util.Duration
+    use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
-
-    /// Sector cell: `Some(ms)` on success, `None` for blank or
-    /// unparseable input.
-    pub type alias Sector = Option[Int32]
 
     /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
     /// columns. Semantics derived from empirical CSV analysis:
@@ -32,8 +29,8 @@ mod RawLap {
     /// sector (S1/S2/S3): the parsed time, the long-form duplicate, the
     /// raw seconds-only column, and the improvement flag.
     pub type alias RawSector = {
-        value = Sector,
-        large = Sector,
+        value = Option[Duration],
+        large = Option[Duration],
         seconds = String,
         improvement = Improvement
     }
@@ -55,17 +52,17 @@ mod RawLap {
         car = RawCar,
         driver = RawDriver,
         lapNumber = Int32,
-        lapTime = Option[Int32],
+        lapTime = Duration,
         lapImprovement = Improvement,
         crossingFinishLineInPit = String,
         s1 = RawSector,
         s2 = RawSector,
         s3 = RawSector,
         kph = String,
-        elapsed = Option[Int32],
+        elapsed = Duration,
         hour = Hour,
         topSpeed = String,
-        pitTime = Option[Int32],
+        pitTime = Option[Duration],
         flagAtFl = String
     }
 
@@ -110,7 +107,7 @@ mod RawLap {
             |> Decode.pipeline(durationField("ELAPSED"))
             |> Decode.pipeline(hourField("HOUR"))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
-            |> Decode.pipeline(durationField("PIT_TIME"))
+            |> Decode.pipeline(optionalDurationField("PIT_TIME"))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
     def carDecoder(): Decoder[RawCar] =
@@ -146,21 +143,21 @@ mod RawLap {
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
-            ("lapTime",                 durationJson(rawLap#lapTime)) ::
+            ("lapTime",                 JsonString(Duration.format(rawLap#lapTime))) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
             ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
-            ("s1",                      durationJson(rawLap#s1#value)) ::
+            ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
             ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
-            ("s2",                      durationJson(rawLap#s2#value)) ::
+            ("s2",                      optionalDurationJson(rawLap#s2#value)) ::
             ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
-            ("s3",                      durationJson(rawLap#s3#value)) ::
+            ("s3",                      optionalDurationJson(rawLap#s3#value)) ::
             ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
             ("kph",                     kphValue(rawLap#kph)) ::
-            ("elapsed",                 durationJson(rawLap#elapsed)) ::
+            ("elapsed",                 JsonString(Duration.format(rawLap#elapsed))) ::
             ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driver#driverName)) ::
-            ("pitTime",                 durationJson(rawLap#pitTime)) ::
+            ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
             ("class",                   JsonString(rawLap#car#class)) ::
             ("group",                   JsonString(rawLap#car#group)) ::
             ("team",                    JsonString(rawLap#car#team)) ::
@@ -175,12 +172,22 @@ mod RawLap {
     def stringField(name: String): Decoder[String] =
         Decode.field(name, Decode.string())
 
-    def durationField(name: String): Decoder[Option[Int32]] =
+    def durationField(name: String): Decoder[Duration] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
+
+    /// Numeric input → `ms`. Blank or unparseable input fails the decode.
+    def parseDuration(name: String, raw: String): Result[String, Duration] =
+        match Duration.toMillis(raw) {
+            case Some(ms) => Ok(ms)
+            case None     => Err("${name}: expected duration but got \"${raw}\"")
+        }
+
+    def optionalDurationField(name: String): Decoder[Option[Duration]] =
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
 
     /// Blank → `None`. Numeric input → `Some(ms)`. Anything else fails the
     /// decode so unfamiliar formatting surfaces immediately.
-    def parseDuration(name: String, raw: String): Result[String, Option[Int32]] =
+    def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
         if (raw == "") Ok(None)
         else match Duration.toMillis(raw) {
             case Some(ms) => Ok(Some(ms))
@@ -228,8 +235,8 @@ mod RawLap {
                     improvement = improvement
                 }
         )
-            |> Decode.pipeline(sectorField(name))
-            |> Decode.pipeline(sectorField(largeName))
+            |> Decode.pipeline(optionalDurationField(name))
+            |> Decode.pipeline(optionalDurationField(largeName))
             |> Decode.pipeline(stringField(secondsName))
             |> Decode.pipeline(improvementField(improvementName))
             |> Decode.andThen(sector ->
@@ -258,22 +265,11 @@ mod RawLap {
             case None    => None
         }
 
-    def sectorField(name: String): Decoder[Sector] =
-        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseSector(name, s)))
 
-    /// Blank → `None`. Numeric input → `Some(ms)`. Anything else fails
-    /// the decode so unfamiliar formatting surfaces immediately.
-    def parseSector(name: String, raw: String): Result[String, Sector] =
-        if (raw == "") Ok(None)
-        else match Duration.toMillis(raw) {
-            case Some(ms) => Ok(Some(ms))
-            case None     => Err("${name}: expected duration but got \"${raw}\"")
-        }
-
-    /// Renders an `Option[Int32]` duration cell as JSON. Some is normalized
+    /// Renders an `Option[Duration]` cell as JSON. Some is normalized
     /// through Duration.format, None becomes an empty string.
-    def durationJson(s: Option[Int32]): Json.JsonValue =
-        match s {
+    def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
+        match d {
             case Some(ms) => JsonString(Duration.format(ms))
             case None     => JsonString("")
         }

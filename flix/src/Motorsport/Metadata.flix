@@ -60,7 +60,7 @@ mod Motorsport.Metadata {
         { car = updatedCar, lap1Elapsed = newLap1 }
 
     def lap1Elapsed(lap: RawLap): Option[Int32] =
-        if (lap#lapNumber == 1) lap#elapsed
+        if (lap#lapNumber == 1) Some(lap#elapsed)
         else None
 
     def appendUnique(xs: List[String], x: String): List[String] =

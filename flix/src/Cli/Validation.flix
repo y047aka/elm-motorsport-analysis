@@ -23,10 +23,9 @@
 mod Cli.Validation {
 
     use Util.Duration
+    use Util.Duration.Duration
     use Util.HourClock
-    use Util.HourClock.Hour
     use RawLap.RawLap
-    use RawLap.Sector
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
@@ -94,23 +93,20 @@ mod Cli.Validation {
         })
 
     def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
-        match lap#lapTime {
-            case None        => Ok(())
-            case Some(lapMs) =>
-                let (s1Ms, s1Blank) = sectorMs(lap#s1#value, "s1");
-                let (s2Ms, s2Blank) = sectorMs(lap#s2#value, "s2");
-                let (s3Ms, s3Blank) = sectorMs(lap#s3#value, "s3");
-                let sum = s1Ms + s2Ms + s3Ms;
-                if (sum == lapMs) Ok(())
-                else
-                    let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
-                    Err(Violation.SectorSum(lap, lapMs, sum, blanks))
-        }
+        let lapMs = lap#lapTime;
+        let (s1Ms, s1Blank) = sectorMs(lap#s1#value, "s1");
+        let (s2Ms, s2Blank) = sectorMs(lap#s2#value, "s2");
+        let (s3Ms, s3Blank) = sectorMs(lap#s3#value, "s3");
+        let sum = s1Ms + s2Ms + s3Ms;
+        if (sum == lapMs) Ok(())
+        else
+            let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
+            Err(Violation.SectorSum(lap, lapMs, sum, blanks))
 
-    /// Unpacks a Sector into (ms, blank-label-or-None). None is treated as
-    /// 0 ms and the field name is returned so it can be attached to the
-    /// violation message.
-    def sectorMs(sector: Sector, name: String): (Int32, Option[String]) =
+    /// Unpacks an Option[Duration] sector into (ms, blank-label-or-None).
+    /// None is treated as 0 ms and the field name is returned so it can be
+    /// attached to the violation message.
+    def sectorMs(sector: Option[Duration], name: String): (Duration, Option[String]) =
         match sector {
             case Some(ms) => (ms, None)
             case None     => (0, Some(name))
@@ -126,9 +122,9 @@ mod Cli.Validation {
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
-                    let lapMs   = lap#lapTime |> Option.getWithDefault(0);
+                    let lapMs   = lap#lapTime;
                     let newRun  = running + lapMs;
-                    let elapsed = lap#elapsed |> Option.getWithDefault(0);
+                    let elapsed = lap#elapsed;
                     if (newRun == elapsed) (newRun, acc)
                     else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
             },
@@ -139,33 +135,19 @@ mod Cli.Validation {
         }
 
     /// Race-wide hour-elapsed baseline check. The baseline is the first row
-    /// in CSV order whose elapsed parses successfully.
+    /// in the CSV.
     def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
-        match findBaseline(laps) {
-            case None       => Nil
-            case Some(base) =>
-                laps |> List.filterMap(lap -> resultToOption(checkHourLine(lap, base)))
-        }
-
-    def findBaseline(laps: List[RawLap]): Option[Int32] =
         match laps {
-            case Nil          => None
-            case lap :: rest  =>
-                match lap#elapsed {
-                    case Some(elapsedMs) =>
-                        Some(HourClock.offsetFrom(lap#hour, elapsedMs))
-                    case None => findBaseline(rest)
-                }
+            case Nil         => Nil
+            case lap :: _ =>
+                let base = HourClock.offsetFrom(lap#hour, lap#elapsed);
+                laps |> List.filterMap(l -> resultToOption(checkHourLine(l, base)))
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        match lap#elapsed {
-            case None => Ok(())
-            case Some(elapsedMs) =>
-                let offset = HourClock.offsetFrom(lap#hour, elapsedMs);
-                if (offset == base) Ok(())
-                else Err(Violation.HourElapsedOffset(lap, base, offset))
-        }
+        let offset = HourClock.offsetFrom(lap#hour, lap#elapsed);
+        if (offset == base) Ok(())
+        else Err(Violation.HourElapsedOffset(lap, base, offset))
 
     def formatViolation(eventName: String, v: Violation): String =
         match v {

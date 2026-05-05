@@ -1,5 +1,7 @@
 mod Util.Duration {
 
+    pub type alias Duration = Int32
+
     def parse(s: String): Option[Int32] =
         match String.split({regex = "\\."}, s) {
             case wholePart :: msPart :: Nil =>

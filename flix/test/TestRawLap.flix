@@ -31,7 +31,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#carNumber == "12");
                 Assert.assertTrue(r#driver#driverNumber == 1);
                 Assert.assertTrue(r#lapNumber == 3);
-                Assert.assertTrue(r#lapTime == Some(161963));
+                Assert.assertTrue(r#lapTime == 161963);
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
                 Assert.assertTrue(r#s1#value == Some(41805));
@@ -39,7 +39,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#s2#value == Some(63483));
                 Assert.assertTrue(r#s3#value == Some(56675));
                 Assert.assertTrue(r#kph == "101.4");
-                Assert.assertTrue(r#elapsed == Some(370938));
+                Assert.assertTrue(r#elapsed == 370938);
                 Assert.assertTrue(r#hour == Hour.Hour(39998429));
                 Assert.assertTrue(r#topSpeed == "88.5");
                 Assert.assertTrue(r#driver#driverName == "Will STEVENS");

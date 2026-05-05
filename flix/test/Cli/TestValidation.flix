@@ -132,12 +132,13 @@ mod Cli.TestValidation {
         }
 
     @Test
-    def testBlankLapTimeSkipped(): Unit \ Assert =
-        // lapTime missing means we have no expected value -> nothing to compare
-        let lap = buildLap("7", 1, "", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        let violations = Validation.detect(lap :: Nil)
-            |> List.filter(isSectorSum);
-        Assert.assertTrue(List.isEmpty(violations))
+    def testBlankLapTimeFailsDecode(): Unit \ Assert =
+        let row = "7;1;1;;0;;30.000;0;60.000;0;30.000;0;100;2:00.000;14:02:00.000;0:30.000;0:60.000;0:30.000;200;Driver;;HYPERCAR;H;Team;Maker;GF;30.000;60.000;30.000;";
+        let csv = header() + "\n" + row;
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
+        }
 
     @Test
     def testMultipleCarsGroupedSeparately(): Unit \ Assert =
