@@ -107,13 +107,13 @@ mod Cli.Validation {
                     Err(Violation.SectorSum(lap, lapMs, sum, blanks))
         }
 
-    /// Unpacks a Sector into (ms, blank-label-or-None). Err is treated as
+    /// Unpacks a Sector into (ms, blank-label-or-None). None is treated as
     /// 0 ms and the field name is returned so it can be attached to the
     /// violation message.
     def sectorMs(sector: Sector, name: String): (Int32, Option[String]) =
         match sector {
-            case Ok(ms)  => (ms, None)
-            case Err(_)  => (0, Some(name))
+            case Some(ms) => (ms, None)
+            case None     => (0, Some(name))
         }
 
     /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).

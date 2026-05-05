@@ -8,10 +8,9 @@ mod RawLap {
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonFloat, JsonArray}
 
-    /// Sector cell: `Ok(ms)` on success, `Err(raw)` for blank or
-    /// unparseable input. Err preserves the original CSV string so JSON
-    /// output round-trips it verbatim.
-    pub type alias Sector = Result[String, Int32]
+    /// Sector cell: `Some(ms)` on success, `None` for blank or
+    /// unparseable input.
+    pub type alias Sector = Option[Int32]
 
     /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
     /// columns. Semantics derived from empirical CSV analysis:
@@ -74,8 +73,7 @@ mod RawLap {
     /// with a header row; columns are identified by name so ordering and
     /// extra columns (e.g. S*_LARGE) are ignored automatically. Numeric
     /// columns whose raw text is empty or unparseable degrade to `0`.
-    /// Sector cells round-trip the raw text on parse failure via
-    /// `Sector = Result[String, Int32]`.
+    /// Sector cells are `None` when blank/unparseable, `Some(ms)` otherwise.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             car -> driver -> lapNumber -> lapTime -> lapImprovement ->
@@ -228,8 +226,8 @@ mod RawLap {
     /// Blank/unparseable cells are skipped, so a row with all three
     /// blank is treated as consistent.
     def checkSectorConsistency(name: String, s: RawSector): Result[String, Unit] =
-        let valueMs   = Result.toOption(s#value);
-        let largeMs   = Result.toOption(s#large);
+        let valueMs   = s#value;
+        let largeMs   = s#large;
         let secondsMs = secondsToMillis(s#seconds);
         let observed  = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
         match observed {
@@ -248,21 +246,15 @@ mod RawLap {
             case None    => None
         }
 
-    /// Parses a CSV sector cell into a Sector. Blank or non-numeric inputs
-    /// are kept as `Err(raw)` so the original text can round-trip to JSON.
     def parseSector(raw: String): Sector =
-        match Duration.toMillis(raw) {
-            case Some(ms) => Ok(ms)
-            case None     => Err(raw)
-        }
+        Duration.toMillis(raw)
 
-    /// Renders a Sector as JSON. Ok is normalized through Duration.format,
-    /// Err is emitted verbatim. The output is byte-identical with the
-    /// pre-refactor result (which went through Duration.normalize).
+    /// Renders a Sector as JSON. Some is normalized through Duration.format,
+    /// None becomes an empty string.
     def sectorJson(s: Sector): Json.JsonValue =
         match s {
-            case Ok(ms)   => JsonString(Duration.format(ms))
-            case Err(raw) => JsonString(raw)
+            case Some(ms) => JsonString(Duration.format(ms))
+            case None     => JsonString("")
         }
 
     def stripTrailingDotZero(s: String): String =

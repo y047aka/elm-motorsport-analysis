@@ -34,10 +34,10 @@ mod TestRawLap {
                 Assert.assertTrue(r#lapTime == "2:41.963");
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
-                Assert.assertTrue(r#s1#value == Ok(41805));
+                Assert.assertTrue(r#s1#value == Some(41805));
                 Assert.assertTrue(r#s1#improvement == RawLap.Improvement.None);
-                Assert.assertTrue(r#s2#value == Ok(63483));
-                Assert.assertTrue(r#s3#value == Ok(56675));
+                Assert.assertTrue(r#s2#value == Some(63483));
+                Assert.assertTrue(r#s3#value == Some(56675));
                 Assert.assertTrue(r#kph == "101.4");
                 Assert.assertTrue(r#elapsed == "6:10.938");
                 Assert.assertTrue(r#hour == Hour.Hour(39998429));
