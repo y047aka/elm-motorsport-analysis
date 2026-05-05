@@ -94,7 +94,7 @@ mod RawLap {
             |> Decode.pipeline(driverDecoder())
             |> Decode.pipeline(intField("LAP_NUMBER"))
             |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
-            |> Decode.pipeline(intField("LAP_IMPROVEMENT"))
+            |> Decode.pipeline(improvementField("LAP_IMPROVEMENT"))
             |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
             |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
@@ -171,6 +171,14 @@ mod RawLap {
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
 
+    def improvementField(name: String): Decoder[Improvement] =
+        intField(name) |> Decode.andThen(n -> match n {
+            case 0 => Decode.succeed(n)
+            case 1 => Decode.succeed(n)
+            case 2 => Decode.succeed(n)
+            case _ => Decode.fail("${name}: expected 0/1/2 but got ${n}")
+        })
+
     /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
     /// the same elapsed time, failing the decode otherwise so an
     /// unfamiliar CSV layout surfaces immediately.
@@ -187,7 +195,7 @@ mod RawLap {
             |> Decode.pipeline(Decode.field(name, Decode.map(parseSector, Decode.string())))
             |> Decode.pipeline(Decode.field(largeName, Decode.map(parseSector, Decode.string())))
             |> Decode.pipeline(stringField(secondsName))
-            |> Decode.pipeline(intField(improvementName))
+            |> Decode.pipeline(improvementField(improvementName))
             |> Decode.andThen(sector -> match checkSectorConsistency(name, sector) {
                 case Ok(())   => Decode.succeed(sector)
                 case Err(msg) => Decode.fail(msg)
