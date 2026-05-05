@@ -65,18 +65,11 @@ mod RawLap {
     /// `Sector = Result[String, Int32]`.
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
-            carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
+            car -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
             crossingFinishLineInPit -> s1 -> s2 -> s3 -> kph -> elapsed -> hour ->
-            topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
-            flagAtFl ->
+            topSpeed -> driverName -> pitTime -> flagAtFl ->
                 {
-                    car = {
-                        carNumber = carNumber,
-                        class = class,
-                        group = group,
-                        team = team,
-                        manufacturer = manufacturer
-                    },
+                    car = car,
                     driverNumber = driverNumber,
                     lapNumber = lapNumber,
                     lapTime = lapTime,
@@ -94,7 +87,7 @@ mod RawLap {
                     flagAtFl = flagAtFl
                 }
         )
-            |> Decode.pipeline(stringField("NUMBER"))
+            |> Decode.pipeline(carDecoder())
             |> Decode.pipeline(intField("DRIVER_NUMBER"))
             |> Decode.pipeline(intField("LAP_NUMBER"))
             |> Decode.pipeline(Decode.field("LAP_TIME", Decode.map(Duration.normalize, Decode.string())))
@@ -109,11 +102,26 @@ mod RawLap {
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
             |> Decode.pipeline(stringField("DRIVER_NAME"))
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
+            |> Decode.pipeline(stringField("FLAG_AT_FL"))
+
+    /// Decoder for the five car-identity columns. Reads NUMBER, CLASS,
+    /// GROUP, TEAM, and MANUFACTURER and assembles them into a RawCar.
+    def carDecoder(): Decoder[RawCar] =
+        Decode.intoRecord(
+            carNumber -> class -> group -> team -> manufacturer ->
+                {
+                    carNumber = carNumber,
+                    class = class,
+                    group = group,
+                    team = team,
+                    manufacturer = manufacturer
+                }
+        )
+            |> Decode.pipeline(stringField("NUMBER"))
             |> Decode.pipeline(stringField("CLASS"))
             |> Decode.pipeline(stringField("GROUP"))
             |> Decode.pipeline(stringField("TEAM"))
             |> Decode.pipeline(stringField("MANUFACTURER"))
-            |> Decode.pipeline(stringField("FLAG_AT_FL"))
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
