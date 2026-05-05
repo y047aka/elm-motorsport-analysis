@@ -176,7 +176,16 @@ mod RawLap {
         Decode.field(name, Decode.string())
 
     def durationField(name: String): Decoder[String] =
-        Decode.field(name, Decode.map(Duration.normalize, Decode.string()))
+        stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
+
+    /// Blank → `""`. Numeric input → normalized `H:MM:SS.mmm` text. Anything
+    /// else fails the decode so unfamiliar formatting surfaces immediately.
+    def parseDuration(name: String, raw: String): Result[String, String] =
+        if (raw == "") Ok("")
+        else match Duration.toMillis(raw) {
+            case Some(ms) => Ok(Duration.format(ms))
+            case None     => Err("${name}: expected duration but got \"${raw}\"")
+        }
 
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
