@@ -13,10 +13,6 @@ mod RawLap {
     /// output round-trips it verbatim.
     pub type alias Sector = Result[String, Int32]
 
-    /// Hour-of-day cell: `Ok(Hour)` on success, `Err(raw)` otherwise.
-    /// Err preserves the original CSV string so JSON output round-trips it.
-    pub type alias HourCell = Result[String, Hour]
-
     /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
     /// columns. Semantics derived from empirical CSV analysis:
     ///   None        = slower than this driver's personal best
@@ -68,7 +64,7 @@ mod RawLap {
         s3 = RawSector,
         kph = String,
         elapsed = String,
-        hour = HourCell,
+        hour = Hour,
         topSpeed = String,
         pitTime = String,
         flagAtFl = String
@@ -114,7 +110,7 @@ mod RawLap {
             |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
             |> Decode.pipeline(stringField("KPH"))
             |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
-            |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
+            |> Decode.pipeline(hourField("HOUR"))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(stringField("FLAG_AT_FL"))
@@ -163,7 +159,7 @@ mod RawLap {
             ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
-            ("hour",                    hourJson(rawLap#hour)) ::
+            ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driver#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
@@ -183,6 +179,12 @@ mod RawLap {
 
     def intField(name: String): Decoder[Int32] =
         Decode.field(name, Decode.int())
+
+    def hourField(name: String): Decoder[Hour] =
+        stringField(name) |> Decode.andThen(s -> match HourClock.parse(s) {
+            case Ok(h)    => Decode.succeed(h)
+            case Err(_)   => Decode.fail("${name}: expected H:MM:SS.mmm but got \"${s}\"")
+        })
 
     def improvementField(name: String): Decoder[Improvement] =
         stringField(name) |> Decode.andThen(s -> match s {
@@ -260,16 +262,6 @@ mod RawLap {
     def sectorJson(s: Sector): Json.JsonValue =
         match s {
             case Ok(ms)   => JsonString(Duration.format(ms))
-            case Err(raw) => JsonString(raw)
-        }
-
-    /// Renders an HourCell as JSON. Ok is normalized through HourClock.format
-    /// (`HH:MM:SS.mmm`), Err is emitted verbatim. WEC CSVs use zero-padded
-    /// two-digit hours, so the output is byte-identical with the
-    /// pre-refactor result (which echoed the hour cell directly).
-    def hourJson(h: HourCell): Json.JsonValue =
-        match h {
-            case Ok(hour) => JsonString(HourClock.format(hour))
             case Err(raw) => JsonString(raw)
         }
 

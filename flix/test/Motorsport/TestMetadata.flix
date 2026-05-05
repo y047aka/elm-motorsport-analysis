@@ -1,6 +1,7 @@
 mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
+    use Util.HourClock.Hour
     use Util.Json
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
@@ -26,7 +27,7 @@ mod Motorsport.TestMetadata {
             s3                      = { value = Err(""), large = Err(""), seconds = "", improvement = RawLap.Improvement.None },
             kph                     = "0",
             elapsed                 = elapsed,
-            hour                    = Err(""),
+            hour                    = Hour.Hour(0),
             topSpeed                = "",
             pitTime                 = "",
             flagAtFl                = ""

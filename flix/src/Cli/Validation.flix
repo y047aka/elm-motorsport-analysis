@@ -11,7 +11,6 @@
 ///                          onward is reported)
 ///   3. HourElapsedOffset — across the CSV, `(hour - elapsed) mod 24h` is
 ///                          constant
-///   4. HourUnparseable   — hour cell cannot be parsed as H:MM:SS.mmm
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -42,10 +41,6 @@ mod Cli.Validation {
         /// `(hour - elapsed) mod 24h` does not match the baseline.
         /// Args: lap / baseline offset (ms) / actual offset (ms).
         case HourElapsedOffset(RawLap, Int32, Int32)
-
-        /// hour cell could not be parsed as H:MM:SS.mmm.
-        /// Args: lap / original raw string.
-        case HourUnparseable(RawLap, String)
     }
 
     /// Runs all rules and renders each violation as a stderr-ready string.
@@ -144,13 +139,10 @@ mod Cli.Validation {
         }
 
     /// Race-wide hour-elapsed baseline check. The baseline is the first row
-    /// in CSV order whose hour parses successfully; rows whose hour fails to
-    /// parse are reported as HourUnparseable rather than silently skipped.
+    /// in CSV order whose elapsed parses successfully.
     def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
-        let baseline = findBaseline(laps);
-        match baseline {
-            case None       =>
-                laps |> List.filterMap(lap -> hourUnparseableOf(lap))
+        match findBaseline(laps) {
+            case None       => Nil
             case Some(base) =>
                 laps |> List.filterMap(lap -> resultToOption(checkHourLine(lap, base)))
         }
@@ -159,31 +151,20 @@ mod Cli.Validation {
         match laps {
             case Nil          => None
             case lap :: rest  =>
-                match (lap#hour, Duration.toMillis(lap#elapsed)) {
-                    case (Ok(h), Some(elapsedMs)) =>
-                        Some(HourClock.offsetFrom(h, elapsedMs))
-                    case _ => findBaseline(rest)
+                match Duration.toMillis(lap#elapsed) {
+                    case Some(elapsedMs) =>
+                        Some(HourClock.offsetFrom(lap#hour, elapsedMs))
+                    case None => findBaseline(rest)
                 }
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        match lap#hour {
-            case Err(raw) =>
-                Err(Violation.HourUnparseable(lap, raw))
-            case Ok(h) =>
-                match Duration.toMillis(lap#elapsed) {
-                    case None => Ok(())
-                    case Some(elapsedMs) =>
-                        let offset = HourClock.offsetFrom(h, elapsedMs);
-                        if (offset == base) Ok(())
-                        else Err(Violation.HourElapsedOffset(lap, base, offset))
-                }
-        }
-
-    def hourUnparseableOf(lap: RawLap): Option[Violation] =
-        match lap#hour {
-            case Err(raw) => Some(Violation.HourUnparseable(lap, raw))
-            case Ok(_)    => None
+        match Duration.toMillis(lap#elapsed) {
+            case None => Ok(())
+            case Some(elapsedMs) =>
+                let offset = HourClock.offsetFrom(lap#hour, elapsedMs);
+                if (offset == base) Ok(())
+                else Err(Violation.HourElapsedOffset(lap, base, offset))
         }
 
     def formatViolation(eventName: String, v: Violation): String =
@@ -197,8 +178,6 @@ mod Cli.Validation {
                 formatExpectedActual(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
                 formatExpectedActual(eventName, lap, "hour-offset", base, offset)
-            case Violation.HourUnparseable(lap, raw) =>
-                "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] hour-unparseable: raw=\"${raw}\""
         }
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.

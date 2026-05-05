@@ -40,7 +40,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#s3#value == Ok(56675));
                 Assert.assertTrue(r#kph == "101.4");
                 Assert.assertTrue(r#elapsed == "6:10.938");
-                Assert.assertTrue(r#hour == Ok(Hour.Hour(39998429)));
+                Assert.assertTrue(r#hour == Hour.Hour(39998429));
                 Assert.assertTrue(r#topSpeed == "88.5");
                 Assert.assertTrue(r#driver#driverName == "Will STEVENS");
                 Assert.assertTrue(r#pitTime == "");

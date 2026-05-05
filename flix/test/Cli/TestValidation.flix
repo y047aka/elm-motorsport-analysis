@@ -22,7 +22,6 @@ mod Cli.TestValidation {
         case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
         case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber
         case Violation.HourElapsedOffset(lap, _, _) => lap#car#carNumber
-        case Violation.HourUnparseable(lap, _)      => lap#car#carNumber
     }
 
     def isSectorSum(v: Violation): Bool = match v {
@@ -38,11 +37,6 @@ mod Cli.TestValidation {
     def isHourElapsedOffset(v: Violation): Bool = match v {
         case Violation.HourElapsedOffset(_, _, _) => true
         case _                                    => false
-    }
-
-    def isHourUnparseable(v: Violation): Bool = match v {
-        case Violation.HourUnparseable(_, _) => true
-        case _                               => false
     }
 
     @Test
@@ -159,20 +153,6 @@ mod Cli.TestValidation {
         Assert.assertTrue(not List.isEmpty(car8Issues))
 
     @Test
-    def testHourUnparseableReported(): Unit \ Assert =
-        // lap 2 has unparseable hour ("not-a-time") — should produce HourUnparseable
-        let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "not-a-time");
-        let violations = Validation.detect(l1 :: l2 :: Nil)
-            |> List.filter(isHourUnparseable);
-        Assert.assertTrue(List.length(violations) == 1);
-        match List.head(violations) {
-            case Some(Violation.HourUnparseable(_, raw)) =>
-                Assert.assertTrue(raw == "not-a-time")
-            case _ => Assert.assertTrue(false)
-        }
-
-    @Test
     def testRaceWideBaselineIsolatesBadFirstLap(): Unit \ Assert =
         // The race-wide baseline is taken from the first valid row in the
         // whole CSV, so even if car "8" lap 1's hour is 1 ms off, car "7"
@@ -234,15 +214,12 @@ mod Cli.TestValidation {
         }
 
     @Test
-    def testHourUnparseableRendersRawString(): Unit \ Assert =
-        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "garbage");
-        let messages = Validation.validate("test", lap :: Nil)
-            |> List.filter(m -> String.contains({substr = "hour-unparseable"}, m));
-        Assert.assertTrue(List.length(messages) == 1);
-        match List.head(messages) {
-            case Some(msg) =>
-                Assert.assertTrue(String.contains({substr = "raw=\"garbage\""}, msg))
-            case None => Assert.assertTrue(false)
+    def testHourUnparseableFailsDecode(): Unit \ Assert =
+        let row = "7;1;1;2:00.000;0;;30.000;0;60.000;0;30.000;0;100;2:00.000;garbage;0:30.000;0:60.000;0:30.000;200;Driver;;HYPERCAR;H;Team;Maker;GF;30.000;60.000;30.000;";
+        let csv = header() + "\n" + row;
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
         }
 
 }
