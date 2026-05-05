@@ -33,13 +33,20 @@ mod RawLap {
         kph = String,
         elapsed = String,
         hour = HourCell,
+        s1Large = Sector,
+        s2Large = Sector,
+        s3Large = Sector,
         topSpeed = String,
         driverName = String,
         pitTime = String,
         class = String,
         group = String,
         team = String,
-        manufacturer = String
+        manufacturer = String,
+        flagAtFl = String,
+        s1Seconds = String,
+        s2Seconds = String,
+        s3Seconds = String
     }
 
     /// Decoder for a WEC-format lap row. The CSV is semicolon-separated
@@ -53,7 +60,9 @@ mod RawLap {
             carNumber -> driverNumber -> lapNumber -> lapTime -> lapImprovement ->
             crossingFinishLineInPit -> s1 -> s1Improvement -> s2 -> s2Improvement ->
             s3 -> s3Improvement -> kph -> elapsed -> hour ->
+            s1Large -> s2Large -> s3Large ->
             topSpeed -> driverName -> pitTime -> class -> group -> team -> manufacturer ->
+            flagAtFl -> s1Seconds -> s2Seconds -> s3Seconds ->
                 {
                     carNumber = carNumber,
                     driverNumber = driverNumber,
@@ -70,13 +79,20 @@ mod RawLap {
                     kph = kph,
                     elapsed = elapsed,
                     hour = hour,
+                    s1Large = s1Large,
+                    s2Large = s2Large,
+                    s3Large = s3Large,
                     topSpeed = topSpeed,
                     driverName = driverName,
                     pitTime = pitTime,
                     class = class,
                     group = group,
                     team = team,
-                    manufacturer = manufacturer
+                    manufacturer = manufacturer,
+                    flagAtFl = flagAtFl,
+                    s1Seconds = s1Seconds,
+                    s2Seconds = s2Seconds,
+                    s3Seconds = s3Seconds
                 }
         )
             |> Decode.pipeline(stringField("NUMBER"))
@@ -94,6 +110,9 @@ mod RawLap {
             |> Decode.pipeline(stringField("KPH"))
             |> Decode.pipeline(Decode.field("ELAPSED", Decode.map(Duration.normalize, Decode.string())))
             |> Decode.pipeline(Decode.field("HOUR", Decode.map(HourClock.parse, Decode.string())))
+            |> Decode.pipeline(Decode.field("S1_LARGE", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(Decode.field("S2_LARGE", Decode.map(parseSector, Decode.string())))
+            |> Decode.pipeline(Decode.field("S3_LARGE", Decode.map(parseSector, Decode.string())))
             |> Decode.pipeline(Decode.field("TOP_SPEED", Decode.map(stripTrailingDotZero, Decode.string())))
             |> Decode.pipeline(stringField("DRIVER_NAME"))
             |> Decode.pipeline(Decode.field("PIT_TIME", Decode.map(Duration.normalize, Decode.string())))
@@ -101,6 +120,10 @@ mod RawLap {
             |> Decode.pipeline(stringField("GROUP"))
             |> Decode.pipeline(stringField("TEAM"))
             |> Decode.pipeline(stringField("MANUFACTURER"))
+            |> Decode.pipeline(stringField("FLAG_AT_FL"))
+            |> Decode.pipeline(stringField("S1_SECONDS"))
+            |> Decode.pipeline(stringField("S2_SECONDS"))
+            |> Decode.pipeline(stringField("S3_SECONDS"))
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
@@ -119,6 +142,9 @@ mod RawLap {
             ("kph",                     kphValue(rawLap#kph)) ::
             ("elapsed",                 JsonString(rawLap#elapsed)) ::
             ("hour",                    hourJson(rawLap#hour)) ::
+            ("s1Large",                 sectorJson(rawLap#s1Large)) ::
+            ("s2Large",                 sectorJson(rawLap#s2Large)) ::
+            ("s3Large",                 sectorJson(rawLap#s3Large)) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
             ("driverName",              JsonString(rawLap#driverName)) ::
             ("pitTime",                 JsonString(rawLap#pitTime)) ::
@@ -126,6 +152,10 @@ mod RawLap {
             ("group",                   JsonString(rawLap#group)) ::
             ("team",                    JsonString(rawLap#team)) ::
             ("manufacturer",            JsonString(rawLap#manufacturer)) ::
+            ("flagAtFl",                JsonString(rawLap#flagAtFl)) ::
+            ("s1Seconds",               JsonString(rawLap#s1Seconds)) ::
+            ("s2Seconds",               JsonString(rawLap#s2Seconds)) ::
+            ("s3Seconds",               JsonString(rawLap#s3Seconds)) ::
             Nil
         )
 
