@@ -235,24 +235,21 @@ mod RawLap {
             |> Decode.pipeline(improvementField(improvementName))
             |> Decode.andThen(parts -> match parts {
                 case (value, large, seconds, improvement) =>
-                    Decode.fromResult(
-                        checkSectorConsistency(name, value, large, seconds)
-                            |> Result.map(_ -> { value = value, improvement = improvement })
-                    )
+                    Decode.fromResult(checkSectorConsistency(name, value, large, seconds, improvement))
             })
 
     /// Blank cells are skipped, so a row with all three blank is treated
     /// as consistent. Unparseable `S_SECONDS` fails the decode.
-    def checkSectorConsistency(name: String, valueMs: Option[Duration], largeMs: Option[Duration], secondsRaw: String): Result[String, Unit] =
+    def checkSectorConsistency(name: String, valueMs: Option[Duration], largeMs: Option[Duration], secondsRaw: String, improvement: Improvement): Result[String, RawSector] =
         match secondsToMillis(name, secondsRaw) {
             case Err(e)       => Err(e)
             case Ok(secondsMs) =>
                 let observed = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
                 match observed {
-                    case Nil           => Ok(())
+                    case Nil           => Ok({ value = valueMs, improvement = improvement })
                     case first :: rest =>
                         if (List.forAll(x -> x == first, rest))
-                            Ok(())
+                            Ok({ value = valueMs, improvement = improvement })
                         else
                             Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
                 }
