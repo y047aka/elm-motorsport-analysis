@@ -22,7 +22,7 @@ mod Motorsport.TestMetadata {
             lapNumber               = lapNumber,
             lapTime                 = Duration.fromMillis(90000),
             lapImprovement          = RawLap.Improvement.None,
-            crossingFinishLineInPit = "",
+            crossingFinishLineInPit = false,
             s1                      = { value = None, improvement = RawLap.Improvement.None },
             s2                      = { value = None, improvement = RawLap.Improvement.None },
             s3                      = { value = None, improvement = RawLap.Improvement.None },

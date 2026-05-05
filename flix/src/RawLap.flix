@@ -67,7 +67,7 @@ mod RawLap {
         lapNumber = Int32,
         lapTime = Duration,
         lapImprovement = Improvement,
-        crossingFinishLineInPit = String,
+        crossingFinishLineInPit = Bool,
         s1 = RawSector,
         s2 = RawSector,
         s3 = RawSector,
@@ -113,7 +113,7 @@ mod RawLap {
             |> Decode.pipeline(intField("LAP_NUMBER"))
             |> Decode.pipeline(durationField("LAP_TIME"))
             |> Decode.pipeline(improvementField("LAP_IMPROVEMENT"))
-            |> Decode.pipeline(stringField("CROSSING_FINISH_LINE_IN_PIT"))
+            |> Decode.pipeline(boxField("CROSSING_FINISH_LINE_IN_PIT"))
             |> Decode.pipeline(sectorDecoder("S1", "S1_LARGE", "S1_SECONDS", "S1_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S2", "S2_LARGE", "S2_SECONDS", "S2_IMPROVEMENT"))
             |> Decode.pipeline(sectorDecoder("S3", "S3_LARGE", "S3_SECONDS", "S3_IMPROVEMENT"))
@@ -159,7 +159,7 @@ mod RawLap {
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
-            ("crossingFinishLineInPit", JsonString(rawLap#crossingFinishLineInPit)) ::
+            ("crossingFinishLineInPit", JsonString(if (rawLap#crossingFinishLineInPit) "B" else "")) ::
             ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
             ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
             ("s2",                      optionalDurationJson(rawLap#s2#value)) ::
@@ -249,6 +249,14 @@ mod RawLap {
             case "3" => Ok(Improvement.OverallBest)
             case _   => Err("${name}: expected 0/1/2/3 but got \"${s}\"")
         }
+
+    /// "B" (Box) → true, blank → false, anything else fails decode.
+    def boxField(name: String): Decoder[Bool] =
+        stringField(name) |> Decode.andThen(s -> match s {
+            case "B" => Decode.succeed(true)
+            case ""  => Decode.succeed(false)
+            case _   => Decode.fail("${name}: expected \"B\" or blank but got \"${s}\"")
+        })
 
     def flagField(name: String): Decoder[Flag] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))

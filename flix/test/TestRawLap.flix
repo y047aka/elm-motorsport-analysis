@@ -34,7 +34,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#lapNumber == 3);
                 Assert.assertTrue(r#lapTime == Duration.fromMillis(161963));
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
-                Assert.assertTrue(r#crossingFinishLineInPit == "");
+                Assert.assertTrue(r#crossingFinishLineInPit == false);
                 Assert.assertTrue(r#s1#value == Some(Duration.fromMillis(41805)));
                 Assert.assertTrue(r#s1#improvement == RawLap.Improvement.None);
                 Assert.assertTrue(r#s2#value == Some(Duration.fromMillis(63483)));
