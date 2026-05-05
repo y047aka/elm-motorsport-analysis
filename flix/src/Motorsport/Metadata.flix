@@ -44,7 +44,7 @@ mod Motorsport.Metadata {
         // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
         let car: Car = {
             carNumber    = lap#car#carNumber,
-            drivers      = lap#driver#driverName :: Nil,
+            drivers      = lap#driver#name :: Nil,
             class        = lap#car#class,
             group        = lap#car#group,
             team         = lap#car#team,
@@ -53,7 +53,7 @@ mod Motorsport.Metadata {
         { car = car, lap1Elapsed = lap1Elapsed(lap) }
 
     def updateBuildWithLap(build: CarBuild, lap: RawLap): CarBuild =
-        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driver#driverName) | build#car };
+        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driver#name) | build#car };
         let newLap1 = match build#lap1Elapsed {
             case Some(_) => build#lap1Elapsed
             case None    => lap1Elapsed(lap)

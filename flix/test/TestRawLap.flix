@@ -30,7 +30,7 @@ mod TestRawLap {
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
                 Assert.assertTrue(r#car#carNumber == "12");
-                Assert.assertTrue(r#driver#driverNumber == 1);
+                Assert.assertTrue(r#driver#number == 1);
                 Assert.assertTrue(r#lapNumber == 3);
                 Assert.assertTrue(r#lapTime == Duration.fromMillis(161963));
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
@@ -43,7 +43,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#elapsed == Duration.fromMillis(370938));
                 Assert.assertTrue(r#hour == Hour.Hour(39998429));
                 Assert.assertTrue(r#topSpeed == "88.5");
-                Assert.assertTrue(r#driver#driverName == "Will STEVENS");
+                Assert.assertTrue(r#driver#name == "Will STEVENS");
                 Assert.assertTrue(r#pitTime == None);
                 Assert.assertTrue(r#car#class == "HYPERCAR");
                 Assert.assertTrue(r#car#group == "H");
@@ -108,7 +108,7 @@ mod TestRawLap {
                 match List.head(records) {
                     case Some(r) =>
                         Assert.assertTrue(r#car#carNumber == "12");
-                        Assert.assertTrue(r#driver#driverNumber == 1);
+                        Assert.assertTrue(r#driver#number == 1);
                         Assert.assertTrue(r#car#group == "H");
                         Assert.assertTrue(r#car#manufacturer == "Porsche")
                     case None => Assert.assertTrue(false)

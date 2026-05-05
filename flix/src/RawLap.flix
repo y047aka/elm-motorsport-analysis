@@ -42,8 +42,8 @@ mod RawLap {
     }
 
     pub type alias RawDriver = {
-        driverNumber = Int32,
-        driverName = String
+        number = Int32,
+        name = String
     }
 
     pub type alias RawLap = {
@@ -128,10 +128,10 @@ mod RawLap {
 
     def driverDecoder(): Decoder[RawDriver] =
         Decode.intoRecord(
-            driverNumber -> driverName ->
+            number -> name ->
                 {
-                    driverNumber = driverNumber,
-                    driverName = driverName
+                    number = number,
+                    name = name
                 }
         )
             |> Decode.pipeline(intField("DRIVER_NUMBER"))
@@ -140,7 +140,7 @@ mod RawLap {
     pub def toJson(rawLap: RawLap): Json.JsonValue =
         JsonObject(
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
-            ("driverNumber",            JsonInt(rawLap#driver#driverNumber)) ::
+            ("driverNumber",            JsonInt(rawLap#driver#number)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
             ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
             ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
@@ -155,7 +155,7 @@ mod RawLap {
             ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
             ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
             ("topSpeed",                JsonString(rawLap#topSpeed)) ::
-            ("driverName",              JsonString(rawLap#driver#driverName)) ::
+            ("driverName",              JsonString(rawLap#driver#name)) ::
             ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
             ("class",                   JsonString(rawLap#car#class)) ::
             ("group",                   JsonString(rawLap#car#group)) ::

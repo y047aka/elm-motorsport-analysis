@@ -16,8 +16,8 @@ mod Motorsport.TestMetadata {
                 manufacturer = manufacturer
             },
             driver = {
-                driverNumber = 1,
-                driverName   = driverName
+                number = 1,
+                name   = driverName
             },
             lapNumber               = lapNumber,
             lapTime                 = Duration.fromMillis(90000),
