@@ -112,10 +112,9 @@ mod Cli.Validation {
 
     /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).
     /// Each lap updates `running = sum(lapTime[1..=n])` and is flagged if
-    /// `elapsed` disagrees. Blank/unparseable lapTime and elapsed are
-    /// treated as 0 ms (matches Rust's behaviour). Once a drift starts,
-    /// every subsequent lap is reported — noisier than adjacent-diff, but
-    /// catches compensating drift.
+    /// `elapsed` disagrees. Once a drift starts, every subsequent lap is
+    /// reported — noisier than adjacent-diff, but catches compensating
+    /// drift.
     def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
