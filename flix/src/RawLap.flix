@@ -24,13 +24,12 @@ mod RawLap {
         case OverallBest
     }
 
-    /// Per-sector data bundling the four CSV columns describing one
-    /// sector (S1/S2/S3): the parsed time, the long-form duplicate, the
-    /// raw seconds-only column, and the improvement flag.
+    /// Per-sector data parsed from the four CSV columns describing one
+    /// sector (S/S_LARGE/S_SECONDS/S_IMPROVEMENT). The three time columns
+    /// are cross-checked at decode time but only the canonical value is
+    /// retained.
     pub type alias RawSector = {
         value = Option[Duration],
-        large = Option[Duration],
-        seconds = String,
         improvement = Improvement
     }
 
@@ -223,32 +222,31 @@ mod RawLap {
 
     /// Asserts the invariant that `S`, `S_LARGE`, and `S_SECONDS` encode
     /// the same elapsed time, failing the decode otherwise so an
-    /// unfamiliar CSV layout surfaces immediately.
+    /// unfamiliar CSV layout surfaces immediately. Only the canonical
+    /// value (and improvement flag) survive into RawSector.
     def sectorDecoder(name: String, largeName: String, secondsName: String, improvementName: String): Decoder[RawSector] =
         Decode.intoRecord(
             value -> large -> seconds -> improvement ->
-                {
-                    value = value,
-                    large = large,
-                    seconds = seconds,
-                    improvement = improvement
-                }
+                (value, large, seconds, improvement)
         )
             |> Decode.pipeline(optionalDurationField(name))
             |> Decode.pipeline(optionalDurationField(largeName))
             |> Decode.pipeline(stringField(secondsName))
             |> Decode.pipeline(improvementField(improvementName))
-            |> Decode.andThen(sector ->
-                Decode.fromResult(checkSectorConsistency(name, sector) |> Result.map(_ -> sector)))
+            |> Decode.andThen(parts -> match parts {
+                case (value, large, seconds, improvement) =>
+                    Decode.fromResult(
+                        checkSectorConsistency(name, value, large, seconds)
+                            |> Result.map(_ -> { value = value, improvement = improvement })
+                    )
+            })
 
     /// Blank cells are skipped, so a row with all three blank is treated
     /// as consistent. Unparseable `S_SECONDS` fails the decode.
-    def checkSectorConsistency(name: String, s: RawSector): Result[String, Unit] =
-        match secondsToMillis(name, s#seconds) {
+    def checkSectorConsistency(name: String, valueMs: Option[Duration], largeMs: Option[Duration], secondsRaw: String): Result[String, Unit] =
+        match secondsToMillis(name, secondsRaw) {
             case Err(e)       => Err(e)
             case Ok(secondsMs) =>
-                let valueMs  = s#value;
-                let largeMs  = s#large;
                 let observed = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
                 match observed {
                     case Nil           => Ok(())
