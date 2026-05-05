@@ -2,6 +2,7 @@ mod TestRawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.{FieldNames, Error}
+    use Util.Duration
     use Util.HourClock.Hour
     use Util.Json
     use RawLap.RawLap
@@ -31,15 +32,15 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#carNumber == "12");
                 Assert.assertTrue(r#driver#driverNumber == 1);
                 Assert.assertTrue(r#lapNumber == 3);
-                Assert.assertTrue(r#lapTime == 161963);
+                Assert.assertTrue(r#lapTime == Duration.fromMillis(161963));
                 Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == "");
-                Assert.assertTrue(r#s1#value == Some(41805));
+                Assert.assertTrue(r#s1#value == Some(Duration.fromMillis(41805)));
                 Assert.assertTrue(r#s1#improvement == RawLap.Improvement.None);
-                Assert.assertTrue(r#s2#value == Some(63483));
-                Assert.assertTrue(r#s3#value == Some(56675));
+                Assert.assertTrue(r#s2#value == Some(Duration.fromMillis(63483)));
+                Assert.assertTrue(r#s3#value == Some(Duration.fromMillis(56675)));
                 Assert.assertTrue(r#kph == "101.4");
-                Assert.assertTrue(r#elapsed == 370938);
+                Assert.assertTrue(r#elapsed == Duration.fromMillis(370938));
                 Assert.assertTrue(r#hour == Hour.Hour(39998429));
                 Assert.assertTrue(r#topSpeed == "88.5");
                 Assert.assertTrue(r#driver#driverName == "Will STEVENS");
@@ -84,7 +85,7 @@ mod TestRawLap {
         // PIT_TIME "0:01:41.031" is parsed to ms and re-rendered as "1:41.031"
         // by the decoder + JSON encoder pipeline.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;0:01:41.031;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
-            case Ok(r)  => Assert.assertTrue(r#pitTime == Some(101031))
+            case Ok(r)  => Assert.assertTrue(r#pitTime == Some(Duration.fromMillis(101031)))
             case Err(_) => Assert.assertTrue(false)
         }
 

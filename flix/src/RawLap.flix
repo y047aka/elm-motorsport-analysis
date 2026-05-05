@@ -175,23 +175,23 @@ mod RawLap {
     def durationField(name: String): Decoder[Duration] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseDuration(name, s)))
 
-    /// Numeric input → `ms`. Blank or unparseable input fails the decode.
+    /// Numeric input → `Duration`. Blank or unparseable input fails the decode.
     def parseDuration(name: String, raw: String): Result[String, Duration] =
-        match Duration.toMillis(raw) {
-            case Some(ms) => Ok(ms)
-            case None     => Err("${name}: expected duration but got \"${raw}\"")
+        match Duration.fromString(raw) {
+            case Some(d) => Ok(d)
+            case None    => Err("${name}: expected duration but got \"${raw}\"")
         }
 
     def optionalDurationField(name: String): Decoder[Option[Duration]] =
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseOptionalDuration(name, s)))
 
-    /// Blank → `None`. Numeric input → `Some(ms)`. Anything else fails the
+    /// Blank → `None`. Numeric input → `Some(d)`. Anything else fails the
     /// decode so unfamiliar formatting surfaces immediately.
     def parseOptionalDuration(name: String, raw: String): Result[String, Option[Duration]] =
         if (raw == "") Ok(None)
-        else match Duration.toMillis(raw) {
-            case Some(ms) => Ok(Some(ms))
-            case None     => Err("${name}: expected duration but got \"${raw}\"")
+        else match Duration.fromString(raw) {
+            case Some(d) => Ok(Some(d))
+            case None    => Err("${name}: expected duration but got \"${raw}\"")
         }
 
     def intField(name: String): Decoder[Int32] =
@@ -258,10 +258,10 @@ mod RawLap {
                     Err("${name}: value/large/seconds disagree (value=${valueMs}, large=${largeMs}, seconds=${secondsMs})")
         }
 
-    def secondsToMillis(raw: String): Option[Int32] =
+    def secondsToMillis(raw: String): Option[Duration] =
         if (raw == "") None
         else match Float64.fromString(raw) {
-            case Some(f) => Float64.tryToInt32(Float64.round(f * 1000.0))
+            case Some(f) => Float64.tryToInt32(Float64.round(f * 1000.0)) |> Option.map(Duration.fromMillis)
             case None    => None
         }
 

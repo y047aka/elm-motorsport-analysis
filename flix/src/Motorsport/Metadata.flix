@@ -1,5 +1,6 @@
 mod Motorsport.Metadata {
 
+    use Util.Duration.Duration
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
@@ -25,7 +26,7 @@ mod Motorsport.Metadata {
 
     type alias CarBuild = {
         car         = Car,
-        lap1Elapsed = Option[Int32]
+        lap1Elapsed = Option[Duration]
     }
 
     def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
@@ -59,7 +60,7 @@ mod Motorsport.Metadata {
         };
         { car = updatedCar, lap1Elapsed = newLap1 }
 
-    def lap1Elapsed(lap: RawLap): Option[Int32] =
+    def lap1Elapsed(lap: RawLap): Option[Duration] =
         if (lap#lapNumber == 1) Some(lap#elapsed)
         else None
 

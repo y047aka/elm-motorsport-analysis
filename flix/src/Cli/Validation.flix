@@ -29,16 +29,16 @@ mod Cli.Validation {
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
-        /// Args: lap / lapTime ms / sector sum ms / labels of blank sectors.
-        case SectorSum(RawLap, Int32, Int32, List[String])
+        /// Args: lap / lapTime / sector sum / labels of blank sectors.
+        case SectorSum(RawLap, Duration, Duration, List[String])
 
         /// `elapsed[n] != sum(lapTime[1..=n])`. Cumulative-sum based, so
         /// every row from the first drift onward is reported (sticky drift).
-        /// Args: lap / expected = running sum (ms) / actual = elapsed (ms).
-        case ElapsedDrift(RawLap, Int32, Int32)
+        /// Args: lap / expected = running sum / actual = elapsed.
+        case ElapsedDrift(RawLap, Duration, Duration)
 
         /// `(hour - elapsed) mod 24h` does not match the baseline.
-        /// Args: lap / baseline offset (ms) / actual offset (ms).
+        /// Args: lap / baseline offset (ms, signed) / actual offset (ms, signed).
         case HourElapsedOffset(RawLap, Int32, Int32)
     }
 
@@ -93,23 +93,22 @@ mod Cli.Validation {
         })
 
     def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
-        let lapMs = lap#lapTime;
-        let (s1Ms, s1Blank) = sectorMs(lap#s1#value, "s1");
-        let (s2Ms, s2Blank) = sectorMs(lap#s2#value, "s2");
-        let (s3Ms, s3Blank) = sectorMs(lap#s3#value, "s3");
-        let sum = s1Ms + s2Ms + s3Ms;
-        if (sum == lapMs) Ok(())
+        let lapTime = lap#lapTime;
+        let (s1, s1Blank) = sectorOrZero(lap#s1#value, "s1");
+        let (s2, s2Blank) = sectorOrZero(lap#s2#value, "s2");
+        let (s3, s3Blank) = sectorOrZero(lap#s3#value, "s3");
+        let sum = Duration.add(Duration.add(s1, s2), s3);
+        if (sum == lapTime) Ok(())
         else
             let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
-            Err(Violation.SectorSum(lap, lapMs, sum, blanks))
+            Err(Violation.SectorSum(lap, lapTime, sum, blanks))
 
-    /// Unpacks an Option[Duration] sector into (ms, blank-label-or-None).
-    /// None is treated as 0 ms and the field name is returned so it can be
-    /// attached to the violation message.
-    def sectorMs(sector: Option[Duration], name: String): (Duration, Option[String]) =
+    /// Unpacks an Option[Duration] sector. None is treated as zero and the
+    /// field name is returned so it can be attached to the violation message.
+    def sectorOrZero(sector: Option[Duration], name: String): (Duration, Option[String]) =
         match sector {
-            case Some(ms) => (ms, None)
-            case None     => (0, Some(name))
+            case Some(d) => (d, None)
+            case None    => (Duration.zero(), Some(name))
         }
 
     /// Cumulative-sum elapsed-drift check (equivalent to Rust's `scan`).
@@ -122,13 +121,12 @@ mod Cli.Validation {
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
-                    let lapMs   = lap#lapTime;
-                    let newRun  = running + lapMs;
+                    let newRun  = Duration.add(running, lap#lapTime);
                     let elapsed = lap#elapsed;
                     if (newRun == elapsed) (newRun, acc)
                     else (newRun, Violation.ElapsedDrift(lap, newRun, elapsed) :: acc)
             },
-            (0, Nil)
+            (Duration.zero(), Nil)
         );
         match folded {
             case (_, acc) => List.reverse(acc)
@@ -140,36 +138,39 @@ mod Cli.Validation {
         match laps {
             case Nil         => Nil
             case lap :: _ =>
-                let base = HourClock.offsetFrom(lap#hour, lap#elapsed);
+                let base = HourClock.offsetFrom(lap#hour, Duration.millis(lap#elapsed));
                 laps |> List.filterMap(l -> resultToOption(checkHourLine(l, base)))
         }
 
     def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
-        let offset = HourClock.offsetFrom(lap#hour, lap#elapsed);
+        let offset = HourClock.offsetFrom(lap#hour, Duration.millis(lap#elapsed));
         if (offset == base) Ok(())
         else Err(Violation.HourElapsedOffset(lap, base, offset))
 
     def formatViolation(eventName: String, v: Violation): String =
         match v {
-            case Violation.SectorSum(lap, lapMs, sum, blanks) =>
+            case Violation.SectorSum(lap, lapTime, sum, blanks) =>
                 let suffix =
                     if (List.isEmpty(blanks)) ""
                     else " (blank: ${List.join(",", blanks)})";
-                formatExpectedActual(eventName, lap, "sector-sum", lapMs, sum) + suffix
+                formatDurationPair(eventName, lap, "sector-sum", lapTime, sum) + suffix
             case Violation.ElapsedDrift(lap, expected, actual) =>
-                formatExpectedActual(eventName, lap, "elapsed-drift", expected, actual)
+                formatDurationPair(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
-                formatExpectedActual(eventName, lap, "hour-offset", base, offset)
+                formatSignedMsPair(eventName, lap, "hour-offset", base, offset)
         }
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
-    def formatExpectedActual(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
-        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatMs(expected)} (${expected}ms) actual=${formatMs(actual)} (${actual}ms)"
+    def formatDurationPair(eventName: String, lap: RawLap, kind: String, expected: Duration, actual: Duration): String =
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${expected} (${Duration.millis(expected)}ms) actual=${actual} (${Duration.millis(actual)}ms)"
 
-    def formatMs(ms: Int32): String =
-        if (ms < 0) "-" + Duration.format(0 - ms)
-        else Duration.format(ms)
+    def formatSignedMsPair(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
+
+    def formatSignedMs(ms: Int32): String =
+        if (ms < 0) "-" + Duration.format(Duration.fromMillis(0 - ms))
+        else Duration.format(Duration.fromMillis(ms))
 
 }

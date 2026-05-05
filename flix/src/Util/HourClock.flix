@@ -1,6 +1,6 @@
 /// Wall-clock time-of-day in milliseconds since midnight.
 ///
-/// Invariant: 0 <= ms < DAY_MS. `Util.Duration.toMillis` accepts `H:MM:SS`,
+/// Invariant: 0 <= ms < DAY_MS. `Util.Duration.fromString` accepts `H:MM:SS`,
 /// `M:SS`, and `SS` interchangeably; Hour, in contrast, only accepts strict
 /// time-of-day values with two colons and a result below 24h.
 ///
@@ -26,8 +26,9 @@ mod Util.HourClock {
         let parts = String.split({regex = ":"}, trimmed);
         if (List.length(parts) != 3) Err(raw)
         else
-            match Duration.toMillis(trimmed) {
-                case Some(ms) =>
+            match Duration.fromString(trimmed) {
+                case Some(d) =>
+                    let ms = Duration.millis(d);
                     if (ms >= 0 and ms < dayMs()) Ok(Hour.Hour(ms))
                     else Err(raw)
                 case None => Err(raw)

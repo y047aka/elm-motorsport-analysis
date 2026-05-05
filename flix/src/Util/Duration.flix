@@ -1,21 +1,39 @@
 mod Util.Duration {
 
-    pub type alias Duration = Int32
+    pub enum Duration with Eq, Order {
+        case Duration(Int32)
+    }
 
-    pub def toMillis(s: String): Option[Int32] =
+    instance ToString[Duration] {
+        pub def toString(d: Duration): String = Util.Duration.format(d)
+    }
+
+    pub def zero(): Duration = Duration.Duration(0)
+
+    pub def fromMillis(ms: Int32): Duration = Duration.Duration(ms)
+
+    pub def millis(d: Duration): Int32 =
+        let Duration.Duration(ms) = d;
+        ms
+
+    pub def add(a: Duration, b: Duration): Duration =
+        Duration.Duration(millis(a) + millis(b))
+
+    pub def fromString(s: String): Option[Duration] =
         if (String.isEmpty(s)) None
         else match String.split({regex = "\\."}, s) {
             case wholePart :: msPart :: Nil =>
                 forM(
                     seconds <- parseHmsToSeconds(wholePart);
                     millis  <- Int32.fromString(padFractionalToMs(msPart))
-                ) yield seconds * 1000 + millis
+                ) yield Duration.Duration(seconds * 1000 + millis)
             case wholeOnly :: Nil =>
-                Option.map(secs -> secs * 1000, parseHmsToSeconds(wholeOnly))
+                Option.map(secs -> Duration.Duration(secs * 1000), parseHmsToSeconds(wholeOnly))
             case _ => None
         }
 
-    pub def format(ms: Int32): String =
+    pub def format(d: Duration): String =
+        let ms       = millis(d);
         let totalSec = ms / 1000;
         let msPart   = ms - totalSec * 1000;
         let h        = totalSec / 3600;
