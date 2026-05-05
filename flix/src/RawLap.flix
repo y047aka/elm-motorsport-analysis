@@ -142,9 +142,6 @@ mod RawLap {
             Nil
         )
 
-    pub def toJsonArray(rawLaps: List[RawLap]): Json.JsonValue =
-        JsonArray(List.map(toJson, rawLaps))
-
     def carDecoder(): Decoder[RawCar] =
         Decode.intoRecord(
             carNumber -> class -> group -> team -> manufacturer ->
