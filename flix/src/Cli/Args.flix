@@ -25,26 +25,30 @@ mod Cli.Args {
         } :: Nil
 
     pub def parse(args: List[String]): Result[ArgsError, ParsedArgs] =
+        forM(
+            result <- getOptResult(args);
+            out    <- extractOutput(result#options);
+            input  <- extractInput(result#nonOptions)
+        ) yield { inputPath = input, outputFile = out }
+
+    def getOptResult(args: List[String]): Result[ArgsError, {options = List[CliOption], nonOptions = List[String]}] =
         match GetOpt.getOpt(GetOpt.ArgOrder.Permute, optionDescrs(), args) {
-            case Validation.Failure(errors) =>
-                Err(ArgsError.ParseErrors(Nec.toList(errors)))
-            case Validation.Success(result) =>
-                let outputs = List.filterMap(opt -> match opt {
-                    case CliOption.Output(p) => Some(p)
-                }, result#options);
-                let outputFile = match outputs {
-                    case Nil      => Ok(None)
-                    case p :: Nil => Ok(Some(p))
-                    case _        => Err(ArgsError.DuplicateOutput)
-                };
-                Result.flatMap(out ->
-                    match result#nonOptions {
-                        case input :: Nil => Ok({ inputPath = input, outputFile = out })
-                        case Nil          => Err(ArgsError.MissingInputPath)
-                        case extras       => Err(ArgsError.UnexpectedArguments(extras))
-                    },
-                    outputFile
-                )
+            case Validation.Failure(errors) => Err(ArgsError.ParseErrors(Nec.toList(errors)))
+            case Validation.Success(result) => Ok(result)
+        }
+
+    def extractOutput(opts: List[CliOption]): Result[ArgsError, Option[String]] =
+        match opts {
+            case Nil                        => Ok(None)
+            case CliOption.Output(p) :: Nil => Ok(Some(p))
+            case _                          => Err(ArgsError.DuplicateOutput)
+        }
+
+    def extractInput(nonOptions: List[String]): Result[ArgsError, String] =
+        match nonOptions {
+            case input :: Nil => Ok(input)
+            case Nil          => Err(ArgsError.MissingInputPath)
+            case extras       => Err(ArgsError.UnexpectedArguments(extras))
         }
 
     pub def usageInfo(): String =
