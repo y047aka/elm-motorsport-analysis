@@ -10,32 +10,63 @@ mod Util.Json {
         case JsonObject(List[(String, JsonValue)])
     }
 
-    pub def render(value: JsonValue): String =
-        renderWithIndent(0, value)
+    pub def render(value: JsonValue): String = region rc {
+        let sb = StringBuilder.empty(rc);
+        appendValue!(sb, 0, value);
+        StringBuilder.toString(sb)
+    }
 
-    def renderWithIndent(indent: Int32, value: JsonValue): String =
-        let spaces = String.repeat(indent, " ");
-        let inner = String.repeat(indent + 2, " ");
+    def appendValue!(sb: StringBuilder[r], indent: Int32, value: JsonValue): Unit \ r =
         match value {
-            case JsonValue.JsonNull       => "null"
-            case JsonValue.JsonBool(b)    => if (b) "true" else "false"
-            case JsonValue.JsonInt(n)     => "${n}"
-            case JsonValue.JsonFloat(n)   => "${n}"
-            case JsonValue.JsonString(s)  => "\"${escapeString(s)}\""
+            case JsonValue.JsonNull       => StringBuilder.appendString!("null", sb)
+            case JsonValue.JsonBool(b)    => StringBuilder.appendString!(if (b) "true" else "false", sb)
+            case JsonValue.JsonInt(n)     => StringBuilder.appendString!("${n}", sb)
+            case JsonValue.JsonFloat(n)   => StringBuilder.appendString!("${n}", sb)
+            case JsonValue.JsonString(s)  =>
+                StringBuilder.appendString!("\"", sb);
+                StringBuilder.appendString!(escapeString(s), sb);
+                StringBuilder.appendString!("\"", sb)
             case JsonValue.JsonArray(xs)  =>
                 if (List.isEmpty(xs))
-                    "[]"
+                    StringBuilder.appendString!("[]", sb)
                 else
-                    let items = xs |> List.map(x -> "${inner}${renderWithIndent(indent + 2, x)}");
-                    "[\n${List.join(",\n", items)}\n${spaces}]"
+                    let spaces = String.repeat(indent, " ");
+                    let inner = String.repeat(indent + 2, " ");
+                    StringBuilder.appendString!("[\n", sb);
+                    appendSeparated!(sb, ",\n", xs, x -> {
+                        StringBuilder.appendString!(inner, sb);
+                        appendValue!(sb, indent + 2, x)
+                    });
+                    StringBuilder.appendString!("\n", sb);
+                    StringBuilder.appendString!(spaces, sb);
+                    StringBuilder.appendString!("]", sb)
             case JsonValue.JsonObject(kvs) =>
                 if (List.isEmpty(kvs))
-                    "{}"
+                    StringBuilder.appendString!("{}", sb)
                 else
-                    let entries = kvs |> List.map(match (k, v) ->
-                        "${inner}\"${escapeString(k)}\": ${renderWithIndent(indent + 2, v)}"
-                    );
-                    "{\n${List.join(",\n", entries)}\n${spaces}}"
+                    let spaces = String.repeat(indent, " ");
+                    let inner = String.repeat(indent + 2, " ");
+                    StringBuilder.appendString!("{\n", sb);
+                    appendSeparated!(sb, ",\n", kvs, match (k, v) -> {
+                        StringBuilder.appendString!(inner, sb);
+                        StringBuilder.appendString!("\"", sb);
+                        StringBuilder.appendString!(escapeString(k), sb);
+                        StringBuilder.appendString!("\": ", sb);
+                        appendValue!(sb, indent + 2, v)
+                    });
+                    StringBuilder.appendString!("\n", sb);
+                    StringBuilder.appendString!(spaces, sb);
+                    StringBuilder.appendString!("}", sb)
+        }
+
+    def appendSeparated!(sb: StringBuilder[r], sep: String, xs: List[a], f: a -> Unit \ r): Unit \ r =
+        match xs {
+            case Nil       => ()
+            case x :: Nil  => f(x)
+            case x :: rest =>
+                f(x);
+                StringBuilder.appendString!(sep, sb);
+                appendSeparated!(sb, sep, rest, f)
         }
 
     def escapeString(s: String): String =
