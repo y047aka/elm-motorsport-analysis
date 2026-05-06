@@ -9,7 +9,7 @@ def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
-            Console.eprintln("Usage: flix-run <input.csv|dir> [--output <output.json>]");
+            Console.eprintln(Args.usageInfo());
             1
         case Ok(parsed) =>
             match FileTask.resolve(parsed) {
