@@ -2,7 +2,7 @@ module UpdateCarsBenchmark exposing (main)
 
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
-import Fixture.Json as Fixture
+import Fixture.Generated as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car, Status(..))
 import Motorsport.Duration exposing (Duration)
@@ -20,7 +20,7 @@ suite : Benchmark
 suite =
     let
         cars =
-            Fixture.jsonDecoded
+            Fixture.cars
 
         timeLimit =
             calcTimeLimit cars
