@@ -2,9 +2,9 @@ mod Cli.Args {
 
     pub enum ArgsError with ToString {
         case MissingInputPath
-        case MissingOutputValue
+        case UnexpectedArguments(List[String])
         case DuplicateOutput
-        case UnexpectedArgument(String)
+        case ParseErrors(List[String])
     }
 
     pub type alias ParsedArgs = {
@@ -12,41 +12,42 @@ mod Cli.Args {
         outputFile = Option[String]
     }
 
-    enum ParseState {
-        case Ready(Option[String], Option[String])
-        case ExpectingOutputValue(Option[String])
+    enum CliOption {
+        case Output(String)
     }
 
+    def optionDescrs(): List[GetOpt.OptionDescr[CliOption]] =
+        {
+            optionIds     = Nil,
+            optionNames   = "output" :: Nil,
+            argDescriptor = GetOpt.ArgDescr.ReqArg(s -> Some(CliOption.Output(s)), "<file>"),
+            explanation   = "write metadata JSON to <file>"
+        } :: Nil
+
     pub def parse(args: List[String]): Result[ArgsError, ParsedArgs] =
-        let finalState = List.foldLeft((acc, arg) ->
-            Result.flatMap(st -> step(st, arg), acc),
-            Ok(ParseState.Ready(None, None)),
-            args
-        );
-        finalState |> Result.flatMap(resolve)
-
-    def step(state: ParseState, arg: String): Result[ArgsError, ParseState] =
-        match state {
-            case ParseState.ExpectingOutputValue(input) =>
-                Ok(ParseState.Ready(input, Some(arg)))
-            case ParseState.Ready(input, None) if arg == "--output" =>
-                Ok(ParseState.ExpectingOutputValue(input))
-            case ParseState.Ready(_, Some(_)) if arg == "--output" =>
-                Err(ArgsError.DuplicateOutput)
-            case ParseState.Ready(None, output) =>
-                Ok(ParseState.Ready(Some(arg), output))
-            case ParseState.Ready(Some(_), _) =>
-                Err(ArgsError.UnexpectedArgument(arg))
+        match GetOpt.getOpt(GetOpt.ArgOrder.Permute, optionDescrs(), args) {
+            case Validation.Failure(errors) =>
+                Err(ArgsError.ParseErrors(Nec.toList(errors)))
+            case Validation.Success(result) =>
+                let outputs = List.filterMap(opt -> match opt {
+                    case CliOption.Output(p) => Some(p)
+                }, result#options);
+                let outputFile = match outputs {
+                    case Nil      => Ok(None)
+                    case p :: Nil => Ok(Some(p))
+                    case _        => Err(ArgsError.DuplicateOutput)
+                };
+                Result.flatMap(out ->
+                    match result#nonOptions {
+                        case input :: Nil => Ok({ inputPath = input, outputFile = out })
+                        case Nil          => Err(ArgsError.MissingInputPath)
+                        case extras       => Err(ArgsError.UnexpectedArguments(extras))
+                    },
+                    outputFile
+                )
         }
 
-    def resolve(state: ParseState): Result[ArgsError, ParsedArgs] =
-        match state {
-            case ParseState.Ready(Some(input), output) =>
-                Ok({ inputPath = input, outputFile = output })
-            case ParseState.Ready(None, _) =>
-                Err(ArgsError.MissingInputPath)
-            case ParseState.ExpectingOutputValue(_) =>
-                Err(ArgsError.MissingOutputValue)
-        }
+    pub def usageInfo(): String =
+        GetOpt.usageInfo("Usage: flix-run <input.csv|dir>", optionDescrs())
 
 }
