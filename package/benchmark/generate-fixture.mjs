@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -15,7 +15,7 @@ if (json.includes('"""')) {
 
 const elm = `module Fixture.Generated exposing (cars)
 
-{-| Auto-generated from ${source.replace(resolve(here, "../.."), "")}.
+{-| Auto-generated from ${relative(resolve(here, "../.."), source)}.
 Do not edit by hand. Run \`node generate-fixture.mjs\` to regenerate.
 -}
 
