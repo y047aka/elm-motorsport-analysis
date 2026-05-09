@@ -49,16 +49,12 @@ mod RawLap {
 
     /// One Le Mans mini-sector observation. `time` is the duration of the
     /// segment between the previous mini-sector marker and this one;
-    /// `elapsed` is the cumulative time from the start of the lap up to
-    /// this marker. Both fields are required to be present together — the
-    /// outer `Option` (in `miniSectors: Option[List[(MiniSectorId,
-    /// Option[RawMiniSector])]]`) carries the "this marker was blank for
-    /// this lap" axis (pit lap, missed loop, track-limits cut). Half-empty
-    /// rows (one of `time`/`elapsed` set, the other blank) are rejected at
-    /// decode time so this representational state stays unreachable.
+    /// `elapsed` is the cumulative time from the start of the lap up to this
+    /// marker. Both are `Option` because the values can be blank in the CSV
+    /// (e.g. on a pit lap or when the timing system missed a marker).
     pub type alias RawMiniSector = {
-        time = Duration,
-        elapsed = Duration
+        time = Option[Duration],
+        elapsed = Option[Duration]
     }
 
     pub type alias RawCar = {
@@ -90,7 +86,7 @@ mod RawLap {
         topSpeed = String,
         pitTime = Option[Duration],
         flagAtFl = Flag,
-        miniSectors = Option[List[(MiniSectorId, Option[RawMiniSector])]]
+        miniSectors = Option[List[(MiniSectorId, RawMiniSector)]]
     }
 
     pub def decoder(): Decoder[RawLap] =
@@ -341,34 +337,21 @@ mod RawLap {
     /// CSVs) and blank values both decode to `None` for that side. When
     /// every entry is `None` for both sides the whole list collapses to
     /// `None` so `toJson` can omit the `miniSectors` key.
-    def miniSectorsDecoder(): Decoder[Option[List[(MiniSectorId, Option[RawMiniSector])]]] =
+    def miniSectorsDecoder(): Decoder[Option[List[(MiniSectorId, RawMiniSector)]]] =
         Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
 
-    def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, Option[RawMiniSector])]] =
+    def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, RawMiniSector)]] =
         Extra.traverse(
             id -> Decode.map(sector -> (id, sector), miniSectorDecoder(id)),
             ids
         )
 
-    /// Decodes one mini-sector. Both columns must agree: both present →
-    /// `Some(record)`, both blank → `None`. A half-empty pair (only one
-    /// of the two columns populated) is rejected with `Decode.fail` so
-    /// the type cannot represent that asymmetric state at all.
-    def miniSectorDecoder(id: MiniSectorId): Decoder[Option[RawMiniSector]] =
+    def miniSectorDecoder(id: MiniSectorId): Decoder[RawMiniSector] =
         let prefix = MiniSector.csvName(id);
-        let pair = Decode.map2(
-            (t, e) -> (t, e),
+        Decode.map2(
+            (time, elapsed) -> { time = time, elapsed = elapsed },
             optionalDurationFromOptionalColumn("${prefix}_time"),
             optionalDurationFromOptionalColumn("${prefix}_elapsed")
-        );
-        Decode.andThen(
-            result -> match result {
-                case (None, None)       => Decode.succeed(None)
-                case (Some(t), Some(e)) => Decode.succeed(Some({ time = t, elapsed = e }))
-                case (Some(_), None)    => Decode.fail("mini-sector ${prefix}: ${prefix}_time present but ${prefix}_elapsed blank")
-                case (None, Some(_))    => Decode.fail("mini-sector ${prefix}: ${prefix}_elapsed present but ${prefix}_time blank")
-            },
-            pair
         )
 
     /// Combines `Decode.optionalField` (header missing → `None`) with
@@ -377,21 +360,26 @@ mod RawLap {
     def optionalDurationFromOptionalColumn(name: String): Decoder[Option[Duration]] =
         Decode.map(Option.flatten, Decode.optionalField(name, optionalDurationField(name)))
 
-    def collapseIfAllNone(list: List[(MiniSectorId, Option[RawMiniSector])]): Option[List[(MiniSectorId, Option[RawMiniSector])]] =
-        let hasAny = List.exists(match (_, opt) -> opt != None, list);
+    def collapseIfAllNone(list: List[(MiniSectorId, RawMiniSector)]): Option[List[(MiniSectorId, RawMiniSector)]] =
+        let hasAny = List.exists(
+            match (_, sector) -> sector#time != None or sector#elapsed != None,
+            list
+        );
         if (hasAny) Some(list) else None
 
-    def miniSectorsToJson(list: List[(MiniSectorId, Option[RawMiniSector])]): Json.JsonValue =
-        let entries = list |> List.filterMap(match (id, opt) -> match opt {
-            case None         => None
-            case Some(sector) => Some((MiniSector.jsonKey(id), miniSectorToJson(sector)))
-        });
+    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Json.JsonValue =
+        let entries = list |> List.filterMap(match (id, sector) ->
+            if (sector#time == None and sector#elapsed == None)
+                None
+            else
+                Some((MiniSector.jsonKey(id), miniSectorToJson(sector)))
+        );
         JsonObject(entries)
 
     def miniSectorToJson(sector: RawMiniSector): Json.JsonValue =
         JsonObject(
-            ("time",    JsonString(Util.Duration.format(sector#time))) ::
-            ("elapsed", JsonString(Util.Duration.format(sector#elapsed))) ::
+            ("time",    optionalDurationJson(sector#time)) ::
+            ("elapsed", optionalDurationJson(sector#elapsed)) ::
             Nil
         )
 
