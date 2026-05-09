@@ -12,19 +12,13 @@
 ///   3. HourElapsedOffset          — across the CSV, `(hour - elapsed) mod 24h` is
 ///                                   constant
 ///   4. MiniSectorSum              — when mini-sectors present, `sum(time) == lapTime`
-///                                   (per row, blank `time` counted as zero).
-///                                   **Skipped on pit laps** (see below).
+///                                   (blank `time` counted as zero).
+///                                   Skipped on pit laps and Ford-chicane track-limits
+///                                   signatures (see below).
 ///   5. MiniSectorElapsedMonotonic — when mini-sectors present, `elapsed` values are
-///                                   strictly increasing in track order (reports each
-///                                   adjacent pair where the second value is less than
-///                                   or equal to the first). Always run even on pit
-///                                   laps — monotonicity is not affected by missing
-///                                   markers because blank `elapsed` entries are
-///                                   skipped without breaking the chain. Equality is
-///                                   treated as a violation: two timing loops cannot
-///                                   physically fire at the same millisecond, and the
-///                                   real Le Mans 2025 dataset never produces an
-///                                   equal-adjacent pair.
+///                                   strictly increasing in track order. Equality is
+///                                   reported (two timing loops cannot fire at the
+///                                   same millisecond). Always run, even on pit laps.
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -36,23 +30,14 @@
 ///     per-car uses first-seen-index to sort the car groups).
 ///   - Mini-sector rules silently skip laps where `miniSectors == None`
 ///     (non-Le Mans rounds, or laps where all 30 source columns were blank).
-///   - **MiniSectorSum is skipped on pit laps** — when a car enters the pits
-///     it bypasses main-line markers (typically FORDOUT and FL_time) so the
-///     sum can never reach lapTime. A pit lap is identified by either
-///     `crossingFinishLineInPit == "B"` (crossed FL inside the pit lane) or
-///     `pitTime != None` (pit-stop duration recorded for this lap).
-///   - **MiniSectorSum is also skipped for known Ford-chicane track-limits
-///     signatures** — when a driver runs off track at a Ford chicane
-///     (track-limits violation), the timing loops inside the bypassed
-///     section go untriggered (SCL1 + FORDOUT for the second chicane,
-///     PITREF + SCL1 for the first). Empirically (Le Mans 2025) these two
-///     adjacent-pair blank patterns are the dominant cause of the remaining
-///     non-pit MiniSectorSum noise (310 of 311 warnings after the pit
-///     skip), concentrated on the front-running hypercars.
-///   - Combined skips (pit lap + track-limits violation) reduce Le Mans
-///     2025 noise from 2240 → 1 MiniSectorSum warning while preserving
-///     genuine timing-loop anomalies (e.g. a wide moment causing FORDOUT +
-///     FL_time to drop while the car was not in the pits).
+///   - **MiniSectorSum pit-lap skip** — pit-entry laps bypass main-line
+///     markers (typically FORDOUT and FL_time) so the sum can never reach
+///     lapTime. Identified by `crossingFinishLineInPit == "B"` or
+///     `pitTime != None`.
+///   - **MiniSectorSum track-limits skip** — running off the Ford chicanes
+///     leaves a known blank pattern (SCL1+FORDOUT for the second chicane,
+///     PITREF+SCL1 for the first). These are the dominant non-pit cause of
+///     residual sum mismatches in Le Mans 2025.
 mod Cli.Validation {
 
     use Util.Duration.Duration
@@ -76,18 +61,14 @@ mod Cli.Validation {
         /// Args: lap / baseline offset (ms, signed) / actual offset (ms, signed).
         case HourElapsedOffset(RawLap, Int32, Int32)
 
-        /// `sum(miniSector.time) != lapTime` for laps with mini-sector data.
+        /// `sum(miniSector.time) != lapTime`.
         /// Args: lap / lapTime / sum / IDs of sub-sectors with blank time
-        /// (in track order). Carry the `MiniSectorId` rather than its
-        /// JSON key so downstream consumers (e.g. `isTrackLimitsPattern`)
-        /// stay type-safe; `formatViolation` calls `MiniSector.jsonKey`
-        /// at the rendering boundary.
+        /// (in track order).
         case MiniSectorSum(RawLap, Duration, Duration, List[MiniSectorId])
 
-        /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent
-        /// pair in track order (only entries where both sides are
-        /// present are compared). Equality is reported because two
-        /// timing loops cannot physically fire at the same millisecond.
+        /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent pair
+        /// in track order. Only entries where both sides are present are
+        /// compared.
         /// Args: lap / prev id / prev elapsed / curr id / curr elapsed.
         case MiniSectorElapsedMonotonic(RawLap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
@@ -212,12 +193,6 @@ mod Cli.Validation {
                 formatLabelledDurationPair(eventName, lap, kind, "prev", prevElapsed, "curr", currElapsed)
         }
 
-    /// Per-lap mini-sector checks. Skipped entirely for laps without
-    /// mini-sector data (`miniSectors == None`). Otherwise emits at most
-    /// one `MiniSectorSum` plus zero or more `MiniSectorElapsedMonotonic`
-    /// violations. The `MiniSectorSum` rule is skipped on pit laps since
-    /// the car bypasses some main-line markers (see the module-level
-    /// docstring).
     def checkMiniSectors(lap: RawLap): List[Violation] =
         match lap#miniSectors {
             case None       => Nil
@@ -229,10 +204,6 @@ mod Cli.Validation {
                 List.append(sumViol, monoViol)
         }
 
-    /// True when the car was either flagged as crossing the finish line
-    /// inside the pit lane or had a pit-stop duration recorded for this
-    /// lap. Either condition implies the car missed at least one main-line
-    /// timing loop, so MiniSectorSum can never balance.
     def isPitLap(lap: RawLap): Bool =
         lap#crossingFinishLineInPit or lap#pitTime != None
 
@@ -255,25 +226,15 @@ mod Cli.Validation {
                 else                                  Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
         }
 
-    /// True when the blank `time`-column set matches a known Ford-chicane
-    /// track-limits-violation signature for Le Mans 2025. Track-ordered
-    /// list, so SCL1 always precedes FORDOUT and PITREF always precedes
-    /// SCL1. Compares `MiniSectorId` directly so a rename of a
-    /// `MiniSector.jsonKey` mapping cannot silently drift this rule out
-    /// of sync.
+    /// Matches the two known Ford-chicane track-limits blank patterns at
+    /// Le Mans 2025. The blanks list is in track order, so SCL1 always
+    /// precedes FORDOUT and PITREF always precedes SCL1.
     def isTrackLimitsPattern(blanks: List[MiniSectorId]): Bool =
         blanks == MiniSectorId.SCL1 :: MiniSectorId.FORDOUT :: Nil
             or blanks == MiniSectorId.PITREF :: MiniSectorId.SCL1 :: Nil
 
-    /// Walks the track-ordered list and reports each adjacent pair
-    /// where the second elapsed is less than *or equal to* the first.
-    /// Equality is rejected because two timing loops cannot physically
-    /// fire at the same millisecond — the real Le Mans 2025 dataset
-    /// never produces an equal-adjacent pair, so the strict check
-    /// catches stuck-clock anomalies without adding noise. Entries
-    /// with blank elapsed are skipped without breaking the chain (so
-    /// we still catch a backwards step that straddles a single missing
-    /// marker).
+    /// Reports each adjacent pair where the second elapsed is `<=` the first.
+    /// Blank-elapsed entries are skipped without breaking the chain.
     def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) -> match (state, pair) {
@@ -304,9 +265,6 @@ mod Cli.Validation {
         formatLabelledDurationPair(eventName, lap, kind, "expected", expected, "actual", actual)
 
     /// Same shape as `formatDurationPair` but with caller-supplied labels.
-    /// Used by `MiniSectorElapsedMonotonic` to emit `prev=/curr=` instead of
-    /// `expected=/actual=`, since the comparison is "previous marker vs.
-    /// current marker" rather than "what we expected vs. what we observed".
     def formatLabelledDurationPair(
         eventName: String,
         lap: RawLap,

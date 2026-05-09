@@ -25,8 +25,7 @@ mod Motorsport.MiniSector {
     }
 
     /// Track-order list — must match Motorsport.Circuit.LeMans.miniSectorOrder.
-    /// Order: S1 (SCL2, Z4, IP1) → S2 (Z12, SCLC, A7-1, IP2) →
-    /// S3 (A8-1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL).
+    /// Line groups correspond to S1 / S2 / S3.
     pub def all(): List[MiniSectorId] =
         List#{
             MiniSectorId.SCL2, MiniSectorId.Z4, MiniSectorId.IP1,
@@ -35,10 +34,9 @@ mod Motorsport.MiniSector {
             MiniSectorId.PITREF, MiniSectorId.SCL1, MiniSectorId.FORDOUT, MiniSectorId.FL
         }
 
-    /// CSV column prefix. Each mini-sector contributes two columns:
-    /// `${csvName}_time` and `${csvName}_elapsed`. Note that A7_1 and A8_1
-    /// use a hyphen in the CSV (A7-1, A8-1) — the Flix identifier underscore
-    /// is just an identifier-syntax constraint.
+    /// CSV column prefix. A7_1 / A8_1 map to the hyphenated `A7-1` / `A8-1`
+    /// (the Flix identifier underscore is a syntax constraint, not part of
+    /// the column name). Each prefix yields two columns: `_time` and `_elapsed`.
     pub def csvName(id: MiniSectorId): String =
         match id {
             case MiniSectorId.SCL2    => "SCL2"
@@ -58,10 +56,8 @@ mod Motorsport.MiniSector {
             case MiniSectorId.FL      => "FL"
         }
 
-    /// JSON object key. Lower-case form of `csvName`, with the hyphen in
-    /// A7-1 / A8-1 collapsed back to an underscore so the keys are valid
-    /// JS identifiers (matches the Elm `Motorsport.Lap.MiniSectors` field
-    /// names).
+    /// JSON object key — lower-case `csvName` with the hyphen reverted to an
+    /// underscore (matches the Elm `Motorsport.Lap.MiniSectors` field names).
     pub def jsonKey(id: MiniSectorId): String =
         match id {
             case MiniSectorId.SCL2    => "scl2"

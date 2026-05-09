@@ -47,11 +47,10 @@ mod RawLap {
         improvement = Improvement
     }
 
-    /// One Le Mans mini-sector observation. `time` is the duration of the
-    /// segment between the previous mini-sector marker and this one;
-    /// `elapsed` is the cumulative time from the start of the lap up to this
-    /// marker. Both are `Option` because the values can be blank in the CSV
-    /// (e.g. on a pit lap or when the timing system missed a marker).
+    /// One Le Mans mini-sector observation. `time` is the segment duration
+    /// from the previous marker; `elapsed` is the cumulative time from the
+    /// start of the lap. Both are `Option` because either column can be
+    /// blank (pit laps, missed markers).
     pub type alias RawMiniSector = {
         time = Option[Duration],
         elapsed = Option[Duration]
@@ -332,11 +331,9 @@ mod RawLap {
             case None     => JsonString("")
         }
 
-    /// Decodes the 15 Le Mans mini-sectors (each contributes `<NAME>_time`
-    /// and `<NAME>_elapsed`). Columns absent from the header (non-Le Mans
-    /// CSVs) and blank values both decode to `None` for that side. When
-    /// every entry is `None` for both sides the whole list collapses to
-    /// `None` so `toJson` can omit the `miniSectors` key.
+    /// Decodes the 15 Le Mans mini-sectors. Missing columns (non-Le Mans
+    /// CSVs) and blank values both decode to `None`; an all-`None` row
+    /// collapses to `None` so `toJson` can omit the `miniSectors` key.
     def miniSectorsDecoder(): Decoder[Option[List[(MiniSectorId, RawMiniSector)]]] =
         Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
 
@@ -354,9 +351,7 @@ mod RawLap {
             optionalDurationFromOptionalColumn("${prefix}_elapsed")
         )
 
-    /// Combines `Decode.optionalField` (header missing → `None`) with
-    /// `optionalDurationField` (blank value → `None`) and flattens the
-    /// resulting `Option[Option[Duration]]` to `Option[Duration]`.
+    /// Both "header missing" and "blank value" map to `None`.
     def optionalDurationFromOptionalColumn(name: String): Decoder[Option[Duration]] =
         Decode.map(Option.flatten, Decode.optionalField(name, optionalDurationField(name)))
 
