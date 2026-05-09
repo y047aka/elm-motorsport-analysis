@@ -199,7 +199,7 @@ mod Cli.Validation {
                 formatDurationPair(eventName, lap, "mini-sector-sum", lapTime, sum) + suffix
             case Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, currElapsed) =>
                 let kind = "mini-sector-elapsed[${MiniSector.jsonKey(prevId)}->${MiniSector.jsonKey(currId)}]";
-                formatDurationPair(eventName, lap, kind, prevElapsed, currElapsed)
+                formatLabelledDurationPair(eventName, lap, kind, "prev", prevElapsed, "curr", currElapsed)
         }
 
     /// Per-lap mini-sector checks. Skipped entirely for laps without
@@ -227,22 +227,23 @@ mod Cli.Validation {
         lap#crossingFinishLineInPit or lap#pitTime != None
 
     def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
-        let parts = list |> List.map(match (id, sector) ->
-            match sector#time {
-                case Some(d) => (d, None)
-                case None    => (Util.Duration.zero(), Some(MiniSector.jsonKey(id)))
-            }
-        );
-        let sum = parts |> List.foldLeft(
-            (acc, pair) -> match pair {
-                case (d, _) => Util.Duration.add(acc, d)
+        let folded = list |> List.foldLeft(
+            (state, pair) -> match (state, pair) {
+                case ((accSum, accBlanks), (id, sector)) =>
+                    match sector#time {
+                        case Some(d) => (Util.Duration.add(accSum, d), accBlanks)
+                        case None    => (accSum, MiniSector.jsonKey(id) :: accBlanks)
+                    }
             },
-            Util.Duration.zero()
+            (Util.Duration.zero(), Nil)
         );
-        let blanks = parts |> List.filterMap(match (_, b) -> b);
-        if (sum == lap#lapTime)               Nil
-        else if (isTrackLimitsPattern(blanks)) Nil
-        else                                  Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
+        match folded {
+            case (sum, blanksRev) =>
+                let blanks = List.reverse(blanksRev);
+                if (sum == lap#lapTime)               Nil
+                else if (isTrackLimitsPattern(blanks)) Nil
+                else                                  Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
+        }
 
     /// True when the blank `time`-column set matches a known Ford-chicane
     /// track-limits-violation signature for Le Mans 2025. Track-ordered
@@ -265,7 +266,7 @@ mod Cli.Validation {
                         case Some(curr) => match prev {
                             case None => (Some((id, curr)), acc)
                             case Some((prevId, prevElapsed)) =>
-                                if (Util.Duration.millis(curr) >= Util.Duration.millis(prevElapsed))
+                                if (curr >= prevElapsed)
                                     (Some((id, curr)), acc)
                                 else
                                     (Some((id, curr)),
@@ -283,7 +284,22 @@ mod Cli.Validation {
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
     def formatDurationPair(eventName: String, lap: RawLap, kind: String, expected: Duration, actual: Duration): String =
-        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${expected} (${Util.Duration.millis(expected)}ms) actual=${actual} (${Util.Duration.millis(actual)}ms)"
+        formatLabelledDurationPair(eventName, lap, kind, "expected", expected, "actual", actual)
+
+    /// Same shape as `formatDurationPair` but with caller-supplied labels.
+    /// Used by `MiniSectorElapsedMonotonic` to emit `prev=/curr=` instead of
+    /// `expected=/actual=`, since the comparison is "previous marker vs.
+    /// current marker" rather than "what we expected vs. what we observed".
+    def formatLabelledDurationPair(
+        eventName: String,
+        lap: RawLap,
+        kind: String,
+        leftLabel: String,
+        leftValue: Duration,
+        rightLabel: String,
+        rightValue: Duration
+    ): String =
+        "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: ${leftLabel}=${leftValue} (${Util.Duration.millis(leftValue)}ms) ${rightLabel}=${rightValue} (${Util.Duration.millis(rightValue)}ms)"
 
     def formatSignedMsPair(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
         "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"

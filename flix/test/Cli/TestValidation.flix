@@ -28,6 +28,13 @@ mod Cli.TestValidation {
 
     /// Build a Le Mans-shaped lap. `miniTail` is the raw 30-column suffix
     /// (`time;elapsed;...`) appended after the standard fields.
+    ///
+    /// Note: `s3` must be a plain-seconds string (e.g. `"64.000"`, not
+    /// `"1:04.000"`) because the Le Mans CSV has trailing `S3_SECONDS`-style
+    /// columns that go through `Float64.fromString`. Real Le Mans S3 values
+    /// run 1:30+, so this fixture is intentionally simplified — the integrity
+    /// rules under test don't care about realistic lap geometry, only the
+    /// arithmetic relationships between the columns.
     def buildLeMansLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String): RawLap =
         buildLeMansLapWith(num, lap, lapTime, s1, s2, s3, elapsed, hour, miniTail, "", "")
 
