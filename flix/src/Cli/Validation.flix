@@ -221,17 +221,10 @@ mod Cli.Validation {
         match folded {
             case (sum, blanksRev) =>
                 let blanks = List.reverse(blanksRev);
-                if (sum == lap#lapTime)               Nil
-                else if (isTrackLimitsPattern(blanks)) Nil
-                else                                  Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
+                if (sum == lap#lapTime)                             Nil
+                else if (MiniSector.isTrackLimitsSignature(blanks)) Nil
+                else                                                Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
         }
-
-    /// Matches the two known Ford-chicane track-limits blank patterns at
-    /// Le Mans 2025. The blanks list is in track order, so SCL1 always
-    /// precedes FORDOUT and PITREF always precedes SCL1.
-    def isTrackLimitsPattern(blanks: List[MiniSectorId]): Bool =
-        blanks == MiniSectorId.SCL1 :: MiniSectorId.FORDOUT :: Nil
-            or blanks == MiniSectorId.PITREF :: MiniSectorId.SCL1 :: Nil
 
     /// Reports each adjacent pair where the second elapsed is `<=` the first.
     /// Blank-elapsed entries are skipped without breaking the chain.
