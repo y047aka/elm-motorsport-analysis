@@ -340,29 +340,17 @@ mod RawLap {
         Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
 
     def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, RawMiniSector)]] =
-        List.foldRight(
-            (id, acc) ->
-                Decode.andThen(
-                    sector ->
-                        Decode.andThen(
-                            rest -> Decode.succeed((id, sector) :: rest),
-                            acc
-                        ),
-                    miniSectorDecoder(id)
-                ),
-            Decode.succeed(Nil),
+        Decode.traverse(
+            id -> Decode.map(sector -> (id, sector), miniSectorDecoder(id)),
             ids
         )
 
     def miniSectorDecoder(id: MiniSectorId): Decoder[RawMiniSector] =
         let prefix = MiniSector.csvName(id);
-        Decode.andThen(
-            time ->
-                Decode.andThen(
-                    elapsed -> Decode.succeed({ time = time, elapsed = elapsed }),
-                    optionalDurationFromMaybeField("${prefix}_elapsed")
-                ),
-            optionalDurationFromMaybeField("${prefix}_time")
+        Decode.map2(
+            (time, elapsed) -> { time = time, elapsed = elapsed },
+            optionalDurationFromMaybeField("${prefix}_time"),
+            optionalDurationFromMaybeField("${prefix}_elapsed")
         )
 
     /// Combines `Decode.optionalField` (header missing → `None`) with
