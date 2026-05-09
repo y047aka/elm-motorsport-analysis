@@ -36,17 +36,18 @@
 ///     sum can never reach lapTime. A pit lap is identified by either
 ///     `crossingFinishLineInPit == "B"` (crossed FL inside the pit lane) or
 ///     `pitTime != None` (pit-stop duration recorded for this lap).
-///   - **MiniSectorSum is also skipped for known Ford-chicane-cut
-///     signatures** — when a driver cuts a Ford chicane, the timing loops
-///     inside the cut (SCL1 + FORDOUT for the second chicane, PITREF + SCL1
-///     for the first) go untriggered. Empirically (Le Mans 2025) these two
+///   - **MiniSectorSum is also skipped for known Ford-chicane track-limits
+///     signatures** — when a driver runs off track at a Ford chicane
+///     (track-limits violation), the timing loops inside the bypassed
+///     section go untriggered (SCL1 + FORDOUT for the second chicane,
+///     PITREF + SCL1 for the first). Empirically (Le Mans 2025) these two
 ///     adjacent-pair blank patterns are the dominant cause of the remaining
 ///     non-pit MiniSectorSum noise (310 of 311 warnings after the pit
 ///     skip), concentrated on the front-running hypercars.
-///   - Combined skips (pit lap + chicane cut) reduce Le Mans 2025 noise
-///     from 2240 → 1 MiniSectorSum warning while preserving genuine
-///     timing-loop anomalies (e.g. a wide moment causing FORDOUT + FL_time
-///     to drop while the car was not in the pits).
+///   - Combined skips (pit lap + track-limits violation) reduce Le Mans
+///     2025 noise from 2240 → 1 MiniSectorSum warning while preserving
+///     genuine timing-loop anomalies (e.g. a wide moment causing FORDOUT +
+///     FL_time to drop while the car was not in the pits).
 mod Cli.Validation {
 
     use Util.Duration.Duration
@@ -239,14 +240,15 @@ mod Cli.Validation {
             Util.Duration.zero()
         );
         let blanks = parts |> List.filterMap(match (_, b) -> b);
-        if (sum == lap#lapTime)             Nil
-        else if (isChicaneCutPattern(blanks)) Nil
-        else                                Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
+        if (sum == lap#lapTime)               Nil
+        else if (isTrackLimitsPattern(blanks)) Nil
+        else                                  Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
 
     /// True when the blank `time`-column set matches a known Ford-chicane
-    /// cut signature for Le Mans 2025. Track-ordered list, so SCL1 always
-    /// precedes FORDOUT and PITREF always precedes SCL1.
-    def isChicaneCutPattern(blanks: List[String]): Bool =
+    /// track-limits-violation signature for Le Mans 2025. Track-ordered
+    /// list, so SCL1 always precedes FORDOUT and PITREF always precedes
+    /// SCL1.
+    def isTrackLimitsPattern(blanks: List[String]): Bool =
         blanks == "scl1" :: "fordout" :: Nil
             or blanks == "pitref" :: "scl1" :: Nil
 

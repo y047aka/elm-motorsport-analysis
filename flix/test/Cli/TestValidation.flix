@@ -53,19 +53,19 @@ mod Cli.TestValidation {
         ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
         ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;;;;2:00.000"
 
-    /// Driver cuts the second Ford chicane: SCL1 + FORDOUT loops not
-    /// triggered. FL_elapsed is preserved at lapTime since the car still
-    /// crosses the finish line. The non-chicane markers retain their
-    /// straight-line cumulative times.
-    def chicaneCut_SCL1_FORDOUT_MiniTail(): String =
+    /// Track-limits violation at the second Ford chicane: SCL1 + FORDOUT
+    /// loops not triggered. FL_elapsed is preserved at lapTime since the
+    /// car still crosses the finish line. The on-track markers retain
+    /// their straight-line cumulative times.
+    def trackLimits_SCL1_FORDOUT_MiniTail(): String =
         "8.000;8.000;8.000;16.000;8.000;24.000" +
         ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
         ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;;;;;8.000;2:00.000"
 
-    /// Driver cuts the first Ford chicane: PITREF + SCL1 loops not
-    /// triggered. The car re-joins the main racing line before FORDOUT, so
-    /// FORDOUT and FL fire normally.
-    def chicaneCut_PITREF_SCL1_MiniTail(): String =
+    /// Track-limits violation at the first Ford chicane: PITREF + SCL1
+    /// loops not triggered. The car re-joins the main racing line before
+    /// FORDOUT, so FORDOUT and FL fire normally.
+    def trackLimits_PITREF_SCL1_MiniTail(): String =
         "8.000;8.000;8.000;16.000;8.000;24.000" +
         ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
         ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;;;;;8.000;1:52.000;8.000;2:00.000"
@@ -367,33 +367,34 @@ mod Cli.TestValidation {
 
     @Test
     def testMiniSectorSumStillReportsNonPitLapWithBlankTrailingMarkers(): Unit \ Assert =
-        // {fordout, fl} blank without any pit or chicane-cut signal — a
-        // genuine timing anomaly (e.g. Le Mans 2025 car 150 lap 14:
+        // {fordout, fl} blank without any pit or track-limits signal —
+        // a genuine timing anomaly (e.g. Le Mans 2025 car 150 lap 14:
         // 4:23.067 lap with FORDOUT and FL_time both blank, no pitTime,
-        // no box flag, no chicane signature). The validator must STILL
-        // flag this as a MiniSectorSum violation.
+        // no box flag, no track-limits signature). The validator must
+        // STILL flag this as a MiniSectorSum violation.
         let lap = buildLeMansLapWith("150", 14, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "", "");
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.length(violations) == 1)
 
     @Test
-    def testMiniSectorSumSkippedOnSCL1FordoutChicaneCut(): Unit \ Assert =
-        // Driver cuts the second Ford chicane: SCL1 and FORDOUT loops are
-        // not triggered. No pit signal. Empirically the dominant non-pit
-        // pattern at Le Mans (257 of 311 post-pit-skip warnings).
-        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", chicaneCut_SCL1_FORDOUT_MiniTail(), "", "");
+    def testMiniSectorSumSkippedOnSCL1FordoutTrackLimits(): Unit \ Assert =
+        // Track-limits violation at the second Ford chicane: SCL1 and
+        // FORDOUT loops are not triggered. No pit signal. Empirically the
+        // dominant non-pit pattern at Le Mans (257 of 311 post-pit-skip
+        // warnings).
+        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_SCL1_FORDOUT_MiniTail(), "", "");
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorSumSkippedOnPitrefScl1ChicaneCut(): Unit \ Assert =
-        // Driver cuts the first Ford chicane: PITREF and SCL1 loops are
-        // not triggered, but the car rejoins before FORDOUT so FORDOUT
-        // and FL fire normally. Second-most-common non-pit pattern (53
-        // cases at Le Mans 2025).
-        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", chicaneCut_PITREF_SCL1_MiniTail(), "", "");
+    def testMiniSectorSumSkippedOnPitrefScl1TrackLimits(): Unit \ Assert =
+        // Track-limits violation at the first Ford chicane: PITREF and
+        // SCL1 loops are not triggered, but the car rejoins before
+        // FORDOUT so FORDOUT and FL fire normally. Second-most-common
+        // non-pit pattern (53 cases at Le Mans 2025).
+        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_PITREF_SCL1_MiniTail(), "", "");
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
