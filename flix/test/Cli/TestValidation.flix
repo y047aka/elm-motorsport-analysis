@@ -302,7 +302,7 @@ mod Cli.TestValidation {
     @Test
     def testMiniSectorBlankTimeAnnotated(): Unit \ Assert =
         // Blank Z4_time → counted as 0 ms in the sum (8 + 0 + 8 + ... = 1:52.000),
-        // so we expect a MiniSectorSum violation with `z4` in the blanks list.
+        // so we expect a MiniSectorSum violation with Z4 in the blanks list.
         let badTail = String.replace({src = "8.000;8.000;8.000;16.000"}, {dst = "8.000;8.000;;16.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
         let violations = Validation.detect(lap :: Nil)
@@ -310,7 +310,7 @@ mod Cli.TestValidation {
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.MiniSectorSum(_, _, _, blanks)) =>
-                Assert.assertTrue(List.memberOf("z4", blanks))
+                Assert.assertTrue(List.memberOf(MiniSectorId.Z4, blanks))
             case _ => Assert.assertTrue(false)
         }
 

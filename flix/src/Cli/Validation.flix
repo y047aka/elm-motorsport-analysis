@@ -77,8 +77,12 @@ mod Cli.Validation {
         case HourElapsedOffset(RawLap, Int32, Int32)
 
         /// `sum(miniSector.time) != lapTime` for laps with mini-sector data.
-        /// Args: lap / lapTime / sum / json keys of sub-sectors with blank time.
-        case MiniSectorSum(RawLap, Duration, Duration, List[String])
+        /// Args: lap / lapTime / sum / IDs of sub-sectors with blank time
+        /// (in track order). Carry the `MiniSectorId` rather than its
+        /// JSON key so downstream consumers (e.g. `isTrackLimitsPattern`)
+        /// stay type-safe; `formatViolation` calls `MiniSector.jsonKey`
+        /// at the rendering boundary.
+        case MiniSectorSum(RawLap, Duration, Duration, List[MiniSectorId])
 
         /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent
         /// pair in track order (only entries where both sides are
@@ -201,7 +205,7 @@ mod Cli.Validation {
             case Violation.MiniSectorSum(lap, lapTime, sum, blanks) =>
                 let suffix =
                     if (List.isEmpty(blanks)) ""
-                    else " (blank: ${List.join(",", blanks)})";
+                    else " (blank: ${List.join(",", List.map(MiniSector.jsonKey, blanks))})";
                 formatDurationPair(eventName, lap, "mini-sector-sum", lapTime, sum) + suffix
             case Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, currElapsed) =>
                 let kind = "mini-sector-elapsed[${MiniSector.jsonKey(prevId)}->${MiniSector.jsonKey(currId)}]";
@@ -238,7 +242,7 @@ mod Cli.Validation {
                 case ((accSum, accBlanks), (id, sector)) =>
                     match sector#time {
                         case Some(d) => (Util.Duration.add(accSum, d), accBlanks)
-                        case None    => (accSum, MiniSector.jsonKey(id) :: accBlanks)
+                        case None    => (accSum, id :: accBlanks)
                     }
             },
             (Util.Duration.zero(), Nil)
@@ -254,10 +258,12 @@ mod Cli.Validation {
     /// True when the blank `time`-column set matches a known Ford-chicane
     /// track-limits-violation signature for Le Mans 2025. Track-ordered
     /// list, so SCL1 always precedes FORDOUT and PITREF always precedes
-    /// SCL1.
-    def isTrackLimitsPattern(blanks: List[String]): Bool =
-        blanks == "scl1" :: "fordout" :: Nil
-            or blanks == "pitref" :: "scl1" :: Nil
+    /// SCL1. Compares `MiniSectorId` directly so a rename of a
+    /// `MiniSector.jsonKey` mapping cannot silently drift this rule out
+    /// of sync.
+    def isTrackLimitsPattern(blanks: List[MiniSectorId]): Bool =
+        blanks == MiniSectorId.SCL1 :: MiniSectorId.FORDOUT :: Nil
+            or blanks == MiniSectorId.PITREF :: MiniSectorId.SCL1 :: Nil
 
     /// Walks the track-ordered list and reports each adjacent pair
     /// where the second elapsed is less than *or equal to* the first.
