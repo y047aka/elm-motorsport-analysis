@@ -230,26 +230,22 @@ mod Cli.Validation {
     /// Blank-elapsed entries are skipped without breaking the chain.
     def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let folded = list |> List.foldLeft(
-            (state, pair) -> match (state, pair) {
-                case ((prev, acc), (id, sector)) =>
-                    match sector#elapsed {
-                        case None => (prev, acc)
-                        case Some(curr) => match prev {
-                            case None => (Some((id, curr)), acc)
-                            case Some((prevId, prevElapsed)) =>
-                                if (curr > prevElapsed)
-                                    (Some((id, curr)), acc)
-                                else
-                                    (Some((id, curr)),
-                                     Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, id, curr) :: acc)
-                        }
-                    }
-            },
+            (state, pair) ->
+                let (prev, acc) = state;
+                let (id, sector) = pair;
+                match (sector#elapsed, prev) {
+                    case (None, _)          => (prev, acc)
+                    case (Some(curr), None) => (Some((id, curr)), acc)
+                    case (Some(curr), Some((prevId, prevElapsed))) =>
+                        let newAcc =
+                            if (curr > prevElapsed) acc
+                            else Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, id, curr) :: acc;
+                        (Some((id, curr)), newAcc)
+                },
             (None, Nil)
         );
-        match folded {
-            case (_, acc) => List.reverse(acc)
-        }
+        let (_, acc) = folded;
+        List.reverse(acc)
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted Duration to keep the
