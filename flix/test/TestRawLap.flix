@@ -183,18 +183,18 @@ mod TestRawLap {
                         Assert.assertTrue(List.length(list) == 15);
                         // First entry must be SCL2 with time=20.708 (= 20708 ms).
                         match List.head(list) {
-                            case Some((id, sector)) =>
+                            case Some((id, Some(sector))) =>
                                 Assert.assertTrue(id == MiniSectorId.SCL2);
-                                Assert.assertTrue(sector#time == Some(Duration.fromMillis(20708)));
-                                Assert.assertTrue(sector#elapsed == Some(Duration.fromMillis(20708)))
-                            case None => Assert.assertTrue(false)
+                                Assert.assertTrue(sector#time == Duration.fromMillis(20708));
+                                Assert.assertTrue(sector#elapsed == Duration.fromMillis(20708))
+                            case _ => Assert.assertTrue(false)
                         };
                         // Last entry must be FL with elapsed = lapTime (3:54.555 = 234555 ms).
                         match List.last(list) {
-                            case Some((id, sector)) =>
+                            case Some((id, Some(sector))) =>
                                 Assert.assertTrue(id == MiniSectorId.FL);
-                                Assert.assertTrue(sector#elapsed == Some(Duration.fromMillis(234555)))
-                            case None => Assert.assertTrue(false)
+                                Assert.assertTrue(sector#elapsed == Duration.fromMillis(234555))
+                            case _ => Assert.assertTrue(false)
                         }
                 }
             case Err(_) => Assert.assertTrue(false)
@@ -240,6 +240,22 @@ mod TestRawLap {
                 let json = Json.render(RawLap.toJson(r));
                 Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
             case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testHalfBlankMiniSectorRejected(): Unit \ Assert =
+        // SCL2_time present (20.708) but SCL2_elapsed blank — the two
+        // columns must agree (both present or both absent), so the
+        // decoder must reject this row rather than silently producing
+        // a half-empty record.
+        let line =
+            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
+            "20.708;;13.826;34.534;17.374;51.908;" +
+            "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
+            "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555";
+        match decodeLeMansOne(line) {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
         }
 
 }

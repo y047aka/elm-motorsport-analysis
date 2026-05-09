@@ -53,12 +53,14 @@ mod Cli.TestValidation {
     /// 15 sub-sectors with the trailing FORDOUT and FL_time blanked out —
     /// the canonical "pit-entry lap" pattern observed in real Le Mans data
     /// (the car skips the main-line FORDOUT loop and crosses FL inside the
-    /// pit lane). The FL_elapsed value is preserved at lapTime so the lap
-    /// itself is still completed at the finish line.
+    /// pit lane). FORDOUT and FL are both fully blank (time + elapsed) —
+    /// the half-empty rejection rule requires the two columns to agree
+    /// per marker. The lap itself is still completed at the finish line
+    /// via the outer `RawLap.elapsed` / `lapTime` fields.
     def pitEntryMiniTail(): String =
         "8.000;8.000;8.000;16.000;8.000;24.000" +
         ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
-        ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;;;;2:00.000"
+        ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;;;;"
 
     /// Track-limits violation at the second Ford chicane: SCL1 + FORDOUT
     /// loops not triggered. FL_elapsed is preserved at lapTime since the
@@ -301,9 +303,11 @@ mod Cli.TestValidation {
 
     @Test
     def testMiniSectorBlankTimeAnnotated(): Unit \ Assert =
-        // Blank Z4_time → counted as 0 ms in the sum (8 + 0 + 8 + ... = 1:52.000),
-        // so we expect a MiniSectorSum violation with Z4 in the blanks list.
-        let badTail = String.replace({src = "8.000;8.000;8.000;16.000"}, {dst = "8.000;8.000;;16.000"}, cleanMiniTail());
+        // Blank both Z4 columns (time + elapsed must agree per the
+        // half-empty rejection rule). Z4 contributes 0 to the sum
+        // (8 + 0 + 8 + ... = 1:52.000), so we expect a MiniSectorSum
+        // violation with Z4 in the blanks list.
+        let badTail = String.replace({src = "8.000;8.000;8.000;16.000"}, {dst = "8.000;8.000;;"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);

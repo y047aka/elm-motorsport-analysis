@@ -236,13 +236,13 @@ mod Cli.Validation {
     def isPitLap(lap: RawLap): Bool =
         lap#crossingFinishLineInPit or lap#pitTime != None
 
-    def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+    def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, Option[RawMiniSector])]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) -> match (state, pair) {
-                case ((accSum, accBlanks), (id, sector)) =>
-                    match sector#time {
-                        case Some(d) => (Util.Duration.add(accSum, d), accBlanks)
-                        case None    => (accSum, id :: accBlanks)
+                case ((accSum, accBlanks), (id, opt)) =>
+                    match opt {
+                        case Some(sector) => (Util.Duration.add(accSum, sector#time), accBlanks)
+                        case None         => (accSum, id :: accBlanks)
                     }
             },
             (Util.Duration.zero(), Nil)
@@ -274,21 +274,23 @@ mod Cli.Validation {
     /// with blank elapsed are skipped without breaking the chain (so
     /// we still catch a backwards step that straddles a single missing
     /// marker).
-    def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+    def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, Option[RawMiniSector])]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) -> match (state, pair) {
-                case ((prev, acc), (id, sector)) =>
-                    match sector#elapsed {
+                case ((prev, acc), (id, opt)) =>
+                    match opt {
                         case None => (prev, acc)
-                        case Some(curr) => match prev {
-                            case None => (Some((id, curr)), acc)
-                            case Some((prevId, prevElapsed)) =>
-                                if (curr > prevElapsed)
-                                    (Some((id, curr)), acc)
-                                else
-                                    (Some((id, curr)),
-                                     Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, id, curr) :: acc)
-                        }
+                        case Some(sector) =>
+                            let curr = sector#elapsed;
+                            match prev {
+                                case None => (Some((id, curr)), acc)
+                                case Some((prevId, prevElapsed)) =>
+                                    if (curr > prevElapsed)
+                                        (Some((id, curr)), acc)
+                                    else
+                                        (Some((id, curr)),
+                                         Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, id, curr) :: acc)
+                            }
                     }
             },
             (None, Nil)
