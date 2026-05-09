@@ -336,6 +336,26 @@ mod Cli.TestValidation {
         }
 
     @Test
+    def testMiniSectorElapsedEqualPairFlagged(): Unit \ Assert =
+        // Two adjacent timing loops cannot physically fire at the same
+        // millisecond. Replace IP1_elapsed (24.000) with 16.000 so it
+        // matches the previous Z4_elapsed exactly — the strict
+        // monotonic check should report this as a violation.
+        let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;16.000"}, cleanMiniTail());
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorMonotonic);
+        Assert.assertTrue(List.length(violations) == 1);
+        match List.head(violations) {
+            case Some(Violation.MiniSectorElapsedMonotonic(_, prevId, prevElapsed, currId, currElapsed)) =>
+                Assert.assertTrue(prevId == MiniSectorId.Z4);
+                Assert.assertTrue(currId == MiniSectorId.IP1);
+                Assert.assertTrue(prevElapsed == currElapsed);
+                Assert.assertTrue(prevElapsed == Duration.fromMillis(16000))
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
     def testMiniSectorViolationFormattedString(): Unit \ Assert =
         let badTail = String.replace({src = "8.000;2:00.000"}, {dst = "8.001;2:00.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);

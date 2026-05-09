@@ -15,11 +15,16 @@
 ///                                   (per row, blank `time` counted as zero).
 ///                                   **Skipped on pit laps** (see below).
 ///   5. MiniSectorElapsedMonotonic — when mini-sectors present, `elapsed` values are
-///                                   non-decreasing in track order (reports each
-///                                   adjacent pair that goes backwards). Always run
-///                                   even on pit laps — monotonicity is not affected
-///                                   by missing markers because blank `elapsed`
-///                                   entries are skipped without breaking the chain.
+///                                   strictly increasing in track order (reports each
+///                                   adjacent pair where the second value is less than
+///                                   or equal to the first). Always run even on pit
+///                                   laps — monotonicity is not affected by missing
+///                                   markers because blank `elapsed` entries are
+///                                   skipped without breaking the chain. Equality is
+///                                   treated as a violation: two timing loops cannot
+///                                   physically fire at the same millisecond, and the
+///                                   real Le Mans 2025 dataset never produces an
+///                                   equal-adjacent pair.
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -75,9 +80,10 @@ mod Cli.Validation {
         /// Args: lap / lapTime / sum / json keys of sub-sectors with blank time.
         case MiniSectorSum(RawLap, Duration, Duration, List[String])
 
-        /// Mini-sector `elapsed[i] < elapsed[i-1]` for some adjacent pair
-        /// in track order (only entries where both sides are present are
-        /// compared).
+        /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent
+        /// pair in track order (only entries where both sides are
+        /// present are compared). Equality is reported because two
+        /// timing loops cannot physically fire at the same millisecond.
         /// Args: lap / prev id / prev elapsed / curr id / curr elapsed.
         case MiniSectorElapsedMonotonic(RawLap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
@@ -253,10 +259,15 @@ mod Cli.Validation {
         blanks == "scl1" :: "fordout" :: Nil
             or blanks == "pitref" :: "scl1" :: Nil
 
-    /// Walks the track-ordered list and reports each adjacent pair where
-    /// the second elapsed is strictly less than the first. Entries with
-    /// blank elapsed are skipped without breaking the chain (so we still
-    /// catch a backwards step that straddles a single missing marker).
+    /// Walks the track-ordered list and reports each adjacent pair
+    /// where the second elapsed is less than *or equal to* the first.
+    /// Equality is rejected because two timing loops cannot physically
+    /// fire at the same millisecond — the real Le Mans 2025 dataset
+    /// never produces an equal-adjacent pair, so the strict check
+    /// catches stuck-clock anomalies without adding noise. Entries
+    /// with blank elapsed are skipped without breaking the chain (so
+    /// we still catch a backwards step that straddles a single missing
+    /// marker).
     def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) -> match (state, pair) {
@@ -266,7 +277,7 @@ mod Cli.Validation {
                         case Some(curr) => match prev {
                             case None => (Some((id, curr)), acc)
                             case Some((prevId, prevElapsed)) =>
-                                if (curr >= prevElapsed)
+                                if (curr > prevElapsed)
                                     (Some((id, curr)), acc)
                                 else
                                     (Some((id, curr)),
