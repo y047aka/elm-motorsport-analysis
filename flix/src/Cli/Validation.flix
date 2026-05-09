@@ -149,7 +149,7 @@ mod Cli.Validation {
         let sum = Util.Duration.add(Util.Duration.add(s1, s2), s3);
         if (sum == lapTime) Ok(())
         else
-            let blanks = (s1Blank :: s2Blank :: s3Blank :: Nil) |> List.filterMap(x -> x);
+            let blanks = List#{s1Blank, s2Blank, s3Blank} |> List.filterMap(x -> x);
             Err(Violation.SectorSum(lap, lapTime, sum, blanks))
 
     def sectorOrZero(sector: Option[Duration], name: String): (Duration, Option[String]) =

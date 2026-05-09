@@ -208,7 +208,7 @@ mod RawLap {
         match secondsToMillis(name, secondsRaw) {
             case Err(e)       => Err(e)
             case Ok(secondsMs) =>
-                let observed = List.filterMap(x -> x, valueMs :: largeMs :: secondsMs :: Nil);
+                let observed = List.filterMap(x -> x, List#{valueMs, largeMs, secondsMs});
                 match observed {
                     case Nil           => Ok({ value = valueMs, improvement = improvement })
                     case first :: rest =>

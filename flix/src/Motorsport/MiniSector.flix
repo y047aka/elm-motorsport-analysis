@@ -28,11 +28,12 @@ mod Motorsport.MiniSector {
     /// Order: S1 (SCL2, Z4, IP1) → S2 (Z12, SCLC, A7-1, IP2) →
     /// S3 (A8-1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL).
     pub def all(): List[MiniSectorId] =
-        MiniSectorId.SCL2 :: MiniSectorId.Z4 :: MiniSectorId.IP1 ::
-        MiniSectorId.Z12 :: MiniSectorId.SCLC :: MiniSectorId.A7_1 :: MiniSectorId.IP2 ::
-        MiniSectorId.A8_1 :: MiniSectorId.SCLB :: MiniSectorId.PORIN :: MiniSectorId.POROUT ::
-        MiniSectorId.PITREF :: MiniSectorId.SCL1 :: MiniSectorId.FORDOUT :: MiniSectorId.FL ::
-        Nil
+        List#{
+            MiniSectorId.SCL2, MiniSectorId.Z4, MiniSectorId.IP1,
+            MiniSectorId.Z12, MiniSectorId.SCLC, MiniSectorId.A7_1, MiniSectorId.IP2,
+            MiniSectorId.A8_1, MiniSectorId.SCLB, MiniSectorId.PORIN, MiniSectorId.POROUT,
+            MiniSectorId.PITREF, MiniSectorId.SCL1, MiniSectorId.FORDOUT, MiniSectorId.FL
+        }
 
     /// CSV column prefix. Each mini-sector contributes two columns:
     /// `${csvName}_time` and `${csvName}_elapsed`. Note that A7_1 and A8_1
