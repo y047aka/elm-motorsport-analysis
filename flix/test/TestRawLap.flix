@@ -167,15 +167,16 @@ mod TestRawLap {
             case Err(e)     => Err(e)
         }
 
+    /// Real first-lap row from app/static/wec/2025/le_mans_24h.csv (car 007 lap 1).
+    def realLeMansLapRow(): String =
+        "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
+        "20.708;20.708;13.826;34.534;17.374;51.908;" +
+        "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
+        "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555"
+
     @Test
     def testLeMansRowDecodesAllFifteenMiniSectors(): Unit \ Assert =
-        // Real first-lap row from app/static/wec/2025/le_mans_24h.csv (car 007 lap 1).
-        let line =
-            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
-            "20.708;20.708;13.826;34.534;17.374;51.908;" +
-            "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
-            "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555";
-        match decodeLeMansOne(line) {
+        match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
                 match r#miniSectors {
                     case None       => Assert.assertTrue(false)
@@ -204,12 +205,7 @@ mod TestRawLap {
     def testLeMansRowJsonContainsMiniSectorsWithHyphenedKeys(): Unit \ Assert =
         // Confirm A7-1 / A8-1 round-trip to a7_1 / a8_1 in the JSON output
         // (matches Motorsport.Lap.MiniSectors field names on the Elm side).
-        let line =
-            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
-            "20.708;20.708;13.826;34.534;17.374;51.908;" +
-            "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
-            "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555";
-        match decodeLeMansOne(line) {
+        match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
                 let json = Json.render(RawLap.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));

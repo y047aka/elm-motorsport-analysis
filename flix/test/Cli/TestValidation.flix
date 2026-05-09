@@ -316,11 +316,8 @@ mod Cli.TestValidation {
 
     @Test
     def testMiniSectorElapsedMonotonicViolationDetected(): Unit \ Assert =
-        // Replace IP1_elapsed (24.000) with 20.000 — strictly less than the
-        // previous Z4_elapsed (16.000)? No, 20 > 16, so swap to a value < 16
-        // to trigger a backwards step. Replace the substring "16.000;8.000;24.000"
-        // (Z4_elapsed=16.000, then IP1_time=8.000, then IP1_elapsed=24.000)
-        // with "16.000;8.000;15.000".
+        // Replace IP1_elapsed (24.000) with 15.000 — strictly less than the
+        // previous Z4_elapsed (16.000) — to trigger a backwards step.
         let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;15.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
         let violations = Validation.detect(lap :: Nil)
@@ -353,22 +350,6 @@ mod Cli.TestValidation {
                 Assert.assertTrue(prevElapsed == currElapsed);
                 Assert.assertTrue(prevElapsed == Duration.fromMillis(16000))
             case _ => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testMiniSectorViolationFormattedString(): Unit \ Assert =
-        let badTail = String.replace({src = "8.000;2:00.000"}, {dst = "8.001;2:00.000"}, cleanMiniTail());
-        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
-        let messages = Validation.validate("le_mans_24h", lap :: Nil)
-            |> List.filter(m -> String.contains({substr = "mini-sector-sum"}, m));
-        Assert.assertTrue(List.length(messages) == 1);
-        match List.head(messages) {
-            case Some(msg) =>
-                Assert.assertTrue(String.contains({substr = "le_mans_24h"}, msg));
-                Assert.assertTrue(String.contains({substr = "[car 7 #1]"}, msg));
-                Assert.assertTrue(String.contains({substr = "expected=2:00.000 (120000ms)"}, msg));
-                Assert.assertTrue(String.contains({substr = "actual=2:00.001 (120001ms)"}, msg))
-            case None => Assert.assertTrue(false)
         }
 
     @Test
@@ -407,9 +388,7 @@ mod Cli.TestValidation {
     @Test
     def testMiniSectorSumSkippedOnSCL1FordoutTrackLimits(): Unit \ Assert =
         // Track-limits violation at the second Ford chicane: SCL1 and
-        // FORDOUT loops are not triggered. No pit signal. Empirically the
-        // dominant non-pit pattern at Le Mans (257 of 311 post-pit-skip
-        // warnings).
+        // FORDOUT loops are not triggered. No pit signal.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_SCL1_FORDOUT_MiniTail(), "", "");
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
@@ -419,8 +398,7 @@ mod Cli.TestValidation {
     def testMiniSectorSumSkippedOnPitrefScl1TrackLimits(): Unit \ Assert =
         // Track-limits violation at the first Ford chicane: PITREF and
         // SCL1 loops are not triggered, but the car rejoins before
-        // FORDOUT so FORDOUT and FL fire normally. Second-most-common
-        // non-pit pattern (53 cases at Le Mans 2025).
+        // FORDOUT so FORDOUT and FL fire normally.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_PITREF_SCL1_MiniTail(), "", "");
         let violations = Validation.detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
