@@ -5,10 +5,20 @@ mod TestRawLap {
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
     use RawLap.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
+
+    /// Le Mans header: base columns + 30 mini-sector columns
+    /// (`<NAME>_time;<NAME>_elapsed` for each of the 15 markers in track order).
+    def leMansHeader(): String =
+        header() +
+        ";SCL2_time;SCL2_elapsed;Z4_time;Z4_elapsed;IP1_time;IP1_elapsed" +
+        ";Z12_time;Z12_elapsed;SCLC_time;SCLC_elapsed;A7-1_time;A7-1_elapsed;IP2_time;IP2_elapsed" +
+        ";A8-1_time;A8-1_elapsed;SCLB_time;SCLB_elapsed;PORIN_time;PORIN_elapsed;POROUT_time;POROUT_elapsed;PITREF_time;PITREF_elapsed;SCL1_time;SCL1_elapsed;FORDOUT_time;FORDOUT_elapsed;FL_time;FL_elapsed"
 
     /// Decodes a single semicolon-separated CSV line (without header) and
     /// pulls the first record out of the result. The header row is prepended
@@ -125,6 +135,111 @@ mod TestRawLap {
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;garbage;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)
+        }
+
+    @Test
+    def testNonLeMansCsvLeavesMiniSectorsNone(): Unit \ Assert =
+        // The standard WEC header has no mini-sector columns, so decode
+        // should succeed with `miniSectors == None` and `toJson` must omit
+        // the `miniSectors` key entirely.
+        match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
+            case Ok(r) =>
+                let isNone = match r#miniSectors {
+                    case None    => true
+                    case Some(_) => false
+                };
+                Assert.assertTrue(isNone);
+                let json = Json.render(RawLap.toJson(r));
+                Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    /// Decode a single Le Mans-shaped row (base 29 fields + 30 mini-sector fields).
+    def decodeLeMansOne(line: String): Result[Error, RawLap] =
+        match Decode.decodeCustom(
+            {fieldSeparator = ';'},
+            FieldNames.FieldNamesFromFirstRow,
+            RawLap.decoder(),
+            leMansHeader() + "\n" + line
+        ) {
+            case Ok(r :: _) => Ok(r)
+            case Ok(Nil)    => Err(Error.DecodingErrors(Nil))
+            case Err(e)     => Err(e)
+        }
+
+    @Test
+    def testLeMansRowDecodesAllFifteenMiniSectors(): Unit \ Assert =
+        // Real first-lap row from app/static/wec/2025/le_mans_24h.csv (car 007 lap 1).
+        let line =
+            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
+            "20.708;20.708;13.826;34.534;17.374;51.908;" +
+            "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
+            "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555";
+        match decodeLeMansOne(line) {
+            case Ok(r) =>
+                match r#miniSectors {
+                    case None       => Assert.assertTrue(false)
+                    case Some(list) =>
+                        Assert.assertTrue(List.length(list) == 15);
+                        // First entry must be SCL2 with time=20.708 (= 20708 ms).
+                        match List.head(list) {
+                            case Some((id, sector)) =>
+                                Assert.assertTrue(id == MiniSectorId.SCL2);
+                                Assert.assertTrue(sector#time == Some(Duration.fromMillis(20708)));
+                                Assert.assertTrue(sector#elapsed == Some(Duration.fromMillis(20708)))
+                            case None => Assert.assertTrue(false)
+                        };
+                        // Last entry must be FL with elapsed = lapTime (3:54.555 = 234555 ms).
+                        match List.last(list) {
+                            case Some((id, sector)) =>
+                                Assert.assertTrue(id == MiniSectorId.FL);
+                                Assert.assertTrue(sector#elapsed == Some(Duration.fromMillis(234555)))
+                            case None => Assert.assertTrue(false)
+                        }
+                }
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testLeMansRowJsonContainsMiniSectorsWithHyphenedKeys(): Unit \ Assert =
+        // Confirm A7-1 / A8-1 round-trip to a7_1 / a8_1 in the JSON output
+        // (matches Motorsport.Lap.MiniSectors field names on the Elm side).
+        let line =
+            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395;" +
+            "20.708;20.708;13.826;34.534;17.374;51.908;" +
+            "35.154;1:27.062;4.685;1:31.747;26.059;1:57.806;17.354;2:15.160;" +
+            "6.928;2:22.088;37.644;2:59.732;17.155;3:16.887;16.786;3:33.673;7.954;3:41.627;2.885;3:44.512;6.560;3:51.072;3.483;3:54.555";
+        match decodeLeMansOne(line) {
+            case Ok(r) =>
+                let json = Json.render(RawLap.toJson(r));
+                Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"a7_1\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"a8_1\""}, json));
+                Assert.assertTrue(not String.contains({substr = "\"a7-1\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"scl2\""}, json));
+                Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testLeMansRowAllBlankMiniSectorsCollapseToNone(): Unit \ Assert =
+        // When every mini-sector column in a Le Mans row is blank, the
+        // whole `miniSectors` field collapses to None and the JSON omits
+        // the key.
+        let blanks = ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;";
+        let line =
+            "007;1;1;3:54.555;0;;51.908;0;1:23.252;0;1:39.395;0;206.9;3:54.555;16:03:54.555;0:51.908;1:23.252;1:39.395;328.8;Harry TINCKNELL;;HYPERCAR;;Aston Martin Thor Team;Aston Martin;GF;51.908;83.252;99.395" +
+            blanks;
+        match decodeLeMansOne(line) {
+            case Ok(r) =>
+                let isNone = match r#miniSectors {
+                    case None    => true
+                    case Some(_) => false
+                };
+                Assert.assertTrue(isNone);
+                let json = Json.render(RawLap.toJson(r));
+                Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
+            case Err(_) => Assert.assertTrue(false)
         }
 
 }

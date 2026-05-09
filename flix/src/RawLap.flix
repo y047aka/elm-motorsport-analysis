@@ -7,6 +7,8 @@ mod RawLap {
     use Util.HourClock.Hour
     use Util.Json
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
 
     /// Improvement flag observed in WEC LAP_IMPROVEMENT and S*_IMPROVEMENT
     /// columns. Semantics derived from empirical CSV analysis:
@@ -44,6 +46,16 @@ mod RawLap {
         improvement = Improvement
     }
 
+    /// One Le Mans mini-sector observation. `time` is the duration of the
+    /// segment between the previous mini-sector marker and this one;
+    /// `elapsed` is the cumulative time from the start of the lap up to this
+    /// marker. Both are `Option` because the values can be blank in the CSV
+    /// (e.g. on a pit lap or when the timing system missed a marker).
+    pub type alias RawMiniSector = {
+        time = Option[Duration],
+        elapsed = Option[Duration]
+    }
+
     pub type alias RawCar = {
         carNumber = String,
         class = String,
@@ -72,14 +84,15 @@ mod RawLap {
         hour = Hour,
         topSpeed = String,
         pitTime = Option[Duration],
-        flagAtFl = Flag
+        flagAtFl = Flag,
+        miniSectors = Option[List[(MiniSectorId, RawMiniSector)]]
     }
 
     pub def decoder(): Decoder[RawLap] =
         Decode.intoRecord(
             car -> driver -> lapNumber -> lapTime -> lapImprovement ->
             crossingFinishLineInPit -> s1 -> s2 -> s3 -> kph -> elapsed -> hour ->
-            topSpeed -> pitTime -> flagAtFl ->
+            topSpeed -> pitTime -> flagAtFl -> miniSectors ->
                 {
                     car = car,
                     driver = driver,
@@ -95,7 +108,8 @@ mod RawLap {
                     hour = hour,
                     topSpeed = topSpeed,
                     pitTime = pitTime,
-                    flagAtFl = flagAtFl
+                    flagAtFl = flagAtFl,
+                    miniSectors = miniSectors
                 }
         )
             |> Decode.pipeline(carDecoder())
@@ -113,9 +127,10 @@ mod RawLap {
             |> Decode.pipeline(numericOrBlankStringField("TOP_SPEED"))
             |> Decode.pipeline(optionalDurationField("PIT_TIME"))
             |> Decode.pipeline(flagField("FLAG_AT_FL"))
+            |> Decode.pipeline(miniSectorsDecoder())
 
     pub def toJson(rawLap: RawLap): Json.JsonValue =
-        JsonObject(
+        let baseFields =
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driver#number)) ::
             ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
@@ -139,8 +154,12 @@ mod RawLap {
             ("team",                    JsonString(rawLap#car#team)) ::
             ("manufacturer",            JsonString(rawLap#car#manufacturer)) ::
             ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
-            Nil
-        )
+            Nil;
+        let miniFields = match rawLap#miniSectors {
+            case None       => Nil
+            case Some(list) => ("miniSectors", miniSectorsToJson(list)) :: Nil
+        };
+        JsonObject(List.append(baseFields, miniFields))
 
     def carDecoder(): Decoder[RawCar] =
         Decode.intoRecord(
@@ -311,5 +330,68 @@ mod RawLap {
             case Some(ms) => JsonString(Util.Duration.format(ms))
             case None     => JsonString("")
         }
+
+    /// Decodes the 15 Le Mans mini-sectors (each contributes `<NAME>_time`
+    /// and `<NAME>_elapsed`). Columns absent from the header (non-Le Mans
+    /// CSVs) and blank values both decode to `None` for that side. When
+    /// every entry is `None` for both sides the whole list collapses to
+    /// `None` so `toJson` can omit the `miniSectors` key.
+    def miniSectorsDecoder(): Decoder[Option[List[(MiniSectorId, RawMiniSector)]]] =
+        Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
+
+    def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, RawMiniSector)]] =
+        List.foldRight(
+            (id, acc) ->
+                Decode.andThen(
+                    sector ->
+                        Decode.andThen(
+                            rest -> Decode.succeed((id, sector) :: rest),
+                            acc
+                        ),
+                    miniSectorDecoder(id)
+                ),
+            Decode.succeed(Nil),
+            ids
+        )
+
+    def miniSectorDecoder(id: MiniSectorId): Decoder[RawMiniSector] =
+        let prefix = MiniSector.csvName(id);
+        Decode.andThen(
+            time ->
+                Decode.andThen(
+                    elapsed -> Decode.succeed({ time = time, elapsed = elapsed }),
+                    optionalDurationFromMaybeField("${prefix}_elapsed")
+                ),
+            optionalDurationFromMaybeField("${prefix}_time")
+        )
+
+    /// Combines `Decode.optionalField` (header missing → `None`) with
+    /// `optionalDurationField` (blank value → `None`) and flattens the
+    /// resulting `Option[Option[Duration]]` to `Option[Duration]`.
+    def optionalDurationFromMaybeField(name: String): Decoder[Option[Duration]] =
+        Decode.map(Option.flatten, Decode.optionalField(name, optionalDurationField(name)))
+
+    def collapseIfAllNone(list: List[(MiniSectorId, RawMiniSector)]): Option[List[(MiniSectorId, RawMiniSector)]] =
+        let hasAny = List.exists(
+            match (_, sector) -> sector#time != None or sector#elapsed != None,
+            list
+        );
+        if (hasAny) Some(list) else None
+
+    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Json.JsonValue =
+        let entries = list |> List.filterMap(match (id, sector) ->
+            if (sector#time == None and sector#elapsed == None)
+                None
+            else
+                Some((MiniSector.jsonKey(id), miniSectorToJson(sector)))
+        );
+        JsonObject(entries)
+
+    def miniSectorToJson(sector: RawMiniSector): Json.JsonValue =
+        JsonObject(
+            ("time",    optionalDurationJson(sector#time)) ::
+            ("elapsed", optionalDurationJson(sector#elapsed)) ::
+            Nil
+        )
 
 }

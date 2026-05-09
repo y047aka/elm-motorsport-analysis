@@ -5,12 +5,17 @@
 /// to stderr.
 ///
 /// Rules:
-///   1. SectorSum         — `s1 + s2 + s3 == lapTime` (per row)
-///   2. ElapsedDrift      — per car, `elapsed[n] == sum(lapTime[1..=n])`
-///                          (cumulative-sum: every row from the first drift
-///                          onward is reported)
-///   3. HourElapsedOffset — across the CSV, `(hour - elapsed) mod 24h` is
-///                          constant
+///   1. SectorSum                  — `s1 + s2 + s3 == lapTime` (per row)
+///   2. ElapsedDrift               — per car, `elapsed[n] == sum(lapTime[1..=n])`
+///                                   (cumulative-sum: every row from the first drift
+///                                   onward is reported)
+///   3. HourElapsedOffset          — across the CSV, `(hour - elapsed) mod 24h` is
+///                                   constant
+///   4. MiniSectorSum              — when mini-sectors present, `sum(time) == lapTime`
+///                                   (per row, blank `time` counted as zero)
+///   5. MiniSectorElapsedMonotonic — when mini-sectors present, `elapsed` values are
+///                                   non-decreasing in track order (reports each
+///                                   adjacent pair that goes backwards)
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -20,11 +25,16 @@
 ///     just compares offsets with `==`.
 ///   - Report order follows CSV appearance (per-lap is naturally CSV order;
 ///     per-car uses first-seen-index to sort the car groups).
+///   - Mini-sector rules silently skip laps where `miniSectors == None`
+///     (non-Le Mans rounds, or laps where all 30 source columns were blank).
 mod Cli.Validation {
 
     use Util.Duration.Duration
     use Util.HourClock
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
     use RawLap.RawLap
+    use RawLap.RawMiniSector
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
@@ -39,6 +49,16 @@ mod Cli.Validation {
         /// `(hour - elapsed) mod 24h` does not match the baseline.
         /// Args: lap / baseline offset (ms, signed) / actual offset (ms, signed).
         case HourElapsedOffset(RawLap, Int32, Int32)
+
+        /// `sum(miniSector.time) != lapTime` for laps with mini-sector data.
+        /// Args: lap / lapTime / sum / json keys of sub-sectors with blank time.
+        case MiniSectorSum(RawLap, Duration, Duration, List[String])
+
+        /// Mini-sector `elapsed[i] < elapsed[i-1]` for some adjacent pair
+        /// in track order (only entries where both sides are present are
+        /// compared).
+        /// Args: lap / prev id / prev elapsed / curr id / curr elapsed.
+        case MiniSectorElapsedMonotonic(RawLap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
 
     pub def validate(eventName: String, laps: List[RawLap]): List[String] =
@@ -48,7 +68,8 @@ mod Cli.Validation {
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
         let perCar = perCarViolations(laps);
         let perRace = checkHourElapsedRaceWide(laps);
-        List.append(perLap, List.append(perCar, perRace))
+        let perMini = laps |> List.flatMap(checkMiniSectors);
+        List.append(perLap, List.append(perCar, List.append(perRace, perMini)))
 
     def resultToOption(r: Result[Violation, Unit]): Option[Violation] =
         match r {
@@ -150,6 +171,71 @@ mod Cli.Validation {
                 formatDurationPair(eventName, lap, "elapsed-drift", expected, actual)
             case Violation.HourElapsedOffset(lap, base, offset) =>
                 formatSignedMsPair(eventName, lap, "hour-offset", base, offset)
+            case Violation.MiniSectorSum(lap, lapTime, sum, blanks) =>
+                let suffix =
+                    if (List.isEmpty(blanks)) ""
+                    else " (blank: ${List.join(",", blanks)})";
+                formatDurationPair(eventName, lap, "mini-sector-sum", lapTime, sum) + suffix
+            case Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, currElapsed) =>
+                let kind = "mini-sector-elapsed[${MiniSector.jsonKey(prevId)}->${MiniSector.jsonKey(currId)}]";
+                formatDurationPair(eventName, lap, kind, prevElapsed, currElapsed)
+        }
+
+    /// Per-lap mini-sector checks. Skipped entirely for laps without
+    /// mini-sector data (`miniSectors == None`). Otherwise emits at most
+    /// one `MiniSectorSum` plus zero or more `MiniSectorElapsedMonotonic`
+    /// violations.
+    def checkMiniSectors(lap: RawLap): List[Violation] =
+        match lap#miniSectors {
+            case None       => Nil
+            case Some(list) =>
+                let sumViol  = checkMiniSectorSum(lap, list);
+                let monoViol = checkMiniSectorMonotonic(lap, list);
+                List.append(sumViol, monoViol)
+        }
+
+    def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+        let parts = list |> List.map(match (id, sector) ->
+            match sector#time {
+                case Some(d) => (d, None)
+                case None    => (Util.Duration.zero(), Some(MiniSector.jsonKey(id)))
+            }
+        );
+        let sum = parts |> List.foldLeft(
+            (acc, pair) -> match pair {
+                case (d, _) => Util.Duration.add(acc, d)
+            },
+            Util.Duration.zero()
+        );
+        let blanks = parts |> List.filterMap(match (_, b) -> b);
+        if (sum == lap#lapTime) Nil
+        else Violation.MiniSectorSum(lap, lap#lapTime, sum, blanks) :: Nil
+
+    /// Walks the track-ordered list and reports each adjacent pair where
+    /// the second elapsed is strictly less than the first. Entries with
+    /// blank elapsed are skipped without breaking the chain (so we still
+    /// catch a backwards step that straddles a single missing marker).
+    def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+        let folded = list |> List.foldLeft(
+            (state, pair) -> match (state, pair) {
+                case ((prev, acc), (id, sector)) =>
+                    match sector#elapsed {
+                        case None => (prev, acc)
+                        case Some(curr) => match prev {
+                            case None => (Some((id, curr)), acc)
+                            case Some((prevId, prevElapsed)) =>
+                                if (Util.Duration.millis(curr) >= Util.Duration.millis(prevElapsed))
+                                    (Some((id, curr)), acc)
+                                else
+                                    (Some((id, curr)),
+                                     Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, id, curr) :: acc)
+                        }
+                    }
+            },
+            (None, Nil)
+        );
+        match folded {
+            case (_, acc) => List.reverse(acc)
         }
 
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.

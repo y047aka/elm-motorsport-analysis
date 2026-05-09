@@ -5,14 +5,32 @@ mod Cli.TestValidation {
     use Util.Duration
     use Cli.Validation
     use Cli.Validation.Violation
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
     use RawLap.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
 
+    def leMansHeader(): String =
+        header() +
+        ";SCL2_time;SCL2_elapsed;Z4_time;Z4_elapsed;IP1_time;IP1_elapsed" +
+        ";Z12_time;Z12_elapsed;SCLC_time;SCLC_elapsed;A7-1_time;A7-1_elapsed;IP2_time;IP2_elapsed" +
+        ";A8-1_time;A8-1_elapsed;SCLB_time;SCLB_elapsed;PORIN_time;PORIN_elapsed;POROUT_time;POROUT_elapsed;PITREF_time;PITREF_elapsed;SCL1_time;SCL1_elapsed;FORDOUT_time;FORDOUT_elapsed;FL_time;FL_elapsed"
+
     def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap =
         let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};";
         let csv = header() + "\n" + row;
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+            case Ok(r :: _) => r
+            case _          => unreachable!()
+        }
+
+    /// Build a Le Mans-shaped lap. `miniTail` is the raw 30-column suffix
+    /// (`time;elapsed;...`) appended after the standard fields.
+    def buildLeMansLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String): RawLap =
+        let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};${miniTail}";
+        let csv = leMansHeader() + "\n" + row;
         match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
@@ -23,6 +41,8 @@ mod Cli.TestValidation {
         case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
         case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber
         case Violation.HourElapsedOffset(lap, _, _) => lap#car#carNumber
+        case Violation.MiniSectorSum(lap, _, _, _)  => lap#car#carNumber
+        case Violation.MiniSectorElapsedMonotonic(lap, _, _, _, _) => lap#car#carNumber
     }
 
     def isSectorSum(v: Violation): Bool = match v {
@@ -38,6 +58,16 @@ mod Cli.TestValidation {
     def isHourElapsedOffset(v: Violation): Bool = match v {
         case Violation.HourElapsedOffset(_, _, _) => true
         case _                                    => false
+    }
+
+    def isMiniSectorSum(v: Violation): Bool = match v {
+        case Violation.MiniSectorSum(_, _, _, _) => true
+        case _                                   => false
+    }
+
+    def isMiniSectorMonotonic(v: Violation): Bool = match v {
+        case Violation.MiniSectorElapsedMonotonic(_, _, _, _, _) => true
+        case _                                                    => false
     }
 
     @Test
@@ -187,6 +217,97 @@ mod Cli.TestValidation {
                 Assert.assertTrue(violationCar(v1) == "10");
                 Assert.assertTrue(violationCar(v2) == "7")
             case _ => Assert.assertTrue(false)
+        }
+
+    /// 15 sub-sectors that cleanly split the 2:00.000 lap into 8000 ms each.
+    /// The `_elapsed` column is the running total at each marker.
+    def cleanMiniTail(): String =
+        "8.000;8.000;8.000;16.000;8.000;24.000" +
+        ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
+        ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;8.000;1:52.000;8.000;2:00.000"
+
+    @Test
+    def testMiniSectorsAbsentLapProducesNoMiniViolations(): Unit \ Assert =
+        // Standard (non-Le Mans) header → miniSectors = None → mini-sector
+        // checks must be skipped entirely.
+        let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
+        let violations = Validation.detect(lap :: Nil);
+        Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorSum, violations)));
+        Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorMonotonic, violations)))
+
+    @Test
+    def testValidLeMansLapProducesNoMiniViolations(): Unit \ Assert =
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", cleanMiniTail());
+        let violations = Validation.detect(lap :: Nil);
+        Assert.assertTrue(List.isEmpty(violations))
+
+    @Test
+    def testMiniSectorSumMismatchDetected(): Unit \ Assert =
+        // Bump the FL_time from 8.000 → 8.001, leaving lapTime 2:00.000 →
+        // sum = 2:00.001, off by 1 ms. Note this also breaks the FL_elapsed
+        // monotonic chain so we filter to the SectorSum-style violation.
+        let badTail = String.replace({src = "8.000;2:00.000"}, {dst = "8.001;2:00.000"}, cleanMiniTail());
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorSum);
+        Assert.assertTrue(List.length(violations) == 1);
+        match List.head(violations) {
+            case Some(Violation.MiniSectorSum(_, lapMs, sum, _)) =>
+                Assert.assertTrue(lapMs == Duration.fromMillis(120000));
+                Assert.assertTrue(sum == Duration.fromMillis(120001))
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testMiniSectorBlankTimeAnnotated(): Unit \ Assert =
+        // Blank Z4_time → counted as 0 ms in the sum (8 + 0 + 8 + ... = 1:52.000),
+        // so we expect a MiniSectorSum violation with `z4` in the blanks list.
+        let badTail = String.replace({src = "8.000;8.000;8.000;16.000"}, {dst = "8.000;8.000;;16.000"}, cleanMiniTail());
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorSum);
+        Assert.assertTrue(List.length(violations) == 1);
+        match List.head(violations) {
+            case Some(Violation.MiniSectorSum(_, _, _, blanks)) =>
+                Assert.assertTrue(List.memberOf("z4", blanks))
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testMiniSectorElapsedMonotonicViolationDetected(): Unit \ Assert =
+        // Replace IP1_elapsed (24.000) with 20.000 — strictly less than the
+        // previous Z4_elapsed (16.000)? No, 20 > 16, so swap to a value < 16
+        // to trigger a backwards step. Replace the substring "16.000;8.000;24.000"
+        // (Z4_elapsed=16.000, then IP1_time=8.000, then IP1_elapsed=24.000)
+        // with "16.000;8.000;15.000".
+        let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;15.000"}, cleanMiniTail());
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorMonotonic);
+        Assert.assertTrue(List.length(violations) == 1);
+        match List.head(violations) {
+            case Some(Violation.MiniSectorElapsedMonotonic(_, prevId, prevElapsed, currId, currElapsed)) =>
+                Assert.assertTrue(prevId == MiniSectorId.Z4);
+                Assert.assertTrue(currId == MiniSectorId.IP1);
+                Assert.assertTrue(prevElapsed == Duration.fromMillis(16000));
+                Assert.assertTrue(currElapsed == Duration.fromMillis(15000))
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testMiniSectorViolationFormattedString(): Unit \ Assert =
+        let badTail = String.replace({src = "8.000;2:00.000"}, {dst = "8.001;2:00.000"}, cleanMiniTail());
+        let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
+        let messages = Validation.validate("le_mans_24h", lap :: Nil)
+            |> List.filter(m -> String.contains({substr = "mini-sector-sum"}, m));
+        Assert.assertTrue(List.length(messages) == 1);
+        match List.head(messages) {
+            case Some(msg) =>
+                Assert.assertTrue(String.contains({substr = "le_mans_24h"}, msg));
+                Assert.assertTrue(String.contains({substr = "[car 7 #1]"}, msg));
+                Assert.assertTrue(String.contains({substr = "expected=2:00.000 (120000ms)"}, msg));
+                Assert.assertTrue(String.contains({substr = "actual=2:00.001 (120001ms)"}, msg))
+            case None => Assert.assertTrue(false)
         }
 
     @Test
