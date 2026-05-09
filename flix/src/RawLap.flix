@@ -378,7 +378,7 @@ mod RawLap {
         Decode.map(Option.flatten, Decode.optionalField(name, optionalDurationField(name)))
 
     def collapseIfAllNone(list: List[(MiniSectorId, Option[RawMiniSector])]): Option[List[(MiniSectorId, Option[RawMiniSector])]] =
-        let hasAny = List.exists(match (_, opt) -> Option.isEmpty(opt) |> Bool.not, list);
+        let hasAny = List.exists(match (_, opt) -> not Option.isEmpty(opt), list);
         if (hasAny) Some(list) else None
 
     def miniSectorsToJson(list: List[(MiniSectorId, Option[RawMiniSector])]): Json.JsonValue =
