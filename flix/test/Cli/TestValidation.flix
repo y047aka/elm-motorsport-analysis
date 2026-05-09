@@ -29,12 +29,29 @@ mod Cli.TestValidation {
     /// Build a Le Mans-shaped lap. `miniTail` is the raw 30-column suffix
     /// (`time;elapsed;...`) appended after the standard fields.
     def buildLeMansLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String): RawLap =
-        let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};${miniTail}";
+        buildLeMansLapWith(num, lap, lapTime, s1, s2, s3, elapsed, hour, miniTail, "", "")
+
+    /// Le Mans lap builder with explicit values for the
+    /// CROSSING_FINISH_LINE_IN_PIT and PIT_TIME columns. Pass `box = "B"`
+    /// to mark the lap as a pit-entry lap, or `pitTime = "30.500"` to
+    /// record a pit-stop duration.
+    def buildLeMansLapWith(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String, box: String, pitTime: String): RawLap =
+        let row = "${num};1;${lap};${lapTime};0;${box};${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;${pitTime};HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};${miniTail}";
         let csv = leMansHeader() + "\n" + row;
         match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }
+
+    /// 15 sub-sectors with the trailing FORDOUT and FL_time blanked out —
+    /// the canonical "pit-entry lap" pattern observed in real Le Mans data
+    /// (the car skips the main-line FORDOUT loop and crosses FL inside the
+    /// pit lane). The FL_elapsed value is preserved at lapTime so the lap
+    /// itself is still completed at the finish line.
+    def pitEntryMiniTail(): String =
+        "8.000;8.000;8.000;16.000;8.000;24.000" +
+        ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
+        ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;;;;2:00.000"
 
     /// Pulls carNumber off the leading RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
@@ -309,6 +326,50 @@ mod Cli.TestValidation {
                 Assert.assertTrue(String.contains({substr = "actual=2:00.001 (120001ms)"}, msg))
             case None => Assert.assertTrue(false)
         }
+
+    @Test
+    def testMiniSectorSumSkippedOnBoxedFinishLineLap(): Unit \ Assert =
+        // Real pit-entry pattern: car crosses FL inside the pit lane
+        // (CROSSING_FINISH_LINE_IN_PIT = "B"), bypasses FORDOUT and the
+        // FL_time loop. Sum of mini-sector times = 1:44.000 << lapTime
+        // = 2:00.000, but we expect NO MiniSectorSum violation because
+        // the lap is identified as a pit lap.
+        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "B", "");
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorSum);
+        Assert.assertTrue(List.isEmpty(violations))
+
+    @Test
+    def testMiniSectorSumSkippedWhenPitTimeRecorded(): Unit \ Assert =
+        // Even without the boxed-finish-line flag, a recorded PIT_TIME
+        // also marks the lap as a pit lap and skips the sum check.
+        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "", "30.500");
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorSum);
+        Assert.assertTrue(List.isEmpty(violations))
+
+    @Test
+    def testMiniSectorSumStillReportsNonPitLapWithBlankTrailingMarkers(): Unit \ Assert =
+        // Same blank pattern as a pit lap but without any pit signal —
+        // this is the "real timing-loop anomaly" case (e.g. Le Mans 2025
+        // car 9 lap 189: blank scl1+fordout with no pitTime / no box flag).
+        // The validator must STILL flag this as a MiniSectorSum violation.
+        let lap = buildLeMansLapWith("9", 189, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "", "");
+        let violations = Validation.detect(lap :: Nil)
+            |> List.filter(isMiniSectorSum);
+        Assert.assertTrue(List.length(violations) == 1)
+
+    @Test
+    def testMiniSectorMonotonicStillRunsOnPitLaps(): Unit \ Assert =
+        // The Monotonic check is independent of pit context: missing
+        // markers don't break monotonicity (blank elapsed is skipped),
+        // but a backwards step must still be reported even when the lap
+        // is a pit lap.
+        let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;15.000"}, pitEntryMiniTail());
+        let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail, "B", "");
+        let violations = Validation.detect(lap :: Nil);
+        Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorSum, violations)));
+        Assert.assertTrue(List.length(List.filter(isMiniSectorMonotonic, violations)) == 1)
 
     @Test
     def testValidateRendersFormattedString(): Unit \ Assert =

@@ -12,10 +12,14 @@
 ///   3. HourElapsedOffset          — across the CSV, `(hour - elapsed) mod 24h` is
 ///                                   constant
 ///   4. MiniSectorSum              — when mini-sectors present, `sum(time) == lapTime`
-///                                   (per row, blank `time` counted as zero)
+///                                   (per row, blank `time` counted as zero).
+///                                   **Skipped on pit laps** (see below).
 ///   5. MiniSectorElapsedMonotonic — when mini-sectors present, `elapsed` values are
 ///                                   non-decreasing in track order (reports each
-///                                   adjacent pair that goes backwards)
+///                                   adjacent pair that goes backwards). Always run
+///                                   even on pit laps — monotonicity is not affected
+///                                   by missing markers because blank `elapsed`
+///                                   entries are skipped without breaking the chain.
 ///
 /// Design notes:
 ///   - HourElapsedOffset's baseline is the **first valid row in the whole
@@ -27,6 +31,15 @@
 ///     per-car uses first-seen-index to sort the car groups).
 ///   - Mini-sector rules silently skip laps where `miniSectors == None`
 ///     (non-Le Mans rounds, or laps where all 30 source columns were blank).
+///   - **MiniSectorSum is skipped on pit laps** — when a car enters the pits
+///     it bypasses main-line markers (typically FORDOUT and FL_time) so the
+///     sum can never reach lapTime. Empirically (Le Mans 2025, 20182 laps)
+///     this skip removes ~86% of MiniSectorSum noise (1929 of 2240) while
+///     preserving real timing-loop anomalies (the remaining ~311 cases are
+///     adjacent SCL1+FORDOUT loop failures on non-pit laps, concentrated on
+///     specific cars). A pit lap is identified by either
+///     `crossingFinishLineInPit == "B"` (crossed FL inside the pit lane) or
+///     `pitTime != None` (pit-stop duration recorded for this lap).
 mod Cli.Validation {
 
     use Util.Duration.Duration
@@ -184,15 +197,26 @@ mod Cli.Validation {
     /// Per-lap mini-sector checks. Skipped entirely for laps without
     /// mini-sector data (`miniSectors == None`). Otherwise emits at most
     /// one `MiniSectorSum` plus zero or more `MiniSectorElapsedMonotonic`
-    /// violations.
+    /// violations. The `MiniSectorSum` rule is skipped on pit laps since
+    /// the car bypasses some main-line markers (see the module-level
+    /// docstring).
     def checkMiniSectors(lap: RawLap): List[Violation] =
         match lap#miniSectors {
             case None       => Nil
             case Some(list) =>
-                let sumViol  = checkMiniSectorSum(lap, list);
+                let sumViol  =
+                    if (isPitLap(lap)) Nil
+                    else checkMiniSectorSum(lap, list);
                 let monoViol = checkMiniSectorMonotonic(lap, list);
                 List.append(sumViol, monoViol)
         }
+
+    /// True when the car was either flagged as crossing the finish line
+    /// inside the pit lane or had a pit-stop duration recorded for this
+    /// lap. Either condition implies the car missed at least one main-line
+    /// timing loop, so MiniSectorSum can never balance.
+    def isPitLap(lap: RawLap): Bool =
+        lap#crossingFinishLineInPit or lap#pitTime != None
 
     def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let parts = list |> List.map(match (id, sector) ->
