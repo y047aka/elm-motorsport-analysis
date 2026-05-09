@@ -350,14 +350,14 @@ mod RawLap {
         let prefix = MiniSector.csvName(id);
         Decode.map2(
             (time, elapsed) -> { time = time, elapsed = elapsed },
-            optionalDurationFromMaybeField("${prefix}_time"),
-            optionalDurationFromMaybeField("${prefix}_elapsed")
+            optionalDurationFromOptionalColumn("${prefix}_time"),
+            optionalDurationFromOptionalColumn("${prefix}_elapsed")
         )
 
     /// Combines `Decode.optionalField` (header missing → `None`) with
     /// `optionalDurationField` (blank value → `None`) and flattens the
     /// resulting `Option[Option[Duration]]` to `Option[Duration]`.
-    def optionalDurationFromMaybeField(name: String): Decoder[Option[Duration]] =
+    def optionalDurationFromOptionalColumn(name: String): Decoder[Option[Duration]] =
         Decode.map(Option.flatten, Decode.optionalField(name, optionalDurationField(name)))
 
     def collapseIfAllNone(list: List[(MiniSectorId, RawMiniSector)]): Option[List[(MiniSectorId, RawMiniSector)]] =
