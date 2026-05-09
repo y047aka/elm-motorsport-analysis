@@ -490,26 +490,6 @@ mod Util.Csv.Decode {
     pub def pipeline(decoder: Decoder[a], decoderFn: Decoder[a -> b]): Decoder[b] =
         map2((value, fn) -> fn(value), decoder, decoderFn)
 
-    /// Apply a decoder-producing function to every element of a list and
-    /// collect the results into a single list-valued decoder.
-    ///
-    /// Equivalent to `sequence . map f` in Haskell-style notation. The
-    /// produced decoder applies each per-element decoder to the same row in
-    /// list order; failures accumulate via the underlying `map2` rather
-    /// than short-circuiting (mirrors `pipeline`).
-    ///
-    /// Prefer this over `List.foldRight` with nested `andThen` when the
-    /// per-element decoders are independent: `andThen` rebuilds inner
-    /// decoders on every row (because the continuation `next(value)` is
-    /// invoked per-row), whereas `traverse` builds the full decoder graph
-    /// once at construction time and only walks it per row.
-    pub def traverse(f: a -> Decoder[b], list: List[a]): Decoder[List[b]] =
-        List.foldRight(
-            (x, acc) -> map2((b, bs) -> b :: bs, f(x), acc),
-            succeed(Nil),
-            list
-        )
-
     ///
     /// ===== FANCY DECODING =====
     ///

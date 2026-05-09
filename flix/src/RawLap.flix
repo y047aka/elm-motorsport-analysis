@@ -2,6 +2,7 @@ mod RawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
+    use Util.Csv.Decode.Extra
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
@@ -340,7 +341,7 @@ mod RawLap {
         Decode.map(collapseIfAllNone, decodeMiniSectorList(MiniSector.all()))
 
     def decodeMiniSectorList(ids: List[MiniSectorId]): Decoder[List[(MiniSectorId, RawMiniSector)]] =
-        Decode.traverse(
+        Extra.traverse(
             id -> Decode.map(sector -> (id, sector), miniSectorDecoder(id)),
             ids
         )
