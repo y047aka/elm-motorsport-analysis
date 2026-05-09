@@ -31,7 +31,8 @@ mod Motorsport.TestMetadata {
             hour                    = Hour.Hour(0),
             topSpeed                = "",
             pitTime                 = None,
-            flagAtFl                = RawLap.Flag.Green
+            flagAtFl                = RawLap.Flag.Green,
+            miniSectors             = None
         }
 
     @Test
