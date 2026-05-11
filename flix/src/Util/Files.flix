@@ -9,10 +9,10 @@ mod Util.Files {
 
     instance ToString[FileError] {
         pub def toString(e: FileError): String = match e {
-            case FileError.ReadError(path, msg)  => "Failed to read ${path}\n  caused by: ${msg}"
-            case FileError.WriteError(path, msg) => "Failed to write ${path}\n  caused by: ${msg}"
-            case FileError.AccessError(msg)      => "File access error\n  caused by: ${msg}"
-            case FileError.GlobError(msg)        => "Directory glob error\n  caused by: ${msg}"
+            case FileError.ReadError(path, msg)  => "Failed to read ${path} (caused by: ${msg})"
+            case FileError.WriteError(path, msg) => "Failed to write ${path} (caused by: ${msg})"
+            case FileError.AccessError(msg)      => "File access error (caused by: ${msg})"
+            case FileError.GlobError(msg)        => "Directory glob error (caused by: ${msg})"
         }
     }
 

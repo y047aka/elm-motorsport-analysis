@@ -7,8 +7,9 @@ mod Cli.Errors {
     /// The `Csv` variant carries the input path alongside the underlying
     /// decoder message so callers can report which file failed without
     /// re-threading the path themselves. The `ToString` instance renders
-    /// errors in a Rust-`WithChain`-like form: a one-line summary followed
-    /// by an indented `caused by:` line for any nested cause.
+    /// errors in a single-line `summary (caused by: <cause>)` form so log
+    /// lines stay grep-friendly and prefixes (event name, timestamp) remain
+    /// visually attached to the message.
     pub enum CliError {
         case PathNotFound(String)
         case NoCsvFiles(String)
@@ -25,7 +26,7 @@ mod Cli.Errors {
             case CliError.OutputWithDirectory => "--output cannot be used with a directory input"
             case CliError.EmptyFile(p)        => "Empty file: ${p}"
             case CliError.File(cause)         => "${cause}"
-            case CliError.Csv(r)              => "Failed to decode ${r#path}\n  caused by: ${r#message}"
+            case CliError.Csv(r)              => "Failed to decode ${r#path} (caused by: ${r#message})"
         }
     }
 
