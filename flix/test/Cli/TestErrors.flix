@@ -5,7 +5,7 @@ mod Cli.TestErrors {
 
     @Test
     def testPathNotFoundRendersPath(): Unit \ Assert =
-        let s = "${CliError.PathNotFound("/tmp/missing.csv")}";
+        let s = "${CliError.InputPathNotFound("/tmp/missing.csv")}";
         Assert.assertTrue(String.contains({substr = "Path not found"}, s));
         Assert.assertTrue(String.contains({substr = "/tmp/missing.csv"}, s))
 
