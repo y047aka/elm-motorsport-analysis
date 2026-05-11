@@ -23,7 +23,7 @@ mod Util.Files {
             )
         ) |> Result.mapErr(e -> FileError.ReadError(path, "${e}"))
 
-    pub def writeFile(path: String, content: String): Result[FileError, Unit] \ IO =
+    pub def write(path: String, content: String): Result[FileError, Unit] \ IO =
         Fs.FileWrite.runWithIO(() ->
             Fs.WriteFile.runWithFileWrite(() ->
                 Fs.WriteFile.write({str = content}, path)

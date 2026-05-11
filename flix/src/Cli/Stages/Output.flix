@@ -7,10 +7,10 @@ mod Cli.Stages.Output {
 
     /// Writes the rendered metadata and laps JSON to the paths
     /// specified on the FileTask. Returns the first I/O failure.
-    pub def writeOutputs(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
+    pub def write(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(
-            _ <- Files.writeFile(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);
-            _ <- Files.writeFile(task#lapsPath, rendered#lapsJson) |> Result.mapErr(CliError.File)
+            _ <- Files.write(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);
+            _ <- Files.write(task#lapsPath, rendered#lapsJson) |> Result.mapErr(CliError.File)
         ) yield ()
 
 }

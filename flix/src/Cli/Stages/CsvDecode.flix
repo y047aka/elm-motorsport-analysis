@@ -10,7 +10,7 @@ mod Cli.Stages.CsvDecode {
     /// decoder. `inputPath` is only used to attach context to `CliError.Csv`.
     /// FieldNamesFromFirstRow consumes the first line as column names,
     /// making them available for field-based decoding in RawLap.decoder.
-    pub def decodeRawLaps(inputPath: String, content: String): Result[CliError, List[RawLap.RawLap]] =
+    pub def decode(inputPath: String, content: String): Result[CliError, List[RawLap.RawLap]] =
         let stripped =
             if (String.startsWith({prefix = "﻿"}, content)) String.dropLeft(1, content) else content;
         Decode.decodeCustom(

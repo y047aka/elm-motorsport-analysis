@@ -20,7 +20,7 @@ mod Cli.FileTask {
             eventName   = eventName(inputPath)
         }
 
-    pub def resolve(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
+    pub def fromArgs(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
         forM(

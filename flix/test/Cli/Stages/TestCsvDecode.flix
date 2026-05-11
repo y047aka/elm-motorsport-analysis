@@ -10,25 +10,25 @@ mod Cli.Stages.TestCsvDecode {
         "12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:00.000;;;;310.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;;;"
 
     @Test
-    def testDecodeRawLapsParsesValidCsv(): Unit \ Assert =
+    def testDecodeParsesValidCsv(): Unit \ Assert =
         let csv = header() + "\n" + sampleRow();
-        match CsvDecode.decodeRawLaps("test.csv", csv) {
+        match CsvDecode.decode("test.csv", csv) {
             case Ok(laps) => Assert.assertTrue(List.length(laps) == 1)
             case Err(_)   => Assert.assertTrue(false)
         }
 
     @Test
-    def testDecodeRawLapsStripsBom(): Unit \ Assert =
+    def testDecodeStripsBom(): Unit \ Assert =
         let csv = "﻿" + header() + "\n" + sampleRow();
-        match CsvDecode.decodeRawLaps("test.csv", csv) {
+        match CsvDecode.decode("test.csv", csv) {
             case Ok(laps) => Assert.assertTrue(List.length(laps) == 1)
             case Err(_)   => Assert.assertTrue(false)
         }
 
     @Test
-    def testDecodeRawLapsAttachesPathOnError(): Unit \ Assert =
+    def testDecodeAttachesPathOnError(): Unit \ Assert =
         let broken = "not;a;valid;csv";
-        match CsvDecode.decodeRawLaps("/tmp/race.csv", broken) {
+        match CsvDecode.decode("/tmp/race.csv", broken) {
             case Ok(_) => Assert.assertTrue(false)
             case Err(CliError.Csv(r)) =>
                 Assert.assertTrue(r#path == "/tmp/race.csv")

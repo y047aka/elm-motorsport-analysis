@@ -45,7 +45,7 @@ mod Cli.Stages {
     /// Each helper closes over `task` so the chain is composed with `|>`
     /// alone, without threading an explicit pipeline-state record.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        CsvInput.readSource(task#inputPath)
+        CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
             |> Result.map(reportViolations(task))
             |> Result.map(render(task))
@@ -53,7 +53,7 @@ mod Cli.Stages {
             |> Result.map(toReport(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap.RawLap]] =
-        content -> CsvDecode.decodeRawLaps(task#inputPath, content)
+        content -> CsvDecode.decode(task#inputPath, content)
 
     def reportViolations(task: FileTask.FileTask): List[RawLap.RawLap] -> List[RawLap.RawLap] \ Console =
         rawLaps -> {
@@ -67,7 +67,7 @@ mod Cli.Stages {
     /// Writes the rendered JSON and passes `Rendered` through on success
     /// so downstream stages can still see lapCount.
     def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
-        rendered -> Output.writeOutputs(task, rendered) |> Result.map(_ -> rendered)
+        rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)
 
     def toReport(task: FileTask.FileTask): Rendered -> ProcessingReport =
         rendered -> {
