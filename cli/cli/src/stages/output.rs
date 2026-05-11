@@ -3,7 +3,7 @@
 //! The computation that fills these shapes lives in [`transform`](super::transform).
 
 use motorsport::{Car, HourClock, car, duration};
-use serde::{Serialize, Serializer};
+use serde::Serialize;
 
 use crate::domain::{LapRecord, MiniSectorTimes, with_mini_sector_names};
 use crate::error::FileError;
@@ -21,27 +21,6 @@ fn format_sector_time(present: bool, sector_duration: u32) -> String {
         duration::to_string(sector_duration)
     } else {
         String::new()
-    }
-}
-
-/// Serializes TopSpeed as a string, stripping a trailing `.0` when the raw
-/// value is numeric. Unparseable inputs pass through unchanged.
-fn serialize_top_speed<S>(top_speed: &str, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    if top_speed.is_empty() {
-        return serializer.serialize_str(top_speed);
-    }
-
-    if let Ok(speed) = top_speed.parse::<f32>() {
-        if speed.fract() == 0.0 {
-            serializer.serialize_str(&format!("{}", speed as i32))
-        } else {
-            serializer.serialize_str(top_speed)
-        }
-    } else {
-        serializer.serialize_str(top_speed)
     }
 }
 
@@ -107,7 +86,6 @@ pub struct RawLap {
     pub kph: String,
     pub elapsed: String,
     pub hour: String,
-    #[serde(serialize_with = "serialize_top_speed")]
     pub top_speed: String,
     pub driver_name: String,
     pub pit_time: String,
@@ -194,27 +172,6 @@ fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_serialize_top_speed() {
-        use serde_json::value::Serializer;
-
-        let test_cases = vec![
-            ("300.0", "300"),       // trailing .0 dropped
-            ("288.8", "288.8"),     // fractional value preserved
-            ("", ""),               // empty string preserved
-            ("invalid", "invalid"), // unparseable value passes through
-        ];
-
-        for (input, expected) in test_cases {
-            let result = serialize_top_speed(input, Serializer).unwrap();
-            assert_eq!(
-                result,
-                serde_json::Value::String(expected.to_string()),
-                "Expected '{input}' to be formatted as '{expected}', but got: {result:?}"
-            );
-        }
-    }
 
     #[test]
     fn test_create_output_includes_starting_grid() {
