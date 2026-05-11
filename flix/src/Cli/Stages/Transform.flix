@@ -12,7 +12,6 @@ mod Cli.Stages.Transform {
         lapsJson     = String
     }
 
-    /// Renders the metadata + laps JSON payloads from a list of RawLap.
     pub def transform(eventId: String, rawLaps: List[RawLap]): Rendered =
         let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
         let metadataJson = Json.render(Metadata.toJson(metadata));

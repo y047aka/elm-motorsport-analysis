@@ -5,8 +5,6 @@ mod Cli.Stages.Output {
     use Cli.FileTask
     use Cli.Stages.Transform.Rendered
 
-    /// Writes the rendered metadata and laps JSON to the paths
-    /// specified on the FileTask. Returns the first I/O failure.
     pub def write(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(
             _ <- Files.write(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);

@@ -40,10 +40,6 @@ mod Cli.Stages {
         Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
         if (summary#errors == 0) 0 else 1
 
-    /// Pipeline: read CSV -> report violations -> render JSON -> write JSON
-    /// -> turn the Rendered struct into a user-facing ProcessingReport.
-    /// Each helper closes over `task` so the chain is composed with `|>`
-    /// alone, without threading an explicit pipeline-state record.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
@@ -64,8 +60,6 @@ mod Cli.Stages {
     def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
         rawLaps -> Transform.transform(task#eventName, rawLaps)
 
-    /// Writes the rendered JSON and passes `Rendered` through on success
-    /// so downstream stages can still see lapCount.
     def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
         rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)
 

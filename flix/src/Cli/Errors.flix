@@ -2,14 +2,6 @@ mod Cli.Errors {
 
     use Util.Files.FileError
 
-    /// Errors surfaced by the CLI pipeline.
-    ///
-    /// The `Csv` variant carries the input path alongside the underlying
-    /// decoder message so callers can report which file failed without
-    /// re-threading the path themselves. The `ToString` instance renders
-    /// errors in a single-line `summary (caused by: <cause>)` form so log
-    /// lines stay grep-friendly and prefixes (event name, timestamp) remain
-    /// visually attached to the message.
     pub enum CliError {
         case InputPathNotFound(String)
         case NoCsvFilesFound(String)

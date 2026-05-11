@@ -6,11 +6,8 @@ mod Cli.Stages.CsvDecode {
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
-    /// Decodes CSV content into a list of `RawLap`. Strips a leading UTF-8
-    /// BOM (U+FEFF) some Windows tools emit before handing the text to the
-    /// decoder. `inputPath` is only used to attach context to `CliError.Csv`.
-    /// FieldNamesFromFirstRow consumes the first line as column names,
-    /// making them available for field-based decoding in Wec.decoder.
+    /// Strips a leading UTF-8 BOM (U+FEFF) emitted by some Windows tools
+    /// before handing the text to the decoder.
     pub def decode(inputPath: String, content: String): Result[CliError, List[RawLap]] =
         let stripped =
             if (String.startsWith({prefix = "\uFEFF"}, content)) String.dropLeft(1, content) else content;
