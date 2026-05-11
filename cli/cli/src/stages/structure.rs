@@ -7,6 +7,7 @@
 //! ([`csv_input`](super::csv_input)).
 
 use motorsport::duration::{self, Duration};
+use motorsport::HourClock;
 
 use super::csv_input::CsvRow;
 use crate::domain::{
@@ -61,8 +62,34 @@ fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
     }
 }
 
+/// Parses the HOUR column into an `Option<HourClock>`.
+///
+/// An empty / whitespace-only cell is silently treated as `None`. A non-empty
+/// unparseable value emits a warning and also becomes `None`; the validation
+/// stage then skips that row from the race-wide hour-offset baseline, so a
+/// single bad row does not cascade into false positives for the rest of the
+/// CSV.
+fn parse_hour(row: &CsvRow) -> Option<HourClock> {
+    if row.hour.trim().is_empty() {
+        return None;
+    }
+    match HourClock::parse(&row.hour) {
+        Some(h) => Some(h),
+        None => {
+            log::warn!(
+                "car {} lap {}: unparseable HOUR value '{}', dropping from hour-offset check",
+                row.car_number,
+                row.lap,
+                row.hour
+            );
+            None
+        }
+    }
+}
+
 fn lap_record_from(row: CsvRow) -> LapRecord {
     let parsed = parse_required_durations(&row);
+    let hour = parse_hour(&row);
     let pit_time_dur = row
         .pit_time
         .as_deref()
@@ -166,7 +193,8 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
             s2_improvement: row.s2_improvement,
             s3_improvement: row.s3_improvement,
             kph: row.kph,
-            hour: row.hour,
+            flag_at_fl: row.flag_at_fl,
+            hour,
             top_speed: row.top_speed,
             pit_time: pit_time_dur,
         },

@@ -8,7 +8,7 @@ pub struct Driver {
 
 impl Driver {
     /// 新しいドライバーを作成
-    pub fn new(name: String, _is_current: bool) -> Self {
+    pub fn new(name: String) -> Self {
         Driver { name }
     }
 }
@@ -19,7 +19,7 @@ mod tests {
 
     #[test]
     fn test_driver_json_serialization() {
-        let driver = Driver::new("Kamui KOBAYASHI".to_string(), true);
+        let driver = Driver::new("Kamui KOBAYASHI".to_string());
         let json = serde_json::to_string(&driver).unwrap();
 
         assert!(json.contains("\"name\":\"Kamui KOBAYASHI\""));

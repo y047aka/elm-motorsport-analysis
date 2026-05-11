@@ -43,7 +43,7 @@ pub struct CsvRow {
     #[serde(rename = "S3_IMPROVEMENT", alias = " S3_IMPROVEMENT")]
     pub s3_improvement: i32,
     #[serde(rename = "KPH", alias = " KPH")]
-    pub kph: f32,
+    pub kph: String,
     #[serde(rename = "ELAPSED", alias = " ELAPSED")]
     pub elapsed: String,
     #[serde(rename = "HOUR", alias = " HOUR")]
@@ -60,6 +60,9 @@ pub struct CsvRow {
     pub team: String,
     #[serde(rename = "MANUFACTURER", alias = " MANUFACTURER")]
     pub manufacturer: String,
+    // `default` lets events without this column parse cleanly (field absent → "").
+    #[serde(rename = "FLAG_AT_FL", alias = " FLAG_AT_FL", default)]
+    pub flag_at_fl: String,
     // Le Mans 24h mini-sector columns; `Option` because other events omit them.
     #[serde(rename = "SCL2_time", alias = " SCL2_time")]
     pub scl2_time: Option<String>,

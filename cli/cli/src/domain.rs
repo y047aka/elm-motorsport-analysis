@@ -11,6 +11,7 @@
 //! - `BestTimes` / `MiniSectorBests`: accumulators updated during a car's laps
 
 use motorsport::duration::{self, Duration};
+use motorsport::{HourClock, MiniSectorId};
 
 /// Single source of the 15 mini-sector identifiers shared by `MiniSectorTimes`,
 /// `MiniSectorBests`, and `transform::build_mini_sectors`.
@@ -79,8 +80,16 @@ pub struct LapStats {
     pub s1_improvement: i32,
     pub s2_improvement: i32,
     pub s3_improvement: i32,
-    pub kph: f32,
-    pub hour: String,
+    /// Speed in km/h as the raw CSV string (e.g. `"175.0"`, `"160.7"`).
+    /// Kept as-is so the output JSON preserves the input's decimal format
+    /// exactly, matching the Flix implementation.
+    pub kph: String,
+    pub flag_at_fl: String,
+    /// Wall-clock time of day for this lap crossing. `None` when the HOUR
+    /// cell was missing or unparseable; the validation stage skips such rows
+    /// in the `HourElapsedOffset` race-wide check to avoid cascading false
+    /// positives.
+    pub hour: Option<HourClock>,
     pub top_speed: Option<String>,
     pub pit_time: Option<Duration>,
 }
@@ -104,24 +113,26 @@ pub struct MiniSectorEntry {
 }
 
 impl MiniSectorEntry {
-    pub fn parse_time(&self) -> Duration {
-        parse_opt(&self.time)
-    }
-
-    pub fn parse_elapsed(&self) -> Duration {
-        parse_opt(&self.elapsed)
-    }
-
     fn has_content(&self) -> bool {
         is_meaningful(&self.time) || is_meaningful(&self.elapsed)
     }
-}
 
-fn parse_opt(value: &Option<String>) -> Duration {
-    value
-        .as_ref()
-        .and_then(|s| duration::from_string(s))
-        .unwrap_or(0)
+    /// Returns `Some(ms)` only when the time cell is non-blank and parseable.
+    /// Used by the validation stage to distinguish "zero" from "absent".
+    pub fn parse_time_opt(&self) -> Option<Duration> {
+        self.time
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .and_then(duration::from_string)
+    }
+
+    /// Returns `Some(ms)` only when the elapsed cell is non-blank and parseable.
+    pub fn parse_elapsed_opt(&self) -> Option<Duration> {
+        self.elapsed
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .and_then(duration::from_string)
+    }
 }
 
 fn is_meaningful(value: &Option<String>) -> bool {
@@ -151,64 +162,52 @@ macro_rules! define_mini_sector_times {
 }
 with_mini_sector_names!(define_mini_sector_times);
 
-/// Accumulator updated as laps are processed for a single car.
-#[derive(Debug, Clone, Default)]
-pub struct BestTimes {
-    pub lap: Option<Duration>,
-    pub s1: Option<Duration>,
-    pub s2: Option<Duration>,
-    pub s3: Option<Duration>,
-    pub mini: MiniSectorBests,
-}
-
-impl BestTimes {
-    /// Updates lap / S1 / S2 / S3 bests. Zero values are ignored (a zero
-    /// typically means "blank CSV cell", not an actual zero-duration lap).
-    pub fn update_lap_and_sectors(
-        &mut self,
-        lap: Duration,
-        s1: Duration,
-        s2: Duration,
-        s3: Duration,
-    ) {
-        self.lap = best(self.lap, lap);
-        self.s1 = best(self.s1, s1);
-        self.s2 = best(self.s2, s2);
-        self.s3 = best(self.s3, s3);
-    }
-
-    pub fn update_mini(&mut self, mini: &MiniSectorTimes) {
-        self.mini.update_from(mini);
-    }
-}
-
-macro_rules! define_mini_sector_bests {
-    ($($name:ident),* $(,)?) => {
-        #[derive(Debug, Clone, Default)]
-        pub struct MiniSectorBests {
-            $(pub $name: Option<Duration>,)*
-        }
-
-        impl MiniSectorBests {
-            fn update_from(&mut self, mini: &MiniSectorTimes) {
-                $(self.$name = best(self.$name, mini.$name.parse_time());)*
-            }
-        }
-    };
-}
-with_mini_sector_names!(define_mini_sector_bests);
-
-fn best(current_best: Option<Duration>, candidate: Duration) -> Option<Duration> {
-    if candidate == 0 {
-        current_best
-    } else {
-        Some(current_best.map_or(candidate, |b| b.min(candidate)))
+impl MiniSectorTimes {
+    /// Returns all 15 entries in track order, paired with their `MiniSectorId`.
+    ///
+    /// Used by the validation stage to walk sectors in track order without
+    /// duplicating the ordering logic.
+    pub fn as_ordered_pairs(&self) -> [(MiniSectorId, &MiniSectorEntry); 15] {
+        use MiniSectorId::*;
+        [
+            (Scl2,   &self.scl2),
+            (Z4,     &self.z4),
+            (Ip1,    &self.ip1),
+            (Z12,    &self.z12),
+            (Sclc,   &self.sclc),
+            (A7_1,   &self.a7_1),
+            (Ip2,    &self.ip2),
+            (A8_1,   &self.a8_1),
+            (Sclb,   &self.sclb),
+            (Porin,  &self.porin),
+            (Porout, &self.porout),
+            (Pitref, &self.pitref),
+            (Scl1,   &self.scl1),
+            (Fordout,&self.fordout),
+            (Fl,     &self.fl),
+        ]
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `MiniSectorTimes::as_ordered_pairs` and `MiniSectorId::all` are two
+    /// independent declarations of the 15-sector track-order list. If anyone
+    /// adds a 16th sector they must update both — this test guards the pair
+    /// so the discrepancy fails fast instead of silently dropping a sector
+    /// from validation.
+    #[test]
+    fn as_ordered_pairs_matches_mini_sector_id_all() {
+        let times = MiniSectorTimes::default();
+        let pairs = times.as_ordered_pairs();
+        let all = MiniSectorId::all();
+        assert_eq!(pairs.len(), all.len(), "sector count drifted");
+        for (i, (id, _)) in pairs.iter().enumerate() {
+            assert_eq!(*id, all[i], "sector order drifted at index {i}");
+        }
+    }
 
     #[test]
     fn mini_sector_times_default_collapses_to_none() {
@@ -240,50 +239,4 @@ mod tests {
         assert_eq!(retained.fl.time.as_deref(), Some("8.112"));
     }
 
-    #[test]
-    fn best_times_update_with_all_zero_leaves_state_untouched() {
-        let mut bests = BestTimes::default();
-        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
-        let snapshot = bests.clone();
-
-        bests.update_lap_and_sectors(0, 0, 0, 0);
-
-        assert_eq!(bests.lap, snapshot.lap);
-        assert_eq!(bests.s1, snapshot.s1);
-        assert_eq!(bests.s2, snapshot.s2);
-        assert_eq!(bests.s3, snapshot.s3);
-    }
-
-    #[test]
-    fn best_times_update_keeps_the_minimum() {
-        let mut bests = BestTimes::default();
-        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
-        bests.update_lap_and_sectors(95_000, 35_000, 29_000, 40_000);
-
-        assert_eq!(bests.lap, Some(95_000));
-        assert_eq!(bests.s1, Some(30_000));
-        assert_eq!(bests.s2, Some(29_000));
-        assert_eq!(bests.s3, Some(40_000));
-    }
-
-    #[test]
-    fn best_times_mini_update_skips_zero_sectors() {
-        let mut bests = BestTimes::default();
-
-        let all_zeros = MiniSectorTimes::default();
-        bests.update_mini(&all_zeros);
-        assert_eq!(bests.mini.scl2, None);
-        assert_eq!(bests.mini.fl, None);
-
-        let only_fl = MiniSectorTimes {
-            fl: MiniSectorEntry {
-                time: Some("8.112".to_string()),
-                elapsed: None,
-            },
-            ..Default::default()
-        };
-        bests.update_mini(&only_fl);
-        assert_eq!(bests.mini.scl2, None);
-        assert_eq!(bests.mini.fl, Some(8_112));
-    }
 }
