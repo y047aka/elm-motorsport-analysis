@@ -3,6 +3,7 @@ mod Cli.Stages {
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
+    use Cli.Stages.CsvDecode
     use Cli.Stages.CsvInput
     use Cli.Stages.Output
     use Cli.Stages.Transform
@@ -44,11 +45,17 @@ mod Cli.Stages {
     /// Each helper closes over `task` so the chain is composed with `|>`
     /// alone, without threading an explicit pipeline-state record.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        CsvInput.readRawLaps(task#inputPath)
+        readRawLaps(task)
             |> Result.map(reportViolations(task))
             |> Result.map(render(task))
             |> Result.flatMap(write(task))
             |> Result.map(toReport(task))
+
+    def readRawLaps(task: FileTask.FileTask): Result[CliError, List[RawLap]] \ IO =
+        forM(
+            content <- CsvInput.readSource(task#inputPath);
+            rawLaps <- CsvDecode.decodeRawLaps(task#inputPath, content)
+        ) yield rawLaps
 
     def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
         rawLaps -> {
