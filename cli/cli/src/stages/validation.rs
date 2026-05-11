@@ -66,25 +66,48 @@ pub fn validate(event_name: &str, records: &[LapRecord]) -> Vec<String> {
 #[derive(Debug)]
 enum Violation<'a> {
     /// `s1 + s2 + s3 != lapTime`.
-    /// Fields: lap record / lapTime / sector sum / labels of blank sectors.
-    SectorSum(&'a LapRecord, u32, u32, Vec<&'static str>),
+    SectorSum {
+        record: &'a LapRecord,
+        lap_time: u32,
+        sum: u32,
+        /// Labels of blank sectors (`"s1"`, `"s2"`, `"s3"`).
+        blank_sectors: Vec<&'static str>,
+    },
 
     /// `elapsed[n] != sum(lapTime[1..=n])`. Sticky: every row from the first
     /// drift onward is reported.
-    /// Fields: lap record / expected (running sum) / actual (elapsed).
-    ElapsedDrift(&'a LapRecord, u32, u32),
+    ElapsedDrift {
+        record: &'a LapRecord,
+        /// Running sum of lap times up to and including this lap.
+        expected: u32,
+        /// Actual elapsed field from the CSV row.
+        actual: u32,
+    },
 
     /// `(hour - elapsed) mod 24h` does not match the CSV-wide baseline.
-    /// Fields: lap record / baseline offset ms / actual offset ms.
-    HourElapsedOffset(&'a LapRecord, u32, u32),
+    HourElapsedOffset {
+        record: &'a LapRecord,
+        baseline_offset: u32,
+        actual_offset: u32,
+    },
 
     /// `sum(miniSector.time) != lapTime`.
-    /// Fields: lap record / lapTime / sum / IDs of sectors with blank time.
-    MiniSectorSum(&'a LapRecord, u32, u32, Vec<MiniSectorId>),
+    MiniSectorSum {
+        record: &'a LapRecord,
+        lap_time: u32,
+        sum: u32,
+        /// Sectors whose `time` cell was blank, in track order.
+        blank_sectors: Vec<MiniSectorId>,
+    },
 
     /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent pair.
-    /// Fields: lap record / prev id / prev elapsed / curr id / curr elapsed.
-    MiniSectorElapsedMonotonic(&'a LapRecord, MiniSectorId, u32, MiniSectorId, u32),
+    MiniSectorElapsedMonotonic {
+        record: &'a LapRecord,
+        prev_id: MiniSectorId,
+        prev_elapsed: u32,
+        curr_id: MiniSectorId,
+        curr_elapsed: u32,
+    },
 }
 
 // ================================================================
@@ -116,11 +139,16 @@ fn check_sector_sum(record: &LapRecord) -> Option<Violation<'_>> {
     if sum == lap_time {
         None
     } else {
-        let blanks: Vec<&'static str> = [s1_blank, s2_blank, s3_blank]
+        let blank_sectors: Vec<&'static str> = [s1_blank, s2_blank, s3_blank]
             .into_iter()
             .flatten()
             .collect();
-        Some(Violation::SectorSum(record, lap_time, sum, blanks))
+        Some(Violation::SectorSum {
+            record,
+            lap_time,
+            sum,
+            blank_sectors,
+        })
     }
 }
 
@@ -167,7 +195,11 @@ fn check_elapsed_drift<'a>(sorted_laps: &[&'a LapRecord]) -> Vec<Violation<'a>> 
         running = running.saturating_add(record.lap.time);
         let elapsed = record.lap.elapsed;
         if running != elapsed {
-            violations.push(Violation::ElapsedDrift(record, running, elapsed));
+            violations.push(Violation::ElapsedDrift {
+                record,
+                expected: running,
+                actual: elapsed,
+            });
         }
     }
 
@@ -194,7 +226,11 @@ fn check_hour_elapsed_race_wide<'a>(records: &'a [LapRecord]) -> Vec<Violation<'
         match baseline {
             None => baseline = Some(offset),
             Some(base) if offset != base => {
-                violations.push(Violation::HourElapsedOffset(record, base, offset));
+                violations.push(Violation::HourElapsedOffset {
+                    record,
+                    baseline_offset: base,
+                    actual_offset: offset,
+                });
             }
             _ => {}
         }
@@ -227,22 +263,27 @@ fn is_pit_lap(record: &LapRecord) -> bool {
 
 fn check_mini_sector_sum<'a>(record: &'a LapRecord, mini: &MiniSectorTimes) -> Vec<Violation<'a>> {
     let mut sum: u32 = 0;
-    let mut blanks: Vec<MiniSectorId> = Vec::new();
+    let mut blank_sectors: Vec<MiniSectorId> = Vec::new();
 
     for (id, entry) in mini.as_ordered_pairs() {
         match entry.parse_time_opt() {
             Some(t) => sum = sum.saturating_add(t),
-            None    => blanks.push(id),
+            None    => blank_sectors.push(id),
         }
     }
 
     if sum == record.lap.time {
         return vec![];
     }
-    if is_track_limits_signature(&blanks) {
+    if is_track_limits_signature(&blank_sectors) {
         return vec![];
     }
-    vec![Violation::MiniSectorSum(record, record.lap.time, sum, blanks)]
+    vec![Violation::MiniSectorSum {
+        record,
+        lap_time: record.lap.time,
+        sum,
+        blank_sectors,
+    }]
 }
 
 /// Reports each adjacent pair where the second elapsed is `<=` the first.
@@ -257,9 +298,13 @@ fn check_mini_sector_monotonic<'a>(record: &'a LapRecord, mini: &MiniSectorTimes
         };
         if let Some((prev_id, prev_elapsed)) = prev {
             if curr_elapsed <= prev_elapsed {
-                violations.push(Violation::MiniSectorElapsedMonotonic(
-                    record, prev_id, prev_elapsed, id, curr_elapsed,
-                ));
+                violations.push(Violation::MiniSectorElapsedMonotonic {
+                    record,
+                    prev_id,
+                    prev_elapsed,
+                    curr_id: id,
+                    curr_elapsed,
+                });
             }
         }
         prev = Some((id, curr_elapsed));
@@ -274,73 +319,65 @@ fn check_mini_sector_monotonic<'a>(record: &'a LapRecord, mini: &MiniSectorTimes
 
 fn format_violation(event_name: &str, v: &Violation<'_>) -> String {
     match v {
-        Violation::SectorSum(rec, lap_time, sum, blanks) => {
-            let suffix = if blanks.is_empty() {
+        Violation::SectorSum { record, lap_time, sum, blank_sectors } => {
+            let suffix = if blank_sectors.is_empty() {
                 String::new()
             } else {
-                format!(" (blank: {})", blanks.join(","))
+                format!(" (blank: {})", blank_sectors.join(","))
             };
             format!(
                 "{}: [car {} #{}] sector-sum: expected={} ({}ms) actual={} ({}ms){}",
                 event_name,
-                rec.lap.car_number, rec.lap.lap_number,
+                record.lap.car_number, record.lap.lap_number,
                 duration::to_string(*lap_time), lap_time,
                 duration::to_string(*sum), sum,
                 suffix,
             )
         }
 
-        Violation::ElapsedDrift(rec, expected, actual) => format!(
+        Violation::ElapsedDrift { record, expected, actual } => format!(
             "{}: [car {} #{}] elapsed-drift: expected={} ({}ms) actual={} ({}ms)",
             event_name,
-            rec.lap.car_number, rec.lap.lap_number,
+            record.lap.car_number, record.lap.lap_number,
             duration::to_string(*expected), expected,
             duration::to_string(*actual), actual,
         ),
 
-        Violation::HourElapsedOffset(rec, base, offset) => format!(
+        Violation::HourElapsedOffset { record, baseline_offset, actual_offset } => format!(
             "{}: [car {} #{}] hour-offset: expected={} ({}ms) actual={} ({}ms)",
             event_name,
-            rec.lap.car_number, rec.lap.lap_number,
-            format_signed_ms(*base as i64), base,
-            format_signed_ms(*offset as i64), offset,
+            record.lap.car_number, record.lap.lap_number,
+            duration::to_string(*baseline_offset), baseline_offset,
+            duration::to_string(*actual_offset), actual_offset,
         ),
 
-        Violation::MiniSectorSum(rec, lap_time, sum, blanks) => {
-            let suffix = if blanks.is_empty() {
+        Violation::MiniSectorSum { record, lap_time, sum, blank_sectors } => {
+            let suffix = if blank_sectors.is_empty() {
                 String::new()
             } else {
-                let keys: Vec<&str> = blanks.iter().map(|id| id.json_key()).collect();
+                let keys: Vec<&str> = blank_sectors.iter().map(|id| id.json_key()).collect();
                 format!(" (blank: {})", keys.join(","))
             };
             format!(
                 "{}: [car {} #{}] mini-sector-sum: expected={} ({}ms) actual={} ({}ms){}",
                 event_name,
-                rec.lap.car_number, rec.lap.lap_number,
+                record.lap.car_number, record.lap.lap_number,
                 duration::to_string(*lap_time), lap_time,
                 duration::to_string(*sum), sum,
                 suffix,
             )
         }
 
-        Violation::MiniSectorElapsedMonotonic(rec, prev_id, prev_elapsed, curr_id, curr_elapsed) => {
-            format!(
-                "{}: [car {} #{}] mini-sector-elapsed[{}->{}]: prev={} ({}ms) curr={} ({}ms)",
-                event_name,
-                rec.lap.car_number, rec.lap.lap_number,
-                prev_id.json_key(), curr_id.json_key(),
-                duration::to_string(*prev_elapsed), prev_elapsed,
-                duration::to_string(*curr_elapsed), curr_elapsed,
-            )
-        }
-    }
-}
-
-fn format_signed_ms(ms: i64) -> String {
-    if ms < 0 {
-        format!("-{}", duration::to_string((-ms) as u32))
-    } else {
-        duration::to_string(ms as u32)
+        Violation::MiniSectorElapsedMonotonic {
+            record, prev_id, prev_elapsed, curr_id, curr_elapsed,
+        } => format!(
+            "{}: [car {} #{}] mini-sector-elapsed[{}->{}]: prev={} ({}ms) curr={} ({}ms)",
+            event_name,
+            record.lap.car_number, record.lap.lap_number,
+            prev_id.json_key(), curr_id.json_key(),
+            duration::to_string(*prev_elapsed), prev_elapsed,
+            duration::to_string(*curr_elapsed), curr_elapsed,
+        ),
     }
 }
 
@@ -411,7 +448,10 @@ mod tests {
         // s1 + s2 + s3 = 94_000 != lapTime 95_000
         let rec = make_record("7", 1, 95_000, 23_000, 30_000, 41_000, 95_000);
         let v = check_sector_sum(&rec).expect("should detect mismatch");
-        assert!(matches!(v, Violation::SectorSum(_, 95_000, 94_000, _)));
+        assert!(matches!(
+            v,
+            Violation::SectorSum { lap_time: 95_000, sum: 94_000, .. }
+        ));
     }
 
     #[test]
@@ -422,8 +462,8 @@ mod tests {
         rec.sectors.s2 = false; // blank cell
 
         let v = check_sector_sum(&rec).expect("should detect mismatch");
-        if let Violation::SectorSum(_, _, _, blanks) = v {
-            assert!(blanks.contains(&"s2"));
+        if let Violation::SectorSum { blank_sectors, .. } = v {
+            assert!(blank_sectors.contains(&"s2"));
         } else {
             panic!("wrong variant");
         }
@@ -483,7 +523,7 @@ mod tests {
         let records = vec![r1, r2];
         let viols = check_hour_elapsed_race_wide(&records);
         assert_eq!(viols.len(), 1);
-        assert!(matches!(viols[0], Violation::HourElapsedOffset(_, _, _)));
+        assert!(matches!(viols[0], Violation::HourElapsedOffset { .. }));
     }
 
     // ── Rule 4: MiniSectorSum ─────────────────────────────────────────────────
@@ -582,7 +622,7 @@ mod tests {
         let viols = check_mini_sectors(&rec);
         let sum_viols: Vec<_> = viols
             .iter()
-            .filter(|v| matches!(v, Violation::MiniSectorSum(..)))
+            .filter(|v| matches!(v, Violation::MiniSectorSum { .. }))
             .collect();
         assert!(sum_viols.is_empty(), "pit lap should skip MiniSectorSum");
     }
@@ -611,7 +651,11 @@ mod tests {
         assert_eq!(viols.len(), 1);
         assert!(matches!(
             viols[0],
-            Violation::MiniSectorElapsedMonotonic(_, MiniSectorId::Scl2, _, MiniSectorId::Z4, _)
+            Violation::MiniSectorElapsedMonotonic {
+                prev_id: MiniSectorId::Scl2,
+                curr_id: MiniSectorId::Z4,
+                ..
+            }
         ));
     }
 
@@ -620,7 +664,12 @@ mod tests {
     #[test]
     fn format_violation_sector_sum_includes_blank_labels() {
         let rec = make_record("7", 3, 95_000, 23_000, 0, 42_000, 95_000);
-        let v = Violation::SectorSum(&rec, 95_000, 65_000, vec!["s2"]);
+        let v = Violation::SectorSum {
+            record: &rec,
+            lap_time: 95_000,
+            sum: 65_000,
+            blank_sectors: vec!["s2"],
+        };
         let s = format_violation("le_mans_24h", &v);
         assert!(s.contains("[car 7 #3]"));
         assert!(s.contains("sector-sum"));
