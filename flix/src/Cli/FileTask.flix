@@ -20,12 +20,12 @@ mod Cli.FileTask {
             eventName   = eventName(inputPath)
         }
 
-    pub def resolve(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
+    pub def fromArgs(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
         let path = parsed#inputPath;
         let outputOverride = parsed#outputFile;
         forM(
             exists <- Files.exists(path) |> Result.mapErr(CliError.File);
-            _      <- if (exists) Ok(()) else Err(CliError.PathNotFound(path));
+            _      <- if (exists) Ok(()) else Err(CliError.InputPathNotFound(path));
             isDir  <- Files.isDirectory(path) |> Result.mapErr(CliError.File);
             tasks  <- if (isDir) resolveDir(path, outputOverride)
                       else Ok(make(path, outputOverride) :: Nil)
@@ -39,7 +39,7 @@ mod Cli.FileTask {
                     csvPaths <- Files.walkCsvFiles(dirPath) |> Result.mapErr(CliError.File);
                     csvFiles <- Ok(csvPaths |> List.map(p -> make(p, None)));
                     result   <- if (List.isEmpty(csvFiles))
-                                    Err(CliError.NoCsvFiles(dirPath))
+                                    Err(CliError.NoCsvFilesFound(dirPath))
                                 else
                                     Ok(csvFiles)
                 ) yield result

@@ -1,22 +1,15 @@
 mod Cli.Stages {
 
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
-    use Util.Files
-    use Util.Json
-    use Util.Json.JsonValue.JsonArray
-    use Motorsport.Metadata
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Validation
-    use RawLap.RawLap
-
-    pub type alias Output = {
-        lapCount     = Int32,
-        metadataJson = String,
-        lapsJson     = String
-    }
+    use Cli.Stages.CsvDecode
+    use Cli.Stages.CsvInput
+    use Cli.Stages.Output
+    use Cli.Stages.Transform
+    use Cli.Stages.Transform.Rendered
+    use Cli.Stages.Validation
+    use Motorsport.Wec.RawLap
 
     type alias ProcessingReport = {
         lapCount   = Int32,
@@ -29,16 +22,6 @@ mod Cli.Stages {
         errors    = Int32
     }
 
-    pub def process(eventId: String, rawLaps: List[RawLap]): Output =
-        let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
-        let metadataJson = Json.render(Metadata.toJson(metadata));
-        let lapsJson     = Json.render(JsonArray(List.map(RawLap.toJson, rawLaps)));
-        {
-            lapCount     = List.length(rawLaps),
-            metadataJson = metadataJson,
-            lapsJson     = lapsJson
-        }
-
     pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
@@ -46,10 +29,10 @@ mod Cli.Stages {
                     Console.println("${task#eventName}: Wrote ${report#lapCount} laps");
                     Console.println("${task#eventName}: Metadata -> ${report#outputPath}");
                     Console.println("${task#eventName}: Laps     -> ${report#lapsPath}");
-                    { processed = acc#processed + 1, errors = acc#errors }
+                    { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${task#eventName}: ${e}");
-                    { processed = acc#processed, errors = acc#errors + 1 }
+                    { errors = acc#errors + 1 | acc }
             },
             { processed = 0, errors = 0 },
             tasks
@@ -58,38 +41,33 @@ mod Cli.Stages {
         if (summary#errors == 0) 0 else 1
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        forM(
-            lines     <- Files.readLines(task#inputPath) |> Result.mapErr(CliError.File);
-            _         <- match lines {
-                            case Nil => Err(CliError.EmptyFile(task#inputPath))
-                            case _   => Ok(())
-                         };
-            // Some CSV files are saved with a UTF-8 BOM (\uFEFF) by Windows
-            // tools. Strip it here at the I/O boundary before decoding so
-            // the CSV library stays agnostic about file encoding details.
-            // FieldNamesFromFirstRow consumes the first line as column names,
-            // making them available for field-based decoding in RawLap.decoder.
-            content   <- Ok({
-                            let raw = List.join("\n", lines);
-                            if (String.startsWith({prefix = "\uFEFF"}, raw)) String.dropLeft(1, raw) else raw
-                         });
-            rawLaps   <- Decode.decodeCustom(
-                            {fieldSeparator = ';'},
-                            FieldNames.FieldNamesFromFirstRow,
-                            RawLap.decoder(),
-                            content
-                         ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)));
-            _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
-            processed <- Ok(process(task#eventName, rawLaps));
-            _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
-            _         <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
-        ) yield {
-            lapCount   = processed#lapCount,
+        CsvInput.read(task#inputPath)
+            |> Result.flatMap(decode(task))
+            |> Result.map(reportViolations(task))
+            |> Result.map(render(task))
+            |> Result.flatMap(write(task))
+            |> Result.map(toReport(task))
+
+    def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
+        content -> CsvDecode.decode(task#inputPath, content)
+
+    def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
+        rawLaps -> {
+            Validation.validate(task#eventName, rawLaps) |> List.forEach(Console.eprintln);
+            rawLaps
+        }
+
+    def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
+        rawLaps -> Transform.transform(task#eventName, rawLaps)
+
+    def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
+        rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)
+
+    def toReport(task: FileTask.FileTask): Rendered -> ProcessingReport =
+        rendered -> {
+            lapCount   = rendered#lapCount,
             outputPath = task#outputPath,
             lapsPath   = task#lapsPath
         }
-
-    def reportViolations(violations: List[String]): Unit \ Console =
-        violations |> List.forEach(Console.eprintln)
 
 }

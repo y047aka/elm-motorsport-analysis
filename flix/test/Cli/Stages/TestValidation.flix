@@ -1,13 +1,14 @@
-mod Cli.TestValidation {
+mod Cli.Stages.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Util.Duration
-    use Cli.Validation
-    use Cli.Validation.Violation
+    use Cli.Stages.Validation
+    use Cli.Stages.Validation.Violation
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use RawLap.RawLap
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -21,7 +22,7 @@ mod Cli.TestValidation {
     def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap =
         let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};";
         let csv = header() + "\n" + row;
-        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, Wec.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }
@@ -45,7 +46,7 @@ mod Cli.TestValidation {
     def buildLeMansLapWith(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String, box: String, pitTime: String): RawLap =
         let row = "${num};1;${lap};${lapTime};0;${box};${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;${pitTime};HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};${miniTail}";
         let csv = leMansHeader() + "\n" + row;
-        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, Wec.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }

@@ -1,12 +1,14 @@
 mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
-    def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap.RawLap =
+    def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap =
         {
             car = {
                 carNumber    = carNumber,
@@ -21,17 +23,17 @@ mod Motorsport.TestMetadata {
             },
             lapNumber               = lapNumber,
             lapTime                 = Duration.fromMillis(90000),
-            lapImprovement          = RawLap.Improvement.None,
+            lapImprovement          = Wec.Improvement.None,
             crossingFinishLineInPit = false,
-            s1                      = { value = None, improvement = RawLap.Improvement.None },
-            s2                      = { value = None, improvement = RawLap.Improvement.None },
-            s3                      = { value = None, improvement = RawLap.Improvement.None },
+            s1                      = { value = None, improvement = Wec.Improvement.None },
+            s2                      = { value = None, improvement = Wec.Improvement.None },
+            s3                      = { value = None, improvement = Wec.Improvement.None },
             kph                     = "0",
             elapsed                 = Duration.fromString(elapsed) |> Option.getWithDefault(Duration.zero()),
             hour                    = Hour.Hour(0),
             topSpeed                = "",
             pitTime                 = None,
-            flagAtFl                = RawLap.Flag.Green,
+            flagAtFl                = Wec.Flag.Green,
             miniSectors             = None
         }
 

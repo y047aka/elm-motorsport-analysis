@@ -9,10 +9,10 @@ def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
-            Console.eprintln(Args.usageInfo());
+            Console.eprintln(Args.usage());
             1
         case Ok(parsed) =>
-            match FileTask.resolve(parsed) {
+            match FileTask.fromArgs(parsed) {
                 case Err(e) =>
                     Console.eprintln("Error: ${e}");
                     1
