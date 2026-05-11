@@ -20,7 +20,6 @@ mod Cli.TestErrors {
     def testFileErrorDelegatesToFileErrorToString(): Unit \ Assert =
         let inner = FileError.ReadError("/tmp/x.csv", "permission denied");
         let s = "${CliError.File(inner)}";
-        Assert.assertTrue(String.contains({substr = "/tmp/x.csv"}, s));
-        Assert.assertTrue(String.contains({substr = "permission denied"}, s))
+        Assert.assertTrue(s == "Failed to read /tmp/x.csv\n  caused by: permission denied")
 
 }

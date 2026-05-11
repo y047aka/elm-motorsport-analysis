@@ -1,10 +1,19 @@
 mod Util.Files {
 
-    pub enum FileError with ToString {
+    pub enum FileError {
         case ReadError(String, String)   // path, underlying message
         case WriteError(String, String)
         case AccessError(String)         // failure to obtain path stat / existence
         case GlobError(String)
+    }
+
+    instance ToString[FileError] {
+        pub def toString(e: FileError): String = match e {
+            case FileError.ReadError(path, msg)  => "Failed to read ${path}\n  caused by: ${msg}"
+            case FileError.WriteError(path, msg) => "Failed to write ${path}\n  caused by: ${msg}"
+            case FileError.AccessError(msg)      => "File access error\n  caused by: ${msg}"
+            case FileError.GlobError(msg)        => "Directory glob error\n  caused by: ${msg}"
+        }
     }
 
     pub def readLines(path: String): Result[FileError, List[String]] \ IO =
