@@ -13,7 +13,7 @@ mod Cli.Stages.CsvDecode {
     /// making them available for field-based decoding in Wec.decoder.
     pub def decode(inputPath: String, content: String): Result[CliError, List[RawLap]] =
         let stripped =
-            if (String.startsWith({prefix = "\u{FEFF}"}, content)) String.dropLeft(1, content) else content;
+            if (String.startsWith({prefix = "\uFEFF"}, content)) String.dropLeft(1, content) else content;
         Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
