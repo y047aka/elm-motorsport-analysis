@@ -92,11 +92,7 @@ fn car_from_group(car_number: String, records: Vec<LapRecord>, driver_names: Vec
 }
 
 fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
-    driver_names
-        .into_iter()
-        .enumerate()
-        .map(|(i, name)| Driver::new(name, i == 0))
-        .collect()
+    driver_names.into_iter().map(Driver::new).collect()
 }
 
 fn class_from(class_str: &str) -> Class {

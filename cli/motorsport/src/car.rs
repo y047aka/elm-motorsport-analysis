@@ -64,8 +64,8 @@ mod tests {
     #[test]
     fn test_metadata_creation() {
         let drivers = vec![
-            Driver::new("Will STEVENS".to_string(), false),
-            Driver::new("Kamui KOBAYASHI".to_string(), true),
+            Driver::new("Will STEVENS".to_string()),
+            Driver::new("Kamui KOBAYASHI".to_string()),
         ];
 
         let metadata = MetaData::new(
@@ -88,8 +88,8 @@ mod tests {
     #[test]
     fn test_car_creation() {
         let drivers = vec![
-            Driver::new("Will STEVENS".to_string(), false),
-            Driver::new("Kamui KOBAYASHI".to_string(), true),
+            Driver::new("Will STEVENS".to_string()),
+            Driver::new("Kamui KOBAYASHI".to_string()),
         ];
 
         let metadata = MetaData::new(
@@ -145,7 +145,7 @@ mod tests {
 
     #[test]
     fn test_car_json_serialization() {
-        let drivers = vec![Driver::new("Will STEVENS".to_string(), true)];
+        let drivers = vec![Driver::new("Will STEVENS".to_string())];
 
         let metadata = MetaData::new(
             "12".to_string(),

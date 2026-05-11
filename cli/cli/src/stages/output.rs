@@ -177,7 +177,7 @@ mod tests {
     fn test_create_output_includes_starting_grid() {
         use motorsport::{Car, Class, Driver, Lap, MetaData};
 
-        let drivers = vec![Driver::new("Test Driver".to_string(), false)];
+        let drivers = vec![Driver::new("Test Driver".to_string())];
         let metadata = MetaData::new(
             "1".to_string(),
             drivers,
