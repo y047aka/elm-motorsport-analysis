@@ -7,7 +7,7 @@ mod Cli.Stages.TestValidation {
     use Cli.Stages.Validation.Violation
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Motorsport.RawLap
+    use Motorsport.Wec
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -18,10 +18,10 @@ mod Cli.Stages.TestValidation {
         ";Z12_time;Z12_elapsed;SCLC_time;SCLC_elapsed;A7-1_time;A7-1_elapsed;IP2_time;IP2_elapsed" +
         ";A8-1_time;A8-1_elapsed;SCLB_time;SCLB_elapsed;PORIN_time;PORIN_elapsed;POROUT_time;POROUT_elapsed;PITREF_time;PITREF_elapsed;SCL1_time;SCL1_elapsed;FORDOUT_time;FORDOUT_elapsed;FL_time;FL_elapsed"
 
-    def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): RawLap.RawLap =
+    def buildLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String): Wec.RawLap =
         let row = "${num};1;${lap};${lapTime};0;;${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;;HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};";
         let csv = header() + "\n" + row;
-        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, Wec.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }
@@ -35,17 +35,17 @@ mod Cli.Stages.TestValidation {
     /// run 1:30+, so this fixture is intentionally simplified — the integrity
     /// rules under test don't care about realistic lap geometry, only the
     /// arithmetic relationships between the columns.
-    def buildLeMansLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String): RawLap.RawLap =
+    def buildLeMansLap(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String): Wec.RawLap =
         buildLeMansLapWith(num, lap, lapTime, s1, s2, s3, elapsed, hour, miniTail, "", "")
 
     /// Le Mans lap builder with explicit values for the
     /// CROSSING_FINISH_LINE_IN_PIT and PIT_TIME columns. Pass `box = "B"`
     /// to mark the lap as a pit-entry lap, or `pitTime = "30.500"` to
     /// record a pit-stop duration.
-    def buildLeMansLapWith(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String, box: String, pitTime: String): RawLap.RawLap =
+    def buildLeMansLapWith(num: String, lap: Int32, lapTime: String, s1: String, s2: String, s3: String, elapsed: String, hour: String, miniTail: String, box: String, pitTime: String): Wec.RawLap =
         let row = "${num};1;${lap};${lapTime};0;${box};${s1};0;${s2};0;${s3};0;100;${elapsed};${hour};0:${s1};0:${s2};0:${s3};200;Driver;${pitTime};HYPERCAR;H;Team;Maker;GF;${s1};${s2};${s3};${miniTail}";
         let csv = leMansHeader() + "\n" + row;
-        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, RawLap.decoder(), csv) {
+        match Decode.decodeCustom({fieldSeparator = ';'}, FieldNames.FieldNamesFromFirstRow, Wec.decoder(), csv) {
             case Ok(r :: _) => r
             case _          => unreachable!()
         }
@@ -77,7 +77,7 @@ mod Cli.Stages.TestValidation {
         ";8.000;32.000;8.000;40.000;8.000;48.000;8.000;56.000" +
         ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;;;;;8.000;1:52.000;8.000;2:00.000"
 
-    /// Pulls carNumber off the leading RawLap.RawLap arg shared by every variant.
+    /// Pulls carNumber off the leading Wec.RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
         case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
         case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber

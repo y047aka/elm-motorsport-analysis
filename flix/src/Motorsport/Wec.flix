@@ -1,4 +1,4 @@
-mod Motorsport.RawLap {
+mod Motorsport.Wec {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder
