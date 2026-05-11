@@ -39,12 +39,13 @@ mod Cli.Stages {
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         forM(
-            rawLaps   <- CsvInput.readRawLaps(task#inputPath);
-            _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
-            processed <- Ok(Transform.transform(task#eventName, rawLaps));
-            _         <- Output.writeOutputs(task, processed)
+            rawLaps <- CsvInput.readRawLaps(task#inputPath);
+            _       <- Output.writeOutputs(task, {
+                         reportViolations(Validation.validate(task#eventName, rawLaps));
+                         Transform.transform(task#eventName, rawLaps)
+                       })
         ) yield {
-            lapCount   = processed#lapCount,
+            lapCount   = List.length(rawLaps),
             outputPath = task#outputPath,
             lapsPath   = task#lapsPath
         }
