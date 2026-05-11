@@ -85,7 +85,6 @@ version = "0.1.0"
 dependencies = [
  "csv",
  "env_logger",
- "indexmap",
  "log",
  "motorsport",
  "serde",
