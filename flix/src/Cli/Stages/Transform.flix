@@ -4,7 +4,7 @@ mod Cli.Stages.Transform {
     use Util.Json.JsonValue.JsonArray
     use Motorsport.Metadata
     use Motorsport.Wec
-    use Motorsport.RawLap
+    use Motorsport.Wec.RawLap
 
     pub type alias Rendered = {
         lapCount     = Int32,

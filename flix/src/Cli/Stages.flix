@@ -9,7 +9,7 @@ mod Cli.Stages {
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
     use Cli.Stages.Validation
-    use Motorsport.RawLap
+    use Motorsport.Wec.RawLap
 
     type alias ProcessingReport = {
         lapCount   = Int32,

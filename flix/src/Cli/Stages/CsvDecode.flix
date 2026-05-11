@@ -4,7 +4,7 @@ mod Cli.Stages.CsvDecode {
     use Util.Csv.Decode.FieldNames
     use Cli.Errors.CliError
     use Motorsport.Wec
-    use Motorsport.RawLap
+    use Motorsport.Wec.RawLap
 
     /// Decodes CSV content into a list of `RawLap`. Strips a leading UTF-8
     /// BOM (﻿) some Windows tools emit before handing the text to the

@@ -2,7 +2,7 @@ mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
     use Motorsport.Wec
-    use Motorsport.RawLap
+    use Motorsport.Wec.RawLap
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json

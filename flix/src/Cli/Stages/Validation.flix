@@ -45,7 +45,7 @@ mod Cli.Stages.Validation {
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Wec
-    use Motorsport.RawLap
+    use Motorsport.Wec.RawLap
     use Motorsport.Wec.RawMiniSector
 
     pub enum Violation {
