@@ -19,7 +19,7 @@ mod Cli.Stages.TestCsvDecode {
 
     @Test
     def testDecodeStripsBom(): Unit \ Assert =
-        let csv = "﻿" + header() + "\n" + sampleRow();
+        let csv = "\u{FEFF}" + header() + "\n" + sampleRow();
         match CsvDecode.decode("test.csv", csv) {
             case Ok(laps) => Assert.assertTrue(List.length(laps) == 1)
             case Err(_)   => Assert.assertTrue(false)
