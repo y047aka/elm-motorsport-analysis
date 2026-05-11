@@ -113,14 +113,6 @@ pub struct MiniSectorEntry {
 }
 
 impl MiniSectorEntry {
-    pub fn parse_time(&self) -> Duration {
-        parse_opt(&self.time)
-    }
-
-    pub fn parse_elapsed(&self) -> Duration {
-        parse_opt(&self.elapsed)
-    }
-
     fn has_content(&self) -> bool {
         is_meaningful(&self.time) || is_meaningful(&self.elapsed)
     }
@@ -141,13 +133,6 @@ impl MiniSectorEntry {
             .filter(|s| !s.trim().is_empty())
             .and_then(duration::from_string)
     }
-}
-
-fn parse_opt(value: &Option<String>) -> Duration {
-    value
-        .as_ref()
-        .and_then(|s| duration::from_string(s))
-        .unwrap_or(0)
 }
 
 fn is_meaningful(value: &Option<String>) -> bool {
@@ -204,61 +189,6 @@ impl MiniSectorTimes {
     }
 }
 
-/// Accumulator updated as laps are processed for a single car.
-#[derive(Debug, Clone, Default)]
-pub struct BestTimes {
-    pub lap: Option<Duration>,
-    pub s1: Option<Duration>,
-    pub s2: Option<Duration>,
-    pub s3: Option<Duration>,
-    pub mini: MiniSectorBests,
-}
-
-impl BestTimes {
-    /// Updates lap / S1 / S2 / S3 bests. Zero values are ignored (a zero
-    /// typically means "blank CSV cell", not an actual zero-duration lap).
-    pub fn update_lap_and_sectors(
-        &mut self,
-        lap: Duration,
-        s1: Duration,
-        s2: Duration,
-        s3: Duration,
-    ) {
-        self.lap = best(self.lap, lap);
-        self.s1 = best(self.s1, s1);
-        self.s2 = best(self.s2, s2);
-        self.s3 = best(self.s3, s3);
-    }
-
-    pub fn update_mini(&mut self, mini: &MiniSectorTimes) {
-        self.mini.update_from(mini);
-    }
-}
-
-macro_rules! define_mini_sector_bests {
-    ($($name:ident),* $(,)?) => {
-        #[derive(Debug, Clone, Default)]
-        pub struct MiniSectorBests {
-            $(pub $name: Option<Duration>,)*
-        }
-
-        impl MiniSectorBests {
-            fn update_from(&mut self, mini: &MiniSectorTimes) {
-                $(self.$name = best(self.$name, mini.$name.parse_time());)*
-            }
-        }
-    };
-}
-with_mini_sector_names!(define_mini_sector_bests);
-
-fn best(current_best: Option<Duration>, candidate: Duration) -> Option<Duration> {
-    if candidate == 0 {
-        current_best
-    } else {
-        Some(current_best.map_or(candidate, |b| b.min(candidate)))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,50 +239,4 @@ mod tests {
         assert_eq!(retained.fl.time.as_deref(), Some("8.112"));
     }
 
-    #[test]
-    fn best_times_update_with_all_zero_leaves_state_untouched() {
-        let mut bests = BestTimes::default();
-        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
-        let snapshot = bests.clone();
-
-        bests.update_lap_and_sectors(0, 0, 0, 0);
-
-        assert_eq!(bests.lap, snapshot.lap);
-        assert_eq!(bests.s1, snapshot.s1);
-        assert_eq!(bests.s2, snapshot.s2);
-        assert_eq!(bests.s3, snapshot.s3);
-    }
-
-    #[test]
-    fn best_times_update_keeps_the_minimum() {
-        let mut bests = BestTimes::default();
-        bests.update_lap_and_sectors(100_000, 30_000, 30_000, 40_000);
-        bests.update_lap_and_sectors(95_000, 35_000, 29_000, 40_000);
-
-        assert_eq!(bests.lap, Some(95_000));
-        assert_eq!(bests.s1, Some(30_000));
-        assert_eq!(bests.s2, Some(29_000));
-        assert_eq!(bests.s3, Some(40_000));
-    }
-
-    #[test]
-    fn best_times_mini_update_skips_zero_sectors() {
-        let mut bests = BestTimes::default();
-
-        let all_zeros = MiniSectorTimes::default();
-        bests.update_mini(&all_zeros);
-        assert_eq!(bests.mini.scl2, None);
-        assert_eq!(bests.mini.fl, None);
-
-        let only_fl = MiniSectorTimes {
-            fl: MiniSectorEntry {
-                time: Some("8.112".to_string()),
-                elapsed: None,
-            },
-            ..Default::default()
-        };
-        bests.update_mini(&only_fl);
-        assert_eq!(bests.mini.scl2, None);
-        assert_eq!(bests.mini.fl, Some(8_112));
-    }
 }

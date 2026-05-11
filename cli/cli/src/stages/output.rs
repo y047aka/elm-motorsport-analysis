@@ -2,7 +2,7 @@
 //!
 //! The computation that fills these shapes lives in [`transform`](super::transform).
 
-use motorsport::{Car, HourClock, car, duration};
+use motorsport::{HourClock, car, duration};
 use serde::Serialize;
 
 use crate::domain::{LapRecord, MiniSectorTimes, with_mini_sector_names};
@@ -106,15 +106,6 @@ pub struct StartingGrid {
     pub car: car::MetaData,
 }
 
-/// Assembles the metadata output. This module performs no domain computation,
-/// only shape assembly.
-pub(super) fn create_metadata_output(event_name: &str, cars: &[Car]) -> MetadataOutput {
-    MetadataOutput {
-        name: crate::events::display_name(event_name).to_string(),
-        starting_grid: starting_grid_from(cars),
-    }
-}
-
 /// Projects `LapRecord`s into `RawLap`s. Called by `transform::build_outputs`
 /// and re-exported through `for_testing`; not part of the public API.
 pub(crate) fn create_laps_output(records: &[LapRecord]) -> Vec<RawLap> {
@@ -160,60 +151,3 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
     }
 }
 
-fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
-    cars.iter()
-        .map(|car| StartingGrid {
-            position: car.start_position,
-            car: car.meta_data.clone(),
-        })
-        .collect()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_create_output_includes_starting_grid() {
-        use motorsport::{Car, Class, Driver, Lap, MetaData};
-
-        let drivers = vec![Driver::new("Test Driver".to_string())];
-        let metadata = MetaData::new(
-            "1".to_string(),
-            drivers,
-            Class::HYPERCAR,
-            "H".to_string(),
-            "Test Team".to_string(),
-            "Test Manufacturer".to_string(),
-        );
-
-        let laps = vec![Lap::new(
-            "1".to_string(),
-            "Test Driver".to_string(),
-            1,
-            Some(1),
-            95365,
-            95365,
-            23155,
-            29928,
-            42282,
-            23155,
-            29928,
-            42282,
-            95365,
-        )];
-
-        let car = Car::new(metadata, 1, laps);
-        let cars = vec![car];
-
-        let output = create_metadata_output("test_event", &cars);
-
-        assert_eq!(output.starting_grid.len(), 1);
-
-        let grid_entry = &output.starting_grid[0];
-        assert_eq!(grid_entry.position, 1);
-        assert_eq!(grid_entry.car.car_number, "1");
-        assert_eq!(grid_entry.car.team, "Test Team");
-        assert_eq!(grid_entry.car.manufacturer, "Test Manufacturer");
-    }
-}

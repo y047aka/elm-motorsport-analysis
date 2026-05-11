@@ -195,7 +195,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
 #[doc(hidden)]
 pub mod for_testing {
     use crate::domain::LapRecord;
-    pub use crate::stages::transform::{build_outputs, group_laps_by_car};
+    pub use crate::stages::transform::{build_outputs, build_starting_grid};
 
     /// Runs the parse + structure stages in one call.
     pub fn parse_and_structure(csv: &str) -> Vec<LapRecord> {

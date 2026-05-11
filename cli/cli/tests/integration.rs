@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use cli::for_testing::{build_outputs, group_laps_by_car, parse_and_structure};
+use cli::for_testing::{build_outputs, build_starting_grid, parse_and_structure};
 
 // =============================================================================
 // INTEGRATION TESTS
@@ -33,40 +33,21 @@ fn test_csv_parsing_and_data_processing() {
     assert_eq!(first_lap.car.manufacturer, "Porsche");
     assert_eq!(first_lap.car.class, "HYPERCAR");
 
-    // Group by car
-    let cars = group_laps_by_car(records);
-    assert_eq!(cars.len(), 2, "Test data should contain 2 cars");
+    // Build the starting grid and validate per-car metadata.
+    let grid = build_starting_grid(records);
+    assert_eq!(grid.len(), 2, "Test data should contain 2 cars");
 
-    // Validate car 12
-    let car12 = cars
-        .iter()
-        .find(|c| c.meta_data.car_number == "12")
-        .unwrap();
-    assert!(car12.laps.len() >= 2, "Car 12 should have multiple laps");
-    assert_eq!(car12.meta_data.team, "Hertz Team JOTA");
-    assert_eq!(car12.meta_data.manufacturer, "Porsche");
+    let car12 = grid.iter().find(|g| g.car.car_number == "12").unwrap();
+    assert_eq!(car12.car.team, "Hertz Team JOTA");
+    assert_eq!(car12.car.manufacturer, "Porsche");
 
-    // Validate car 7
-    let car7 = cars.iter().find(|c| c.meta_data.car_number == "7").unwrap();
-    assert!(!car7.laps.is_empty(), "Car 7 should have at least one lap");
-    assert_eq!(car7.meta_data.team, "Toyota Gazoo Racing");
-    assert_eq!(car7.meta_data.manufacturer, "Toyota");
+    let car7 = grid.iter().find(|g| g.car.car_number == "7").unwrap();
+    assert_eq!(car7.car.team, "Toyota Gazoo Racing");
+    assert_eq!(car7.car.manufacturer, "Toyota");
 
-    // Validate lap data consistency and position calculations
-    for car in &cars {
-        assert!(!car.laps.is_empty(), "Each car should have lap data");
-        assert!(
-            car.start_position >= 0,
-            "Start position should be non-negative"
-        );
-
-        for lap in &car.laps {
-            assert!(lap.time > 0, "Lap time should be positive");
-            assert!(lap.sector_1 > 0, "Sector 1 should be positive");
-            assert!(lap.sector_2 > 0, "Sector 2 should be positive");
-            assert!(lap.sector_3 > 0, "Sector 3 should be positive");
-            // position is u32 type, so always >= 0 - no explicit check needed
-        }
+    for entry in &grid {
+        assert!(entry.position >= 0, "Start position should be non-negative");
+        assert!(!entry.car.drivers.is_empty(), "Each car should have drivers");
     }
 }
 
@@ -275,56 +256,42 @@ fn test_real_wec_data_processing() {
             !records.is_empty(),
             "{race_name} should parse laps from CSV"
         );
+        let lap_count = records.len();
 
-        let cars = group_laps_by_car(records);
-        assert!(!cars.is_empty(), "{race_name} should have cars grouped");
+        let grid = build_starting_grid(records);
+        assert!(!grid.is_empty(), "{race_name} should have cars in grid");
         assert!(
-            cars.len() >= min_cars,
+            grid.len() >= min_cars,
             "{race_name} should have at least {min_cars} cars"
         );
 
-        // Test specific car exists and has expected data
-        if let Some(test_car_data) = cars.iter().find(|c| c.meta_data.car_number == test_car) {
-            assert!(
-                !test_car_data.laps.is_empty(),
-                "{race_name}: Car {test_car} should have laps"
-            );
+        if let Some(entry) = grid.iter().find(|g| g.car.car_number == test_car) {
             assert_eq!(
-                test_car_data.meta_data.team, expected_team,
+                entry.car.team, expected_team,
                 "{race_name}: Car {test_car} should have correct team"
             );
         }
 
-        // Validate all cars have consistent structure
-        for car in &cars {
+        for entry in &grid {
             assert!(
-                !car.meta_data.car_number.is_empty(),
+                !entry.car.car_number.is_empty(),
                 "{race_name}: Car should have number"
             );
             assert!(
-                !car.meta_data.drivers.is_empty(),
+                !entry.car.drivers.is_empty(),
                 "{race_name}: Car should have drivers"
             );
-            assert!(!car.laps.is_empty(), "{race_name}: Car should have laps");
             assert!(
-                car.start_position >= 0,
+                entry.position >= 0,
                 "{race_name}: Car should have valid start position"
             );
-
-            for lap in &car.laps {
-                assert!(lap.time > 0, "{race_name}: Lap should have positive time");
-                assert!(
-                    lap.elapsed > 0,
-                    "{race_name}: Lap should have positive elapsed time"
-                );
-            }
         }
 
         println!(
             "✓ {} processed successfully: {} cars, {} total laps",
             race_name,
-            cars.len(),
-            cars.iter().map(|c| c.laps.len()).sum::<usize>()
+            grid.len(),
+            lap_count
         );
     }
 }
