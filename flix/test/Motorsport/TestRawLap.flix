@@ -23,7 +23,7 @@ mod Motorsport.TestRawLap {
     /// Decodes a single semicolon-separated CSV line (without header) and
     /// pulls the first record out of the result. The header row is prepended
     /// automatically so the decoder can resolve field names.
-    def decodeOne(line: String): Result[Error, RawLap] =
+    def decodeOne(line: String): Result[Error, RawLap.RawLap] =
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
@@ -155,7 +155,7 @@ mod Motorsport.TestRawLap {
         }
 
     /// Decode a single Le Mans-shaped row (base 29 fields + 30 mini-sector fields).
-    def decodeLeMansOne(line: String): Result[Error, RawLap] =
+    def decodeLeMansOne(line: String): Result[Error, RawLap.RawLap] =
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,

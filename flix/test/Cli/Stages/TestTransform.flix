@@ -10,7 +10,7 @@ mod Cli.Stages.TestTransform {
 
     /// Rust 側 integration.rs L500-505 の create_test_csv_data と同等の 3 行データ。
     /// セミコロン区切り、22 列以上のフィールド。
-    def sampleRawLaps(): List[RawLap] =
+    def sampleRawLaps(): List[RawLap.RawLap] =
         let csv =
             header() + "\n" +
             "12;1;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:00.000;;;;310.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;;;\n" +
