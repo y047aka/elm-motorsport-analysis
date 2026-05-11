@@ -2,12 +2,13 @@ mod Motorsport.TestMetadata {
 
     use Motorsport.Metadata
     use Motorsport.Wec
+    use Motorsport.RawLap
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
-    def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): Wec.RawLap =
+    def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap =
         {
             car = {
                 carNumber    = carNumber,

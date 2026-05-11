@@ -9,7 +9,7 @@ mod Cli.Stages {
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
     use Cli.Stages.Validation
-    use Motorsport.Wec
+    use Motorsport.RawLap
 
     type alias ProcessingReport = {
         lapCount   = Int32,
@@ -52,16 +52,16 @@ mod Cli.Stages {
             |> Result.flatMap(write(task))
             |> Result.map(toReport(task))
 
-    def decode(task: FileTask.FileTask): String -> Result[CliError, List[Wec.RawLap]] =
+    def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    def reportViolations(task: FileTask.FileTask): List[Wec.RawLap] -> List[Wec.RawLap] \ Console =
+    def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
         rawLaps -> {
             Validation.validate(task#eventName, rawLaps) |> List.forEach(Console.eprintln);
             rawLaps
         }
 
-    def render(task: FileTask.FileTask): List[Wec.RawLap] -> Rendered =
+    def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
         rawLaps -> Transform.transform(task#eventName, rawLaps)
 
     /// Writes the rendered JSON and passes `Rendered` through on success

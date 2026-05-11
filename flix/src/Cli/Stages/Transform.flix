@@ -4,6 +4,7 @@ mod Cli.Stages.Transform {
     use Util.Json.JsonValue.JsonArray
     use Motorsport.Metadata
     use Motorsport.Wec
+    use Motorsport.RawLap
 
     pub type alias Rendered = {
         lapCount     = Int32,
@@ -11,8 +12,8 @@ mod Cli.Stages.Transform {
         lapsJson     = String
     }
 
-    /// Renders the metadata + laps JSON payloads from a list of Wec.
-    pub def transform(eventId: String, rawLaps: List[Wec.RawLap]): Rendered =
+    /// Renders the metadata + laps JSON payloads from a list of RawLap.
+    pub def transform(eventId: String, rawLaps: List[RawLap]): Rendered =
         let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
         let metadataJson = Json.render(Metadata.toJson(metadata));
         let lapsJson     = Json.render(JsonArray(List.map(Wec.toJson, rawLaps)));

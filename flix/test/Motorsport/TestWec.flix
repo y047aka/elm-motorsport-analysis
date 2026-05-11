@@ -8,6 +8,7 @@ mod Motorsport.TestWec {
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Wec
+    use Motorsport.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -23,7 +24,7 @@ mod Motorsport.TestWec {
     /// Decodes a single semicolon-separated CSV line (without header) and
     /// pulls the first record out of the result. The header row is prepended
     /// automatically so the decoder can resolve field names.
-    def decodeOne(line: String): Result[Error, Wec.RawLap] =
+    def decodeOne(line: String): Result[Error, RawLap] =
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
@@ -155,7 +156,7 @@ mod Motorsport.TestWec {
         }
 
     /// Decode a single Le Mans-shaped row (base 29 fields + 30 mini-sector fields).
-    def decodeLeMansOne(line: String): Result[Error, Wec.RawLap] =
+    def decodeLeMansOne(line: String): Result[Error, RawLap] =
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,

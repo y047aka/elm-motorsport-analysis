@@ -5,7 +5,7 @@ mod Motorsport.Metadata {
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
     use Motorsport.Events
-    use Motorsport.Wec
+    use Motorsport.RawLap
 
     pub type alias StartingGrid = {
         position = Int32,
@@ -17,7 +17,7 @@ mod Motorsport.Metadata {
         startingGrid = List[StartingGrid]
     }
 
-    pub def fromRawLaps(eventId: String, rawLaps: List[Wec.RawLap]): Metadata =
+    pub def fromRawLaps(eventId: String, rawLaps: List[RawLap]): Metadata =
         let builds = buildCars(rawLaps);
         {
             name         = Events.displayName(eventId),
@@ -29,10 +29,10 @@ mod Motorsport.Metadata {
         lap1Elapsed = Option[Duration]
     }
 
-    def buildCars(rawLaps: List[Wec.RawLap]): List[CarBuild] =
+    def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
         rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
 
-    def upsertBuild(acc: List[CarBuild], lap: Wec.RawLap): List[CarBuild] =
+    def upsertBuild(acc: List[CarBuild], lap: RawLap): List[CarBuild] =
         if (List.exists(b -> b#car#carNumber == lap#car#carNumber, acc))
             acc |> List.map(b ->
                 if (b#car#carNumber == lap#car#carNumber) updateBuildWithLap(b, lap) else b
@@ -40,7 +40,7 @@ mod Motorsport.Metadata {
         else
             List.append(acc, buildFromLap(lap) :: Nil)
 
-    def buildFromLap(lap: Wec.RawLap): CarBuild =
+    def buildFromLap(lap: RawLap): CarBuild =
         // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
         let car: Car = {
             carNumber    = lap#car#carNumber,
@@ -52,7 +52,7 @@ mod Motorsport.Metadata {
         };
         { car = car, lap1Elapsed = lap1Elapsed(lap) }
 
-    def updateBuildWithLap(build: CarBuild, lap: Wec.RawLap): CarBuild =
+    def updateBuildWithLap(build: CarBuild, lap: RawLap): CarBuild =
         let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driver#name) | build#car };
         let newLap1 = match build#lap1Elapsed {
             case Some(_) => build#lap1Elapsed
@@ -60,7 +60,7 @@ mod Motorsport.Metadata {
         };
         { car = updatedCar, lap1Elapsed = newLap1 }
 
-    def lap1Elapsed(lap: Wec.RawLap): Option[Duration] =
+    def lap1Elapsed(lap: RawLap): Option[Duration] =
         if (lap#lapNumber == 1) Some(lap#elapsed)
         else None
 
