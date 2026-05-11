@@ -29,10 +29,10 @@ mod Cli.Stages {
                     Console.println("${task#eventName}: Wrote ${report#lapCount} laps");
                     Console.println("${task#eventName}: Metadata -> ${report#outputPath}");
                     Console.println("${task#eventName}: Laps     -> ${report#lapsPath}");
-                    { processed = acc#processed + 1, errors = acc#errors }
+                    { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${task#eventName}: ${e}");
-                    { processed = acc#processed, errors = acc#errors + 1 }
+                    { errors = acc#errors + 1 | acc }
             },
             { processed = 0, errors = 0 },
             tasks
