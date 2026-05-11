@@ -259,6 +259,22 @@ fn best(current_best: Option<Duration>, candidate: Duration) -> Option<Duration>
 mod tests {
     use super::*;
 
+    /// `MiniSectorTimes::as_ordered_pairs` and `MiniSectorId::all` are two
+    /// independent declarations of the 15-sector track-order list. If anyone
+    /// adds a 16th sector they must update both — this test guards the pair
+    /// so the discrepancy fails fast instead of silently dropping a sector
+    /// from validation.
+    #[test]
+    fn as_ordered_pairs_matches_mini_sector_id_all() {
+        let times = MiniSectorTimes::default();
+        let pairs = times.as_ordered_pairs();
+        let all = MiniSectorId::all();
+        assert_eq!(pairs.len(), all.len(), "sector count drifted");
+        for (i, (id, _)) in pairs.iter().enumerate() {
+            assert_eq!(*id, all[i], "sector order drifted at index {i}");
+        }
+    }
+
     #[test]
     fn mini_sector_times_default_collapses_to_none() {
         assert!(MiniSectorTimes::default().into_optional().is_none());
