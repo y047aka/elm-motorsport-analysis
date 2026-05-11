@@ -53,7 +53,7 @@ mod Cli.Validation {
     /// Pipeline stage: run validation against the rawLaps already on the
     /// State, print any violations to stderr, and pass the State through
     /// unchanged. Violations never abort the pipeline by design.
-    pub def run(s: State.State): Result[CliError, State.State] \ Console =
+    pub def step(s: State.State): Result[CliError, State.State] \ Console =
         validate(s#task#eventName, s#rawLaps) |> List.forEach(Console.eprintln);
         Ok(s)
 

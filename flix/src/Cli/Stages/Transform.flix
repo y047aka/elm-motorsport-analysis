@@ -9,7 +9,7 @@ mod Cli.Stages.Transform {
 
     /// Pipeline stage: render the metadata + laps JSON from the rawLaps
     /// already populated on the State.
-    pub def run(s: State.State): State.State =
+    pub def step(s: State.State): State.State =
         { rendered = transform(s#task#eventName, s#rawLaps) | s }
 
     /// Renders the metadata + laps JSON payloads from a list of RawLap.

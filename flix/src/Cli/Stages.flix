@@ -43,10 +43,10 @@ mod Cli.Stages {
     /// purely with `|>`.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         Ok(State.init(task))
-            |> Result.flatMap(CsvInput.run)
-            |> Result.flatMap(Validation.run)
-            |> Result.map(Transform.run)
-            |> Result.flatMap(Output.run)
+            |> Result.flatMap(CsvInput.step)
+            |> Result.flatMap(Validation.step)
+            |> Result.map(Transform.step)
+            |> Result.flatMap(Output.step)
             |> Result.map(toReport)
 
     def toReport(s: State.State): ProcessingReport = {

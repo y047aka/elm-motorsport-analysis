@@ -8,7 +8,7 @@ mod Cli.Stages.Output {
 
     /// Pipeline stage: write the rendered JSON to disk and pass the
     /// State through unchanged on success.
-    pub def run(s: State.State): Result[CliError, State.State] \ IO =
+    pub def step(s: State.State): Result[CliError, State.State] \ IO =
         writeOutputs(s#task, s#rendered) |> Result.map(_ -> s)
 
     /// Writes the rendered metadata and laps JSON to the paths
