@@ -4,7 +4,7 @@
 //! metadata and assigns starting-grid positions from lap-1 elapsed times.
 //! Per-lap output is produced separately via [`output::create_laps_output`].
 
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 use motorsport::{Driver, MetaData};
 
@@ -31,28 +31,29 @@ pub fn build_outputs(
 /// Aggregates records by car number (preserving CSV first-seen order),
 /// then ranks cars by lap-1 elapsed time to assign starting positions.
 pub fn build_starting_grid(records: Vec<LapRecord>) -> Vec<StartingGrid> {
-    let builds = build_cars(records);
+    let builds = build_cars(&records);
 
     // Cars that completed lap 1, ranked by elapsed time, get 0-based positions.
-    let mut ranked: Vec<(String, u32)> = builds
+    // We compute positions by index into `builds` to avoid carrying borrows
+    // across the subsequent move.
+    let mut ranked: Vec<(usize, u32)> = builds
         .iter()
-        .filter_map(|b| b.lap1_elapsed.map(|e| (b.meta.car_number.clone(), e)))
+        .enumerate()
+        .filter_map(|(i, b)| b.lap1_elapsed.map(|e| (i, e)))
         .collect();
     ranked.sort_by_key(|(_, elapsed)| *elapsed);
-    let position_by_car: HashMap<String, i32> = ranked
-        .into_iter()
-        .enumerate()
-        .map(|(i, (cn, _))| (cn, i as i32))
-        .collect();
+
+    let mut positions = vec![0_i32; builds.len()];
+    for (rank, (build_idx, _)) in ranked.into_iter().enumerate() {
+        positions[build_idx] = rank as i32;
+    }
 
     builds
         .into_iter()
-        .map(|b| {
-            let position = position_by_car.get(&b.meta.car_number).copied().unwrap_or(0);
-            StartingGrid {
-                position,
-                car: b.meta,
-            }
+        .zip(positions)
+        .map(|(b, position)| StartingGrid {
+            position,
+            car: b.meta,
         })
         .collect()
 }
@@ -62,58 +63,46 @@ struct CarBuild {
     lap1_elapsed: Option<u32>,
 }
 
-fn build_cars(records: Vec<LapRecord>) -> Vec<CarBuild> {
-    // (drivers, lap1_elapsed, first_seen_index_into_records)
-    let mut grouped: HashMap<String, (Vec<String>, Option<u32>, usize)> = HashMap::new();
+fn build_cars(records: &[LapRecord]) -> Vec<CarBuild> {
+    // IndexMap preserves CSV first-seen order without a separate index field.
+    let mut grouped: IndexMap<&str, (Vec<String>, Option<u32>, &LapRecord)> = IndexMap::new();
 
-    for (index, record) in records.iter().enumerate() {
-        let car_number = &record.lap.car_number;
-        let driver_name = record.lap.driver.clone();
+    for record in records {
+        let car_number = record.lap.car_number.as_str();
+        let driver_name = &record.lap.driver;
         let lap1 = (record.lap.lap_number == 1).then_some(record.lap.elapsed);
 
-        match grouped.get_mut(car_number) {
-            Some((drivers, l1, _)) => {
-                if !drivers.contains(&driver_name) {
-                    drivers.push(driver_name);
+        grouped
+            .entry(car_number)
+            .and_modify(|(drivers, l1, _)| {
+                if !drivers.iter().any(|d| d == driver_name) {
+                    drivers.push(driver_name.clone());
                 }
                 if l1.is_none() {
                     *l1 = lap1;
                 }
-            }
-            None => {
-                grouped.insert(car_number.clone(), (vec![driver_name], lap1, index));
-            }
-        }
+            })
+            .or_insert_with(|| (vec![driver_name.clone()], lap1, record));
     }
 
-    let mut cars: Vec<(usize, CarBuild)> = grouped
+    grouped
         .into_iter()
-        .map(|(car_number, (driver_names, lap1, first_idx))| {
-            let car_info = &records[first_idx].car;
+        .map(|(car_number, (driver_names, lap1, first_record))| {
+            let car_info = &first_record.car;
             let meta = MetaData::new(
-                car_number,
-                drivers_from(driver_names),
+                car_number.to_string(),
+                driver_names.into_iter().map(Driver::new).collect(),
                 car_info.class.clone(),
                 car_info.group.clone(),
                 car_info.team.clone(),
                 car_info.manufacturer.clone(),
             );
-            (
-                first_idx,
-                CarBuild {
-                    meta,
-                    lap1_elapsed: lap1,
-                },
-            )
+            CarBuild {
+                meta,
+                lap1_elapsed: lap1,
+            }
         })
-        .collect();
-
-    cars.sort_by_key(|(index, _)| *index);
-    cars.into_iter().map(|(_, c)| c).collect()
-}
-
-fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
-    driver_names.into_iter().map(Driver::new).collect()
+        .collect()
 }
 
 

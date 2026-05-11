@@ -33,6 +33,14 @@ fn test_csv_parsing_and_data_processing() {
     assert_eq!(first_lap.car.manufacturer, "Porsche");
     assert_eq!(first_lap.car.class, "HYPERCAR");
 
+    // Every parsed lap should carry positive time and sector durations.
+    for r in &records {
+        assert!(r.lap.time > 0, "lap.time should be positive");
+        assert!(r.lap.sector_1 > 0, "sector_1 should be positive");
+        assert!(r.lap.sector_2 > 0, "sector_2 should be positive");
+        assert!(r.lap.sector_3 > 0, "sector_3 should be positive");
+    }
+
     // Build the starting grid and validate per-car metadata.
     let grid = build_starting_grid(records);
     assert_eq!(grid.len(), 2, "Test data should contain 2 cars");
