@@ -1,7 +1,5 @@
 mod Cli.Stages {
 
-    use Util.Csv.Decode
-    use Util.Csv.Decode.FieldNames
     use Util.Files
     use Util.Json
     use Util.Json.JsonValue.JsonArray
@@ -9,6 +7,7 @@ mod Cli.Stages {
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
+    use Cli.Stages.CsvInput
     use Cli.Validation
     use RawLap.RawLap
 
@@ -59,26 +58,7 @@ mod Cli.Stages {
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         forM(
-            lines     <- Files.readLines(task#inputPath) |> Result.mapErr(CliError.File);
-            _         <- match lines {
-                            case Nil => Err(CliError.EmptyFile(task#inputPath))
-                            case _   => Ok(())
-                         };
-            // Some CSV files are saved with a UTF-8 BOM (\uFEFF) by Windows
-            // tools. Strip it here at the I/O boundary before decoding so
-            // the CSV library stays agnostic about file encoding details.
-            // FieldNamesFromFirstRow consumes the first line as column names,
-            // making them available for field-based decoding in RawLap.decoder.
-            content   <- Ok({
-                            let raw = List.join("\n", lines);
-                            if (String.startsWith({prefix = "\uFEFF"}, raw)) String.dropLeft(1, raw) else raw
-                         });
-            rawLaps   <- Decode.decodeCustom(
-                            {fieldSeparator = ';'},
-                            FieldNames.FieldNamesFromFirstRow,
-                            RawLap.decoder(),
-                            content
-                         ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)));
+            rawLaps   <- CsvInput.readRawLaps(task#inputPath);
             _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
             processed <- Ok(process(task#eventName, rawLaps));
             _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);

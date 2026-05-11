@@ -1,0 +1,35 @@
+mod Cli.Stages.CsvInput {
+
+    use Util.Csv.Decode
+    use Util.Csv.Decode.FieldNames
+    use Util.Files
+    use Cli.Errors.CliError
+    use RawLap.RawLap
+
+    /// Reads a CSV file from disk and decodes it into a list of `RawLap`.
+    ///
+    /// Some CSV files are saved with a UTF-8 BOM (\uFEFF) by Windows
+    /// tools. Strip it here at the I/O boundary before decoding so the
+    /// CSV library stays agnostic about file encoding details.
+    /// FieldNamesFromFirstRow consumes the first line as column names,
+    /// making them available for field-based decoding in RawLap.decoder.
+    pub def readRawLaps(inputPath: String): Result[CliError, List[RawLap]] \ IO =
+        forM(
+            lines   <- Files.readLines(inputPath) |> Result.mapErr(CliError.File);
+            _       <- match lines {
+                          case Nil => Err(CliError.EmptyFile(inputPath))
+                          case _   => Ok(())
+                       };
+            content <- Ok({
+                          let raw = List.join("\n", lines);
+                          if (String.startsWith({prefix = "\uFEFF"}, raw)) String.dropLeft(1, raw) else raw
+                       });
+            rawLaps <- Decode.decodeCustom(
+                          {fieldSeparator = ';'},
+                          FieldNames.FieldNamesFromFirstRow,
+                          RawLap.decoder(),
+                          content
+                       ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)))
+        ) yield rawLaps
+
+}
