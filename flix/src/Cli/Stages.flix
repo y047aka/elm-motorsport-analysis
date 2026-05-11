@@ -45,17 +45,15 @@ mod Cli.Stages {
     /// Each helper closes over `task` so the chain is composed with `|>`
     /// alone, without threading an explicit pipeline-state record.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        readRawLaps(task)
+        CsvInput.readSource(task#inputPath)
+            |> Result.flatMap(decode(task))
             |> Result.map(reportViolations(task))
             |> Result.map(render(task))
             |> Result.flatMap(write(task))
             |> Result.map(toReport(task))
 
-    def readRawLaps(task: FileTask.FileTask): Result[CliError, List[RawLap]] \ IO =
-        forM(
-            content <- CsvInput.readSource(task#inputPath);
-            rawLaps <- CsvDecode.decodeRawLaps(task#inputPath, content)
-        ) yield rawLaps
+    def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
+        content -> CsvDecode.decodeRawLaps(task#inputPath, content)
 
     def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
         rawLaps -> {
