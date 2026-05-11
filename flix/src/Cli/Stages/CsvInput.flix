@@ -29,7 +29,7 @@ mod Cli.Stages.CsvInput {
                           FieldNames.FieldNamesFromFirstRow,
                           RawLap.decoder(),
                           content
-                       ) |> Result.mapErr(e -> CliError.Csv(Decode.errorToString(e)))
+                       ) |> Result.mapErr(e -> CliError.Csv({ path = inputPath, message = Decode.errorToString(e) }))
         ) yield rawLaps
 
 }
