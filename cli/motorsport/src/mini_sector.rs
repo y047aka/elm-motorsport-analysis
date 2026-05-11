@@ -39,6 +39,15 @@ impl MiniSectorId {
     /// CSV column prefix. `A7_1` / `A8_1` map to the hyphenated `A7-1` /
     /// `A8-1` (the enum underscore is an identifier constraint, not part of
     /// the column name). Each prefix yields two columns: `_time` and `_elapsed`.
+    ///
+    /// Not currently consumed by the converter pipeline — the CSV column
+    /// names are baked into `stages::csv_input::CsvRow` via `#[serde(rename)]`
+    /// attributes. This method exists so the `MiniSectorId` enum is a
+    /// complete, self-contained source of truth (matching the Flix
+    /// `Motorsport.MiniSector` module) and so future tooling (e.g. CSV
+    /// schema generation, reverse export) can look up the names here rather
+    /// than re-deriving them.
+    #[allow(dead_code)]
     pub fn csv_name(self) -> &'static str {
         match self {
             Self::Scl2   => "SCL2",
