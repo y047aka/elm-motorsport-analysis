@@ -5,6 +5,7 @@ mod Cli.Stages {
     use Cli.FileTask
     use Cli.Stages.CsvInput
     use Cli.Stages.Output
+    use Cli.Stages.State
     use Cli.Stages.Transform
     use Cli.Validation
 
@@ -37,20 +38,21 @@ mod Cli.Stages {
         Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
         if (summary#errors == 0) 0 else 1
 
+    /// Every stage has the uniform shape `State -> Result[CliError, State]`
+    /// (or `State -> State` for pure stages), so the pipeline composes
+    /// purely with `|>`.
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
-        forM(
-            rawLaps <- CsvInput.readRawLaps(task#inputPath);
-            _       <- Output.writeOutputs(task, {
-                         reportViolations(Validation.validate(task#eventName, rawLaps));
-                         Transform.transform(task#eventName, rawLaps)
-                       })
-        ) yield {
-            lapCount   = List.length(rawLaps),
-            outputPath = task#outputPath,
-            lapsPath   = task#lapsPath
-        }
+        Ok(State.init(task))
+            |> Result.flatMap(CsvInput.run)
+            |> Result.flatMap(Validation.run)
+            |> Result.map(Transform.run)
+            |> Result.flatMap(Output.run)
+            |> Result.map(toReport)
 
-    def reportViolations(violations: List[String]): Unit \ Console =
-        violations |> List.forEach(Console.eprintln)
+    def toReport(s: State.State): ProcessingReport = {
+        lapCount   = s#rendered#lapCount,
+        outputPath = s#task#outputPath,
+        lapsPath   = s#task#lapsPath
+    }
 
 }

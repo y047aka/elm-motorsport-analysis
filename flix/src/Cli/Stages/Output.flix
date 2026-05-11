@@ -3,7 +3,13 @@ mod Cli.Stages.Output {
     use Util.Files
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Stages.Transform.Rendered
+    use Cli.Stages.State
+    use Cli.Stages.State.Rendered
+
+    /// Pipeline stage: write the rendered JSON to disk and pass the
+    /// State through unchanged on success.
+    pub def run(s: State.State): Result[CliError, State.State] \ IO =
+        writeOutputs(s#task, s#rendered) |> Result.map(_ -> s)
 
     /// Writes the rendered metadata and laps JSON to the paths
     /// specified on the FileTask. Returns the first I/O failure.

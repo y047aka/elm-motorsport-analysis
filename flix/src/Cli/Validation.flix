@@ -42,10 +42,20 @@ mod Cli.Validation {
 
     use Util.Duration.Duration
     use Util.HourClock
+    use Sys.Console
+    use Cli.Errors.CliError
+    use Cli.Stages.State
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use RawLap.RawLap
     use RawLap.RawMiniSector
+
+    /// Pipeline stage: run validation against the rawLaps already on the
+    /// State, print any violations to stderr, and pass the State through
+    /// unchanged. Violations never abort the pipeline by design.
+    pub def run(s: State.State): Result[CliError, State.State] \ Console =
+        validate(s#task#eventName, s#rawLaps) |> List.forEach(Console.eprintln);
+        Ok(s)
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
