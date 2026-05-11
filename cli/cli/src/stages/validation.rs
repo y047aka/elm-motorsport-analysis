@@ -19,8 +19,10 @@
 //!                                   strictly increasing in track order.
 //!
 //! Design notes:
-//!   - `HourElapsedOffset` baseline is the **first valid row in the whole CSV**
-//!     (race-wide, not per-car). A bad lap 1 on one car does not cascade.
+//!   - `HourElapsedOffset` baseline is the **first row with a parseable hour cell**
+//!     in the whole CSV (race-wide, not per-car). Rows whose HOUR was missing or
+//!     unparseable are skipped — they can no longer cascade false positives across
+//!     the rest of the race.
 //!   - 24 h wrap is handled by `HourClock::offset_from`, so the validator just
 //!     compares offsets with `==`.
 //!   - Report order follows CSV appearance (per-lap rules: natural CSV order;
@@ -174,24 +176,31 @@ fn check_elapsed_drift<'a>(sorted_laps: &[&'a LapRecord]) -> Vec<Violation<'a>> 
 
 // ── Rule 3: HourElapsedOffset ────────────────────────────────────────────────
 
+/// Race-wide hour-vs-elapsed offset check.
+///
+/// Baseline is the **first row with a parseable `hour` cell** (not necessarily
+/// the first record in the CSV). Rows whose `hour` failed to parse are silently
+/// skipped — a single malformed cell can therefore no longer poison the
+/// baseline or cascade through the rest of the race.
 fn check_hour_elapsed_race_wide<'a>(records: &'a [LapRecord]) -> Vec<Violation<'a>> {
-    let Some(first) = records.first() else {
-        return vec![];
-    };
+    let mut baseline: Option<u32> = None;
+    let mut violations = Vec::new();
 
-    let base = first.stats.hour.offset_from(first.lap.elapsed);
-
-    records
-        .iter()
-        .filter_map(|record| {
-            let offset = record.stats.hour.offset_from(record.lap.elapsed);
-            if offset == base {
-                None
-            } else {
-                Some(Violation::HourElapsedOffset(record, base, offset))
+    for record in records {
+        let Some(hour) = record.stats.hour else {
+            continue;
+        };
+        let offset = hour.offset_from(record.lap.elapsed);
+        match baseline {
+            None => baseline = Some(offset),
+            Some(base) if offset != base => {
+                violations.push(Violation::HourElapsedOffset(record, base, offset));
             }
-        })
-        .collect()
+            _ => {}
+        }
+    }
+
+    violations
 }
 
 // ── Rules 4 & 5: MiniSector checks ──────────────────────────────────────────
@@ -379,7 +388,7 @@ mod tests {
                 s2_improvement: 0,
                 s3_improvement: 0,
                 kph: 160.0,
-                hour: HourClock::parse("11:00:00.000").unwrap(),
+                hour: HourClock::parse("11:00:00.000"),
                 top_speed: None,
                 pit_time: None,
             },
@@ -454,9 +463,9 @@ mod tests {
         // Lap 1 elapsed=1:35, offset = 11h - 1:35 = constant.
         // Lap 2 elapsed=3:10, hour=11:01:35 (start + 1:35 + run next lap).
         let mut r1 = make_record("7", 1, 95_000, 0, 0, 0, 95_000);
-        r1.stats.hour = HourClock::parse("11:01:35.000").unwrap();
+        r1.stats.hour = HourClock::parse("11:01:35.000");
         let mut r2 = make_record("7", 2, 95_000, 0, 0, 0, 190_000);
-        r2.stats.hour = HourClock::parse("11:03:10.000").unwrap();
+        r2.stats.hour = HourClock::parse("11:03:10.000");
 
         let records = vec![r1, r2];
         let viols = check_hour_elapsed_race_wide(&records);
@@ -466,10 +475,10 @@ mod tests {
     #[test]
     fn hour_elapsed_offset_mismatch_flagged() {
         let mut r1 = make_record("7", 1, 95_000, 0, 0, 0, 95_000);
-        r1.stats.hour = HourClock::parse("11:01:35.000").unwrap();
+        r1.stats.hour = HourClock::parse("11:01:35.000");
         // r2 hour is wrong — does not match expected offset.
         let mut r2 = make_record("7", 2, 95_000, 0, 0, 0, 190_000);
-        r2.stats.hour = HourClock::parse("11:05:00.000").unwrap(); // wrong
+        r2.stats.hour = HourClock::parse("11:05:00.000"); // wrong
 
         let records = vec![r1, r2];
         let viols = check_hour_elapsed_race_wide(&records);

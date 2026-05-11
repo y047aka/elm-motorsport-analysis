@@ -62,17 +62,27 @@ fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
     }
 }
 
-fn parse_hour(row: &CsvRow) -> HourClock {
+/// Parses the HOUR column into an `Option<HourClock>`.
+///
+/// An empty / whitespace-only cell is silently treated as `None`. A non-empty
+/// unparseable value emits a warning and also becomes `None`; the validation
+/// stage then skips that row from the race-wide hour-offset baseline, so a
+/// single bad row does not cascade into false positives for the rest of the
+/// CSV.
+fn parse_hour(row: &CsvRow) -> Option<HourClock> {
+    if row.hour.trim().is_empty() {
+        return None;
+    }
     match HourClock::parse(&row.hour) {
-        Some(h) => h,
+        Some(h) => Some(h),
         None => {
             log::warn!(
-                "car {} lap {}: unparseable HOUR value '{}', treating as midnight",
+                "car {} lap {}: unparseable HOUR value '{}', dropping from hour-offset check",
                 row.car_number,
                 row.lap,
                 row.hour
             );
-            HourClock::parse("0:00:00.000").expect("midnight is always valid")
+            None
         }
     }
 }

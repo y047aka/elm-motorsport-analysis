@@ -2,7 +2,7 @@
 //!
 //! The computation that fills these shapes lives in [`transform`](super::transform).
 
-use motorsport::{Car, car, duration};
+use motorsport::{Car, HourClock, car, duration};
 use serde::{Serialize, Serializer};
 
 use crate::domain::LapRecord;
@@ -139,7 +139,7 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         s3_improvement: stats.s3_improvement,
         kph: (stats.kph * 10.0).round() / 10.0,
         elapsed: duration::to_string(lap.elapsed),
-        hour: stats.hour.format(),
+        hour: stats.hour.map(HourClock::format).unwrap_or_default(),
         top_speed: stats.top_speed.clone().unwrap_or_default(),
         driver_name: lap.driver.clone(),
         pit_time: stats
