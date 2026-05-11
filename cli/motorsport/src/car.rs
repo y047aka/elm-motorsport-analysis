@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::{Class, Driver};
+use crate::Driver;
 
 /// 車両メタデータ（FlixのMotorsport.Car.Carと互換）
 #[derive(Debug, Clone, PartialEq, Serialize)]
@@ -8,7 +8,7 @@ use crate::{Class, Driver};
 pub struct MetaData {
     pub car_number: CarNumber,
     pub drivers: Vec<Driver>,
-    pub class: Class,
+    pub class: String,
     pub group: String,
     pub team: String,
     pub manufacturer: String,
@@ -18,7 +18,7 @@ impl MetaData {
     pub fn new(
         car_number: CarNumber,
         drivers: Vec<Driver>,
-        class: Class,
+        class: String,
         group: String,
         team: String,
         manufacturer: String,
@@ -51,14 +51,14 @@ mod tests {
         let metadata = MetaData::new(
             "12".to_string(),
             drivers,
-            Class::HYPERCAR,
+            "HYPERCAR".to_string(),
             "H".to_string(),
             "Hertz Team JOTA".to_string(),
             "Porsche".to_string(),
         );
 
         assert_eq!(metadata.car_number, "12");
-        assert_eq!(metadata.class, Class::HYPERCAR);
+        assert_eq!(metadata.class, "HYPERCAR");
         assert_eq!(metadata.group, "H");
         assert_eq!(metadata.team, "Hertz Team JOTA");
         assert_eq!(metadata.manufacturer, "Porsche");
@@ -72,7 +72,7 @@ mod tests {
         let metadata = MetaData::new(
             "12".to_string(),
             drivers,
-            Class::HYPERCAR,
+            "HYPERCAR".to_string(),
             "H".to_string(),
             "Hertz Team JOTA".to_string(),
             "Porsche".to_string(),
@@ -80,6 +80,7 @@ mod tests {
 
         let json = serde_json::to_string(&metadata).unwrap();
         assert!(json.contains("\"carNumber\":\"12\""));
+        assert!(json.contains("\"class\":\"HYPERCAR\""));
         assert!(json.contains("\"team\":\"Hertz Team JOTA\""));
         assert!(json.contains("\"manufacturer\":\"Porsche\""));
     }

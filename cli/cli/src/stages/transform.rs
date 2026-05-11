@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use motorsport::{Class, Driver, MetaData};
+use motorsport::{Driver, MetaData};
 
 use super::output::{MetadataOutput, RawLap, StartingGrid, create_laps_output};
 use crate::domain::LapRecord;
@@ -93,7 +93,7 @@ fn build_cars(records: Vec<LapRecord>) -> Vec<CarBuild> {
             let meta = MetaData::new(
                 car_number,
                 drivers_from(driver_names),
-                class_from(&car_info.class),
+                car_info.class.clone(),
                 car_info.group.clone(),
                 car_info.team.clone(),
                 car_info.manufacturer.clone(),
@@ -116,17 +116,6 @@ fn drivers_from(driver_names: Vec<String>) -> Vec<Driver> {
     driver_names.into_iter().map(Driver::new).collect()
 }
 
-fn class_from(class_str: &str) -> Class {
-    match class_str {
-        "HYPERCAR" => Class::HYPERCAR,
-        "LMP2" => Class::LMP2,
-        "LMGT3" => Class::LMGT3,
-        unknown => {
-            log::warn!("Unknown class '{}', falling back to None", unknown);
-            Class::None
-        }
-    }
-}
 
 #[cfg(test)]
 mod tests {
