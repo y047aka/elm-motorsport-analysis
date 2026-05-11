@@ -27,7 +27,7 @@ mod Cli.Stages.TestCsvDecode {
 
     @Test
     def testDecodeAttachesPathOnError(): Unit \ Assert =
-        let broken = "not;a;valid;csv";
+        let broken = header() + "\n" + "12;not-a-number;1;1:35.365;0;;23.155;0;29.928;0;42.282;0;160.7;1:35.365;11:02:00.000;;;;310.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;GF;;;";
         match CsvDecode.decode("/tmp/race.csv", broken) {
             case Ok(_) => Assert.assertTrue(false)
             case Err(CliError.Csv(r)) =>
