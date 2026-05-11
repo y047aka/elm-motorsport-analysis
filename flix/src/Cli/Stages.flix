@@ -1,21 +1,12 @@
 mod Cli.Stages {
 
-    use Util.Files
-    use Util.Json
-    use Util.Json.JsonValue.JsonArray
-    use Motorsport.Metadata
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.CsvInput
+    use Cli.Stages.Output
+    use Cli.Stages.Transform
     use Cli.Validation
-    use RawLap.RawLap
-
-    pub type alias Output = {
-        lapCount     = Int32,
-        metadataJson = String,
-        lapsJson     = String
-    }
 
     type alias ProcessingReport = {
         lapCount   = Int32,
@@ -27,16 +18,6 @@ mod Cli.Stages {
         processed = Int32,
         errors    = Int32
     }
-
-    pub def process(eventId: String, rawLaps: List[RawLap]): Output =
-        let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
-        let metadataJson = Json.render(Metadata.toJson(metadata));
-        let lapsJson     = Json.render(JsonArray(List.map(RawLap.toJson, rawLaps)));
-        {
-            lapCount     = List.length(rawLaps),
-            metadataJson = metadataJson,
-            lapsJson     = lapsJson
-        }
 
     pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
         let summary = List.foldLeft(
@@ -60,9 +41,8 @@ mod Cli.Stages {
         forM(
             rawLaps   <- CsvInput.readRawLaps(task#inputPath);
             _         <- Ok(reportViolations(Validation.validate(task#eventName, rawLaps)));
-            processed <- Ok(process(task#eventName, rawLaps));
-            _         <- Files.writeFile(task#outputPath, processed#metadataJson) |> Result.mapErr(CliError.File);
-            _         <- Files.writeFile(task#lapsPath, processed#lapsJson) |> Result.mapErr(CliError.File)
+            processed <- Ok(Transform.transform(task#eventName, rawLaps));
+            _         <- Output.writeOutputs(task, processed)
         ) yield {
             lapCount   = processed#lapCount,
             outputPath = task#outputPath,
