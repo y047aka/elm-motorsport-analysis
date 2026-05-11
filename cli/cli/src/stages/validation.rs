@@ -425,6 +425,7 @@ mod tests {
                 s2_improvement: 0,
                 s3_improvement: 0,
                 kph: 160.0,
+                flag_at_fl: String::new(),
                 hour: HourClock::parse("11:00:00.000"),
                 top_speed: None,
                 pit_time: None,

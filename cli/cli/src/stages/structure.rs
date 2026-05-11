@@ -193,6 +193,7 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
             s2_improvement: row.s2_improvement,
             s3_improvement: row.s3_improvement,
             kph: row.kph,
+            flag_at_fl: row.flag_at_fl,
             hour,
             top_speed: row.top_speed,
             pit_time: pit_time_dur,

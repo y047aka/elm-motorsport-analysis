@@ -5,7 +5,7 @@
 use motorsport::{Car, HourClock, car, duration};
 use serde::{Serialize, Serializer};
 
-use crate::domain::LapRecord;
+use crate::domain::{LapRecord, MiniSectorTimes, with_mini_sector_names};
 use crate::error::FileError;
 
 /// Pretty-prints a serializable value as JSON (Stage 5).
@@ -24,16 +24,15 @@ fn format_sector_time(present: bool, sector_duration: u32) -> String {
     }
 }
 
-/// Serializes KPH as an integer when it has no fractional part, preserving the
-/// historical JSON shape.
-fn serialize_speed<S>(kph: &f32, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    if kph.fract() == 0.0 {
-        serializer.serialize_i32(*kph as i32)
+/// Formats KPH as a string. The value is rounded to one decimal place; if the
+/// result is a whole number the fractional part is omitted (e.g. `175.0` →
+/// `"175"`, `160.7` → `"160.7"`).
+fn format_kph(kph: f32) -> String {
+    let rounded = (kph * 10.0).round() / 10.0;
+    if rounded.fract() == 0.0 {
+        format!("{}", rounded as i32)
     } else {
-        serializer.serialize_f32(*kph)
+        format!("{:.1}", rounded)
     }
 }
 
@@ -56,6 +55,42 @@ where
     } else {
         serializer.serialize_str(top_speed)
     }
+}
+
+/// One mini-sector's time and elapsed for the laps JSON output.
+#[derive(Debug, Serialize)]
+pub struct MiniSectorJsonEntry {
+    pub time: Option<String>,
+    pub elapsed: Option<String>,
+}
+
+macro_rules! define_mini_sectors_json {
+    ($($name:ident),* $(,)?) => {
+        /// All 15 Le Mans mini-sectors serialized to JSON.
+        ///
+        /// Field names are snake_case (e.g. `a7_1`) matching `MiniSectorId::json_key`.
+        /// The struct is produced by `mini_sectors_json_from` and written as
+        /// `"miniSectors"` inside `RawLap`.
+        #[derive(Debug, Serialize)]
+        pub struct MiniSectorsJson {
+            $(pub $name: MiniSectorJsonEntry,)*
+        }
+    };
+}
+with_mini_sector_names!(define_mini_sectors_json);
+
+fn mini_sectors_json_from(times: &MiniSectorTimes) -> MiniSectorsJson {
+    macro_rules! build {
+        ($($name:ident),* $(,)?) => {
+            MiniSectorsJson {
+                $($name: MiniSectorJsonEntry {
+                    time: times.$name.time.clone(),
+                    elapsed: times.$name.elapsed.clone(),
+                },)*
+            }
+        };
+    }
+    with_mini_sector_names!(build)
 }
 
 #[derive(Debug, Serialize)]
@@ -81,8 +116,7 @@ pub struct RawLap {
     pub s2_improvement: i32,
     pub s3: String,
     pub s3_improvement: i32,
-    #[serde(serialize_with = "serialize_speed")]
-    pub kph: f32,
+    pub kph: String,
     pub elapsed: String,
     pub hour: String,
     #[serde(serialize_with = "serialize_top_speed")]
@@ -93,6 +127,9 @@ pub struct RawLap {
     pub group: String,
     pub team: String,
     pub manufacturer: String,
+    pub flag_at_fl: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mini_sectors: Option<MiniSectorsJson>,
 }
 
 /// JSON shape for an element of the `startingGrid` array.
@@ -137,7 +174,7 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         s2_improvement: stats.s2_improvement,
         s3: format_sector_time(sectors.s3, lap.sector_3),
         s3_improvement: stats.s3_improvement,
-        kph: (stats.kph * 10.0).round() / 10.0,
+        kph: format_kph(stats.kph),
         elapsed: duration::to_string(lap.elapsed),
         hour: stats.hour.map(HourClock::format).unwrap_or_default(),
         top_speed: stats.top_speed.clone().unwrap_or_default(),
@@ -149,6 +186,11 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         group: car.group.clone(),
         team: car.team.clone(),
         manufacturer: car.manufacturer.clone(),
+        flag_at_fl: stats.flag_at_fl.clone(),
+        mini_sectors: record
+            .mini_sectors
+            .as_ref()
+            .map(mini_sectors_json_from),
     }
 }
 
@@ -166,20 +208,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_serialize_speed() {
-        use serde_json::Value;
-
+    fn test_format_kph() {
         // Integer value: trailing .0 is dropped.
-        let result = serialize_speed(&186.0, serde_json::value::Serializer).unwrap();
-        assert_eq!(result, Value::Number(186.into()));
+        assert_eq!(format_kph(186.0), "186");
 
-        // Fractional value: kept as-is.
-        let result = serialize_speed(&184.3, serde_json::value::Serializer).unwrap();
-        if let Value::Number(n) = result {
-            assert!((n.as_f64().unwrap() - 184.3).abs() < 0.001);
-        } else {
-            panic!("Expected number, got {result:?}");
-        }
+        // Fractional value: kept as-is with one decimal.
+        assert_eq!(format_kph(184.3), "184.3");
+
+        // Rounding to one decimal.
+        assert_eq!(format_kph(160.7), "160.7");
     }
 
     #[test]

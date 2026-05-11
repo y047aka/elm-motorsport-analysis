@@ -81,6 +81,7 @@ pub struct LapStats {
     pub s2_improvement: i32,
     pub s3_improvement: i32,
     pub kph: f32,
+    pub flag_at_fl: String,
     /// Wall-clock time of day for this lap crossing. `None` when the HOUR
     /// cell was missing or unparseable; the validation stage skips such rows
     /// in the `HourElapsedOffset` race-wide check to avoid cascading false

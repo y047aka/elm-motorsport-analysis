@@ -287,6 +287,7 @@ mod tests {
             s2_improvement: 0,
             s3_improvement: 0,
             kph,
+            flag_at_fl: String::new(),
             hour: motorsport::HourClock::parse("11:02:02.856"),
             top_speed: top_speed.map(|s| s.to_string()),
             pit_time: None,

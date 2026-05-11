@@ -393,6 +393,8 @@ fn test_elm_json_structure_and_field_compatibility() {
             "group",
             "team",
             "manufacturer",
+            "kph",
+            "flagAtFl",
         ];
         for field in &string_fields {
             assert!(lap.get(field).is_some(), "{field} field required");
@@ -406,7 +408,6 @@ fn test_elm_json_structure_and_field_compatibility() {
             "s1Improvement",
             "s2Improvement",
             "s3Improvement",
-            "kph",
         ];
         for field in &number_fields {
             assert!(lap.get(field).is_some(), "{field} field required");
