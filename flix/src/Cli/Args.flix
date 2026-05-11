@@ -51,7 +51,7 @@ mod Cli.Args {
             case extras       => Err(ArgsError.UnexpectedArguments(extras))
         }
 
-    pub def usageInfo(): String =
+    pub def usage(): String =
         GetOpt.usageInfo("Usage: flix-run <input.csv|dir>", optionDescrs())
 
 }

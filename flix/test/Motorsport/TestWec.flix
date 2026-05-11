@@ -1,4 +1,4 @@
-mod TestRawLap {
+mod Motorsport.TestWec {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.{FieldNames, Error}
@@ -7,7 +7,8 @@ mod TestRawLap {
     use Util.Json
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use RawLap.RawLap
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -27,7 +28,7 @@ mod TestRawLap {
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
+            Wec.decoder(),
             header() + "\n" + line
         ) {
             case Ok(r :: _) => Ok(r)
@@ -43,10 +44,10 @@ mod TestRawLap {
                 Assert.assertTrue(r#driver#number == 1);
                 Assert.assertTrue(r#lapNumber == 3);
                 Assert.assertTrue(r#lapTime == Duration.fromMillis(161963));
-                Assert.assertTrue(r#lapImprovement == RawLap.Improvement.None);
+                Assert.assertTrue(r#lapImprovement == Wec.Improvement.None);
                 Assert.assertTrue(r#crossingFinishLineInPit == false);
                 Assert.assertTrue(r#s1#value == Some(Duration.fromMillis(41805)));
-                Assert.assertTrue(r#s1#improvement == RawLap.Improvement.None);
+                Assert.assertTrue(r#s1#improvement == Wec.Improvement.None);
                 Assert.assertTrue(r#s2#value == Some(Duration.fromMillis(63483)));
                 Assert.assertTrue(r#s3#value == Some(Duration.fromMillis(56675)));
                 Assert.assertTrue(r#kph == "101.4");
@@ -59,7 +60,7 @@ mod TestRawLap {
                 Assert.assertTrue(r#car#group == "H");
                 Assert.assertTrue(r#car#team == "Hertz Team JOTA");
                 Assert.assertTrue(r#car#manufacturer == "Porsche");
-                Assert.assertTrue(r#flagAtFl == RawLap.Flag.SlowZone)
+                Assert.assertTrue(r#flagAtFl == Wec.Flag.SlowZone)
             case Err(_) => Assert.assertTrue(false)
         }
 
@@ -76,7 +77,7 @@ mod TestRawLap {
         // KPH is rendered as a JSON string, preserving the CSV value.
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;86.0;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
-                let json = Json.render(RawLap.toJson(r));
+                let json = Json.render(Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"kph\": \"86.0\""}, json))
             case Err(_) => Assert.assertTrue(false)
         }
@@ -99,7 +100,7 @@ mod TestRawLap {
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
+            Wec.decoder(),
             csv
         ) {
             case Ok(records) => Assert.assertTrue(List.length(records) == 2)
@@ -149,7 +150,7 @@ mod TestRawLap {
                     case Some(_) => false
                 };
                 Assert.assertTrue(isNone);
-                let json = Json.render(RawLap.toJson(r));
+                let json = Json.render(Wec.toJson(r));
                 Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
             case Err(_) => Assert.assertTrue(false)
         }
@@ -159,7 +160,7 @@ mod TestRawLap {
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
+            Wec.decoder(),
             leMansHeader() + "\n" + line
         ) {
             case Ok(r :: _) => Ok(r)
@@ -207,7 +208,7 @@ mod TestRawLap {
         // (matches Motorsport.Lap.MiniSectors field names on the Elm side).
         match decodeLeMansOne(realLeMansLapRow()) {
             case Ok(r) =>
-                let json = Json.render(RawLap.toJson(r));
+                let json = Json.render(Wec.toJson(r));
                 Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json));
                 Assert.assertTrue(String.contains({substr = "\"a7_1\""}, json));
                 Assert.assertTrue(String.contains({substr = "\"a8_1\""}, json));
@@ -233,7 +234,7 @@ mod TestRawLap {
                     case Some(_) => false
                 };
                 Assert.assertTrue(isNone);
-                let json = Json.render(RawLap.toJson(r));
+                let json = Json.render(Wec.toJson(r));
                 Assert.assertTrue(not String.contains({substr = "miniSectors"}, json))
             case Err(_) => Assert.assertTrue(false)
         }

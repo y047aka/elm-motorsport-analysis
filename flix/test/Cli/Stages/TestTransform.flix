@@ -1,9 +1,10 @@
-mod Cli.TestStages {
+mod Cli.Stages.TestTransform {
 
-    use Cli.Stages
+    use Cli.Stages.Transform
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
-    use RawLap.RawLap
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -19,7 +20,7 @@ mod Cli.TestStages {
         match Decode.decodeCustom(
             {fieldSeparator = ';'},
             FieldNames.FieldNamesFromFirstRow,
-            RawLap.decoder(),
+            Wec.decoder(),
             csv
         ) {
             case Ok(rs) => rs
@@ -27,13 +28,13 @@ mod Cli.TestStages {
         }
 
     @Test
-    def testProcessCountsLaps(): Unit \ Assert =
-        let out = Stages.process("le_mans_24h", sampleRawLaps());
+    def testTransformCountsLaps(): Unit \ Assert =
+        let out = Transform.transform("le_mans_24h", sampleRawLaps());
         Assert.assertTrue(out#lapCount == 3)
 
     @Test
-    def testProcessRendersMetadataJson(): Unit \ Assert =
-        let out = Stages.process("le_mans_24h", sampleRawLaps());
+    def testTransformRendersMetadataJson(): Unit \ Assert =
+        let out = Transform.transform("le_mans_24h", sampleRawLaps());
         let json = out#metadataJson;
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
@@ -41,8 +42,8 @@ mod Cli.TestStages {
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
     @Test
-    def testProcessRendersLapsJson(): Unit \ Assert =
-        let out = Stages.process("le_mans_24h", sampleRawLaps());
+    def testTransformRendersLapsJson(): Unit \ Assert =
+        let out = Transform.transform("le_mans_24h", sampleRawLaps());
         let json = out#lapsJson;
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, json));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, json));
@@ -50,8 +51,8 @@ mod Cli.TestStages {
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, json))
 
     @Test
-    def testProcessEmptyInputProducesEmptyArrays(): Unit \ Assert =
-        let out = Stages.process("le_mans_24h", Nil);
+    def testTransformEmptyInputProducesEmptyArrays(): Unit \ Assert =
+        let out = Transform.transform("le_mans_24h", Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"startingGrid\": []"}, out#metadataJson));
         Assert.assertTrue(out#lapsJson == "[]")

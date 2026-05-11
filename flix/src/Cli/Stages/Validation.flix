@@ -38,14 +38,15 @@
 ///     leaves a known blank pattern (SCL1+FORDOUT for the second chicane,
 ///     PITREF+SCL1 for the first). These are the dominant non-pit cause of
 ///     residual sum mismatches in Le Mans 2025.
-mod Cli.Validation {
+mod Cli.Stages.Validation {
 
     use Util.Duration.Duration
     use Util.HourClock
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use RawLap.RawLap
-    use RawLap.RawMiniSector
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
+    use Motorsport.Wec.RawMiniSector
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.

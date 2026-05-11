@@ -5,7 +5,7 @@ mod Motorsport.Metadata {
     use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
     use Motorsport.Events
-    use RawLap.RawLap
+    use Motorsport.Wec.RawLap
 
     pub type alias StartingGrid = {
         position = Int32,
