@@ -80,7 +80,10 @@ pub struct LapStats {
     pub s1_improvement: i32,
     pub s2_improvement: i32,
     pub s3_improvement: i32,
-    pub kph: f32,
+    /// Speed in km/h as the raw CSV string (e.g. `"175.0"`, `"160.7"`).
+    /// Kept as-is so the output JSON preserves the input's decimal format
+    /// exactly, matching the Flix implementation.
+    pub kph: String,
     pub flag_at_fl: String,
     /// Wall-clock time of day for this lap crossing. `None` when the HOUR
     /// cell was missing or unparseable; the validation stage skips such rows

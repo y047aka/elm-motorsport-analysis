@@ -43,7 +43,7 @@ pub struct CsvRow {
     #[serde(rename = "S3_IMPROVEMENT", alias = " S3_IMPROVEMENT")]
     pub s3_improvement: i32,
     #[serde(rename = "KPH", alias = " KPH")]
-    pub kph: f32,
+    pub kph: String,
     #[serde(rename = "ELAPSED", alias = " ELAPSED")]
     pub elapsed: String,
     #[serde(rename = "HOUR", alias = " HOUR")]

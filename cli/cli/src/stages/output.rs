@@ -24,18 +24,6 @@ fn format_sector_time(present: bool, sector_duration: u32) -> String {
     }
 }
 
-/// Formats KPH as a string. The value is rounded to one decimal place; if the
-/// result is a whole number the fractional part is omitted (e.g. `175.0` →
-/// `"175"`, `160.7` → `"160.7"`).
-fn format_kph(kph: f32) -> String {
-    let rounded = (kph * 10.0).round() / 10.0;
-    if rounded.fract() == 0.0 {
-        format!("{}", rounded as i32)
-    } else {
-        format!("{:.1}", rounded)
-    }
-}
-
 /// Serializes TopSpeed as a string, stripping a trailing `.0` when the raw
 /// value is numeric. Unparseable inputs pass through unchanged.
 fn serialize_top_speed<S>(top_speed: &str, serializer: S) -> Result<S::Ok, S::Error>
@@ -174,7 +162,7 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         s2_improvement: stats.s2_improvement,
         s3: format_sector_time(sectors.s3, lap.sector_3),
         s3_improvement: stats.s3_improvement,
-        kph: format_kph(stats.kph),
+        kph: stats.kph.clone(),
         elapsed: duration::to_string(lap.elapsed),
         hour: stats.hour.map(HourClock::format).unwrap_or_default(),
         top_speed: stats.top_speed.clone().unwrap_or_default(),
@@ -206,18 +194,6 @@ fn starting_grid_from(cars: &[Car]) -> Vec<StartingGrid> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_format_kph() {
-        // Integer value: trailing .0 is dropped.
-        assert_eq!(format_kph(186.0), "186");
-
-        // Fractional value: kept as-is with one decimal.
-        assert_eq!(format_kph(184.3), "184.3");
-
-        // Rounding to one decimal.
-        assert_eq!(format_kph(160.7), "160.7");
-    }
 
     #[test]
     fn test_serialize_top_speed() {

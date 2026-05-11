@@ -275,7 +275,7 @@ mod tests {
 
     fn test_stats(
         driver_number: u32,
-        kph: f32,
+        kph: &str,
         lap_improvement: i32,
         top_speed: Option<&str>,
     ) -> LapStats {
@@ -286,7 +286,7 @@ mod tests {
             s1_improvement: 0,
             s2_improvement: 0,
             s3_improvement: 0,
-            kph,
+            kph: kph.to_string(),
             flag_at_fl: String::new(),
             hour: motorsport::HourClock::parse("11:02:02.856"),
             top_speed: top_speed.map(|s| s.to_string()),
@@ -340,7 +340,7 @@ mod tests {
                 Some(3),
                 (95365, 23155, 29928, 42282, 95365),
                 test_car_info("Hertz Team JOTA", "Porsche"),
-                test_stats(1, 160.7, 0, None),
+                test_stats(1, "160.7", 0, None),
             ),
             test_record(
                 "12",
@@ -349,7 +349,7 @@ mod tests {
                 Some(2),
                 (113610, 23155, 29928, 42282, 113610),
                 test_car_info("Hertz Team JOTA", "Porsche"),
-                test_stats(2, 165.2, 1, Some("298.6")),
+                test_stats(2, "165.2", 1, Some("298.6")),
             ),
             test_record(
                 "7",
@@ -358,7 +358,7 @@ mod tests {
                 Some(1),
                 (93291, 23119, 29188, 40984, 93291),
                 test_car_info("Toyota Gazoo Racing", "Toyota"),
-                test_stats(1, 175.0, 0, Some("298.6")),
+                test_stats(1, "175.0", 0, Some("298.6")),
             ),
         ];
         let cars = group_laps_by_car(records);
@@ -392,7 +392,7 @@ mod tests {
                 None,
                 (95365, 23155, 29928, 42282, 95365),
                 car_info.clone(),
-                test_stats(1, 160.7, 0, None),
+                test_stats(1, "160.7", 0, None),
             ),
             test_record(
                 "12",
@@ -401,7 +401,7 @@ mod tests {
                 None,
                 (92245, 22500, 29100, 40645, 187610),
                 car_info.clone(),
-                test_stats(1, 165.2, 1, None),
+                test_stats(1, "165.2", 1, None),
             ),
             test_record(
                 "12",
@@ -410,7 +410,7 @@ mod tests {
                 None,
                 (94000, 23000, 29500, 41500, 281610),
                 car_info,
-                test_stats(1, 163.0, 0, None),
+                test_stats(1, "163.0", 0, None),
             ),
         ];
 
