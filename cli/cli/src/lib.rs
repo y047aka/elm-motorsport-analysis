@@ -150,7 +150,7 @@ pub fn run(args: impl Iterator<Item = String>) -> Result<RunSummary, SetupError>
 // ================================================================
 
 fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
-    use stages::{csv_input, files, output, structure, transform};
+    use stages::{csv_input, files, output, structure, transform, validation};
 
     // Stage 1: read
     let csv_content = files::read_csv(task.input_path())?;
@@ -160,6 +160,11 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
 
     // Stage 3: structure — `CsvRow` to `LapRecord`
     let records = structure::structure(rows);
+
+    // Stage 3b: validate — data integrity warnings (does not affect exit code)
+    for warning in validation::validate(task.event_name(), &records) {
+        eprintln!("{warning}");
+    }
 
     // Stage 4: transform — `LapRecord` list to serializable shapes
     let (raw_laps, metadata) = transform::build_outputs(records, task.event_name());

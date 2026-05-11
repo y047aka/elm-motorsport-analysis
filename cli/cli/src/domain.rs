@@ -11,6 +11,7 @@
 //! - `BestTimes` / `MiniSectorBests`: accumulators updated during a car's laps
 
 use motorsport::duration::{self, Duration};
+use motorsport::{HourClock, MiniSectorId};
 
 /// Single source of the 15 mini-sector identifiers shared by `MiniSectorTimes`,
 /// `MiniSectorBests`, and `transform::build_mini_sectors`.
@@ -80,7 +81,7 @@ pub struct LapStats {
     pub s2_improvement: i32,
     pub s3_improvement: i32,
     pub kph: f32,
-    pub hour: String,
+    pub hour: HourClock,
     pub top_speed: Option<String>,
     pub pit_time: Option<Duration>,
 }
@@ -114,6 +115,23 @@ impl MiniSectorEntry {
 
     fn has_content(&self) -> bool {
         is_meaningful(&self.time) || is_meaningful(&self.elapsed)
+    }
+
+    /// Returns `Some(ms)` only when the time cell is non-blank and parseable.
+    /// Used by the validation stage to distinguish "zero" from "absent".
+    pub fn parse_time_opt(&self) -> Option<Duration> {
+        self.time
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .and_then(duration::from_string)
+    }
+
+    /// Returns `Some(ms)` only when the elapsed cell is non-blank and parseable.
+    pub fn parse_elapsed_opt(&self) -> Option<Duration> {
+        self.elapsed
+            .as_deref()
+            .filter(|s| !s.trim().is_empty())
+            .and_then(duration::from_string)
     }
 }
 
@@ -150,6 +168,33 @@ macro_rules! define_mini_sector_times {
     };
 }
 with_mini_sector_names!(define_mini_sector_times);
+
+impl MiniSectorTimes {
+    /// Returns all 15 entries in track order, paired with their `MiniSectorId`.
+    ///
+    /// Used by the validation stage to walk sectors in track order without
+    /// duplicating the ordering logic.
+    pub fn as_ordered_pairs(&self) -> [(MiniSectorId, &MiniSectorEntry); 15] {
+        use MiniSectorId::*;
+        [
+            (Scl2,   &self.scl2),
+            (Z4,     &self.z4),
+            (Ip1,    &self.ip1),
+            (Z12,    &self.z12),
+            (Sclc,   &self.sclc),
+            (A7_1,   &self.a7_1),
+            (Ip2,    &self.ip2),
+            (A8_1,   &self.a8_1),
+            (Sclb,   &self.sclb),
+            (Porin,  &self.porin),
+            (Porout, &self.porout),
+            (Pitref, &self.pitref),
+            (Scl1,   &self.scl1),
+            (Fordout,&self.fordout),
+            (Fl,     &self.fl),
+        ]
+    }
+}
 
 /// Accumulator updated as laps are processed for a single car.
 #[derive(Debug, Clone, Default)]

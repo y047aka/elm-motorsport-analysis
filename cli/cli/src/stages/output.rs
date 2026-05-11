@@ -139,7 +139,7 @@ fn raw_lap_from(record: &LapRecord) -> RawLap {
         s3_improvement: stats.s3_improvement,
         kph: (stats.kph * 10.0).round() / 10.0,
         elapsed: duration::to_string(lap.elapsed),
-        hour: stats.hour.clone(),
+        hour: stats.hour.format(),
         top_speed: stats.top_speed.clone().unwrap_or_default(),
         driver_name: lap.driver.clone(),
         pit_time: stats

@@ -7,6 +7,7 @@
 //! ([`csv_input`](super::csv_input)).
 
 use motorsport::duration::{self, Duration};
+use motorsport::HourClock;
 
 use super::csv_input::CsvRow;
 use crate::domain::{
@@ -61,8 +62,24 @@ fn parse_required_durations(row: &CsvRow) -> ParsedDurations {
     }
 }
 
+fn parse_hour(row: &CsvRow) -> HourClock {
+    match HourClock::parse(&row.hour) {
+        Some(h) => h,
+        None => {
+            log::warn!(
+                "car {} lap {}: unparseable HOUR value '{}', treating as midnight",
+                row.car_number,
+                row.lap,
+                row.hour
+            );
+            HourClock::parse("0:00:00.000").expect("midnight is always valid")
+        }
+    }
+}
+
 fn lap_record_from(row: CsvRow) -> LapRecord {
     let parsed = parse_required_durations(&row);
+    let hour = parse_hour(&row);
     let pit_time_dur = row
         .pit_time
         .as_deref()
@@ -166,7 +183,7 @@ fn lap_record_from(row: CsvRow) -> LapRecord {
             s2_improvement: row.s2_improvement,
             s3_improvement: row.s3_improvement,
             kph: row.kph,
-            hour: row.hour,
+            hour,
             top_speed: row.top_speed,
             pit_time: pit_time_dur,
         },
