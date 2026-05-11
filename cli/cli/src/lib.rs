@@ -194,8 +194,7 @@ fn process_file(task: &FileTask) -> Result<ProcessingReport, FileError> {
 /// Intra-crate access for integration tests. Not part of the public API.
 #[doc(hidden)]
 pub mod for_testing {
-    pub use crate::domain::LapRecord;
-    pub use crate::stages::output::MetadataOutput;
+    use crate::domain::LapRecord;
     pub use crate::stages::transform::{build_outputs, group_laps_by_car};
 
     /// Runs the parse + structure stages in one call.

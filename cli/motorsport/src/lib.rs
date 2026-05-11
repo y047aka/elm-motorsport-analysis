@@ -6,7 +6,7 @@ pub mod hour_clock;
 pub mod lap;
 pub mod mini_sector;
 
-pub use car::{Car, CarNumber, MetaData};
+pub use car::{Car, MetaData};
 pub use class::Class;
 pub use driver::Driver;
 pub use duration::Duration;
