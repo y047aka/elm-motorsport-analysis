@@ -509,15 +509,57 @@ mod tests {
 
     #[test]
     fn mini_sector_sum_skips_track_limits_signature() {
-        // lapTime = 95s, only fl = 95s present, scl1+fordout both blank.
+        // lapTime = 95s, fl = 90s present, scl1+fordout both blank.
+        // sum (90_000) != lapTime (95_000), but blanks == [Scl1, Fordout] →
+        // matches the second-chicane track-limits signature and is skipped.
         let mut rec = make_record("7", 1, 95_000, 0, 0, 0, 95_000);
         let mut mini = MiniSectorTimes::default();
-        mini.fl = MiniSectorEntry { time: Some("1:35.000".to_string()), elapsed: None };
-        // scl1 and fordout are blank — this matches the second-chicane signature.
+        // Fill every mini-sector except scl1 and fordout, so the blanks list
+        // is exactly [Scl1, Fordout] in track order.
+        for (id, _) in MiniSectorTimes::default().as_ordered_pairs() {
+            if id == MiniSectorId::Scl1 || id == MiniSectorId::Fordout {
+                continue;
+            }
+            let entry = MiniSectorEntry {
+                // Per-sector time is irrelevant for the signature check —
+                // only blank/non-blank pattern matters. Use small placeholder
+                // values whose sum is < lapTime so a violation *would* fire
+                // without the track-limits skip.
+                time: Some("0:00.001".to_string()),
+                elapsed: None,
+            };
+            match id {
+                MiniSectorId::Scl2   => mini.scl2 = entry,
+                MiniSectorId::Z4     => mini.z4 = entry,
+                MiniSectorId::Ip1    => mini.ip1 = entry,
+                MiniSectorId::Z12    => mini.z12 = entry,
+                MiniSectorId::Sclc   => mini.sclc = entry,
+                MiniSectorId::A7_1   => mini.a7_1 = entry,
+                MiniSectorId::Ip2    => mini.ip2 = entry,
+                MiniSectorId::A8_1   => mini.a8_1 = entry,
+                MiniSectorId::Sclb   => mini.sclb = entry,
+                MiniSectorId::Porin  => mini.porin = entry,
+                MiniSectorId::Porout => mini.porout = entry,
+                MiniSectorId::Pitref => mini.pitref = entry,
+                MiniSectorId::Fl     => mini.fl = entry,
+                MiniSectorId::Scl1 | MiniSectorId::Fordout => unreachable!(),
+            }
+        }
         rec.mini_sectors = Some(mini);
-        // Sum = 95_000, lapTime = 95_000: no violation anyway (clean).
+
+        // Sanity: sum != lapTime, so without the skip we'd flag a violation.
+        let sum: u32 = rec
+            .mini_sectors
+            .as_ref()
+            .unwrap()
+            .as_ordered_pairs()
+            .iter()
+            .filter_map(|(_, e)| e.parse_time_opt())
+            .sum();
+        assert_ne!(sum, rec.lap.time, "test setup: sum must differ from lapTime");
+
         let viols = check_mini_sector_sum(&rec, rec.mini_sectors.as_ref().unwrap());
-        assert!(viols.is_empty());
+        assert!(viols.is_empty(), "track-limits signature must skip the violation");
     }
 
     #[test]
