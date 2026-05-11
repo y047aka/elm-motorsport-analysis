@@ -4,13 +4,7 @@ mod Cli.Stages.CsvInput {
     use Util.Csv.Decode.FieldNames
     use Util.Files
     use Cli.Errors.CliError
-    use Cli.Stages.State
     use RawLap.RawLap
-
-    /// Pipeline stage: read the CSV referenced by the State's task and
-    /// populate `rawLaps`.
-    pub def step(s: State.State): Result[CliError, State.State] \ IO =
-        readRawLaps(s#task#inputPath) |> Result.map(rl -> { rawLaps = rl | s })
 
     /// Reads a CSV file from disk and decodes it into a list of `RawLap`.
     ///
