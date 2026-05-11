@@ -38,45 +38,45 @@
 ///     leaves a known blank pattern (SCL1+FORDOUT for the second chicane,
 ///     PITREF+SCL1 for the first). These are the dominant non-pit cause of
 ///     residual sum mismatches in Le Mans 2025.
-mod Cli.Validation {
+mod Cli.Stages.Validation {
 
     use Util.Duration.Duration
     use Util.HourClock
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use RawLap.RawLap
-    use RawLap.RawMiniSector
+    use Motorsport.RawLap
+    use Motorsport.RawLap.RawMiniSector
 
     pub enum Violation {
         /// `s1 + s2 + s3 != lapTime`.
         /// Args: lap / lapTime / sector sum / labels of blank sectors.
-        case SectorSum(RawLap, Duration, Duration, List[String])
+        case SectorSum(RawLap.RawLap, Duration, Duration, List[String])
 
         /// `elapsed[n] != sum(lapTime[1..=n])`. Cumulative-sum based, so
         /// every row from the first drift onward is reported (sticky drift).
         /// Args: lap / expected = running sum / actual = elapsed.
-        case ElapsedDrift(RawLap, Duration, Duration)
+        case ElapsedDrift(RawLap.RawLap, Duration, Duration)
 
         /// `(hour - elapsed) mod 24h` does not match the baseline.
         /// Args: lap / baseline offset (ms, signed) / actual offset (ms, signed).
-        case HourElapsedOffset(RawLap, Int32, Int32)
+        case HourElapsedOffset(RawLap.RawLap, Int32, Int32)
 
         /// `sum(miniSector.time) != lapTime`.
         /// Args: lap / lapTime / sum / IDs of sub-sectors with blank time
         /// (in track order).
-        case MiniSectorSum(RawLap, Duration, Duration, List[MiniSectorId])
+        case MiniSectorSum(RawLap.RawLap, Duration, Duration, List[MiniSectorId])
 
         /// Mini-sector `elapsed[i] <= elapsed[i-1]` for some adjacent pair
         /// in track order. Only entries where both sides are present are
         /// compared.
         /// Args: lap / prev id / prev elapsed / curr id / curr elapsed.
-        case MiniSectorElapsedMonotonic(RawLap, MiniSectorId, Duration, MiniSectorId, Duration)
+        case MiniSectorElapsedMonotonic(RawLap.RawLap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
 
-    pub def validate(eventName: String, laps: List[RawLap]): List[String] =
+    pub def validate(eventName: String, laps: List[RawLap.RawLap]): List[String] =
         detect(laps) |> List.map(v -> formatViolation(eventName, v))
 
-    pub def detect(laps: List[RawLap]): List[Violation] =
+    pub def detect(laps: List[RawLap.RawLap]): List[Violation] =
         let perLap = laps |> List.filterMap(lap -> resultToOption(checkSectorSum(lap)));
         let perCar = perCarViolations(laps);
         let perRace = checkHourElapsedRaceWide(laps);
@@ -91,7 +91,7 @@ mod Cli.Validation {
 
     /// Walks per-car elapsed-drift checks in CSV order (first-seen index).
     /// Each car's laps are sorted by lapNumber before the check.
-    def perCarViolations(laps: List[RawLap]): List[Violation] =
+    def perCarViolations(laps: List[RawLap.RawLap]): List[Violation] =
         groupByCar(laps) |> List.flatMap(pair -> match pair {
             case (_, carLaps) =>
                 let sorted = List.sortBy(l -> l#lapNumber, carLaps);
@@ -102,7 +102,7 @@ mod Cli.Validation {
     ///   1. first pass records carNumber → first-seen index
     ///   2. second pass collects carNumber → all laps
     ///   3. flatten, sorted by first-seen index
-    def groupByCar(laps: List[RawLap]): List[(String, List[RawLap])] =
+    def groupByCar(laps: List[RawLap.RawLap]): List[(String, List[RawLap.RawLap])] =
         let firstSeen = laps |> List.foldLeft(
             (acc, lap) ->
                 if (Map.memberOf(lap#car#carNumber, acc)) acc
@@ -122,7 +122,7 @@ mod Cli.Validation {
             case (car, _) => Map.get(car, firstSeen) |> Option.getWithDefault(0)
         })
 
-    def checkSectorSum(lap: RawLap): Result[Violation, Unit] =
+    def checkSectorSum(lap: RawLap.RawLap): Result[Violation, Unit] =
         let lapTime = lap#lapTime;
         let (s1, s1Blank) = sectorOrZero(lap#s1#value, "s1");
         let (s2, s2Blank) = sectorOrZero(lap#s2#value, "s2");
@@ -144,7 +144,7 @@ mod Cli.Validation {
     /// `elapsed` disagrees. Once a drift starts, every subsequent lap is
     /// reported — noisier than adjacent-diff, but catches compensating
     /// drift.
-    def checkElapsedDrift(sortedLaps: List[RawLap]): List[Violation] =
+    def checkElapsedDrift(sortedLaps: List[RawLap.RawLap]): List[Violation] =
         let folded = sortedLaps |> List.foldLeft(
             (state, lap) -> match state {
                 case (running, acc) =>
@@ -159,7 +159,7 @@ mod Cli.Validation {
             case (_, acc) => List.reverse(acc)
         }
 
-    def checkHourElapsedRaceWide(laps: List[RawLap]): List[Violation] =
+    def checkHourElapsedRaceWide(laps: List[RawLap.RawLap]): List[Violation] =
         match laps {
             case Nil         => Nil
             case lap :: _ =>
@@ -167,7 +167,7 @@ mod Cli.Validation {
                 laps |> List.filterMap(l -> resultToOption(checkHourLine(l, base)))
         }
 
-    def checkHourLine(lap: RawLap, base: Int32): Result[Violation, Unit] =
+    def checkHourLine(lap: RawLap.RawLap, base: Int32): Result[Violation, Unit] =
         let offset = HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed));
         if (offset == base) Ok(())
         else Err(Violation.HourElapsedOffset(lap, base, offset))
@@ -193,7 +193,7 @@ mod Cli.Validation {
                 formatLabelledDurationPair(eventName, lap, kind, "prev", prevElapsed, "curr", currElapsed)
         }
 
-    def checkMiniSectors(lap: RawLap): List[Violation] =
+    def checkMiniSectors(lap: RawLap.RawLap): List[Violation] =
         match lap#miniSectors {
             case None       => Nil
             case Some(list) =>
@@ -204,10 +204,10 @@ mod Cli.Validation {
                 List.append(sumViol, monoViol)
         }
 
-    def isPitLap(lap: RawLap): Bool =
+    def isPitLap(lap: RawLap.RawLap): Bool =
         lap#crossingFinishLineInPit or lap#pitTime != None
 
-    def checkMiniSectorSum(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+    def checkMiniSectorSum(lap: RawLap.RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) -> match (state, pair) {
                 case ((accSum, accBlanks), (id, sector)) =>
@@ -228,7 +228,7 @@ mod Cli.Validation {
 
     /// Reports each adjacent pair where the second elapsed is `<=` the first.
     /// Blank-elapsed entries are skipped without breaking the chain.
-    def checkMiniSectorMonotonic(lap: RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
+    def checkMiniSectorMonotonic(lap: RawLap.RawLap, list: List[(MiniSectorId, RawMiniSector)]): List[Violation] =
         let folded = list |> List.foldLeft(
             (state, pair) ->
                 let (prev, acc) = state;
@@ -250,13 +250,13 @@ mod Cli.Validation {
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted Duration to keep the
     /// output both human-readable and grep-friendly (matches Rust output).
-    def formatDurationPair(eventName: String, lap: RawLap, kind: String, expected: Duration, actual: Duration): String =
+    def formatDurationPair(eventName: String, lap: RawLap.RawLap, kind: String, expected: Duration, actual: Duration): String =
         formatLabelledDurationPair(eventName, lap, kind, "expected", expected, "actual", actual)
 
     /// Same shape as `formatDurationPair` but with caller-supplied labels.
     def formatLabelledDurationPair(
         eventName: String,
-        lap: RawLap,
+        lap: RawLap.RawLap,
         kind: String,
         leftLabel: String,
         leftValue: Duration,
@@ -265,7 +265,7 @@ mod Cli.Validation {
     ): String =
         "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: ${leftLabel}=${leftValue} (${Util.Duration.millis(leftValue)}ms) ${rightLabel}=${rightValue} (${Util.Duration.millis(rightValue)}ms)"
 
-    def formatSignedMsPair(eventName: String, lap: RawLap, kind: String, expected: Int32, actual: Int32): String =
+    def formatSignedMsPair(eventName: String, lap: RawLap.RawLap, kind: String, expected: Int32, actual: Int32): String =
         "${eventName}: [car ${lap#car#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
 
     def formatSignedMs(ms: Int32): String =

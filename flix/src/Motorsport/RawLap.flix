@@ -1,4 +1,4 @@
-mod RawLap {
+mod Motorsport.RawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.Decoder

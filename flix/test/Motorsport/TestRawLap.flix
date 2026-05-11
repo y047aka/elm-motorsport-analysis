@@ -1,4 +1,4 @@
-mod TestRawLap {
+mod Motorsport.TestRawLap {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.{FieldNames, Error}
@@ -7,7 +7,7 @@ mod TestRawLap {
     use Util.Json
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use RawLap.RawLap
+    use Motorsport.RawLap
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
