@@ -2,7 +2,7 @@ mod Cli.Args {
 
     pub enum ArgsError with ToString {
         case MissingInputPath
-        case UnexpectedArgument(String)
+        case UnexpectedArguments(List[String])
         case DuplicateOutput
         case ParseErrors(List[String])
     }
@@ -46,9 +46,9 @@ mod Cli.Args {
 
     def extractInput(nonOptions: List[String]): Result[ArgsError, String] =
         match nonOptions {
-            case input :: Nil          => Ok(input)
-            case Nil                   => Err(ArgsError.MissingInputPath)
-            case _ :: extra :: _       => Err(ArgsError.UnexpectedArgument(extra))
+            case input :: Nil => Ok(input)
+            case Nil          => Err(ArgsError.MissingInputPath)
+            case extras       => Err(ArgsError.UnexpectedArguments(extras))
         }
 
     pub def usage(): String =
