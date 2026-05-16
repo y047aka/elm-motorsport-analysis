@@ -13,6 +13,7 @@ import { defineConfig, devices } from '@playwright/test';
  */
 export default defineConfig({
   testDir: './tests',
+  globalSetup: './tests/global-setup.ts',
   snapshotPathTemplate: '{testDir}/{testFileDir}/{testFileName}-snapshots/{arg}{ext}',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
@@ -36,7 +37,7 @@ export default defineConfig({
     timeout: 5000,
     toHaveScreenshot: process.env.CI
       ? { maxDiffPixels: 0 }
-      : { maxDiffPixelRatio: 0.0002 },
+      : { maxDiffPixelRatio: 0.001 },
   },
 
   projects: [

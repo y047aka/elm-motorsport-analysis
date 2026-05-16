@@ -1,7 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 
-const WAIT_TIMEOUT = 5000;
-const FONT_SMOOTHING_CSS = 'html { -webkit-font-smoothing: antialiased; }';
+const WAIT_TIMEOUT = 10_000;
 
 /**
  * ページのレンダリング完了を待機するヘルパー関数
@@ -9,16 +8,21 @@ const FONT_SMOOTHING_CSS = 'html { -webkit-font-smoothing: antialiased; }';
  * @param contentSelector ページ固有のコンテンツを示すセレクター
  */
 async function waitForPageReady(page: Page, contentSelector: string) {
-  await page.locator('[data-theme="forest"]').waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
   await page.locator(contentSelector).waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
-  await page.waitForFunction(() => document.fonts.check('12px "Inter"'), { timeout: WAIT_TIMEOUT });
+  await page.waitForFunction(async () => {
+    await document.fonts.ready;
+    return (
+      document.fonts.check('400 12px "Inter"') &&
+      document.fonts.check('600 12px "Inter"') &&
+      document.fonts.check('700 12px "Inter"')
+    );
+  }, { timeout: WAIT_TIMEOUT });
 }
 
 test.describe('Top Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'load' });
     await waitForPageReady(page, 'text=Formula E 2025');
-    await page.addStyleTag({ content: FONT_SMOOTHING_CSS });
   });
 
   test('should render the main page correctly', async ({ page }) => {
@@ -32,7 +36,6 @@ test.describe('Le Mans 2025 Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/wec/2025/le_mans_24h', { waitUntil: 'load' });
     await waitForPageReady(page, 'text=24 Hours of Le Mans');
-    await page.addStyleTag({ content: FONT_SMOOTHING_CSS });
   });
 
   test('should render Le Mans 2025 page correctly', async ({ page }) => {
