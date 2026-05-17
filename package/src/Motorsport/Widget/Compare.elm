@@ -186,7 +186,6 @@ viewCarSelector props model =
             [ property "display" "flex"
             , property "gap" "10px"
             , property "flex-wrap" "wrap"
-            , property "height" "100%"
             ]
         ]
         (List.map (viewClassGroup model) groupedByClass)
