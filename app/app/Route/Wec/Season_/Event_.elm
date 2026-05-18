@@ -259,11 +259,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 , property "row-gap" "10px"
                                 ]
                             ]
-                            [ div
-                                [ css
-                                    [ property "grid-row" "1"
-                                    ]
-                                ]
+                            [ div [ css [ property "grid-row" "1", property "padding-inline" "10px" ] ]
                                 [ Html.map CompareWidgetMsg <|
                                     CompareWidget.viewCarSelector compareProps m.compare
                                 ]

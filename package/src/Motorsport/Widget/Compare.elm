@@ -185,14 +185,16 @@ viewCarSelector props model =
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
     in
-    div
-        [ css
-            [ property "display" "flex"
-            , property "gap" "10px"
-            , property "flex-wrap" "wrap"
+    div [ class "card bg-base-200" ]
+        [ div
+            [ css
+                [ property "display" "flex"
+                , property "gap" "10px"
+                , property "flex-wrap" "wrap"
+                ]
             ]
+            (List.map (viewClassGroup props.analysis model) groupedByClass)
         ]
-        (List.map (viewClassGroup props.analysis model) groupedByClass)
 
 
 viewClassGroup : Analysis -> Model -> List StandingsEntry -> Html Msg
@@ -203,8 +205,7 @@ viewClassGroup analysis model cars =
 
         Just firstCar ->
             div
-                [ class "card bg-base-200"
-                , css
+                [ css
                     [ property "flex" "1"
                     , property "min-width" "200px"
                     ]
