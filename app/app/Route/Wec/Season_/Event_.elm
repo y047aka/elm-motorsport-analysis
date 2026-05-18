@@ -11,7 +11,6 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, button, div, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
@@ -270,7 +269,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     , padding4 (px 0) (px 10) (px 10) (px 10)
                                     , property "display" "grid"
                                     , property "grid-template-columns" "300px 1fr 300px"
-                                    , property "grid-template-rows" "minmax(0, 1fr) auto"
+                                    , property "grid-template-rows" "minmax(0, 1fr) 100px"
                                     , property "row-gap" "10px"
                                     , property "column-gap" "10px"
                                     ]
@@ -289,27 +288,28 @@ view app { eventSummary, analysis, raceControl } m =
                                         }
                                     ]
                                 , div
-                                    [ Attributes.class "card bg-base-200 overflow-hidden p-4"
+                                    [ Attributes.class "card bg-base-200 overflow-hidden"
                                     , css
                                         [ property "grid-row" "1"
                                         , property "grid-column" "2"
-                                        , property "display" "grid"
-                                        , property "place-items" "center"
                                         ]
                                     ]
-                                    [ TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } analysis standings ]
+                                    [ div
+                                        [ Attributes.class "card-body p-3"
+                                        , css [ property "height" "100%" ]
+                                        ]
+                                        [ Html.map CompareWidgetMsg <|
+                                            CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
+                                        ]
+                                    ]
                                 , div
-                                    [ Attributes.class "card bg-base-200 overflow-hidden"
+                                    [ Attributes.class "card bg-base-200"
                                     , css
                                         [ property "grid-row" "2"
                                         , property "grid-column" "2"
                                         ]
                                     ]
-                                    [ div [ Attributes.class "card-body p-3" ]
-                                        [ Html.map CompareWidgetMsg <|
-                                            CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
-                                        ]
-                                    ]
+                                    []
                                 , div
                                     [ Attributes.class "card bg-base-200"
                                     , css

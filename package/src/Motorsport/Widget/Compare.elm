@@ -11,6 +11,7 @@ import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car
 import Motorsport.Chart.BoxPlot as BoxPlot
+import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
@@ -27,7 +28,8 @@ import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
 type ActiveChart
-    = PositionProgressionChart
+    = TrackerChart
+    | PositionProgressionChart
     | LapTimeProgressionChart
     | CloseBattlesChart
     | BoxPlotChart
@@ -42,7 +44,7 @@ type alias Model =
 init : Model
 init =
     { selectedCars = []
-    , activeChart = PositionProgressionChart
+    , activeChart = TrackerChart
     }
 
 
@@ -90,9 +92,11 @@ viewCharts size props model =
     in
     div
         [ css
-            [ property "display" "flex"
-            , property "flex-direction" "column"
+            [ property "height" "100%"
+            , property "display" "grid"
+            , property "grid-template-rows" "auto 1fr"
             , property "gap" "8px"
+            , property "place-items" "center"
             ]
         ]
         [ viewChartTabs model.activeChart
@@ -102,8 +106,11 @@ viewCharts size props model =
 
 viewChartTabs : ActiveChart -> Html Msg
 viewChartTabs activeChart =
-    div [ class "join" ]
-        [ chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
+    div [ class "join"
+        , css [ property "justify-self" "left" ]
+        ]
+        [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)
+        , chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
         , chartTabButton "Lap Time" LapTimeProgressionChart (activeChart == LapTimeProgressionChart)
         , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
         , chartTabButton "Box Plot" BoxPlotChart (activeChart == BoxPlotChart)
@@ -130,6 +137,12 @@ chartTabButton label chart isActive =
 viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List StandingsEntry -> Html Msg
 viewActiveChart activeChart size props selectedCars =
     case activeChart of
+        TrackerChart ->
+            TrackerChart.view
+                { season = props.eventSummary.season, eventName = props.eventSummary.name }
+                props.analysis
+                props.standings
+
         PositionProgressionChart ->
             PositionProgression.view
                 size
