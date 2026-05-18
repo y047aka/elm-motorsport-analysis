@@ -1,6 +1,7 @@
 module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
 
-import Css exposing (backgroundColor, before, property, qt)
+import Css exposing (backgroundColor, batch, before, borderRadius, height, pct, property, px, qt, width)
+import Css.Color exposing (oklch)
 import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes exposing (class, css, src)
@@ -8,10 +9,13 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car as Car
 import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
+import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer
+import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
@@ -188,11 +192,11 @@ viewCarSelector props model =
             , property "flex-wrap" "wrap"
             ]
         ]
-        (List.map (viewClassGroup model) groupedByClass)
+        (List.map (viewClassGroup props.analysis model) groupedByClass)
 
 
-viewClassGroup : Model -> List StandingsEntry -> Html Msg
-viewClassGroup model cars =
+viewClassGroup : Analysis -> Model -> List StandingsEntry -> Html Msg
+viewClassGroup analysis model cars =
     case List.head cars of
         Nothing ->
             text ""
@@ -235,13 +239,13 @@ viewClassGroup model cars =
                             , property "gap" "2px"
                             ]
                         ]
-                        (List.map (carSelectorItem model) cars)
+                        (List.map (carSelectorItem analysis model) cars)
                     ]
                 ]
 
 
-carSelectorItem : Model -> StandingsEntry -> Html Msg
-carSelectorItem model item =
+carSelectorItem : Analysis -> Model -> StandingsEntry -> Html Msg
+carSelectorItem analysis model item =
     let
         isSelected =
             List.member item.metadata.carNumber model.selectedCars
@@ -264,7 +268,7 @@ carSelectorItem model item =
                 "0.5"
     in
     div
-        [ class "stat px-0 py-1 place-items-center gap-1 rounded cursor-pointer"
+        [ class "stat p-0.5 place-items-center gap-1.5 rounded cursor-pointer"
         , css
             [ property "border" borderStyle
             , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / " ++ opacity ++ ")")
@@ -272,17 +276,80 @@ carSelectorItem model item =
             ]
         , onClick (ToggleCar item.metadata.carNumber)
         ]
-        [ -- Position
-          div
-            [ class "stat-title text-[9px] leading-none" ]
-            [ text ("P" ++ String.fromInt item.position) ]
-        , -- Manufacturer logo
+        [ -- Manufacturer logo
           manufacturerLogo item.metadata.manufacturer
         , -- Car number
           div
             [ class "stat-value text-xs leading-none" ]
             [ text item.metadata.carNumber ]
+        , -- Sector progress
+          sectorProgressBar analysis item
         ]
+
+
+sectorProgressBar : Analysis -> StandingsEntry -> Html msg
+sectorProgressBar analysis item =
+    let
+        sectorBar sector_ =
+            div
+                [ css
+                    [ height (px 2)
+                    , borderRadius (px 1)
+                    , batch <|
+                        if sector_.progress < 100 then
+                            [ width (pct sector_.progress)
+                            , backgroundColor (oklch 1 0 0)
+                            ]
+
+                        else
+                            [ width (pct 100)
+                            , property "background-color"
+                                (performanceLevel sector_
+                                    |> Performance.toColorVariable
+                                )
+                            ]
+                    ]
+                ]
+                []
+    in
+    if Car.hasRetired item.status then
+        div [ css [ width (pct 100), height (px 2) ] ] []
+
+    else
+        case item.currentLapSectors of
+            Just sectors ->
+                let
+                    ( s1_progress, s2_progress, s3_progress ) =
+                        case item.sector of
+                            Just sectorProgress ->
+                                case sectorProgress.sector of
+                                    S1 ->
+                                        ( sectorProgress.progress, 0, 0 )
+
+                                    S2 ->
+                                        ( 100, sectorProgress.progress, 0 )
+
+                                    S3 ->
+                                        ( 100, 100, sectorProgress.progress )
+
+                            Nothing ->
+                                ( 100, 100, 100 )
+                in
+                div
+                    [ css
+                        [ width (pct 100)
+                        , property "display" "grid"
+                        , property "grid-template-columns" "1fr 1fr 1fr"
+                        , property "column-gap" "2px"
+                        ]
+                    ]
+                    [ sectorBar { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1_progress }
+                    , sectorBar { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2_progress }
+                    , sectorBar { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3_progress }
+                    ]
+
+            Nothing ->
+                div [ css [ width (pct 100), height (px 2) ] ] []
 
 
 manufacturerLogo : Motorsport.Manufacturer.Manufacturer -> Html msg
