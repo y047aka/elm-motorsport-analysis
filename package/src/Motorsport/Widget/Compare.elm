@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
+module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, resolveCars, update, viewCarSelector, viewCharts)
 
 import Css exposing (backgroundColor, batch, before, borderRadius, height, pct, property, px, qt, width)
 import Css.Color exposing (oklch)

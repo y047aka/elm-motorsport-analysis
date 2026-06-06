@@ -20,6 +20,7 @@ import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), Timel
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
+import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
@@ -269,7 +270,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     , padding4 (px 0) (px 10) (px 10) (px 10)
                                     , property "display" "grid"
                                     , property "grid-template-columns" "300px 1fr 300px"
-                                    , property "grid-template-rows" "minmax(0, 1fr) 100px"
+                                    , property "grid-template-rows" "minmax(0, 1fr) auto"
                                     , property "row-gap" "10px"
                                     , property "column-gap" "10px"
                                     ]
@@ -303,13 +304,18 @@ view app { eventSummary, analysis, raceControl } m =
                                         ]
                                     ]
                                 , div
-                                    [ Attributes.class "card bg-base-200"
+                                    [ Attributes.class "card bg-base-200 overflow-hidden"
                                     , css
                                         [ property "grid-row" "2"
                                         , property "grid-column" "2"
                                         ]
                                     ]
-                                    []
+                                    [ SelectedCarsStrip.view
+                                        { season = eventSummary.season }
+                                        (CompareWidget.resolveCars m.compare.selectedCars standings
+                                            |> List.sortBy .position
+                                        )
+                                    ]
                                 , div
                                     [ Attributes.class "card bg-base-200"
                                     , css
