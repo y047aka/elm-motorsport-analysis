@@ -229,7 +229,7 @@ view app { eventSummary, analysis, raceControl } m =
                 , css
                     [ height (pct 100)
                     , property "display" "grid"
-                    , property "grid-template-rows" "auto auto 1fr"
+                    , property "grid-template-rows" "auto 1fr"
                     ]
                 ]
                 [ navigation eventSummary raceControl m.mode
@@ -252,79 +252,66 @@ view app { eventSummary, analysis, raceControl } m =
                     Tracker ->
                         div
                             [ css
-                                [ property "grid-row" "2 / 4"
-                                , property "grid-column" "1 / -1"
+                                [ property "grid-row" "2"
+                                , height (pct 100)
+                                , overflowY hidden
+                                , padding4 (px 0) (px 10) (px 10) (px 10)
                                 , property "display" "grid"
-                                , property "grid-template-rows" "auto 1fr"
+                                , property "grid-template-columns" "300px 1fr 300px"
+                                , property "grid-template-rows" "minmax(0, 1fr) auto"
                                 , property "row-gap" "10px"
+                                , property "column-gap" "10px"
                                 ]
                             ]
-                            [ div [ css [ property "grid-row" "1", property "padding-inline" "10px" ] ]
-                                [ Html.map CompareWidgetMsg <|
-                                    CompareWidget.viewCarSelector compareProps m.compare
+                            [ div
+                                [ css
+                                    [ property "grid-row" "1 / 3"
+                                    , property "grid-column" "1"
+                                    , property "height" "100%"
+                                    ]
+                                ]
+                                [ LiveStandingsWidget.view
+                                    { eventSummary = eventSummary
+                                    , standings = standings
+                                    , onSelectCar = (\item -> CompareWidget.ToggleCar item.metadata.carNumber) >> CompareWidgetMsg
+                                    }
                                 ]
                             , div
-                                [ css
-                                    [ height (pct 100)
-                                    , overflowY hidden
-                                    , padding4 (px 0) (px 10) (px 10) (px 10)
-                                    , property "display" "grid"
-                                    , property "grid-template-columns" "300px 1fr 300px"
-                                    , property "grid-template-rows" "minmax(0, 1fr) auto"
-                                    , property "row-gap" "10px"
-                                    , property "column-gap" "10px"
+                                [ Attributes.class "card bg-base-200 overflow-hidden"
+                                , css
+                                    [ property "grid-row" "1"
+                                    , property "grid-column" "2"
                                     ]
                                 ]
                                 [ div
-                                    [ css
-                                        [ property "grid-row" "1 / 3"
-                                        , property "grid-column" "1"
-                                        , property "height" "100%"
-                                        ]
+                                    [ Attributes.class "card-body p-3"
+                                    , css [ property "height" "100%" ]
                                     ]
-                                    [ LiveStandingsWidget.view
-                                        { eventSummary = eventSummary
-                                        , standings = standings
-                                        , onSelectCar = (\item -> CompareWidget.ToggleCar item.metadata.carNumber) >> CompareWidgetMsg
-                                        }
+                                    [ Html.map CompareWidgetMsg <|
+                                        CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
                                     ]
-                                , div
-                                    [ Attributes.class "card bg-base-200 overflow-hidden"
-                                    , css
-                                        [ property "grid-row" "1"
-                                        , property "grid-column" "2"
-                                        ]
-                                    ]
-                                    [ div
-                                        [ Attributes.class "card-body p-3"
-                                        , css [ property "height" "100%" ]
-                                        ]
-                                        [ Html.map CompareWidgetMsg <|
-                                            CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
-                                        ]
-                                    ]
-                                , div
-                                    [ Attributes.class "card bg-base-200 overflow-hidden"
-                                    , css
-                                        [ property "grid-row" "2"
-                                        , property "grid-column" "2"
-                                        ]
-                                    ]
-                                    [ SelectedCarsStrip.view
-                                        { season = eventSummary.season }
-                                        (CompareWidget.resolveCars m.compare.selectedCars standings
-                                            |> List.sortBy .position
-                                        )
-                                    ]
-                                , div
-                                    [ Attributes.class "card bg-base-200"
-                                    , css
-                                        [ property "grid-row" "1 / 3"
-                                        , property "grid-column" "3"
-                                        ]
-                                    ]
-                                    []
                                 ]
+                            , div
+                                [ Attributes.class "card bg-base-200 overflow-hidden"
+                                , css
+                                    [ property "grid-row" "2"
+                                    , property "grid-column" "2"
+                                    ]
+                                ]
+                                [ SelectedCarsStrip.view
+                                    { season = eventSummary.season }
+                                    (CompareWidget.resolveCars m.compare.selectedCars standings
+                                        |> List.sortBy .position
+                                    )
+                                ]
+                            , div
+                                [ Attributes.class "card bg-base-200"
+                                , css
+                                    [ property "grid-row" "1 / 3"
+                                    , property "grid-column" "3"
+                                    ]
+                                ]
+                                []
                             ]
 
                     Events ->

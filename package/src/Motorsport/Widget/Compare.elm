@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, resolveCars, update, viewCarSelector, viewCharts)
+module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, resolveCars, update, viewCharts)
 
 import Css exposing (backgroundColor, batch, before, borderRadius, height, pct, property, px, qt, width)
 import Css.Color exposing (oklch)
@@ -28,7 +28,8 @@ import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
 type ActiveChart
-    = TrackerChart
+    = CarSelector
+    | TrackerChart
     | PositionProgressionChart
     | LapTimeProgressionChart
     | CloseBattlesChart
@@ -85,11 +86,6 @@ type alias Props =
 
 viewCharts : { width : Float, height : Float } -> Props -> Model -> Html Msg
 viewCharts size props model =
-    let
-        selectedCars =
-            resolveCars model.selectedCars props.standings
-                |> List.sortBy .position
-    in
     div
         [ css
             [ property "height" "100%"
@@ -100,7 +96,7 @@ viewCharts size props model =
             ]
         ]
         [ viewChartTabs model.activeChart
-        , viewActiveChart model.activeChart size props selectedCars
+        , viewActiveChart model.activeChart size props model
         ]
 
 
@@ -110,6 +106,7 @@ viewChartTabs activeChart =
         , css [ property "justify-self" "left" ]
         ]
         [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)
+        , chartTabButton "Cars" CarSelector (activeChart == CarSelector)
         , chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
         , chartTabButton "Lap Time" LapTimeProgressionChart (activeChart == LapTimeProgressionChart)
         , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
@@ -134,9 +131,17 @@ chartTabButton label chart isActive =
         [ text label ]
 
 
-viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List StandingsEntry -> Html Msg
-viewActiveChart activeChart size props selectedCars =
+viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> Model -> Html Msg
+viewActiveChart activeChart size props model =
+    let
+        selectedCars =
+            resolveCars model.selectedCars props.standings
+                |> List.sortBy .position
+    in
     case activeChart of
+        CarSelector ->
+            viewCarSelector props model
+
         TrackerChart ->
             TrackerChart.view
                 { season = props.eventSummary.season, eventName = props.eventSummary.name }
@@ -198,16 +203,15 @@ viewCarSelector props model =
                 |> List.Extra.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> first :: rest)
     in
-    div [ class "card bg-base-200" ]
-        [ div
-            [ css
-                [ property "display" "flex"
-                , property "gap" "10px"
-                , property "flex-wrap" "wrap"
-                ]
+    div
+        [ css
+            [ width (pct 100)
+            , property "align-self" "start"
+            , property "display" "grid"
+            , property "gap" "10px"
             ]
-            (List.map (viewClassGroup props.analysis model) groupedByClass)
         ]
+        (List.map (viewClassGroup props.analysis model) groupedByClass)
 
 
 viewClassGroup : Analysis -> Model -> List StandingsEntry -> Html Msg
