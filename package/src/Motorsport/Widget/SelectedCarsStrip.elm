@@ -20,7 +20,7 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings as Standings exposing (SectorPerformance, SectorProgress, Standings, StandingsEntry)
+import Motorsport.Standings as Standings exposing (SectorProgress, Standings, StandingsEntry)
 import Path.Styled as Path
 import Scale
 import Shape
@@ -139,18 +139,20 @@ carCard { season, analysis } standings item =
                 [ class "card-body p-3"
                 , css
                     [ property "display" "grid"
-                    , property "row-gap" "6px"
+                    , property "row-gap" "8px"
                     ]
                 ]
                 [ cardHeader item
                 , div
                     [ css
                         [ property "display" "grid"
-                        , property "grid-template-columns" "1fr 1fr"
+                        , property "grid-template-columns" "auto 1fr 1fr"
+                        , property "align-items" "center"
                         , property "column-gap" "8px"
                         ]
                     ]
-                    [ currentLapBlock analysis item
+                    [ currentSectorPie analysis item
+                    , currentLapBlock analysis item
                     , lastLapBlock item
                     ]
                 , lapTimeSparkline
@@ -174,8 +176,7 @@ cardHeader item =
         [ carNumberBadge item
         , div
             [ css
-                [ property "font-size" "10px"
-                , property "font-weight" "600"
+                [ property "font-size" "12px"
                 , property "white-space" "nowrap"
                 , property "overflow" "hidden"
                 , property "text-overflow" "ellipsis"
@@ -263,7 +264,6 @@ positionLabel season item =
             , property "align-items" "center"
             , property "column-gap" "4px"
             , property "font-size" "10px"
-            , property "font-weight" "700"
             , before
                 [ property "display" "block"
                 , property "content" (qt "")
@@ -302,12 +302,7 @@ gapCell label gap =
             , property "font-variant-numeric" "tabular-nums"
             ]
         ]
-        [ div
-            [ css
-                [ property "font-size" "9px"
-                , opacity (num 0.7)
-                ]
-            ]
+        [ div [ css [ opacity (num 0.7) ] ]
             [ text label ]
         , div
             [ css [ property "text-align" "right" ] ]
@@ -320,36 +315,29 @@ gapCell label gap =
 -}
 currentLapBlock : Analysis -> StandingsEntry -> Html msg
 currentLapBlock analysis item =
-    lapBlock "Current"
-        (currentLapTimeCell analysis item)
-        (currentSectorPie analysis item)
+    lapBlock "Current" (currentLapTimeCell analysis item)
 
 
 {-| Last ラップ: 確定したラップタイム・対ベスト差・セクター成績を表示する.
 -}
 lastLapBlock : StandingsEntry -> Html msg
 lastLapBlock item =
-    lapBlock "Last"
-        (lastLapTimeCell item)
-        (lastSectorPie item.lastLapSectors)
+    lapBlock "Last" (lastLapTimeCell item)
 
 
 {-| ラップ1段分の共通レイアウト. 上段にラベル・タイム・末尾(差分など), 下段にセクターバー.
 -}
-lapBlock : String -> Html msg -> Html msg -> Html msg
-lapBlock label timeCell bars =
+lapBlock : String -> Html msg -> Html msg
+lapBlock label timeCell =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr"
-            , property "grid-template-row" "auto auto"
             , property "place-items" "center"
             , property "row-gap" "1px"
             ]
         ]
-        [ div [ css [ property "grid-column" "2" ] ] [ labelText label ]
-        , div [ css [ property "grid-column" "1", property "grid-row" "1 / 3" ] ] [ bars ]
-        , div [ css [ property "grid-column" "2" ] ] [ timeCell ]
+        [ labelText label
+        , timeCell
         ]
 
 
@@ -463,22 +451,6 @@ currentSectorSlot sector =
             |> Performance.toColorVariable
         , 1
         )
-
-
-{-| Last ラップのセクター成績をドーナツで表示する. 各セクターを成績色で全周塗る.
--}
-lastSectorPie : Maybe SectorPerformance -> Html msg
-lastSectorPie maybeSectors =
-    case maybeSectors of
-        Just { sector_1, sector_2, sector_3 } ->
-            sectorPie
-                [ ( Performance.toColorVariable sector_1.performance, 1 )
-                , ( Performance.toColorVariable sector_2.performance, 1 )
-                , ( Performance.toColorVariable sector_3.performance, 1 )
-                ]
-
-        Nothing ->
-            emptyPie
 
 
 {-| 3スロットを受け取り, 各スロットを 120° のドーナツ扇形として描く.
