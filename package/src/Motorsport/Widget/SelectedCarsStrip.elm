@@ -7,8 +7,7 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 
 -}
 
-import Css exposing (backgroundColor, batch, before, height, num, opacity, pct, property, px, qt, width)
-import Css.Color exposing (oklch)
+import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
 import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes as Attributes exposing (alt, class, css, src)
 import Html.Styled.Events exposing (onClick)
@@ -25,7 +24,7 @@ import Motorsport.Standings as Standings exposing (SectorPerformance, SectorProg
 import Path.Styled as Path
 import Scale
 import Shape
-import Svg.Styled exposing (circle, svg)
+import Svg.Styled exposing (Svg, circle, g, svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
@@ -140,7 +139,7 @@ carCard { season, analysis } standings item =
                 [ class "card-body p-3"
                 , css
                     [ property "display" "grid"
-                    , property "row-gap" "4px"
+                    , property "row-gap" "6px"
                     ]
                 ]
                 [ cardHeader item
@@ -323,7 +322,7 @@ currentLapBlock : Analysis -> StandingsEntry -> Html msg
 currentLapBlock analysis item =
     lapBlock "Current"
         (currentLapTimeCell analysis item)
-        (currentSectorBars analysis item)
+        (currentSectorPie analysis item)
 
 
 {-| Last ラップ: 確定したラップタイム・対ベスト差・セクター成績を表示する.
@@ -332,7 +331,7 @@ lastLapBlock : StandingsEntry -> Html msg
 lastLapBlock item =
     lapBlock "Last"
         (lastLapTimeCell item)
-        (lastSectorBars item.lastLapSectors)
+        (lastSectorPie item.lastLapSectors)
 
 
 {-| ラップ1段分の共通レイアウト. 上段にラベル・タイム・末尾(差分など), 下段にセクターバー.
@@ -342,14 +341,15 @@ lapBlock label timeCell bars =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "1fr"
-            , property "justify-items" "center"
-            , property "row-gap" "2px"
+            , property "grid-template-columns" "auto 1fr"
+            , property "grid-template-row" "auto auto"
+            , property "place-items" "center"
+            , property "row-gap" "1px"
             ]
         ]
-        [ labelText label
-        , timeCell
-        , bars
+        [ div [ css [ property "grid-column" "2" ] ] [ labelText label ]
+        , div [ css [ property "grid-column" "1", property "grid-row" "1 / 3" ] ] [ bars ]
+        , div [ css [ property "grid-column" "2" ] ] [ timeCell ]
         ]
 
 
@@ -411,24 +411,25 @@ applyPerformanceColor performance =
         property "color" (Performance.toColorVariable performance)
 
 
-{-| Current ラップのセクターバー. 進行中セクターは進捗率の幅で白く, 確定済みセクターは成績色で塗る.
+{-| Current ラップのセクター成績を小さなドーナツ(3分割)で表示する.
+進行中セクターは進捗率ぶんだけ白で, 確定済みセクターは成績色で塗る.
 -}
-currentSectorBars : Analysis -> StandingsEntry -> Html msg
-currentSectorBars analysis item =
+currentSectorPie : Analysis -> StandingsEntry -> Html msg
+currentSectorPie analysis item =
     case ( item.currentLapSectors, Car.hasRetired item.status ) of
         ( Just sectors, False ) ->
             let
                 ( s1p, s2p, s3p ) =
                     sectorProgressTriplet item.sector
             in
-            sectorBarGrid
-                [ currentSectorBar { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1p }
-                , currentSectorBar { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2p }
-                , currentSectorBar { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3p }
+            sectorPie
+                [ currentSectorSlot { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1p }
+                , currentSectorSlot { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2p }
+                , currentSectorSlot { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3p }
                 ]
 
         _ ->
-            emptySectorBars
+            emptyPie
 
 
 sectorProgressTriplet : Maybe SectorProgress -> ( Float, Float, Float )
@@ -449,75 +450,108 @@ sectorProgressTriplet sectorProgress =
             ( 100, 100, 100 )
 
 
-currentSectorBar : { time : Duration, personalBest : Duration, fastest : Duration, progress : Float } -> Html msg
-currentSectorBar sector =
-    div
-        [ css
-            [ height (px 3)
-            , Css.borderRadius (px 1)
-            , batch <|
-                if sector.progress < 100 then
-                    [ width (pct sector.progress)
-                    , backgroundColor (oklch 1 0 0)
-                    ]
-
-                else
-                    [ width (pct 100)
-                    , property "background-color"
-                        (performanceLevel { time = sector.time, personalBest = sector.personalBest, fastest = sector.fastest }
-                            |> Performance.toColorVariable
-                        )
-                    ]
-            ]
-        ]
-        []
-
-
-{-| Last ラップのセクターバー. 各セクターの成績色で塗りつぶす.
+{-| 1セクター分のスロットを `(塗り色, 充填率0..1)` に変換する.
+進行中(progress < 100)は白で進捗率ぶん, 確定済みは成績色で全周.
 -}
-lastSectorBars : Maybe SectorPerformance -> Html msg
-lastSectorBars maybeSectors =
+currentSectorSlot : { time : Duration, personalBest : Duration, fastest : Duration, progress : Float } -> ( String, Float )
+currentSectorSlot sector =
+    if sector.progress < 100 then
+        ( "oklch(1 0 0)", sector.progress / 100 )
+
+    else
+        ( performanceLevel { time = sector.time, personalBest = sector.personalBest, fastest = sector.fastest }
+            |> Performance.toColorVariable
+        , 1
+        )
+
+
+{-| Last ラップのセクター成績をドーナツで表示する. 各セクターを成績色で全周塗る.
+-}
+lastSectorPie : Maybe SectorPerformance -> Html msg
+lastSectorPie maybeSectors =
     case maybeSectors of
         Just { sector_1, sector_2, sector_3 } ->
-            sectorBarGrid
-                [ lastSectorBar sector_1.performance
-                , lastSectorBar sector_2.performance
-                , lastSectorBar sector_3.performance
+            sectorPie
+                [ ( Performance.toColorVariable sector_1.performance, 1 )
+                , ( Performance.toColorVariable sector_2.performance, 1 )
+                , ( Performance.toColorVariable sector_3.performance, 1 )
                 ]
 
         Nothing ->
-            emptySectorBars
+            emptyPie
 
 
-lastSectorBar : Performance.PerformanceLevel -> Html msg
-lastSectorBar performance =
-    div
-        [ css
-            [ height (px 3)
-            , Css.borderRadius (px 1)
-            , property "background-color" (Performance.toColorVariable performance)
-            ]
+{-| 3スロットを受け取り, 各スロットを 120° のドーナツ扇形として描く.
+各要素は `(塗り色, 充填率0..1)`. 充填率ぶんだけスロット先頭から塗り, 背後に薄いトラックを敷く.
+-}
+sectorPie : List ( String, Float ) -> Html msg
+sectorPie slots =
+    svg
+        [ SvgAttr.width (String.fromFloat pieSize ++ "px")
+        , SvgAttr.height (String.fromFloat pieSize ++ "px")
+        , SvgAttr.css [ Css.property "display" "block" ]
+        , viewBox 0 0 pieSize pieSize
         ]
-        []
-
-
-sectorBarGrid : List (Html msg) -> Html msg
-sectorBarGrid bars =
-    div
-        [ css
-            [ property "width" "100%"
-            , property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr 1fr"
-            , property "column-gap" "4px"
-            , property "align-items" "center"
+        [ g
+            [ SvgAttr.transform
+                ("translate(" ++ String.fromFloat (pieSize / 2) ++ " " ++ String.fromFloat (pieSize / 2) ++ ")")
             ]
+            (slots |> List.indexedMap sectorSlot |> List.concat)
         ]
-        bars
 
 
-emptySectorBars : Html msg
-emptySectorBars =
-    div [ css [ height (px 4) ] ] []
+emptyPie : Html msg
+emptyPie =
+    sectorPie [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
+
+
+sectorSlot : Int -> ( String, Float ) -> List (Svg msg)
+sectorSlot index ( color, fraction ) =
+    let
+        slot =
+            2 * pi / 3
+
+        arc fillFraction =
+            Shape.arc
+                { innerRadius = pieInner
+                , outerRadius = pieOuter
+                , cornerRadius = 1
+                , startAngle = toFloat index * slot + pieGap / 2
+                , endAngle = toFloat index * slot + pieGap / 2 + (slot - pieGap) * fillFraction
+                , padAngle = 0
+                , padRadius = 0
+                }
+
+        track =
+            Path.element (arc 1) [ SvgAttr.fill "hsl(0 0% 100% / 0.12)" ]
+    in
+    if fraction <= 0 then
+        [ track ]
+
+    else
+        [ track, Path.element (arc fraction) [ SvgAttr.fill color ] ]
+
+
+pieSize : Float
+pieSize =
+    30
+
+
+pieOuter : Float
+pieOuter =
+    13
+
+
+pieInner : Float
+pieInner =
+    6.5
+
+
+{-| スロット間の隙間(ラジアン).
+-}
+pieGap : Float
+pieGap =
+    0.12
 
 
 
