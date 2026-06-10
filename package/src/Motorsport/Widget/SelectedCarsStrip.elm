@@ -7,23 +7,33 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 
 -}
 
-import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
+import Css exposing (backgroundColor, batch, before, height, num, opacity, pct, property, px, qt, width)
+import Css.Color exposing (oklch)
 import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes as Attributes exposing (alt, class, css, src)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Car exposing (Status(..))
+import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
-import Motorsport.Duration as Duration
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
-import Motorsport.Lap.Performance as Performance
+import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.Sector exposing (Sector(..))
+import Motorsport.Standings as Standings exposing (SectorPerformance, SectorProgress, Standings, StandingsEntry)
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
 範囲外の offset は内部でクランプされるため, 呼び出し側はそのまま保持してよい.
 -}
-view : { season : Int, offset : Int, onScrollTo : Int -> msg } -> Standings -> Html msg
+view :
+    { season : Int
+    , analysis : Analysis
+    , offset : Int
+    , onScrollTo : Int -> msg
+    }
+    -> Standings
+    -> Html msg
 view config standings =
     let
         allCars =
@@ -62,7 +72,7 @@ view config standings =
                         , property "column-gap" "8px"
                         ]
                     ]
-                    (List.map (carCard { season = config.season }) window)
+                    (List.map (carCard { season = config.season, analysis = config.analysis }) window)
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 
@@ -97,9 +107,10 @@ emptyState =
         [ text "No cars on track" ]
 
 
-carCard : { season : Int } -> StandingsEntry -> Html msg
-carCard { season } item =
-    div [ css
+carCard : { season : Int, analysis : Analysis } -> StandingsEntry -> Html msg
+carCard { season, analysis } item =
+    div
+        [ css
             [ property "display" "grid"
             , property "row-gap" "4px"
             ]
@@ -108,12 +119,13 @@ carCard { season } item =
             [ css
                 [ property "padding-inline" "8px"
                 , property "display" "grid"
-                , property "grid-template-columns" "auto 1fr"
+                , property "grid-template-columns" "auto 1fr auto"
                 , property "column-gap" "16px"
                 ]
             ]
             [ positionLabel season item
             , gapsRow item
+            , statusBadge item.status
             ]
         , div [ class "card bg-base-200" ]
             [ div
@@ -122,10 +134,18 @@ carCard { season } item =
                     [ property "display" "grid"
                     , property "row-gap" "4px"
                     ]
-            ]
+                ]
                 [ cardHeader item
-                , lastLapRow item
-                , bestLapRow item
+                , div
+                    [ css
+                        [ property "display" "grid"
+                        , property "grid-template-columns" "1fr 1fr"
+                        , property "column-gap" "8px"
+                        ]
+                    ]
+                    [ currentLapBlock analysis item
+                    , lastLapBlock item
+                    ]
                 ]
             ]
         ]
@@ -136,7 +156,7 @@ cardHeader item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr auto"
+            , property "grid-template-columns" "auto 1fr"
             , property "align-items" "center"
             , property "column-gap" "8px"
             ]
@@ -152,7 +172,6 @@ cardHeader item =
                 ]
             ]
             [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
-        , statusBadge item.status
         ]
 
 
@@ -253,16 +272,13 @@ gapsRow item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr"
+            , property "grid-template-columns" "1fr"
             , property "align-items" "baseline"
-            , property "column-gap" "16px"
             , property "font-size" "10px"
             , opacity (num 0.75)
             ]
         ]
-        [ gapCell "Leader" item.gapToLeader
-        , gapCell "Ahead" item.intervalToAhead
-        ]
+        [ gapCell "Interval" item.intervalToAhead ]
 
 
 gapCell : String -> Gap.Gap -> Html msg
@@ -289,59 +305,207 @@ gapCell label gap =
         ]
 
 
-lastLapRow : StandingsEntry -> Html msg
-lastLapRow item =
+{-| Current ラップ: 進行中のラップタイムと, 各セクターの進捗(進行中)/成績(確定)を
+横3分割のバーで表示する. Retired や計測前は "-" を出す.
+-}
+currentLapBlock : Analysis -> StandingsEntry -> Html msg
+currentLapBlock analysis item =
+    lapBlock "Current"
+        (currentLapTimeCell analysis item)
+        (currentSectorBars analysis item)
+
+
+{-| Last ラップ: 確定したラップタイム・対ベスト差・セクター成績を表示する.
+-}
+lastLapBlock : StandingsEntry -> Html msg
+lastLapBlock item =
+    lapBlock "Last"
+        (lastLapTimeCell item)
+        (lastSectorBars item.lastLapSectors)
+
+
+{-| ラップ1段分の共通レイアウト. 上段にラベル・タイム・末尾(差分など), 下段にセクターバー.
+-}
+lapBlock : String -> Html msg -> Html msg -> Html msg
+lapBlock label timeCell bars =
+    div [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "1fr"
+            , property "justify-items" "center"
+            , property "row-gap" "2px"
+            ]
+        ]
+        [ labelText label
+        , timeCell
+        , bars
+        ]
+
+
+currentLapTimeCell : Analysis -> StandingsEntry -> Html msg
+currentLapTimeCell analysis item =
+    let
+        colorStyle =
+            case item.currentLapBest of
+                Just best ->
+                    performanceLevel
+                        { time = item.currentLapElapsed, personalBest = best, fastest = analysis.fastestLapTime }
+                        |> applyPerformanceColor
+
+                Nothing ->
+                    batch []
+    in
     div
         [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr auto"
-            , property "align-items" "baseline"
-            , property "column-gap" "6px"
+            [ property "font-size" "13px"
+            , property "font-variant-numeric" "tabular-nums"
+            , property "text-align" "right"
+            , colorStyle
             ]
         ]
-        [ labelText "Last"
-        , div
-            [ css
-                [ property "font-size" "13px"
-                , property "font-variant-numeric" "tabular-nums"
-                , property "text-align" "right"
-                , case item.lastLap of
-                    Just { performance } ->
-                        if Performance.isStandard performance then
-                            batch []
+        [ text
+            (if Car.hasRetired item.status then
+                "-"
 
-                        else
-                            property "color" (Performance.toColorVariable performance)
-
-                    Nothing ->
-                        batch []
-                ]
-            ]
-            [ text (item.lastLap |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
-        , deltaBadge item
+             else
+                Duration.toString item.currentLapElapsed
+            )
         ]
 
 
-bestLapRow : StandingsEntry -> Html msg
-bestLapRow item =
+lastLapTimeCell : StandingsEntry -> Html msg
+lastLapTimeCell item =
     div
         [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr"
-            , property "align-items" "baseline"
-            , property "column-gap" "6px"
+            [ property "font-size" "13px"
+            , property "font-variant-numeric" "tabular-nums"
+            , property "text-align" "right"
+            , case item.lastLap of
+                Just { performance } ->
+                    applyPerformanceColor performance
+
+                Nothing ->
+                    batch []
             ]
         ]
-        [ labelText "Best"
-        , div
-            [ css
-                [ property "font-size" "11px"
-                , property "font-variant-numeric" "tabular-nums"
-                , property "text-align" "right"
+        [ text (item.lastLap |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+
+
+applyPerformanceColor : Performance.PerformanceLevel -> Css.Style
+applyPerformanceColor performance =
+    if Performance.isStandard performance then
+        batch []
+
+    else
+        property "color" (Performance.toColorVariable performance)
+
+
+{-| Current ラップのセクターバー. 進行中セクターは進捗率の幅で白く, 確定済みセクターは成績色で塗る.
+-}
+currentSectorBars : Analysis -> StandingsEntry -> Html msg
+currentSectorBars analysis item =
+    case ( item.currentLapSectors, Car.hasRetired item.status ) of
+        ( Just sectors, False ) ->
+            let
+                ( s1p, s2p, s3p ) =
+                    sectorProgressTriplet item.sector
+            in
+            sectorBarGrid
+                [ currentSectorBar { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1p }
+                , currentSectorBar { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2p }
+                , currentSectorBar { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3p }
                 ]
+
+        _ ->
+            emptySectorBars
+
+
+sectorProgressTriplet : Maybe SectorProgress -> ( Float, Float, Float )
+sectorProgressTriplet sectorProgress =
+    case sectorProgress of
+        Just { sector, progress } ->
+            case sector of
+                S1 ->
+                    ( progress, 0, 0 )
+
+                S2 ->
+                    ( 100, progress, 0 )
+
+                S3 ->
+                    ( 100, 100, progress )
+
+        Nothing ->
+            ( 100, 100, 100 )
+
+
+currentSectorBar : { time : Duration, personalBest : Duration, fastest : Duration, progress : Float } -> Html msg
+currentSectorBar sector =
+    div
+        [ css
+            [ height (px 3)
+            , Css.borderRadius (px 1)
+            , batch <|
+                if sector.progress < 100 then
+                    [ width (pct sector.progress)
+                    , backgroundColor (oklch 1 0 0)
+                    ]
+
+                else
+                    [ width (pct 100)
+                    , property "background-color"
+                        (performanceLevel { time = sector.time, personalBest = sector.personalBest, fastest = sector.fastest }
+                            |> Performance.toColorVariable
+                        )
+                    ]
             ]
-            [ text (item.bestLap |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
         ]
+        []
+
+
+{-| Last ラップのセクターバー. 各セクターの成績色で塗りつぶす.
+-}
+lastSectorBars : Maybe SectorPerformance -> Html msg
+lastSectorBars maybeSectors =
+    case maybeSectors of
+        Just { sector_1, sector_2, sector_3 } ->
+            sectorBarGrid
+                [ lastSectorBar sector_1.performance
+                , lastSectorBar sector_2.performance
+                , lastSectorBar sector_3.performance
+                ]
+
+        Nothing ->
+            emptySectorBars
+
+
+lastSectorBar : Performance.PerformanceLevel -> Html msg
+lastSectorBar performance =
+    div
+        [ css
+            [ height (px 3)
+            , Css.borderRadius (px 1)
+            , property "background-color" (Performance.toColorVariable performance)
+            ]
+        ]
+        []
+
+
+sectorBarGrid : List (Html msg) -> Html msg
+sectorBarGrid bars =
+    div
+        [ css
+            [ property "width" "100%"
+            , property "display" "grid"
+            , property "grid-template-columns" "1fr 1fr 1fr"
+            , property "column-gap" "4px"
+            , property "align-items" "center"
+            ]
+        ]
+        bars
+
+
+emptySectorBars : Html msg
+emptySectorBars =
+    div [ css [ height (px 4) ] ] []
 
 
 labelText : String -> Html msg
@@ -353,49 +517,6 @@ labelText label =
             ]
         ]
         [ text label ]
-
-
-deltaBadge : StandingsEntry -> Html msg
-deltaBadge item =
-    case ( item.lastLap, item.bestLap ) of
-        ( Just last, Just best ) ->
-            let
-                deltaMs =
-                    last.time - best.time
-            in
-            if deltaMs <= 0 then
-                div
-                    [ css
-                        [ property "font-size" "9px"
-                        , opacity (num 0.5)
-                        ]
-                    ]
-                    [ text "=" ]
-
-            else
-                div
-                    [ css
-                        [ property "font-size" "10px"
-                        , property "font-variant-numeric" "tabular-nums"
-                        , opacity (num 0.85)
-                        ]
-                    ]
-                    [ text ("+" ++ formatDelta deltaMs) ]
-
-        _ ->
-            text ""
-
-
-formatDelta : Int -> String
-formatDelta ms =
-    let
-        seconds =
-            toFloat ms / 1000
-
-        rounded =
-            ((seconds * 1000) |> round |> toFloat) / 1000
-    in
-    String.fromFloat rounded
 
 
 formatDriverName : String -> String

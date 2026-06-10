@@ -256,7 +256,8 @@ view app { eventSummary, analysis, raceControl } m =
                   in
                   case m.mode of
                     Tracker ->
-                        div [ css
+                        div
+                            [ css
                                 [ property "grid-row" "2"
                                 , height (pct 100)
                                 , overflowY hidden
@@ -267,11 +268,12 @@ view app { eventSummary, analysis, raceControl } m =
                                 ]
                             ]
                             [ SelectedCarsStrip.view
-                                    { season = eventSummary.season
-                                    , offset = m.stripOffset
-                                    , onScrollTo = StripScrollTo
-                                    }
-                                    standings
+                                { season = eventSummary.season
+                                , analysis = analysis
+                                , offset = m.stripOffset
+                                , onScrollTo = StripScrollTo
+                                }
+                                standings
                             , div
                                 [ css
                                     [ property "height" "100%"
