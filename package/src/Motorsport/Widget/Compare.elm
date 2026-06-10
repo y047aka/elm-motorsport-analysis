@@ -82,12 +82,18 @@ viewCharts size props model =
             [ property "height" "100%"
             , property "display" "grid"
             , property "grid-template-rows" "auto 1fr"
-            , property "gap" "8px"
             , property "place-items" "center"
             ]
         ]
         [ viewChartTabs model.activeChart
-        , viewActiveChart model.activeChart size props model
+        , div
+            [ css
+                [ property "width" "100%"
+                , property "height" "100%"
+                , property "place-items" "center"
+                ]
+            ]
+            [ viewActiveChart model.activeChart size props model ]
         ]
 
 
