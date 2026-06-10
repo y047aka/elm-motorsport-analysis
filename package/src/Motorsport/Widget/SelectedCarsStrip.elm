@@ -51,7 +51,6 @@ view config standings =
                     , property "grid-template-columns" "auto 1fr auto"
                     , property "align-items" "center"
                     , property "column-gap" "8px"
-                    , property "padding" "8px"
                     ]
                 ]
                 [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
@@ -80,7 +79,7 @@ navButton label msg isDisabled =
     button
         [ onClick msg
         , Attributes.disabled isDisabled
-        , class "btn btn-circle btn-sm btn-ghost text-xs"
+        , class "btn btn-circle btn-sm text-xs"
         ]
         [ text label ]
 
@@ -100,31 +99,46 @@ emptyState =
 
 carCard : { season : Int } -> StandingsEntry -> Html msg
 carCard { season } item =
-    div
-        [ css
+    div [ css
             [ property "display" "grid"
-            , property "grid-template-rows" "auto auto auto auto 1fr"
             , property "row-gap" "4px"
-            , property "padding" "6px 8px"
-            , property "border-radius" "6px"
-            , property "background-color" "hsl(0 0% 100% / 0.05)"
             ]
         ]
-        [ cardHeader season item
-        , gapsRow item
-        , lastLapRow item
-        , bestLapRow item
+        [ div
+            [ css
+                [ property "padding-inline" "8px"
+                , property "display" "grid"
+                , property "grid-template-columns" "auto 1fr"
+                , property "column-gap" "16px"
+                ]
+            ]
+            [ positionLabel season item
+            , gapsRow item
+            ]
+        , div [ class "card bg-base-200" ]
+            [ div
+                [ class "card-body p-3"
+                , css
+                    [ property "display" "grid"
+                    , property "row-gap" "4px"
+                    ]
+            ]
+                [ cardHeader item
+                , lastLapRow item
+                , bestLapRow item
+                ]
+            ]
         ]
 
 
-cardHeader : Int -> StandingsEntry -> Html msg
-cardHeader season item =
+cardHeader : StandingsEntry -> Html msg
+cardHeader item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr auto auto"
+            , property "grid-template-columns" "auto 1fr auto"
             , property "align-items" "center"
-            , property "column-gap" "6px"
+            , property "column-gap" "8px"
             ]
         ]
         [ carNumberBadge item
@@ -139,7 +153,6 @@ cardHeader season item =
             ]
             [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
         , statusBadge item.status
-        , positionLabel season item
         ]
 
 
@@ -240,16 +253,14 @@ gapsRow item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr 1fr"
+            , property "grid-template-columns" "1fr 1fr"
             , property "align-items" "baseline"
-            , property "column-gap" "8px"
+            , property "column-gap" "16px"
             , property "font-size" "10px"
             , opacity (num 0.75)
             ]
         ]
-        [ div []
-            [ text ("L " ++ String.fromInt item.lapsCompleted) ]
-        , gapCell "Leader" item.gapToLeader
+        [ gapCell "Leader" item.gapToLeader
         , gapCell "Ahead" item.intervalToAhead
         ]
 

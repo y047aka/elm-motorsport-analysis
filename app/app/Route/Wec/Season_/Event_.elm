@@ -266,14 +266,12 @@ view app { eventSummary, analysis, raceControl } m =
                                 , property "row-gap" "10px"
                                 ]
                             ]
-                            [ div [ Attributes.class "card bg-base-200 overflow-hidden" ]
-                                [ SelectedCarsStrip.view
+                            [ SelectedCarsStrip.view
                                     { season = eventSummary.season
                                     , offset = m.stripOffset
                                     , onScrollTo = StripScrollTo
                                     }
                                     standings
-                                ]
                             , div
                                 [ css
                                     [ property "height" "100%"
