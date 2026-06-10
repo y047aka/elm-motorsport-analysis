@@ -76,6 +76,7 @@ type alias Model =
     , eventsState : DataView.Model
     , query : String
     , compare : CompareWidget.Model
+    , stripOffset : Int
     }
 
 
@@ -103,6 +104,7 @@ init app shared =
                 )
       , query = ""
       , compare = CompareWidget.init
+      , stripOffset = 0
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -124,6 +126,7 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | CompareWidgetMsg CompareWidget.Msg
+    | StripScrollTo Int
 
 
 update :
@@ -166,6 +169,9 @@ update app shared msg m =
             , Effect.none
             , Nothing
             )
+
+        StripScrollTo offset ->
+            ( { m | stripOffset = max 0 offset }, Effect.none, Nothing )
 
 
 
@@ -262,10 +268,11 @@ view app { eventSummary, analysis, raceControl } m =
                             ]
                             [ div [ Attributes.class "card bg-base-200 overflow-hidden" ]
                                 [ SelectedCarsStrip.view
-                                    { season = eventSummary.season }
-                                    (CompareWidget.resolveCars m.compare.selectedCars standings
-                                        |> List.sortBy .position
-                                    )
+                                    { season = eventSummary.season
+                                    , offset = m.stripOffset
+                                    , onScrollTo = StripScrollTo
+                                    }
+                                    standings
                                 ]
                             , div
                                 [ css

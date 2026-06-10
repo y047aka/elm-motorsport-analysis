@@ -1,27 +1,46 @@
 module Motorsport.Widget.SelectedCarsStrip exposing (view)
 
-{-| 選択中の数台について、直前ラップの確定値・ベスト・セクター成績を
-横並びカードで表示する Widget. リアルタイム分析を支援する.
+{-| その瞬間の総合上位数台について、直前ラップの確定値・ベスト・セクター成績を
+横並びカードで表示する Widget. 選択操作なしでレース先頭の状況を俯瞰できる.
 
 @docs view
 
 -}
 
 import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
-import Html.Styled exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (alt, class, css, src)
+import Html.Styled exposing (Html, button, div, img, text)
+import Html.Styled.Attributes as Attributes exposing (alt, class, css, src)
+import Html.Styled.Events exposing (onClick)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Lap.Performance as Performance
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings exposing (StandingsEntry)
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 
 
-view : { season : Int } -> List StandingsEntry -> Html msg
-view config cars =
-    case cars of
+{-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
+範囲外の offset は内部でクランプされるため, 呼び出し側はそのまま保持してよい.
+-}
+view : { season : Int, offset : Int, onScrollTo : Int -> msg } -> Standings -> Html msg
+view config standings =
+    let
+        allCars =
+            Standings.toList standings
+
+        maxOffset =
+            max 0 (List.length allCars - displayCount)
+
+        offset =
+            clamp 0 maxOffset config.offset
+
+        window =
+            allCars
+                |> List.drop offset
+                |> List.take displayCount
+    in
+    case window of
         [] ->
             emptyState
 
@@ -29,13 +48,41 @@ view config cars =
             div
                 [ css
                     [ property "display" "grid"
-                    , property "grid-auto-flow" "column"
-                    , property "grid-auto-columns" "minmax(0, 1fr)"
+                    , property "grid-template-columns" "auto 1fr auto"
+                    , property "align-items" "center"
                     , property "column-gap" "8px"
                     , property "padding" "8px"
                     ]
                 ]
-                (List.map (carCard config) cars)
+                [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
+                , div
+                    [ css
+                        [ property "display" "grid"
+                        , property "grid-auto-flow" "column"
+                        , property "grid-auto-columns" "minmax(0, 1fr)"
+                        , property "column-gap" "8px"
+                        ]
+                    ]
+                    (List.map (carCard { season = config.season }) window)
+                , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
+                ]
+
+
+{-| 同時表示する台数. カルーセルは1台ずつスクロールする.
+-}
+displayCount : Int
+displayCount =
+    5
+
+
+navButton : String -> msg -> Bool -> Html msg
+navButton label msg isDisabled =
+    button
+        [ onClick msg
+        , Attributes.disabled isDisabled
+        , class "btn btn-circle btn-sm btn-ghost text-xs"
+        ]
+        [ text label ]
 
 
 emptyState : Html msg
@@ -48,7 +95,7 @@ emptyState =
             , opacity (num 0.5)
             ]
         ]
-        [ text "Select cars above to compare" ]
+        [ text "No cars on track" ]
 
 
 carCard : { season : Int } -> StandingsEntry -> Html msg
