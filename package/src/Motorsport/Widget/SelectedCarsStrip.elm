@@ -9,7 +9,7 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 
 import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
 import Html.Styled exposing (Html, button, div, img, text)
-import Html.Styled.Attributes as Attributes exposing (alt, class, css, src)
+import Html.Styled.Attributes as Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
@@ -224,36 +224,47 @@ statusBadge status =
 
 carNumberBadge : StandingsEntry -> Html msg
 carNumberBadge item =
+    let
+        manufacturerColor =
+            Manufacturer.toColor item.metadata.manufacturer
+    in
     div
-        [ class "grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
+        [ class "stat p-1 place-items-center gap-1.5 rounded"
         , css
-            [ property "padding" "2px"
-            , backgroundColor (Manufacturer.toColor item.metadata.manufacturer)
+            [ property "width" "35px"
+            , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h)")
+            , property "border" "none"
             ]
         ]
-        [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
-            Just url ->
-                img
-                    [ src url
-                    , alt (Manufacturer.toString item.metadata.manufacturer)
-                    , css
-                        [ property "height" "14px"
-                        , property "object-fit" "contain"
-                        ]
-                    ]
-                    []
-
-            Nothing ->
-                div [] []
-        , div
-            [ css
-                [ property "font-size" "11px"
-                , property "font-weight" "700"
-                , property "line-height" "1"
-                ]
-            ]
+        [ manufacturerLogo item.metadata.manufacturer
+        , div [ class "stat-value text-xs leading-none" ]
             [ text item.metadata.carNumber ]
         ]
+
+
+manufacturerLogo : Manufacturer.Manufacturer -> Html msg
+manufacturerLogo manufacturer =
+    case Manufacturer.toLogoUrl manufacturer of
+        Just url ->
+            img
+                [ src url
+                , css
+                    [ property "max-width" "28px"
+                    , property "height" "16px"
+                    , property "object-fit" "contain"
+                    , property "opacity" "0.9"
+                    ]
+                ]
+                []
+
+        Nothing ->
+            div
+                [ css
+                    [ property "max-width" "28px"
+                    , property "height" "16px"
+                    ]
+                ]
+                []
 
 
 positionLabel : Int -> StandingsEntry -> Html msg
@@ -696,8 +707,8 @@ labelText label =
 formatDriverName : String -> String
 formatDriverName fullName =
     case String.words fullName of
-        _ :: rest ->
-            rest |> List.map String.toUpper |> String.join " "
+        first :: rest ->
+            first :: (rest |> List.map String.toUpper) |> String.join " "
 
         [] ->
             fullName
