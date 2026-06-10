@@ -2,8 +2,7 @@ module Motorsport.Circuit.LeMans exposing
     ( LeMans2025MiniSector(..)
     , miniSectorAccessor
     , calculateMiniSectorProgress
-    , layout, miniSectorDefaultRatio, miniSectorOrder
-    , miniSectorToString
+    , layout, miniSectorDefaultRatio, miniSectorOrder, miniSectorToString
     )
 
 {-|

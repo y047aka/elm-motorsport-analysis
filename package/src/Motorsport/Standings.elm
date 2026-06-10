@@ -377,7 +377,6 @@ getCarHistory carNumber (Standings s) =
         |> Maybe.withDefault []
 
 
-
 type alias TimingState =
     { currentLapElapsed : Duration
     , sector : Maybe SectorProgress

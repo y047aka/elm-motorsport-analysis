@@ -12,13 +12,13 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class
 import Motorsport.Clock as Clock
-import Motorsport.Manufacturer
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
+import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.RunningOrder as RunningOrder
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -249,5 +249,3 @@ config analysis standings =
         , bestTimeColumn { getter = .bestLap }
         ]
     }
-
-

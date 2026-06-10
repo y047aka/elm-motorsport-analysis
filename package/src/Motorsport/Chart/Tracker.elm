@@ -7,8 +7,8 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)

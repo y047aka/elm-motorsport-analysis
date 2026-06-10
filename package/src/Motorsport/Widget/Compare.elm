@@ -102,7 +102,8 @@ viewCharts size props model =
 
 viewChartTabs : ActiveChart -> Html Msg
 viewChartTabs activeChart =
-    div [ class "join"
+    div
+        [ class "join"
         , css [ property "justify-self" "left" ]
         ]
         [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)

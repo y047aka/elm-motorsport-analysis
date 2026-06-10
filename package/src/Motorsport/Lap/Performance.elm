@@ -14,7 +14,7 @@ module Motorsport.Lap.Performance exposing
 
 @docs RatedTime
 
-@docs PerformanceLevel(..), performanceLevel
+@docs PerformanceLevel, performanceLevel
 @docs isStandard
 @docs toColorVariable
 
@@ -51,12 +51,10 @@ findFastestBy getter laps =
         |> Maybe.map getter
 
 
-
 type alias RatedTime =
     { time : Duration
     , performance : PerformanceLevel
     }
-
 
 
 
