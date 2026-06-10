@@ -19,7 +19,6 @@ import Motorsport.Manufacturer
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CloseBattles as CloseBattles
-import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
@@ -31,7 +30,6 @@ type ActiveChart
     = CarSelector
     | TrackerChart
     | PositionProgressionChart
-    | LapTimeProgressionChart
     | CloseBattlesChart
     | BoxPlotChart
 
@@ -109,7 +107,6 @@ viewChartTabs activeChart =
         [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)
         , chartTabButton "Cars" CarSelector (activeChart == CarSelector)
         , chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
-        , chartTabButton "Lap Time" LapTimeProgressionChart (activeChart == LapTimeProgressionChart)
         , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
         , chartTabButton "Box Plot" BoxPlotChart (activeChart == BoxPlotChart)
         ]
@@ -151,13 +148,6 @@ viewActiveChart activeChart size props model =
 
         PositionProgressionChart ->
             PositionProgression.view
-                size
-                props.clock
-                props.standings
-                selectedCars
-
-        LapTimeProgressionChart ->
-            LapTimeProgression.view
                 size
                 props.clock
                 props.standings
