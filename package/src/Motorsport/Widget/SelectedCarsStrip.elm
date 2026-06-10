@@ -17,10 +17,18 @@ import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Sector exposing (Sector(..))
 import Motorsport.Standings as Standings exposing (SectorPerformance, SectorProgress, Standings, StandingsEntry)
+import Path.Styled as Path
+import Scale
+import Shape
+import Svg.Styled exposing (circle, svg)
+import Svg.Styled.Attributes as SvgAttr
+import TypedSvg.Styled.Attributes exposing (viewBox)
+import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
@@ -72,7 +80,7 @@ view config standings =
                         , property "column-gap" "8px"
                         ]
                     ]
-                    (List.map (carCard { season = config.season, analysis = config.analysis }) window)
+                    (List.map (carCard { season = config.season, analysis = config.analysis } standings) window)
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 
@@ -107,8 +115,8 @@ emptyState =
         [ text "No cars on track" ]
 
 
-carCard : { season : Int, analysis : Analysis } -> StandingsEntry -> Html msg
-carCard { season, analysis } item =
+carCard : { season : Int, analysis : Analysis } -> Standings -> StandingsEntry -> Html msg
+carCard { season, analysis } standings item =
     div
         [ css
             [ property "display" "grid"
@@ -146,6 +154,9 @@ carCard { season, analysis } item =
                     [ currentLapBlock analysis item
                     , lastLapBlock item
                     ]
+                , lapTimeSparkline
+                    (Manufacturer.toColorWithFallback item.metadata)
+                    (Standings.getCarHistory item.metadata.carNumber standings)
                 ]
             ]
         ]
@@ -328,7 +339,8 @@ lastLapBlock item =
 -}
 lapBlock : String -> Html msg -> Html msg -> Html msg
 lapBlock label timeCell bars =
-    div [ css
+    div
+        [ css
             [ property "display" "grid"
             , property "grid-template-columns" "1fr"
             , property "justify-items" "center"
@@ -506,6 +518,162 @@ sectorBarGrid bars =
 emptySectorBars : Html msg
 emptySectorBars =
     div [ css [ height (px 4) ] ] []
+
+
+
+-- LAP TIME PROGRESSION (sparkline)
+
+
+{-| 直近ラップの推移を小さな折れ線(スパークライン)で表示する.
+線・ドットともにマニュファクチャラー色で統一する.
+
+縦軸はレーシングラップの帯だけで張る. ピットイン・アウトラップなどの外れ値
+(Q3 + 1.5×IQR 超)はドットを描かず, 縦軸の帯外(枠外)へはみ出させてクリップする.
+折れ線自体は全ラップを繋いで描くため, 枠外へ伸びる線の角度から飛躍の大きさが読める.
+
+-}
+lapTimeSparkline : Css.Color -> List Lap -> Html msg
+lapTimeSparkline color laps =
+    let
+        recent =
+            laps
+                |> List.sortBy .lap
+                |> List.reverse
+                |> List.take 20
+                |> List.reverse
+    in
+    case recent of
+        _ :: _ :: _ ->
+            let
+                lapNumbers =
+                    recent |> List.map (.lap >> toFloat)
+
+                times =
+                    recent |> List.map .time
+
+                sortedTimes =
+                    List.sort times
+
+                ( minX, maxX ) =
+                    ( List.minimum lapNumbers |> Maybe.withDefault 0
+                    , List.maximum lapNumbers |> Maybe.withDefault 1
+                    )
+
+                -- IQR による外れ値の上限フェンス. これを超えるラップ(主にピット系)は
+                -- レーシング帯から外れているとみなし, 表示領域の外へ追いやる.
+                upperFence =
+                    Maybe.map2
+                        (\q1 q3 -> q3 + round (1.5 * toFloat (q3 - q1)))
+                        (quantile 0.25 sortedTimes)
+                        (quantile 0.75 sortedTimes)
+                        |> Maybe.withDefault (List.maximum sortedTimes |> Maybe.withDefault 0)
+
+                bandTimes =
+                    times |> List.filter (\t -> t <= upperFence)
+
+                minY =
+                    List.minimum bandTimes |> Maybe.withDefault 0 |> toFloat
+
+                maxY =
+                    List.maximum bandTimes |> Maybe.withDefault 1 |> toFloat |> (\m -> max m (minY + 1))
+
+                yPad =
+                    (maxY - minY) * 0.1 + 1
+
+                xScale =
+                    Scale.linear ( sparklinePadX, sparklineWidth - sparklinePadX ) ( minX, maxX )
+
+                yScale =
+                    Scale.linear ( sparklineHeight - sparklinePadY, sparklinePadY ) ( minY - yPad, maxY + yPad )
+
+                point lap =
+                    ( Scale.convert xScale (toFloat lap.lap)
+                    , Scale.convert yScale (toFloat lap.time)
+                    )
+
+                -- 折れ線は全ラップを繋いで描く. 外れ値は帯外(枠外)へ伸びてクリップされ,
+                -- その線の角度で飛躍の大きさが読み取れる.
+                linePath =
+                    recent
+                        |> List.map (point >> Just)
+                        |> Shape.line Shape.linearCurve
+
+                dot lap =
+                    let
+                        ( x, y ) =
+                            point lap
+                    in
+                    circle
+                        [ InPx.cx x
+                        , InPx.cy y
+                        , InPx.r 1.8
+                        , SvgAttr.css [ Css.fill color ]
+                        ]
+                        []
+
+                -- ドットは最新ラップ1点のみ. 線の終端=現在地を示す.
+                lastDot =
+                    recent
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.map dot
+                        |> Maybe.withDefault (text "")
+            in
+            svg
+                [ SvgAttr.width "100%"
+                , SvgAttr.css [ Css.property "display" "block" ]
+                , viewBox 0 0 sparklineWidth sparklineHeight
+                ]
+                [ Path.element linePath
+                    [ SvgAttr.stroke color.value
+                    , SvgAttr.strokeWidth "1.5"
+                    , SvgAttr.strokeOpacity "0.6"
+                    , SvgAttr.fill "none"
+                    ]
+                , lastDot
+                ]
+
+        _ ->
+            text ""
+
+
+sparklineWidth : Float
+sparklineWidth =
+    200
+
+
+sparklineHeight : Float
+sparklineHeight =
+    40
+
+
+sparklinePadX : Float
+sparklinePadX =
+    3
+
+
+sparklinePadY : Float
+sparklinePadY =
+    4
+
+
+{-| 昇順ソート済みリストの q 分位点(0〜1)を最近傍で返す.
+-}
+quantile : Float -> List Int -> Maybe Int
+quantile q sorted =
+    let
+        n =
+            List.length sorted
+    in
+    if n == 0 then
+        Nothing
+
+    else
+        let
+            idx =
+                clamp 0 (n - 1) (floor (toFloat (n - 1) * q))
+        in
+        sorted |> List.drop idx |> List.head
 
 
 labelText : String -> Html msg
