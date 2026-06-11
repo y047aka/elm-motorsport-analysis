@@ -8,7 +8,6 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.BoxPlot as BoxPlot
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -24,7 +23,6 @@ type ActiveChart
     = TrackerChart
     | PositionProgressionChart
     | CloseBattlesChart
-    | BoxPlotChart
 
 
 type alias Model =
@@ -106,7 +104,6 @@ viewChartTabs activeChart =
         [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)
         , chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
         , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
-        , chartTabButton "Box Plot" BoxPlotChart (activeChart == BoxPlotChart)
         ]
 
 
@@ -166,9 +163,6 @@ viewActiveChart activeChart size props model =
                             }
                     )
                 |> Maybe.withDefault (text "")
-
-        BoxPlotChart ->
-            BoxPlot.view size props.analysis props.standings selectedCars
 
 
 resolveCars : List String -> Standings -> List StandingsEntry

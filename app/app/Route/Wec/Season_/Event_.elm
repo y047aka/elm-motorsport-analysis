@@ -296,7 +296,7 @@ view app { eventSummary, analysis, raceControl } m =
                                 , css [ property "grid-column" "3" ]
                                 ]
                                 []
-                            , div [ css [ property "grid-column" "1 / -1" ]]
+                            , div [ css [ property "grid-column" "1 / -1" ] ]
                                 [ SelectedCarsStrip.view
                                     { season = eventSummary.season
                                     , analysis = analysis
