@@ -8,9 +8,11 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 -}
 
 import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
+import Dict
 import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
+import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
@@ -79,7 +81,16 @@ view config standings =
                         , property "column-gap" "8px"
                         ]
                     ]
-                    (List.map (carCard { season = config.season, analysis = config.analysis } standings) window)
+                    (List.map
+                        (\item ->
+                            carCard
+                                { season = config.season, analysis = config.analysis }
+                                standings
+                                (findNeighbors allCars item)
+                                item
+                        )
+                        window
+                    )
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 
@@ -114,8 +125,35 @@ emptyState =
         [ text "No cars on track" ]
 
 
-carCard : { season : Int, analysis : Analysis } -> Standings -> StandingsEntry -> Html msg
-carCard { season, analysis } standings item =
+{-| 総合順位で隣接する前後のクルマ. 先頭/最後尾では一方が `Nothing` になる.
+-}
+type alias Neighbors =
+    { ahead : Maybe StandingsEntry
+    , behind : Maybe StandingsEntry
+    }
+
+
+{-| 同一クラス内の順位で `item` の前後に位置するクルマを取り出す.
+総合順位リストはクラスでフィルタしても順序が保たれるため, そのままクラス内順位になる.
+-}
+findNeighbors : List StandingsEntry -> StandingsEntry -> Neighbors
+findNeighbors allCars item =
+    let
+        classmates =
+            allCars |> List.filter (\e -> e.metadata.class == item.metadata.class)
+    in
+    case List.Extra.findIndex (\e -> e.metadata.carNumber == item.metadata.carNumber) classmates of
+        Just i ->
+            { ahead = List.Extra.getAt (i - 1) classmates
+            , behind = List.Extra.getAt (i + 1) classmates
+            }
+
+        Nothing ->
+            { ahead = Nothing, behind = Nothing }
+
+
+carCard : { season : Int, analysis : Analysis } -> Standings -> Neighbors -> StandingsEntry -> Html msg
+carCard { season, analysis } standings neighbors item =
     div
         [ css
             [ property "display" "grid"
@@ -158,6 +196,7 @@ carCard { season, analysis } standings item =
                 , lapTimeSparkline
                     (Manufacturer.toColorWithFallback item.metadata)
                     (Standings.getCarHistory item.metadata.carNumber standings)
+                , rivalGapSparkline standings neighbors item
                 ]
             ]
         ]
@@ -553,11 +592,7 @@ lapTimeSparkline : Css.Color -> List Lap -> Html msg
 lapTimeSparkline color laps =
     let
         recent =
-            laps
-                |> List.sortBy .lap
-                |> List.reverse
-                |> List.take 20
-                |> List.reverse
+            recentLapsByLap laps
     in
     case recent of
         _ :: _ :: _ ->
@@ -652,6 +687,197 @@ lapTimeSparkline color laps =
 
         _ ->
             text ""
+
+
+
+-- RIVAL GAP (sparkline)
+
+
+{-| 前後のライバルとの位置関係を, 近傍3台(対象車＋前後車)のラップ平均を基準(中央の
+0ライン=点線)にした相対ギャップの推移で表示する. 各ラップ番号での
+`各車の累積タイム − グループ平均の累積タイム` をギャップとし, 対象車・前車・後車を
+マニュファクチャラー色の折れ線で描く. 対象車だけは太線＋不透明で強調する.
+
+基準を固定値(対象車そのもの)ではなくグループ平均にすることで, 対象車自身のペース
+変動も0ラインからの離れ方として読み取れる. 線が上がれば(累積タイムが平均より小さい=)
+相対的に速く先行, 下がれば相対的に遅く後退していることを表す. クラス先頭/最後尾で隣が
+欠ける場合は, 存在する車だけで平均を取る.
+
+-}
+rivalGapSparkline : Standings -> Neighbors -> StandingsEntry -> Html msg
+rivalGapSparkline standings neighbors item =
+    let
+        toCarLine isFocused entry =
+            { color = Manufacturer.toColorWithFallback entry.metadata
+            , isFocused = isFocused
+            , laps = recentLapsByLap (Standings.getCarHistory entry.metadata.carNumber standings)
+            }
+
+        focusedLine =
+            toCarLine True item
+
+        -- フィールド順(前車 → 対象車 → 後車). 隣が欠ける場合は除外される.
+        cars =
+            List.filterMap identity
+                [ Maybe.map (toCarLine False) neighbors.ahead
+                , Just focusedLine
+                , Maybe.map (toCarLine False) neighbors.behind
+                ]
+
+        -- 近傍グループの「ラップ番号 → 平均累積タイム」. そのラップに存在する車だけで平均する.
+        referenceByLap =
+            cars
+                |> List.concatMap .laps
+                |> List.foldl
+                    (\lap ->
+                        Dict.update lap.lap
+                            (\existing ->
+                                case existing of
+                                    Just ( sum, count ) ->
+                                        Just ( sum + lap.elapsed, count + 1 )
+
+                                    Nothing ->
+                                        Just ( lap.elapsed, 1 )
+                            )
+                    )
+                    Dict.empty
+                |> Dict.map (\_ ( sum, count ) -> sum // count)
+
+        gapSeries laps =
+            laps
+                |> List.filterMap
+                    (\lap ->
+                        Dict.get lap.lap referenceByLap
+                            |> Maybe.map (\ref -> { lap = lap.lap, gap = lap.elapsed - ref })
+                    )
+
+        focusedLapNumbers =
+            focusedLine.laps |> List.map (.lap >> toFloat)
+
+        allGaps =
+            cars |> List.concatMap (.laps >> gapSeries >> List.map (.gap >> toFloat))
+    in
+    case ( focusedLapNumbers, cars ) of
+        ( _ :: _ :: _, _ :: _ :: _ ) ->
+            let
+                ( minX, maxX ) =
+                    ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
+                    , List.maximum focusedLapNumbers |> Maybe.withDefault 1
+                    )
+
+                -- 0(グループ平均)を必ず含めてレンジを張る.
+                minGap =
+                    List.minimum (0 :: allGaps) |> Maybe.withDefault 0
+
+                maxGap =
+                    List.maximum (0 :: allGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
+
+                yPad =
+                    (maxGap - minGap) * 0.15 + 200
+
+                xScale =
+                    Scale.linear ( sparklinePadX, sparklineWidth - sparklinePadX ) ( minX, maxX )
+
+                -- 平均より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
+                yScale =
+                    Scale.linear ( sparklinePadY, rivalSparkHeight - sparklinePadY ) ( minGap - yPad, maxGap + yPad )
+
+                zeroY =
+                    Scale.convert yScale 0
+
+                carLine car =
+                    let
+                        dataPoints =
+                            gapSeries car.laps
+                                |> List.filter (\{ lap } -> minX <= toFloat lap && toFloat lap <= maxX)
+                                |> List.map
+                                    (\{ lap, gap } ->
+                                        Just
+                                            ( Scale.convert xScale (toFloat lap)
+                                            , Scale.convert yScale (toFloat gap)
+                                            )
+                                    )
+
+                        lastDot =
+                            dataPoints
+                                |> List.filterMap identity
+                                |> List.Extra.last
+                                |> Maybe.map
+                                    (\( x, y ) ->
+                                        circle
+                                            [ InPx.cx x
+                                            , InPx.cy y
+                                            , InPx.r
+                                                (if car.isFocused then
+                                                    2.2
+
+                                                 else
+                                                    1.8
+                                                )
+                                            , SvgAttr.css [ Css.fill car.color ]
+                                            ]
+                                            []
+                                    )
+                                |> Maybe.withDefault (text "")
+                    in
+                    g []
+                        [ Path.element (Shape.line Shape.linearCurve dataPoints)
+                            [ SvgAttr.stroke car.color.value
+                            , SvgAttr.strokeWidth
+                                (if car.isFocused then
+                                    "2"
+
+                                 else
+                                    "1.5"
+                                )
+                            , SvgAttr.strokeOpacity
+                                (if car.isFocused then
+                                    "1"
+
+                                 else
+                                    "0.5"
+                                )
+                            , SvgAttr.fill "none"
+                            ]
+                        , lastDot
+                        ]
+            in
+            svg
+                [ SvgAttr.width "100%"
+                , SvgAttr.css [ Css.property "display" "block" ]
+                , viewBox 0 0 sparklineWidth rivalSparkHeight
+                ]
+                (Svg.Styled.line
+                    [ SvgAttr.x1 (String.fromFloat sparklinePadX)
+                    , SvgAttr.x2 (String.fromFloat (sparklineWidth - sparklinePadX))
+                    , SvgAttr.y1 (String.fromFloat zeroY)
+                    , SvgAttr.y2 (String.fromFloat zeroY)
+                    , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
+                    , SvgAttr.strokeWidth "1"
+                    , SvgAttr.strokeDasharray "2 2"
+                    ]
+                    []
+                    :: List.map carLine cars
+                )
+
+        _ ->
+            text ""
+
+
+{-| ラップ履歴を昇順にそろえ, 直近20ラップだけを取り出す.
+-}
+recentLapsByLap : List Lap -> List Lap
+recentLapsByLap laps =
+    laps
+        |> List.sortBy .lap
+        |> List.reverse
+        |> List.take 20
+        |> List.reverse
+
+
+rivalSparkHeight : Float
+rivalSparkHeight =
+    36
 
 
 sparklineWidth : Float
