@@ -125,11 +125,13 @@ emptyState =
         [ text "No cars on track" ]
 
 
-{-| 総合順位で隣接する前後のクルマ. 先頭/最後尾では一方が `Nothing` になる.
+{-| 同一クラス順位で前後に隣接するクルマ. 直前/直後から順に最大2台ずつ保持する
+(`ahead = [A1, A2]`, `behind = [B1, B2]`). 表示は直近の1台ずつ(`List.head`)を,
+基準母集団は2台ずつ全部を使う. 先頭/最後尾やクラス端では台数が減る.
 -}
 type alias Neighbors =
-    { ahead : Maybe StandingsEntry
-    , behind : Maybe StandingsEntry
+    { ahead : List StandingsEntry
+    , behind : List StandingsEntry
     }
 
 
@@ -150,8 +152,9 @@ type alias GapPoint =
     }
 
 
-{-| 同一クラス内の順位で `item` の前後に位置するクルマを取り出す.
+{-| 同一クラス内の順位で `item` の前後に位置するクルマを最大2台ずつ取り出す.
 総合順位リストはクラスでフィルタしても順序が保たれるため, そのままクラス内順位になる.
+クラス端では取れる台数だけ返す(範囲外インデックスは除外される).
 -}
 findNeighbors : List StandingsEntry -> StandingsEntry -> Neighbors
 findNeighbors allCars item =
@@ -161,12 +164,12 @@ findNeighbors allCars item =
     in
     case List.Extra.findIndex (\e -> e.metadata.carNumber == item.metadata.carNumber) classmates of
         Just i ->
-            { ahead = List.Extra.getAt (i - 1) classmates
-            , behind = List.Extra.getAt (i + 1) classmates
+            { ahead = [ 1, 2 ] |> List.filterMap (\d -> List.Extra.getAt (i - d) classmates)
+            , behind = [ 1, 2 ] |> List.filterMap (\d -> List.Extra.getAt (i + d) classmates)
             }
 
         Nothing ->
-            { ahead = Nothing, behind = Nothing }
+            { ahead = [], behind = [] }
 
 
 carCard : { season : Int, analysis : Analysis } -> Standings -> Neighbors -> StandingsEntry -> Html msg
@@ -708,13 +711,16 @@ lapTimeSparkline color laps =
 -- RIVAL GAP (sparkline)
 
 
-{-| 前後のライバルとの位置関係を, 近傍3台(対象車を含む前後車)のラップ平均を基準(中央の
-0ライン=点線)にした相対ギャップの推移で表示する. 各ラップ番号での
-`各車の累積タイム − グループ平均の累積タイム` をギャップとし, 対象車・前車・後車を
-マニュファクチャラー色の折れ線で描く. 対象車だけは太線＋不透明で強調する.
+{-| 前後のライバルとの位置関係を, 近傍最大5台(対象車＋前後2台ずつ)のラップ平均を基準
+(中央の0ライン=点線)にした相対ギャップの推移で表示する. 各ラップ番号での
+`各車の累積タイム − グループ平均の累積タイム` をギャップとし, 表示するのは直前車・対象車・
+直後車の3本(マニュファクチャラー色). 対象車だけは太線＋不透明で強調する.
 
 線の傾きが相対ペース, レベルが相対順位を表し, 上がれば(累積タイムが基準より小さい=)
-相対的にリードを広げ, 下がれば縮めたことを示す.
+相対的にリードを広げ, 下がれば縮めたことを示す. 2線の差(=収束/発散の読み)は基準の取り方に
+不変なので, 基準を5台に広げても前後ライバルとの詰め具合の読みは変わらない. 5台基準は
+3台基準の厳密な自己センタリング(3本の和=0)を近似的なものへ緩め, 前後線の鏡像ロックを
+解く効果を持つ(外側2台のギャップは概ね相殺するため構図は0近傍に留まる).
 
 基準は各車の非ピットラップ(pitTime なし)だけで平均し, ピットによる基準の跳ねを防ぐ.
 縦軸はピット等の外れ値(両側 IQR)を除いた通常変動の帯だけで張り, 外れ値は枠外へ
@@ -730,26 +736,30 @@ rivalGapSparkline standings neighbors item =
             , laps = recentLapsByLap (Standings.getCarHistory entry.metadata.carNumber standings)
             }
 
-        aheadLine =
-            Maybe.map (toCarLine False) neighbors.ahead
+        aheadLines =
+            neighbors.ahead |> List.map (toCarLine False)
 
-        behindLine =
-            Maybe.map (toCarLine False) neighbors.behind
+        behindLines =
+            neighbors.behind |> List.map (toCarLine False)
 
         focusedLine =
             toCarLine True item
 
-        -- フィールド順(前車 → 対象車 → 後車). 隣が欠ける場合は除外される.
+        -- 表示は直近の前後1台ずつ＋対象車の3本(前車 → 対象車 → 後車). 隣が欠ければ除外.
         cars =
-            List.filterMap identity [ aheadLine, Just focusedLine, behindLine ]
+            List.filterMap identity [ List.head aheadLines, Just focusedLine, List.head behindLines ]
 
         -- 描画ガード用. 前後ライバルが両方欠けるカードはギャップ比較が成立しないため描かない.
         rivalLines =
-            List.filterMap identity [ aheadLine, behindLine ]
+            List.filterMap identity [ List.head aheadLines, List.head behindLines ]
 
-        -- 「ラップ番号 → 近傍3台(対象車を含む)の非ピット平均 elapsed」.
+        -- 基準母集団は前後2台ずつ＋対象車の最大5台. 表示3本とは分離する.
+        referenceCars =
+            aheadLines ++ focusedLine :: behindLines
+
+        -- 「ラップ番号 → 近傍最大5台(対象車を含む)の非ピット平均 elapsed」.
         referenceByLap =
-            groupReferenceByLap cars
+            groupReferenceByLap referenceCars
 
         gapSeries laps =
             laps
@@ -838,8 +848,9 @@ rivalGapSparkline standings neighbors item =
             text ""
 
 
-{-| 近傍グループ各車の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに
+{-| 基準母集団(最大5台)の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに
 累積タイムを平均した基準を返す. ピットラップを除くことで基準が跳ねるのを防ぐ.
+そのラップに非ピットラップを持つ車だけが平均に寄与する.
 -}
 groupReferenceByLap : List CarLine -> Dict Int Int
 groupReferenceByLap carLines =
