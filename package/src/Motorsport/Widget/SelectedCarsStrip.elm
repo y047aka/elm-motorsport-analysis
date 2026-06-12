@@ -144,8 +144,7 @@ type alias CarLine =
     }
 
 
-{-| スパークライン上の1点. `value` は縦軸に取る整数量で,
-ラップタイム(lapTimeSparkline)や基準からの相対ギャップ(rivalGapSparkline)を表す.
+{-| スパークライン上の1点. `value` は縦軸に取る整数量(基準からの相対ギャップなど).
 -}
 type alias LinePoint =
     { lap : Int
@@ -224,7 +223,6 @@ carCard { season, analysis } standings neighbors item =
                     , currentLapBlock analysis item
                     , lastLapBlock item
                     ]
-                , lapTimeSparkline standings item
                 , rivalGapSparkline standings neighbors item
                 ]
             ]
@@ -606,87 +604,6 @@ pieGap =
 
 
 
--- LAP TIME PROGRESSION (sparkline)
-
-
-{-| 対象車の直近ラップタイムの推移を小さな折れ線(スパークライン)で表示する.
-線・ドットともにマニュファクチャラー色で統一する. ライバルの重ね描きは情報過多に
-なるため行わない(前後関係は rivalGapSparkline が受け持つ).
-
-縦軸はレーシングラップの帯だけで張る. ピットイン・アウトラップなどの外れ値
-(Q3 + 1.5×IQR 超)はドットを描かず, 縦軸の帯外(枠外)へはみ出させてクリップする.
-折れ線自体は全ラップを繋いで描くため, 枠外へ伸びる線の角度から飛躍の大きさが読める.
-
--}
-lapTimeSparkline : Standings -> StandingsEntry -> Html msg
-lapTimeSparkline standings item =
-    let
-        focusedLine =
-            toCarLine standings True item
-
-        focusedLapNumbers =
-            focusedLine.laps |> List.map (.lap >> toFloat)
-
-        carsWithPoints =
-            [ { car = focusedLine
-              , points = focusedLine.laps |> List.map (\lap -> { lap = lap.lap, value = lap.time })
-              }
-            ]
-
-        allTimes =
-            carsWithPoints |> List.concatMap (.points >> List.map .value)
-
-        -- IQR による外れ値の上限フェンス. これを超えるラップ(主にピット系)は
-        -- レーシング帯から外れているとみなし, 表示領域の外へ追いやる.
-        upperFence =
-            iqrFences (List.sort allTimes)
-                |> Maybe.map .upper
-                |> Maybe.withDefault (List.maximum allTimes |> Maybe.withDefault 0)
-
-        inBand t =
-            t <= upperFence
-
-        bandTimes =
-            allTimes |> List.filter inBand
-    in
-    case focusedLapNumbers of
-        _ :: _ :: _ ->
-            let
-                ( minX, maxX ) =
-                    ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
-                    , List.maximum focusedLapNumbers |> Maybe.withDefault 1
-                    )
-
-                minY =
-                    List.minimum bandTimes |> Maybe.withDefault 0 |> toFloat
-
-                maxY =
-                    List.maximum bandTimes |> Maybe.withDefault 1 |> toFloat |> (\m -> max m (minY + 1))
-
-                yPad =
-                    (maxY - minY) * 0.1 + 1
-
-                xScale =
-                    Scale.linear ( sparklinePadX, sparklineWidth - sparklinePadX ) ( minX, maxX )
-
-                yScale =
-                    Scale.linear ( sparklineHeight - sparklinePadY, sparklinePadY ) ( minY - yPad, maxY + yPad )
-
-                cfg =
-                    { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
-            in
-            svg
-                [ SvgAttr.width "100%"
-                , SvgAttr.css [ Css.property "display" "block" ]
-                , viewBox 0 0 sparklineWidth sparklineHeight
-                ]
-                (List.map (sparkCarLine cfg) carsWithPoints)
-
-        _ ->
-            text ""
-
-
-
 -- RIVAL GAP (sparkline)
 
 
@@ -847,9 +764,9 @@ groupReferenceByLap carLines =
         |> Dict.map (\_ ( sum, count ) -> sum // count)
 
 
-{-| 1台分の折れ線＋終端ドットを描く. 縦軸の値は呼び出し側が `LinePoint` に詰めた
-ラップタイムまたは相対ギャップ. 終端ドットは最終点が帯内のときだけ描き, 枠外の
-ピットラップ上に浮くのを防ぐ. 対象車は太線＋不透明で強調する.
+{-| 1台分の折れ線＋終端ドットを描く. 縦軸の値は呼び出し側が `LinePoint` に詰める.
+終端ドットは最終点が帯内のときだけ描き, 枠外のピットラップ上に浮くのを防ぐ.
+対象車は太線＋不透明で強調する.
 -}
 sparkCarLine :
     { xScale : Scale.ContinuousScale Float
@@ -941,11 +858,6 @@ rivalSparkHeight =
 sparklineWidth : Float
 sparklineWidth =
     200
-
-
-sparklineHeight : Float
-sparklineHeight =
-    40
 
 
 sparklinePadX : Float
