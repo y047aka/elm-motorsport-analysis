@@ -6,12 +6,10 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
-import List.NonEmpty as NonEmpty
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
-import Motorsport.Widget.CloseBattles as CloseBattles
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
@@ -22,7 +20,6 @@ import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 type ActiveChart
     = TrackerChart
     | PositionProgressionChart
-    | CloseBattlesChart
 
 
 type alias Model =
@@ -103,7 +100,6 @@ viewChartTabs activeChart =
         ]
         [ chartTabButton "Tracker" TrackerChart (activeChart == TrackerChart)
         , chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
-        , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
         ]
 
 
@@ -144,25 +140,6 @@ viewActiveChart activeChart size props model =
                 props.clock
                 props.standings
                 selectedCars
-
-        CloseBattlesChart ->
-            selectedCars
-                |> List.sortBy .position
-                |> NonEmpty.fromList
-                |> Maybe.map
-                    (\cars ->
-                        let
-                            leader =
-                                NonEmpty.head cars
-                        in
-                        CloseBattles.closeBattleItem
-                            size
-                            props.standings
-                            { cars = cars
-                            , position = leader.position
-                            }
-                    )
-                |> Maybe.withDefault (text "")
 
 
 resolveCars : List String -> Standings -> List StandingsEntry
