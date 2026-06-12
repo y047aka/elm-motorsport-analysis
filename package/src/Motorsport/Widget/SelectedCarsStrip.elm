@@ -173,12 +173,16 @@ findNeighbors allCars item =
 
 
 {-| スパークライン1本分のデータ(色・対象車フラグ・直近ラップ列)を組み立てる.
+`currentLap` は対象車の現在ラップ. 全車をこのラップ起点の窓で切り出すことで,
+リタイア済み・大きく遅れた隣接車の古いラップが基準平均に混入するのを防ぐ.
 -}
-toCarLine : Standings -> Bool -> StandingsEntry -> CarLine
-toCarLine standings isFocused entry =
+toCarLine : Standings -> Int -> Bool -> StandingsEntry -> CarLine
+toCarLine standings currentLap isFocused entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , isFocused = isFocused
-    , laps = recentLapsByLap (Standings.getCarHistory entry.metadata.carNumber standings)
+    , laps =
+        Standings.getRecentLaps { count = 20, currentLap = currentLap }
+            (Standings.getCarHistory entry.metadata.carNumber standings)
     }
 
 
@@ -622,19 +626,27 @@ pieGap =
 縦軸はピット等の外れ値(両側 IQR)を除いた通常変動の帯だけで張り, 外れ値は枠外へ
 クリップする. 前後ライバルが両方欠けるカードは描画しない.
 
+ラップ列は対象車の現在ラップを起点に直近20ラップの窓で全車そろえて切り出す.
+基準・ギャップともラップ番号で突き合わせるため, 隣接車が対象車と同一周回にいる
+(クラス内隣接なら通常成り立つ)ことを前提とする. 周回遅れの隣接車は同一ラップ番号の
+累積タイム差が約1ラップ分となり, IQR の外れ値として帯の外へクリップされる.
+
 -}
 rivalGapSparkline : Standings -> Neighbors -> StandingsEntry -> Html msg
 rivalGapSparkline standings neighbors item =
     let
-        -- 各車の CarLine(全履歴ソートを含む)は一度だけ算出して使い回す.
+        -- 各車の CarLine は対象車の現在ラップを窓の起点として一度だけ算出して使い回す.
+        currentLap =
+            item.lapsCompleted
+
         aheadLines =
-            neighbors.ahead |> List.map (toCarLine standings False)
+            neighbors.ahead |> List.map (toCarLine standings currentLap False)
 
         behindLines =
-            neighbors.behind |> List.map (toCarLine standings False)
+            neighbors.behind |> List.map (toCarLine standings currentLap False)
 
         focusedLine =
-            toCarLine standings True item
+            toCarLine standings currentLap True item
 
         -- 表示は直近の前後1台ずつ＋対象車の3本(前車 → 対象車 → 後車). 隣が欠ければ除外.
         cars =
@@ -837,17 +849,6 @@ sparkCarLine { xScale, yScale, minX, maxX, inBand } { car, points } =
             ]
         , lastDot
         ]
-
-
-{-| ラップ履歴を昇順にそろえ, 直近20ラップだけを取り出す.
--}
-recentLapsByLap : List Lap -> List Lap
-recentLapsByLap laps =
-    laps
-        |> List.sortBy .lap
-        |> List.reverse
-        |> List.take 20
-        |> List.reverse
 
 
 rivalSparkHeight : Float
