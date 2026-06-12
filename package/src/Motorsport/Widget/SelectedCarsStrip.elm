@@ -8,7 +8,7 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 -}
 
 import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
-import Dict
+import Dict exposing (Dict)
 import Html.Styled exposing (Html, button, div, img, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, src)
 import Html.Styled.Events exposing (onClick)
@@ -130,6 +130,23 @@ emptyState =
 type alias Neighbors =
     { ahead : Maybe StandingsEntry
     , behind : Maybe StandingsEntry
+    }
+
+
+{-| rivalGapSparkline 用の1台分のデータ(色・対象車フラグ・直近ラップ列).
+-}
+type alias CarLine =
+    { color : Css.Color
+    , isFocused : Bool
+    , laps : List Lap
+    }
+
+
+{-| あるラップでの基準(ライバル平均)からの相対ギャップ.
+-}
+type alias GapPoint =
+    { lap : Int
+    , gap : Int
     }
 
 
@@ -614,10 +631,8 @@ lapTimeSparkline color laps =
                 -- IQR による外れ値の上限フェンス. これを超えるラップ(主にピット系)は
                 -- レーシング帯から外れているとみなし, 表示領域の外へ追いやる.
                 upperFence =
-                    Maybe.map2
-                        (\q1 q3 -> q3 + round (1.5 * toFloat (q3 - q1)))
-                        (quantile 0.25 sortedTimes)
-                        (quantile 0.75 sortedTimes)
+                    iqrFences sortedTimes
+                        |> Maybe.map .upper
                         |> Maybe.withDefault (List.maximum sortedTimes |> Maybe.withDefault 0)
 
                 bandTimes =
@@ -693,15 +708,17 @@ lapTimeSparkline color laps =
 -- RIVAL GAP (sparkline)
 
 
-{-| 前後のライバルとの位置関係を, 近傍3台(対象車＋前後車)のラップ平均を基準(中央の
+{-| 前後のライバルとの位置関係を, 近傍3台(対象車を含む前後車)のラップ平均を基準(中央の
 0ライン=点線)にした相対ギャップの推移で表示する. 各ラップ番号での
 `各車の累積タイム − グループ平均の累積タイム` をギャップとし, 対象車・前車・後車を
 マニュファクチャラー色の折れ線で描く. 対象車だけは太線＋不透明で強調する.
 
-基準を固定値(対象車そのもの)ではなくグループ平均にすることで, 対象車自身のペース
-変動も0ラインからの離れ方として読み取れる. 線が上がれば(累積タイムが平均より小さい=)
-相対的に速く先行, 下がれば相対的に遅く後退していることを表す. クラス先頭/最後尾で隣が
-欠ける場合は, 存在する車だけで平均を取る.
+線の傾きが相対ペース, レベルが相対順位を表し, 上がれば(累積タイムが基準より小さい=)
+相対的にリードを広げ, 下がれば縮めたことを示す.
+
+基準は各車の非ピットラップ(pitTime なし)だけで平均し, ピットによる基準の跳ねを防ぐ.
+縦軸はピット等の外れ値(両側 IQR)を除いた通常変動の帯だけで張り, 外れ値は枠外へ
+クリップする. 前後ライバルが両方欠けるカードは描画しない.
 
 -}
 rivalGapSparkline : Standings -> Neighbors -> StandingsEntry -> Html msg
@@ -713,35 +730,26 @@ rivalGapSparkline standings neighbors item =
             , laps = recentLapsByLap (Standings.getCarHistory entry.metadata.carNumber standings)
             }
 
+        aheadLine =
+            Maybe.map (toCarLine False) neighbors.ahead
+
+        behindLine =
+            Maybe.map (toCarLine False) neighbors.behind
+
         focusedLine =
             toCarLine True item
 
         -- フィールド順(前車 → 対象車 → 後車). 隣が欠ける場合は除外される.
         cars =
-            List.filterMap identity
-                [ Maybe.map (toCarLine False) neighbors.ahead
-                , Just focusedLine
-                , Maybe.map (toCarLine False) neighbors.behind
-                ]
+            List.filterMap identity [ aheadLine, Just focusedLine, behindLine ]
 
-        -- 近傍グループの「ラップ番号 → 平均累積タイム」. そのラップに存在する車だけで平均する.
+        -- 描画ガード用. 前後ライバルが両方欠けるカードはギャップ比較が成立しないため描かない.
+        rivalLines =
+            List.filterMap identity [ aheadLine, behindLine ]
+
+        -- 「ラップ番号 → 近傍3台(対象車を含む)の非ピット平均 elapsed」.
         referenceByLap =
-            cars
-                |> List.concatMap .laps
-                |> List.foldl
-                    (\lap ->
-                        Dict.update lap.lap
-                            (\existing ->
-                                case existing of
-                                    Just ( sum, count ) ->
-                                        Just ( sum + lap.elapsed, count + 1 )
-
-                                    Nothing ->
-                                        Just ( lap.elapsed, 1 )
-                            )
-                    )
-                    Dict.empty
-                |> Dict.map (\_ ( sum, count ) -> sum // count)
+            groupReferenceByLap cars
 
         gapSeries laps =
             laps
@@ -751,96 +759,62 @@ rivalGapSparkline standings neighbors item =
                             |> Maybe.map (\ref -> { lap = lap.lap, gap = lap.elapsed - ref })
                     )
 
+        -- 各車のギャップ点列を一度だけ算出して保持する(縦軸計算と描画で共用).
+        carsWithGaps =
+            cars |> List.map (\car -> { car = car, points = gapSeries car.laps })
+
         focusedLapNumbers =
             focusedLine.laps |> List.map (.lap >> toFloat)
 
         allGaps =
-            cars |> List.concatMap (.laps >> gapSeries >> List.map (.gap >> toFloat))
+            carsWithGaps |> List.concatMap (.points >> List.map .gap)
+
+        -- ピット等の外れ値(両側)を IQR で除いた「通常変動の帯」. これで縦軸を張り,
+        -- 外れ値の点は枠外へはみ出してクリップさせる(線は繋がるので飛躍は角度で読める).
+        fences =
+            iqrFences (List.sort allGaps)
+
+        inBand gap =
+            case fences of
+                Just { lower, upper } ->
+                    lower <= gap && gap <= upper
+
+                Nothing ->
+                    True
+
+        bandGaps =
+            allGaps |> List.filter inBand
     in
-    case ( focusedLapNumbers, cars ) of
-        ( _ :: _ :: _, _ :: _ :: _ ) ->
+    case ( focusedLapNumbers, rivalLines, Dict.isEmpty referenceByLap ) of
+        ( _ :: _ :: _, _ :: _, False ) ->
             let
                 ( minX, maxX ) =
                     ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
                     , List.maximum focusedLapNumbers |> Maybe.withDefault 1
                     )
 
-                -- 0(グループ平均)を必ず含めてレンジを張る.
+                -- 0(ライバル平均ペース)を必ず含めてレンジを張る.
                 minGap =
-                    List.minimum (0 :: allGaps) |> Maybe.withDefault 0
+                    List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
 
                 maxGap =
-                    List.maximum (0 :: allGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
+                    List.maximum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
 
                 yPad =
-                    (maxGap - minGap) * 0.15 + 200
+                    (maxGap - minGap) * 0.15 + 50
 
                 xScale =
                     Scale.linear ( sparklinePadX, sparklineWidth - sparklinePadX ) ( minX, maxX )
 
-                -- 平均より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
+                -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
                 yScale =
                     Scale.linear ( sparklinePadY, rivalSparkHeight - sparklinePadY ) ( minGap - yPad, maxGap + yPad )
 
                 zeroY =
                     Scale.convert yScale 0
 
-                carLine car =
-                    let
-                        dataPoints =
-                            gapSeries car.laps
-                                |> List.filter (\{ lap } -> minX <= toFloat lap && toFloat lap <= maxX)
-                                |> List.map
-                                    (\{ lap, gap } ->
-                                        Just
-                                            ( Scale.convert xScale (toFloat lap)
-                                            , Scale.convert yScale (toFloat gap)
-                                            )
-                                    )
-
-                        lastDot =
-                            dataPoints
-                                |> List.filterMap identity
-                                |> List.Extra.last
-                                |> Maybe.map
-                                    (\( x, y ) ->
-                                        circle
-                                            [ InPx.cx x
-                                            , InPx.cy y
-                                            , InPx.r
-                                                (if car.isFocused then
-                                                    2.2
-
-                                                 else
-                                                    1.8
-                                                )
-                                            , SvgAttr.css [ Css.fill car.color ]
-                                            ]
-                                            []
-                                    )
-                                |> Maybe.withDefault (text "")
-                    in
-                    g []
-                        [ Path.element (Shape.line Shape.linearCurve dataPoints)
-                            [ SvgAttr.stroke car.color.value
-                            , SvgAttr.strokeWidth
-                                (if car.isFocused then
-                                    "2"
-
-                                 else
-                                    "1.5"
-                                )
-                            , SvgAttr.strokeOpacity
-                                (if car.isFocused then
-                                    "1"
-
-                                 else
-                                    "0.5"
-                                )
-                            , SvgAttr.fill "none"
-                            ]
-                        , lastDot
-                        ]
+                cfg =
+                    { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
             in
             svg
                 [ SvgAttr.width "100%"
@@ -857,11 +831,109 @@ rivalGapSparkline standings neighbors item =
                     , SvgAttr.strokeDasharray "2 2"
                     ]
                     []
-                    :: List.map carLine cars
+                    :: List.map (rivalCarLine cfg) carsWithGaps
                 )
 
         _ ->
             text ""
+
+
+{-| 近傍グループ各車の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに
+累積タイムを平均した基準を返す. ピットラップを除くことで基準が跳ねるのを防ぐ.
+-}
+groupReferenceByLap : List CarLine -> Dict Int Int
+groupReferenceByLap carLines =
+    carLines
+        |> List.concatMap .laps
+        |> List.filter (\lap -> lap.pitTime == Nothing)
+        |> List.foldl
+            (\lap ->
+                Dict.update lap.lap
+                    (\existing ->
+                        case existing of
+                            Just ( sum, count ) ->
+                                Just ( sum + lap.elapsed, count + 1 )
+
+                            Nothing ->
+                                Just ( lap.elapsed, 1 )
+                    )
+            )
+            Dict.empty
+        |> Dict.map (\_ ( sum, count ) -> sum // count)
+
+
+{-| 1台分のギャップ折れ線＋終端ドットを描く. 終端ドットは最終点が帯内のときだけ描き,
+枠外のピットラップ上に浮くのを防ぐ. 対象車は太線＋不透明で強調する.
+-}
+rivalCarLine :
+    { xScale : Scale.ContinuousScale Float
+    , yScale : Scale.ContinuousScale Float
+    , minX : Float
+    , maxX : Float
+    , inBand : Int -> Bool
+    }
+    -> { car : CarLine, points : List GapPoint }
+    -> Svg msg
+rivalCarLine { xScale, yScale, minX, maxX, inBand } { car, points } =
+    let
+        visible =
+            points |> List.filter (\{ lap } -> minX <= toFloat lap && toFloat lap <= maxX)
+
+        dataPoints =
+            visible
+                |> List.map
+                    (\{ lap, gap } ->
+                        Just
+                            ( Scale.convert xScale (toFloat lap)
+                            , Scale.convert yScale (toFloat gap)
+                            )
+                    )
+
+        lastDot =
+            case List.Extra.last visible of
+                Just { lap, gap } ->
+                    if inBand gap then
+                        circle
+                            [ InPx.cx (Scale.convert xScale (toFloat lap))
+                            , InPx.cy (Scale.convert yScale (toFloat gap))
+                            , InPx.r
+                                (if car.isFocused then
+                                    2.2
+
+                                 else
+                                    1.8
+                                )
+                            , SvgAttr.css [ Css.fill car.color ]
+                            ]
+                            []
+
+                    else
+                        text ""
+
+                Nothing ->
+                    text ""
+    in
+    g []
+        [ Path.element (Shape.line Shape.linearCurve dataPoints)
+            [ SvgAttr.stroke car.color.value
+            , SvgAttr.strokeWidth
+                (if car.isFocused then
+                    "2"
+
+                 else
+                    "1.5"
+                )
+            , SvgAttr.strokeOpacity
+                (if car.isFocused then
+                    "1"
+
+                 else
+                    "0.5"
+                )
+            , SvgAttr.fill "none"
+            ]
+        , lastDot
+        ]
 
 
 {-| ラップ履歴を昇順にそろえ, 直近20ラップだけを取り出す.
@@ -917,6 +989,23 @@ quantile q sorted =
                 clamp 0 (n - 1) (floor (toFloat (n - 1) * q))
         in
         sorted |> List.drop idx |> List.head
+
+
+{-| 昇順ソート済みリストの IQR 外れ値フェンス `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]`.
+要素が空のときは `Nothing`.
+-}
+iqrFences : List Int -> Maybe { lower : Int, upper : Int }
+iqrFences sorted =
+    Maybe.map2
+        (\q1 q3 ->
+            let
+                margin =
+                    round (1.5 * toFloat (q3 - q1))
+            in
+            { lower = q1 - margin, upper = q3 + margin }
+        )
+        (quantile 0.25 sorted)
+        (quantile 0.75 sorted)
 
 
 labelText : String -> Html msg
