@@ -6,8 +6,8 @@ mod Motorsport.Wec {
     use Util.Duration.Duration
     use Util.HourClock
     use Util.HourClock.Hour
-    use Util.Json
-    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Util.Json.Encode
+    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
 
@@ -129,7 +129,7 @@ mod Motorsport.Wec {
             |> Decode.pipeline(flagField("FLAG_AT_FL"))
             |> Decode.pipeline(miniSectorsDecoder())
 
-    pub def toJson(rawLap: RawLap): Json.JsonValue =
+    pub def toJson(rawLap: RawLap): Encode.JsonValue =
         let baseFields =
             ("carNumber",               JsonString(rawLap#car#carNumber)) ::
             ("driverNumber",            JsonInt(rawLap#driver#number)) ::
@@ -325,7 +325,7 @@ mod Motorsport.Wec {
             case Flag.Red              => "RF"
         }
 
-    def optionalDurationJson(d: Option[Duration]): Json.JsonValue =
+    def optionalDurationJson(d: Option[Duration]): Encode.JsonValue =
         match d {
             case Some(ms) => JsonString(Util.Duration.format(ms))
             case None     => JsonString("")
@@ -362,7 +362,7 @@ mod Motorsport.Wec {
         );
         if (hasAny) Some(list) else None
 
-    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Json.JsonValue =
+    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
         let entries = list |> List.filterMap(match (id, sector) ->
             if (sector#time == None and sector#elapsed == None)
                 None
@@ -371,7 +371,7 @@ mod Motorsport.Wec {
         );
         JsonObject(entries)
 
-    def miniSectorToJson(sector: RawMiniSector): Json.JsonValue =
+    def miniSectorToJson(sector: RawMiniSector): Encode.JsonValue =
         JsonObject(
             ("time",    optionalDurationJson(sector#time)) ::
             ("elapsed", optionalDurationJson(sector#elapsed)) ::

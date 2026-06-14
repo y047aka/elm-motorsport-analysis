@@ -1,8 +1,8 @@
 mod Motorsport.Metadata {
 
     use Util.Duration.Duration
-    use Util.Json
-    use Util.Json.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Util.Json.Encode
+    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
     use Motorsport.Events
     use Motorsport.Wec.RawLap
@@ -85,21 +85,21 @@ mod Motorsport.Metadata {
             { position = pos, car = b#car }
         )
 
-    pub def toJson(meta: Metadata): Json.JsonValue =
+    pub def toJson(meta: Metadata): Encode.JsonValue =
         JsonObject(
             ("name",         JsonString(meta#name)) ::
             ("startingGrid", JsonArray(meta#startingGrid |> List.map(toGridEntryJson))) ::
             Nil
         )
 
-    def toGridEntryJson(entry: StartingGrid): Json.JsonValue =
+    def toGridEntryJson(entry: StartingGrid): Encode.JsonValue =
         JsonObject(
             ("position", JsonInt(entry#position)) ::
             ("car",      carToJson(entry#car)) ::
             Nil
         )
 
-    def carToJson(car: Car): Json.JsonValue =
+    def carToJson(car: Car): Encode.JsonValue =
         JsonObject(
             ("carNumber",    JsonString(car#carNumber)) ::
             ("drivers",      JsonArray(car#drivers |> List.map(driverToJson))) ::
@@ -110,7 +110,7 @@ mod Motorsport.Metadata {
             Nil
         )
 
-    def driverToJson(name: String): Json.JsonValue =
+    def driverToJson(name: String): Encode.JsonValue =
         JsonObject(("name", JsonString(name)) :: Nil)
 
 }
