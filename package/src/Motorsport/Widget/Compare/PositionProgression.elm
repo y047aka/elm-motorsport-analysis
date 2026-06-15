@@ -6,6 +6,7 @@ import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
+import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
@@ -21,9 +22,9 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
-view size clock standings selectedCars =
-    case buildClassProgressionData clock standings selectedCars of
+view : { width : Float, height : Float } -> Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Html msg
+view size clock standings target =
+    case buildClassProgressionData clock standings target of
         Ok series ->
             positionProgressionChart size series
 
@@ -31,19 +32,16 @@ view size clock standings selectedCars =
             Widget.emptyState message
 
 
-buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String (List PositionSeries)
-buildClassProgressionData clock standings selectedCars =
+buildClassProgressionData : Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
+buildClassProgressionData clock standings { class, highlighted } =
     let
         lapThreshold =
             calculateLapThreshold clock standings
 
-        selectedCarNumbers =
-            selectedCars |> List.map (.metadata >> .carNumber)
-
         classCars : List StandingsEntry
         classCars =
             Standings.toClassList standings
-                |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
+                |> List.Extra.find (\( class_, _ ) -> class_ == class)
                 |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
 
@@ -51,13 +49,9 @@ buildClassProgressionData clock standings selectedCars =
             classCars
                 |> List.map
                     (\item ->
-                        let
-                            carNumber =
-                                item.metadata.carNumber
-                        in
                         { points = buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) item
                         , color = Manufacturer.toColorWithFallback item.metadata
-                        , isSelected = List.member carNumber selectedCarNumbers
+                        , isSelected = List.member item.metadata.carNumber highlighted
                         }
                     )
                 |> List.filter (\item -> List.length item.points >= 2)

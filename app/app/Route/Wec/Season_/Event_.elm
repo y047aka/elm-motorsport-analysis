@@ -11,6 +11,7 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, button, div, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
@@ -75,8 +76,8 @@ type alias Model =
     , leaderboardState : Leaderboard.Model
     , eventsState : DataView.Model
     , query : String
-    , compare : CompareWidget.Model
     , stripOffset : Int
+    , detailCarNumbers : List String
     }
 
 
@@ -103,8 +104,8 @@ init app shared =
                        )
                 )
       , query = ""
-      , compare = CompareWidget.init
       , stripOffset = 0
+      , detailCarNumbers = []
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -125,8 +126,9 @@ type Msg
     | RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
-    | CompareWidgetMsg CompareWidget.Msg
     | StripScrollTo Int
+    | ShowCarDetail String
+    | ToggleDetailCar String
 
 
 update :
@@ -164,14 +166,24 @@ update app shared msg m =
             , Nothing
             )
 
-        CompareWidgetMsg compareMsg ->
-            ( { m | compare = CompareWidget.update compareMsg m.compare }
-            , Effect.none
-            , Nothing
-            )
-
         StripScrollTo offset ->
             ( { m | stripOffset = max 0 offset }, Effect.none, Nothing )
+
+        ShowCarDetail carNumber ->
+            -- standings 行クリックでモーダルを開く起点. 選択をこの1台にリセットする.
+            ( { m | detailCarNumbers = [ carNumber ] }, Effect.none, Nothing )
+
+        ToggleDetailCar carNumber ->
+            -- モーダル内セレクタ. 最大3台までトグル選択する.
+            let
+                next =
+                    if List.member carNumber m.detailCarNumbers then
+                        List.filter ((/=) carNumber) m.detailCarNumbers
+
+                    else
+                        List.take 3 (m.detailCarNumbers ++ [ carNumber ])
+            in
+            ( { m | detailCarNumbers = next }, Effect.none, Nothing )
 
 
 
@@ -246,13 +258,6 @@ view app { eventSummary, analysis, raceControl } m =
                             , lapCount = raceControl.lapCount
                             , cars = raceControl.cars
                             }
-
-                    compareProps =
-                        { eventSummary = eventSummary
-                        , standings = standings
-                        , clock = raceControl.clock
-                        , analysis = analysis
-                        }
                   in
                   case m.mode of
                     Tracker ->
@@ -279,7 +284,8 @@ view app { eventSummary, analysis, raceControl } m =
                                 [ LiveStandingsWidget.view
                                     { eventSummary = eventSummary
                                     , standings = standings
-                                    , onSelectCar = (\item -> CompareWidget.ToggleCar item.metadata.carNumber) >> CompareWidgetMsg
+                                    , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
+                                    , popoverTarget = carDetailPopoverId
                                     }
                                 ]
                             , div
@@ -287,8 +293,18 @@ view app { eventSummary, analysis, raceControl } m =
                                 , css [ property "grid-column" "2" ]
                                 ]
                                 [ div [ Attributes.class "card-body p-3" ]
-                                    [ Html.map CompareWidgetMsg <|
-                                        CompareWidget.viewCharts { width = 870, height = 200 } compareProps m.compare
+                                    [ div
+                                        [ css
+                                            [ property "height" "100%"
+                                            , property "display" "grid"
+                                            , property "place-items" "center"
+                                            ]
+                                        ]
+                                        [ TrackerChart.view
+                                            { season = eventSummary.season, eventName = eventSummary.name }
+                                            analysis
+                                            standings
+                                        ]
                                     ]
                                 ]
                             , div
@@ -305,6 +321,10 @@ view app { eventSummary, analysis, raceControl } m =
                                     }
                                     standings
                                 ]
+                            , carDetailPopover
+                                { season = eventSummary.season, clock = raceControl.clock }
+                                standings
+                                m.detailCarNumbers
                             ]
 
                     Events ->
@@ -312,6 +332,65 @@ view app { eventSummary, analysis, raceControl } m =
                 ]
             ]
         }
+
+
+carDetailPopoverId : String
+carDetailPopoverId =
+    "car-detail-popover"
+
+
+{-| 車両詳細のポップオーバー. 行クリック時に popovertarget で開けるよう常にレンダリング
+しておき, 中身だけを選択中の車両から構築する(開いている間もライブ更新される).
+`popover="auto"` によりライトディスミス(外側クリック・Esc)で閉じる.
+-}
+carDetailPopover : { season : Int, clock : Clock.Model } -> Standings.Standings -> List String -> Html Msg
+carDetailPopover config standings detailCarNumbers =
+    Html.node "div"
+        [ Attributes.id carDetailPopoverId
+        , attribute "popover" "auto"
+
+        -- daisyUI の modal-box でスタイリングする. modal-box は display を指定しないため,
+        -- UA の「閉じた popover は display:none」がそのまま効く.
+        , Attributes.class "modal-box"
+        , css
+            [ -- Tailwind preflight が UA の margin:auto を打ち消すため明示して中央配置する
+              property "margin" "auto"
+            , property "max-width" "min(90vw, 1200px)"
+
+            -- ガラス風(グラスモーフィズム): 半透明背景 + 背景ぼかし + 縁取り.
+            , property "background-color" "oklch(50% 0 0 / 0.04)"
+            , property "backdrop-filter" "blur(16px)"
+            , property "-webkit-backdrop-filter" "blur(16px)"
+            , property "border" "1px solid oklch(100% 0 0 / 0.1)"
+            , property "box-shadow" "0 0 80px oklch(0% 0 0 / 0.8)"
+
+            -- .modal-box は .modal 配下で開かれることを前提に opacity/scale を畳んでいるため,
+            -- popover の開状態で展開する.
+            , Css.pseudoClass "popover-open"
+                [ property "opacity" "1"
+                , property "scale" "1"
+                ]
+            , Css.pseudoElement "backdrop"
+                [ property "background-color" "oklch(0% 0 0 / 0.1)" ]
+            ]
+        ]
+        (case detailCarNumbers of
+            [] ->
+                []
+
+            _ ->
+                [ button
+                    [ attribute "popovertarget" carDetailPopoverId
+                    , attribute "popovertargetaction" "hide"
+                    , Attributes.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+                    ]
+                    [ text "✕" ]
+                , CompareWidget.viewComparison
+                    { season = config.season, clock = config.clock, onToggleCar = ToggleDetailCar }
+                    standings
+                    detailCarNumbers
+                ]
+        )
 
 
 navigation : EventSummary -> RaceControl.Model -> Mode -> Html Msg
