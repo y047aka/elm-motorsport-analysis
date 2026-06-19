@@ -11,6 +11,7 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, button, div, input, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
@@ -322,7 +323,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     standings
                                 ]
                             , carDetailPopover
-                                { season = eventSummary.season, clock = raceControl.clock }
+                                { season = eventSummary.season, analysis = analysis, clock = raceControl.clock }
                                 standings
                                 m.detailCarNumbers
                             ]
@@ -343,7 +344,7 @@ carDetailPopoverId =
 しておき, 中身だけを選択中の車両から構築する(開いている間もライブ更新される).
 `popover="auto"` によりライトディスミス(外側クリック・Esc)で閉じる.
 -}
-carDetailPopover : { season : Int, clock : Clock.Model } -> Standings.Standings -> List String -> Html Msg
+carDetailPopover : { season : Int, analysis : Analysis, clock : Clock.Model } -> Standings.Standings -> List String -> Html Msg
 carDetailPopover config standings detailCarNumbers =
     Html.node "div"
         [ Attributes.id carDetailPopoverId
@@ -358,11 +359,12 @@ carDetailPopover config standings detailCarNumbers =
             , property "max-width" "min(90vw, 1200px)"
 
             -- ガラス風(グラスモーフィズム): 半透明背景 + 背景ぼかし + 縁取り.
-            , property "background-color" "oklch(50% 0 0 / 0.04)"
+            -- 配色は app 側の DaisyUI テーマトークン(--glass-*)で管理する.
+            , property "background-color" "var(--glass-bg)"
             , property "backdrop-filter" "blur(16px)"
             , property "-webkit-backdrop-filter" "blur(16px)"
-            , property "border" "1px solid oklch(100% 0 0 / 0.1)"
-            , property "box-shadow" "0 0 80px oklch(0% 0 0 / 0.8)"
+            , property "border" "1px solid var(--glass-border)"
+            , property "box-shadow" "0 0 80px var(--glass-shadow)"
 
             -- .modal-box は .modal 配下で開かれることを前提に opacity/scale を畳んでいるため,
             -- popover の開状態で展開する.
@@ -371,7 +373,7 @@ carDetailPopover config standings detailCarNumbers =
                 , property "scale" "1"
                 ]
             , Css.pseudoElement "backdrop"
-                [ property "background-color" "oklch(0% 0 0 / 0.1)" ]
+                [ property "background-color" "var(--glass-backdrop)" ]
             ]
         ]
         (case detailCarNumbers of
@@ -386,7 +388,7 @@ carDetailPopover config standings detailCarNumbers =
                     ]
                     [ text "✕" ]
                 , CompareWidget.viewComparison
-                    { season = config.season, clock = config.clock, onToggleCar = ToggleDetailCar }
+                    { season = config.season, analysis = config.analysis, clock = config.clock, onToggleCar = ToggleDetailCar }
                     standings
                     detailCarNumbers
                 ]

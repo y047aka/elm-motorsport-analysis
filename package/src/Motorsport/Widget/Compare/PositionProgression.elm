@@ -1,4 +1,4 @@
-module Motorsport.Widget.Compare.PositionProgression exposing (view)
+module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
 import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
@@ -32,29 +32,54 @@ view size clock standings target =
             Widget.emptyState message
 
 
-buildClassProgressionData : Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
-buildClassProgressionData clock standings { class, highlighted } =
+{-| ポジション履歴チャートが現在描いているラップ番号の範囲 `(minLap, maxLap)`.
+スパークラインを同じ範囲(X軸)で描くために共有する. 表示対象が無いときは `Nothing`.
+チャート本体と同じ閾値(直近3時間相当)・同じポイント抽出条件で算出する.
+-}
+lapRange : Clock.Model -> Standings -> Class -> Maybe ( Int, Int )
+lapRange clock standings class =
+    let
+        lapNumbers =
+            classPositionPoints clock standings class
+                |> List.concatMap (Tuple.second >> List.map .lapNumber)
+    in
+    Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
+
+
+classCarsOf : Standings -> Class -> List StandingsEntry
+classCarsOf standings class =
+    Standings.toClassList standings
+        |> List.Extra.find (\( class_, _ ) -> class_ == class)
+        |> Maybe.map Tuple.second
+        |> Maybe.withDefault []
+
+
+{-| クラス内各車の「閾値以降の position points」を組み, 2点以上ある車だけを残す.
+チャート本体と lapRange の X 軸を揃えるため, ポイント抽出条件をここに一本化する.
+-}
+classPositionPoints : Clock.Model -> Standings -> Class -> List ( StandingsEntry, List PositionPoint )
+classPositionPoints clock standings class =
     let
         lapThreshold =
             calculateLapThreshold clock standings
+    in
+    classCarsOf standings class
+        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) ))
+        |> List.filter (\( _, points ) -> List.length points >= 2)
 
-        classCars : List StandingsEntry
-        classCars =
-            Standings.toClassList standings
-                |> List.Extra.find (\( class_, _ ) -> class_ == class)
-                |> Maybe.map Tuple.second
-                |> Maybe.withDefault []
 
+buildClassProgressionData : Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
+buildClassProgressionData clock standings { class, highlighted } =
+    let
         series =
-            classCars
+            classPositionPoints clock standings class
                 |> List.map
-                    (\item ->
-                        { points = buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) item
+                    (\( item, points ) ->
+                        { points = points
                         , color = Manufacturer.toColorWithFallback item.metadata
                         , isSelected = List.member item.metadata.carNumber highlighted
                         }
                     )
-                |> List.filter (\item -> List.length item.points >= 2)
     in
     if List.isEmpty series then
         Err "Lap chart will appear as more laps are completed."
@@ -130,8 +155,8 @@ positionProgressionChart size series =
         )
 
 
-buildPositionPoints : Int -> List Lap -> StandingsEntry -> List PositionPoint
-buildPositionPoints lapThreshold history item =
+buildPositionPoints : Int -> List Lap -> List PositionPoint
+buildPositionPoints lapThreshold history =
     history
         |> List.filter (\lap -> lap.lap >= lapThreshold)
         |> List.filterMap
@@ -259,7 +284,7 @@ xAxis size positions =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 11)
+                    , Css.fontSize (Css.px 9)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"
@@ -308,7 +333,7 @@ yAxis size positions =
             [ descendants
                 [ Css.Global.typeSelector "text"
                     [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 11)
+                    , Css.fontSize (Css.px 9)
                     ]
                 , each
                     [ Css.Global.typeSelector "line"

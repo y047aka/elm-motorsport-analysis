@@ -7,29 +7,23 @@ module Motorsport.Widget.SelectedCarsStrip exposing (view)
 
 -}
 
-import Css exposing (backgroundColor, batch, before, num, opacity, property, qt)
-import Dict exposing (Dict)
-import Html.Styled exposing (Html, button, div, img, text)
-import Html.Styled.Attributes as Attributes exposing (class, css, src)
+import Css exposing (backgroundColor, before, num, opacity, property, qt)
+import Dict
+import Html.Styled exposing (Html, button, div, text)
+import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Car as Car exposing (Status(..))
+import Motorsport.Car exposing (Status(..))
 import Motorsport.Class as Class
-import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Gap as Gap
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
-import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings as Standings exposing (SectorProgress, Standings, StandingsEntry)
-import Path.Styled as Path
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.Widget.CarStatus as CarStatus
+import Motorsport.Widget.Sparkline as Sparkline
 import Scale
-import Shape
-import Svg.Styled exposing (Svg, circle, g, svg)
+import Svg.Styled exposing (svg)
 import Svg.Styled.Attributes as SvgAttr
 import TypedSvg.Styled.Attributes exposing (viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
@@ -135,23 +129,6 @@ type alias Neighbors =
     }
 
 
-{-| rivalGapSparkline 用の1台分のデータ(色・対象車フラグ・直近ラップ列).
--}
-type alias CarLine =
-    { color : Css.Color
-    , isFocused : Bool
-    , laps : List Lap
-    }
-
-
-{-| スパークライン上の1点. `value` は縦軸に取る整数量(基準からの相対ギャップなど).
--}
-type alias LinePoint =
-    { lap : Int
-    , value : Int
-    }
-
-
 {-| 同一クラス内の順位で `item` の前後に位置するクルマを最大2台ずつ取り出す.
 総合順位リストはクラスでフィルタしても順序が保たれるため, そのままクラス内順位になる.
 クラス端では取れる台数だけ返す(範囲外インデックスは除外される).
@@ -170,20 +147,6 @@ findNeighbors allCars item =
 
         Nothing ->
             { ahead = [], behind = [] }
-
-
-{-| スパークライン1本分のデータ(色・対象車フラグ・直近ラップ列)を組み立てる.
-`currentLap` は対象車の現在ラップ. 全車をこのラップ起点の窓で切り出すことで,
-リタイア済み・大きく遅れた隣接車の古いラップが基準平均に混入するのを防ぐ.
--}
-toCarLine : Standings -> Int -> Bool -> StandingsEntry -> CarLine
-toCarLine standings currentLap isFocused entry =
-    { color = Manufacturer.toColorWithFallback entry.metadata
-    , isFocused = isFocused
-    , laps =
-        Standings.getRecentLaps { count = 20, currentLap = currentLap }
-            (Standings.getCarHistory entry.metadata.carNumber standings)
-    }
 
 
 carCard : { season : Int, analysis : Analysis } -> Standings -> Neighbors -> StandingsEntry -> Html msg
@@ -215,18 +178,7 @@ carCard { season, analysis } standings neighbors item =
                     ]
                 ]
                 [ cardHeader item
-                , div
-                    [ css
-                        [ property "display" "grid"
-                        , property "grid-template-columns" "auto 1fr 1fr"
-                        , property "align-items" "center"
-                        , property "column-gap" "8px"
-                        ]
-                    ]
-                    [ currentSectorPie analysis item
-                    , currentLapBlock analysis item
-                    , lastLapBlock item
-                    ]
+                , CarStatus.sectorAndLaps analysis item
                 , rivalGapSparkline standings neighbors item
                 ]
             ]
@@ -243,7 +195,7 @@ cardHeader item =
             , property "column-gap" "8px"
             ]
         ]
-        [ carNumberBadge item
+        [ CarStatus.carNumberBadge item
         , div
             [ css
                 [ property "font-size" "12px"
@@ -290,51 +242,6 @@ statusBadge status =
 
         _ ->
             text ""
-
-
-carNumberBadge : StandingsEntry -> Html msg
-carNumberBadge item =
-    let
-        manufacturerColor =
-            Manufacturer.toColor item.metadata.manufacturer
-    in
-    div
-        [ class "stat p-1 place-items-center gap-1.5 rounded"
-        , css
-            [ property "width" "35px"
-            , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h)")
-            , property "border" "none"
-            ]
-        ]
-        [ manufacturerLogo item.metadata.manufacturer
-        , div [ class "stat-value text-xs leading-none" ]
-            [ text item.metadata.carNumber ]
-        ]
-
-
-manufacturerLogo : Manufacturer.Manufacturer -> Html msg
-manufacturerLogo manufacturer =
-    case Manufacturer.toLogoUrl manufacturer of
-        Just url ->
-            img
-                [ src url
-                , css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    , property "object-fit" "contain"
-                    , property "opacity" "0.9"
-                    ]
-                ]
-                []
-
-        Nothing ->
-            div
-                [ css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    ]
-                ]
-                []
 
 
 positionLabel : Int -> StandingsEntry -> Html msg
@@ -391,222 +298,6 @@ gapCell label gap =
         ]
 
 
-{-| Current ラップ: 進行中のラップタイムと, 各セクターの進捗(進行中)/成績(確定)を
-横3分割のバーで表示する. Retired や計測前は "-" を出す.
--}
-currentLapBlock : Analysis -> StandingsEntry -> Html msg
-currentLapBlock analysis item =
-    lapBlock "Current" (currentLapTimeCell analysis item)
-
-
-{-| Last ラップ: 確定したラップタイム・対ベスト差・セクター成績を表示する.
--}
-lastLapBlock : StandingsEntry -> Html msg
-lastLapBlock item =
-    lapBlock "Last" (lastLapTimeCell item)
-
-
-{-| ラップ1段分の共通レイアウト. 上段にラベル・タイム・末尾(差分など), 下段にセクターバー.
--}
-lapBlock : String -> Html msg -> Html msg
-lapBlock label timeCell =
-    div
-        [ css
-            [ property "display" "grid"
-            , property "place-items" "center"
-            , property "row-gap" "1px"
-            ]
-        ]
-        [ labelText label
-        , timeCell
-        ]
-
-
-currentLapTimeCell : Analysis -> StandingsEntry -> Html msg
-currentLapTimeCell analysis item =
-    let
-        colorStyle =
-            case item.currentLapBest of
-                Just best ->
-                    performanceLevel
-                        { time = item.currentLapElapsed, personalBest = best, fastest = analysis.fastestLapTime }
-                        |> applyPerformanceColor
-
-                Nothing ->
-                    batch []
-    in
-    div
-        [ css
-            [ property "font-size" "13px"
-            , property "font-variant-numeric" "tabular-nums"
-            , property "text-align" "right"
-            , colorStyle
-            ]
-        ]
-        [ text
-            (if Car.hasRetired item.status then
-                "-"
-
-             else
-                Duration.toString item.currentLapElapsed
-            )
-        ]
-
-
-lastLapTimeCell : StandingsEntry -> Html msg
-lastLapTimeCell item =
-    div
-        [ css
-            [ property "font-size" "13px"
-            , property "font-variant-numeric" "tabular-nums"
-            , property "text-align" "right"
-            , case item.lastLap of
-                Just { performance } ->
-                    applyPerformanceColor performance
-
-                Nothing ->
-                    batch []
-            ]
-        ]
-        [ text (item.lastLap |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
-
-
-applyPerformanceColor : Performance.PerformanceLevel -> Css.Style
-applyPerformanceColor performance =
-    if Performance.isStandard performance then
-        batch []
-
-    else
-        property "color" (Performance.toColorVariable performance)
-
-
-{-| Current ラップのセクター成績を小さなドーナツ(3分割)で表示する.
-進行中セクターは進捗率ぶんだけ白で, 確定済みセクターは成績色で塗る.
--}
-currentSectorPie : Analysis -> StandingsEntry -> Html msg
-currentSectorPie analysis item =
-    case ( item.currentLapSectors, Car.hasRetired item.status ) of
-        ( Just sectors, False ) ->
-            let
-                ( s1p, s2p, s3p ) =
-                    sectorProgressTriplet item.sector
-            in
-            sectorPie
-                [ currentSectorSlot { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1p }
-                , currentSectorSlot { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2p }
-                , currentSectorSlot { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3p }
-                ]
-
-        _ ->
-            emptyPie
-
-
-sectorProgressTriplet : Maybe SectorProgress -> ( Float, Float, Float )
-sectorProgressTriplet sectorProgress =
-    case sectorProgress of
-        Just { sector, progress } ->
-            case sector of
-                S1 ->
-                    ( progress, 0, 0 )
-
-                S2 ->
-                    ( 100, progress, 0 )
-
-                S3 ->
-                    ( 100, 100, progress )
-
-        Nothing ->
-            ( 100, 100, 100 )
-
-
-{-| 1セクター分のスロットを `(塗り色, 充填率0..1)` に変換する.
-進行中(progress < 100)は白で進捗率ぶん, 確定済みは成績色で全周.
--}
-currentSectorSlot : { time : Duration, personalBest : Duration, fastest : Duration, progress : Float } -> ( String, Float )
-currentSectorSlot sector =
-    if sector.progress < 100 then
-        ( "oklch(1 0 0)", sector.progress / 100 )
-
-    else
-        ( performanceLevel { time = sector.time, personalBest = sector.personalBest, fastest = sector.fastest }
-            |> Performance.toColorVariable
-        , 1
-        )
-
-
-{-| 3スロットを受け取り, 各スロットを 120° のドーナツ扇形として描く.
-各要素は `(塗り色, 充填率0..1)`. 充填率ぶんだけスロット先頭から塗り, 背後に薄いトラックを敷く.
--}
-sectorPie : List ( String, Float ) -> Html msg
-sectorPie slots =
-    svg
-        [ SvgAttr.width (String.fromFloat pieSize ++ "px")
-        , SvgAttr.height (String.fromFloat pieSize ++ "px")
-        , SvgAttr.css [ Css.property "display" "block" ]
-        , viewBox 0 0 pieSize pieSize
-        ]
-        [ g
-            [ SvgAttr.transform
-                ("translate(" ++ String.fromFloat (pieSize / 2) ++ " " ++ String.fromFloat (pieSize / 2) ++ ")")
-            ]
-            (slots |> List.indexedMap sectorSlot |> List.concat)
-        ]
-
-
-emptyPie : Html msg
-emptyPie =
-    sectorPie [ ( "transparent", 0 ), ( "transparent", 0 ), ( "transparent", 0 ) ]
-
-
-sectorSlot : Int -> ( String, Float ) -> List (Svg msg)
-sectorSlot index ( color, fraction ) =
-    let
-        slot =
-            2 * pi / 3
-
-        arc fillFraction =
-            Shape.arc
-                { innerRadius = pieInner
-                , outerRadius = pieOuter
-                , cornerRadius = 1
-                , startAngle = toFloat index * slot + pieGap / 2
-                , endAngle = toFloat index * slot + pieGap / 2 + (slot - pieGap) * fillFraction
-                , padAngle = 0
-                , padRadius = 0
-                }
-
-        track =
-            Path.element (arc 1) [ SvgAttr.fill "hsl(0 0% 100% / 0.12)" ]
-    in
-    if fraction <= 0 then
-        [ track ]
-
-    else
-        [ track, Path.element (arc fraction) [ SvgAttr.fill color ] ]
-
-
-pieSize : Float
-pieSize =
-    30
-
-
-pieOuter : Float
-pieOuter =
-    13
-
-
-pieInner : Float
-pieInner =
-    6.5
-
-
-{-| スロット間の隙間(ラジアン).
--}
-pieGap : Float
-pieGap =
-    0.12
-
-
 
 -- RIVAL GAP (sparkline)
 
@@ -640,13 +331,13 @@ rivalGapSparkline standings neighbors item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (toCarLine standings currentLap False)
+            neighbors.ahead |> List.map (Sparkline.toCarLine standings currentLap False)
 
         behindLines =
-            neighbors.behind |> List.map (toCarLine standings currentLap False)
+            neighbors.behind |> List.map (Sparkline.toCarLine standings currentLap False)
 
         focusedLine =
-            toCarLine standings currentLap True item
+            Sparkline.toCarLine standings currentLap True item
 
         -- 表示は直近の前後1台ずつ＋対象車の3本(前車 → 対象車 → 後車). 隣が欠ければ除外.
         cars =
@@ -662,7 +353,7 @@ rivalGapSparkline standings neighbors item =
 
         -- 「ラップ番号 → 近傍最大5台(対象車を含む)の非ピット平均 elapsed」.
         referenceByLap =
-            groupReferenceByLap referenceCars
+            Sparkline.groupReferenceByLap referenceCars
 
         gapSeries laps =
             laps
@@ -685,7 +376,7 @@ rivalGapSparkline standings neighbors item =
         -- ピット等の外れ値(両側)を IQR で除いた「通常変動の帯」. これで縦軸を張り,
         -- 外れ値の点は枠外へはみ出してクリップさせる(線は繋がるので飛躍は角度で読める).
         fences =
-            iqrFences (List.sort allGaps)
+            Sparkline.iqrFences (List.sort allGaps)
 
         inBand gap =
             case fences of
@@ -717,11 +408,11 @@ rivalGapSparkline standings neighbors item =
                     (maxGap - minGap) * 0.15 + 50
 
                 xScale =
-                    Scale.linear ( sparklinePadX, sparklineWidth - sparklinePadX ) ( minX, maxX )
+                    Scale.linear ( Sparkline.sparklinePadX, Sparkline.sparklineWidth - Sparkline.sparklinePadX ) ( minX, maxX )
 
                 -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
                 yScale =
-                    Scale.linear ( sparklinePadY, rivalSparkHeight - sparklinePadY ) ( minGap - yPad, maxGap + yPad )
+                    Scale.linear ( Sparkline.sparklinePadY, rivalSparkHeight - Sparkline.sparklinePadY ) ( minGap - yPad, maxGap + yPad )
 
                 zeroY =
                     Scale.convert yScale 0
@@ -732,11 +423,11 @@ rivalGapSparkline standings neighbors item =
             svg
                 [ SvgAttr.width "100%"
                 , SvgAttr.css [ Css.property "display" "block" ]
-                , viewBox 0 0 sparklineWidth rivalSparkHeight
+                , viewBox 0 0 Sparkline.sparklineWidth rivalSparkHeight
                 ]
                 (Svg.Styled.line
-                    [ SvgAttr.x1 (String.fromFloat sparklinePadX)
-                    , SvgAttr.x2 (String.fromFloat (sparklineWidth - sparklinePadX))
+                    [ SvgAttr.x1 (String.fromFloat Sparkline.sparklinePadX)
+                    , SvgAttr.x2 (String.fromFloat (Sparkline.sparklineWidth - Sparkline.sparklinePadX))
                     , SvgAttr.y1 (String.fromFloat zeroY)
                     , SvgAttr.y2 (String.fromFloat zeroY)
                     , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
@@ -744,178 +435,16 @@ rivalGapSparkline standings neighbors item =
                     , SvgAttr.strokeDasharray "2 2"
                     ]
                     []
-                    :: List.map (sparkCarLine cfg) carsWithGaps
+                    :: List.map (Sparkline.sparkCarLine cfg) carsWithGaps
                 )
 
         _ ->
             text ""
 
 
-{-| 基準母集団(最大5台)の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに
-累積タイムを平均した基準を返す. ピットラップを除くことで基準が跳ねるのを防ぐ.
-そのラップに非ピットラップを持つ車だけが平均に寄与する.
--}
-groupReferenceByLap : List CarLine -> Dict Int Int
-groupReferenceByLap carLines =
-    carLines
-        |> List.concatMap .laps
-        |> List.filter (\lap -> lap.pitTime == Nothing)
-        |> List.foldl
-            (\lap ->
-                Dict.update lap.lap
-                    (\existing ->
-                        case existing of
-                            Just ( sum, count ) ->
-                                Just ( sum + lap.elapsed, count + 1 )
-
-                            Nothing ->
-                                Just ( lap.elapsed, 1 )
-                    )
-            )
-            Dict.empty
-        |> Dict.map (\_ ( sum, count ) -> sum // count)
-
-
-{-| 1台分の折れ線＋終端ドットを描く. 縦軸の値は呼び出し側が `LinePoint` に詰める.
-終端ドットは最終点が帯内のときだけ描き, 枠外のピットラップ上に浮くのを防ぐ.
-対象車は太線＋不透明で強調する.
--}
-sparkCarLine :
-    { xScale : Scale.ContinuousScale Float
-    , yScale : Scale.ContinuousScale Float
-    , minX : Float
-    , maxX : Float
-    , inBand : Int -> Bool
-    }
-    -> { car : CarLine, points : List LinePoint }
-    -> Svg msg
-sparkCarLine { xScale, yScale, minX, maxX, inBand } { car, points } =
-    let
-        visible =
-            points |> List.filter (\{ lap } -> minX <= toFloat lap && toFloat lap <= maxX)
-
-        dataPoints =
-            visible
-                |> List.map
-                    (\{ lap, value } ->
-                        Just
-                            ( Scale.convert xScale (toFloat lap)
-                            , Scale.convert yScale (toFloat value)
-                            )
-                    )
-
-        lastDot =
-            case List.Extra.last visible of
-                Just { lap, value } ->
-                    if inBand value then
-                        circle
-                            [ InPx.cx (Scale.convert xScale (toFloat lap))
-                            , InPx.cy (Scale.convert yScale (toFloat value))
-                            , InPx.r
-                                (if car.isFocused then
-                                    2.2
-
-                                 else
-                                    1.8
-                                )
-                            , SvgAttr.css [ Css.fill car.color ]
-                            ]
-                            []
-
-                    else
-                        text ""
-
-                Nothing ->
-                    text ""
-    in
-    g []
-        [ Path.element (Shape.line Shape.linearCurve dataPoints)
-            [ SvgAttr.stroke car.color.value
-            , SvgAttr.strokeWidth
-                (if car.isFocused then
-                    "2"
-
-                 else
-                    "1.5"
-                )
-            , SvgAttr.strokeOpacity
-                (if car.isFocused then
-                    "1"
-
-                 else
-                    "0.5"
-                )
-            , SvgAttr.fill "none"
-            ]
-        , lastDot
-        ]
-
-
 rivalSparkHeight : Float
 rivalSparkHeight =
     36
-
-
-sparklineWidth : Float
-sparklineWidth =
-    200
-
-
-sparklinePadX : Float
-sparklinePadX =
-    3
-
-
-sparklinePadY : Float
-sparklinePadY =
-    4
-
-
-{-| 昇順ソート済みリストの q 分位点(0〜1)を最近傍で返す.
--}
-quantile : Float -> List Int -> Maybe Int
-quantile q sorted =
-    let
-        n =
-            List.length sorted
-    in
-    if n == 0 then
-        Nothing
-
-    else
-        let
-            idx =
-                clamp 0 (n - 1) (floor (toFloat (n - 1) * q))
-        in
-        sorted |> List.drop idx |> List.head
-
-
-{-| 昇順ソート済みリストの IQR 外れ値フェンス `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]`.
-要素が空のときは `Nothing`.
--}
-iqrFences : List Int -> Maybe { lower : Int, upper : Int }
-iqrFences sorted =
-    Maybe.map2
-        (\q1 q3 ->
-            let
-                margin =
-                    round (1.5 * toFloat (q3 - q1))
-            in
-            { lower = q1 - margin, upper = q3 + margin }
-        )
-        (quantile 0.25 sorted)
-        (quantile 0.75 sorted)
-
-
-labelText : String -> Html msg
-labelText label =
-    div
-        [ css
-            [ property "font-size" "9px"
-            , opacity (num 0.6)
-            ]
-        ]
-        [ text label ]
 
 
 formatDriverName : String -> String

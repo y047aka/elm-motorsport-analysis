@@ -12,23 +12,62 @@ module Motorsport.Widget.Compare exposing (viewComparison)
 -}
 
 import Css exposing (num, opacity, property)
-import Html.Styled exposing (Html, button, div, img, text)
-import Html.Styled.Attributes exposing (class, css, src)
+import Html.Styled exposing (Html, button, div, text)
+import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
+import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
-import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
-import Motorsport.Lap.Performance as Performance
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.Widget.CarStatus as CarStatus
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
+import Motorsport.Widget.Sparkline as Sparkline
 
 
-carSummary : Int -> StandingsEntry -> Html msg
-carSummary season item =
+{-| 比較できる車両の最大台数. サマリーのスロット数(プレースホルダ含む)もこれに揃える.
+-}
+maxComparisonCars : Int
+maxComparisonCars =
+    3
+
+
+{-| モーダルのグラスモーフィズムに馴染む半透明パネル. モーダル本体(ダイアログ表面)
+の上に重なる前提で, 白を薄く敷いて1段持ち上げる. 塗り/縁取りの色は app 側の
+DaisyUI テーマトークン(`--glass-panel-bg` / `--glass-panel-border`)で管理する.
+-}
+glassPanel : Css.Style
+glassPanel =
+    Css.batch
+        [ property "background-color" "var(--glass-panel-bg)"
+        , property "border" "1px solid var(--glass-panel-border)"
+        , property "border-radius" "8px"
+        ]
+
+
+{-| 未選択スロットを埋める控えめなプレースホルダ. 上のセレクタへ誘導する.
+-}
+placeholderCard : Html msg
+placeholderCard =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "place-items" "center"
+            , property "min-height" "100px"
+            , property "border" "1px dashed hsl(0 0% 100% / 0.15)"
+            , property "border-radius" "8px"
+            , property "font-size" "11px"
+            , property "color" "hsl(0 0% 100% / 0.35)"
+            ]
+        ]
+        [ text "車両を追加" ]
+
+
+carSummary : Analysis -> Maybe ( Int, Int ) -> Standings -> StandingsEntry -> Html msg
+carSummary analysis lapRange standings item =
     div
         [ css
             [ property "display" "grid"
@@ -36,9 +75,24 @@ carSummary season item =
             , property "align-content" "start"
             ]
         ]
-        [ header season item
-        , summaryStats item
+        [ header item
+        , summaryStats analysis item
+        , lapTimeCard lapRange standings item
         ]
+
+
+{-| 各車サマリーに含める「Lap time」カード. 絶対ラップタイムの推移を1台分の折れ線で描く.
+X軸はポジション履歴と同じラップ範囲に揃える.
+-}
+lapTimeCard : Maybe ( Int, Int ) -> Standings -> StandingsEntry -> Html msg
+lapTimeCard maybeRange standings item =
+    chartPanel "Lap time" <|
+        case maybeRange of
+            Just range ->
+                Sparkline.lapTimeSparkline range standings item
+
+            Nothing ->
+                text ""
 
 
 {-| モーダル内で同一クラスの車両を最大3台までトグル選択しながら比較するビュー.
@@ -46,11 +100,11 @@ carSummary season item =
 セレクタの各チップは `onToggleCar` を発火する(3台上限の制御は呼び出し側で行う).
 -}
 viewComparison :
-    { season : Int, clock : Clock.Model, onToggleCar : String -> msg }
+    { season : Int, analysis : Analysis, clock : Clock.Model, onToggleCar : String -> msg }
     -> Standings
     -> List String
     -> Html msg
-viewComparison { season, clock, onToggleCar } standings selectedCarNumbers =
+viewComparison { season, analysis, clock, onToggleCar } standings selectedCarNumbers =
     let
         entriesByNumber =
             Standings.toList standings
@@ -67,29 +121,88 @@ viewComparison { season, clock, onToggleCar } standings selectedCarNumbers =
             text ""
 
         first :: _ ->
+            let
+                class =
+                    first.metadata.class
+
+                lapRange =
+                    PositionProgression.lapRange clock standings class
+            in
             div
                 [ css
                     [ property "display" "grid"
                     , property "row-gap" "12px"
                     ]
                 ]
-                [ carSelector onToggleCar standings first.metadata.class selectedCarNumbers
+                [ div
+                    [ css
+                        [ property "display" "flex"
+                        , property "align-items" "center"
+                        , property "column-gap" "12px"
+                        ]
+                    ]
+                    [ classBadge season class
+                    , carSelector onToggleCar standings class selectedCarNumbers
+                    ]
                 , div
                     [ css
                         [ property "display" "grid"
-                        , property "grid-template-columns" ("repeat(" ++ String.fromInt (List.length selectedEntries) ++ ", minmax(0, 1fr))")
+                        , property "grid-template-columns" ("repeat(" ++ String.fromInt maxComparisonCars ++ ", minmax(0, 1fr))")
                         , property "column-gap" "16px"
                         ]
                     ]
-                    (List.map (carSummary season) selectedEntries)
-                , PositionProgression.view
-                    { width = 600, height = 200 }
-                    clock
-                    standings
-                    { class = first.metadata.class
-                    , highlighted = selectedCarNumbers
-                    }
+                    (List.map (carSummary analysis lapRange standings) selectedEntries
+                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) placeholderCard
+                    )
+                , gapPanel lapRange standings selectedEntries
+                , chartPanel "Position progression" <|
+                    PositionProgression.view
+                        { width = 800, height = 200 }
+                        clock
+                        standings
+                        { class = class
+                        , highlighted = selectedCarNumbers
+                        }
                 ]
+
+
+{-| 「Gap to group avg」見出し付きのパネル. 選択車のグループ平均を基準にした相対ギャップを
+1枚に統合表示する.
+-}
+gapPanel : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapPanel maybeRange standings entries =
+    chartPanel "Gap to group avg" <|
+        case maybeRange of
+            Just range ->
+                Sparkline.gapSparkline range standings entries
+
+            Nothing ->
+                text ""
+
+
+{-| 見出し付きのチャートパネル. 見出しは小型・大文字で控えめに付ける.
+-}
+chartPanel : String -> Html msg -> Html msg
+chartPanel label content =
+    div
+        [ css
+            [ glassPanel
+            , property "padding" "8px"
+            , property "display" "grid"
+            , property "row-gap" "6px"
+            ]
+        ]
+        [ div
+            [ css
+                [ property "font-size" "9px"
+                , property "text-transform" "uppercase"
+                , property "letter-spacing" "0.05em"
+                , opacity (num 0.5)
+                ]
+            ]
+            [ text label ]
+        , content
+        ]
 
 
 {-| 指定クラスの全車両をチップとして並べ, クリックで選択をトグルするセレクタ.
@@ -157,29 +270,24 @@ carSelectorChip onToggleCar isSelected item =
         [ text ("#" ++ item.metadata.carNumber) ]
 
 
-header : Int -> StandingsEntry -> Html msg
-header season item =
+header : StandingsEntry -> Html msg
+header item =
     div
         [ css
             [ property "display" "grid"
             , property "grid-template-columns" "auto 1fr auto"
-            , property "align-items" "center"
+            , property "align-items" "start"
             , property "column-gap" "12px"
             ]
         ]
-        [ carNumberBadge item
+        [ CarStatus.carNumberBadge item
         , div
             [ css
                 [ property "display" "grid"
                 , property "row-gap" "2px"
                 ]
             ]
-            [ div
-                [ css
-                    [ property "font-size" "14px"
-                    , property "font-weight" "700"
-                    ]
-                ]
+            [ div [ css [ property "font-size" "14px" ] ]
                 [ text item.metadata.team ]
             , div
                 [ css
@@ -189,66 +297,12 @@ header season item =
                 ]
                 [ text (item.metadata.drivers |> List.map .name |> String.join " / ") ]
             ]
-        , div
-            [ css
-                [ property "display" "grid"
-                , property "justify-items" "end"
-                , property "row-gap" "4px"
-                ]
-            ]
-            [ classBadge season item
-            , statusBadge item.status
-            ]
+        , statusBadge item.status
         ]
 
 
-carNumberBadge : StandingsEntry -> Html msg
-carNumberBadge item =
-    let
-        manufacturerColor =
-            Manufacturer.toColor item.metadata.manufacturer
-    in
-    div
-        [ class "stat p-1 place-items-center gap-1.5 rounded"
-        , css
-            [ property "width" "35px"
-            , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h)")
-            , property "border" "none"
-            ]
-        ]
-        [ manufacturerLogo item.metadata.manufacturer
-        , div [ class "stat-value text-xs leading-none" ]
-            [ text item.metadata.carNumber ]
-        ]
-
-
-manufacturerLogo : Manufacturer -> Html msg
-manufacturerLogo manufacturer =
-    case Manufacturer.toLogoUrl manufacturer of
-        Just url ->
-            img
-                [ src url
-                , css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    , property "object-fit" "contain"
-                    , property "opacity" "0.9"
-                    ]
-                ]
-                []
-
-        Nothing ->
-            div
-                [ css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    ]
-                ]
-                []
-
-
-classBadge : Int -> StandingsEntry -> Html msg
-classBadge season item =
+classBadge : Int -> Class -> Html msg
+classBadge season class =
     div
         [ css
             [ property "display" "flex"
@@ -256,17 +310,18 @@ classBadge season item =
             , property "column-gap" "4px"
             , property "font-size" "11px"
             , property "font-weight" "700"
+            , property "white-space" "nowrap"
             , Css.before
                 [ property "display" "block"
                 , property "content" (Css.qt "")
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , Css.backgroundColor (Class.toHexColor season item.metadata.class)
+                , Css.backgroundColor (Class.toHexColor season class)
                 ]
             ]
         ]
-        [ text (Class.toString item.metadata.class) ]
+        [ text (Class.toString class) ]
 
 
 statusBadge : Status -> Html msg
@@ -303,38 +358,58 @@ statusBadge status =
             text ""
 
 
-summaryStats : StandingsEntry -> Html msg
-summaryStats item =
+summaryStats : Analysis -> StandingsEntry -> Html msg
+summaryStats analysis item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "repeat(auto-fit, minmax(56px, 1fr))"
-            , property "gap" "8px"
-            ]
-        ]
-        [ statCell "Position" (text ("P" ++ String.fromInt item.position))
-        , statCell "In Class" (text ("P" ++ String.fromInt item.positionInClass))
-        , statCell "Laps" (text (String.fromInt item.lapsCompleted))
-        , statCell "Gap" (text (Gap.toString item.gapToLeader))
-        , statCell "Interval" (text (Gap.toString item.intervalToAhead))
-        , statCell "Best Lap" (ratedTimeCell item.bestLap)
-        ]
-
-
-statCell : String -> Html msg -> Html msg
-statCell label valueHtml =
-    div
-        [ class "rounded bg-base-300 p-2"
-        , css
-            [ property "display" "grid"
-            , property "row-gap" "2px"
-            , property "justify-items" "center"
+            , property "row-gap" "12px"
             ]
         ]
         [ div
             [ css
-                [ property "font-size" "9px"
-                , opacity (num 0.6)
+                [ glassPanel
+                , property "display" "grid"
+                , property "grid-template-columns" "repeat(5, minmax(0, 1fr))"
+                ]
+            ]
+            [ statCell "Pos" (text ("P" ++ String.fromInt item.position))
+            , statCell "Class" (text ("P" ++ String.fromInt item.positionInClass))
+            , statCell "Laps" (text (String.fromInt item.lapsCompleted))
+            , statCell "Gap" (text (Gap.toString item.gapToLeader))
+            , statCell "Int" (text (Gap.toString item.intervalToAhead))
+            ]
+        , div
+            [ css
+                [ glassPanel
+                , property "padding" "8px"
+                ]
+            ]
+            [ CarStatus.sectorAndLaps analysis item ]
+        ]
+
+
+{-| 順位・ギャップ系を1枚のストリップに詰める用の小型セル.
+セル間は左の区切り線で仕切る(先頭セルは区切り線なし).
+-}
+statCell : String -> Html msg -> Html msg
+statCell label valueHtml =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "row-gap" "1px"
+            , property "justify-items" "center"
+            , property "padding" "4px 2px"
+            , property "border-left" "1px solid hsl(0 0% 100% / 0.05)"
+            , Css.firstChild [ property "border-left" "none" ]
+            ]
+        ]
+        [ div
+            [ css
+                [ property "font-size" "8px"
+                , property "text-transform" "uppercase"
+                , property "letter-spacing" "0.03em"
+                , opacity (num 0.5)
                 ]
             ]
             [ text label ]
@@ -346,22 +421,3 @@ statCell label valueHtml =
             ]
             [ valueHtml ]
         ]
-
-
-ratedTimeCell : Maybe Performance.RatedTime -> Html msg
-ratedTimeCell ratedTime =
-    case ratedTime of
-        Just { time, performance } ->
-            div
-                [ css
-                    [ if Performance.isStandard performance then
-                        Css.batch []
-
-                      else
-                        property "color" (Performance.toColorVariable performance)
-                    ]
-                ]
-                [ text (Duration.toString time) ]
-
-        Nothing ->
-            text "-"
