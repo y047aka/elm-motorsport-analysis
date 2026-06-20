@@ -18,6 +18,7 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
+import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Gap as Gap
@@ -66,8 +67,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Analysis -> Maybe ( Int, Int ) -> Standings -> StandingsEntry -> Html msg
-carSummary analysis lapRange standings item =
+carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe DistributionScale -> Standings -> StandingsEntry -> Html msg
+carSummary analysis lapRange distScale standings item =
     div
         [ css
             [ property "display" "grid"
@@ -78,7 +79,17 @@ carSummary analysis lapRange standings item =
         [ header item
         , summaryStats analysis item
         , lapTimeCard lapRange standings item
+        , lapTimeDistributionCard lapRange distScale standings item
         ]
+
+
+{-| ラップタイム分布チャートの共有スケール. 選択車全体で横軸(ドメイン)と縦軸(最大密度)を
+揃え, 3カラムを縦横ともに同一スケールで描くために使う.
+-}
+type alias DistributionScale =
+    { domain : ( Float, Float )
+    , maxDensity : Float
+    }
 
 
 {-| 各車サマリーに含める「Lap time」カード. 絶対ラップタイムの推移を1台分の折れ線で描く.
@@ -93,6 +104,51 @@ lapTimeCard maybeRange standings item =
 
             Nothing ->
                 text ""
+
+
+{-| 各車サマリーに含める「Lap time distribution」カード. 1台分のラップタイム分布を
+KDE 曲線で描く. 横軸(ラップタイム)・縦軸(密度)とも選択車全体で共有する `distScale` に揃え,
+3カラムを同一スケールで描く(高さ＝分布の尖り＝ペースの安定度を比較できる).
+-}
+lapTimeDistributionCard : Maybe ( Int, Int ) -> Maybe DistributionScale -> Standings -> StandingsEntry -> Html msg
+lapTimeDistributionCard maybeRange maybeScale standings item =
+    chartPanel "Lap time distribution" <|
+        case ( maybeRange, maybeScale ) of
+            ( Just range, Just { domain, maxDensity } ) ->
+                LapTimeDistribution.view
+                    { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
+                    [ seriesOf standings range item ]
+
+            _ ->
+                text ""
+
+
+{-| ラップタイム分布チャート用の Series を1台分組み立てる. ラップ範囲内の非ピットラップから
+IQR 上限フェンス以下のレーシングラップだけを抽出し, ピット・アウトラップを除外する.
+-}
+seriesOf : Standings -> ( Int, Int ) -> StandingsEntry -> LapTimeDistribution.Series
+seriesOf standings range entry =
+    { color = Manufacturer.toColorWithFallback entry.metadata
+    , isFocused = True
+    , times = racingTimes standings range entry
+    , lastLap = entry.lastLap |> Maybe.map .time
+    }
+
+
+racingTimes : Standings -> ( Int, Int ) -> StandingsEntry -> List Int
+racingTimes standings ( minLap, maxLap ) entry =
+    let
+        times =
+            Standings.getCarHistory entry.metadata.carNumber standings
+                |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
+                |> List.map .time
+
+        upper =
+            Sparkline.iqrFences (List.sort times)
+                |> Maybe.map .upper
+                |> Maybe.withDefault (List.maximum times |> Maybe.withDefault 0)
+    in
+    times |> List.filter (\t -> t <= upper)
 
 
 {-| モーダル内で同一クラスの車両を最大3台までトグル選択しながら比較するビュー.
@@ -127,6 +183,23 @@ viewComparison { season, analysis, clock, onToggleCar } standings selectedCarNum
 
                 lapRange =
                     PositionProgression.lapRange clock standings class
+
+                distSeries =
+                    case lapRange of
+                        Just range ->
+                            List.map (seriesOf standings range) selectedEntries
+
+                        Nothing ->
+                            []
+
+                distScale =
+                    LapTimeDistribution.domainOf distSeries
+                        |> Maybe.map
+                            (\domain ->
+                                { domain = domain
+                                , maxDensity = LapTimeDistribution.maxDensityOf domain distSeries
+                                }
+                            )
             in
             div
                 [ css
@@ -151,7 +224,7 @@ viewComparison { season, analysis, clock, onToggleCar } standings selectedCarNum
                         , property "column-gap" "16px"
                         ]
                     ]
-                    (List.map (carSummary analysis lapRange standings) selectedEntries
+                    (List.map (carSummary analysis lapRange distScale standings) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) placeholderCard
                     )
                 , gapPanel lapRange standings selectedEntries
