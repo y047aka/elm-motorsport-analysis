@@ -1,19 +1,20 @@
 module Motorsport.Widget.Sparkline exposing
-    ( CarLine, LinePoint
-    , toCarLine, sparkCarLine, iqrFences, groupReferenceByLap
-    , sparklineWidth, sparklinePadX, sparklinePadY
-    , lapTimeSparkline, gapSparkline
+    ( CarLine, LinePoint, LineScales
+    , toCarLine, groupReferenceByLap, gapPoints, iqrFences
+    , sparklineWidth
+    , lapTimeSparkline, gapSparkline, gapChartView
     )
 
-{-| ラップ系スパークラインの共有プリミティブ. 折れ線＋終端ドットの描画(`sparkCarLine`),
-直近ラップ列の組み立て(`toCarLine`), IQR 外れ値フェンス(`iqrFences`)を提供し,
-これらを使う具体的なスパークライン(`lapTimeSparkline` / `gapSparkline` や呼び出し側の
-rivalGapSparkline)で共有する.
+{-| ラップ系スパークラインの共有プリミティブ. 直近ラップ列の組み立て(`toCarLine`),
+ラップ番号ごとのグループ基準(`groupReferenceByLap`)と相対ギャップ点列(`gapPoints`),
+IQR 外れ値フェンス(`iqrFences`)を提供する. ギャップ系チャートは縦軸計算・ゼロ基準線・
+折れ線描画をまとめた共通レンダラ `gapChartView` を, 絶対ラップタイム版は `lapTimeSparkline`
+を使う. 呼び出し側(rivalGapSparkline 等)は CarLine の切り出しと寸法だけを与える.
 
-@docs CarLine, LinePoint
-@docs toCarLine, sparkCarLine, iqrFences, groupReferenceByLap
-@docs sparklineWidth, sparklinePadX, sparklinePadY
-@docs lapTimeSparkline, gapSparkline
+@docs CarLine, LinePoint, LineScales
+@docs toCarLine, groupReferenceByLap, gapPoints, iqrFences
+@docs sparklineWidth
+@docs lapTimeSparkline, gapSparkline, gapChartView
 
 -}
 
@@ -47,6 +48,18 @@ type alias CarLine =
 type alias LinePoint =
     { lap : Int
     , value : Int
+    }
+
+
+{-| 折れ線1本を描くためのスケール一式. X/Y のスケールと, 表示範囲の判定に使う
+X軸の端 `minX`/`maxX`, 縦軸の帯内判定 `inBand` をまとめる.
+-}
+type alias LineScales =
+    { xScale : Scale.ContinuousScale Float
+    , yScale : Scale.ContinuousScale Float
+    , minX : Float
+    , maxX : Float
+    , inBand : Int -> Bool
     }
 
 
@@ -168,16 +181,47 @@ gapSparkline ( minLap, maxLap ) standings entries =
         referenceByLap =
             groupReferenceByLap carLines
 
-        gapSeries laps =
-            laps
-                |> List.filterMap
-                    (\lap ->
-                        Dict.get lap.lap referenceByLap
-                            |> Maybe.map (\ref -> { lap = lap.lap, value = lap.elapsed - ref })
-                    )
-
         carsWithGaps =
-            carLines |> List.map (\car -> { car = car, points = gapSeries car.laps })
+            carLines |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
+    in
+    if Dict.isEmpty referenceByLap then
+        text ""
+
+    else
+        gapChartView
+            { width = consolidatedWidth
+            , height = consolidatedHeight
+            , xRange = ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
+            }
+            carsWithGaps
+
+
+{-| ラップ番号ごとのグループ基準 `referenceByLap` と各車のラップ列から, 相対ギャップ
+点列(`累積タイム − 基準`)を組み立てる. 基準を持たないラップは点を作らず除外する.
+-}
+gapPoints : Dict Int Int -> List Lap -> List LinePoint
+gapPoints referenceByLap laps =
+    laps
+        |> List.filterMap
+            (\lap ->
+                Dict.get lap.lap referenceByLap
+                    |> Maybe.map (\ref -> { lap = lap.lap, value = lap.elapsed - ref })
+            )
+
+
+{-| 複数車の相対ギャップ点列を1枚に重ねて描く共通レンダラ. 縦軸は 0(グループ平均ペース)を
+必ず含め, ピット等の外れ値(両側 IQR)を除いた帯で張って外れ値は枠外へクリップする. 基準より
+速い(累積小=先行)を上, 遅い(累積大=後退)を下に置き, 0 ラインを破線で示す. 寸法とX軸範囲は
+呼び出し側が `width`/`height`/`xRange` で与える(統合チャートとカード内で寸法だけが異なる).
+-}
+gapChartView :
+    { width : Float, height : Float, xRange : ( Float, Float ) }
+    -> List { car : CarLine, points : List LinePoint }
+    -> Html msg
+gapChartView { width, height, xRange } carsWithGaps =
+    let
+        ( minX, maxX ) =
+            xRange
 
         allGaps =
             carsWithGaps |> List.concatMap (.points >> List.map .value)
@@ -195,58 +239,51 @@ gapSparkline ( minLap, maxLap ) standings entries =
 
         bandGaps =
             allGaps |> List.filter inBand
+
+        -- 0(グループ平均ペース)を必ず含めてレンジを張る.
+        minGap =
+            List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
+
+        maxGap =
+            List.maximum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
+
+        yPad =
+            (maxGap - minGap) * 0.15 + 50
+
+        xScale =
+            Scale.linear ( sparklinePadX, width - sparklinePadX ) ( minX, maxX )
+
+        -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
+        yScale =
+            Scale.linear ( sparklinePadY, height - sparklinePadY ) ( minGap - yPad, maxGap + yPad )
+
+        cfg =
+            { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
     in
-    if Dict.isEmpty referenceByLap then
-        text ""
+    svg
+        [ SvgAttr.width "100%"
+        , SvgAttr.css [ Css.property "display" "block" ]
+        , viewBox 0 0 width height
+        ]
+        (zeroReferenceLine { x1 = sparklinePadX, x2 = width - sparklinePadX, y = Scale.convert yScale 0 }
+            :: List.map (sparkCarLine cfg) carsWithGaps
+        )
 
-    else
-        let
-            minX =
-                toFloat minLap
 
-            maxX =
-                toFloat (max maxLap (minLap + 1))
-
-            -- 0(グループ平均ペース)を必ず含めてレンジを張る.
-            minGap =
-                List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
-
-            maxGap =
-                List.maximum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
-
-            yPad =
-                (maxGap - minGap) * 0.15 + 50
-
-            xScale =
-                Scale.linear ( sparklinePadX, consolidatedWidth - sparklinePadX ) ( minX, maxX )
-
-            -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
-            yScale =
-                Scale.linear ( sparklinePadY, consolidatedHeight - sparklinePadY ) ( minGap - yPad, maxGap + yPad )
-
-            zeroY =
-                Scale.convert yScale 0
-
-            cfg =
-                { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
-        in
-        svg
-            [ SvgAttr.width "100%"
-            , SvgAttr.css [ Css.property "display" "block" ]
-            , viewBox 0 0 consolidatedWidth consolidatedHeight
-            ]
-            (line
-                [ SvgAttr.x1 (String.fromFloat sparklinePadX)
-                , SvgAttr.x2 (String.fromFloat (consolidatedWidth - sparklinePadX))
-                , SvgAttr.y1 (String.fromFloat zeroY)
-                , SvgAttr.y2 (String.fromFloat zeroY)
-                , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
-                , SvgAttr.strokeWidth "1"
-                , SvgAttr.strokeDasharray "2 2"
-                ]
-                []
-                :: List.map (sparkCarLine cfg) carsWithGaps
-            )
+{-| グループ平均=0 を示す水平の破線.
+-}
+zeroReferenceLine : { x1 : Float, x2 : Float, y : Float } -> Svg msg
+zeroReferenceLine { x1, x2, y } =
+    line
+        [ SvgAttr.x1 (String.fromFloat x1)
+        , SvgAttr.x2 (String.fromFloat x2)
+        , SvgAttr.y1 (String.fromFloat y)
+        , SvgAttr.y2 (String.fromFloat y)
+        , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
+        , SvgAttr.strokeWidth "1"
+        , SvgAttr.strokeDasharray "2 2"
+        ]
+        []
 
 
 {-| 基準母集団の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに累積タイムを
@@ -279,12 +316,7 @@ groupReferenceByLap carLines =
 対象車は太線＋不透明で強調する.
 -}
 sparkCarLine :
-    { xScale : Scale.ContinuousScale Float
-    , yScale : Scale.ContinuousScale Float
-    , minX : Float
-    , maxX : Float
-    , inBand : Int -> Bool
-    }
+    LineScales
     -> { car : CarLine, points : List LinePoint }
     -> Svg msg
 sparkCarLine { xScale, yScale, minX, maxX, inBand } { car, points } =

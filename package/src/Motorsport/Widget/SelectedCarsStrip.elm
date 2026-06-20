@@ -20,10 +20,6 @@ import Motorsport.Gap as Gap
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CarStatus as CarStatus
 import Motorsport.Widget.Sparkline as Sparkline
-import Scale
-import Svg.Styled exposing (svg)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (viewBox)
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
@@ -355,88 +351,24 @@ rivalGapSparkline standings neighbors item =
         referenceByLap =
             Sparkline.groupReferenceByLap referenceCars
 
-        gapSeries laps =
-            laps
-                |> List.filterMap
-                    (\lap ->
-                        Dict.get lap.lap referenceByLap
-                            |> Maybe.map (\ref -> { lap = lap.lap, value = lap.elapsed - ref })
-                    )
-
-        -- 各車のギャップ点列を一度だけ算出して保持する(縦軸計算と描画で共用).
+        -- 各車のギャップ点列を一度だけ算出して保持する(描画で共用).
         carsWithGaps =
-            cars |> List.map (\car -> { car = car, points = gapSeries car.laps })
+            cars |> List.map (\car -> { car = car, points = Sparkline.gapPoints referenceByLap car.laps })
 
         focusedLapNumbers =
             focusedLine.laps |> List.map (.lap >> toFloat)
-
-        allGaps =
-            carsWithGaps |> List.concatMap (.points >> List.map .value)
-
-        -- ピット等の外れ値(両側)を IQR で除いた「通常変動の帯」. これで縦軸を張り,
-        -- 外れ値の点は枠外へはみ出してクリップさせる(線は繋がるので飛躍は角度で読める).
-        fences =
-            Sparkline.iqrFences (List.sort allGaps)
-
-        inBand gap =
-            case fences of
-                Just { lower, upper } ->
-                    lower <= gap && gap <= upper
-
-                Nothing ->
-                    True
-
-        bandGaps =
-            allGaps |> List.filter inBand
     in
     case ( focusedLapNumbers, rivalLines, Dict.isEmpty referenceByLap ) of
         ( _ :: _ :: _, _ :: _, False ) ->
-            let
-                ( minX, maxX ) =
+            Sparkline.gapChartView
+                { width = Sparkline.sparklineWidth
+                , height = rivalSparkHeight
+                , xRange =
                     ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
                     , List.maximum focusedLapNumbers |> Maybe.withDefault 1
                     )
-
-                -- 0(ライバル平均ペース)を必ず含めてレンジを張る.
-                minGap =
-                    List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
-
-                maxGap =
-                    List.maximum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 1 |> (\m -> max m (minGap + 1))
-
-                yPad =
-                    (maxGap - minGap) * 0.15 + 50
-
-                xScale =
-                    Scale.linear ( Sparkline.sparklinePadX, Sparkline.sparklineWidth - Sparkline.sparklinePadX ) ( minX, maxX )
-
-                -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
-                yScale =
-                    Scale.linear ( Sparkline.sparklinePadY, rivalSparkHeight - Sparkline.sparklinePadY ) ( minGap - yPad, maxGap + yPad )
-
-                zeroY =
-                    Scale.convert yScale 0
-
-                cfg =
-                    { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
-            in
-            svg
-                [ SvgAttr.width "100%"
-                , SvgAttr.css [ Css.property "display" "block" ]
-                , viewBox 0 0 Sparkline.sparklineWidth rivalSparkHeight
-                ]
-                (Svg.Styled.line
-                    [ SvgAttr.x1 (String.fromFloat Sparkline.sparklinePadX)
-                    , SvgAttr.x2 (String.fromFloat (Sparkline.sparklineWidth - Sparkline.sparklinePadX))
-                    , SvgAttr.y1 (String.fromFloat zeroY)
-                    , SvgAttr.y2 (String.fromFloat zeroY)
-                    , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
-                    , SvgAttr.strokeWidth "1"
-                    , SvgAttr.strokeDasharray "2 2"
-                    ]
-                    []
-                    :: List.map (Sparkline.sparkCarLine cfg) carsWithGaps
-                )
+                }
+                carsWithGaps
 
         _ ->
             text ""
