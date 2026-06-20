@@ -15,6 +15,7 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
+import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -327,13 +328,13 @@ rivalGapSparkline standings neighbors item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (Sparkline.toCarLine standings currentLap False)
+            neighbors.ahead |> List.map (Sparkline.carLine standings (Recent currentLap) Muted)
 
         behindLines =
-            neighbors.behind |> List.map (Sparkline.toCarLine standings currentLap False)
+            neighbors.behind |> List.map (Sparkline.carLine standings (Recent currentLap) Muted)
 
         focusedLine =
-            Sparkline.toCarLine standings currentLap True item
+            Sparkline.carLine standings (Recent currentLap) Focused item
 
         -- 表示は直近の前後1台ずつ＋対象車の3本(前車 → 対象車 → 後車). 隣が欠ければ除外.
         cars =
@@ -360,23 +361,14 @@ rivalGapSparkline standings neighbors item =
     in
     case ( focusedLapNumbers, rivalLines, Dict.isEmpty referenceByLap ) of
         ( _ :: _ :: _, _ :: _, False ) ->
-            Sparkline.gapChartView
-                { width = Sparkline.sparklineWidth
-                , height = rivalSparkHeight
-                , xRange =
-                    ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
-                    , List.maximum focusedLapNumbers |> Maybe.withDefault 1
-                    )
-                }
+            Sparkline.gapChartView Sparkline.rivalStrip
+                ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
+                , List.maximum focusedLapNumbers |> Maybe.withDefault 1
+                )
                 carsWithGaps
 
         _ ->
             text ""
-
-
-rivalSparkHeight : Float
-rivalSparkHeight =
-    36
 
 
 formatDriverName : String -> String

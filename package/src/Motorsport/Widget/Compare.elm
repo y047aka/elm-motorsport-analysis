@@ -18,6 +18,7 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
+import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
@@ -134,7 +135,7 @@ IQR 上限フェンス以下のレーシングラップだけを抽出し, ピ�
 seriesOf : Standings -> ( Int, Int ) -> StandingsEntry -> LapTimeDistribution.Series
 seriesOf standings range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
-    , isFocused = True
+    , emphasis = Focused
     , times = racingTimes standings range entry
     , lastLap = entry.lastLap |> Maybe.map .time
     }
@@ -147,13 +148,8 @@ racingTimes standings ( minLap, maxLap ) entry =
             Standings.getCarHistory entry.metadata.carNumber standings
                 |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
                 |> List.map .time
-
-        upper =
-            Sparkline.iqrFences (List.sort times)
-                |> Maybe.map .upper
-                |> Maybe.withDefault (List.maximum times |> Maybe.withDefault 0)
     in
-    times |> List.filter (\t -> t <= upper)
+    times |> List.filter (\t -> t <= upperFence times)
 
 
 {-| モーダル内で同一クラスの車両を最大3台までトグル選択しながら比較するビュー.

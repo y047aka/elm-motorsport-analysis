@@ -17,6 +17,7 @@ import Css exposing (Style, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, text)
 import Html.Styled.Attributes exposing (css)
+import Motorsport.Chart.Common exposing (Emphasis, chooseByEmphasis)
 import Motorsport.Duration as Duration
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -34,7 +35,7 @@ import TypedSvg.Types exposing (Transform(..))
 -}
 type alias Series =
     { color : Css.Color
-    , isFocused : Bool
+    , emphasis : Emphasis
     , times : List Int
     , lastLap : Maybe Int
     }
@@ -216,20 +217,8 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
             [ SvgAttr.fill ("oklch(from " ++ series.color.value ++ " l c h / 0.15)") ]
         , Path.element (Shape.line Shape.monotoneInXCurve linePoints)
             [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth
-                (if series.isFocused then
-                    "2"
-
-                 else
-                    "1.5"
-                )
-            , SvgAttr.strokeOpacity
-                (if series.isFocused then
-                    "1"
-
-                 else
-                    "0.6"
-                )
+            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.5" } series.emphasis)
+            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.6" } series.emphasis)
             , SvgAttr.fill "none"
             ]
         , lastLapMarker xScale yScale series lastLapPoint

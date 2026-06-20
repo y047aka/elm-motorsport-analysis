@@ -6,6 +6,7 @@ import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
+import Motorsport.Chart.Common exposing (Emphasis(..), chooseByEmphasis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -77,7 +78,12 @@ buildClassProgressionData clock standings { class, highlighted } =
                     (\( item, points ) ->
                         { points = points
                         , color = Manufacturer.toColorWithFallback item.metadata
-                        , isSelected = List.member item.metadata.carNumber highlighted
+                        , emphasis =
+                            if List.member item.metadata.carNumber highlighted then
+                                Focused
+
+                            else
+                                Muted
                         }
                     )
     in
@@ -97,7 +103,7 @@ type alias PositionPoint =
 type alias PositionSeries =
     { points : List PositionPoint
     , color : Color
-    , isSelected : Bool
+    , emphasis : Emphasis
     }
 
 
@@ -370,45 +376,32 @@ renderPositionLine size allPoints series =
                 |> List.map Just
                 |> Shape.line Shape.linearCurve
 
-        strokeWidth =
-            if series.isSelected then
-                "2"
-
-            else
-                "1.2"
-
-        opacity =
-            if series.isSelected then
-                "1"
-
-            else
-                "0.4"
-
         lineAttributes =
             [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth strokeWidth
-            , SvgAttr.strokeOpacity opacity
+            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.2" } series.emphasis)
+            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.4" } series.emphasis)
             , SvgAttr.fill "none"
             ]
 
         lastPointElement =
-            if series.isSelected then
-                dataPoints
-                    |> List.Extra.last
-                    |> Maybe.map
-                        (\( x, y ) ->
-                            circle
-                                [ InPx.cx x
-                                , InPx.cy y
-                                , InPx.r 3.0
-                                , SvgAttr.css [ Css.fill series.color ]
-                                ]
-                                []
-                        )
-                    |> Maybe.withDefault (g [] [])
+            case series.emphasis of
+                Focused ->
+                    dataPoints
+                        |> List.Extra.last
+                        |> Maybe.map
+                            (\( x, y ) ->
+                                circle
+                                    [ InPx.cx x
+                                    , InPx.cy y
+                                    , InPx.r 3.0
+                                    , SvgAttr.css [ Css.fill series.color ]
+                                    ]
+                                    []
+                            )
+                        |> Maybe.withDefault (g [] [])
 
-            else
-                g [] []
+                Muted ->
+                    g [] []
     in
     g []
         [ Path.element linePath lineAttributes
