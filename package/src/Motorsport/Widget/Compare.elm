@@ -77,9 +77,8 @@ carSummary analysis lapRange distScale standings item =
             ]
         ]
         [ header item
-        , summaryStats analysis item
-        , lapTimeCard lapRange standings item
-        , lapTimeDistributionCard lapRange distScale standings item
+        , summaryStats item
+        , lapTimePanel analysis lapRange distScale standings item
         ]
 
 
@@ -92,35 +91,40 @@ type alias DistributionScale =
     }
 
 
-{-| 各車サマリーに含める「Lap time」カード. 絶対ラップタイムの推移を1台分の折れ線で描く.
-X軸はポジション履歴と同じラップ範囲に揃える.
--}
-lapTimeCard : Maybe ( Int, Int ) -> Standings -> StandingsEntry -> Html msg
-lapTimeCard maybeRange standings item =
-    chartPanel "Lap time" <|
-        case maybeRange of
-            Just range ->
-                Sparkline.lapTimeSparkline range standings item
-
-            Nothing ->
-                text ""
-
-
-{-| 各車サマリーに含める「Lap time distribution」カード. 1台分のラップタイム分布を
-KDE 曲線で描く. 横軸(ラップタイム)・縦軸(密度)とも選択車全体で共有する `distScale` に揃え,
+{-| 「セクター進捗 + Current/Last ラップ + ラップタイム分布」を1枚にまとめたパネル.
+ラップタイムに関する表示をこのまとまりに集約する. 分布は1台分を KDE 曲線で描き,
+横軸(ラップタイム)・縦軸(密度)とも選択車全体で共有する `distScale` に揃えて
 3カラムを同一スケールで描く(高さ＝分布の尖り＝ペースの安定度を比較できる).
 -}
-lapTimeDistributionCard : Maybe ( Int, Int ) -> Maybe DistributionScale -> Standings -> StandingsEntry -> Html msg
-lapTimeDistributionCard maybeRange maybeScale standings item =
-    chartPanel "Lap time distribution" <|
-        case ( maybeRange, maybeScale ) of
-            ( Just range, Just { domain, maxDensity } ) ->
-                LapTimeDistribution.view
-                    { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                    [ seriesOf standings range item ]
+lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe DistributionScale -> Standings -> StandingsEntry -> Html msg
+lapTimePanel analysis maybeRange maybeScale standings item =
+    div
+        [ css
+            [ glassPanel
+            , property "padding" "8px"
+            , property "display" "grid"
+            , property "row-gap" "8px"
+            ]
+        ]
+        [ panelLabel "Lap time"
+        , div [ css [ property "padding-bottom" "4px" ] ]
+            [ CarStatus.sectorAndLaps analysis item ]
+        , div
+            [ css
+                [ property "padding-top" "4px"
+                , property "border-top" "1px solid oklch(1 0 0 / 0.05)"
+                ]
+            ]
+            [ case ( maybeRange, maybeScale ) of
+                ( Just range, Just { domain, maxDensity } ) ->
+                    LapTimeDistribution.view
+                        { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
+                        [ seriesOf standings range item ]
 
-            _ ->
-                text ""
+                _ ->
+                    text ""
+            ]
+        ]
 
 
 {-| ラップタイム分布チャート用の Series を1台分組み立てる. ラップ範囲内の非ピットラップから
@@ -265,17 +269,24 @@ chartPanel label content =
             , property "row-gap" "6px"
             ]
         ]
-        [ div
-            [ css
-                [ property "font-size" "9px"
-                , property "text-transform" "uppercase"
-                , property "letter-spacing" "0.05em"
-                , opacity (num 0.5)
-                ]
-            ]
-            [ text label ]
+        [ panelLabel label
         , content
         ]
+
+
+{-| パネル見出しの共通スタイル. 小型・大文字・控えめな不透明度で付ける.
+-}
+panelLabel : String -> Html msg
+panelLabel label =
+    div
+        [ css
+            [ property "font-size" "9px"
+            , property "text-transform" "uppercase"
+            , property "letter-spacing" "0.05em"
+            , opacity (num 0.5)
+            ]
+        ]
+        [ text label ]
 
 
 {-| 指定クラスの全車両をチップとして並べ, クリックで選択をトグルするセレクタ.
@@ -431,34 +442,20 @@ statusBadge status =
             text ""
 
 
-summaryStats : Analysis -> StandingsEntry -> Html msg
-summaryStats analysis item =
+summaryStats : StandingsEntry -> Html msg
+summaryStats item =
     div
         [ css
-            [ property "display" "grid"
-            , property "row-gap" "12px"
+            [ glassPanel
+            , property "display" "grid"
+            , property "grid-template-columns" "repeat(5, minmax(0, 1fr))"
             ]
         ]
-        [ div
-            [ css
-                [ glassPanel
-                , property "display" "grid"
-                , property "grid-template-columns" "repeat(5, minmax(0, 1fr))"
-                ]
-            ]
-            [ statCell "Pos" (text ("P" ++ String.fromInt item.position))
-            , statCell "Class" (text ("P" ++ String.fromInt item.positionInClass))
-            , statCell "Laps" (text (String.fromInt item.lapsCompleted))
-            , statCell "Gap" (text (Gap.toString item.gapToLeader))
-            , statCell "Int" (text (Gap.toString item.intervalToAhead))
-            ]
-        , div
-            [ css
-                [ glassPanel
-                , property "padding" "8px"
-                ]
-            ]
-            [ CarStatus.sectorAndLaps analysis item ]
+        [ statCell "Pos" (text ("P" ++ String.fromInt item.position))
+        , statCell "Class" (text ("P" ++ String.fromInt item.positionInClass))
+        , statCell "Laps" (text (String.fromInt item.lapsCompleted))
+        , statCell "Gap" (text (Gap.toString item.gapToLeader))
+        , statCell "Int" (text (Gap.toString item.intervalToAhead))
         ]
 
 

@@ -63,20 +63,32 @@ manufacturerLogo manufacturer =
                 []
 
 
-{-| セクター進捗パイ + Current ラップ + Last ラップを `auto 1fr 1fr` の横並びで描く.
+{-| セクター進捗パイ + Current ラップ + Last ラップを描く.
+pie はセクター進捗(＝Current ラップ)を示すので Current と同じ列にまとめ,
+左右 50/50 の2カラム(`pie + Current` | `Last`)でバランスよく並べる.
 -}
 sectorAndLaps : Analysis -> StandingsEntry -> Html msg
 sectorAndLaps analysis item =
     div
         [ css
             [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr 1fr"
-            , property "align-items" "center"
+            , property "grid-template-columns" "1fr 1fr"
+            , property "place-items" "center"
             , property "column-gap" "8px"
             ]
         ]
-        [ currentSectorPie analysis item
-        , currentLapBlock analysis item
+        [ div
+            [ css
+                [ property "display" "grid"
+                , property "width" "fit-content"
+                , property "grid-template-columns" "auto auto"
+                , property "align-items" "center"
+                , property "column-gap" "8px"
+                ]
+            ]
+            [ currentSectorPie analysis item
+            , currentLapBlock analysis item
+            ]
         , lastLapBlock item
         ]
 
