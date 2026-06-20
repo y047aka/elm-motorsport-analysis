@@ -72,6 +72,7 @@ carSummary analysis lapRange distScale standings item =
     div
         [ css
             [ property "display" "grid"
+            , property "grid-template-rows" "1fr auto auto"
             , property "row-gap" "12px"
             , property "align-content" "start"
             ]
@@ -373,16 +374,45 @@ header item =
             ]
             [ div [ css [ property "font-size" "14px" ] ]
                 [ text item.metadata.team ]
-            , div
-                [ css
-                    [ property "font-size" "11px"
-                    , opacity (num 0.7)
-                    ]
-                ]
-                [ text (item.metadata.drivers |> List.map .name |> String.join " / ") ]
+            , driverList item
             ]
         , statusBadge item.status
         ]
+
+
+{-| Leaderboard と同様に, 現在ステアリングを握っているドライバーを強調し,
+それ以外のドライバーは控えめに表示する.
+-}
+driverList : StandingsEntry -> Html msg
+driverList item =
+    div
+        [ css
+            [ property "display" "flex"
+            , property "flex-wrap" "wrap"
+            , property "column-gap" "8px"
+            , property "row-gap" "2px"
+            , property "font-size" "11px"
+            ]
+        ]
+        (List.map
+            (\driver ->
+                let
+                    isCurrentDriver =
+                        Maybe.map .name item.currentDriver == Just driver.name
+                in
+                div
+                    [ css
+                        [ if isCurrentDriver then
+                            opacity (num 1)
+
+                          else
+                            opacity (num 0.4)
+                        ]
+                    ]
+                    [ text driver.name ]
+            )
+            item.metadata.drivers
+        )
 
 
 classBadge : Int -> Class -> Html msg

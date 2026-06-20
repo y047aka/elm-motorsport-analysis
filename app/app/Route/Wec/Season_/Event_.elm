@@ -357,6 +357,7 @@ carDetailPopover config standings detailCarNumbers =
             [ -- Tailwind preflight が UA の margin:auto を打ち消すため明示して中央配置する
               property "margin" "auto"
             , property "max-width" "min(90vw, 1200px)"
+            , property "padding" "1rem"
 
             -- ガラス風(グラスモーフィズム): 半透明背景 + 背景ぼかし + 縁取り.
             -- 配色は app 側の DaisyUI テーマトークン(--glass-*)で管理する.
