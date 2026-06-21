@@ -79,6 +79,7 @@ type alias Model =
     , query : String
     , stripOffset : Int
     , detailCarNumbers : List String
+    , detailChart : CompareWidget.Chart
     }
 
 
@@ -107,6 +108,7 @@ init app shared =
       , query = ""
       , stripOffset = 0
       , detailCarNumbers = []
+      , detailChart = CompareWidget.GapChart
       }
     , Effect.fromCmd
         (Task.succeed (Shared.FetchJson_Wec { season = app.routeParams.season, event = app.routeParams.event })
@@ -130,6 +132,7 @@ type Msg
     | StripScrollTo Int
     | ShowCarDetail String
     | ToggleDetailCar String
+    | SelectDetailChart CompareWidget.Chart
 
 
 update :
@@ -185,6 +188,9 @@ update app shared msg m =
                         List.take 3 (m.detailCarNumbers ++ [ carNumber ])
             in
             ( { m | detailCarNumbers = next }, Effect.none, Nothing )
+
+        SelectDetailChart chart ->
+            ( { m | detailChart = chart }, Effect.none, Nothing )
 
 
 
@@ -323,7 +329,7 @@ view app { eventSummary, analysis, raceControl } m =
                                     standings
                                 ]
                             , carDetailPopover
-                                { season = eventSummary.season, analysis = analysis, clock = raceControl.clock }
+                                { season = eventSummary.season, analysis = analysis, clock = raceControl.clock, activeChart = m.detailChart }
                                 standings
                                 m.detailCarNumbers
                             ]
@@ -344,7 +350,7 @@ carDetailPopoverId =
 しておき, 中身だけを選択中の車両から構築する(開いている間もライブ更新される).
 `popover="auto"` によりライトディスミス(外側クリック・Esc)で閉じる.
 -}
-carDetailPopover : { season : Int, analysis : Analysis, clock : Clock.Model } -> Standings.Standings -> List String -> Html Msg
+carDetailPopover : { season : Int, analysis : Analysis, clock : Clock.Model, activeChart : CompareWidget.Chart } -> Standings.Standings -> List String -> Html Msg
 carDetailPopover config standings detailCarNumbers =
     Html.node "div"
         [ Attributes.id carDetailPopoverId
@@ -389,7 +395,13 @@ carDetailPopover config standings detailCarNumbers =
                     ]
                     [ text "✕" ]
                 , CompareWidget.viewComparison
-                    { season = config.season, analysis = config.analysis, clock = config.clock, onToggleCar = ToggleDetailCar }
+                    { season = config.season
+                    , analysis = config.analysis
+                    , clock = config.clock
+                    , onToggleCar = ToggleDetailCar
+                    , activeChart = config.activeChart
+                    , onSelectChart = SelectDetailChart
+                    }
                     standings
                     detailCarNumbers
                 ]

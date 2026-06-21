@@ -307,7 +307,7 @@ groupReferenceByLap carLines =
 -}
 consolidated : Dimensions
 consolidated =
-    { width = 700, height = 120, padding = { top = 4, right = 20, bottom = 20, left = 30 } }
+    { width = 1000, height = 250, padding = { top = 20, right = 25, bottom = 20, left = 25 } }
 
 
 {-| カード内に収める前後ライバル比較(ギャップ)の寸法. 狭幅・低背に取る.

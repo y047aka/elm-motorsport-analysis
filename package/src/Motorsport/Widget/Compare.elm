@@ -1,19 +1,19 @@
-module Motorsport.Widget.Compare exposing (viewComparison)
+module Motorsport.Widget.Compare exposing (Chart(..), viewComparison)
 
 {-| 車両の詳細情報(サマリー＋クラス内ポジション履歴)を表示する Widget.
 ポップオーバー/ダイアログの中身として使う想定で, ポップオーバー属性自体は持たない.
 
 `viewComparison` はモーダル内に同一クラスの車両セレクタを備え, 最大3台までを
-トグル選択しながら比較できる. サマリーを横並びにし, ポジション履歴チャートは
-1枚に全車を強調表示する(同一クラス前提).
+トグル選択しながら比較できる. サマリーを横並びにし, 下部の2チャートは
+タブで切り替えて片方ずつ表示する(占有面積を抑える).
 
-@docs viewComparison
+@docs Chart, viewComparison
 
 -}
 
 import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, button, div, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Analysis exposing (Analysis)
@@ -165,16 +165,30 @@ racingTimes standings ( minLap, maxLap ) entry =
     times |> List.filter (\t -> t <= upperFence times)
 
 
+{-| 下部チャートのタブ. どちらか一方だけを表示する.
+-}
+type Chart
+    = GapChart
+    | PositionChart
+
+
 {-| モーダル内で同一クラスの車両を最大3台までトグル選択しながら比較するビュー.
 `selectedCarNumbers` は選択中の車番(先頭をチャートのクラス基準とする).
 セレクタの各チップは `onToggleCar` を発火する(3台上限の制御は呼び出し側で行う).
+下部チャートは `activeChart` の1枚だけを表示し, タブクリックで `onSelectChart` を発火する.
 -}
 viewComparison :
-    { season : Int, analysis : Analysis, clock : Clock.Model, onToggleCar : String -> msg }
+    { season : Int
+    , analysis : Analysis
+    , clock : Clock.Model
+    , onToggleCar : String -> msg
+    , activeChart : Chart
+    , onSelectChart : Chart -> msg
+    }
     -> Standings
     -> List String
     -> Html msg
-viewComparison { season, analysis, clock, onToggleCar } standings selectedCarNumbers =
+viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChart } standings selectedCarNumbers =
     let
         entriesByNumber =
             Standings.toList standings
@@ -241,47 +255,79 @@ viewComparison { season, analysis, clock, onToggleCar } standings selectedCarNum
                     (List.map (carSummary analysis lapRange distScale standings) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) placeholderCard
                     )
-                , gapPanel lapRange standings selectedEntries
-                , chartPanel "Position progression" <|
-                    PositionProgression.view
-                        { width = 800, height = 200 }
-                        clock
-                        standings
-                        { class = class
-                        , highlighted = selectedCarNumbers
-                        }
+                , chartTabs onSelectChart
+                    activeChart
+                    [ ( GapChart
+                      , "Gap to group avg"
+                      , \() -> gapChart lapRange standings selectedEntries
+                      )
+                    , ( PositionChart
+                      , "Position progression"
+                      , \() ->
+                            PositionProgression.view
+                                { width = 1000, height = 250 }
+                                clock
+                                standings
+                                { class = class
+                                , highlighted = selectedCarNumbers
+                                }
+                      )
+                    ]
                 ]
 
 
-{-| 「Gap to group avg」見出し付きのパネル. 選択車のグループ平均を基準にした相対ギャップを
-1枚に統合表示する.
+{-| 選択車のグループ平均を基準にした相対ギャップを1枚に統合表示するチャート.
 -}
-gapPanel : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
-gapPanel maybeRange standings entries =
-    chartPanel "Gap to group avg" <|
-        case maybeRange of
-            Just range ->
-                Sparkline.gapChartView range standings entries
+gapChart : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapChart maybeRange standings entries =
+    case maybeRange of
+        Just range ->
+            Sparkline.gapChartView range standings entries
 
-            Nothing ->
-                text ""
+        Nothing ->
+            text ""
 
 
-{-| 見出し付きのチャートパネル. 見出しは小型・大文字で控えめに付ける.
+{-| 複数のチャートをタブで切り替えて1枚分の面積に収めるパネル.
+タブの仕組みは Event ページの mode セレクタと同じく `join` のボタン群で,
+クリックで `onSelect` を発火して `active` を切り替える(状態は呼び出し側が保持する).
+非アクティブなチャートは描画しないよう, 各 content は遅延評価のサンクで渡す.
 -}
-chartPanel : String -> Html msg -> Html msg
-chartPanel label content =
+chartTabs : (Chart -> msg) -> Chart -> List ( Chart, String, () -> Html msg ) -> Html msg
+chartTabs onSelect active tabs =
     div
         [ css
             [ glassPanelDark
             , property "padding" "8px"
             , property "display" "grid"
-            , property "row-gap" "6px"
             ]
         ]
-        [ panelLabel label
-        , content
+        [ div [ class "join" ]
+            (List.map (\( chart, label, _ ) -> chartTabButton onSelect chart label (chart == active)) tabs)
+        , tabs
+            |> List.Extra.find (\( chart, _, _ ) -> chart == active)
+            |> Maybe.map (\( _, _, content ) -> content ())
+            |> Maybe.withDefault (text "")
         ]
+
+
+{-| `chartTabs` のタブボタン. Event ページの `joinButton` と同じ見た目に揃える.
+-}
+chartTabButton : (Chart -> msg) -> Chart -> String -> Bool -> Html msg
+chartTabButton onSelect chart label isActive =
+    button
+        [ onClick (onSelect chart)
+        , class
+            ("join-item btn btn-sm btn-soft"
+                ++ (if isActive then
+                        " btn-active"
+
+                    else
+                        ""
+                   )
+            )
+        ]
+        [ text label ]
 
 
 {-| パネル見出しの共通スタイル. 小型・大文字・控えめな不透明度で付ける.

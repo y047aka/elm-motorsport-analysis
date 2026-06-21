@@ -116,7 +116,7 @@ lapExtent positions =
 
 positionHistoryWindowMillis : Int
 positionHistoryWindowMillis =
-    3 * 60 * 60 * 1000
+    6 * 60 * 60 * 1000
 
 
 calculateLapThreshold : Clock.Model -> Standings -> Int
@@ -142,7 +142,7 @@ positionProgressionChart size series =
         dimensions =
             { width = size.width
             , height = size.height
-            , padding = { top = 15, right = 25, bottom = 25, left = 25 }
+            , padding = { top = 20, right = 25, bottom = 20, left = 25 }
             }
 
         allPoints =
