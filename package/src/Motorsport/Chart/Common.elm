@@ -1,25 +1,25 @@
 module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
     , LapWindow(..)
-    , Dimensions
-    , Scales, svg, renderLine
-    , xContinuousScale
+    , Dimensions, Scales, xContinuousScale
+    , svg, renderLine
     , axisStyle, lapGridLines, lapAxis, yAxis
     , iqrFences, upperFence
     )
 
-{-| 複数のチャートが共有する土台. 系列の強調(`Emphasis`), ラップ列の窓(`LapWindow`),
-描画寸法(`Dimensions`), 折れ線描画のスケール(`Scales`)といった型と, それらを使って
-1系列の折れ線＋終端ドットを描く共通レンダラ(`renderLine`), 軸・グリッドの共通描画
-(`axisStyle` / `lapGridLines` / `lapAxis` / `yAxis`), 外れ値処理の統計ヘルパ
-(`iqrFences` / `upperFence`)をまとめる. スパークライン・ラップタイム分布・ポジション履歴
-などから参照する.
+{-| Shared foundation for several charts. Bundles the types — series emphasis
+(`Emphasis`), the lap-column window (`LapWindow`), drawing dimensions
+(`Dimensions`), and the scales for line drawing (`Scales`) — together with the
+common renderer that draws one series as a polyline plus a terminal dot
+(`renderLine`), the shared axis/grid drawing (`axisStyle` / `lapGridLines` /
+`lapAxis` / `yAxis`), and the outlier statistics helpers (`iqrFences` /
+`upperFence`). Referenced by the sparkline, lap-time distribution, and position
+history charts.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
 @docs LapWindow
-@docs Dimensions
-@docs Scales, svg, renderLine
-@docs xContinuousScale
+@docs Dimensions, Scales, xContinuousScale
+@docs svg, renderLine
 @docs axisStyle, lapGridLines, lapAxis, yAxis
 @docs iqrFences, upperFence
 
@@ -40,9 +40,14 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-{-| 系列(折れ線)の強調. `Focused` は対象車(太線・不透明・終端ドット), `Related` は対象に
-関係する数台(有彩色・細線・半透明), `Muted` はそれ以外の車(無彩色・細線・低不透明)を表す.
-真偽値による分岐(boolean blindness)を避ける.
+
+-- Emphasis
+
+
+{-| Emphasis of a series (polyline). `Focused` is the target car (thick, opaque,
+terminal dot), `Related` is the few cars related to the target (chromatic, thin,
+semi-transparent), and `Muted` is every other car (near-achromatic, thin, low
+opacity). Avoids branching on booleans (boolean blindness).
 -}
 type Emphasis
     = Focused
@@ -50,8 +55,9 @@ type Emphasis
     | Muted
 
 
-{-| 強調に応じて値を選ぶ. `Focused` なら `.focused`, `Related` なら `.related`, `Muted` なら
-`.muted` を返す. 線幅や不透明度の分岐をチャート間で同じ形に書ける.
+{-| Selects a value by emphasis: `.focused` for `Focused`, `.related` for
+`Related`, `.muted` for `Muted`. Lets stroke width and opacity branches be
+written the same way across charts.
 -}
 chooseByEmphasis : { focused : a, related : a, muted : a } -> Emphasis -> a
 chooseByEmphasis { focused, related, muted } emphasis =
@@ -66,8 +72,10 @@ chooseByEmphasis { focused, related, muted } emphasis =
             muted
 
 
-{-| 描画順の優先度. 大きいほど手前(後で描く). `Muted`(奥) < `Related`(中) < `Focused`(手前).
-強調対象が周辺車に隠れないよう, `sortForDrawing` で重ね順を決めるのに使う.
+{-| Draw-order priority. Higher is closer to the front (drawn later):
+`Muted` (back) < `Related` (middle) < `Focused` (front). Used by `sortForDrawing`
+to decide the stacking order so the focused series is not hidden by surrounding
+cars.
 -}
 emphasisRank : Emphasis -> Int
 emphasisRank emphasis =
@@ -82,9 +90,11 @@ emphasisRank emphasis =
             2
 
 
-{-| 系列を描画順(リスト先頭=最背面)に並べ替える. 第1キーは `Emphasis` ランク昇順
-(`Muted` 奥 → `Focused` 手前). 第2キーは最新時点の順位で, 上位(小さい番号)ほど手前に置く.
-順位を持たない系列は最背面へ送る. `toEmphasis` / `toLatestPosition` で系列から各キーを取り出す.
+{-| Sorts series into draw order (head of list = backmost). The primary key is
+the `Emphasis` rank ascending (`Muted` back → `Focused` front). The secondary key
+is the latest position, placing higher ranks (smaller numbers) toward the front.
+Series without a position are sent to the back. `toEmphasis` / `toLatestPosition`
+extract each key from a series.
 -}
 sortForDrawing : (a -> Emphasis) -> (a -> Maybe Int) -> List a -> List a
 sortForDrawing toEmphasis toLatestPosition =
@@ -92,18 +102,28 @@ sortForDrawing toEmphasis toLatestPosition =
         (\s -> ( emphasisRank (toEmphasis s), negate (Maybe.withDefault 9999 (toLatestPosition s)) ))
 
 
-{-| ラップ列の切り出し方. `Recent` は対象車の現在ラップを起点とした直近20周の窓
-(リタイア済み・大きく遅れた隣接車の古いラップが基準平均に混入するのを防ぐ).
-`Range` はポジション履歴と揃えた確定ラップ範囲 `(minLap, maxLap)`.
+
+-- Lap window
+
+
+{-| How to slice the lap column. `Recent` is the window of the last 20 laps
+anchored at the target car's current lap (keeps stale laps of retired or
+far-behind neighbors from contaminating the baseline average). `Range` is a fixed
+lap range `(minLap, maxLap)` aligned with the position history.
 -}
 type LapWindow
     = Recent Int
     | Range ( Int, Int )
 
 
-{-| チャートの viewBox 寸法と上下左右のパディング(`padding.top` 等). 軸ラベルのために
-左・下を厚く取るチャート(ポジション履歴)と, 対称パディングのチャート(スパークライン)を
-同じ型で表す. 種類ごとのプリセットは各チャート側で定義する.
+
+-- Dimensions & scales
+
+
+{-| A chart's viewBox dimensions and its top/right/bottom/left padding
+(`padding.top`, etc.). Represents with one type both charts that take thick
+left/bottom padding for axis labels (position history) and charts with symmetric
+padding (sparkline). Per-kind presets are defined on each chart.
 -}
 type alias Dimensions =
     { width : Float
@@ -117,8 +137,9 @@ type alias Dimensions =
     }
 
 
-{-| 折れ線を描くためのスケール一式. 各チャートで `allPoints` から1度だけ構築し,
-軸・グリッド・各系列の描画へ配る(系列ごとの再構築を避ける).
+{-| The set of scales for drawing polylines. Built once per chart from
+`allPoints` and shared across the axis, grid, and per-series drawing (avoids
+rebuilding per series).
 -}
 type alias Scales =
     { xScale : Scale.ContinuousScale Float
@@ -126,17 +147,23 @@ type alias Scales =
     }
 
 
-{-| ラップ番号(X軸)を画面座標へ張る線形スケール. 左右の水平パディングを差し引いた
-プロット幅へ, 与えられたドメイン `( minX, maxX )` を写像する. ラップ軸を持つチャートで
-共有する(縦軸はチャートごとに張り方が異なるため各チャート側で組む).
+{-| Linear scale mapping the lap number (X axis) to screen coordinates. Maps the
+given domain `( minX, maxX )` onto the plot width with the horizontal padding
+removed. Shared by charts with a lap axis (the Y axis differs per chart, so each
+chart builds its own).
 -}
 xContinuousScale : Dimensions -> ( Float, Float ) -> Scale.ContinuousScale Float
 xContinuousScale { width, padding } domain =
     Scale.linear ( padding.left, width - padding.right ) domain
 
 
-{-| チャート共通の svg ラッパ. 幅100%・block 表示で `viewBox` を寸法に張り, 装飾と
-各系列の折れ線をまとめて描く. 装飾(軸・グリッド・ゼロ線など)は各チャートが渡す.
+
+-- Line drawing
+
+
+{-| Common svg wrapper for charts. Sets `viewBox` to the dimensions at 100% width
+and block display, then draws the decorations and each series' polyline together.
+The decorations (axis, grid, zero line, etc.) are passed in by each chart.
 -}
 svg : { width : Float, height : Float } -> List (Svg msg) -> Svg msg
 svg { width, height } children =
@@ -148,11 +175,14 @@ svg { width, height } children =
         children
 
 
-{-| 1系列分の折れ線＋終端ドットを描く共通レンダラ. `points` は `( x, y )` の整数値
-(ラップ番号と縦軸量)で渡し, `Scales` で画面座標へ投影する. 表示は X軸スケールの
-ドメイン(`Scale.domain`)内に収め, はみ出す点はクリップする. 線の太さ・不透明度・色は
-`Emphasis` で決め(`Muted` は車色を捨てて無彩色で描く), 終端ドットは強調系列(`Focused`)の
-最終点にだけ置く. `label`(車両番号など)が空文字列でなければ終端ドットの右側に併記する.
+{-| Common renderer that draws one series as a polyline plus a terminal dot.
+`points` are integer `( x, y )` values (lap number and vertical quantity),
+projected to screen coordinates via `Scales`. Output is clipped to the X-axis
+scale domain (`Scale.domain`); points outside it are dropped. Stroke width,
+opacity, and color are chosen by `Emphasis` (`Muted` largely drops the car color
+and draws near-achromatic); the terminal dot is placed only on the last point of
+the focused series (`Focused`). If `label` (e.g. a car number) is non-empty, it
+is shown to the right of the terminal dot.
 -}
 renderLine :
     Scales
@@ -166,7 +196,7 @@ renderLine scales { color, emphasis, label, points } =
         visible =
             points |> List.filter (\( x, _ ) -> minX <= toFloat x && toFloat x <= maxX)
 
-        -- Muted(その他)は車色の彩度を大きく落として背面へ退かせる(完全な無彩色にはしない).
+        -- Muted (others): drop most of the car color's chroma to recede into the background (not fully achromatic).
         strokeValue =
             case emphasis of
                 Muted ->
@@ -186,7 +216,6 @@ renderLine scales { color, emphasis, label, points } =
         linePath =
             visible |> List.map (projectPoint scales >> Just) |> Shape.line Shape.linearCurve
 
-        -- 終端ドットは強調系列(Focused)の最終点にだけ置く.
         terminalDot =
             case emphasis of
                 Focused ->
@@ -209,15 +238,29 @@ renderLine scales { color, emphasis, label, points } =
         ]
 
 
-{-| 整数値の点 `( x, y )`(ラップ番号と縦軸量)を `Scales` で画面座標へ投影する.
+{-| Projects an integer point `( x, y )` (lap number and vertical quantity) to
+screen coordinates via `Scales`.
 -}
 projectPoint : Scales -> ( Int, Int ) -> ( Float, Float )
 projectPoint { xScale, yScale } ( x, y ) =
     ( Scale.convert xScale (toFloat x), Scale.convert yScale (toFloat y) )
 
 
-{-| 終端ドット(＋必要ならラベル)を描く. 強調系列の最終点を受け取り `Scales` で投影する.
-`label` が空文字列でなければドットの右側に併記する. 描画可否(Focused のみ)は `renderLine` で分岐する.
+{-| Polyline color for `Muted` (other cars unrelated to the target). A fully
+achromatic color would lose car identifiability, so this returns a color with the
+original car color's chroma (oklch chroma) greatly reduced. Keeping a hint of
+color preserves identifiability while receding into the background. Computed with
+the `oklch(from …)` relative color syntax.
+-}
+mutedColorValue : Css.Color -> String
+mutedColorValue color =
+    "oklch(from " ++ color.value ++ " 0.5 calc(c * 0.2) h)"
+
+
+{-| Draws the terminal dot (plus a label when needed). Takes the focused series'
+last point and projects it via `Scales`. If `label` is non-empty, it is shown to
+the right of the dot. Whether to draw at all (Focused only) is decided in
+`renderLine`.
 -}
 terminalMarker : Scales -> { color : Css.Color, label : String } -> ( Int, Int ) -> Svg msg
 terminalMarker scales { color, label } point =
@@ -242,17 +285,9 @@ terminalMarker scales { color, label } point =
         )
 
 
-{-| `Muted`(対象に関係しないその他の車)の折れ線色. 完全な無彩色にすると車の識別性が
-失われるため, 元の車色の彩度(oklch の chroma)を大きく落とした色を返す. わずかに色味を
-残すことで識別性を保ちつつ背面へ退かせる. `oklch(from …)` の相対色構文で算出する.
--}
-mutedColorValue : Css.Color -> String
-mutedColorValue color =
-    "oklch(from " ++ color.value ++ " 0.5 calc(c * 0.2) h)"
-
-
-{-| 終端ドットの右側に併記するラベル(車両番号など). 描画可否は呼び出し側(`renderLine`)で
-分岐する. ドットと重ならないよう半径ぶん右へ寄せ, 縦は中央に揃える.
+{-| Label shown to the right of the terminal dot (e.g. a car number). Whether to
+draw it is decided by the caller (`renderLine`). Offset right by the radius so it
+does not overlap the dot, and vertically centered.
 -}
 terminalLabel : { x : Float, y : Float, color : Css.Color, label : String } -> Svg msg
 terminalLabel { x, y, color, label } =
@@ -269,15 +304,19 @@ terminalLabel { x, y, color, label } =
         [ text label ]
 
 
-{-| 終端ドットの半径. 強調系列の最新点を示す.
+{-| Radius of the terminal dot, marking the focused series' latest point.
 -}
 terminalDotRadius : Float
 terminalDotRadius =
     2.2
 
 
-{-| 軸テキスト/目盛り線の共通スタイル. 小型・控えめなグレーで, 目盛り線も細く付ける.
-ラップ軸・順位軸など軸を持つチャートで共有する.
+
+-- Axes & grid
+
+
+{-| Common style for axis text and tick lines: small, muted gray, with thin tick
+lines. Shared by charts with an axis such as the lap axis or position axis.
 -}
 axisStyle : Css.Style
 axisStyle =
@@ -296,7 +335,8 @@ axisStyle =
         ]
 
 
-{-| ラップ番号の縦グリッド線(5周ごと). チャート上下のプロット領域いっぱいに引く.
+{-| Vertical grid lines at lap numbers (every 5 laps), drawn across the full
+height of the plot area.
 -}
 lapGridLines : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
 lapGridLines { height, padding } xScale ( minLap, maxLap ) =
@@ -332,7 +372,8 @@ lapGridLines { height, padding } xScale ( minLap, maxLap ) =
             gridLaps
 
 
-{-| ラップ番号のX軸(下端). 毎ラップに目盛りを置き, ラベルは5周ごとに付ける.
+{-| Lap-number X axis (bottom). Places a tick at every lap, with a label every 5
+laps.
 -}
 lapAxis : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
 lapAxis { height, padding } xScale ( minLap, maxLap ) =
@@ -365,8 +406,9 @@ lapAxis { height, padding } xScale ( minLap, maxLap ) =
         [ axis ]
 
 
-{-| Y軸(左端)の共通ラッパ. 目盛り値・整形(`Axis.Attribute`)はチャート固有なので
-呼び出し側が渡し, スタイルと左パディングへの平行移動だけを共通化する.
+{-| Common wrapper for the Y axis (left). Tick values and formatting
+(`Axis.Attribute`) are chart-specific and passed in by the caller; only the style
+and the translation to the left padding are shared.
 -}
 yAxis : Dimensions -> List (Axis.Attribute Float) -> Scale.ContinuousScale Float -> Svg msg
 yAxis { padding } attributes yScale =
@@ -377,27 +419,12 @@ yAxis { padding } attributes yScale =
         [ fromUnstyled (Axis.left attributes yScale) ]
 
 
-{-| 昇順ソート済みリストの q 分位点(0〜1)を最近傍で返す.
--}
-quantile : Float -> List Int -> Maybe Int
-quantile q sorted =
-    let
-        n =
-            List.length sorted
-    in
-    if n == 0 then
-        Nothing
 
-    else
-        let
-            idx =
-                clamp 0 (n - 1) (floor (toFloat (n - 1) * q))
-        in
-        sorted |> List.drop idx |> List.head
+-- Outlier handling
 
 
-{-| 昇順ソート済みリストの IQR 外れ値フェンス `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]`.
-要素が空のときは `Nothing`.
+{-| IQR outlier fences `[Q1 − 1.5×IQR, Q3 + 1.5×IQR]` for an ascending-sorted
+list. `Nothing` when empty.
 
     iqrFences [ 1, 2, 3, 4, 5, 6, 7, 8 ]
     --> Just { lower = -4, upper = 12 }
@@ -417,8 +444,9 @@ iqrFences sorted =
         (quantile 0.75 sorted)
 
 
-{-| 外れ値の上側フェンス `Q3 + 1.5×IQR`. レーシング帯の上限として使う. 値が少なく
-フェンスを求められないときは最大値へフォールバックする(空リストでは 0). 入力はソート不要.
+{-| Upper outlier fence `Q3 + 1.5×IQR`, used as the upper bound of the racing
+band. Falls back to the maximum when there are too few values to compute a fence
+(0 for an empty list). Input need not be sorted.
 
     upperFence [ 1, 2, 3, 4, 5, 6, 7, 8 ]
     --> 12
@@ -429,3 +457,22 @@ upperFence values =
     iqrFences (List.sort values)
         |> Maybe.map .upper
         |> Maybe.withDefault (List.maximum values |> Maybe.withDefault 0)
+
+
+{-| Returns the q-quantile (0–1) of an ascending-sorted list by nearest rank.
+-}
+quantile : Float -> List Int -> Maybe Int
+quantile q sorted =
+    let
+        n =
+            List.length sorted
+    in
+    if n == 0 then
+        Nothing
+
+    else
+        let
+            idx =
+                clamp 0 (n - 1) (floor (toFloat (n - 1) * q))
+        in
+        sorted |> List.drop idx |> List.head
