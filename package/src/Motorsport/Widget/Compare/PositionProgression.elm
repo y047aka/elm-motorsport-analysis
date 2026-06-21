@@ -4,7 +4,7 @@ import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, svg, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, yAxis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -155,13 +155,17 @@ positionProgressionChart size series =
             { xScale = xContinuousScale dimensions lapRange_
             , yScale = yContinuousScale dimensions allPoints
             }
+
+        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
+        orderedSeries =
+            sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
     svg size
         ([ lapGridLines dimensions scales.xScale lapRange_
          , lapAxis dimensions scales.xScale lapRange_
          , positionAxis dimensions scales.yScale
          ]
-            ++ List.map (positionLine scales) series
+            ++ List.map (positionLine scales) orderedSeries
         )
 
 

@@ -328,10 +328,10 @@ rivalGapSparkline standings neighbors item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (Sparkline.carLine standings (Recent currentLap) Muted)
+            neighbors.ahead |> List.map (Sparkline.carLine standings (Recent currentLap) Related)
 
         behindLines =
-            neighbors.behind |> List.map (Sparkline.carLine standings (Recent currentLap) Muted)
+            neighbors.behind |> List.map (Sparkline.carLine standings (Recent currentLap) Related)
 
         focusedLine =
             Sparkline.carLine standings (Recent currentLap) Focused item

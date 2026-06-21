@@ -17,7 +17,7 @@ import Css exposing (Style, property)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Chart.Common exposing (Emphasis, chooseByEmphasis)
+import Motorsport.Chart.Common exposing (Emphasis)
 import Motorsport.Duration as Duration
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
@@ -217,8 +217,7 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
             [ SvgAttr.fill ("oklch(from " ++ series.color.value ++ " l c h / 0.15)") ]
         , Path.element (Shape.line Shape.monotoneInXCurve linePoints)
             [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.5" } series.emphasis)
-            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.6" } series.emphasis)
+            , SvgAttr.strokeWidth "2"
             , SvgAttr.fill "none"
             ]
         , lastLapMarker xScale yScale series lastLapPoint
@@ -243,13 +242,13 @@ lastLapMarker xScale yScale series lastLapPoint =
                 [ circle
                     [ InPx.cx px
                     , InPx.cy py
-                    , InPx.r 2
+                    , InPx.r 2.5
                     , SvgAttr.css [ Css.fill series.color ]
                     ]
                     []
                 , text_
                     [ InPx.x px
-                    , InPx.y (py - 4)
+                    , InPx.y (py - 6)
                     , SvgAttr.textAnchor "middle"
                     , SvgAttr.css
                         [ Css.fill series.color

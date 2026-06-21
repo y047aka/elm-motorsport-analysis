@@ -1,5 +1,5 @@
 module Motorsport.Chart.Common exposing
-    ( Emphasis(..), chooseByEmphasis
+    ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
     , LapWindow(..)
     , Dimensions
     , Scales, svg, renderLine
@@ -14,7 +14,7 @@ module Motorsport.Chart.Common exposing
 (`iqrFences` / `upperFence`)をまとめる. スパークライン・ラップタイム分布・ポジション履歴
 などから参照する.
 
-@docs Emphasis, chooseByEmphasis
+@docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
 @docs LapWindow
 @docs Dimensions
 @docs Scales, svg, renderLine
@@ -38,25 +38,56 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-{-| 系列(折れ線)の強調. `Focused` は対象車(太線・不透明・大ドット), `Muted` は周辺車
-(細線・半透明・小ドット)を表す. 真偽値による分岐(boolean blindness)を避ける.
+{-| 系列(折れ線)の強調. `Focused` は対象車(太線・不透明・終端ドット), `Related` は対象に
+関係する数台(有彩色・細線・半透明), `Muted` はそれ以外の車(無彩色・細線・低不透明)を表す.
+真偽値による分岐(boolean blindness)を避ける.
 -}
 type Emphasis
     = Focused
+    | Related
     | Muted
 
 
-{-| 強調に応じて値を選ぶ. `Focused` なら `.focused`, `Muted` なら `.muted` を返す.
-線幅や不透明度の分岐をチャート間で同じ形に書ける.
+{-| 強調に応じて値を選ぶ. `Focused` なら `.focused`, `Related` なら `.related`, `Muted` なら
+`.muted` を返す. 線幅や不透明度の分岐をチャート間で同じ形に書ける.
 -}
-chooseByEmphasis : { focused : a, muted : a } -> Emphasis -> a
-chooseByEmphasis { focused, muted } emphasis =
+chooseByEmphasis : { focused : a, related : a, muted : a } -> Emphasis -> a
+chooseByEmphasis { focused, related, muted } emphasis =
     case emphasis of
         Focused ->
             focused
 
+        Related ->
+            related
+
         Muted ->
             muted
+
+
+{-| 描画順の優先度. 大きいほど手前(後で描く). `Muted`(奥) < `Related`(中) < `Focused`(手前).
+強調対象が周辺車に隠れないよう, `sortForDrawing` で重ね順を決めるのに使う.
+-}
+emphasisRank : Emphasis -> Int
+emphasisRank emphasis =
+    case emphasis of
+        Muted ->
+            0
+
+        Related ->
+            1
+
+        Focused ->
+            2
+
+
+{-| 系列を描画順(リスト先頭=最背面)に並べ替える. 第1キーは `Emphasis` ランク昇順
+(`Muted` 奥 → `Focused` 手前). 第2キーは最新時点の順位で, 上位(小さい番号)ほど手前に置く.
+順位を持たない系列は最背面へ送る. `toEmphasis` / `toLatestPosition` で系列から各キーを取り出す.
+-}
+sortForDrawing : (a -> Emphasis) -> (a -> Maybe Int) -> List a -> List a
+sortForDrawing toEmphasis toLatestPosition =
+    List.sortBy
+        (\s -> ( emphasisRank (toEmphasis s), negate (Maybe.withDefault 9999 (toLatestPosition s)) ))
 
 
 {-| ラップ列の切り出し方. `Recent` は対象車の現在ラップを起点とした直近20周の窓
@@ -108,9 +139,9 @@ svg { width, height } children =
 
 {-| 1系列分の折れ線＋終端ドットを描く共通レンダラ. `points` は `( x, y )` の整数値
 (ラップ番号と縦軸量)で渡し, `Scales` で画面座標へ投影する. 表示は X軸スケールの
-ドメイン(`Scale.domain`)内に収め, はみ出す点はクリップする. 線の太さ・不透明度は
-`Emphasis` で決め, 終端ドットは強調系列(`Focused`)の最終点にだけ置く. `label`(車両番号など)
-が空文字列でなければ終端ドットの右側に併記する.
+ドメイン(`Scale.domain`)内に収め, はみ出す点はクリップする. 線の太さ・不透明度・色は
+`Emphasis` で決め(`Muted` は車色を捨てて無彩色で描く), 終端ドットは強調系列(`Focused`)の
+最終点にだけ置く. `label`(車両番号など)が空文字列でなければ終端ドットの右側に併記する.
 -}
 renderLine :
     Scales
@@ -118,6 +149,15 @@ renderLine :
     -> Svg msg
 renderLine { xScale, yScale } { color, emphasis, label, points } =
     let
+        -- Muted(その他)は車色の彩度を大きく落として背面へ退かせる(完全な無彩色にはしない).
+        strokeValue =
+            case emphasis of
+                Muted ->
+                    mutedColorValue color
+
+                _ ->
+                    color.value
+
         ( minX, maxX ) =
             Scale.domain xScale
 
@@ -159,18 +199,27 @@ renderLine { xScale, yScale } { color, emphasis, label, points } =
                             )
                         |> Maybe.withDefault (g [] [])
 
-                Muted ->
+                _ ->
                     g [] []
     in
     g []
         [ Path.element linePath
-            [ SvgAttr.stroke color.value
-            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.5" } emphasis)
-            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.4" } emphasis)
+            [ SvgAttr.stroke strokeValue
+            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", related = "1.5", muted = "1.5" } emphasis)
+            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", related = "0.5", muted = "0.3" } emphasis)
             , SvgAttr.fill "none"
             ]
         , terminalDot
         ]
+
+
+{-| `Muted`(対象に関係しないその他の車)の折れ線色. 完全な無彩色にすると車の識別性が
+失われるため, 元の車色の彩度(oklch の chroma)を大きく落とした色を返す. わずかに色味を
+残すことで識別性を保ちつつ背面へ退かせる. `oklch(from …)` の相対色構文で算出する.
+-}
+mutedColorValue : Css.Color -> String
+mutedColorValue color =
+    "oklch(from " ++ color.value ++ " 0.5 calc(c * 0.2) h)"
 
 
 {-| 終端ドットの右側に併記するラベル(車両番号など). 描画可否は呼び出し側(`renderLine`)で
@@ -213,7 +262,7 @@ axisStyle =
             , Css.Global.typeSelector "path"
             ]
             [ Css.Extra.strokeWidth 1
-            , Css.property "stroke" "oklch(0.5 0 0 / 0.7)"
+            , Css.property "stroke" "oklch(0.5 0 0 / 1)"
             ]
         ]
 

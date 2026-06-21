@@ -24,8 +24,11 @@
   --glass-shadow: oklch(0% 0 0 / 0.8);
   --glass-backdrop: oklch(0% 0 0 / 0.1);
 
-  --glass-panel-bg: oklch(100% 0 0 / 0.04);
-  --glass-panel-border: oklch(100% 0 0 / 0.01);
+  --glass-panel-bg: oklch(1 0 0 / 0.04);
+  --glass-panel-border: oklch(1 0 0 / 0.01);
+
+  --glass-panel-dark-bg: oklch(0 0 0 / 0.15);
+  --glass-panel-dark-border: oklch(1 0 0 / 0.045);
 
   --performance-standard: oklch(0.8652 0.1768 90.38);
   --performance-personal-best: oklch(0.7323 0.249195 142.4953);

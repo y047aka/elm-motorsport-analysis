@@ -50,6 +50,19 @@ glassPanel =
         ]
 
 
+{-| `glassPanel` の暗色バリエーション. 白を薄く敷いて持ち上げる通常版に対し, 黒を薄く
+敷いて1段沈める. 折れ線を載せるチャートの背景に使い, 線の視認性を上げる. 塗りは app 側の
+DaisyUI テーマトークン(`--glass-panel-bg-dark`)で管理する.
+-}
+glassPanelDark : Css.Style
+glassPanelDark =
+    Css.batch
+        [ property "background-color" "var(--glass-panel-dark-bg)"
+        , property "border" "1px solid var(--glass-panel-dark-border)"
+        , property "border-radius" "8px"
+        ]
+
+
 {-| 未選択スロットを埋める控えめなプレースホルダ. 上のセレクタへ誘導する.
 -}
 placeholderCard : Html msg
@@ -260,7 +273,7 @@ chartPanel : String -> Html msg -> Html msg
 chartPanel label content =
     div
         [ css
-            [ glassPanel
+            [ glassPanelDark
             , property "padding" "8px"
             , property "display" "grid"
             , property "row-gap" "6px"

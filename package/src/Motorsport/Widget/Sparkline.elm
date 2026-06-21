@@ -24,7 +24,8 @@ import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSiz
 import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, svg, yAxis)
+import List.Extra
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -199,11 +200,18 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
 
             else
                 []
+
+        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
+        orderedCars =
+            sortForDrawing
+                (.car >> .emphasis)
+                (.car >> .laps >> List.Extra.last >> Maybe.andThen .position)
+                carsWithGaps
     in
     svg { width = width, height = height }
         (decorations
             ++ zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
-            :: List.map (gapLine scales) carsWithGaps
+            :: List.map (gapLine scales) orderedCars
         )
 
 
