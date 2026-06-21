@@ -54,8 +54,7 @@ view app shared =
     { title = "Race Analysis"
     , body =
         [ div [ attribute "data-theme" "forest" ]
-            [ link { path = Route.GapChart, label = "Gap Chart" }
-            , link { path = Route.LapTimeChart, label = "LapTime Chart" }
+            [ link { path = Route.LapTimeChart, label = "LapTime Chart" }
             , link { path = Route.LapTimeChartsByDriver, label = "LapTime Charts By Driver" }
             , link { path = Route.F1, label = "F1" }
             , section_ "WEC 2025"

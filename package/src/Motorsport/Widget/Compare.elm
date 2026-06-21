@@ -19,6 +19,7 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
+import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Clock as Clock
@@ -27,7 +28,6 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CarStatus as CarStatus
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
-import Motorsport.Widget.Sparkline as Sparkline
 
 
 {-| 比較できる車両の最大台数. サマリーのスロット数(プレースホルダ含む)もこれに揃える.
@@ -282,7 +282,7 @@ gapChart : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
 gapChart maybeRange standings entries =
     case maybeRange of
         Just range ->
-            Sparkline.gapChartView range standings entries
+            GapChart.gapChartView range standings entries
 
         Nothing ->
             text ""

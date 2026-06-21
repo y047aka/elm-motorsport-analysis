@@ -16,11 +16,11 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
+import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CarStatus as CarStatus
-import Motorsport.Widget.Sparkline as Sparkline
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
@@ -328,13 +328,13 @@ rivalGapSparkline standings neighbors item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (Sparkline.carLine standings (Recent currentLap) Related)
+            neighbors.ahead |> List.map (GapChart.carLine standings (Recent currentLap) Related)
 
         behindLines =
-            neighbors.behind |> List.map (Sparkline.carLine standings (Recent currentLap) Related)
+            neighbors.behind |> List.map (GapChart.carLine standings (Recent currentLap) Related)
 
         focusedLine =
-            Sparkline.carLine standings (Recent currentLap) Focused item
+            GapChart.carLine standings (Recent currentLap) Focused item
 
         -- 表示は直近の前後1台ずつ＋対象車の3本(前車 → 対象車 → 後車). 隣が欠ければ除外.
         cars =
@@ -350,12 +350,12 @@ rivalGapSparkline standings neighbors item =
 
         -- 「ラップ番号 → 近傍最大5台(対象車を含む)の非ピット平均 elapsed」. 描画ガードに使う.
         referenceByLap =
-            Sparkline.groupReferenceByLap referenceCars
+            GapChart.groupReferenceByLap referenceCars
 
         -- 各車のギャップ点列を一度だけ算出して保持する(描画で共用). 狭幅のカードでは
         -- 終端の車番ラベルを省くため carNumber を空にする(空文字列なら renderLine が描かない).
         carsWithGaps =
-            Sparkline.plotGaps
+            GapChart.plotGaps
                 { reference = referenceCars
                 , display = cars |> List.map (\car -> { car | carNumber = "" })
                 }
@@ -365,7 +365,7 @@ rivalGapSparkline standings neighbors item =
     in
     case ( focusedLapNumbers, rivalLines, Dict.isEmpty referenceByLap ) of
         ( _ :: _ :: _, _ :: _, False ) ->
-            Sparkline.gapSparkline Sparkline.rivalStrip
+            GapChart.gapSparkline GapChart.rivalStrip
                 ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
                 , List.maximum focusedLapNumbers |> Maybe.withDefault 1
                 )
