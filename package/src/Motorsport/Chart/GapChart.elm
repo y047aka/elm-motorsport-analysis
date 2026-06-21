@@ -5,13 +5,16 @@ module Motorsport.Chart.GapChart exposing
     , gapChartView, gapSparkline
     )
 
-{-| ラップ系スパークラインの共有プリミティブ. ラップ列の切り出し(`carLine`),
-ラップ番号ごとのグループ基準(`groupReferenceByLap`)と相対ギャップ点列(`gapPoints`)を
-提供する. ギャップ系チャートは縦軸計算・ゼロ基準線・折れ線描画をまとめた共通レンダラ
-`gapChartView` を使う. 各チャートの寸法は [`Dimensions`](Motorsport-Chart-Common)
-プリセット(`consolidated` / `rivalStrip`)として1か所に集約する. ラップ列の窓
-([`LapWindow`](Motorsport-Chart-Common))・強調の有無([`Emphasis`](Motorsport-Chart-Common))・
-外れ値処理([`iqrFences`](Motorsport-Chart-Common)等)は共有の `Motorsport.Chart.Common` を参照する.
+{-| Shared primitives for the relative-gap chart. Provides lap-series slicing
+(`carLine`), the per-lap group baseline (`groupReferenceByLap`), and the
+relative-gap point series (`gapPoints`). Gap charts go through the shared
+renderer `gapChartView`, which bundles the vertical-axis computation, zero
+baseline, and polyline drawing. Each chart's dimensions are collected as
+`Dimensions` presets (`consolidated` / `rivalStrip`). The lap window
+([`LapWindow`](Motorsport-Chart-Common)), emphasis
+([`Emphasis`](Motorsport-Chart-Common)), and outlier handling
+([`iqrFences`](Motorsport-Chart-Common) etc.) come from the shared
+`Motorsport.Chart.Common`.
 
 @docs CarLine, LinePoint, PlottedCar
 @docs carLine, groupReferenceByLap, gapPoints, plotGaps
@@ -34,7 +37,7 @@ import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
 
 
-{-| スパークライン1本分のデータ(色・強調の有無・車両番号・ラップ列).
+{-| One series' data: color, emphasis, car number, and lap list.
 -}
 type alias CarLine =
     { color : Css.Color
@@ -44,7 +47,8 @@ type alias CarLine =
     }
 
 
-{-| スパークライン上の1点. `value` は縦軸に取る整数量(ラップタイムや相対ギャップなど).
+{-| A single point. `value` is the integer vertical quantity (lap time, relative
+gap, etc.).
 -}
 type alias LinePoint =
     { lap : Int
@@ -52,8 +56,9 @@ type alias LinePoint =
     }
 
 
-{-| 描画1単位. スパークライン1本分のデータ(`car`)と, その縦軸へ投影した点列(`points`)を
-組にする. `gapChartView` / `gapSparkline` が受け取って1枚に重ねて描く.
+{-| One drawing unit: a series (`car`) paired with its points projected onto the
+vertical axis (`points`). `gapChartView` / `gapSparkline` overlay these on a
+single chart.
 -}
 type alias PlottedCar =
     { car : CarLine
@@ -61,8 +66,8 @@ type alias PlottedCar =
     }
 
 
-{-| スパークライン1本分のデータ(色・強調・ラップ列)を組み立てる. ラップ列の窓は
-`LapWindow` で, 強調の有無は `Emphasis` で指定する.
+{-| Builds one series (color, emphasis, lap list). The lap window is given by
+`LapWindow` and the emphasis by `Emphasis`.
 -}
 carLine : Standings -> LapWindow -> Emphasis -> StandingsEntry -> CarLine
 carLine standings window emphasis entry =
@@ -83,14 +88,18 @@ carLine standings window emphasis entry =
     }
 
 
-{-| 複数車の相対ギャップ推移を X軸(ラップ番号)・Y軸(基準との差・秒)付きで1枚に重ねて
-表示するフルチャート. 与えられた車のグループ平均(非ピットラップの累積タイム平均)を基準=0
-ライン(点線)とし, 各車の `累積タイム − グループ平均` を縦軸に取る. 基準より速い(累積小=先行)を
-上, 遅い(累積大=後退)を下に置くため, 線の上下動がそのまま相対ペースの優劣になる.
+{-| Full chart overlaying multiple cars' relative-gap progression with an X axis
+(lap number) and Y axis (difference from baseline, seconds). The group average of
+the given cars (mean cumulative time over non-pit laps) is the baseline = 0 line
+(dotted), and each car's `cumulative time − group average` is the vertical
+quantity. Faster than baseline (smaller cumulative = ahead) goes up, slower
+(larger = behind) goes down, so a line's vertical motion reads directly as
+relative pace.
 
-絶対ラップタイムと違い, グループ平均を引くことで近接した同士のペース差が拡大されて
-読みやすくなる. 縦軸はピット等の外れ値(両側 IQR)を除いた帯で張り, 外れ値は枠外へ
-クリップする.
+Unlike absolute lap time, subtracting the group average magnifies pace
+differences between nearby cars for readability. The vertical axis spans a band
+with outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside
+the frame.
 
 -}
 gapChartView : ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
@@ -108,8 +117,9 @@ gapChartView ( minLap, maxLap ) standings entries =
             (plotGaps { reference = carLines, display = carLines })
 
 
-{-| ラップ番号ごとのグループ基準 `referenceByLap` と各車のラップ列から, 相対ギャップ
-点列(`累積タイム − 基準`)を組み立てる. 基準を持たないラップは点を作らず除外する.
+{-| Builds the relative-gap point series (`cumulative time − baseline`) from the
+per-lap group baseline `referenceByLap` and each car's lap list. Laps without a
+baseline produce no point and are dropped.
 -}
 gapPoints : Dict Int Int -> List Lap -> List LinePoint
 gapPoints referenceByLap laps =
@@ -121,10 +131,12 @@ gapPoints referenceByLap laps =
             )
 
 
-{-| 基準母集団(`reference`)からラップ番号ごとのグループ基準を1度だけ算出し, 表示対象
-(`display`)の各車を相対ギャップ点列へ投影して `PlottedCar` 列に組み立てる. 基準母集団と
-表示集合が異なる場合(前後ライバル比較では基準を最大5台, 表示を3本にする)に備えて2集合を
-別々に受け取る. 同一集合を渡せば「自分たちのグループ平均」を基準にしたチャートになる.
+{-| Computes the per-lap group baseline once from the reference population
+(`reference`), then projects each displayed car (`display`) onto its relative-gap
+point series to build the `PlottedCar` list. The two sets are taken separately so
+the reference and displayed populations can differ (the rival comparison uses up
+to 5 cars as the baseline and shows 3). Passing the same set yields a chart
+referenced to the cars' own group average.
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
 plotGaps { reference, display } =
@@ -135,21 +147,24 @@ plotGaps { reference, display } =
     display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
 
 
-{-| 軸なしで相対ギャップ点列を描く最小構成のスパークライン. 折れ線とゼロ基準線だけを描き,
-事前に組んだ `PlottedCar` を受け取る(寸法・X軸範囲は呼び出し側が与える). 軸付きのフル
-チャートは [`gapChartView`](#gapChartView) を使う.
+{-| Minimal axis-less sparkline drawing the relative-gap point series: only the
+polyline and zero baseline. Takes pre-built `PlottedCar`s (the caller supplies
+dimensions and X range). For the full chart with axes, use
+[`gapChartView`](#gapChartView).
 -}
 gapSparkline : Dimensions -> ( Float, Float ) -> List PlottedCar -> Html msg
 gapSparkline dimensions range carsWithGaps =
     gapChartViewWith { dimensions = dimensions, showAxes = False } range carsWithGaps
 
 
-{-| 複数車の相対ギャップ点列を1枚に重ねて描く共通レンダラ(内部実装). 縦軸は 0(グループ平均
-ペース)を必ず含め, ピット等の外れ値(両側 IQR)を除いた帯で張って外れ値は枠外へクリップする.
-基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置き, 0 ラインを破線で示す. 寸法と
-X軸範囲は呼び出し側が `Dimensions` プリセットと `( minX, maxX )` で与える(統合チャートと
-カード内で寸法だけが異なる). 軸の有無は公開関数(`gapChartView` / `gapSparkline`)が
-`showAxes` で切り替える.
+{-| Shared renderer overlaying multiple cars' relative-gap point series. The
+vertical axis always includes 0 (group-average pace) and spans a band with
+outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside the
+frame. Faster (smaller cumulative = ahead) goes up, slower (larger = behind) down,
+with the 0 line shown dashed. The caller supplies dimensions and X range via a
+`Dimensions` preset and `( minX, maxX )` (the consolidated chart and the card
+differ only in dimensions). The axes are toggled by the public functions
+(`gapChartView` / `gapSparkline`) via `showAxes`.
 -}
 gapChartViewWith :
     { dimensions : Dimensions, showAxes : Bool }
@@ -166,7 +181,7 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
             , yScale = gapYScale dimensions carsWithGaps
             }
 
-        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
+        -- Stack back-to-front: Muted (back) → Related → Focused (front).
         orderedCars =
             sortForDrawing
                 (.car >> .emphasis)
@@ -180,9 +195,10 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
         )
 
 
-{-| 縦軸スケールを点列から張る. 0(グループ平均ペース)を必ず含め, ピット等の外れ値(両側
-IQR)を除いた帯で範囲を決める. 速い(累積小=先行)を上, 遅い(累積大=後退)を下に置くため,
-スクリーン座標は `( padding.top, height - padding.bottom )` の向きで対応づける.
+{-| Builds the vertical scale from the points. Always includes 0 (group-average
+pace) and bounds the range by a band with outliers (two-sided IQR, e.g. pit laps)
+removed. Maps to screen coordinates as `( padding.top, height - padding.bottom )`
+so faster (smaller cumulative = ahead) is up and slower (larger = behind) is down.
 -}
 gapYScale : Dimensions -> List PlottedCar -> Scale.ContinuousScale Float
 gapYScale { height, padding } carsWithGaps =
@@ -204,7 +220,7 @@ gapYScale { height, padding } carsWithGaps =
         bandGaps =
             allGaps |> List.filter inBand
 
-        -- 0(グループ平均ペース)を必ず含めてレンジを張る.
+        -- Always include 0 (group-average pace) in the range.
         minGap =
             List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
 
@@ -217,8 +233,8 @@ gapYScale { height, padding } carsWithGaps =
     Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
 
 
-{-| 軸まわりの装飾(背面から手前へ: グリッド線 → X軸 → Y軸)を組み立てる. `showAxes` が
-False のスパークラインでは空にして折れ線だけを残す.
+{-| Builds the axis decorations (back to front: grid lines → X axis → Y axis).
+When `showAxes` is False (sparkline) returns empty, leaving only the polylines.
 -}
 gapDecorations : { showAxes : Bool } -> Dimensions -> Scales -> ( Float, Float ) -> List (Svg msg)
 gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
@@ -236,8 +252,8 @@ gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
         []
 
 
-{-| Y軸(基準=グループ平均との差). 目盛りは4本, ミリ秒値を符号付きの秒に整形して示す.
-共通ラッパ `yAxis` に目盛り設定を渡して描く.
+{-| Y axis (difference from the baseline = group average). Four ticks, formatting
+millisecond values as signed seconds. Draws via the shared `yAxis` wrapper.
 -}
 gapAxis : Dimensions -> Scale.ContinuousScale Float -> Svg msg
 gapAxis dimensions yScale =
@@ -251,7 +267,8 @@ gapAxis dimensions yScale =
         yScale
 
 
-{-| Y軸ラベルの整形. ミリ秒を 0.1 秒精度の符号付き秒へ変換する(0 は符号なし).
+{-| Formats a Y-axis label: milliseconds to signed seconds at 0.1 s precision
+(0 is unsigned).
 -}
 formatGapTick : Float -> String
 formatGapTick ms =
@@ -269,8 +286,9 @@ formatGapTick ms =
         String.fromFloat seconds
 
 
-{-| `PlottedCar` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は相対ギャップ
-(`累積タイム − グループ平均`).
+{-| Converts a `PlottedCar` into the shared renderer `renderLine`'s input and
+draws one line. The vertical quantity is the relative gap
+(`cumulative time − group average`).
 -}
 gapLine : Scales -> PlottedCar -> Svg msg
 gapLine scales { car, points } =
@@ -282,7 +300,7 @@ gapLine scales { car, points } =
         }
 
 
-{-| グループ平均=0 を示す水平の破線.
+{-| Horizontal dashed line marking group average = 0.
 -}
 zeroReferenceLine : { x1 : Float, x2 : Float, y : Float } -> Svg msg
 zeroReferenceLine { x1, x2, y } =
@@ -298,9 +316,9 @@ zeroReferenceLine { x1, x2, y } =
         []
 
 
-{-| 基準母集団の非ピットラップ(pitTime なし)だけを集め, ラップ番号ごとに累積タイムを
-平均した基準を返す. ピットラップを除くことで基準が跳ねるのを防ぐ.
-そのラップに非ピットラップを持つ車だけが平均に寄与する.
+{-| Collects only the non-pit laps (no `pitTime`) of the cars and returns, per lap
+number, the mean cumulative time. Excluding pit laps keeps the baseline from
+jumping. Only cars with a non-pit lap on that lap contribute to the average.
 -}
 groupReferenceByLap : List CarLine -> Dict Int Int
 groupReferenceByLap carLines =
@@ -323,15 +341,17 @@ groupReferenceByLap carLines =
         |> Dict.map (\_ ( sum, count ) -> sum // count)
 
 
-{-| 全幅で描く統合チャート(ギャップ)の寸法. 横長アスペクトにして, 幅100%へ伸ばした
-ときの実高さ(幅 × 高さ/幅)を抑える. X軸・Y軸ラベルのために下・左を厚めに取る.
+{-| Dimensions for the full-width consolidated gap chart. A wide aspect keeps the
+rendered height (width × height/width) low when stretched to 100% width. Bottom
+and left padding are thicker for the X/Y axis labels.
 -}
 consolidated : Dimensions
 consolidated =
     { width = 1000, height = 250, padding = { top = 20, right = 25, bottom = 20, left = 25 } }
 
 
-{-| カード内に収める前後ライバル比較(ギャップ)の寸法. 狭幅・低背に取る.
+{-| Dimensions for the in-card ahead/behind rival comparison (gap). Narrow and
+short.
 -}
 rivalStrip : Dimensions
 rivalStrip =
