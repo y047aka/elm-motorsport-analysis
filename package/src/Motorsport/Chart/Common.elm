@@ -3,12 +3,14 @@ module Motorsport.Chart.Common exposing
     , LapWindow(..)
     , Dimensions
     , Scales, svg, renderLine
+    , axisStyle, lapGridLines, lapAxis, yAxis
     , iqrFences, upperFence
     )
 
 {-| 複数のチャートが共有する土台. 系列の強調(`Emphasis`), ラップ列の窓(`LapWindow`),
 描画寸法(`Dimensions`), 折れ線描画のスケール(`Scales`)といった型と, それらを使って
-1系列の折れ線＋終端ドットを描く共通レンダラ(`renderLine`), 外れ値処理の統計ヘルパ
+1系列の折れ線＋終端ドットを描く共通レンダラ(`renderLine`), 軸・グリッドの共通描画
+(`axisStyle` / `lapGridLines` / `lapAxis` / `yAxis`), 外れ値処理の統計ヘルパ
 (`iqrFences` / `upperFence`)をまとめる. スパークライン・ラップタイム分布・ポジション履歴
 などから参照する.
 
@@ -16,19 +18,24 @@ module Motorsport.Chart.Common exposing
 @docs LapWindow
 @docs Dimensions
 @docs Scales, svg, renderLine
+@docs axisStyle, lapGridLines, lapAxis, yAxis
 @docs iqrFences, upperFence
 
 -}
 
+import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
 import Css
+import Css.Extra
+import Css.Global exposing (descendants, each)
 import List.Extra
 import Path.Styled as Path
 import Scale
 import Shape
-import Svg.Styled exposing (Svg, circle, g)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, text, text_)
 import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (viewBox)
+import TypedSvg.Styled.Attributes exposing (transform, viewBox)
 import TypedSvg.Styled.Attributes.InPx as InPx
+import TypedSvg.Types exposing (Transform(..))
 
 
 {-| 系列(折れ線)の強調. `Focused` は対象車(太線・不透明・大ドット), `Muted` は周辺車
@@ -102,13 +109,14 @@ svg { width, height } children =
 {-| 1系列分の折れ線＋終端ドットを描く共通レンダラ. `points` は `( x, y )` の整数値
 (ラップ番号と縦軸量)で渡し, `Scales` で画面座標へ投影する. 表示は X軸スケールの
 ドメイン(`Scale.domain`)内に収め, はみ出す点はクリップする. 線の太さ・不透明度は
-`Emphasis` で決め, 終端ドットは強調系列(`Focused`)の最終点にだけ置く.
+`Emphasis` で決め, 終端ドットは強調系列(`Focused`)の最終点にだけ置く. `label`(車両番号など)
+が空文字列でなければ終端ドットの右側に併記する.
 -}
 renderLine :
     Scales
-    -> { color : Css.Color, emphasis : Emphasis, points : List ( Int, Int ) }
+    -> { color : Css.Color, emphasis : Emphasis, label : String, points : List ( Int, Int ) }
     -> Svg msg
-renderLine { xScale, yScale } { color, emphasis, points } =
+renderLine { xScale, yScale } { color, emphasis, label, points } =
     let
         ( minX, maxX ) =
             Scale.domain xScale
@@ -133,13 +141,21 @@ renderLine { xScale, yScale } { color, emphasis, points } =
                                     ( px, py ) =
                                         project point
                                 in
-                                circle
-                                    [ InPx.cx px
-                                    , InPx.cy py
-                                    , InPx.r terminalDotRadius
-                                    , SvgAttr.css [ Css.fill color ]
-                                    ]
-                                    []
+                                g []
+                                    (circle
+                                        [ InPx.cx px
+                                        , InPx.cy py
+                                        , InPx.r terminalDotRadius
+                                        , SvgAttr.css [ Css.fill color ]
+                                        ]
+                                        []
+                                        :: (if String.isEmpty label then
+                                                []
+
+                                            else
+                                                [ terminalLabel { x = px, y = py, color = color, label = label } ]
+                                           )
+                                    )
                             )
                         |> Maybe.withDefault (g [] [])
 
@@ -157,11 +173,130 @@ renderLine { xScale, yScale } { color, emphasis, points } =
         ]
 
 
+{-| 終端ドットの右側に併記するラベル(車両番号など). 描画可否は呼び出し側(`renderLine`)で
+分岐する. ドットと重ならないよう半径ぶん右へ寄せ, 縦は中央に揃える.
+-}
+terminalLabel : { x : Float, y : Float, color : Css.Color, label : String } -> Svg msg
+terminalLabel { x, y, color, label } =
+    text_
+        [ InPx.x (x + terminalDotRadius + 3)
+        , InPx.y y
+        , SvgAttr.dominantBaseline "central"
+        , SvgAttr.css
+            [ Css.fill color
+            , Css.fontSize (Css.px 9)
+            , Css.fontWeight Css.bold
+            ]
+        ]
+        [ text label ]
+
+
 {-| 終端ドットの半径. 強調系列の最新点を示す.
 -}
 terminalDotRadius : Float
 terminalDotRadius =
     2.2
+
+
+{-| 軸テキスト/目盛り線の共通スタイル. 小型・控えめなグレーで, 目盛り線も細く付ける.
+ラップ軸・順位軸など軸を持つチャートで共有する.
+-}
+axisStyle : Css.Style
+axisStyle =
+    descendants
+        [ Css.Global.typeSelector "text"
+            [ Css.fill (Css.hsl 0 0 0.7)
+            , Css.fontSize (Css.px 9)
+            ]
+        , each
+            [ Css.Global.typeSelector "line"
+            , Css.Global.typeSelector "path"
+            ]
+            [ Css.Extra.strokeWidth 1
+            , Css.property "stroke" "oklch(0.5 0 0 / 0.7)"
+            ]
+        ]
+
+
+{-| ラップ番号の縦グリッド線(5周ごと). チャート上下のプロット領域いっぱいに引く.
+-}
+lapGridLines : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
+lapGridLines { height, padding } xScale ( minLap, maxLap ) =
+    let
+        gridLaps =
+            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
+
+        top =
+            padding.top
+
+        bottom =
+            height - padding.bottom
+    in
+    g [] <|
+        List.map
+            (\lap ->
+                let
+                    x =
+                        toFloat lap |> Scale.convert xScale
+                in
+                line
+                    [ SvgAttr.x1 (String.fromFloat x)
+                    , SvgAttr.x2 (String.fromFloat x)
+                    , SvgAttr.y1 (String.fromFloat top)
+                    , SvgAttr.y2 (String.fromFloat bottom)
+                    , SvgAttr.css
+                        [ Css.property "stroke" "oklch(0.5 0 0 / 0.3)"
+                        , Css.Extra.strokeWidth 1
+                        ]
+                    ]
+                    []
+            )
+            gridLaps
+
+
+{-| ラップ番号のX軸(下端). 毎ラップに目盛りを置き, ラベルは5周ごとに付ける.
+-}
+lapAxis : Dimensions -> Scale.ContinuousScale Float -> ( Int, Int ) -> Svg msg
+lapAxis { height, padding } xScale ( minLap, maxLap ) =
+    let
+        allLaps =
+            List.range minLap maxLap |> List.map toFloat
+
+        axis =
+            fromUnstyled <|
+                Axis.bottom
+                    [ ticks allLaps
+                    , tickSizeOuter 0
+                    , tickSizeInner -3
+                    , tickPadding 8
+                    , tickFormat
+                        (\f ->
+                            if modBy 5 (round f) == 0 then
+                                String.fromInt (round f)
+
+                            else
+                                ""
+                        )
+                    ]
+                    xScale
+    in
+    g
+        [ SvgAttr.css [ axisStyle ]
+        , transform [ Translate 0 (height - padding.bottom) ]
+        ]
+        [ axis ]
+
+
+{-| Y軸(左端)の共通ラッパ. 目盛り値・整形(`Axis.Attribute`)はチャート固有なので
+呼び出し側が渡し, スタイルと左パディングへの平行移動だけを共通化する.
+-}
+yAxis : Dimensions -> List (Axis.Attribute Float) -> Scale.ContinuousScale Float -> Svg msg
+yAxis { padding } attributes yScale =
+    g
+        [ SvgAttr.css [ axisStyle ]
+        , transform [ Translate padding.left 0 ]
+        ]
+        [ fromUnstyled (Axis.left attributes yScale) ]
 
 
 {-| 昇順ソート済みリストの q 分位点(0〜1)を最近傍で返す.

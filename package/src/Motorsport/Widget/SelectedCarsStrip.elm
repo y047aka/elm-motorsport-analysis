@@ -352,16 +352,17 @@ rivalGapSparkline standings neighbors item =
         referenceByLap =
             Sparkline.groupReferenceByLap referenceCars
 
-        -- 各車のギャップ点列を一度だけ算出して保持する(描画で共用).
+        -- 各車のギャップ点列を一度だけ算出して保持する(描画で共用). 狭幅のカードでは
+        -- 終端の車番ラベルを省くため carNumber を空にする(空文字列なら renderLine が描かない).
         carsWithGaps =
-            cars |> List.map (\car -> { car = car, points = Sparkline.gapPoints referenceByLap car.laps })
+            cars |> List.map (\car -> { car = { car | carNumber = "" }, points = Sparkline.gapPoints referenceByLap car.laps })
 
         focusedLapNumbers =
             focusedLine.laps |> List.map (.lap >> toFloat)
     in
     case ( focusedLapNumbers, rivalLines, Dict.isEmpty referenceByLap ) of
         ( _ :: _ :: _, _ :: _, False ) ->
-            Sparkline.gapChartView Sparkline.rivalStrip
+            Sparkline.gapSparkline Sparkline.rivalStrip
                 ( List.minimum focusedLapNumbers |> Maybe.withDefault 0
                 , List.maximum focusedLapNumbers |> Maybe.withDefault 1
                 )

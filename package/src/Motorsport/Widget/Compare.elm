@@ -248,7 +248,7 @@ gapPanel maybeRange standings entries =
     chartPanel "Gap to group avg" <|
         case maybeRange of
             Just range ->
-                Sparkline.gapSparkline range standings entries
+                Sparkline.gapChartView range standings entries
 
             Nothing ->
                 text ""

@@ -1,12 +1,10 @@
 module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
-import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
+import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
-import Css.Extra
-import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, renderLine, svg)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, svg, yAxis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -14,10 +12,7 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg, fromUnstyled, g, line)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform)
-import TypedSvg.Types exposing (Transform(..))
+import Svg.Styled exposing (Svg)
 
 
 view : { width : Float, height : Float } -> Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Html msg
@@ -75,6 +70,7 @@ buildClassProgressionData clock standings { class, highlighted } =
                     (\( item, points ) ->
                         { points = points
                         , color = Manufacturer.toColorWithFallback item.metadata
+                        , carNumber = item.metadata.carNumber
                         , emphasis =
                             if List.member item.metadata.carNumber highlighted then
                                 Focused
@@ -100,6 +96,7 @@ type alias PositionPoint =
 type alias PositionSeries =
     { points : List PositionPoint
     , color : Color
+    , carNumber : String
     , emphasis : Emphasis
     }
 
@@ -145,7 +142,7 @@ positionProgressionChart size series =
         dimensions =
             { width = size.width
             , height = size.height
-            , padding = { top = 15, right = 15, bottom = 30, left = 30 }
+            , padding = { top = 15, right = 25, bottom = 25, left = 25 }
             }
 
         allPoints =
@@ -160,9 +157,9 @@ positionProgressionChart size series =
             }
     in
     svg size
-        ([ xGridLines dimensions scales.xScale lapRange_
-         , xAxis dimensions scales.xScale lapRange_
-         , yAxis dimensions scales.yScale
+        ([ lapGridLines dimensions scales.xScale lapRange_
+         , lapAxis dimensions scales.xScale lapRange_
+         , positionAxis dimensions scales.yScale
          ]
             ++ List.map (positionLine scales) series
         )
@@ -206,87 +203,11 @@ yContinuousScale { height, padding } positions =
     Scale.linear ( height - padding.bottom, padding.top ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
-xGridLines : Dimensions -> ContinuousScale Float -> ( Int, Int ) -> Svg msg
-xGridLines { height, padding } xScale ( minLap, maxLap ) =
-    let
-        gridLaps =
-            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
-
-        top =
-            padding.top
-
-        bottom =
-            height - padding.bottom
-    in
-    g [] <|
-        List.map
-            (\lap ->
-                let
-                    x =
-                        toFloat lap |> Scale.convert xScale
-                in
-                line
-                    [ SvgAttr.x1 (String.fromFloat x)
-                    , SvgAttr.x2 (String.fromFloat x)
-                    , SvgAttr.y1 (String.fromFloat top)
-                    , SvgAttr.y2 (String.fromFloat bottom)
-                    , SvgAttr.css
-                        [ Css.property "stroke" "#333"
-                        , Css.Extra.strokeWidth 1
-                        ]
-                    ]
-                    []
-            )
-            gridLaps
-
-
-xAxis : Dimensions -> ContinuousScale Float -> ( Int, Int ) -> Svg msg
-xAxis { height, padding } xScale ( minLap, maxLap ) =
-    let
-        allLaps =
-            List.range minLap maxLap |> List.map toFloat
-
-        axis =
-            fromUnstyled <|
-                Axis.bottom
-                    [ ticks allLaps
-                    , tickSizeOuter 0
-                    , tickSizeInner -3
-                    , tickPadding 8
-                    , tickFormat
-                        (\f ->
-                            if modBy 5 (round f) == 0 then
-                                String.fromInt (round f)
-
-                            else
-                                ""
-                        )
-                    ]
-                    xScale
-    in
-    g
-        [ SvgAttr.css
-            [ descendants
-                [ Css.Global.typeSelector "text"
-                    [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
-                    ]
-                , each
-                    [ Css.Global.typeSelector "line"
-                    , Css.Global.typeSelector "path"
-                    ]
-                    [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
-                    ]
-                ]
-            ]
-        , transform [ Translate 0 (height - padding.bottom) ]
-        ]
-        [ axis ]
-
-
-yAxis : Dimensions -> ContinuousScale Float -> Svg msg
-yAxis { padding } yScale =
+{-| Y軸(順位). ラベルは1位・5位・10位…と1-indexed で表示し, 共通ラッパ `yAxis` に
+目盛り設定を渡して描く(スケールは0-indexed のためラベルで +1 する).
+-}
+positionAxis : Dimensions -> ContinuousScale Float -> Svg msg
+positionAxis dimensions yScale =
     let
         ( domainMax, _ ) =
             Scale.domain yScale
@@ -299,36 +220,14 @@ yAxis { padding } yScale =
 
         tickValues_ =
             labelPositions |> List.map (\label -> toFloat (label - 1))
-
-        axis =
-            fromUnstyled <|
-                Axis.left
-                    [ ticks tickValues_
-                    , tickSizeOuter 0
-                    , tickSizeInner 5
-                    , tickFormat (round >> (+) 1 >> String.fromInt)
-                    ]
-                    yScale
     in
-    g
-        [ SvgAttr.css
-            [ descendants
-                [ Css.Global.typeSelector "text"
-                    [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 9)
-                    ]
-                , each
-                    [ Css.Global.typeSelector "line"
-                    , Css.Global.typeSelector "path"
-                    ]
-                    [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
-                    ]
-                ]
-            ]
-        , transform [ Translate padding.left 0 ]
+    yAxis dimensions
+        [ ticks tickValues_
+        , tickSizeOuter 0
+        , tickSizeInner 5
+        , tickFormat (round >> (+) 1 >> String.fromInt)
         ]
-        [ axis ]
+        yScale
 
 
 {-| `PositionSeries` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は順位.
@@ -338,5 +237,6 @@ positionLine scales series =
     renderLine scales
         { color = series.color
         , emphasis = series.emphasis
+        , label = series.carNumber
         , points = series.points |> List.map (\p -> ( p.lapNumber, p.position ))
         }

@@ -2,7 +2,7 @@ module Motorsport.Widget.Sparkline exposing
     ( CarLine, LinePoint, PlottedCar
     , carLine, groupReferenceByLap, gapPoints
     , consolidated, rivalStrip
-    , gapSparkline, gapChartView
+    , gapChartView, gapSparkline
     )
 
 {-| ラップ系スパークラインの共有プリミティブ. ラップ列の切り出し(`carLine`),
@@ -16,14 +16,15 @@ module Motorsport.Widget.Sparkline exposing
 @docs CarLine, LinePoint, PlottedCar
 @docs carLine, groupReferenceByLap, gapPoints
 @docs consolidated, rivalStrip
-@docs gapSparkline, gapChartView
+@docs gapChartView, gapSparkline
 
 -}
 
+import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, renderLine, svg)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, svg, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -32,11 +33,12 @@ import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
 
 
-{-| スパークライン1本分のデータ(色・強調の有無・ラップ列).
+{-| スパークライン1本分のデータ(色・強調の有無・車両番号・ラップ列).
 -}
 type alias CarLine =
     { color : Css.Color
     , emphasis : Emphasis
+    , carNumber : String
     , laps : List Lap
     }
 
@@ -50,7 +52,7 @@ type alias LinePoint =
 
 
 {-| 描画1単位. スパークライン1本分のデータ(`car`)と, その縦軸へ投影した点列(`points`)を
-組にする. `gapChartView` / `sparkCarLine` が受け取り, `gapSparkline` 等が組み立てる.
+組にする. `gapChartView` / `gapSparkline` が受け取って1枚に重ねて描く.
 -}
 type alias PlottedCar =
     { car : CarLine
@@ -69,6 +71,7 @@ carLine standings window emphasis entry =
     in
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = emphasis
+    , carNumber = entry.metadata.carNumber
     , laps =
         case window of
             Recent currentLap ->
@@ -79,18 +82,18 @@ carLine standings window emphasis entry =
     }
 
 
-{-| 複数車の相対ギャップ推移を1枚に重ねて表示する. 与えられた車のグループ平均(非ピット
-ラップの累積タイム平均)を基準=0ライン(点線)とし, 各車の `累積タイム − グループ平均` を
-縦軸に取る. 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置くため, 線の上下動が
-そのまま相対ペースの優劣になる.
+{-| 複数車の相対ギャップ推移を X軸(ラップ番号)・Y軸(基準との差・秒)付きで1枚に重ねて
+表示するフルチャート. 与えられた車のグループ平均(非ピットラップの累積タイム平均)を基準=0
+ライン(点線)とし, 各車の `累積タイム − グループ平均` を縦軸に取る. 基準より速い(累積小=先行)を
+上, 遅い(累積大=後退)を下に置くため, 線の上下動がそのまま相対ペースの優劣になる.
 
 絶対ラップタイムと違い, グループ平均を引くことで近接した同士のペース差が拡大されて
 読みやすくなる. 縦軸はピット等の外れ値(両側 IQR)を除いた帯で張り, 外れ値は枠外へ
 クリップする.
 
 -}
-gapSparkline : ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
-gapSparkline ( minLap, maxLap ) standings entries =
+gapChartView : ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapChartView ( minLap, maxLap ) standings entries =
     let
         carLines =
             entries |> List.map (carLine standings (Range ( minLap, maxLap )) Focused)
@@ -105,7 +108,7 @@ gapSparkline ( minLap, maxLap ) standings entries =
         text ""
 
     else
-        gapChartView consolidated
+        gapChartViewWith { dimensions = consolidated, showAxes = True }
             ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
             carsWithGaps
 
@@ -123,19 +126,32 @@ gapPoints referenceByLap laps =
             )
 
 
-{-| 複数車の相対ギャップ点列を1枚に重ねて描く共通レンダラ. 縦軸は 0(グループ平均ペース)を
-必ず含め, ピット等の外れ値(両側 IQR)を除いた帯で張って外れ値は枠外へクリップする. 基準より
-速い(累積小=先行)を上, 遅い(累積大=後退)を下に置き, 0 ラインを破線で示す. 寸法とX軸範囲は
-呼び出し側が `Dimensions` プリセットと `( minX, maxX )` で与える(統合チャートとカード内で
-寸法だけが異なる).
+{-| 軸なしで相対ギャップ点列を描く最小構成のスパークライン. 折れ線とゼロ基準線だけを描き,
+事前に組んだ `PlottedCar` を受け取る(寸法・X軸範囲は呼び出し側が与える). 軸付きのフル
+チャートは [`gapChartView`](#gapChartView) を使う.
 -}
-gapChartView :
-    Dimensions
+gapSparkline : Dimensions -> ( Float, Float ) -> List PlottedCar -> Html msg
+gapSparkline dimensions range carsWithGaps =
+    gapChartViewWith { dimensions = dimensions, showAxes = False } range carsWithGaps
+
+
+{-| 複数車の相対ギャップ点列を1枚に重ねて描く共通レンダラ(内部実装). 縦軸は 0(グループ平均
+ペース)を必ず含め, ピット等の外れ値(両側 IQR)を除いた帯で張って外れ値は枠外へクリップする.
+基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置き, 0 ラインを破線で示す. 寸法と
+X軸範囲は呼び出し側が `Dimensions` プリセットと `( minX, maxX )` で与える(統合チャートと
+カード内で寸法だけが異なる). 軸の有無は公開関数(`gapChartView` / `gapSparkline`)が
+`showAxes` で切り替える.
+-}
+gapChartViewWith :
+    { dimensions : Dimensions, showAxes : Bool }
     -> ( Float, Float )
     -> List PlottedCar
     -> Html msg
-gapChartView { width, height, padding } ( minX, maxX ) carsWithGaps =
+gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
     let
+        { width, height, padding } =
+            dimensions
+
         allGaps =
             carsWithGaps |> List.concatMap (.points >> List.map .value)
 
@@ -169,11 +185,59 @@ gapChartView { width, height, padding } ( minX, maxX ) carsWithGaps =
             -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
             , yScale = Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
             }
+
+        lapRange_ =
+            ( ceiling minX, floor maxX )
+
+        -- グリッド線は最背面, 軸はその上に描く.
+        decorations =
+            if showAxes then
+                [ lapGridLines dimensions scales.xScale lapRange_
+                , lapAxis dimensions scales.xScale lapRange_
+                , gapAxis dimensions scales.yScale
+                ]
+
+            else
+                []
     in
     svg { width = width, height = height }
-        (zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
+        (decorations
+            ++ zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
             :: List.map (gapLine scales) carsWithGaps
         )
+
+
+{-| Y軸(基準=グループ平均との差). 目盛りは4本, ミリ秒値を符号付きの秒に整形して示す.
+共通ラッパ `yAxis` に目盛り設定を渡して描く.
+-}
+gapAxis : Dimensions -> Scale.ContinuousScale Float -> Svg msg
+gapAxis dimensions yScale =
+    yAxis dimensions
+        [ tickCount 4
+        , tickSizeOuter 0
+        , tickSizeInner -3
+        , tickPadding 6
+        , tickFormat formatGapTick
+        ]
+        yScale
+
+
+{-| Y軸ラベルの整形. ミリ秒を 0.1 秒精度の符号付き秒へ変換する(0 は符号なし).
+-}
+formatGapTick : Float -> String
+formatGapTick ms =
+    let
+        seconds =
+            toFloat (round (ms / 100)) / 10
+    in
+    if seconds == 0 then
+        "0"
+
+    else if seconds > 0 then
+        "+" ++ String.fromFloat seconds
+
+    else
+        String.fromFloat seconds
 
 
 {-| `PlottedCar` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は相対ギャップ
@@ -184,6 +248,7 @@ gapLine scales { car, points } =
     renderLine scales
         { color = car.color
         , emphasis = car.emphasis
+        , label = car.carNumber
         , points = points |> List.map (\p -> ( p.lap, p.value ))
         }
 
@@ -197,7 +262,7 @@ zeroReferenceLine { x1, x2, y } =
         , SvgAttr.x2 (String.fromFloat x2)
         , SvgAttr.y1 (String.fromFloat y)
         , SvgAttr.y2 (String.fromFloat y)
-        , SvgAttr.stroke "hsl(0 0% 100% / 0.35)"
+        , SvgAttr.stroke "oklch(0.5 0 0 / 0.7)"
         , SvgAttr.strokeWidth "1"
         , SvgAttr.strokeDasharray "2 2"
         ]
@@ -230,11 +295,11 @@ groupReferenceByLap carLines =
 
 
 {-| 全幅で描く統合チャート(ギャップ)の寸法. 横長アスペクトにして, 幅100%へ伸ばした
-ときの実高さ(幅 × 高さ/幅)を抑える.
+ときの実高さ(幅 × 高さ/幅)を抑える. X軸・Y軸ラベルのために下・左を厚めに取る.
 -}
 consolidated : Dimensions
 consolidated =
-    { width = 700, height = 80, padding = { top = 4, right = 3, bottom = 4, left = 3 } }
+    { width = 700, height = 120, padding = { top = 4, right = 20, bottom = 20, left = 30 } }
 
 
 {-| カード内に収める前後ライバル比較(ギャップ)の寸法. 狭幅・低背に取る.
