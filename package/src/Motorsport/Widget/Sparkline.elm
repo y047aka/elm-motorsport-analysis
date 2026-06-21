@@ -1,6 +1,6 @@
 module Motorsport.Widget.Sparkline exposing
     ( CarLine, LinePoint, PlottedCar
-    , carLine, groupReferenceByLap, gapPoints
+    , carLine, groupReferenceByLap, gapPoints, plotGaps
     , consolidated, rivalStrip
     , gapChartView, gapSparkline
     )
@@ -14,7 +14,7 @@ module Motorsport.Widget.Sparkline exposing
 外れ値処理([`iqrFences`](Motorsport-Chart-Common)等)は共有の `Motorsport.Chart.Common` を参照する.
 
 @docs CarLine, LinePoint, PlottedCar
-@docs carLine, groupReferenceByLap, gapPoints
+@docs carLine, groupReferenceByLap, gapPoints, plotGaps
 @docs consolidated, rivalStrip
 @docs gapChartView, gapSparkline
 
@@ -98,20 +98,14 @@ gapChartView ( minLap, maxLap ) standings entries =
     let
         carLines =
             entries |> List.map (carLine standings (Range ( minLap, maxLap )) Focused)
-
-        referenceByLap =
-            groupReferenceByLap carLines
-
-        carsWithGaps =
-            carLines |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
     in
-    if Dict.isEmpty referenceByLap then
+    if Dict.isEmpty (groupReferenceByLap carLines) then
         text ""
 
     else
         gapChartViewWith { dimensions = consolidated, showAxes = True }
             ( toFloat minLap, toFloat (max maxLap (minLap + 1)) )
-            carsWithGaps
+            (plotGaps { reference = carLines, display = carLines })
 
 
 {-| ラップ番号ごとのグループ基準 `referenceByLap` と各車のラップ列から, 相対ギャップ
@@ -125,6 +119,20 @@ gapPoints referenceByLap laps =
                 Dict.get lap.lap referenceByLap
                     |> Maybe.map (\ref -> { lap = lap.lap, value = lap.elapsed - ref })
             )
+
+
+{-| 基準母集団(`reference`)からラップ番号ごとのグループ基準を1度だけ算出し, 表示対象
+(`display`)の各車を相対ギャップ点列へ投影して `PlottedCar` 列に組み立てる. 基準母集団と
+表示集合が異なる場合(前後ライバル比較では基準を最大5台, 表示を3本にする)に備えて2集合を
+別々に受け取る. 同一集合を渡せば「自分たちのグループ平均」を基準にしたチャートになる.
+-}
+plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
+plotGaps { reference, display } =
+    let
+        referenceByLap =
+            groupReferenceByLap reference
+    in
+    display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
 
 
 {-| 軸なしで相対ギャップ点列を描く最小構成のスパークライン. 折れ線とゼロ基準線だけを描き,
@@ -153,6 +161,32 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
         { width, height, padding } =
             dimensions
 
+        scales =
+            { xScale = xContinuousScale dimensions ( minX, maxX )
+            , yScale = gapYScale dimensions carsWithGaps
+            }
+
+        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
+        orderedCars =
+            sortForDrawing
+                (.car >> .emphasis)
+                (.car >> .laps >> List.Extra.last >> Maybe.andThen .position)
+                carsWithGaps
+    in
+    svg { width = width, height = height }
+        (gapDecorations { showAxes = showAxes } dimensions scales ( minX, maxX )
+            ++ zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
+            :: List.map (gapLine scales) orderedCars
+        )
+
+
+{-| 縦軸スケールを点列から張る. 0(グループ平均ペース)を必ず含め, ピット等の外れ値(両側
+IQR)を除いた帯で範囲を決める. 速い(累積小=先行)を上, 遅い(累積大=後退)を下に置くため,
+スクリーン座標は `( padding.top, height - padding.bottom )` の向きで対応づける.
+-}
+gapYScale : Dimensions -> List PlottedCar -> Scale.ContinuousScale Float
+gapYScale { height, padding } carsWithGaps =
+    let
         allGaps =
             carsWithGaps |> List.concatMap (.points >> List.map .value)
 
@@ -179,40 +213,27 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
 
         yPad =
             (maxGap - minGap) * 0.15 + 50
-
-        scales =
-            { xScale = xContinuousScale dimensions ( minX, maxX )
-
-            -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
-            , yScale = Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
-            }
-
-        lapRange_ =
-            ( ceiling minX, floor maxX )
-
-        -- グリッド線は最背面, 軸はその上に描く.
-        decorations =
-            if showAxes then
-                [ lapGridLines dimensions scales.xScale lapRange_
-                , lapAxis dimensions scales.xScale lapRange_
-                , gapAxis dimensions scales.yScale
-                ]
-
-            else
-                []
-
-        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
-        orderedCars =
-            sortForDrawing
-                (.car >> .emphasis)
-                (.car >> .laps >> List.Extra.last >> Maybe.andThen .position)
-                carsWithGaps
     in
-    svg { width = width, height = height }
-        (decorations
-            ++ zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
-            :: List.map (gapLine scales) orderedCars
-        )
+    Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
+
+
+{-| 軸まわりの装飾(背面から手前へ: グリッド線 → X軸 → Y軸)を組み立てる. `showAxes` が
+False のスパークラインでは空にして折れ線だけを残す.
+-}
+gapDecorations : { showAxes : Bool } -> Dimensions -> Scales -> ( Float, Float ) -> List (Svg msg)
+gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
+    if showAxes then
+        let
+            lapRange_ =
+                ( ceiling minX, floor maxX )
+        in
+        [ lapGridLines dimensions scales.xScale lapRange_
+        , lapAxis dimensions scales.xScale lapRange_
+        , gapAxis dimensions scales.yScale
+        ]
+
+    else
+        []
 
 
 {-| Y軸(基準=グループ平均との差). 目盛りは4本, ミリ秒値を符号付きの秒に整形して示す.

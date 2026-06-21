@@ -348,14 +348,17 @@ rivalGapSparkline standings neighbors item =
         referenceCars =
             aheadLines ++ focusedLine :: behindLines
 
-        -- 「ラップ番号 → 近傍最大5台(対象車を含む)の非ピット平均 elapsed」.
+        -- 「ラップ番号 → 近傍最大5台(対象車を含む)の非ピット平均 elapsed」. 描画ガードに使う.
         referenceByLap =
             Sparkline.groupReferenceByLap referenceCars
 
         -- 各車のギャップ点列を一度だけ算出して保持する(描画で共用). 狭幅のカードでは
         -- 終端の車番ラベルを省くため carNumber を空にする(空文字列なら renderLine が描かない).
         carsWithGaps =
-            cars |> List.map (\car -> { car = { car | carNumber = "" }, points = Sparkline.gapPoints referenceByLap car.laps })
+            Sparkline.plotGaps
+                { reference = referenceCars
+                , display = cars |> List.map (\car -> { car | carNumber = "" })
+                }
 
         focusedLapNumbers =
             focusedLine.laps |> List.map (.lap >> toFloat)
