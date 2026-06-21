@@ -2,24 +2,33 @@ module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis
     , LapWindow(..)
     , Dimensions
-    , LineScales
+    , Scales, svg, renderLine
     , iqrFences, upperFence
     )
 
 {-| 複数のチャートが共有する土台. 系列の強調(`Emphasis`), ラップ列の窓(`LapWindow`),
-描画寸法(`Dimensions`), 折れ線描画のスケール一式(`LineScales`)といった型に加え,
-外れ値処理の統計ヘルパ(`iqrFences` / `upperFence`)をまとめる. スパークライン・ラップタイム
-分布・ポジション履歴などから参照する.
+描画寸法(`Dimensions`), 折れ線描画のスケール(`Scales`)といった型と, それらを使って
+1系列の折れ線＋終端ドットを描く共通レンダラ(`renderLine`), 外れ値処理の統計ヘルパ
+(`iqrFences` / `upperFence`)をまとめる. スパークライン・ラップタイム分布・ポジション履歴
+などから参照する.
 
 @docs Emphasis, chooseByEmphasis
 @docs LapWindow
 @docs Dimensions
-@docs LineScales
+@docs Scales, svg, renderLine
 @docs iqrFences, upperFence
 
 -}
 
+import Css
+import List.Extra
+import Path.Styled as Path
 import Scale
+import Shape
+import Svg.Styled exposing (Svg, circle, g)
+import Svg.Styled.Attributes as SvgAttr
+import TypedSvg.Styled.Attributes exposing (viewBox)
+import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 {-| 系列(折れ線)の強調. `Focused` は対象車(太線・不透明・大ドット), `Muted` は周辺車
@@ -52,26 +61,107 @@ type LapWindow
     | Range ( Int, Int )
 
 
-{-| チャートの viewBox 寸法とパディング. 種類ごとのプリセットは各チャート側で定義する.
+{-| チャートの viewBox 寸法と上下左右のパディング(`padding.top` 等). 軸ラベルのために
+左・下を厚く取るチャート(ポジション履歴)と, 対称パディングのチャート(スパークライン)を
+同じ型で表す. 種類ごとのプリセットは各チャート側で定義する.
 -}
 type alias Dimensions =
     { width : Float
     , height : Float
-    , padX : Float
-    , padY : Float
+    , padding :
+        { top : Float
+        , right : Float
+        , bottom : Float
+        , left : Float
+        }
     }
 
 
-{-| 折れ線1本を描くためのスケール一式. X/Y のスケールと, 表示範囲の判定に使う
-X軸の端 `minX`/`maxX`, 縦軸の帯内判定 `inBand` をまとめる.
+{-| 折れ線を描くためのスケール一式. 各チャートで `allPoints` から1度だけ構築し,
+軸・グリッド・各系列の描画へ配る(系列ごとの再構築を避ける).
 -}
-type alias LineScales =
+type alias Scales =
     { xScale : Scale.ContinuousScale Float
     , yScale : Scale.ContinuousScale Float
-    , minX : Float
-    , maxX : Float
-    , inBand : Int -> Bool
     }
+
+
+{-| チャート共通の svg ラッパ. 幅100%・block 表示で `viewBox` を寸法に張り, 装飾と
+各系列の折れ線をまとめて描く. 装飾(軸・グリッド・ゼロ線など)は各チャートが渡す.
+-}
+svg : { width : Float, height : Float } -> List (Svg msg) -> Svg msg
+svg { width, height } children =
+    Svg.Styled.svg
+        [ SvgAttr.width "100%"
+        , SvgAttr.css [ Css.property "display" "block" ]
+        , viewBox 0 0 width height
+        ]
+        children
+
+
+{-| 1系列分の折れ線＋終端ドットを描く共通レンダラ. `points` は `( x, y )` の整数値
+(ラップ番号と縦軸量)で渡し, `Scales` で画面座標へ投影する. 表示は X軸スケールの
+ドメイン(`Scale.domain`)内に収め, はみ出す点はクリップする. 線の太さ・不透明度は
+`Emphasis` で決め, 終端ドットは強調系列(`Focused`)の最終点にだけ置く.
+-}
+renderLine :
+    Scales
+    -> { color : Css.Color, emphasis : Emphasis, points : List ( Int, Int ) }
+    -> Svg msg
+renderLine { xScale, yScale } { color, emphasis, points } =
+    let
+        ( minX, maxX ) =
+            Scale.domain xScale
+
+        visible =
+            points |> List.filter (\( x, _ ) -> minX <= toFloat x && toFloat x <= maxX)
+
+        project ( x, y ) =
+            ( Scale.convert xScale (toFloat x), Scale.convert yScale (toFloat y) )
+
+        linePath =
+            visible |> List.map (project >> Just) |> Shape.line Shape.linearCurve
+
+        terminalDot =
+            case emphasis of
+                Focused ->
+                    visible
+                        |> List.Extra.last
+                        |> Maybe.map
+                            (\point ->
+                                let
+                                    ( px, py ) =
+                                        project point
+                                in
+                                circle
+                                    [ InPx.cx px
+                                    , InPx.cy py
+                                    , InPx.r terminalDotRadius
+                                    , SvgAttr.css [ Css.fill color ]
+                                    ]
+                                    []
+                            )
+                        |> Maybe.withDefault (g [] [])
+
+                Muted ->
+                    g [] []
+    in
+    g []
+        [ Path.element linePath
+            [ SvgAttr.stroke color.value
+            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.5" } emphasis)
+            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.4" } emphasis)
+            , SvgAttr.fill "none"
+            ]
+        , terminalDot
+        ]
+
+
+{-| 終端ドットの半径. 強調系列の最新点を示す.
+-}
+terminalDotRadius : Float
+terminalDotRadius =
+    2.2
 
 
 {-| 昇順ソート済みリストの q 分位点(0〜1)を最近傍で返す.

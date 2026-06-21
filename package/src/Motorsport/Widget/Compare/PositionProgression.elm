@@ -6,20 +6,17 @@ import Css.Extra
 import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
-import Motorsport.Chart.Common exposing (Emphasis(..), chooseByEmphasis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, renderLine, svg)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
-import Path.Styled as Path
 import Scale exposing (ContinuousScale)
-import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
+import Svg.Styled exposing (Svg, fromUnstyled, g, line)
 import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
+import TypedSvg.Styled.Attributes exposing (transform)
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -107,19 +104,17 @@ type alias PositionSeries =
     }
 
 
-chartPadding : Float
-chartPadding =
-    15
-
-
-chartPaddingLeft : Float
-chartPaddingLeft =
-    chartPadding + 15
-
-
-chartPaddingBottom : Float
-chartPaddingBottom =
-    chartPadding + 15
+{-| 点列が占めるラップ番号の範囲 `(minLap, maxLap)`. 空のときは `(1, 1)`.
+-}
+lapExtent : List PositionPoint -> ( Int, Int )
+lapExtent positions =
+    let
+        laps =
+            positions |> List.map .lapNumber
+    in
+    ( List.minimum laps |> Maybe.withDefault 1
+    , List.maximum laps |> Maybe.withDefault 1
+    )
 
 
 positionHistoryWindowMillis : Int
@@ -146,18 +141,30 @@ calculateLapThreshold clock standings =
 positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
 positionProgressionChart size series =
     let
+        -- 軸ラベルのために左・下を厚めに取る非対称パディング.
+        dimensions =
+            { width = size.width
+            , height = size.height
+            , padding = { top = 15, right = 15, bottom = 30, left = 30 }
+            }
+
         allPoints =
             series |> List.concatMap .points
+
+        lapRange_ =
+            lapExtent allPoints
+
+        scales =
+            { xScale = xContinuousScale dimensions lapRange_
+            , yScale = yContinuousScale dimensions allPoints
+            }
     in
-    svg
-        [ SvgAttr.width "100%"
-        , viewBox 0 0 size.width size.height
-        ]
-        ([ xGridLines size allPoints
-         , xAxis size allPoints
-         , yAxis size allPoints
+    svg size
+        ([ xGridLines dimensions scales.xScale lapRange_
+         , xAxis dimensions scales.xScale lapRange_
+         , yAxis dimensions scales.yScale
          ]
-            ++ (series |> List.map (renderPositionLine size allPoints))
+            ++ List.map (positionLine scales) series
         )
 
 
@@ -171,23 +178,13 @@ buildPositionPoints lapThreshold history =
             )
 
 
-xScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
-xScale size positions =
-    let
-        ( minLap, maxLap ) =
-            positions
-                |> List.map .lapNumber
-                |> (\laps ->
-                        ( List.minimum laps |> Maybe.withDefault 1
-                        , List.maximum laps |> Maybe.withDefault 1
-                        )
-                   )
-    in
-    Scale.linear ( chartPaddingLeft, size.width - chartPadding ) ( toFloat minLap, toFloat maxLap )
+xContinuousScale : Dimensions -> ( Int, Int ) -> ContinuousScale Float
+xContinuousScale { width, padding } ( minLap, maxLap ) =
+    Scale.linear ( padding.left, width - padding.right ) ( toFloat minLap, toFloat maxLap )
 
 
-yScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
-yScale size positions =
+yContinuousScale : Dimensions -> List PositionPoint -> ContinuousScale Float
+yContinuousScale { height, padding } positions =
     let
         allPositions =
             positions |> List.map .position
@@ -206,36 +203,27 @@ yScale size positions =
         adjustedMax =
             maxPos + paddingY
     in
-    Scale.linear ( size.height - chartPaddingBottom, chartPadding ) ( toFloat adjustedMax, toFloat adjustedMin )
+    Scale.linear ( height - padding.bottom, padding.top ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
-xGridLines : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-xGridLines size positions =
+xGridLines : Dimensions -> ContinuousScale Float -> ( Int, Int ) -> Svg msg
+xGridLines { height, padding } xScale ( minLap, maxLap ) =
     let
-        lapNumbers =
-            positions |> List.map .lapNumber
-
-        minLap =
-            List.minimum lapNumbers |> Maybe.withDefault 1
-
-        maxLap =
-            List.maximum lapNumbers |> Maybe.withDefault 1
-
         gridLaps =
             List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
 
         top =
-            chartPadding
+            padding.top
 
         bottom =
-            size.height - chartPaddingBottom
+            height - padding.bottom
     in
     g [] <|
         List.map
             (\lap ->
                 let
                     x =
-                        toFloat lap |> Scale.convert (xScale size positions)
+                        toFloat lap |> Scale.convert xScale
                 in
                 line
                     [ SvgAttr.x1 (String.fromFloat x)
@@ -252,18 +240,9 @@ xGridLines size positions =
             gridLaps
 
 
-xAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-xAxis size positions =
+xAxis : Dimensions -> ContinuousScale Float -> ( Int, Int ) -> Svg msg
+xAxis { height, padding } xScale ( minLap, maxLap ) =
     let
-        lapNumbers =
-            positions |> List.map .lapNumber
-
-        minLap =
-            List.minimum lapNumbers |> Maybe.withDefault 1
-
-        maxLap =
-            List.maximum lapNumbers |> Maybe.withDefault 1
-
         allLaps =
             List.range minLap maxLap |> List.map toFloat
 
@@ -283,7 +262,7 @@ xAxis size positions =
                                 ""
                         )
                     ]
-                    (xScale size positions)
+                    xScale
     in
     g
         [ SvgAttr.css
@@ -301,19 +280,16 @@ xAxis size positions =
                     ]
                 ]
             ]
-        , transform [ Translate 0 (size.height - chartPaddingBottom) ]
+        , transform [ Translate 0 (height - padding.bottom) ]
         ]
         [ axis ]
 
 
-yAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-yAxis size positions =
+yAxis : Dimensions -> ContinuousScale Float -> Svg msg
+yAxis { padding } yScale =
     let
-        scale =
-            yScale size positions
-
         ( domainMax, _ ) =
-            Scale.domain scale
+            Scale.domain yScale
 
         -- ラベルは1-indexed（1位、5位、10位...）、スケールは0-indexed
         labelPositions =
@@ -332,7 +308,7 @@ yAxis size positions =
                     , tickSizeInner 5
                     , tickFormat (round >> (+) 1 >> String.fromInt)
                     ]
-                    scale
+                    yScale
     in
     g
         [ SvgAttr.css
@@ -350,60 +326,17 @@ yAxis size positions =
                     ]
                 ]
             ]
-        , transform [ Translate chartPaddingLeft 0 ]
+        , transform [ Translate padding.left 0 ]
         ]
         [ axis ]
 
 
-renderPositionLine : { width : Float, height : Float } -> List PositionPoint -> PositionSeries -> Svg msg
-renderPositionLine size allPoints series =
-    let
-        dataPoints =
-            series.points
-                |> List.map
-                    (\{ lapNumber, position } ->
-                        ( lapNumber
-                            |> toFloat
-                            |> Scale.convert (xScale size allPoints)
-                        , position
-                            |> toFloat
-                            |> Scale.convert (yScale size allPoints)
-                        )
-                    )
-
-        linePath =
-            dataPoints
-                |> List.map Just
-                |> Shape.line Shape.linearCurve
-
-        lineAttributes =
-            [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.2" } series.emphasis)
-            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.4" } series.emphasis)
-            , SvgAttr.fill "none"
-            ]
-
-        lastPointElement =
-            case series.emphasis of
-                Focused ->
-                    dataPoints
-                        |> List.Extra.last
-                        |> Maybe.map
-                            (\( x, y ) ->
-                                circle
-                                    [ InPx.cx x
-                                    , InPx.cy y
-                                    , InPx.r 3.0
-                                    , SvgAttr.css [ Css.fill series.color ]
-                                    ]
-                                    []
-                            )
-                        |> Maybe.withDefault (g [] [])
-
-                Muted ->
-                    g [] []
-    in
-    g []
-        [ Path.element linePath lineAttributes
-        , lastPointElement
-        ]
+{-| `PositionSeries` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は順位.
+-}
+positionLine : Scales -> PositionSeries -> Svg msg
+positionLine scales series =
+    renderLine scales
+        { color = series.color
+        , emphasis = series.emphasis
+        , points = series.points |> List.map (\p -> ( p.lapNumber, p.position ))
+        }

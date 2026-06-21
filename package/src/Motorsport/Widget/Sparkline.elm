@@ -23,18 +23,13 @@ module Motorsport.Widget.Sparkline exposing
 import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
-import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), LineScales, chooseByEmphasis, iqrFences)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, renderLine, svg)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
-import Path.Styled as Path
 import Scale
-import Shape
-import Svg.Styled exposing (Svg, circle, g, line, svg)
+import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
 
 
 {-| スパークライン1本分のデータ(色・強調の有無・ラップ列).
@@ -139,7 +134,7 @@ gapChartView :
     -> ( Float, Float )
     -> List PlottedCar
     -> Html msg
-gapChartView { width, height, padX, padY } ( minX, maxX ) carsWithGaps =
+gapChartView { width, height, padding } ( minX, maxX ) carsWithGaps =
     let
         allGaps =
             carsWithGaps |> List.concatMap (.points >> List.map .value)
@@ -168,24 +163,29 @@ gapChartView { width, height, padX, padY } ( minX, maxX ) carsWithGaps =
         yPad =
             (maxGap - minGap) * 0.15 + 50
 
-        xScale =
-            Scale.linear ( padX, width - padX ) ( minX, maxX )
+        scales =
+            { xScale = Scale.linear ( padding.left, width - padding.right ) ( minX, maxX )
 
-        -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
-        yScale =
-            Scale.linear ( padY, height - padY ) ( minGap - yPad, maxGap + yPad )
-
-        cfg =
-            { xScale = xScale, yScale = yScale, minX = minX, maxX = maxX, inBand = inBand }
+            -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
+            , yScale = Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
+            }
     in
-    svg
-        [ SvgAttr.width "100%"
-        , SvgAttr.css [ Css.property "display" "block" ]
-        , viewBox 0 0 width height
-        ]
-        (zeroReferenceLine { x1 = padX, x2 = width - padX, y = Scale.convert yScale 0 }
-            :: List.map (sparkCarLine cfg) carsWithGaps
+    svg { width = width, height = height }
+        (zeroReferenceLine { x1 = padding.left, x2 = width - padding.right, y = Scale.convert scales.yScale 0 }
+            :: List.map (gapLine scales) carsWithGaps
         )
+
+
+{-| `PlottedCar` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は相対ギャップ
+(`累積タイム − グループ平均`).
+-}
+gapLine : Scales -> PlottedCar -> Svg msg
+gapLine scales { car, points } =
+    renderLine scales
+        { color = car.color
+        , emphasis = car.emphasis
+        , points = points |> List.map (\p -> ( p.lap, p.value ))
+        }
 
 
 {-| グループ平均=0 を示す水平の破線.
@@ -229,68 +229,16 @@ groupReferenceByLap carLines =
         |> Dict.map (\_ ( sum, count ) -> sum // count)
 
 
-{-| 1台分の折れ線＋終端ドットを描く. 縦軸の値は呼び出し側が `LinePoint` に詰める.
-終端ドットは最終点が帯内のときだけ描き, 枠外のピットラップ上に浮くのを防ぐ.
-`Focused` の車は太線＋不透明で強調する.
--}
-sparkCarLine :
-    LineScales
-    -> PlottedCar
-    -> Svg msg
-sparkCarLine { xScale, yScale, minX, maxX, inBand } { car, points } =
-    let
-        visible =
-            points |> List.filter (\{ lap } -> minX <= toFloat lap && toFloat lap <= maxX)
-
-        dataPoints =
-            visible
-                |> List.map
-                    (\{ lap, value } ->
-                        Just
-                            ( Scale.convert xScale (toFloat lap)
-                            , Scale.convert yScale (toFloat value)
-                            )
-                    )
-
-        lastDot =
-            case List.Extra.last visible of
-                Just { lap, value } ->
-                    if inBand value then
-                        circle
-                            [ InPx.cx (Scale.convert xScale (toFloat lap))
-                            , InPx.cy (Scale.convert yScale (toFloat value))
-                            , InPx.r (chooseByEmphasis { focused = 2.2, muted = 1.8 } car.emphasis)
-                            , SvgAttr.css [ Css.fill car.color ]
-                            ]
-                            []
-
-                    else
-                        text ""
-
-                Nothing ->
-                    text ""
-    in
-    g []
-        [ Path.element (Shape.line Shape.linearCurve dataPoints)
-            [ SvgAttr.stroke car.color.value
-            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", muted = "1.5" } car.emphasis)
-            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", muted = "0.5" } car.emphasis)
-            , SvgAttr.fill "none"
-            ]
-        , lastDot
-        ]
-
-
 {-| 全幅で描く統合チャート(ギャップ)の寸法. 横長アスペクトにして, 幅100%へ伸ばした
 ときの実高さ(幅 × 高さ/幅)を抑える.
 -}
 consolidated : Dimensions
 consolidated =
-    { width = 700, height = 80, padX = 3, padY = 4 }
+    { width = 700, height = 80, padding = { top = 4, right = 3, bottom = 4, left = 3 } }
 
 
 {-| カード内に収める前後ライバル比較(ギャップ)の寸法. 狭幅・低背に取る.
 -}
 rivalStrip : Dimensions
 rivalStrip =
-    { width = 200, height = 36, padX = 3, padY = 4 }
+    { width = 200, height = 36, padding = { top = 4, right = 3, bottom = 4, left = 3 } }
