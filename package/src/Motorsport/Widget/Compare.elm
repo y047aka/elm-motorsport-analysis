@@ -417,7 +417,7 @@ header item =
             [ property "display" "grid"
             , property "grid-template-columns" "auto 1fr auto"
             , property "align-items" "start"
-            , property "column-gap" "12px"
+            , property "column-gap" "8px"
             ]
         ]
         [ CarStatus.carNumberBadge item

@@ -1,15 +1,15 @@
-module Motorsport.Widget.CarStatus exposing (carNumberBadge, sectorAndLaps)
+module Motorsport.Widget.CarStatus exposing (carNumberBadge, carNumberBadgeRow, sectorAndLaps)
 
 {-| 1台分の「セクター進捗パイ + Current ラップ + Last ラップ」を横並びで描く共有部品.
 SelectedCarsStrip と Compare の双方で同じ見た目を使うために切り出した.
 
-@docs carNumberBadge, sectorAndLaps
+@docs carNumberBadge, carNumberBadgeRow, sectorAndLaps
 
 -}
 
 import Css exposing (batch, num, opacity, property)
 import Html.Styled exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (class, css, src)
+import Html.Styled.Attributes exposing (alt, class, css, src)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car
 import Motorsport.Duration as Duration exposing (Duration)
@@ -28,39 +28,55 @@ import TypedSvg.Styled.Attributes exposing (viewBox)
 -}
 carNumberBadge : StandingsEntry -> Html msg
 carNumberBadge item =
-    div
-        [ class "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
-        , css [ Css.backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
-        ]
-        [ manufacturerLogo item.metadata.manufacturer
+    badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
+        [ manufacturerLogo
+            [ property "max-width" "28px"
+            , property "height" "16px"
+            , property "object-fit" "contain"
+            , property "opacity" "0.9"
+            ]
+            item.metadata.manufacturer
         , div [ class "text-xs font-bold leading-none" ]
             [ text item.metadata.carNumber ]
         ]
+        item
 
 
-manufacturerLogo : Manufacturer -> Html msg
-manufacturerLogo manufacturer =
+{-| マニュファクチャラー色の横並びバッジ. ロゴ(左)と車番(右)を並べる.
+-}
+carNumberBadgeRow : StandingsEntry -> Html msg
+carNumberBadgeRow item =
+    badge "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
+        [ manufacturerLogo
+            [ property "height" "14px"
+            , property "object-fit" "contain"
+            ]
+            item.metadata.manufacturer
+        , div [ class "text-center leading-none text-xs font-bold" ]
+            [ text item.metadata.carNumber ]
+        ]
+        item
+
+
+{-| マニュファクチャラー色を背景に敷くバッジの外枠. 中身は呼び出し側が組み立てる.
+-}
+badge : String -> List (Html msg) -> StandingsEntry -> Html msg
+badge containerClass children item =
+    div
+        [ class containerClass
+        , css [ Css.backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
+        ]
+        children
+
+
+manufacturerLogo : List Css.Style -> Manufacturer -> Html msg
+manufacturerLogo styles manufacturer =
     case Manufacturer.toLogoUrl manufacturer of
         Just url ->
-            img
-                [ src url
-                , css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    , property "object-fit" "contain"
-                    , property "opacity" "0.9"
-                    ]
-                ]
-                []
+            img [ src url, alt (Manufacturer.toString manufacturer), css styles ] []
 
         Nothing ->
-            div
-                [ css
-                    [ property "max-width" "28px"
-                    , property "height" "16px"
-                    ]
-                ]
-                []
+            div [ css styles ] []
 
 
 {-| セクター進捗パイ + Current ラップ + Last ラップを描く.

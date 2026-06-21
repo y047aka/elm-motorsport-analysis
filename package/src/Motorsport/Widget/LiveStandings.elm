@@ -2,16 +2,16 @@ module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, before, hover, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled exposing (Html, button, div, img, li, text)
-import Html.Styled.Attributes exposing (alt, attribute, class, css, src)
+import Html.Styled exposing (Html, button, div, li, text)
+import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.Widget.CarStatus as CarStatus
 
 
 type alias Props msg =
@@ -120,25 +120,7 @@ carRow popoverTarget onSelect item =
 carRowContent : StandingsEntry -> List (Html msg)
 carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
-    , div
-        [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
-        , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
-        ]
-        [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
-            Just logoUrl ->
-                img
-                    [ src logoUrl
-                    , alt (Manufacturer.toString item.metadata.manufacturer)
-                    , class "object-contain"
-                    , css [ property "height" "14px" ]
-                    ]
-                    []
-
-            Nothing ->
-                div [] [ text "" ]
-        , div [ class "text-center leading-none text-xs font-bold" ]
-            [ text item.metadata.carNumber ]
-        ]
+    , CarStatus.carNumberBadgeRow item
     , div [ class "text-xs opacity-70" ]
         [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
     , div [ class "text-xs text-right" ]
