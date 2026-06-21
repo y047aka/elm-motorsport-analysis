@@ -41,26 +41,26 @@ paddingBottom =
     padding + 10
 
 
-xScale : Int -> ContinuousScale Float
-xScale lapTotal =
+xContinuousScale : Int -> ContinuousScale Float
+xContinuousScale lapTotal =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
-yScale : Duration -> ContinuousScale Float
-yScale fastestLapTime =
+yContinuousScale : Duration -> ContinuousScale Float
+yContinuousScale fastestLapTime =
     Scale.linear ( h - paddingBottom, padding ) ( toFloat fastestLapTime * 10, 0 )
 
 
-xAxis : Int -> Svg msg
-xAxis lapTotal =
+xAxis : ContinuousScale Float -> Svg msg
+xAxis xScale =
     g [ transform [ Translate 0 (h - paddingBottom) ], css axisStyles ]
-        [ fromUnstyled <| Axis.bottom [] (xScale lapTotal) ]
+        [ fromUnstyled <| Axis.bottom [] xScale ]
 
 
-yAxis : Duration -> Svg msg
-yAxis fastestLapTime =
+yAxis : ContinuousScale Float -> Svg msg
+yAxis yScale =
     g [ transform [ Translate paddingLeft 0 ], css axisStyles ]
-        [ fromUnstyled <| Axis.left [] (yScale fastestLapTime) ]
+        [ fromUnstyled <| Axis.left [] yScale ]
 
 
 axisStyles : List Style
@@ -79,18 +79,24 @@ view analysis { lapTotal, cars } =
     let
         fastestLapTime =
             analysis.fastestLapTime
+
+        xScale =
+            xContinuousScale lapTotal
+
+        yScale =
+            yContinuousScale fastestLapTime
     in
     svg [ viewBox 0 0 w h ]
-        [ xAxis lapTotal
-        , yAxis fastestLapTime
+        [ xAxis xScale
+        , yAxis yScale
         , g [] <|
             (cars
                 |> RunningOrder.toList
                 |> List.map
                     (\{ laps } ->
                         dotHistory
-                            { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
-                            , y = (\{ lap, elapsed } -> toFloat elapsed - (toFloat (lap * fastestLapTime) * 1.02)) >> Scale.convert (yScale fastestLapTime)
+                            { x = .lap >> toFloat >> Scale.convert xScale
+                            , y = (\{ lap, elapsed } -> toFloat elapsed - (toFloat (lap * fastestLapTime) * 1.02)) >> Scale.convert yScale
                             , color = "#000"
                             , dotLabel = .lap >> String.fromInt
                             }
