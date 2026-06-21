@@ -3,6 +3,7 @@ module Motorsport.Chart.Common exposing
     , LapWindow(..)
     , Dimensions
     , Scales, svg, renderLine
+    , xContinuousScale
     , axisStyle, lapGridLines, lapAxis, yAxis
     , iqrFences, upperFence
     )
@@ -18,6 +19,7 @@ module Motorsport.Chart.Common exposing
 @docs LapWindow
 @docs Dimensions
 @docs Scales, svg, renderLine
+@docs xContinuousScale
 @docs axisStyle, lapGridLines, lapAxis, yAxis
 @docs iqrFences, upperFence
 
@@ -122,6 +124,15 @@ type alias Scales =
     { xScale : Scale.ContinuousScale Float
     , yScale : Scale.ContinuousScale Float
     }
+
+
+{-| ラップ番号(X軸)を画面座標へ張る線形スケール. 左右の水平パディングを差し引いた
+プロット幅へ, 与えられたドメイン `( minX, maxX )` を写像する. ラップ軸を持つチャートで
+共有する(縦軸はチャートごとに張り方が異なるため各チャート側で組む).
+-}
+xContinuousScale : Dimensions -> ( Float, Float ) -> Scale.ContinuousScale Float
+xContinuousScale { width, padding } domain =
+    Scale.linear ( padding.left, width - padding.right ) domain
 
 
 {-| チャート共通の svg ラッパ. 幅100%・block 表示で `viewBox` を寸法に張り, 装飾と

@@ -4,7 +4,7 @@ import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -151,8 +151,11 @@ positionProgressionChart size series =
         lapRange_ =
             lapExtent allPoints
 
+        ( minLap, maxLap ) =
+            lapRange_
+
         scales =
-            { xScale = xContinuousScale dimensions lapRange_
+            { xScale = xContinuousScale dimensions ( toFloat minLap, toFloat maxLap )
             , yScale = yContinuousScale dimensions allPoints
             }
 
@@ -177,11 +180,6 @@ buildPositionPoints lapThreshold history =
             (\lap ->
                 lap.position |> Maybe.map (\pos -> { lapNumber = lap.lap, position = pos })
             )
-
-
-xContinuousScale : Dimensions -> ( Int, Int ) -> ContinuousScale Float
-xContinuousScale { width, padding } ( minLap, maxLap ) =
-    Scale.linear ( padding.left, width - padding.right ) ( toFloat minLap, toFloat maxLap )
 
 
 yContinuousScale : Dimensions -> List PositionPoint -> ContinuousScale Float

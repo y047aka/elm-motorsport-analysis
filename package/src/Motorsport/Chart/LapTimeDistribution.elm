@@ -13,19 +13,17 @@ module Motorsport.Chart.LapTimeDistribution exposing (Series, domainOf, maxDensi
 -}
 
 import Axis
-import Css exposing (Style, property)
-import Css.Global exposing (descendants, each, typeSelector)
+import Css
 import Html.Styled exposing (Html, text)
-import Html.Styled.Attributes exposing (css)
-import Motorsport.Chart.Common exposing (Emphasis)
+import Motorsport.Chart.Common as Common exposing (Emphasis)
 import Motorsport.Duration as Duration
 import Path.Styled as Path
 import Scale exposing (ContinuousScale)
 import Shape
 import Statistics
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, svg, text_)
+import Svg.Styled exposing (Svg, circle, fromUnstyled, g, text_)
 import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform, viewBox)
+import TypedSvg.Styled.Attributes exposing (transform)
 import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
@@ -99,11 +97,7 @@ view { width, height, domain, maxDensity } seriesList =
             yScale =
                 Scale.linear ( height - padBottom, padTop ) ( 0, maxDensity )
         in
-        svg
-            [ SvgAttr.width "100%"
-            , SvgAttr.css [ property "display" "block" ]
-            , viewBox 0 0 width height
-            ]
+        Common.svg { width = width, height = height }
             (xAxis height xScale
                 :: List.map (densityShape xScale yScale) densities
             )
@@ -264,7 +258,7 @@ lastLapMarker xScale yScale series lastLapPoint =
 
 xAxis : Float -> ContinuousScale Float -> Svg msg
 xAxis height xScale =
-    g [ transform [ Translate 0 (height - padBottom) ], css axisStyles ]
+    g [ transform [ Translate 0 (height - padBottom) ], SvgAttr.css [ Common.axisStyle ] ]
         [ fromUnstyled <|
             Axis.bottom
                 [ Axis.tickCount 4
@@ -273,19 +267,6 @@ xAxis height xScale =
                 ]
                 xScale
         ]
-
-
-axisStyles : List Style
-axisStyles =
-    [ descendants
-        [ each [ typeSelector "line", typeSelector "path" ]
-            [ property "stroke" "hsl(0 0% 100% / 0.3)" ]
-        , typeSelector "text"
-            [ property "fill" "hsl(0 0% 100% / 0.5)"
-            , property "font-size" "8px"
-            ]
-        ]
-    ]
 
 
 

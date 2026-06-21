@@ -25,7 +25,7 @@ import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -181,7 +181,7 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
             (maxGap - minGap) * 0.15 + 50
 
         scales =
-            { xScale = Scale.linear ( padding.left, width - padding.right ) ( minX, maxX )
+            { xScale = xContinuousScale dimensions ( minX, maxX )
 
             -- 基準より速い(累積小=先行)を上, 遅い(累積大=後退)を下に置く.
             , yScale = Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
