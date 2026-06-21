@@ -158,8 +158,14 @@ renderLine :
     Scales
     -> { color : Css.Color, emphasis : Emphasis, label : String, points : List ( Int, Int ) }
     -> Svg msg
-renderLine { xScale, yScale } { color, emphasis, label, points } =
+renderLine scales { color, emphasis, label, points } =
     let
+        ( minX, maxX ) =
+            Scale.domain scales.xScale
+
+        visible =
+            points |> List.filter (\( x, _ ) -> minX <= toFloat x && toFloat x <= maxX)
+
         -- Muted(その他)は車色の彩度を大きく落として背面へ退かせる(完全な無彩色にはしない).
         strokeValue =
             case emphasis of
@@ -169,45 +175,24 @@ renderLine { xScale, yScale } { color, emphasis, label, points } =
                 _ ->
                     color.value
 
-        ( minX, maxX ) =
-            Scale.domain xScale
-
-        visible =
-            points |> List.filter (\( x, _ ) -> minX <= toFloat x && toFloat x <= maxX)
-
-        project ( x, y ) =
-            ( Scale.convert xScale (toFloat x), Scale.convert yScale (toFloat y) )
+        strokeStyle =
+            chooseByEmphasis
+                { focused = { width = "2", opacity = "1" }
+                , related = { width = "1.5", opacity = "0.5" }
+                , muted = { width = "1.5", opacity = "0.3" }
+                }
+                emphasis
 
         linePath =
-            visible |> List.map (project >> Just) |> Shape.line Shape.linearCurve
+            visible |> List.map (projectPoint scales >> Just) |> Shape.line Shape.linearCurve
 
+        -- 終端ドットは強調系列(Focused)の最終点にだけ置く.
         terminalDot =
             case emphasis of
                 Focused ->
                     visible
                         |> List.Extra.last
-                        |> Maybe.map
-                            (\point ->
-                                let
-                                    ( px, py ) =
-                                        project point
-                                in
-                                g []
-                                    (circle
-                                        [ InPx.cx px
-                                        , InPx.cy py
-                                        , InPx.r terminalDotRadius
-                                        , SvgAttr.css [ Css.fill color ]
-                                        ]
-                                        []
-                                        :: (if String.isEmpty label then
-                                                []
-
-                                            else
-                                                [ terminalLabel { x = px, y = py, color = color, label = label } ]
-                                           )
-                                    )
-                            )
+                        |> Maybe.map (terminalMarker scales { color = color, label = label })
                         |> Maybe.withDefault (g [] [])
 
                 _ ->
@@ -216,12 +201,45 @@ renderLine { xScale, yScale } { color, emphasis, label, points } =
     g []
         [ Path.element linePath
             [ SvgAttr.stroke strokeValue
-            , SvgAttr.strokeWidth (chooseByEmphasis { focused = "2", related = "1.5", muted = "1.5" } emphasis)
-            , SvgAttr.strokeOpacity (chooseByEmphasis { focused = "1", related = "0.5", muted = "0.3" } emphasis)
+            , SvgAttr.strokeWidth strokeStyle.width
+            , SvgAttr.strokeOpacity strokeStyle.opacity
             , SvgAttr.fill "none"
             ]
         , terminalDot
         ]
+
+
+{-| 整数値の点 `( x, y )`(ラップ番号と縦軸量)を `Scales` で画面座標へ投影する.
+-}
+projectPoint : Scales -> ( Int, Int ) -> ( Float, Float )
+projectPoint { xScale, yScale } ( x, y ) =
+    ( Scale.convert xScale (toFloat x), Scale.convert yScale (toFloat y) )
+
+
+{-| 終端ドット(＋必要ならラベル)を描く. 強調系列の最終点を受け取り `Scales` で投影する.
+`label` が空文字列でなければドットの右側に併記する. 描画可否(Focused のみ)は `renderLine` で分岐する.
+-}
+terminalMarker : Scales -> { color : Css.Color, label : String } -> ( Int, Int ) -> Svg msg
+terminalMarker scales { color, label } point =
+    let
+        ( x, y ) =
+            projectPoint scales point
+    in
+    g []
+        (circle
+            [ InPx.cx x
+            , InPx.cy y
+            , InPx.r terminalDotRadius
+            , SvgAttr.css [ Css.fill color ]
+            ]
+            []
+            :: (if String.isEmpty label then
+                    []
+
+                else
+                    [ terminalLabel { x = x, y = y, color = color, label = label } ]
+               )
+        )
 
 
 {-| `Muted`(対象に関係しないその他の車)の折れ線色. 完全な無彩色にすると車の識別性が
