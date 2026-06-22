@@ -8,29 +8,28 @@ import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import FatalError exposing (FatalError)
-import Html.Styled as Html exposing (Html, button, div, input, main_, nav, text)
-import Html.Styled.Attributes as Attributes exposing (attribute, css, type_, value)
-import Html.Styled.Events exposing (onClick, onInput)
+import Html.Styled exposing (Html, button, div, main_, nav, text)
+import Html.Styled.Attributes as Attributes exposing (attribute, css)
+import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
-import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.Standings as Standings
-import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
-import Motorsport.Utils exposing (compareBy)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
 import Shared
-import String exposing (dropRight)
 import Task
 import Time
 import UrlPath exposing (UrlPath)
 import View exposing (View)
+import View.CarDetailPopover as CarDetailPopover
+import View.PlaybackControls as PlaybackControls
+import View.RaceEvents as RaceEvents
 
 
 type alias RouteParams =
@@ -174,11 +173,11 @@ update app shared msg m =
             ( { m | stripOffset = max 0 offset }, Effect.none, Nothing )
 
         ShowCarDetail carNumber ->
-            -- standings 行クリックでモーダルを開く起点. 選択をこの1台にリセットする.
+            -- Opening the modal from a standings row click; reset the selection to this single car.
             ( { m | detailCarNumbers = [ carNumber ] }, Effect.none, Nothing )
 
         ToggleDetailCar carNumber ->
-            -- モーダル内セレクタ. 最大3台までトグル選択する.
+            -- In-modal selector; toggle selection up to a maximum of 3 cars.
             let
                 next =
                     if List.member carNumber m.detailCarNumbers then
@@ -237,19 +236,7 @@ view app { eventSummary, analysis, raceControl } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
-            [ Html.node "style"
-                []
-                [ text """
-                    @keyframes slideUp {
-                        from {
-                            transform: translateY(100%);
-                        }
-                        to {
-                            transform: translateY(0);
-                        }
-                    }
-                """ ]
-            , main_
+            [ main_
                 [ attribute "data-theme" "forest"
                 , css
                     [ height (pct 100)
@@ -268,144 +255,88 @@ view app { eventSummary, analysis, raceControl } m =
                   in
                   case m.mode of
                     Tracker ->
-                        div
-                            [ css
-                                [ property "grid-row" "2"
-                                , property "height" "100%"
-                                , overflowY hidden
-                                , padding4 (px 0) (px 10) (px 10) (px 10)
-                                , property "display" "grid"
-                                , property "grid-template-columns" "300px 1fr 300px"
-                                , property "grid-template-rows" "minmax(0, 1fr) auto"
-                                , property "row-gap" "10px"
-                                , property "column-gap" "10px"
-                                ]
-                            ]
-                            [ div
-                                [ css
-                                    [ property "grid-column" "1"
-                                    , property "height" "100%"
-                                    , overflowY hidden
-                                    ]
-                                ]
-                                [ LiveStandingsWidget.view
-                                    { eventSummary = eventSummary
-                                    , standings = standings
-                                    , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
-                                    , popoverTarget = carDetailPopoverId
-                                    }
-                                ]
-                            , div
-                                [ Attributes.class "card bg-base-200"
-                                , css [ property "grid-column" "2" ]
-                                ]
-                                [ div [ Attributes.class "card-body p-3" ]
-                                    [ div
-                                        [ css
-                                            [ property "height" "100%"
-                                            , property "display" "grid"
-                                            , property "place-items" "center"
-                                            ]
-                                        ]
-                                        [ TrackerChart.view
-                                            { season = eventSummary.season, eventName = eventSummary.name }
-                                            analysis
-                                            standings
-                                        ]
-                                    ]
-                                ]
-                            , div
-                                [ Attributes.class "card bg-base-200"
-                                , css [ property "grid-column" "3" ]
-                                ]
-                                []
-                            , div [ css [ property "grid-column" "1 / -1" ] ]
-                                [ SelectedCarsStrip.view
-                                    { season = eventSummary.season
-                                    , analysis = analysis
-                                    , offset = m.stripOffset
-                                    , onScrollTo = StripScrollTo
-                                    }
-                                    standings
-                                ]
-                            , carDetailPopover
-                                { season = eventSummary.season, analysis = analysis, clock = raceControl.clock, activeChart = m.detailChart }
-                                standings
-                                m.detailCarNumbers
-                            ]
+                        trackerView eventSummary analysis raceControl standings m
 
                     Events ->
-                        eventsView m.eventsState raceControl
+                        RaceEvents.view EventsMsg m.eventsState raceControl
                 ]
             ]
         }
 
 
-carDetailPopoverId : String
-carDetailPopoverId =
-    "car-detail-popover"
-
-
-{-| 車両詳細のポップオーバー. 行クリック時に popovertarget で開けるよう常にレンダリング
-しておき, 中身だけを選択中の車両から構築する(開いている間もライブ更新される).
-`popover="auto"` によりライトディスミス(外側クリック・Esc)で閉じる.
--}
-carDetailPopover : { season : Int, analysis : Analysis, clock : Clock.Model, activeChart : CompareWidget.Chart } -> Standings.Standings -> List String -> Html Msg
-carDetailPopover config standings detailCarNumbers =
-    Html.node "div"
-        [ Attributes.id carDetailPopoverId
-        , attribute "popover" "auto"
-
-        -- daisyUI の modal-box でスタイリングする. modal-box は display を指定しないため,
-        -- UA の「閉じた popover は display:none」がそのまま効く.
-        , Attributes.class "modal-box"
-        , css
-            [ -- Tailwind preflight が UA の margin:auto を打ち消すため明示して中央配置する
-              property "margin" "auto"
-            , property "max-width" "min(90vw, 1200px)"
-            , property "padding" "1rem"
-
-            -- ガラス風(グラスモーフィズム): 半透明背景 + 背景ぼかし + 縁取り.
-            -- 配色は app 側の DaisyUI テーマトークン(--glass-*)で管理する.
-            , property "background-color" "var(--glass-bg)"
-            , property "backdrop-filter" "blur(16px)"
-            , property "-webkit-backdrop-filter" "blur(16px)"
-            , property "border" "1px solid var(--glass-border)"
-            , property "box-shadow" "0 0 80px var(--glass-shadow)"
-
-            -- .modal-box は .modal 配下で開かれることを前提に opacity/scale を畳んでいるため,
-            -- popover の開状態で展開する.
-            , Css.pseudoClass "popover-open"
-                [ property "opacity" "1"
-                , property "scale" "1"
-                ]
-            , Css.pseudoElement "backdrop"
-                [ property "background-color" "var(--glass-backdrop)" ]
+trackerView : EventSummary -> Analysis -> RaceControl.Model -> Standings.Standings -> Model -> Html Msg
+trackerView eventSummary analysis raceControl standings m =
+    div
+        [ css
+            [ property "grid-row" "2"
+            , property "height" "100%"
+            , overflowY hidden
+            , padding4 (px 0) (px 10) (px 10) (px 10)
+            , property "display" "grid"
+            , property "grid-template-columns" "300px 1fr 300px"
+            , property "grid-template-rows" "minmax(0, 1fr) auto"
+            , property "row-gap" "10px"
+            , property "column-gap" "10px"
             ]
         ]
-        (case detailCarNumbers of
-            [] ->
-                []
-
-            _ ->
-                [ button
-                    [ attribute "popovertarget" carDetailPopoverId
-                    , attribute "popovertargetaction" "hide"
-                    , Attributes.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-                    ]
-                    [ text "✕" ]
-                , CompareWidget.viewComparison
-                    { season = config.season
-                    , analysis = config.analysis
-                    , clock = config.clock
-                    , onToggleCar = ToggleDetailCar
-                    , activeChart = config.activeChart
-                    , onSelectChart = SelectDetailChart
-                    }
-                    standings
-                    detailCarNumbers
+        [ div
+            [ css
+                [ property "grid-column" "1"
+                , property "height" "100%"
+                , overflowY hidden
                 ]
-        )
+            ]
+            [ LiveStandingsWidget.view
+                { eventSummary = eventSummary
+                , standings = standings
+                , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
+                , popoverTarget = CarDetailPopover.popoverId
+                }
+            ]
+        , div
+            [ Attributes.class "card bg-base-200"
+            , css [ property "grid-column" "2" ]
+            ]
+            [ div [ Attributes.class "card-body p-3" ]
+                [ div
+                    [ css
+                        [ property "height" "100%"
+                        , property "display" "grid"
+                        , property "place-items" "center"
+                        ]
+                    ]
+                    [ TrackerChart.view
+                        { season = eventSummary.season, eventName = eventSummary.name }
+                        analysis
+                        standings
+                    ]
+                ]
+            ]
+        , div
+            [ Attributes.class "card bg-base-200"
+            , css [ property "grid-column" "3" ]
+            ]
+            []
+        , div [ css [ property "grid-column" "1 / -1" ] ]
+            [ SelectedCarsStrip.view
+                { season = eventSummary.season
+                , analysis = analysis
+                , offset = m.stripOffset
+                , onScrollTo = StripScrollTo
+                }
+                standings
+            ]
+        , CarDetailPopover.view
+            { season = eventSummary.season
+            , analysis = analysis
+            , clock = raceControl.clock
+            , activeChart = m.detailChart
+            , onToggleCar = ToggleDetailCar
+            , onSelectChart = SelectDetailChart
+            }
+            standings
+            m.detailCarNumbers
+        ]
 
 
 navigation : EventSummary -> RaceControl.Model -> Mode -> Html Msg
@@ -424,7 +355,12 @@ navigation eventSummary raceControl currentMode =
             ]
         ]
         [ div [ Attributes.class "text-sm whitespace-nowrap" ] [ text headerTitle ]
-        , viewPlayerControls raceControl
+        , PlaybackControls.view
+            { raceControl = raceControl
+            , onStart = StartRace
+            , onPause = PauseRace
+            , toRaceControlMsg = RaceControlMsg
+            }
         , viewModeSelector currentMode
         ]
 
@@ -457,161 +393,3 @@ joinButton label isActive msg =
             )
         ]
         [ text label ]
-
-
-viewPlayerControls : RaceControl.Model -> Html Msg
-viewPlayerControls raceControl =
-    div [ Attributes.class "flex items-center gap-8" ]
-        [ div [ Attributes.class "flex items-center gap-2" ]
-            [ viewPlayPauseButton raceControl
-            , viewSkipControls
-            ]
-        , viewProgressBar raceControl
-        , viewSpeedControls raceControl.clock.playbackSpeed
-        ]
-
-
-viewPlayPauseButton : RaceControl.Model -> Html Msg
-viewPlayPauseButton raceControl =
-    let
-        ( icon, action, isDisabled ) =
-            case raceControl.clock.state of
-                Initial ->
-                    ( "▶", StartRace, False )
-
-                Started _ _ ->
-                    ( "■", PauseRace, False )
-
-                Paused _ ->
-                    ( "▶", StartRace, False )
-
-                Finished ->
-                    ( "■", PauseRace, True )
-    in
-    button
-        [ onClick action
-        , Attributes.disabled isDisabled
-        , Attributes.class "btn btn-circle btn-sm btn-ghost text-xs"
-        ]
-        [ text icon ]
-
-
-viewSpeedControls : Clock.PlaybackSpeed -> Html Msg
-viewSpeedControls currentSpeed =
-    div [ Attributes.class "join" ]
-        [ speedSegmentButton "1×" Clock.Speed1x (currentSpeed == Clock.Speed1x)
-        , speedSegmentButton "10×" Clock.Speed10x (currentSpeed == Clock.Speed10x)
-        , speedSegmentButton "60×" Clock.Speed60x (currentSpeed == Clock.Speed60x)
-        ]
-
-
-speedSegmentButton : String -> Clock.PlaybackSpeed -> Bool -> Html Msg
-speedSegmentButton label speed isActive =
-    joinButton label isActive (RaceControlMsg (RaceControl.SetPlaybackSpeed speed))
-
-
-viewSkipControls : Html Msg
-viewSkipControls =
-    div [ Attributes.class "join" ]
-        [ joinButton "+10s" False (RaceControlMsg (RaceControl.SkipTime (10 * 1000)))
-        , joinButton "+1m" False (RaceControlMsg (RaceControl.SkipTime (60 * 1000)))
-        , joinButton "+1h" False (RaceControlMsg (RaceControl.SkipTime (60 * 60 * 1000)))
-        ]
-
-
-viewProgressBar : RaceControl.Model -> Html Msg
-viewProgressBar { clock, lapTotal, lapCount, timeLimit } =
-    let
-        elapsed =
-            Clock.getElapsed clock
-
-        remaining =
-            timeLimit - elapsed
-    in
-    div [ Attributes.class "flex flex-col gap-2 flex-1 min-w-0 text-xs font-medium tabular-nums opacity-70" ]
-        [ div [ Attributes.class "flex justify-between" ]
-            [ div [] [ text (Clock.toString clock) ]
-            , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt lapTotal) ]
-            , div [] [ text (Duration.toString remaining |> dropRight 4) ]
-            ]
-        , input
-            [ type_ "range"
-            , Attributes.min "0"
-            , Attributes.max (String.fromInt lapTotal)
-            , value (String.fromInt lapCount)
-            , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
-            , Attributes.class "range range-xs w-full"
-            ]
-            []
-        ]
-
-
-eventsView : DataView.Model -> RaceControl.Model -> Html Msg
-eventsView eventsState raceControl =
-    let
-        currentElapsed =
-            Clock.getElapsed raceControl.clock
-
-        occurredEvents =
-            raceControl.timelineEvents
-                |> List.filter (\event -> currentElapsed >= event.eventTime)
-                |> List.sortBy .eventTime
-    in
-    div []
-        [ Html.h2 [] [ text "Race Events" ]
-        , DataView.view eventsConfig eventsState occurredEvents
-        ]
-
-
-eventsConfig : DataView.Config TimelineEvent Msg
-eventsConfig =
-    { toId = .eventTime >> Duration.toString
-    , toMsg = EventsMsg
-    , columns =
-        [ DataView.customColumn
-            { label = "Time"
-            , getter = .eventTime >> Duration.toString
-            , sorter = compareBy .eventTime
-            }
-        , DataView.stringColumn
-            { label = "Car"
-            , getter =
-                \event ->
-                    case event.eventType of
-                        CarEvent carNumber _ ->
-                            carNumber
-
-                        _ ->
-                            ""
-            }
-        , DataView.stringColumn
-            { label = "Event"
-            , getter = .eventType >> eventTypeToString
-            }
-        ]
-    }
-
-
-eventTypeToString : EventType -> String
-eventTypeToString eventType =
-    case eventType of
-        RaceStart ->
-            "Race Started"
-
-        CarEvent _ (Start _) ->
-            "Start"
-
-        CarEvent _ (LapCompleted lap _) ->
-            "Lap " ++ String.fromInt lap ++ " Completed"
-
-        CarEvent _ (PitIn _) ->
-            "Pit In"
-
-        CarEvent _ (PitOut _) ->
-            "Pit Out"
-
-        CarEvent _ Retirement ->
-            "Retirement"
-
-        CarEvent _ Checkered ->
-            "Checkered Flag"
