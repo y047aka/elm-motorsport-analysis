@@ -28,7 +28,7 @@ import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
@@ -220,7 +220,6 @@ gapYScale { height, padding } carsWithGaps =
         bandGaps =
             allGaps |> List.filter inBand
 
-        -- Always include 0 (group-average pace) in the range.
         minGap =
             List.minimum (0 :: List.map toFloat bandGaps) |> Maybe.withDefault 0
 
@@ -342,12 +341,12 @@ groupReferenceByLap carLines =
 
 
 {-| Dimensions for the full-width consolidated gap chart. A wide aspect keeps the
-rendered height (width × height/width) low when stretched to 100% width. Bottom
-and left padding are thicker for the X/Y axis labels.
+rendered height (width × height/width) low when stretched to 100% width. Uses the
+shared `axisPadding` to reserve room for the X/Y axis labels.
 -}
 consolidated : Dimensions
 consolidated =
-    { width = 1000, height = 250, padding = { top = 20, right = 25, bottom = 20, left = 25 } }
+    { width = 1000, height = 250, padding = axisPadding }
 
 
 {-| Dimensions for the in-card ahead/behind rival comparison (gap). Narrow and

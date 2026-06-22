@@ -92,9 +92,6 @@ formatDriverName fullName =
             fullName
 
 
-{-| 行全体を popovertarget 付きの button にすることで, クリック時にブラウザが
-詳細ポップオーバーを開く. 同時に onSelect で対象車を Model へ記録する.
--}
 carRow : String -> (StandingsEntry -> msg) -> StandingsEntry -> Html msg
 carRow popoverTarget onSelect item =
     li []

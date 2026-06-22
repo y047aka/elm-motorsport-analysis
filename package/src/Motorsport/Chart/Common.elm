@@ -1,7 +1,7 @@
 module Motorsport.Chart.Common exposing
     ( Emphasis(..), chooseByEmphasis, emphasisRank, sortForDrawing
     , LapWindow(..)
-    , Dimensions, Scales, xContinuousScale
+    , Dimensions, Scales, axisPadding, xContinuousScale
     , svg, renderLine
     , axisStyle, lapGridLines, lapAxis, yAxis
     , iqrFences, upperFence
@@ -18,7 +18,7 @@ history charts.
 
 @docs Emphasis, chooseByEmphasis, emphasisRank, sortForDrawing
 @docs LapWindow
-@docs Dimensions, Scales, xContinuousScale
+@docs Dimensions, Scales, axisPadding, xContinuousScale
 @docs svg, renderLine
 @docs axisStyle, lapGridLines, lapAxis, yAxis
 @docs iqrFences, upperFence
@@ -121,9 +121,9 @@ type LapWindow
 
 
 {-| A chart's viewBox dimensions and its top/right/bottom/left padding
-(`padding.top`, etc.). Represents with one type both charts that take thick
-left/bottom padding for axis labels (position history) and charts with symmetric
-padding (sparkline). Per-kind presets are defined on each chart.
+(`padding.top`, etc.). Represents with one type both charts that reserve padding for
+axis labels (position history, consolidated gap chart; see `axisPadding`) and charts
+with minimal padding (sparkline). Per-kind presets are defined on each chart.
 -}
 type alias Dimensions =
     { width : Float
@@ -135,6 +135,15 @@ type alias Dimensions =
         , left : Float
         }
     }
+
+
+{-| Shared padding reserving room for the X/Y axis labels. Symmetric (25 left/right,
+20 top/bottom), shared by the lap-axis charts (consolidated gap chart and position
+history).
+-}
+axisPadding : { top : Float, right : Float, bottom : Float, left : Float }
+axisPadding =
+    { top = 20, right = 25, bottom = 20, left = 25 }
 
 
 {-| The set of scales for drawing polylines. Built once per chart from

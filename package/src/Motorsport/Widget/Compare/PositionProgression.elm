@@ -4,7 +4,7 @@ import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
-import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
@@ -25,9 +25,10 @@ view size clock standings target =
             Widget.emptyState message
 
 
-{-| ポジション履歴チャートが現在描いているラップ番号の範囲 `(minLap, maxLap)`.
-スパークラインを同じ範囲(X軸)で描くために共有する. 表示対象が無いときは `Nothing`.
-チャート本体と同じ閾値(直近3時間相当)・同じポイント抽出条件で算出する.
+{-| The lap-number range `(minLap, maxLap)` the position-history chart currently
+draws. Shared so the sparkline can be drawn over the same range (X axis). When there
+is nothing to display, returns `Nothing`. Computed with the same threshold (the
+recent window) and the same point-extraction condition as the chart itself.
 -}
 lapRange : Clock.Model -> Standings -> Class -> Maybe ( Int, Int )
 lapRange clock standings class =
@@ -47,8 +48,9 @@ classCarsOf standings class =
         |> Maybe.withDefault []
 
 
-{-| クラス内各車の「閾値以降の position points」を組み, 2点以上ある車だけを残す.
-チャート本体と lapRange の X 軸を揃えるため, ポイント抽出条件をここに一本化する.
+{-| Builds the "position points past the threshold" for each car in the class,
+keeping only cars with two or more points. Centralizes the point-extraction
+condition here so the chart itself and `lapRange` share the same X axis.
 -}
 classPositionPoints : Clock.Model -> Standings -> Class -> List ( StandingsEntry, List PositionPoint )
 classPositionPoints clock standings class =
@@ -101,7 +103,7 @@ type alias PositionSeries =
     }
 
 
-{-| 点列が占めるラップ番号の範囲 `(minLap, maxLap)`. 空のときは `(1, 1)`.
+{-| The lap-number range `(minLap, maxLap)` the point series spans. `(1, 1)` when empty.
 -}
 lapExtent : List PositionPoint -> ( Int, Int )
 lapExtent positions =
@@ -138,11 +140,10 @@ calculateLapThreshold clock standings =
 positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
 positionProgressionChart size series =
     let
-        -- 軸ラベルのために左・下を厚めに取る非対称パディング.
         dimensions =
             { width = size.width
             , height = size.height
-            , padding = { top = 20, right = 25, bottom = 20, left = 25 }
+            , padding = axisPadding
             }
 
         allPoints =
@@ -159,7 +160,7 @@ positionProgressionChart size series =
             , yScale = yContinuousScale dimensions allPoints
             }
 
-        -- Muted(奥) → Related → Focused(手前)の順で重ね描きする.
+        -- Stack back-to-front: Muted (back) → Related → Focused (front).
         orderedSeries =
             sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
@@ -205,8 +206,8 @@ yContinuousScale { height, padding } positions =
     Scale.linear ( height - padding.bottom, padding.top ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
-{-| Y軸(順位). ラベルは1位・5位・10位…と1-indexed で表示し, 共通ラッパ `yAxis` に
-目盛り設定を渡して描く(スケールは0-indexed のためラベルで +1 する).
+{-| Y axis (position). Labels are shown 1-indexed as P1, P5, P10…, drawn by passing
+tick settings to the shared `yAxis` wrapper (the scale is 0-indexed, so labels add +1).
 -}
 positionAxis : Dimensions -> ContinuousScale Float -> Svg msg
 positionAxis dimensions yScale =
@@ -214,7 +215,6 @@ positionAxis dimensions yScale =
         ( domainMax, _ ) =
             Scale.domain yScale
 
-        -- ラベルは1-indexed（1位、5位、10位...）、スケールは0-indexed
         labelPositions =
             1
                 :: (List.range 1 ((round domainMax // 5) + 1) |> List.map (\i -> i * 5))
@@ -232,7 +232,8 @@ positionAxis dimensions yScale =
         yScale
 
 
-{-| `PositionSeries` を共通レンダラ `renderLine` の入力へ変換して1本描く. 縦軸量は順位.
+{-| Converts a `PositionSeries` into the shared renderer `renderLine`'s input and
+draws one line. The vertical quantity is position.
 -}
 positionLine : Scales -> PositionSeries -> Svg msg
 positionLine scales series =
