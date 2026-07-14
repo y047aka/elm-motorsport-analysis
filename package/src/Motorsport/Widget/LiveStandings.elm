@@ -11,7 +11,7 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Gap as Gap
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
-import Motorsport.Widget.CarStatus as CarStatus
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
 type alias Props msg =
@@ -117,7 +117,7 @@ carRow popoverTarget onSelect item =
 carRowContent : StandingsEntry -> List (Html msg)
 carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
-    , CarStatus.carNumberBadgeRow item
+    , CarNumberBadge.viewRow item
     , div [ class "text-xs opacity-70" ]
         [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
     , div [ class "text-xs text-right" ]

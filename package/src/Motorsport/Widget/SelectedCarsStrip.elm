@@ -18,9 +18,10 @@ import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Class as Class
-import Motorsport.Gap as Gap
+import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
-import Motorsport.Widget.CarStatus as CarStatus
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
+import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 
 
 {-| `offset` は表示ウィンドウの先頭順位(0始まり). `onScrollTo` には移動先 offset を渡す.
@@ -175,7 +176,7 @@ carCard { season, analysis } standings neighbors item =
                     ]
                 ]
                 [ cardHeader item
-                , CarStatus.sectorAndLaps analysis item
+                , SectorAndLaps.view analysis item
                 , rivalGapSparkline standings neighbors item
                 ]
             ]
@@ -192,7 +193,7 @@ cardHeader item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarStatus.carNumberBadge item
+        [ CarNumberBadge.view item
         , div
             [ css
                 [ property "font-size" "12px"
@@ -276,7 +277,7 @@ gapsRow item =
         [ gapCell "Interval" item.intervalToAhead ]
 
 
-gapCell : String -> Gap.Gap -> Html msg
+gapCell : String -> Gap -> Html msg
 gapCell label gap =
     div
         [ css

@@ -15,9 +15,10 @@ import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Gap as Gap
 import Motorsport.Standings exposing (Standings, StandingsEntry)
-import Motorsport.Widget.CarStatus as CarStatus
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
+import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 
 
 {-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
@@ -72,7 +73,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
         ]
         [ panelLabel "Lap time"
         , div [ css [ property "padding-bottom" "4px" ] ]
-            [ CarStatus.sectorAndLaps analysis item ]
+            [ SectorAndLaps.view analysis item ]
         , div
             [ css
                 [ property "padding-top" "4px"
@@ -101,7 +102,7 @@ header item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarStatus.carNumberBadge item
+        [ CarNumberBadge.view item
         , div
             [ css
                 [ property "display" "grid"
