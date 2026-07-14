@@ -9,6 +9,7 @@ import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car
 import Motorsport.Class as Class
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
@@ -81,17 +82,6 @@ view props =
         )
 
 
-formatDriverName : String -> String
-formatDriverName fullName =
-    case String.words fullName of
-        _ :: rest ->
-            -- 姓全体を大文字で表示
-            rest |> List.map String.toUpper |> String.join " "
-
-        [] ->
-            fullName
-
-
 carRow : String -> (StandingsEntry -> msg) -> StandingsEntry -> Html msg
 carRow popoverTarget onSelect item =
     li []
@@ -119,7 +109,7 @@ carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
     , CarNumberBadge.viewRow item
     , div [ class "text-xs opacity-70" ]
-        [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
+        [ text (item.currentDriver |> Maybe.map (.name >> Driver.toSurnameDisplay) |> Maybe.withDefault "") ]
     , div [ class "text-xs text-right" ]
         [ text (Gap.toString item.intervalToAhead) ]
     , if item.status == Car.InPit then
