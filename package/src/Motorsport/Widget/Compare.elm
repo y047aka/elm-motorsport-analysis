@@ -14,7 +14,6 @@ tabbed so only one shows at a time (to save space).
 import Css exposing (property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Clock as Clock
@@ -64,11 +63,8 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
             Standings.toList standings
 
         selectedEntries =
-            selectedCarNumbers
-                |> List.filterMap
-                    (\carNumber ->
-                        List.Extra.find (\e -> e.metadata.carNumber == carNumber) entriesByNumber
-                    )
+            entriesByNumber
+                |> List.filter (\e -> List.member e.metadata.carNumber selectedCarNumbers)
     in
     case selectedEntries of
         [] ->
