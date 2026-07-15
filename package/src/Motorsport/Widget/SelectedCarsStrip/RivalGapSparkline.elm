@@ -12,7 +12,8 @@ import Html.Styled exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.ViewModel.Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 {-| Shows the car's relationship to its rivals ahead and behind as the history of
@@ -49,8 +50,8 @@ clipped outside the band as an IQR outlier.
 ahead and behind are found internally as in-class neighbors in this list.
 
 -}
-view : Standings -> List Entry -> Entry -> Html msg
-view standings allCars item =
+view : LapHistory -> List Entry -> Entry -> Html msg
+view history allCars item =
     let
         neighbors =
             findNeighbors allCars item
@@ -59,13 +60,13 @@ view standings allCars item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (GapChart.carLine standings (Recent currentLap) Related)
+            neighbors.ahead |> List.map (GapChart.carLine history (Recent currentLap) Related)
 
         behindLines =
-            neighbors.behind |> List.map (GapChart.carLine standings (Recent currentLap) Related)
+            neighbors.behind |> List.map (GapChart.carLine history (Recent currentLap) Related)
 
         focusedLine =
-            GapChart.carLine standings (Recent currentLap) Focused item
+            GapChart.carLine history (Recent currentLap) Focused item
 
         -- Display the nearest rival on each side plus the focused car
         -- (ahead → focused → behind); missing neighbors are dropped.

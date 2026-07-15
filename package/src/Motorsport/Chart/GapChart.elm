@@ -31,7 +31,8 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Scale
 import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
@@ -69,11 +70,11 @@ type alias PlottedCar =
 {-| Builds one series (color, emphasis, lap list). The lap window is given by
 `LapWindow` and the emphasis by `Emphasis`.
 -}
-carLine : Standings -> LapWindow -> Emphasis -> Entry -> CarLine
-carLine standings window emphasis entry =
+carLine : LapHistory -> LapWindow -> Emphasis -> Entry -> CarLine
+carLine lapHistory window emphasis entry =
     let
         history =
-            Standings.getCarHistory entry.metadata.carNumber standings
+            LapHistory.get entry.metadata.carNumber lapHistory
     in
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = emphasis
@@ -81,7 +82,7 @@ carLine standings window emphasis entry =
     , laps =
         case window of
             Recent currentLap ->
-                Standings.getRecentLaps { count = 20, currentLap = currentLap } history
+                LapHistory.recentLaps { count = 20, currentLap = currentLap } history
 
             Range ( minLap, maxLap ) ->
                 history |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap)
@@ -102,11 +103,11 @@ with outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside
 the frame.
 
 -}
-gapChartView : ( Int, Int ) -> Standings -> List Entry -> Html msg
-gapChartView ( minLap, maxLap ) standings entries =
+gapChartView : ( Int, Int ) -> LapHistory -> List Entry -> Html msg
+gapChartView ( minLap, maxLap ) lapHistory entries =
     let
         carLines =
-            entries |> List.map (carLine standings (Range ( minLap, maxLap )) Focused)
+            entries |> List.map (carLine lapHistory (Range ( minLap, maxLap )) Focused)
     in
     if Dict.isEmpty (groupReferenceByLap carLines) then
         text ""

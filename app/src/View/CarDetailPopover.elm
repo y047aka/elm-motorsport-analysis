@@ -19,7 +19,8 @@ import Html.Styled as Html exposing (Html, button, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
-import Motorsport.ViewModel.Standings as Standings
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Standings)
 import Motorsport.Widget.Compare as CompareWidget
 
 
@@ -36,10 +37,10 @@ view :
     , onToggleCar : String -> msg
     , onSelectChart : CompareWidget.Chart -> msg
     }
-    -> Standings.Standings
+    -> { standings : Standings, history : LapHistory }
     -> List String
     -> Html msg
-view config standings detailCarNumbers =
+view config data detailCarNumbers =
     Html.node "div"
         [ Attributes.id popoverId
         , attribute "popover" "auto"
@@ -94,6 +95,6 @@ view config standings detailCarNumbers =
                     , activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
                     }
-                    standings
+                    data
                     detailCarNumbers
         ]

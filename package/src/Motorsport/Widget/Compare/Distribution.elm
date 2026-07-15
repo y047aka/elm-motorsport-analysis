@@ -13,7 +13,8 @@ a shared scale that aligns the X domain and peak density across all selected car
 import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 {-| Shared scale for the lap-time distribution chart. Aligns the X axis (domain)
@@ -44,20 +45,20 @@ scaleOf series =
 laps within the lap range, keeps only racing laps at or below the IQR upper fence,
 excluding pit and out laps.
 -}
-seriesOf : Standings -> ( Int, Int ) -> Entry -> LapTimeDistribution.Series
-seriesOf standings range entry =
+seriesOf : LapHistory -> ( Int, Int ) -> Entry -> LapTimeDistribution.Series
+seriesOf history range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
-    , times = racingTimes standings range entry
+    , times = racingTimes history range entry
     , lastLap = entry.lastLap |> Maybe.map .time
     }
 
 
-racingTimes : Standings -> ( Int, Int ) -> Entry -> List Int
-racingTimes standings ( minLap, maxLap ) entry =
+racingTimes : LapHistory -> ( Int, Int ) -> Entry -> List Int
+racingTimes history ( minLap, maxLap ) entry =
     let
         times =
-            Standings.getCarHistory entry.metadata.carNumber standings
+            LapHistory.get entry.metadata.carNumber history
                 |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
                 |> List.map .time
     in

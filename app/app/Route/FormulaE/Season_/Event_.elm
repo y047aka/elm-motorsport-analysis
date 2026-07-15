@@ -17,6 +17,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -184,10 +185,13 @@ view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboard
                         , lapCount = raceControl.lapCount
                         , cars = raceControl.cars
                         }
+
+                history =
+                    LapHistory.compute { elapsed = Clock.getElapsed raceControl.clock } raceControl.cars
               in
               case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis standings) leaderboardState standings
+                    Leaderboard.view (config eventSummary.season analysis history) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
@@ -264,8 +268,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Analysis -> Standings.Standings -> Leaderboard.Config Entry Msg
-config season analysis standings =
+config : Int -> Analysis -> LapHistory -> Leaderboard.Config Entry Msg
+config season analysis history =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -294,12 +298,12 @@ config season analysis standings =
             }
         , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            { getter = \item -> LapHistory.get item.metadata.carNumber history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            { getter = \item -> LapHistory.get item.metadata.carNumber history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

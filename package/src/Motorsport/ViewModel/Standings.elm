@@ -5,9 +5,7 @@ module Motorsport.ViewModel.Standings exposing
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount
-    , getCarHistory
     , groupCarsByCloseIntervals
-    , getRecentLaps
     )
 
 {-|
@@ -20,11 +18,7 @@ module Motorsport.ViewModel.Standings exposing
 
 @docs toList, toClassList, leader, lapCount
 
-@docs getCarHistory
-
 @docs groupCarsByCloseIntervals
-
-@docs getRecentLaps
 
 -}
 
@@ -36,7 +30,7 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
+import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
@@ -49,7 +43,6 @@ type Standings
         { laps : Int
         , entries : SortedList ByPosition Entry
         , entriesByClass : List ( Class, SortedList ByPosition Entry )
-        , lapHistory : Dict String (List Lap)
         }
 
 
@@ -146,9 +139,6 @@ compute fastest config =
         positionsInClass =
             positionsInClassByCarNumber config.cars
 
-        raceClock =
-            { elapsed = config.elapsed }
-
         entries =
             carsList
                 |> List.indexedMap
@@ -214,17 +204,12 @@ compute fastest config =
             sortedEntries
                 |> SortedList.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory =
-            carsList
-                |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
-                |> Dict.fromList
         }
 
 
 {-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
 
 各ラップを1つの Entry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
-`lapHistory` / `carLapData` はラップ番号文字列をキーとして構築されるため、不変条件が保たれる。
 
 -}
 fromLaps : Car.Metadata -> List Lap -> Standings
@@ -269,9 +254,6 @@ fromLaps baseMetadata laps =
 
         sortedEntries =
             Ordering.byPosition entries
-
-        lapKey lap =
-            String.fromInt lap.lap
     in
     Standings
         { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
@@ -280,10 +262,6 @@ fromLaps baseMetadata laps =
             sortedEntries
                 |> SortedList.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory =
-            laps
-                |> List.map (\lap -> ( lapKey lap, [ lap ] ))
-                |> Dict.fromList
         }
 
 
@@ -302,7 +280,6 @@ fromList entries =
             sortedEntries
                 |> SortedList.gatherEqualsBy (.metadata >> .class)
                 |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory = Dict.empty
         }
 
 
@@ -367,14 +344,6 @@ extractMiniSectorPerformance fastest lap =
                 , fl = rateMiniSector ms.fl fastest.miniSectorFastest.fl
                 }
             )
-
-
-{-| carNumber からラップ履歴を取得する
--}
-getCarHistory : String -> Standings -> List Lap
-getCarHistory carNumber (Standings s) =
-    Dict.get carNumber s.lapHistory
-        |> Maybe.withDefault []
 
 
 type alias TimingState =
@@ -485,14 +454,3 @@ groupCarsByCloseIntervals (Standings s) =
     SortedList.toList s.entries
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
-
-
-getRecentLaps : { count : Int, currentLap : Int } -> List Lap -> List Lap
-getRecentLaps { count, currentLap } lapList =
-    let
-        targetRange =
-            List.range (currentLap - count) currentLap
-    in
-    lapList
-        |> List.filter (\lap -> List.member lap.lap targetRange)
-        |> List.sortBy .lap

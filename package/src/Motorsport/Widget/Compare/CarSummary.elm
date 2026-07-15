@@ -14,7 +14,8 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Gap as Gap
-import Motorsport.ViewModel.Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
@@ -39,8 +40,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> Entry -> Html msg
-carSummary analysis lapRange distScale standings item =
+carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+carSummary analysis lapRange distScale history item =
     div
         [ css
             [ property "display" "grid"
@@ -51,7 +52,7 @@ carSummary analysis lapRange distScale standings item =
         ]
         [ header item
         , summaryStats item
-        , lapTimePanel analysis lapRange distScale standings item
+        , lapTimePanel analysis lapRange distScale history item
         ]
 
 
@@ -61,8 +62,8 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 `distScale` so the three columns share one scale (height = peak sharpness = pace
 stability, comparable across cars).
 -}
-lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> Entry -> Html msg
-lapTimePanel analysis maybeRange maybeScale standings item =
+lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+lapTimePanel analysis maybeRange maybeScale history item =
     div
         [ css
             [ glassPanel
@@ -84,7 +85,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
                 ( Just range, Just { domain, maxDensity } ) ->
                     LapTimeDistribution.view
                         { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                        [ Distribution.seriesOf standings range item ]
+                        [ Distribution.seriesOf history range item ]
 
                 _ ->
                     text ""

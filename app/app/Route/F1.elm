@@ -15,6 +15,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -172,8 +173,11 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                                 , lapCount = raceControl_F1.lapCount
                                 , cars = raceControl_F1.cars
                                 }
+
+                        history =
+                            LapHistory.compute { elapsed = Clock.getElapsed raceControl_F1.clock } raceControl_F1.cars
                     in
-                    Leaderboard.view (config analysis_F1 standings) leaderboardState standings
+                    Leaderboard.view (config analysis_F1 history) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -181,8 +185,8 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Standings.Standings -> Leaderboard.Config Entry Msg
-config analysis standings =
+config : Analysis -> LapHistory -> Leaderboard.Config Entry Msg
+config analysis history =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -205,12 +209,12 @@ config analysis standings =
             }
         , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            { getter = \item -> LapHistory.get item.metadata.carNumber history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
+            { getter = \item -> LapHistory.get item.metadata.carNumber history
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

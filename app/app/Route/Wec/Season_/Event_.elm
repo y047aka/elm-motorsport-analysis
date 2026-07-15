@@ -16,6 +16,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -252,10 +253,13 @@ view app { eventSummary, analysis, raceControl } m =
                             , lapCount = raceControl.lapCount
                             , cars = raceControl.cars
                             }
+
+                    history =
+                        LapHistory.compute { elapsed = Clock.getElapsed raceControl.clock } raceControl.cars
                   in
                   case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis raceControl standings m
+                        trackerView eventSummary analysis raceControl { standings = standings, history = history } m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -264,8 +268,8 @@ view app { eventSummary, analysis, raceControl } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> RaceControl.Model -> Standings.Standings -> Model -> Html Msg
-trackerView eventSummary analysis raceControl standings m =
+trackerView : EventSummary -> Analysis -> RaceControl.Model -> { standings : Standings.Standings, history : LapHistory } -> Model -> Html Msg
+trackerView eventSummary analysis raceControl { standings, history } m =
     div
         [ css
             [ property "grid-row" "2"
@@ -324,7 +328,7 @@ trackerView eventSummary analysis raceControl standings m =
                 , offset = m.stripOffset
                 , onScrollTo = StripScrollTo
                 }
-                standings
+                { standings = standings, history = history }
             ]
         , CarDetailPopover.view
             { season = eventSummary.season
@@ -334,7 +338,7 @@ trackerView eventSummary analysis raceControl standings m =
             , onToggleCar = ToggleDetailCar
             , onSelectChart = SelectDetailChart
             }
-            standings
+            { standings = standings, history = history }
             m.detailCarNumbers
         ]
 

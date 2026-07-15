@@ -9,15 +9,16 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)
 
 
-view : { width : Float, height : Float } -> Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Html msg
-view size clock standings target =
-    case buildClassProgressionData clock standings target of
+view : { width : Float, height : Float } -> Clock.Model -> { standings : Standings, history : LapHistory } -> { class : Class, highlighted : List String } -> Html msg
+view size clock data target =
+    case buildClassProgressionData clock data target of
         Ok series ->
             positionProgressionChart size series
 
@@ -30,11 +31,11 @@ draws. Shared so the sparkline can be drawn over the same range (X axis). When t
 is nothing to display, returns `Nothing`. Computed with the same threshold (the
 recent window) and the same point-extraction condition as the chart itself.
 -}
-lapRange : Clock.Model -> Standings -> Class -> Maybe ( Int, Int )
-lapRange clock standings class =
+lapRange : Clock.Model -> { standings : Standings, history : LapHistory } -> Class -> Maybe ( Int, Int )
+lapRange clock data class =
     let
         lapNumbers =
-            classPositionPoints clock standings class
+            classPositionPoints clock data class
                 |> List.concatMap (Tuple.second >> List.map .lapNumber)
     in
     Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
@@ -52,22 +53,22 @@ classCarsOf standings class =
 keeping only cars with two or more points. Centralizes the point-extraction
 condition here so the chart itself and `lapRange` share the same X axis.
 -}
-classPositionPoints : Clock.Model -> Standings -> Class -> List ( Entry, List PositionPoint )
-classPositionPoints clock standings class =
+classPositionPoints : Clock.Model -> { standings : Standings, history : LapHistory } -> Class -> List ( Entry, List PositionPoint )
+classPositionPoints clock { standings, history } class =
     let
         lapThreshold =
-            calculateLapThreshold clock standings
+            calculateLapThreshold clock { standings = standings, history = history }
     in
     classCarsOf standings class
-        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) ))
+        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber history) ))
         |> List.filter (\( _, points ) -> List.length points >= 2)
 
 
-buildClassProgressionData : Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
-buildClassProgressionData clock standings { class, highlighted } =
+buildClassProgressionData : Clock.Model -> { standings : Standings, history : LapHistory } -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
+buildClassProgressionData clock data { class, highlighted } =
     let
         series =
-            classPositionPoints clock standings class
+            classPositionPoints clock data class
                 |> List.map
                     (\( item, points ) ->
                         { points = points
@@ -121,8 +122,8 @@ positionHistoryWindowMillis =
     6 * 60 * 60 * 1000
 
 
-calculateLapThreshold : Clock.Model -> Standings -> Int
-calculateLapThreshold clock standings =
+calculateLapThreshold : Clock.Model -> { standings : Standings, history : LapHistory } -> Int
+calculateLapThreshold clock { standings, history } =
     let
         currentRaceTime =
             Clock.getElapsed clock
@@ -131,7 +132,7 @@ calculateLapThreshold clock standings =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
     Standings.leader standings
-        |> Maybe.map (\l -> Standings.getCarHistory l.metadata.carNumber standings)
+        |> Maybe.map (\l -> LapHistory.get l.metadata.carNumber history)
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap
         |> Maybe.withDefault 1

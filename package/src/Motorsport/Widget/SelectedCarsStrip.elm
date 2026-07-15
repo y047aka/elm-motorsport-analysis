@@ -13,6 +13,7 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
@@ -27,9 +28,9 @@ view :
     , offset : Int
     , onScrollTo : Int -> msg
     }
-    -> Standings
+    -> { standings : Standings, history : LapHistory }
     -> Html msg
-view config standings =
+view config { standings, history } =
     let
         allCars =
             Standings.toList standings
@@ -70,7 +71,7 @@ view config standings =
                     (List.map
                         (CarCard.view
                             { season = config.season, analysis = config.analysis }
-                            standings
+                            history
                             allCars
                         )
                         window
