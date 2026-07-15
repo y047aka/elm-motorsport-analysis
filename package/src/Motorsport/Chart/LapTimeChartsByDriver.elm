@@ -42,26 +42,26 @@ paddingBottom =
     padding + 5
 
 
-xScale : Int -> ContinuousScale Float
-xScale lapTotal =
+xContinuousScale : Int -> ContinuousScale Float
+xContinuousScale lapTotal =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
-yScale : Duration -> ContinuousScale Float
-yScale fastestLapTime =
+yContinuousScale : Duration -> ContinuousScale Float
+yContinuousScale fastestLapTime =
     Scale.linear ( h - paddingBottom, padding ) ( toFloat fastestLapTime, toFloat fastestLapTime * 1.2 )
 
 
-xAxis : Int -> Svg msg
-xAxis lapTotal =
+xAxis : ContinuousScale Float -> Svg msg
+xAxis xScale =
     g [ transform [ Translate 0 (h - paddingBottom) ], Svg.css axisStyles ]
-        [ fromUnstyled <| Axis.bottom [ tickCount 5, tickSizeInner 4, tickSizeOuter 4 ] (xScale lapTotal) ]
+        [ fromUnstyled <| Axis.bottom [ tickCount 5, tickSizeInner 4, tickSizeOuter 4 ] xScale ]
 
 
-yAxis : Duration -> Svg msg
-yAxis fastestLapTime =
+yAxis : ContinuousScale Float -> Svg msg
+yAxis yScale =
     g [ transform [ Translate paddingLeft 0 ], Svg.css axisStyles ]
-        [ fromUnstyled <| Axis.left [ tickCount 2, tickSizeInner 3, tickSizeOuter 3 ] (yScale fastestLapTime) ]
+        [ fromUnstyled <| Axis.left [ tickCount 2, tickSizeInner 3, tickSizeOuter 3 ] yScale ]
 
 
 axisStyles : List Style
@@ -80,6 +80,12 @@ view analysis { lapTotal, cars } =
     let
         fastestLapTime =
             analysis.fastestLapTime
+
+        xScale =
+            xContinuousScale lapTotal
+
+        yScale =
+            yContinuousScale fastestLapTime
     in
     ul
         [ css
@@ -96,11 +102,11 @@ view analysis { lapTotal, cars } =
                     li [ css [ listStyle none ] ]
                         [ p [] [ text car.metadata.carNumber ]
                         , svg [ viewBox 0 0 w h ]
-                            [ xAxis lapTotal
-                            , yAxis fastestLapTime
+                            [ xAxis xScale
+                            , yAxis yScale
                             , dotHistory
-                                { x = .lap >> toFloat >> Scale.convert (xScale lapTotal)
-                                , y = .time >> toFloat >> Scale.convert (yScale fastestLapTime)
+                                { x = .lap >> toFloat >> Scale.convert xScale
+                                , y = .time >> toFloat >> Scale.convert yScale
                                 , color = "#000"
                                 }
                                 car.laps

@@ -243,8 +243,6 @@ update msg m =
             )
 
 
-
-
 lapsPathFor : String -> String
 lapsPathFor jsonPath =
     if String.endsWith ".json" jsonPath then

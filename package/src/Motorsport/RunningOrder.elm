@@ -1,4 +1,8 @@
-module Motorsport.RunningOrder exposing (RunningOrder, fromList, singleton, leader, toList)
+module Motorsport.RunningOrder exposing
+    ( RunningOrder
+    , fromList, singleton
+    , leader, toList
+    )
 
 {-| A running order represents a non-empty, race-position-sorted list of cars.
 

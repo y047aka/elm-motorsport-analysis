@@ -18,8 +18,8 @@ import List.Extra
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Standings exposing (SectorProgress, MiniSectorProgress, StandingsEntry)
 import Motorsport.Sector exposing (Sector(..))
+import Motorsport.Standings exposing (MiniSectorProgress, SectorProgress, StandingsEntry)
 
 
 type alias TrackConfig =

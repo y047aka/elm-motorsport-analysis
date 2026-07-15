@@ -1,29 +1,23 @@
-module Motorsport.Widget.Compare.PositionProgression exposing (view)
+module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
-import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
+import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
 import Css exposing (Color)
-import Css.Extra
-import Css.Global exposing (descendants, each)
 import Html.Styled exposing (Html)
 import List.Extra
+import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Widget as Widget
-import Path.Styled as Path
 import Scale exposing (ContinuousScale)
-import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, svg)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
-import TypedSvg.Types exposing (Transform(..))
+import Svg.Styled exposing (Svg)
 
 
-view : { width : Float, height : Float } -> Clock.Model -> Standings -> List StandingsEntry -> Html msg
-view size clock standings selectedCars =
-    case buildClassProgressionData clock standings selectedCars of
+view : { width : Float, height : Float } -> Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Html msg
+view size clock standings target =
+    case buildClassProgressionData clock standings target of
         Ok series ->
             positionProgressionChart size series
 
@@ -31,36 +25,62 @@ view size clock standings selectedCars =
             Widget.emptyState message
 
 
-buildClassProgressionData : Clock.Model -> Standings -> List StandingsEntry -> Result String (List PositionSeries)
-buildClassProgressionData clock standings selectedCars =
+{-| The lap-number range `(minLap, maxLap)` the position-history chart currently
+draws. Shared so the sparkline can be drawn over the same range (X axis). When there
+is nothing to display, returns `Nothing`. Computed with the same threshold (the
+recent window) and the same point-extraction condition as the chart itself.
+-}
+lapRange : Clock.Model -> Standings -> Class -> Maybe ( Int, Int )
+lapRange clock standings class =
+    let
+        lapNumbers =
+            classPositionPoints clock standings class
+                |> List.concatMap (Tuple.second >> List.map .lapNumber)
+    in
+    Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
+
+
+classCarsOf : Standings -> Class -> List StandingsEntry
+classCarsOf standings class =
+    Standings.toClassList standings
+        |> List.Extra.find (\( class_, _ ) -> class_ == class)
+        |> Maybe.map Tuple.second
+        |> Maybe.withDefault []
+
+
+{-| Builds the "position points past the threshold" for each car in the class,
+keeping only cars with two or more points. Centralizes the point-extraction
+condition here so the chart itself and `lapRange` share the same X axis.
+-}
+classPositionPoints : Clock.Model -> Standings -> Class -> List ( StandingsEntry, List PositionPoint )
+classPositionPoints clock standings class =
     let
         lapThreshold =
             calculateLapThreshold clock standings
+    in
+    classCarsOf standings class
+        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) ))
+        |> List.filter (\( _, points ) -> List.length points >= 2)
 
-        selectedCarNumbers =
-            selectedCars |> List.map (.metadata >> .carNumber)
 
-        classCars : List StandingsEntry
-        classCars =
-            Standings.toClassList standings
-                |> List.Extra.find (\( class_, _ ) -> Just class_ == (selectedCars |> List.head |> Maybe.map (.metadata >> .class)))
-                |> Maybe.map Tuple.second
-                |> Maybe.withDefault []
-
+buildClassProgressionData : Clock.Model -> Standings -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
+buildClassProgressionData clock standings { class, highlighted } =
+    let
         series =
-            classCars
+            classPositionPoints clock standings class
                 |> List.map
-                    (\item ->
-                        let
-                            carNumber =
-                                item.metadata.carNumber
-                        in
-                        { points = buildPositionPoints lapThreshold (Standings.getCarHistory item.metadata.carNumber standings) item
+                    (\( item, points ) ->
+                        { points = points
                         , color = Manufacturer.toColorWithFallback item.metadata
-                        , isSelected = List.member carNumber selectedCarNumbers
+                        , carNumber = item.metadata.carNumber
+                        , emphasis =
+                            if List.member item.metadata.carNumber highlighted then
+                                Focused
+
+                            else
+                                Muted
                         }
                     )
-                |> List.filter (\item -> List.length item.points >= 2)
     in
     if List.isEmpty series then
         Err "Lap chart will appear as more laps are completed."
@@ -78,28 +98,27 @@ type alias PositionPoint =
 type alias PositionSeries =
     { points : List PositionPoint
     , color : Color
-    , isSelected : Bool
+    , carNumber : String
+    , emphasis : Emphasis
     }
 
 
-chartPadding : Float
-chartPadding =
-    15
-
-
-chartPaddingLeft : Float
-chartPaddingLeft =
-    chartPadding + 15
-
-
-chartPaddingBottom : Float
-chartPaddingBottom =
-    chartPadding + 15
+{-| The lap-number range `(minLap, maxLap)` the point series spans. `(1, 1)` when empty.
+-}
+lapExtent : List PositionPoint -> ( Int, Int )
+lapExtent positions =
+    let
+        laps =
+            positions |> List.map .lapNumber
+    in
+    ( List.minimum laps |> Maybe.withDefault 1
+    , List.maximum laps |> Maybe.withDefault 1
+    )
 
 
 positionHistoryWindowMillis : Int
 positionHistoryWindowMillis =
-    3 * 60 * 60 * 1000
+    6 * 60 * 60 * 1000
 
 
 calculateLapThreshold : Clock.Model -> Standings -> Int
@@ -121,23 +140,41 @@ calculateLapThreshold clock standings =
 positionProgressionChart : { width : Float, height : Float } -> List PositionSeries -> Html msg
 positionProgressionChart size series =
     let
+        dimensions =
+            { width = size.width
+            , height = size.height
+            , padding = axisPadding
+            }
+
         allPoints =
             series |> List.concatMap .points
+
+        lapRange_ =
+            lapExtent allPoints
+
+        ( minLap, maxLap ) =
+            lapRange_
+
+        scales =
+            { xScale = xContinuousScale dimensions ( toFloat minLap, toFloat maxLap )
+            , yScale = yContinuousScale dimensions allPoints
+            }
+
+        -- Stack back-to-front: Muted (back) → Related → Focused (front).
+        orderedSeries =
+            sortForDrawing .emphasis (.points >> List.Extra.last >> Maybe.map .position) series
     in
-    svg
-        [ SvgAttr.width "100%"
-        , viewBox 0 0 size.width size.height
-        ]
-        ([ xGridLines size allPoints
-         , xAxis size allPoints
-         , yAxis size allPoints
+    svg size
+        ([ lapGridLines dimensions scales.xScale lapRange_
+         , lapAxis dimensions scales.xScale lapRange_
+         , positionAxis dimensions scales.yScale
          ]
-            ++ (series |> List.map (renderPositionLine size allPoints))
+            ++ List.map (positionLine scales) orderedSeries
         )
 
 
-buildPositionPoints : Int -> List Lap -> StandingsEntry -> List PositionPoint
-buildPositionPoints lapThreshold history item =
+buildPositionPoints : Int -> List Lap -> List PositionPoint
+buildPositionPoints lapThreshold history =
     history
         |> List.filter (\lap -> lap.lap >= lapThreshold)
         |> List.filterMap
@@ -146,23 +183,8 @@ buildPositionPoints lapThreshold history item =
             )
 
 
-xScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
-xScale size positions =
-    let
-        ( minLap, maxLap ) =
-            positions
-                |> List.map .lapNumber
-                |> (\laps ->
-                        ( List.minimum laps |> Maybe.withDefault 1
-                        , List.maximum laps |> Maybe.withDefault 1
-                        )
-                   )
-    in
-    Scale.linear ( chartPaddingLeft, size.width - chartPadding ) ( toFloat minLap, toFloat maxLap )
-
-
-yScale : { width : Float, height : Float } -> List PositionPoint -> ContinuousScale Float
-yScale size positions =
+yContinuousScale : Dimensions -> List PositionPoint -> ContinuousScale Float
+yContinuousScale { height, padding } positions =
     let
         allPositions =
             positions |> List.map .position
@@ -181,116 +203,18 @@ yScale size positions =
         adjustedMax =
             maxPos + paddingY
     in
-    Scale.linear ( size.height - chartPaddingBottom, chartPadding ) ( toFloat adjustedMax, toFloat adjustedMin )
+    Scale.linear ( height - padding.bottom, padding.top ) ( toFloat adjustedMax, toFloat adjustedMin )
 
 
-xGridLines : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-xGridLines size positions =
+{-| Y axis (position). Labels are shown 1-indexed as P1, P5, P10…, drawn by passing
+tick settings to the shared `yAxis` wrapper (the scale is 0-indexed, so labels add +1).
+-}
+positionAxis : Dimensions -> ContinuousScale Float -> Svg msg
+positionAxis dimensions yScale =
     let
-        lapNumbers =
-            positions |> List.map .lapNumber
-
-        minLap =
-            List.minimum lapNumbers |> Maybe.withDefault 1
-
-        maxLap =
-            List.maximum lapNumbers |> Maybe.withDefault 1
-
-        gridLaps =
-            List.range minLap maxLap |> List.filter (\l -> modBy 5 l == 0)
-
-        top =
-            chartPadding
-
-        bottom =
-            size.height - chartPaddingBottom
-    in
-    g [] <|
-        List.map
-            (\lap ->
-                let
-                    x =
-                        toFloat lap |> Scale.convert (xScale size positions)
-                in
-                line
-                    [ SvgAttr.x1 (String.fromFloat x)
-                    , SvgAttr.x2 (String.fromFloat x)
-                    , SvgAttr.y1 (String.fromFloat top)
-                    , SvgAttr.y2 (String.fromFloat bottom)
-                    , SvgAttr.css
-                        [ Css.property "stroke" "#333"
-                        , Css.Extra.strokeWidth 1
-                        ]
-                    ]
-                    []
-            )
-            gridLaps
-
-
-xAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-xAxis size positions =
-    let
-        lapNumbers =
-            positions |> List.map .lapNumber
-
-        minLap =
-            List.minimum lapNumbers |> Maybe.withDefault 1
-
-        maxLap =
-            List.maximum lapNumbers |> Maybe.withDefault 1
-
-        allLaps =
-            List.range minLap maxLap |> List.map toFloat
-
-        axis =
-            fromUnstyled <|
-                Axis.bottom
-                    [ ticks allLaps
-                    , tickSizeOuter 0
-                    , tickSizeInner -3
-                    , tickPadding 8
-                    , tickFormat
-                        (\f ->
-                            if modBy 5 (round f) == 0 then
-                                String.fromInt (round f)
-
-                            else
-                                ""
-                        )
-                    ]
-                    (xScale size positions)
-    in
-    g
-        [ SvgAttr.css
-            [ descendants
-                [ Css.Global.typeSelector "text"
-                    [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 11)
-                    ]
-                , each
-                    [ Css.Global.typeSelector "line"
-                    , Css.Global.typeSelector "path"
-                    ]
-                    [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
-                    ]
-                ]
-            ]
-        , transform [ Translate 0 (size.height - chartPaddingBottom) ]
-        ]
-        [ axis ]
-
-
-yAxis : { width : Float, height : Float } -> List PositionPoint -> Svg msg
-yAxis size positions =
-    let
-        scale =
-            yScale size positions
-
         ( domainMax, _ ) =
-            Scale.domain scale
+            Scale.domain yScale
 
-        -- ラベルは1-indexed（1位、5位、10位...）、スケールは0-indexed
         labelPositions =
             1
                 :: (List.range 1 ((round domainMax // 5) + 1) |> List.map (\i -> i * 5))
@@ -298,100 +222,24 @@ yAxis size positions =
 
         tickValues_ =
             labelPositions |> List.map (\label -> toFloat (label - 1))
-
-        axis =
-            fromUnstyled <|
-                Axis.left
-                    [ ticks tickValues_
-                    , tickSizeOuter 0
-                    , tickSizeInner 5
-                    , tickFormat (round >> (+) 1 >> String.fromInt)
-                    ]
-                    scale
     in
-    g
-        [ SvgAttr.css
-            [ descendants
-                [ Css.Global.typeSelector "text"
-                    [ Css.fill (Css.hsl 0 0 0.7)
-                    , Css.fontSize (Css.px 11)
-                    ]
-                , each
-                    [ Css.Global.typeSelector "line"
-                    , Css.Global.typeSelector "path"
-                    ]
-                    [ Css.Extra.strokeWidth 1
-                    , Css.property "stroke" "#555"
-                    ]
-                ]
-            ]
-        , transform [ Translate chartPaddingLeft 0 ]
+    yAxis dimensions
+        [ ticks tickValues_
+        , tickSizeOuter 0
+        , tickSizeInner 5
+        , tickFormat (round >> (+) 1 >> String.fromInt)
         ]
-        [ axis ]
+        yScale
 
 
-renderPositionLine : { width : Float, height : Float } -> List PositionPoint -> PositionSeries -> Svg msg
-renderPositionLine size allPoints series =
-    let
-        dataPoints =
-            series.points
-                |> List.map
-                    (\{ lapNumber, position } ->
-                        ( lapNumber
-                            |> toFloat
-                            |> Scale.convert (xScale size allPoints)
-                        , position
-                            |> toFloat
-                            |> Scale.convert (yScale size allPoints)
-                        )
-                    )
-
-        linePath =
-            dataPoints
-                |> List.map Just
-                |> Shape.line Shape.linearCurve
-
-        strokeWidth =
-            if series.isSelected then
-                "2"
-
-            else
-                "1.2"
-
-        opacity =
-            if series.isSelected then
-                "1"
-
-            else
-                "0.4"
-
-        lineAttributes =
-            [ SvgAttr.stroke series.color.value
-            , SvgAttr.strokeWidth strokeWidth
-            , SvgAttr.strokeOpacity opacity
-            , SvgAttr.fill "none"
-            ]
-
-        lastPointElement =
-            if series.isSelected then
-                dataPoints
-                    |> List.Extra.last
-                    |> Maybe.map
-                        (\( x, y ) ->
-                            circle
-                                [ InPx.cx x
-                                , InPx.cy y
-                                , InPx.r 3.0
-                                , SvgAttr.css [ Css.fill series.color ]
-                                ]
-                                []
-                        )
-                    |> Maybe.withDefault (g [] [])
-
-            else
-                g [] []
-    in
-    g []
-        [ Path.element linePath lineAttributes
-        , lastPointElement
-        ]
+{-| Converts a `PositionSeries` into the shared renderer `renderLine`'s input and
+draws one line. The vertical quantity is position.
+-}
+positionLine : Scales -> PositionSeries -> Svg msg
+positionLine scales series =
+    renderLine scales
+        { color = series.color
+        , emphasis = series.emphasis
+        , label = series.carNumber
+        , points = series.points |> List.map (\p -> ( p.lapNumber, p.position ))
+        }

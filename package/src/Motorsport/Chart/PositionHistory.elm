@@ -45,18 +45,18 @@ paddingVertical =
     padding + 30
 
 
-xScale : Int -> ContinuousScale Float
-xScale lapTotal =
+xContinuousScale : Int -> ContinuousScale Float
+xContinuousScale lapTotal =
     Scale.linear ( paddingLeft, w - padding ) ( 0, toFloat lapTotal )
 
 
-yScale : List Car -> ContinuousScale Float
-yScale cars =
+yContinuousScale : List Car -> ContinuousScale Float
+yContinuousScale cars =
     Scale.linear ( paddingVertical, h - paddingVertical ) ( 0, toFloat (List.length cars - 1) )
 
 
-xAxis : Int -> Svg msg
-xAxis lapTotal =
+xAxis : Int -> ContinuousScale Float -> Svg msg
+xAxis lapTotal xScale =
     let
         axis tag =
             fromUnstyled <|
@@ -65,7 +65,7 @@ xAxis lapTotal =
                     , tickSizeOuter 5
                     , tickSizeInner 5
                     ]
-                    (xScale lapTotal)
+                    xScale
     in
     g
         [ css
@@ -91,6 +91,15 @@ view { clock, lapTotal, cars } =
     let
         raceClock =
             { elapsed = Clock.getElapsed clock }
+
+        carList =
+            RunningOrder.toList cars
+
+        xScale =
+            xContinuousScale lapTotal
+
+        yScale =
+            yContinuousScale carList
     in
     svg
         [ width w
@@ -98,10 +107,9 @@ view { clock, lapTotal, cars } =
         , viewBox 0 0 w h
         , css [ display block ]
         ]
-        [ xAxis lapTotal
+        [ xAxis lapTotal xScale
         , g []
-            (cars
-                |> RunningOrder.toList
+            (carList
                 |> List.sortBy .startPosition
                 |> List.map
                     (\car ->
@@ -115,8 +123,8 @@ view { clock, lapTotal, cars } =
                                     |> List.take (List.length <| completedLapsAt raceClock car.laps)
                         in
                         history
-                            { x = toFloat >> Scale.convert (xScale lapTotal)
-                            , y = toFloat >> Scale.convert (yScale (RunningOrder.toList cars))
+                            { x = toFloat >> Scale.convert xScale
+                            , y = toFloat >> Scale.convert yScale
                             , svgPalette = Class.toStrokePalette class
                             , label = String.join " " [ carNumber, team ]
                             }

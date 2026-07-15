@@ -7,8 +7,8 @@ import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Motorsport.Sector as Sector
+import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -131,7 +131,7 @@ viewWithConfig direction config standings =
     in
     svg
         [ viewBox 0 0 w h
-        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 100) ]
+        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 90) ]
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config standings
@@ -175,7 +175,7 @@ track direction config =
                 , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
                 , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
                 , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
-                , stroke "oklch(0.22 0 0)"
+                , stroke "oklch(0.23 0 0)"
                 , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
                 ]
                 []

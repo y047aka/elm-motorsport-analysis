@@ -27,13 +27,13 @@ padding =
     1
 
 
-xScale : ( Int, Float ) -> ContinuousScale Float
-xScale ( min, max ) =
+xContinuousScale : ( Int, Float ) -> ContinuousScale Float
+xContinuousScale ( min, max ) =
     ( toFloat min, max ) |> Scale.linear ( padding, w - padding )
 
 
-yScale : ( Float, Float ) -> ContinuousScale Float
-yScale ( min, max ) =
+yContinuousScale : ( Float, Float ) -> ContinuousScale Float
+yContinuousScale ( min, max ) =
     ( min, max ) |> Scale.linear ( h - padding, padding )
 
 
@@ -46,8 +46,11 @@ relative to the fastest lap time, and the laps to render.
 view : Analysis -> Float -> List Lap -> Html msg
 view { fastestLapTime, slowestLapTime } coefficient laps =
     let
-        xScale_ =
-            xScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
+        xScale =
+            xContinuousScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
+
+        yScale =
+            yContinuousScale ( 0, 0 )
 
         width lap =
             if isCurrentLap lap then
@@ -69,8 +72,8 @@ view { fastestLapTime, slowestLapTime } coefficient laps =
     in
     svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
-            { x = .time >> toFloat >> Scale.convert xScale_
-            , y = always 0 >> Scale.convert (yScale ( 0, 0 ))
+            { x = .time >> toFloat >> Scale.convert xScale
+            , y = always 0 >> Scale.convert yScale
             , width = width
             , color = color
             }

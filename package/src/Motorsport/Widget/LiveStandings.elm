@@ -2,22 +2,24 @@ module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, before, hover, property, qt)
 import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled exposing (Html, div, img, li, text)
-import Html.Styled.Attributes exposing (alt, class, css, src)
+import Html.Styled exposing (Html, button, div, li, text)
+import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car
 import Motorsport.Class as Class
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
 type alias Props msg =
     { eventSummary : EventSummary
     , standings : Standings
     , onSelectCar : StandingsEntry -> msg
+    , popoverTarget : String
     }
 
 
@@ -70,7 +72,7 @@ view props =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy2 carRow props.onSelectCar item
+                                    , Lazy.lazy3 carRow props.popoverTarget props.onSelectCar item
                                     )
                                 )
                         )
@@ -80,58 +82,45 @@ view props =
         )
 
 
-formatDriverName : String -> String
-formatDriverName fullName =
-    case String.words fullName of
-        _ :: rest ->
-            -- 姓全体を大文字で表示
-            rest |> List.map String.toUpper |> String.join " "
+carRow : String -> (StandingsEntry -> msg) -> StandingsEntry -> Html msg
+carRow popoverTarget onSelect item =
+    li []
+        [ button
+            [ onClick (onSelect item)
+            , attribute "popovertarget" popoverTarget
 
-        [] ->
-            fullName
-
-
-carRow : (StandingsEntry -> msg) -> StandingsEntry -> Html msg
-carRow onSelect item =
-    li
-        [ onClick (onSelect item)
-        , class "list-row p-0.5 grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2"
-        , css
-            [ property "cursor" "pointer"
-            , property "transition" "background-color 0.2s ease"
-            , after [ property "border" "none" ]
-            , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
+            -- Explicit "show": the default "toggle" would close the shared
+            -- popover when a second row is clicked while it is already open.
+            , attribute "popovertargetaction" "show"
+            , class "list-row w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left"
+            , css
+                [ property "background" "none"
+                , property "border" "none"
+                , property "color" "inherit"
+                , property "font" "inherit"
+                , property "cursor" "pointer"
+                , property "transition" "background-color 0.2s ease"
+                , after [ property "border" "none" ]
+                , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
+                ]
             ]
+            (carRowContent item)
         ]
-        [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
-        , div
-            [ class "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
-            , css [ backgroundColor (Manufacturer.toColor item.metadata.manufacturer) ]
-            ]
-            [ case Manufacturer.toLogoUrl item.metadata.manufacturer of
-                Just logoUrl ->
-                    img
-                        [ src logoUrl
-                        , alt (Manufacturer.toString item.metadata.manufacturer)
-                        , class "object-contain"
-                        , css [ property "height" "14px" ]
-                        ]
-                        []
 
-                Nothing ->
-                    div [] [ text "" ]
-            , div [ class "text-center leading-none text-xs font-bold" ]
-                [ text item.metadata.carNumber ]
-            ]
-        , div [ class "text-xs opacity-70" ]
-            [ text (item.currentDriver |> Maybe.map (.name >> formatDriverName) |> Maybe.withDefault "") ]
-        , div [ class "text-xs text-right" ]
-            [ text (Gap.toString item.intervalToAhead) ]
-        , if item.status == Car.InPit then
-            div
-                [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
-                [ text "P" ]
 
-          else
-            text ""
-        ]
+carRowContent : StandingsEntry -> List (Html msg)
+carRowContent item =
+    [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
+    , CarNumberBadge.viewRow item
+    , div [ class "text-xs opacity-70" ]
+        [ text (item.currentDriver |> Maybe.map (.name >> Driver.toSurnameDisplay) |> Maybe.withDefault "") ]
+    , div [ class "text-xs text-right" ]
+        [ text (Gap.toString item.intervalToAhead) ]
+    , if item.status == Car.InPit then
+        div
+            [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
+            [ text "P" ]
+
+      else
+        text ""
+    ]

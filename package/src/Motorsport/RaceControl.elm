@@ -122,7 +122,7 @@ update msg m =
                                 m.cars
                                     |> RunningOrder.toList
                                     |> applyEvents newElapsed m.timelineEvents
-                                                |> RunningOrder.fromList { elapsed = newClock.elapsed }
+                                    |> RunningOrder.fromList { elapsed = newClock.elapsed }
                                     |> Maybe.withDefault m.cars
                         }
 

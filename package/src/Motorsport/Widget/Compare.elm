@@ -1,311 +1,148 @@
-module Motorsport.Widget.Compare exposing (Model, Msg(..), Props, init, update, viewCarSelector, viewCharts)
+module Motorsport.Widget.Compare exposing (Chart(..), viewComparison)
 
-import Css exposing (backgroundColor, before, property, qt)
-import Data.Series.EventSummary exposing (EventSummary)
-import Html.Styled exposing (Html, button, div, img, text)
-import Html.Styled.Attributes exposing (class, css, src)
-import Html.Styled.Events exposing (onClick)
-import List.Extra
-import List.NonEmpty as NonEmpty
+{-| Widget showing per-car detail (summary + in-class position history). Intended
+as the body of a popover/dialog; it does not carry the popover attributes itself.
+
+`viewComparison` embeds a same-class car selector in the modal and compares up to
+three cars, toggle-selected. Summaries sit side by side; the two lower charts are
+tabbed so only one shows at a time (to save space).
+
+@docs Chart, viewComparison
+
+-}
+
+import Css exposing (property)
+import Html.Styled exposing (Html, div, text)
+import Html.Styled.Attributes exposing (css)
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Chart.BoxPlot as BoxPlot
-import Motorsport.Class as Class
+import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Clock as Clock
-import Motorsport.Manufacturer
 import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
-import Motorsport.Widget.CloseBattles as CloseBattles
-import Motorsport.Widget.Compare.LapTimeProgression as LapTimeProgression
+import Motorsport.Widget.Compare.CarSelector as CarSelector
+import Motorsport.Widget.Compare.CarSummary as CarSummary
+import Motorsport.Widget.Compare.ChartTabs as ChartTabs
+import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
-
--- TYPES
-
-
-type ActiveChart
-    = PositionProgressionChart
-    | LapTimeProgressionChart
-    | CloseBattlesChart
-    | BoxPlotChart
+{-| Maximum number of cars that can be compared. The summary slot count
+(including placeholders) matches this.
+-}
+maxComparisonCars : Int
+maxComparisonCars =
+    3
 
 
-type alias Model =
-    { selectedCars : List String
-    , activeChart : ActiveChart
-    }
+{-| Tab for the lower chart. Only one is shown at a time.
+-}
+type Chart
+    = GapChart
+    | PositionChart
 
 
-init : Model
-init =
-    { selectedCars = []
-    , activeChart = PositionProgressionChart
-    }
-
-
-type Msg
-    = ToggleCar String
-    | SwitchChart ActiveChart
-
-
-update : Msg -> Model -> Model
-update msg model =
-    case msg of
-        ToggleCar carNumber ->
-            if List.member carNumber model.selectedCars then
-                { model | selectedCars = List.filter ((/=) carNumber) model.selectedCars }
-
-            else
-                { model | selectedCars = model.selectedCars ++ [ carNumber ] }
-
-        SwitchChart chart ->
-            { model | activeChart = chart }
-
-
-
--- Props
-
-
-type alias Props =
-    { eventSummary : EventSummary
-    , standings : Standings
-    , clock : Clock.Model
+{-| View that compares up to three same-class cars, toggle-selected within the
+modal. `selectedCarNumbers` are the selected car numbers (the first sets the
+chart's class reference). Each selector chip fires `onToggleCar` (the caller
+enforces the 3-car limit). Only `activeChart` is rendered; clicking a tab fires
+`onSelectChart`.
+-}
+viewComparison :
+    { season : Int
     , analysis : Analysis
+    , clock : Clock.Model
+    , onToggleCar : String -> msg
+    , activeChart : Chart
+    , onSelectChart : Chart -> msg
     }
-
-
-
--- VIEW
-
-
-viewCharts : { width : Float, height : Float } -> Props -> Model -> Html Msg
-viewCharts size props model =
+    -> Standings
+    -> List String
+    -> Html msg
+viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChart } standings selectedCarNumbers =
     let
-        selectedCars =
-            resolveCars model.selectedCars props.standings
-                |> List.sortBy .position
+        entriesByNumber =
+            Standings.toList standings
+
+        selectedEntries =
+            entriesByNumber
+                |> List.filter (\e -> List.member e.metadata.carNumber selectedCarNumbers)
     in
-    div
-        [ css
-            [ property "display" "flex"
-            , property "flex-direction" "column"
-            , property "gap" "8px"
-            ]
-        ]
-        [ viewChartTabs model.activeChart
-        , viewActiveChart model.activeChart size props selectedCars
-        ]
-
-
-viewChartTabs : ActiveChart -> Html Msg
-viewChartTabs activeChart =
-    div [ class "join" ]
-        [ chartTabButton "Position" PositionProgressionChart (activeChart == PositionProgressionChart)
-        , chartTabButton "Lap Time" LapTimeProgressionChart (activeChart == LapTimeProgressionChart)
-        , chartTabButton "Battles" CloseBattlesChart (activeChart == CloseBattlesChart)
-        , chartTabButton "Box Plot" BoxPlotChart (activeChart == BoxPlotChart)
-        ]
-
-
-chartTabButton : String -> ActiveChart -> Bool -> Html Msg
-chartTabButton label chart isActive =
-    button
-        [ onClick (SwitchChart chart)
-        , class
-            ("join-item btn btn-sm btn-soft"
-                ++ (if isActive then
-                        " btn-active"
-
-                    else
-                        ""
-                   )
-            )
-        ]
-        [ text label ]
-
-
-viewActiveChart : ActiveChart -> { width : Float, height : Float } -> Props -> List StandingsEntry -> Html Msg
-viewActiveChart activeChart size props selectedCars =
-    case activeChart of
-        PositionProgressionChart ->
-            PositionProgression.view
-                size
-                props.clock
-                props.standings
-                selectedCars
-
-        LapTimeProgressionChart ->
-            LapTimeProgression.view
-                size
-                props.clock
-                props.standings
-                selectedCars
-
-        CloseBattlesChart ->
-            selectedCars
-                |> List.sortBy .position
-                |> NonEmpty.fromList
-                |> Maybe.map
-                    (\cars ->
-                        let
-                            leader =
-                                NonEmpty.head cars
-                        in
-                        CloseBattles.closeBattleItem
-                            size
-                            props.standings
-                            { cars = cars
-                            , position = leader.position
-                            }
-                    )
-                |> Maybe.withDefault (text "")
-
-        BoxPlotChart ->
-            BoxPlot.view size props.analysis props.standings selectedCars
-
-
-resolveCars : List String -> Standings -> List StandingsEntry
-resolveCars carNumbers standings =
-    carNumbers
-        |> List.filterMap
-            (\carNumber ->
-                Standings.toList standings
-                    |> List.Extra.find (\item -> item.metadata.carNumber == carNumber)
-            )
-
-
-viewCarSelector : Props -> Model -> Html Msg
-viewCarSelector props model =
-    let
-        groupedByClass =
-            Standings.toList props.standings
-                |> List.Extra.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> first :: rest)
-    in
-    div
-        [ css
-            [ property "display" "flex"
-            , property "gap" "10px"
-            , property "flex-wrap" "wrap"
-            , property "height" "100%"
-            ]
-        ]
-        (List.map (viewClassGroup model) groupedByClass)
-
-
-viewClassGroup : Model -> List StandingsEntry -> Html Msg
-viewClassGroup model cars =
-    case List.head cars of
-        Nothing ->
+    case selectedEntries of
+        [] ->
             text ""
 
-        Just firstCar ->
+        first :: _ ->
+            let
+                class =
+                    first.metadata.class
+
+                lapRange =
+                    PositionProgression.lapRange clock standings class
+
+                distSeries =
+                    case lapRange of
+                        Just range ->
+                            List.map (Distribution.seriesOf standings range) selectedEntries
+
+                        Nothing ->
+                            []
+
+                distScale =
+                    Distribution.scaleOf distSeries
+            in
             div
-                [ class "card bg-base-200"
-                , css
-                    [ property "flex" "1"
-                    , property "min-width" "200px"
+                [ css
+                    [ property "display" "grid"
+                    , property "row-gap" "12px"
                     ]
                 ]
                 [ div
-                    [ class "card-body p-3 gap-2" ]
-                    [ -- Class header
-                      div
-                        [ css
-                            [ property "display" "flex"
-                            , property "align-items" "center"
-                            , property "column-gap" "0.5em"
-                            , property "font-size" "10px"
-                            , property "font-weight" "700"
-                            , property "color" "hsl(0 0% 100% / 0.8)"
-                            , before
-                                [ property "display" "block"
-                                , property "content" (qt "")
-                                , property "width" "0.2em"
-                                , property "height" "1.2em"
-                                , property "border-radius" "2px"
-                                , backgroundColor (Class.toHexColor 2025 firstCar.metadata.class)
-                                ]
-                            ]
+                    [ css
+                        [ property "display" "flex"
+                        , property "align-items" "center"
+                        , property "column-gap" "12px"
                         ]
-                        [ text (Class.toString firstCar.metadata.class) ]
-                    , -- Car grid
-                      div
-                        [ css
-                            [ property "display" "grid"
-                            , property "grid-template-columns" "repeat(auto-fill, minmax(35px, 1fr))"
-                            , property "gap" "2px"
-                            ]
+                    ]
+                    [ CarSelector.classBadge season class
+                    , CarSelector.carSelector onToggleCar standings class selectedCarNumbers
+                    ]
+                , div
+                    [ css
+                        [ property "display" "grid"
+                        , property "grid-template-columns" ("repeat(" ++ String.fromInt maxComparisonCars ++ ", minmax(0, 1fr))")
+                        , property "column-gap" "16px"
                         ]
-                        (List.map (carSelectorItem model) cars)
+                    ]
+                    (List.map (CarSummary.carSummary analysis lapRange distScale standings) selectedEntries
+                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
+                    )
+                , ChartTabs.chartTabs onSelectChart
+                    activeChart
+                    [ ( GapChart
+                      , "Gap to group avg"
+                      , \() -> gapChart lapRange standings selectedEntries
+                      )
+                    , ( PositionChart
+                      , "Position progression"
+                      , \() ->
+                            PositionProgression.view
+                                { width = 1000, height = 250 }
+                                clock
+                                standings
+                                { class = class
+                                , highlighted = selectedCarNumbers
+                                }
+                      )
                     ]
                 ]
 
 
-carSelectorItem : Model -> StandingsEntry -> Html Msg
-carSelectorItem model item =
-    let
-        isSelected =
-            List.member item.metadata.carNumber model.selectedCars
-
-        manufacturerColor =
-            Motorsport.Manufacturer.toColor item.metadata.manufacturer
-
-        borderStyle =
-            if isSelected then
-                "2px solid hsl(0 0% 100% / 0.5)"
-
-            else
-                "2px solid transparent"
-
-        opacity =
-            if isSelected then
-                "1.0"
-
-            else
-                "0.5"
-    in
-    div
-        [ class "stat px-0 py-1 place-items-center gap-1 rounded cursor-pointer"
-        , css
-            [ property "border" borderStyle
-            , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / " ++ opacity ++ ")")
-            , property "transition" "all 0.2s"
-            ]
-        , onClick (ToggleCar item.metadata.carNumber)
-        ]
-        [ -- Position
-          div
-            [ class "stat-title text-[9px] leading-none" ]
-            [ text ("P" ++ String.fromInt item.position) ]
-        , -- Manufacturer logo
-          manufacturerLogo item.metadata.manufacturer
-        , -- Car number
-          div
-            [ class "stat-value text-xs leading-none" ]
-            [ text item.metadata.carNumber ]
-        ]
-
-
-manufacturerLogo : Motorsport.Manufacturer.Manufacturer -> Html msg
-manufacturerLogo manufacturer =
-    case Motorsport.Manufacturer.toLogoUrl manufacturer of
-        Just url ->
-            img
-                [ src url
-                , css
-                    [ property "max-width" "30px"
-                    , property "height" "16px"
-                    , property "object-fit" "contain"
-                    , property "opacity" "0.9"
-                    ]
-                ]
-                []
+{-| Chart combining the relative gaps measured against the selected cars' group average.
+-}
+gapChart : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapChart maybeRange standings entries =
+    case maybeRange of
+        Just range ->
+            GapChart.gapChartView range standings entries
 
         Nothing ->
-            div
-                [ css
-                    [ property "max-width" "30px"
-                    , property "height" "16px"
-                    ]
-                ]
-                []
+            text ""

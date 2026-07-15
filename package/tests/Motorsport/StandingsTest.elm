@@ -13,7 +13,7 @@ import Test exposing (Test, describe, test)
 
 suite : Test
 suite =
-    describe "CloseBattles"
+    describe "Standings"
         [ describe "groupCarsByCloseIntervals"
             [ test "groups cars with gaps <= 1.5 seconds" <|
                 \_ ->
