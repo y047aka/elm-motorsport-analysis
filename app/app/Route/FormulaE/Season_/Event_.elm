@@ -18,7 +18,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings exposing (Entry)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -173,25 +173,14 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, analysis, raceControl, standings, lapHistory } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Formula E"
         , body =
             [ header shared
-            , let
-                standings =
-                    Standings.compute analysis
-                        { elapsed = Clock.getElapsed raceControl.clock
-                        , lapCount = raceControl.lapCount
-                        , cars = raceControl.cars
-                        }
-
-                history =
-                    LapHistory.compute { elapsed = Clock.getElapsed raceControl.clock } raceControl.cars
-              in
-              case mode of
+            , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis history) leaderboardState standings
+                    Leaderboard.view (config eventSummary.season analysis lapHistory) leaderboardState standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl

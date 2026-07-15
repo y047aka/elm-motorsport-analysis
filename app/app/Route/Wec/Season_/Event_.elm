@@ -13,11 +13,11 @@ import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Clock as Clock exposing (State(..))
+import Motorsport.Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Standings)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
@@ -233,7 +233,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { eventSummary, analysis, raceControl } m =
+view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -246,20 +246,9 @@ view app { eventSummary, analysis, raceControl } m =
                     ]
                 ]
                 [ navigation eventSummary raceControl m.mode
-                , let
-                    standings =
-                        Standings.compute analysis
-                            { elapsed = Clock.getElapsed raceControl.clock
-                            , lapCount = raceControl.lapCount
-                            , cars = raceControl.cars
-                            }
-
-                    history =
-                        LapHistory.compute { elapsed = Clock.getElapsed raceControl.clock } raceControl.cars
-                  in
-                  case m.mode of
+                , case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis raceControl { standings = standings, history = history } m
+                        trackerView eventSummary analysis raceControl { standings = standings, history = lapHistory } m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -268,7 +257,7 @@ view app { eventSummary, analysis, raceControl } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> RaceControl.Model -> { standings : Standings.Standings, history : LapHistory } -> Model -> Html Msg
+trackerView : EventSummary -> Analysis -> RaceControl.Model -> { standings : Standings, history : LapHistory } -> Model -> Html Msg
 trackerView eventSummary analysis raceControl { standings, history } m =
     div
         [ css

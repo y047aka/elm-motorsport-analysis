@@ -19,7 +19,10 @@ import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Car)
+import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.TimelineEvent as TimelineEvent
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
@@ -54,6 +57,8 @@ type alias Model =
     , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
+    , standings : Standings
+    , lapHistory : LapHistory
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
@@ -73,11 +78,23 @@ init :
             }
     -> ( Model, Effect Msg )
 init flags maybePagePath =
+    let
+        raceControlInit =
+            RaceControl.placeholder
+
+        analysisInit =
+            Analysis.finished raceControlInit
+
+        viewModels =
+            computeViewModels analysisInit raceControlInit
+    in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.placeholder
-      , raceControl = RaceControl.placeholder
+      , raceControl = raceControlInit
       , analysis_F1 = Analysis.finished RaceControl.placeholder
-      , analysis = Analysis.finished RaceControl.placeholder
+      , analysis = analysisInit
+      , standings = viewModels.standings
+      , lapHistory = viewModels.lapHistory
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
@@ -204,13 +221,21 @@ update msg m =
                     RaceControl.fromCars (TimelineEvent.fromCars cars) cars
                         |> Maybe.withDefault RaceControl.placeholder
 
+                analysisNew =
+                    Analysis.finished rcNew
+
+                viewModels =
+                    computeViewModels analysisNew rcNew
+
                 modelEventSummary =
                     m.eventSummary
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl = rcNew
-                , analysis = Analysis.finished rcNew
+                , analysis = analysisNew
+                , standings = viewModels.standings
+                , lapHistory = viewModels.lapHistory
               }
             , Effect.none
             )
@@ -234,10 +259,18 @@ update msg m =
             let
                 rcNew =
                     RaceControl.update raceControlMsg m.raceControl
+
+                analysisNew =
+                    Analysis.fromRaceControl rcNew
+
+                viewModels =
+                    computeViewModels analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
-                , analysis = Analysis.fromRaceControl rcNew
+                , analysis = analysisNew
+                , standings = viewModels.standings
+                , lapHistory = viewModels.lapHistory
               }
             , Effect.none
             )
@@ -263,10 +296,18 @@ finalizeWecIfReady m =
                 rcNew =
                     RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
                         |> Maybe.withDefault RaceControl.placeholder
+
+                analysisNew =
+                    Analysis.finished rcNew
+
+                viewModels =
+                    computeViewModels analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
-                , analysis = Analysis.finished rcNew
+                , analysis = analysisNew
+                , standings = viewModels.standings
+                , lapHistory = viewModels.lapHistory
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
@@ -275,6 +316,25 @@ finalizeWecIfReady m =
 
         _ ->
             ( m, Effect.none )
+
+
+{-| ドメインモデル（RaceControl）から view へ渡す計算済みモデルを構築する。
+raceControl / analysis を更新するすべての箇所で呼ぶ。
+-}
+computeViewModels : Analysis -> RaceControl.Model -> { standings : Standings, lapHistory : LapHistory }
+computeViewModels analysis raceControl =
+    let
+        elapsed =
+            Clock.getElapsed raceControl.clock
+    in
+    { standings =
+        Standings.compute analysis
+            { elapsed = elapsed
+            , lapCount = raceControl.lapCount
+            , cars = raceControl.cars
+            }
+    , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.cars
+    }
 
 
 
