@@ -10,9 +10,7 @@ status, above the driver name, sector performance, and rival gap sparkline.
 import Css exposing (backgroundColor, before, num, opacity, property, qt)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
-import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
@@ -25,8 +23,8 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
-view : { season : Int, analysis : Analysis } -> LapHistory -> List Entry -> Entry -> Html msg
-view { season, analysis } history allCars item =
+view : LapHistory -> List Entry -> Entry -> Html msg
+view history allCars item =
     div
         [ css
             [ property "display" "grid"
@@ -41,7 +39,7 @@ view { season, analysis } history allCars item =
                 , property "column-gap" "16px"
                 ]
             ]
-            [ positionLabel season item
+            [ positionLabel item
             , gapsRow item
             , statusBadge item.status
             ]
@@ -54,7 +52,7 @@ view { season, analysis } history allCars item =
                     ]
                 ]
                 [ cardHeader item
-                , SectorAndLaps.view analysis item
+                , SectorAndLaps.view item
                 , RivalGapSparkline.view history allCars item
                 ]
             ]
@@ -120,8 +118,8 @@ statusBadge status =
             text ""
 
 
-positionLabel : Int -> Entry -> Html msg
-positionLabel season item =
+positionLabel : Entry -> Html msg
+positionLabel item =
     div
         [ css
             [ property "display" "flex"
@@ -134,7 +132,7 @@ positionLabel season item =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , backgroundColor (Class.toHexColor season item.metadata.class)
+                , backgroundColor item.classColor
                 ]
             ]
         ]

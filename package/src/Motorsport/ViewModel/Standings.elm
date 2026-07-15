@@ -1,32 +1,36 @@
 module Motorsport.ViewModel.Standings exposing
-    ( Standings, Entry
+    ( Standings, Entry, ClassInfo
     , SectorProgress, MiniSectorProgress
-    , SectorTimes
+    , SectorTimes, CurrentSectorSlots
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
-    , toList, toClassList, leader, lapCount
+    , toList, toClassList, leader, lapCount, elapsed
+    , classInfoOf
     , groupCarsByCloseIntervals
     )
 
 {-|
 
-@docs Standings, Entry
+@docs Standings, Entry, ClassInfo
 @docs SectorProgress, MiniSectorProgress
-@docs SectorTimes
+@docs SectorTimes, CurrentSectorSlots
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
 
-@docs toList, toClassList, leader, lapCount
+@docs toList, toClassList, leader, lapCount, elapsed
+
+@docs classInfoOf
 
 @docs groupCarsByCloseIntervals
 
 -}
 
+import Css
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Class exposing (Class)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -40,10 +44,21 @@ import SortedList exposing (SortedList)
 
 type Standings
     = Standings
-        { laps : Int
+        { elapsed : Duration
+        , laps : Int
         , entries : SortedList ByPosition Entry
-        , entriesByClass : List ( Class, SortedList ByPosition Entry )
+        , entriesByClass : List ( ClassInfo, SortedList ByPosition Entry )
         }
+
+
+{-| クラス見出し・バッジが必要とする表示情報。
+season 依存の色解決は compute 時に済ませてある。
+-}
+type alias ClassInfo =
+    { class : Class
+    , name : String
+    , color : Css.Color
+    }
 
 
 type alias SectorTimes =
@@ -87,12 +102,15 @@ type alias Entry =
     , positionInClass : Int
     , status : Status
     , metadata : Car.Metadata
+    , classColor : Css.Color
     , lapsCompleted : Int
     , currentLapTime : Maybe Duration
     , currentLapBest : Maybe Duration
     , currentLapSectors : Maybe SectorTimes
+    , currentLapSectorSlots : Maybe CurrentSectorSlots
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
+    , currentLapRated : Maybe RatedTime
     , sector : Maybe SectorProgress
     , miniSector : Maybe MiniSectorProgress
     , gapToLeader : Gap
@@ -112,6 +130,16 @@ type alias SectorProgress =
     }
 
 
+{-| 現在ラップのセクターごとの「進捗 + 性能判定」。
+donut 表示などが Analysis を追加供給されずに描けるよう、compute 時に判定済み。
+-}
+type alias CurrentSectorSlots =
+    { sector_1 : { progress : Float, rated : RatedTime }
+    , sector_2 : { progress : Float, rated : RatedTime }
+    , sector_3 : { progress : Float, rated : RatedTime }
+    }
+
+
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector
     , progress : Float
@@ -119,16 +147,18 @@ type alias MiniSectorProgress =
 
 
 compute :
-    { a
-        | fastestLapTime : Duration
-        , sector_1_fastest : Duration
-        , sector_2_fastest : Duration
-        , sector_3_fastest : Duration
-        , miniSectorFastest : LeMans2025MiniSectorFastest
-    }
+    { season : Int }
+    ->
+        { a
+            | fastestLapTime : Duration
+            , sector_1_fastest : Duration
+            , sector_2_fastest : Duration
+            , sector_3_fastest : Duration
+            , miniSectorFastest : LeMans2025MiniSectorFastest
+        }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
-compute fastest config =
+compute { season } fastest config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -168,12 +198,17 @@ compute fastest config =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
+                        , classColor = Class.toHexColor season metadata.class
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
                         , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
+                        , currentLapSectorSlots = currentLap |> Maybe.map (extractCurrentSectorSlots fastest timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
+                        , currentLapRated =
+                            currentLap
+                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -198,12 +233,10 @@ compute fastest config =
             Ordering.byPosition entries
     in
     Standings
-        { laps = config.lapCount
+        { elapsed = config.elapsed
+        , laps = config.lapCount
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
 
 
@@ -212,8 +245,8 @@ compute fastest config =
 各ラップを1つの Entry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
 
 -}
-fromLaps : Car.Metadata -> List Lap -> Standings
-fromLaps baseMetadata laps =
+fromLaps : { season : Int } -> Car.Metadata -> List Lap -> Standings
+fromLaps { season } baseMetadata laps =
     let
         fastest =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
@@ -231,12 +264,15 @@ fromLaps baseMetadata laps =
                         , positionInClass = index + 1
                         , status = Car.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
+                        , classColor = Class.toHexColor season baseMetadata.class
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
                         , currentLapSectors = Just (extractSectorTimes lap)
+                        , currentLapSectorSlots = Just (extractCurrentSectorSlots fastest Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
+                        , currentLapRated = Nothing
                         , sector = Nothing
                         , miniSector = Nothing
                         , gapToLeader = Gap.None
@@ -256,12 +292,10 @@ fromLaps baseMetadata laps =
             Ordering.byPosition entries
     in
     Standings
-        { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
+        { elapsed = 0
+        , laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
 
 
@@ -274,13 +308,28 @@ fromList entries =
             Ordering.byPosition entries
     in
     Standings
-        { laps = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
+        { elapsed = 0
+        , laps = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
+
+
+groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, SortedList ByPosition Entry )
+groupEntriesByClass sortedEntries =
+    sortedEntries
+        |> SortedList.gatherEqualsBy (.metadata >> .class)
+        |> List.map (\( first, rest ) -> ( classInfoOf first, Ordering.byPosition (first :: SortedList.toList rest) ))
+
+
+{-| エントリからクラスの表示情報を取り出す。
+-}
+classInfoOf : Entry -> ClassInfo
+classInfoOf entry =
+    { class = entry.metadata.class
+    , name = Class.toString entry.metadata.class
+    , color = entry.classColor
+    }
 
 
 rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime
@@ -298,6 +347,35 @@ extractSectorTimes lap =
     , s1_best = lap.s1_best
     , s2_best = lap.s2_best
     , s3_best = lap.s3_best
+    }
+
+
+extractCurrentSectorSlots :
+    { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    -> Maybe SectorProgress
+    -> Lap
+    -> CurrentSectorSlots
+extractCurrentSectorSlots fastest sectorProgress lap =
+    let
+        ( s1_progress, s2_progress, s3_progress ) =
+            case sectorProgress of
+                Just { sector, progress } ->
+                    case sector of
+                        S1 ->
+                            ( progress, 0, 0 )
+
+                        S2 ->
+                            ( 100, progress, 0 )
+
+                        S3 ->
+                            ( 100, 100, progress )
+
+                Nothing ->
+                    ( 100, 100, 100 )
+    in
+    { sector_1 = { progress = s1_progress, rated = rateTime fastest.sector_1_fastest { time = lap.sector_1, personalBest = lap.s1_best } }
+    , sector_2 = { progress = s2_progress, rated = rateTime fastest.sector_2_fastest { time = lap.sector_2, personalBest = lap.s2_best } }
+    , sector_3 = { progress = s3_progress, rated = rateTime fastest.sector_3_fastest { time = lap.sector_3, personalBest = lap.s3_best } }
     }
 
 
@@ -412,7 +490,7 @@ toList (Standings s) =
     SortedList.toList s.entries
 
 
-toClassList : Standings -> List ( Class, List Entry )
+toClassList : Standings -> List ( ClassInfo, List Entry )
 toClassList (Standings s) =
     s.entriesByClass
         |> List.map (Tuple.mapSecond SortedList.toList)
@@ -426,6 +504,13 @@ leader (Standings s) =
 lapCount : Standings -> Int
 lapCount (Standings s) =
     s.laps
+
+
+{-| この Standings が表すレース経過時間。compute に渡した elapsed が焼き込まれている。
+-}
+elapsed : Standings -> Duration
+elapsed (Standings s) =
+    s.elapsed
 
 
 groupCarsByCloseIntervals : Standings -> List (List Entry)

@@ -5,7 +5,6 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
-import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
@@ -327,9 +326,6 @@ coordinatesOnTrack direction config car =
 renderCar : Direction -> Entry -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
-        { carNumber, class } =
-            car.metadata
-
         { cx, cy } =
             constants.track
 
@@ -344,13 +340,13 @@ renderCar direction car { angle, x, y } =
     in
     g []
         [ g [ Attributes.transform [ Translate x y ] ]
-            [ Lazy.lazy2 carMarker car.positionInClass class ]
-        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = carNumber }
+            [ Lazy.lazy2 carMarker car.positionInClass car.classColor ]
+        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]
 
 
-carMarker : Int -> Class -> Svg msg
-carMarker positionInClass class =
+carMarker : Int -> Css.Color -> Svg msg
+carMarker positionInClass classColor =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
@@ -369,7 +365,7 @@ carMarker positionInClass class =
         [ Attributes.cx (px 0)
         , Attributes.cy (px 0)
         , Attributes.r (px carSize)
-        , fill (Class.toHexColor 2025 class |> .value)
+        , fill classColor.value
         , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
         ]
         []

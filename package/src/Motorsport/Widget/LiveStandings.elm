@@ -1,14 +1,12 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
 import Css exposing (after, backgroundColor, before, hover, property, qt)
-import Data.Series.EventSummary exposing (EventSummary)
 import Html.Styled exposing (Html, button, div, li, text)
 import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car
-import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
@@ -16,8 +14,7 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
 type alias Props msg =
-    { eventSummary : EventSummary
-    , standings : Standings
+    { standings : Standings
     , onSelectCar : Entry -> msg
     , popoverTarget : String
     }
@@ -34,7 +31,7 @@ view props =
             ]
         ]
         (List.map
-            (\( class_, cars ) ->
+            (\( classInfo, cars ) ->
                 div
                     [ class "card bg-base-200 overflow-hidden"
                     , css
@@ -56,11 +53,11 @@ view props =
                                 , property "width" "0.2em"
                                 , property "height" "1.2em"
                                 , property "border-radius" "2px"
-                                , backgroundColor (Class.toHexColor props.eventSummary.season class_)
+                                , backgroundColor classInfo.color
                                 ]
                             ]
                         ]
-                        [ text (Class.toString class_) ]
+                        [ text classInfo.name ]
                     , Keyed.node "ul"
                         [ class "list"
                         , css

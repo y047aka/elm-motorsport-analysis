@@ -168,7 +168,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 Leaderboard ->
                     let
                         standings =
-                            Standings.compute analysis_F1
+                            Standings.compute { season = 0 } analysis_F1
                                 { elapsed = Clock.getElapsed raceControl_F1.clock
                                 , lapCount = raceControl_F1.lapCount
                                 , cars = raceControl_F1.cars

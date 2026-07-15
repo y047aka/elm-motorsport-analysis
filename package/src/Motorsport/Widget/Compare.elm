@@ -14,9 +14,7 @@ tabbed so only one shows at a time (to save space).
 import Css exposing (property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Clock as Clock
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
@@ -48,17 +46,14 @@ enforces the 3-car limit). Only `activeChart` is rendered; clicking a tab fires
 `onSelectChart`.
 -}
 viewComparison :
-    { season : Int
-    , analysis : Analysis
-    , clock : Clock.Model
-    , onToggleCar : String -> msg
+    { onToggleCar : String -> msg
     , activeChart : Chart
     , onSelectChart : Chart -> msg
     }
     -> { standings : Standings, history : LapHistory }
     -> List String
     -> Html msg
-viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChart } { standings, history } selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart } { standings, history } selectedCarNumbers =
     let
         entriesByNumber =
             Standings.toList standings
@@ -77,7 +72,7 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
                     first.metadata.class
 
                 lapRange =
-                    PositionProgression.lapRange clock { standings = standings, history = history } class
+                    PositionProgression.lapRange { standings = standings, history = history } class
 
                 distSeries =
                     case lapRange of
@@ -103,7 +98,7 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
                         , property "column-gap" "12px"
                         ]
                     ]
-                    [ CarSelector.classBadge season class
+                    [ CarSelector.classBadge (Standings.classInfoOf first)
                     , CarSelector.carSelector onToggleCar standings class selectedCarNumbers
                     ]
                 , div
@@ -113,7 +108,7 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
                         , property "column-gap" "16px"
                         ]
                     ]
-                    (List.map (CarSummary.carSummary analysis lapRange distScale history) selectedEntries
+                    (List.map (CarSummary.carSummary lapRange distScale history) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
                 , ChartTabs.chartTabs onSelectChart
@@ -127,7 +122,6 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
                       , \() ->
                             PositionProgression.view
                                 { width = 1000, height = 250 }
-                                clock
                                 { standings = standings, history = history }
                                 { class = class
                                 , highlighted = selectedCarNumbers

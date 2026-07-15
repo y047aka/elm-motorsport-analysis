@@ -10,7 +10,6 @@ Compare widget, plus the placeholder that fills an unselected slot.
 import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Gap as Gap
@@ -40,8 +39,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
-carSummary analysis lapRange distScale history item =
+carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+carSummary lapRange distScale history item =
     div
         [ css
             [ property "display" "grid"
@@ -52,7 +51,7 @@ carSummary analysis lapRange distScale history item =
         ]
         [ header item
         , summaryStats item
-        , lapTimePanel analysis lapRange distScale history item
+        , lapTimePanel lapRange distScale history item
         ]
 
 
@@ -62,8 +61,8 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 `distScale` so the three columns share one scale (height = peak sharpness = pace
 stability, comparable across cars).
 -}
-lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
-lapTimePanel analysis maybeRange maybeScale history item =
+lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+lapTimePanel maybeRange maybeScale history item =
     div
         [ css
             [ glassPanel
@@ -74,7 +73,7 @@ lapTimePanel analysis maybeRange maybeScale history item =
         ]
         [ panelLabel "Lap time"
         , div [ css [ property "padding-bottom" "4px" ] ]
-            [ SectorAndLaps.view analysis item ]
+            [ SectorAndLaps.view item ]
         , div
             [ css
                 [ property "padding-top" "4px"

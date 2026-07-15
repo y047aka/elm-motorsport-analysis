@@ -10,12 +10,10 @@ shared by SelectedCarsStrip and Compare.
 import Css exposing (batch, num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car
-import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
-import Motorsport.Sector exposing (Sector(..))
-import Motorsport.ViewModel.Standings exposing (SectorProgress, Entry)
+import Motorsport.Duration as Duration
+import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Path.Styled as Path
 import Shape
 import Svg.Styled exposing (Svg, g, svg)
@@ -26,8 +24,8 @@ import TypedSvg.Styled.Attributes exposing (viewBox)
 {-| The pie shows sector progress of the current lap, so it shares a column
 with Current; the layout is a balanced 50/50 grid of `pie + Current` | `Last`.
 -}
-view : Analysis -> Entry -> Html msg
-view analysis item =
+view : Entry -> Html msg
+view item =
     div
         [ css
             [ property "display" "grid"
@@ -45,16 +43,16 @@ view analysis item =
                 , property "column-gap" "8px"
                 ]
             ]
-            [ currentSectorPie analysis item
-            , currentLapBlock analysis item
+            [ currentSectorPie item
+            , currentLapBlock item
             ]
         , lastLapBlock item
         ]
 
 
-currentLapBlock : Analysis -> Entry -> Html msg
-currentLapBlock analysis item =
-    lapBlock "Current" (currentLapTimeCell analysis item)
+currentLapBlock : Entry -> Html msg
+currentLapBlock item =
+    lapBlock "Current" (currentLapTimeCell item)
 
 
 lastLapBlock : Entry -> Html msg
@@ -76,15 +74,13 @@ lapBlock label timeCell =
         ]
 
 
-currentLapTimeCell : Analysis -> Entry -> Html msg
-currentLapTimeCell analysis item =
+currentLapTimeCell : Entry -> Html msg
+currentLapTimeCell item =
     let
         colorStyle =
-            case item.currentLapBest of
-                Just best ->
-                    performanceLevel
-                        { time = item.currentLapElapsed, personalBest = best, fastest = analysis.fastestLapTime }
-                        |> applyPerformanceColor
+            case item.currentLapRated of
+                Just { performance } ->
+                    applyPerformanceColor performance
 
                 Nothing ->
                     batch []
@@ -138,55 +134,30 @@ applyPerformanceColor performance =
 The in-progress sector is filled white up to its progress; completed
 sectors are filled with their performance color.
 -}
-currentSectorPie : Analysis -> Entry -> Html msg
-currentSectorPie analysis item =
-    case ( item.currentLapSectors, Car.hasRetired item.status ) of
-        ( Just sectors, False ) ->
-            let
-                ( s1p, s2p, s3p ) =
-                    sectorProgressTriplet item.sector
-            in
+currentSectorPie : Entry -> Html msg
+currentSectorPie item =
+    case ( item.currentLapSectorSlots, Car.hasRetired item.status ) of
+        ( Just slots, False ) ->
             sectorPie
-                [ currentSectorSlot { time = sectors.sector_1, personalBest = sectors.s1_best, fastest = analysis.sector_1_fastest, progress = s1p }
-                , currentSectorSlot { time = sectors.sector_2, personalBest = sectors.s2_best, fastest = analysis.sector_2_fastest, progress = s2p }
-                , currentSectorSlot { time = sectors.sector_3, personalBest = sectors.s3_best, fastest = analysis.sector_3_fastest, progress = s3p }
+                [ currentSectorSlot slots.sector_1
+                , currentSectorSlot slots.sector_2
+                , currentSectorSlot slots.sector_3
                 ]
 
         _ ->
             emptyPie
 
 
-sectorProgressTriplet : Maybe SectorProgress -> ( Float, Float, Float )
-sectorProgressTriplet sectorProgress =
-    case sectorProgress of
-        Just { sector, progress } ->
-            case sector of
-                S1 ->
-                    ( progress, 0, 0 )
-
-                S2 ->
-                    ( 100, progress, 0 )
-
-                S3 ->
-                    ( 100, 100, progress )
-
-        Nothing ->
-            ( 100, 100, 100 )
-
-
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
 white partial fill while in progress, full performance color once completed.
 -}
-currentSectorSlot : { time : Duration, personalBest : Duration, fastest : Duration, progress : Float } -> ( String, Float )
-currentSectorSlot sector =
-    if sector.progress < 100 then
-        ( "oklch(1 0 0)", sector.progress / 100 )
+currentSectorSlot : { progress : Float, rated : RatedTime } -> ( String, Float )
+currentSectorSlot { progress, rated } =
+    if progress < 100 then
+        ( "oklch(1 0 0)", progress / 100 )
 
     else
-        ( performanceLevel { time = sector.time, personalBest = sector.personalBest, fastest = sector.fastest }
-            |> Performance.toColorVariable
-        , 1
-        )
+        ( Performance.toColorVariable rated.performance, 1 )
 
 
 {-| Draw three slots as 120° donut arcs. Each element is

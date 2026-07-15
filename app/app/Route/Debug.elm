@@ -171,8 +171,8 @@ view app { analysis, raceControl } { leaderboardState } =
                     raceControl.cars
                         |> RunningOrder.toList
                         |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                        |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
-                        |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+                        |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
+                        |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
               in
               DataView.view (config analysis standings) leaderboardState (Standings.toList standings)
             ]

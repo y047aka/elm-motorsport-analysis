@@ -248,7 +248,7 @@ view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
                 [ navigation eventSummary raceControl m.mode
                 , case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis raceControl { standings = standings, history = lapHistory } m
+                        trackerView eventSummary analysis { standings = standings, history = lapHistory } m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -257,8 +257,8 @@ view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> RaceControl.Model -> { standings : Standings, history : LapHistory } -> Model -> Html Msg
-trackerView eventSummary analysis raceControl { standings, history } m =
+trackerView : EventSummary -> Analysis -> { standings : Standings, history : LapHistory } -> Model -> Html Msg
+trackerView eventSummary analysis { standings, history } m =
     div
         [ css
             [ property "grid-row" "2"
@@ -280,8 +280,7 @@ trackerView eventSummary analysis raceControl { standings, history } m =
                 ]
             ]
             [ LiveStandingsWidget.view
-                { eventSummary = eventSummary
-                , standings = standings
+                { standings = standings
                 , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
                 , popoverTarget = CarDetailPopover.popoverId
                 }
@@ -312,18 +311,13 @@ trackerView eventSummary analysis raceControl { standings, history } m =
             []
         , div [ css [ property "grid-column" "1 / -1" ] ]
             [ SelectedCarsStrip.view
-                { season = eventSummary.season
-                , analysis = analysis
-                , offset = m.stripOffset
+                { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
                 }
                 { standings = standings, history = history }
             ]
         , CarDetailPopover.view
-            { season = eventSummary.season
-            , analysis = analysis
-            , clock = raceControl.clock
-            , activeChart = m.detailChart
+            { activeChart = m.detailChart
             , onToggleCar = ToggleDetailCar
             , onSelectChart = SelectDetailChart
             }

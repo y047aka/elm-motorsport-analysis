@@ -21,9 +21,9 @@ import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
+import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
-import Motorsport.TimelineEvent as TimelineEvent
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
@@ -86,7 +86,7 @@ init flags maybePagePath =
             Analysis.finished raceControlInit
 
         viewModels =
-            computeViewModels analysisInit raceControlInit
+            computeViewModels { season = 0 } analysisInit raceControlInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.placeholder
@@ -225,7 +225,7 @@ update msg m =
                     Analysis.finished rcNew
 
                 viewModels =
-                    computeViewModels analysisNew rcNew
+                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
 
                 modelEventSummary =
                     m.eventSummary
@@ -264,7 +264,7 @@ update msg m =
                     Analysis.fromRaceControl rcNew
 
                 viewModels =
-                    computeViewModels analysisNew rcNew
+                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
@@ -301,7 +301,7 @@ finalizeWecIfReady m =
                     Analysis.finished rcNew
 
                 viewModels =
-                    computeViewModels analysisNew rcNew
+                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
@@ -321,14 +321,15 @@ finalizeWecIfReady m =
 {-| ドメインモデル（RaceControl）から view へ渡す計算済みモデルを構築する。
 raceControl / analysis を更新するすべての箇所で呼ぶ。
 -}
-computeViewModels : Analysis -> RaceControl.Model -> { standings : Standings, lapHistory : LapHistory }
-computeViewModels analysis raceControl =
+computeViewModels : { season : Int } -> Analysis -> RaceControl.Model -> { standings : Standings, lapHistory : LapHistory }
+computeViewModels season analysis raceControl =
     let
         elapsed =
             Clock.getElapsed raceControl.clock
     in
     { standings =
-        Standings.compute analysis
+        Standings.compute season
+            analysis
             { elapsed = elapsed
             , lapCount = raceControl.lapCount
             , cars = raceControl.cars
