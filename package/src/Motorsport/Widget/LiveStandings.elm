@@ -15,7 +15,11 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 type alias Props msg =
     { standings : Standings
-    , onSelectCar : Entry -> msg
+
+    -- 選択された車両の carNumber を返す。
+    -- Lazy を効かせるため、view ごとに再生成されるクロージャではなく
+    -- Msg コンストラクタなどの安定した参照を渡すこと。
+    , onSelectCar : String -> msg
     , popoverTarget : String
     }
 
@@ -79,11 +83,11 @@ view props =
         )
 
 
-carRow : String -> (Entry -> msg) -> Entry -> Html msg
+carRow : String -> (String -> msg) -> Entry -> Html msg
 carRow popoverTarget onSelect item =
     li []
         [ button
-            [ onClick (onSelect item)
+            [ onClick (onSelect item.metadata.carNumber)
             , attribute "popovertarget" popoverTarget
 
             -- Explicit "show": the default "toggle" would close the shared

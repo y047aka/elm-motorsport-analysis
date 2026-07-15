@@ -281,7 +281,9 @@ trackerView eventSummary analysis { standings, history } m =
             ]
             [ LiveStandingsWidget.view
                 { standings = standings
-                , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
+
+                -- クロージャではなくコンストラクタを直接渡す（行の Lazy を効かせるため）
+                , onSelectCar = ShowCarDetail
                 , popoverTarget = CarDetailPopover.popoverId
                 }
             ]
