@@ -1,4 +1,4 @@
-module Motorsport.StandingsTest exposing (suite)
+module Motorsport.ViewModel.StandingsTest exposing (suite)
 
 import Expect
 import Motorsport.Car as Car exposing (Status(..))
@@ -7,7 +7,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Test exposing (Test, describe, test)
 
 
@@ -67,12 +67,12 @@ suite =
 -- Helper functions for creating test data
 
 
-createStandingsEntry : Int -> String -> Duration -> StandingsEntry
+createStandingsEntry : Int -> String -> Duration -> Entry
 createStandingsEntry position carNumber interval =
     createStandingsEntryWithGap position carNumber (Gap.Seconds interval)
 
 
-createStandingsEntryWithGap : Int -> String -> Gap -> StandingsEntry
+createStandingsEntryWithGap : Int -> String -> Gap -> Entry
 createStandingsEntryWithGap position carNumber gap =
     { position = position
     , positionInClass = 1

@@ -15,7 +15,7 @@ import Motorsport.Car as Car
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings exposing (SectorProgress, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (SectorProgress, Entry)
 import Path.Styled as Path
 import Shape
 import Svg.Styled exposing (Svg, g, svg)
@@ -26,7 +26,7 @@ import TypedSvg.Styled.Attributes exposing (viewBox)
 {-| The pie shows sector progress of the current lap, so it shares a column
 with Current; the layout is a balanced 50/50 grid of `pie + Current` | `Last`.
 -}
-view : Analysis -> StandingsEntry -> Html msg
+view : Analysis -> Entry -> Html msg
 view analysis item =
     div
         [ css
@@ -52,12 +52,12 @@ view analysis item =
         ]
 
 
-currentLapBlock : Analysis -> StandingsEntry -> Html msg
+currentLapBlock : Analysis -> Entry -> Html msg
 currentLapBlock analysis item =
     lapBlock "Current" (currentLapTimeCell analysis item)
 
 
-lastLapBlock : StandingsEntry -> Html msg
+lastLapBlock : Entry -> Html msg
 lastLapBlock item =
     lapBlock "Last" (lastLapTimeCell item)
 
@@ -76,7 +76,7 @@ lapBlock label timeCell =
         ]
 
 
-currentLapTimeCell : Analysis -> StandingsEntry -> Html msg
+currentLapTimeCell : Analysis -> Entry -> Html msg
 currentLapTimeCell analysis item =
     let
         colorStyle =
@@ -107,7 +107,7 @@ currentLapTimeCell analysis item =
         ]
 
 
-lastLapTimeCell : StandingsEntry -> Html msg
+lastLapTimeCell : Entry -> Html msg
 lastLapTimeCell item =
     div
         [ css
@@ -138,7 +138,7 @@ applyPerformanceColor performance =
 The in-progress sector is filled white up to its progress; completed
 sectors are filled with their performance color.
 -}
-currentSectorPie : Analysis -> StandingsEntry -> Html msg
+currentSectorPie : Analysis -> Entry -> Html msg
 currentSectorPie analysis item =
     case ( item.currentLapSectors, Car.hasRetired item.status ) of
         ( Just sectors, False ) ->

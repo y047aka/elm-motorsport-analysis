@@ -11,14 +11,14 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
 type alias Props msg =
     { eventSummary : EventSummary
     , standings : Standings
-    , onSelectCar : StandingsEntry -> msg
+    , onSelectCar : Entry -> msg
     , popoverTarget : String
     }
 
@@ -82,7 +82,7 @@ view props =
         )
 
 
-carRow : String -> (StandingsEntry -> msg) -> StandingsEntry -> Html msg
+carRow : String -> (Entry -> msg) -> Entry -> Html msg
 carRow popoverTarget onSelect item =
     li []
         [ button
@@ -108,7 +108,7 @@ carRow popoverTarget onSelect item =
         ]
 
 
-carRowContent : StandingsEntry -> List (Html msg)
+carRowContent : Entry -> List (Html msg)
 carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
     , CarNumberBadge.viewRow item

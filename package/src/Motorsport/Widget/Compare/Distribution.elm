@@ -13,7 +13,7 @@ a shared scale that aligns the X domain and peak density across all selected car
 import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 
 
 {-| Shared scale for the lap-time distribution chart. Aligns the X axis (domain)
@@ -44,7 +44,7 @@ scaleOf series =
 laps within the lap range, keeps only racing laps at or below the IQR upper fence,
 excluding pit and out laps.
 -}
-seriesOf : Standings -> ( Int, Int ) -> StandingsEntry -> LapTimeDistribution.Series
+seriesOf : Standings -> ( Int, Int ) -> Entry -> LapTimeDistribution.Series
 seriesOf standings range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
@@ -53,7 +53,7 @@ seriesOf standings range entry =
     }
 
 
-racingTimes : Standings -> ( Int, Int ) -> StandingsEntry -> List Int
+racingTimes : Standings -> ( Int, Int ) -> Entry -> List Int
 racingTimes standings ( minLap, maxLap ) entry =
     let
         times =

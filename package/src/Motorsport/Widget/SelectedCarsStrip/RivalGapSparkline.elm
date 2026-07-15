@@ -12,7 +12,7 @@ import Html.Styled exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (Standings, Entry)
 
 
 {-| Shows the car's relationship to its rivals ahead and behind as the history of
@@ -49,7 +49,7 @@ clipped outside the band as an IQR outlier.
 ahead and behind are found internally as in-class neighbors in this list.
 
 -}
-view : Standings -> List StandingsEntry -> StandingsEntry -> Html msg
+view : Standings -> List Entry -> Entry -> Html msg
 view standings allCars item =
     let
         neighbors =
@@ -114,8 +114,8 @@ uses only the nearest one on each side (`List.head`); the reference population
 uses all of them. Fewer cars are available at the front/back or class edges.
 -}
 type alias Neighbors =
-    { ahead : List StandingsEntry
-    , behind : List StandingsEntry
+    { ahead : List Entry
+    , behind : List Entry
     }
 
 
@@ -124,7 +124,7 @@ overall standings by class preserves order, so the result is the in-class order
 as-is. At class edges only the available cars are returned (out-of-range indices
 are dropped).
 -}
-findNeighbors : List StandingsEntry -> StandingsEntry -> Neighbors
+findNeighbors : List Entry -> Entry -> Neighbors
 findNeighbors allCars item =
     let
         classmates =

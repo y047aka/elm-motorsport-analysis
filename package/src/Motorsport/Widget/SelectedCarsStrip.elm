@@ -13,7 +13,7 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Standings as Standings exposing (Standings)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
 

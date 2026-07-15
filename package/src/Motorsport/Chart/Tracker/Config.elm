@@ -19,7 +19,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings exposing (MiniSectorProgress, SectorProgress, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (MiniSectorProgress, SectorProgress, Entry)
 
 
 type alias TrackConfig =
@@ -155,7 +155,7 @@ buildMiniSectors miniSectors sectorStart miniRatio =
                 |> WithMiniSectors
 
 
-computeProgress : TrackConfig -> StandingsEntry -> Float
+computeProgress : TrackConfig -> Entry -> Float
 computeProgress config car =
     if car.currentLapProgress > 0 then
         car.currentLapProgress

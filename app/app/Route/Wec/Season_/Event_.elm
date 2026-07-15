@@ -16,7 +16,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings
+import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
@@ -247,7 +247,7 @@ view app { eventSummary, analysis, raceControl } m =
                 [ navigation eventSummary raceControl m.mode
                 , let
                     standings =
-                        Standings.init analysis
+                        Standings.compute analysis
                             { elapsed = Clock.getElapsed raceControl.clock
                             , lapCount = raceControl.lapCount
                             , cars = raceControl.cars

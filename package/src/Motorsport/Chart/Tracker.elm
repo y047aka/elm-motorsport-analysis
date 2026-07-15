@@ -8,7 +8,7 @@ import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Sector as Sector
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -297,7 +297,7 @@ renderCars direction config standings =
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> StandingsEntry -> Svg msg
+renderCarOnTrack : Direction -> TrackConfig -> Entry -> Svg msg
 renderCarOnTrack direction config car =
     let
         coords =
@@ -306,7 +306,7 @@ renderCarOnTrack direction config car =
     renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> StandingsEntry -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> Entry -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -324,7 +324,7 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> StandingsEntry -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Direction -> Entry -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
         { carNumber, class } =

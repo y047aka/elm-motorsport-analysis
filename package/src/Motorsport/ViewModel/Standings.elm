@@ -1,9 +1,9 @@
-module Motorsport.Standings exposing
-    ( Standings, StandingsEntry
+module Motorsport.ViewModel.Standings exposing
+    ( Standings, Entry
     , SectorProgress, MiniSectorProgress
     , SectorTimes
     , SectorPerformance, MiniSectorPerformance
-    , init, fromLaps, fromList
+    , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount
     , getCarHistory
     , groupCarsByCloseIntervals
@@ -12,11 +12,11 @@ module Motorsport.Standings exposing
 
 {-|
 
-@docs Standings, StandingsEntry
+@docs Standings, Entry
 @docs SectorProgress, MiniSectorProgress
 @docs SectorTimes
 @docs SectorPerformance, MiniSectorPerformance
-@docs init, fromLaps, fromList
+@docs compute, fromLaps, fromList
 
 @docs toList, toClassList, leader, lapCount
 
@@ -47,8 +47,8 @@ import SortedList exposing (SortedList)
 type Standings
     = Standings
         { laps : Int
-        , entries : SortedList ByPosition StandingsEntry
-        , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
+        , entries : SortedList ByPosition Entry
+        , entriesByClass : List ( Class, SortedList ByPosition Entry )
         , lapHistory : Dict String (List Lap)
         }
 
@@ -89,7 +89,7 @@ type alias MiniSectorPerformance =
     }
 
 
-type alias StandingsEntry =
+type alias Entry =
     { position : Int
     , positionInClass : Int
     , status : Status
@@ -125,7 +125,7 @@ type alias MiniSectorProgress =
     }
 
 
-init :
+compute :
     { a
         | fastestLapTime : Duration
         , sector_1_fastest : Duration
@@ -135,7 +135,7 @@ init :
     }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
-init fastest config =
+compute fastest config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -223,7 +223,7 @@ init fastest config =
 
 {-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
 
-各ラップを1つの StandingsEntry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
+各ラップを1つの Entry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
 `lapHistory` / `carLapData` はラップ番号文字列をキーとして構築されるため、不変条件が保たれる。
 
 -}
@@ -287,9 +287,9 @@ fromLaps baseMetadata laps =
         }
 
 
-{-| `StandingsEntry` のリストから `Standings` を組み立てる。テスト用途などで直接エントリを指定したい場合に使う。
+{-| `Entry` のリストから `Standings` を組み立てる。テスト用途などで直接エントリを指定したい場合に使う。
 -}
-fromList : List StandingsEntry -> Standings
+fromList : List Entry -> Standings
 fromList entries =
     let
         sortedEntries =
@@ -438,18 +438,18 @@ positionsInClassByCarNumber raceOrder =
         |> Dict.fromList
 
 
-toList : Standings -> List StandingsEntry
+toList : Standings -> List Entry
 toList (Standings s) =
     SortedList.toList s.entries
 
 
-toClassList : Standings -> List ( Class, List StandingsEntry )
+toClassList : Standings -> List ( Class, List Entry )
 toClassList (Standings s) =
     s.entriesByClass
         |> List.map (Tuple.mapSecond SortedList.toList)
 
 
-leader : Standings -> Maybe StandingsEntry
+leader : Standings -> Maybe Entry
 leader (Standings s) =
     SortedList.head s.entries
 
@@ -459,7 +459,7 @@ lapCount (Standings s) =
     s.laps
 
 
-groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
+groupCarsByCloseIntervals : Standings -> List (List Entry)
 groupCarsByCloseIntervals (Standings s) =
     let
         isCloseToNext current =

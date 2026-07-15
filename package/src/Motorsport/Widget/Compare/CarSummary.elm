@@ -14,7 +14,7 @@ import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Gap as Gap
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (Standings, Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
@@ -39,7 +39,7 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> StandingsEntry -> Html msg
+carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> Entry -> Html msg
 carSummary analysis lapRange distScale standings item =
     div
         [ css
@@ -61,7 +61,7 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 `distScale` so the three columns share one scale (height = peak sharpness = pace
 stability, comparable across cars).
 -}
-lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> StandingsEntry -> Html msg
+lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> Entry -> Html msg
 lapTimePanel analysis maybeRange maybeScale standings item =
     div
         [ css
@@ -92,7 +92,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
         ]
 
 
-header : StandingsEntry -> Html msg
+header : Entry -> Html msg
 header item =
     div
         [ css
@@ -120,7 +120,7 @@ header item =
 {-| As in the leaderboard, emphasizes the driver currently at the wheel and dims
 the others.
 -}
-driverList : StandingsEntry -> Html msg
+driverList : Entry -> Html msg
 driverList item =
     div
         [ css
@@ -186,7 +186,7 @@ statusBadge status =
             text ""
 
 
-summaryStats : StandingsEntry -> Html msg
+summaryStats : Entry -> Html msg
 summaryStats item =
     div
         [ css

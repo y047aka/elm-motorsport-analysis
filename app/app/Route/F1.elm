@@ -15,7 +15,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings exposing (StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -167,7 +167,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 Leaderboard ->
                     let
                         standings =
-                            Standings.init analysis_F1
+                            Standings.compute analysis_F1
                                 { elapsed = Clock.getElapsed raceControl_F1.clock
                                 , lapCount = raceControl_F1.lapCount
                                 , cars = raceControl_F1.cars
@@ -181,7 +181,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
+config : Analysis -> Standings.Standings -> Leaderboard.Config Entry Msg
 config analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg

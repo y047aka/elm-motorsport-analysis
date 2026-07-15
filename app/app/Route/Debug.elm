@@ -18,7 +18,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -179,7 +179,7 @@ view app { analysis, raceControl } { leaderboardState } =
         }
 
 
-config : Analysis -> Standings -> Leaderboard.Config StandingsEntry Msg
+config : Analysis -> Standings -> Leaderboard.Config Entry Msg
 config analysis standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg

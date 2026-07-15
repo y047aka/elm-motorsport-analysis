@@ -19,7 +19,7 @@ import Html.Styled as Html exposing (Html, button, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Clock as Clock
-import Motorsport.Standings as Standings
+import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.Compare as CompareWidget
 
 

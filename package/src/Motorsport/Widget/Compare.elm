@@ -17,7 +17,7 @@ import Html.Styled.Attributes exposing (css)
 import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Clock as Clock
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
@@ -138,7 +138,7 @@ viewComparison { season, analysis, clock, onToggleCar, activeChart, onSelectChar
 
 {-| Chart combining the relative gaps measured against the selected cars' group average.
 -}
-gapChart : Maybe ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapChart : Maybe ( Int, Int ) -> Standings -> List Entry -> Html msg
 gapChart maybeRange standings entries =
     case maybeRange of
         Just range ->

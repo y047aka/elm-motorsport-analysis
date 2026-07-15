@@ -31,7 +31,7 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Scale
 import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
@@ -69,7 +69,7 @@ type alias PlottedCar =
 {-| Builds one series (color, emphasis, lap list). The lap window is given by
 `LapWindow` and the emphasis by `Emphasis`.
 -}
-carLine : Standings -> LapWindow -> Emphasis -> StandingsEntry -> CarLine
+carLine : Standings -> LapWindow -> Emphasis -> Entry -> CarLine
 carLine standings window emphasis entry =
     let
         history =
@@ -102,7 +102,7 @@ with outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside
 the frame.
 
 -}
-gapChartView : ( Int, Int ) -> Standings -> List StandingsEntry -> Html msg
+gapChartView : ( Int, Int ) -> Standings -> List Entry -> Html msg
 gapChartView ( minLap, maxLap ) standings entries =
     let
         carLines =

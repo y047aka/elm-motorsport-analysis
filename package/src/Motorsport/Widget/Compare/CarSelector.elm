@@ -13,7 +13,7 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its
@@ -45,7 +45,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
         )
 
 
-carSelectorChip : (String -> msg) -> Bool -> StandingsEntry -> Html msg
+carSelectorChip : (String -> msg) -> Bool -> Entry -> Html msg
 carSelectorChip onToggleCar isSelected item =
     let
         manufacturerColor =

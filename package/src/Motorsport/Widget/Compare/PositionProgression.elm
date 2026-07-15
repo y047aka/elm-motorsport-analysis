@@ -9,7 +9,7 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Clock as Clock
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)
@@ -40,7 +40,7 @@ lapRange clock standings class =
     Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
 
 
-classCarsOf : Standings -> Class -> List StandingsEntry
+classCarsOf : Standings -> Class -> List Entry
 classCarsOf standings class =
     Standings.toClassList standings
         |> List.Extra.find (\( class_, _ ) -> class_ == class)
@@ -52,7 +52,7 @@ classCarsOf standings class =
 keeping only cars with two or more points. Centralizes the point-extraction
 condition here so the chart itself and `lapRange` share the same X axis.
 -}
-classPositionPoints : Clock.Model -> Standings -> Class -> List ( StandingsEntry, List PositionPoint )
+classPositionPoints : Clock.Model -> Standings -> Class -> List ( Entry, List PositionPoint )
 classPositionPoints clock standings class =
     let
         lapThreshold =

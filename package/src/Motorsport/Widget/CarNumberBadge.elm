@@ -11,12 +11,12 @@ import Css exposing (property)
 import Html.Styled exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (alt, class, css, src)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Standings exposing (StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 {-| Small stacked badge: logo on top, car number below.
 -}
-view : StandingsEntry -> Html msg
+view : Entry -> Html msg
 view item =
     badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
         [ manufacturerLogo
@@ -34,7 +34,7 @@ view item =
 
 {-| Horizontal badge: logo on the left, car number on the right.
 -}
-viewRow : StandingsEntry -> Html msg
+viewRow : Entry -> Html msg
 viewRow item =
     badge "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
         [ manufacturerLogo
@@ -48,7 +48,7 @@ viewRow item =
         item
 
 
-badge : String -> List (Html msg) -> StandingsEntry -> Html msg
+badge : String -> List (Html msg) -> Entry -> Html msg
 badge containerClass children item =
     div
         [ class containerClass

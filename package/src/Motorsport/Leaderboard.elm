@@ -70,7 +70,7 @@ import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 
 
@@ -750,7 +750,7 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
 -- VIEW
 
 
-view : Config StandingsEntry msg -> Model -> Standings -> Html msg
+view : Config Entry msg -> Model -> Standings -> Html msg
 view config state standings =
     DataView.view config state (Standings.toList standings)
 

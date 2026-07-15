@@ -15,7 +15,7 @@ import Motorsport.Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (Standings, Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
@@ -24,7 +24,7 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
-view : { season : Int, analysis : Analysis } -> Standings -> List StandingsEntry -> StandingsEntry -> Html msg
+view : { season : Int, analysis : Analysis } -> Standings -> List Entry -> Entry -> Html msg
 view { season, analysis } standings allCars item =
     div
         [ css
@@ -60,7 +60,7 @@ view { season, analysis } standings allCars item =
         ]
 
 
-cardHeader : StandingsEntry -> Html msg
+cardHeader : Entry -> Html msg
 cardHeader item =
     div
         [ css
@@ -119,7 +119,7 @@ statusBadge status =
             text ""
 
 
-positionLabel : Int -> StandingsEntry -> Html msg
+positionLabel : Int -> Entry -> Html msg
 positionLabel season item =
     div
         [ css
@@ -140,7 +140,7 @@ positionLabel season item =
         [ text ("P" ++ String.fromInt item.position) ]
 
 
-gapsRow : StandingsEntry -> Html msg
+gapsRow : Entry -> Html msg
 gapsRow item =
     div
         [ css
