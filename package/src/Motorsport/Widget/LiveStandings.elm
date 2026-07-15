@@ -88,6 +88,10 @@ carRow popoverTarget onSelect item =
         [ button
             [ onClick (onSelect item)
             , attribute "popovertarget" popoverTarget
+
+            -- Explicit "show": the default "toggle" would close the shared
+            -- popover when a second row is clicked while it is already open.
+            , attribute "popovertargetaction" "show"
             , class "list-row w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left"
             , css
                 [ property "background" "none"

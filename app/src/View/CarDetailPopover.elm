@@ -71,18 +71,22 @@ view config standings detailCarNumbers =
                 [ Css.property "background-color" "var(--glass-backdrop)" ]
             ]
         ]
-        (case detailCarNumbers of
+        [ button
+            [ attribute "popovertarget" popoverId
+            , attribute "popovertargetaction" "hide"
+            , Attributes.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            ]
+            [ text "✕" ]
+        , case detailCarNumbers of
             [] ->
-                []
+                -- Deselecting the last car must not leave an empty modal:
+                -- keep the close button above and explain how to recover.
+                Html.div
+                    [ Attributes.class "py-8 text-center text-sm opacity-70" ]
+                    [ text "No cars selected. Pick a car from the standings to compare." ]
 
             _ ->
-                [ button
-                    [ attribute "popovertarget" popoverId
-                    , attribute "popovertargetaction" "hide"
-                    , Attributes.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
-                    ]
-                    [ text "✕" ]
-                , CompareWidget.viewComparison
+                CompareWidget.viewComparison
                     { season = config.season
                     , analysis = config.analysis
                     , clock = config.clock
@@ -92,5 +96,4 @@ view config standings detailCarNumbers =
                     }
                     standings
                     detailCarNumbers
-                ]
-        )
+        ]
