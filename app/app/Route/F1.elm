@@ -205,12 +205,12 @@ config analysis lapHistory =
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            , reference = analysis
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            , reference = analysis
             , coefficient = 1.2
             }
         ]

@@ -1,11 +1,12 @@
 module Motorsport.Chart.Tracker exposing (view)
 
 import Css
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Direction exposing (Direction(..))
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Scale exposing (ContinuousScale)
@@ -92,8 +93,18 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view : { season : Int, eventName : String } -> Analysis -> Standings -> Svg msg
-view { season, eventName } analysis standings =
+view :
+    { season : Int, eventName : String }
+    ->
+        { a
+            | sector_1_fastest : Duration
+            , sector_2_fastest : Duration
+            , sector_3_fastest : Duration
+            , miniSectorFastest : LeMans2025MiniSectorFastest
+        }
+    -> Standings
+    -> Svg msg
+view { season, eventName } reference standings =
     let
         layout =
             if season == 2025 && eventName == "24 Hours of Le Mans" then
@@ -106,7 +117,7 @@ view { season, eventName } analysis standings =
                 Circuit.clockwise
 
         config =
-            Config.buildConfig layout analysis
+            Config.buildConfig layout reference
     in
     viewWithConfig layout.direction config standings
 

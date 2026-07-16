@@ -2,7 +2,7 @@ module Motorsport.Chart.Histogram exposing (view)
 
 import Css exposing (px)
 import Html.Styled exposing (Html)
-import Motorsport.Analysis exposing (Analysis)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
@@ -39,11 +39,11 @@ yContinuousScale ( min, max ) =
 
 {-| Small histogram for a list of `Lap`s.
 
-Takes an `Analysis` context, a coefficient to clamp the x-axis upper bound
-relative to the fastest lap time, and the laps to render.
+Takes the fastest/slowest reference times, a coefficient to clamp the x-axis
+upper bound relative to the fastest lap time, and the laps to render.
 
 -}
-view : Analysis -> Float -> List Lap -> Html msg
+view : { a | fastestLapTime : Duration, slowestLapTime : Duration } -> Float -> List Lap -> Html msg
 view { fastestLapTime, slowestLapTime } coefficient laps =
     let
         xScale =

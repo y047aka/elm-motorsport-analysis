@@ -5,7 +5,6 @@ import Css exposing (Style, fill, hex, listStyle, none, property, zero)
 import Css.Global exposing (descendants, each, typeSelector)
 import Html.Styled exposing (Html, li, p, text, ul)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Fragments exposing (dot, path)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.RaceControl as RaceControl
@@ -75,11 +74,11 @@ axisStyles =
     ]
 
 
-view : Analysis -> RaceControl.Model -> Html msg
-view analysis { lapTotal, cars } =
+view : { a | fastestLapTime : Duration } -> RaceControl.Model -> Html msg
+view reference { lapTotal, cars } =
     let
         fastestLapTime =
-            analysis.fastestLapTime
+            reference.fastestLapTime
 
         xScale =
             xContinuousScale lapTotal
