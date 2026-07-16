@@ -15,7 +15,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Reference exposing (Reference)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -166,7 +166,7 @@ view app { viewModel_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config viewModel_F1.reference viewModel_F1.lapHistory) leaderboardState viewModel_F1.standings
+                    Leaderboard.view (config viewModel_F1.bestTimes viewModel_F1.lapHistory) leaderboardState viewModel_F1.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -174,8 +174,8 @@ view app { viewModel_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Reference -> LapHistory -> Leaderboard.Config Entry Msg
-config reference lapHistory =
+config : BestTimes -> LapHistory -> Leaderboard.Config Entry Msg
+config bestTimes lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -200,12 +200,12 @@ config reference lapHistory =
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = reference
+            , bestTimes = bestTimes
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = reference
+            , bestTimes = bestTimes
             , coefficient = 1.2
             }
         ]

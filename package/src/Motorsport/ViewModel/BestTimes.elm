@@ -1,11 +1,11 @@
-module Motorsport.ViewModel.Reference exposing (Reference, Scope(..), compute)
+module Motorsport.ViewModel.BestTimes exposing (BestTimes, Scope(..), compute)
 
-{-| レース全体の最速値（比較基準）。
+{-| 集計スコープ内の最速値（比較基準）。
 
 widget が個々のタイムを性能判定・スケーリングする際の基準となる集計値。
 ドメインモデル（RunningOrder）を走査して構築する。
 
-@docs Reference, Scope, compute
+@docs BestTimes, Scope, compute
 
 -}
 
@@ -16,7 +16,7 @@ import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, calcula
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 
 
-type alias Reference =
+type alias BestTimes =
     { fastestLapTime : Duration
     , slowestLapTime : Duration
     , fastestSector_1 : Duration
@@ -37,7 +37,7 @@ type Scope
     | UpToElapsed
 
 
-compute : Scope -> { a | clock : Clock.Model, cars : RunningOrder } -> Reference
+compute : Scope -> { a | clock : Clock.Model, cars : RunningOrder } -> BestTimes
 compute scope { clock, cars } =
     let
         lapsByCar =

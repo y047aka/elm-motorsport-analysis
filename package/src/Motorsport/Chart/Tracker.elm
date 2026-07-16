@@ -104,7 +104,7 @@ view :
         }
     -> Standings
     -> Svg msg
-view { season, eventName } reference standings =
+view { season, eventName } bestTimes standings =
     let
         layout =
             if season == 2025 && eventName == "24 Hours of Le Mans" then
@@ -117,7 +117,7 @@ view { season, eventName } reference standings =
                 Circuit.clockwise
 
         config =
-            Config.buildConfig layout reference
+            Config.buildConfig layout bestTimes
     in
     viewWithConfig layout.direction config standings
 

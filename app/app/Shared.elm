@@ -21,7 +21,7 @@ import Motorsport.Car as Car exposing (Car)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
-import Motorsport.ViewModel.Reference exposing (Scope(..))
+import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)

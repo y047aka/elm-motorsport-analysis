@@ -95,5 +95,5 @@ view :
     -> View (PagesMsg Msg)
 view app { viewModel_F1, raceControl_F1 } _ =
     { title = "LapTime Chart"
-    , body = [ LapTimeChart.view viewModel_F1.reference raceControl_F1 ]
+    , body = [ LapTimeChart.view viewModel_F1.bestTimes raceControl_F1 ]
     }

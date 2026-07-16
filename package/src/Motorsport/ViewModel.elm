@@ -12,14 +12,14 @@ module Motorsport.ViewModel exposing (ViewModel, compute)
 import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Reference as Reference exposing (Reference, Scope)
+import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 
 
 type alias ViewModel =
     { standings : Standings
     , lapHistory : LapHistory
-    , reference : Reference
+    , bestTimes : BestTimes
     }
 
 
@@ -29,16 +29,16 @@ compute season scope raceControl =
         elapsed =
             Clock.getElapsed raceControl.clock
 
-        reference =
-            Reference.compute scope raceControl
+        bestTimes =
+            BestTimes.compute scope raceControl
     in
     { standings =
         Standings.compute season
-            reference
+            bestTimes
             { elapsed = elapsed
             , lapCount = raceControl.lapCount
             , cars = raceControl.cars
             }
     , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.cars
-    , reference = reference
+    , bestTimes = bestTimes
     }

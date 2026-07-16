@@ -299,7 +299,7 @@ trackerView eventSummary ({ standings } as viewModel) m =
                     ]
                     [ TrackerChart.view
                         { season = eventSummary.season, eventName = eventSummary.name }
-                        viewModel.reference
+                        viewModel.bestTimes
                         standings
                     ]
                 ]

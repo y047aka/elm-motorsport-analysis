@@ -68,7 +68,7 @@ nix run .#cli-test           # Run Rust tests
 
 **`/package/src/Motorsport/`** - Domain models
 - `Car.elm`, `Driver.elm`, `Lap.elm`, `Gap.elm`
-- `ViewModel.elm`, `ViewModel/` - Computed models for views (Standings, LapHistory, Reference)
+- `ViewModel.elm`, `ViewModel/` - Computed models for views (Standings, LapHistory, BestTimes)
 - `Chart/` - Chart rendering (GapChart, BoxPlot)
 
 ### Data Flow

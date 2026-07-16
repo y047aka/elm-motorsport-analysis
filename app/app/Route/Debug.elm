@@ -17,7 +17,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
-import Motorsport.ViewModel.Reference exposing (Reference)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -159,11 +159,11 @@ view app { viewModel, raceControl } { leaderboardState } =
                     , text (Clock.getElapsed clock |> Duration.toString)
                     ]
                 , div []
-                    [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.reference.fastestLapTime) ]
-                    , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.reference.slowestLapTime) ]
-                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.reference.fastestSector_1) ]
-                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.reference.fastestSector_2) ]
-                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.reference.fastestSector_3) ]
+                    [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
+                    , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_1) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_2) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_3) ]
                     ]
                 ]
             , let
@@ -174,13 +174,13 @@ view app { viewModel, raceControl } { leaderboardState } =
                         |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
                         |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
               in
-              DataView.view (config viewModel.reference standings) leaderboardState (Standings.toList standings)
+              DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
             ]
         }
 
 
-config : Reference -> Standings -> Leaderboard.Config Entry Msg
-config reference standings =
+config : BestTimes -> Standings -> Leaderboard.Config Entry Msg
+config bestTimes standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -196,7 +196,7 @@ config reference standings =
                         (\{ sector_1, s1_best } ->
                             { time = sector_1
                             , personalBest = s1_best
-                            , fastest = reference.fastestSector_1
+                            , fastest = bestTimes.fastestSector_1
                             , progress = 100
                             }
                         )
@@ -214,7 +214,7 @@ config reference standings =
                         (\{ sector_2, s2_best } ->
                             { time = sector_2
                             , personalBest = s2_best
-                            , fastest = reference.fastestSector_2
+                            , fastest = bestTimes.fastestSector_2
                             , progress = 100
                             }
                         )
@@ -232,7 +232,7 @@ config reference standings =
                         (\{ sector_3, s3_best } ->
                             { time = sector_3
                             , personalBest = s3_best
-                            , fastest = reference.fastestSector_3
+                            , fastest = bestTimes.fastestSector_3
                             , progress = 100
                             }
                         )

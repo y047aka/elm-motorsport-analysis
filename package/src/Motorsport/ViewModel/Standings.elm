@@ -134,7 +134,7 @@ type alias SectorProgress =
 
 
 {-| 現在ラップのセクターごとの「進捗 + 性能判定」。
-donut 表示などが Reference を追加供給されずに描けるよう、compute 時に判定済み。
+donut 表示などが BestTimes を追加供給されずに描けるよう、compute 時に判定済み。
 -}
 type alias CurrentSectorSlots =
     { sector_1 : { progress : Float, rated : RatedTime }
@@ -161,7 +161,7 @@ compute :
         }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
-compute { season } fastest config =
+compute { season } bestTimes config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -206,12 +206,12 @@ compute { season } fastest config =
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
                         , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
-                        , currentLapSectorSlots = currentLap |> Maybe.map (extractCurrentSectorSlots fastest timing.sector)
+                        , currentLapSectorSlots = currentLap |> Maybe.map (extractCurrentSectorSlots bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
                         , currentLapRated =
                             currentLap
-                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -222,12 +222,12 @@ compute { season } fastest config =
                                 |> Maybe.withDefault 0
                         , lastLap =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLap =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
-                        , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance fastest)
-                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance fastest)
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                        , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
+                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance bestTimes)
                         , currentDriver = car.currentDriver
                         }
                     )
@@ -251,7 +251,7 @@ compute { season } fastest config =
 fromLaps : { season : Int } -> Car.Metadata -> List Lap -> Standings
 fromLaps { season } baseMetadata laps =
     let
-        fastest =
+        bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
             , fastestSector_1 = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
             , fastestSector_2 = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
@@ -272,7 +272,7 @@ fromLaps { season } baseMetadata laps =
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
                         , currentLapSectors = Just (extractSectorTimes lap)
-                        , currentLapSectorSlots = Just (extractCurrentSectorSlots fastest Nothing lap)
+                        , currentLapSectorSlots = Just (extractCurrentSectorSlots bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
                         , currentLapRated = Nothing
@@ -282,11 +282,11 @@ fromLaps { season } baseMetadata laps =
                         , intervalToAhead = Gap.None
                         , currentLapProgress = 0
                         , lastLap =
-                            Just (rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
+                            Just (rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLap =
-                            Just (rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
-                        , lastLapSectors = Just (extractSectorPerformance fastest lap)
-                        , lastLapMiniSectors = extractMiniSectorPerformance fastest lap
+                            Just (rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                        , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
+                        , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap
                         , currentDriver = Just lap.driver
                         }
                     )
@@ -358,7 +358,7 @@ extractCurrentSectorSlots :
     -> Maybe SectorProgress
     -> Lap
     -> CurrentSectorSlots
-extractCurrentSectorSlots fastest sectorProgress lap =
+extractCurrentSectorSlots bestTimes sectorProgress lap =
     let
         ( s1_progress, s2_progress, s3_progress ) =
             case sectorProgress of
@@ -376,9 +376,9 @@ extractCurrentSectorSlots fastest sectorProgress lap =
                 Nothing ->
                     ( 100, 100, 100 )
     in
-    { sector_1 = { progress = s1_progress, rated = rateTime fastest.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
-    , sector_2 = { progress = s2_progress, rated = rateTime fastest.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
-    , sector_3 = { progress = s3_progress, rated = rateTime fastest.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
+    { sector_1 = { progress = s1_progress, rated = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
+    , sector_2 = { progress = s2_progress, rated = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
+    , sector_3 = { progress = s3_progress, rated = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
     }
 
 
@@ -386,10 +386,10 @@ extractSectorPerformance :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Lap
     -> SectorPerformance
-extractSectorPerformance fastest lap =
-    { sector_1 = rateTime fastest.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
-    , sector_2 = rateTime fastest.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
-    , sector_3 = rateTime fastest.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
+extractSectorPerformance bestTimes lap =
+    { sector_1 = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
+    , sector_2 = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
+    , sector_3 = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
@@ -397,7 +397,7 @@ extractMiniSectorPerformance :
     { a | fastestMiniSectors : LeMans2025MiniSectorFastest }
     -> Lap
     -> Maybe MiniSectorPerformance
-extractMiniSectorPerformance fastest lap =
+extractMiniSectorPerformance bestTimes lap =
     lap.miniSectors
         |> Maybe.map
             (\ms ->
@@ -408,21 +408,21 @@ extractMiniSectorPerformance fastest lap =
                             msd.time
                             msd.best
                 in
-                { scl2 = rateMiniSector ms.scl2 fastest.fastestMiniSectors.scl2
-                , z4 = rateMiniSector ms.z4 fastest.fastestMiniSectors.z4
-                , ip1 = rateMiniSector ms.ip1 fastest.fastestMiniSectors.ip1
-                , z12 = rateMiniSector ms.z12 fastest.fastestMiniSectors.z12
-                , sclc = rateMiniSector ms.sclc fastest.fastestMiniSectors.sclc
-                , a7_1 = rateMiniSector ms.a7_1 fastest.fastestMiniSectors.a7_1
-                , ip2 = rateMiniSector ms.ip2 fastest.fastestMiniSectors.ip2
-                , a8_1 = rateMiniSector ms.a8_1 fastest.fastestMiniSectors.a8_1
-                , sclb = rateMiniSector ms.sclb fastest.fastestMiniSectors.sclb
-                , porin = rateMiniSector ms.porin fastest.fastestMiniSectors.porin
-                , porout = rateMiniSector ms.porout fastest.fastestMiniSectors.porout
-                , pitref = rateMiniSector ms.pitref fastest.fastestMiniSectors.pitref
-                , scl1 = rateMiniSector ms.scl1 fastest.fastestMiniSectors.scl1
-                , fordout = rateMiniSector ms.fordout fastest.fastestMiniSectors.fordout
-                , fl = rateMiniSector ms.fl fastest.fastestMiniSectors.fl
+                { scl2 = rateMiniSector ms.scl2 bestTimes.fastestMiniSectors.scl2
+                , z4 = rateMiniSector ms.z4 bestTimes.fastestMiniSectors.z4
+                , ip1 = rateMiniSector ms.ip1 bestTimes.fastestMiniSectors.ip1
+                , z12 = rateMiniSector ms.z12 bestTimes.fastestMiniSectors.z12
+                , sclc = rateMiniSector ms.sclc bestTimes.fastestMiniSectors.sclc
+                , a7_1 = rateMiniSector ms.a7_1 bestTimes.fastestMiniSectors.a7_1
+                , ip2 = rateMiniSector ms.ip2 bestTimes.fastestMiniSectors.ip2
+                , a8_1 = rateMiniSector ms.a8_1 bestTimes.fastestMiniSectors.a8_1
+                , sclb = rateMiniSector ms.sclb bestTimes.fastestMiniSectors.sclb
+                , porin = rateMiniSector ms.porin bestTimes.fastestMiniSectors.porin
+                , porout = rateMiniSector ms.porout bestTimes.fastestMiniSectors.porout
+                , pitref = rateMiniSector ms.pitref bestTimes.fastestMiniSectors.pitref
+                , scl1 = rateMiniSector ms.scl1 bestTimes.fastestMiniSectors.scl1
+                , fordout = rateMiniSector ms.fordout bestTimes.fastestMiniSectors.fordout
+                , fl = rateMiniSector ms.fl bestTimes.fastestMiniSectors.fl
                 }
             )
 

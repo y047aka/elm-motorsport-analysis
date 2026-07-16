@@ -17,7 +17,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Reference exposing (Reference)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -180,13 +180,13 @@ view app ({ eventSummary, raceControl, viewModel } as shared) { mode, leaderboar
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season viewModel.reference viewModel.lapHistory) leaderboardState viewModel.standings
+                    Leaderboard.view (config eventSummary.season viewModel.bestTimes viewModel.lapHistory) leaderboardState viewModel.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } viewModel.reference viewModel.standings
+                    TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } viewModel.bestTimes viewModel.standings
             ]
         }
 
@@ -257,8 +257,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Reference -> LapHistory -> Leaderboard.Config Entry Msg
-config season reference lapHistory =
+config : Int -> BestTimes -> LapHistory -> Leaderboard.Config Entry Msg
+config season bestTimes lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -288,12 +288,12 @@ config season reference lapHistory =
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = reference
+            , bestTimes = bestTimes
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = reference
+            , bestTimes = bestTimes
             , coefficient = 1.2
             }
         ]

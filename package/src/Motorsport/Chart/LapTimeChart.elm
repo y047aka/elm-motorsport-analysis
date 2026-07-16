@@ -74,10 +74,10 @@ axisStyles =
 
 
 view : { a | fastestLapTime : Duration } -> RaceControl.Model -> Html msg
-view reference { lapTotal, cars } =
+view bestTimes { lapTotal, cars } =
     let
         fastestLapTime =
-            reference.fastestLapTime
+            bestTimes.fastestLapTime
 
         xScale =
             xContinuousScale lapTotal

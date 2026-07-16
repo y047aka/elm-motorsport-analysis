@@ -57,7 +57,7 @@ buildConfig :
             , fastestMiniSectors : LeMans2025MiniSectorFastest
         }
     -> TrackConfig
-buildConfig layout reference =
+buildConfig layout bestTimes =
     let
         isLeMans2025 =
             Circuit.hasMiniSectors layout
@@ -65,17 +65,17 @@ buildConfig layout reference =
         totalTime =
             if isLeMans2025 then
                 LeMans.miniSectorOrder
-                    |> List.map (\mini -> LeMans.miniSectorAccessor mini reference.fastestMiniSectors)
+                    |> List.map (\mini -> LeMans.miniSectorAccessor mini bestTimes.fastestMiniSectors)
                     |> List.sum
                     |> toFloat
 
             else
-                toFloat (reference.fastestSector_1 + reference.fastestSector_2 + reference.fastestSector_3)
+                toFloat (bestTimes.fastestSector_1 + bestTimes.fastestSector_2 + bestTimes.fastestSector_3)
 
         miniRatio miniSector =
             let
                 value =
-                    LeMans.miniSectorAccessor miniSector reference.fastestMiniSectors
+                    LeMans.miniSectorAccessor miniSector bestTimes.fastestMiniSectors
                         |> toFloat
 
                 defaultRatio =
@@ -89,7 +89,7 @@ buildConfig layout reference =
                 value / totalTime
 
         shares =
-            computeSectorShares layout reference totalTime miniRatio
+            computeSectorShares layout bestTimes totalTime miniRatio
     in
     [ { sector = S1
       , start = 0
@@ -115,7 +115,7 @@ computeSectorShares :
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> { s1 : Float, s2 : Float, s3 : Float }
-computeSectorShares layout reference totalTime miniRatio =
+computeSectorShares layout bestTimes totalTime miniRatio =
     let
         sectorShare fastestTime miniSectors =
             case miniSectors of
@@ -135,9 +135,9 @@ computeSectorShares layout reference totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    { s1 = sectorShare reference.fastestSector_1 layout.s1
-    , s2 = sectorShare reference.fastestSector_2 layout.s2
-    , s3 = sectorShare reference.fastestSector_3 layout.s3
+    { s1 = sectorShare bestTimes.fastestSector_1 layout.s1
+    , s2 = sectorShare bestTimes.fastestSector_2 layout.s2
+    , s3 = sectorShare bestTimes.fastestSector_3 layout.s3
     }
 
 
