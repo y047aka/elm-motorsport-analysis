@@ -69,8 +69,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Sector exposing (Sector(..))
-import Motorsport.ViewModel.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorSlots, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 
 
@@ -373,71 +372,57 @@ currentLapColumn_Wec :
         ->
             { a
                 | status : Status
-                , currentLapElapsed : Duration
-                , currentLapBest : Maybe Duration
-                , currentLapSectors : Maybe SectorTimes
-                , sector : Maybe SectorProgress
+                , currentLapRated : Maybe RatedTime
+                , currentLapSectorSlots : Maybe CurrentSectorSlots
             }
     , sorter : data -> data -> Order
-    , analysis : Analysis
     }
     -> Column data msg
-currentLapColumn_Wec { getter, sorter, analysis } =
+currentLapColumn_Wec { getter, sorter } =
     { name = "Current Lap"
-    , view = getter >> Lazy.lazy2 viewCurrentLapColumn_Wec analysis
+    , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
     , sorter = sorter
     , filter = \_ _ -> True
     }
 
 
 viewCurrentLapColumn_Wec :
-    Analysis
-    ->
-        { a
-            | status : Status
-            , currentLapElapsed : Duration
-            , currentLapBest : Maybe Duration
-            , currentLapSectors : Maybe SectorTimes
-            , sector : Maybe SectorProgress
-        }
+    { a
+        | status : Status
+        , currentLapRated : Maybe RatedTime
+        , currentLapSectorSlots : Maybe CurrentSectorSlots
+    }
     -> Html msg
-viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, currentLapBest, currentLapSectors, sector } =
+viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorSlots } =
     let
-        lapTime { time, personalBest } =
+        lapTime { time, performance } =
             div
                 [ css
                     [ textAlign center
-                    , let
-                        status_ =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
-                      in
-                      if Performance.isStandard status_ then
+                    , if Performance.isStandard performance then
                         batch []
 
                       else
-                        Performance.toColorVariable status_
+                        Performance.toColorVariable performance
                             |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell sector_ =
+        sectorCell { progress, rated } =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
                     , batch <|
-                        if sector_.progress < 100 then
-                            [ width (pct sector_.progress)
+                        if progress < 100 then
+                            [ width (pct progress)
                             , backgroundColor (oklch 1 0 0)
                             ]
 
                         else
                             [ width (pct 100)
-                            , property "background-color"
-                                (performanceLevel sector_
-                                    |> Performance.toColorVariable
-                                )
+                            , property "background-color" (Performance.toColorVariable rated.performance)
                             ]
                     ]
                 ]
@@ -448,41 +433,24 @@ viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, currentLapBest, c
 
     else
         Maybe.map2
-            (\best { sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
+            (\rated slots ->
                 div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                    [ lapTime { time = currentLapElapsed, personalBest = best }
-                    , let
-                        ( s1_progress, s2_progress, s3_progress ) =
-                            case sector of
-                                Just sectorProgress ->
-                                    case sectorProgress.sector of
-                                        S1 ->
-                                            ( sectorProgress.progress, 0, 0 )
-
-                                        S2 ->
-                                            ( 100, sectorProgress.progress, 0 )
-
-                                        S3 ->
-                                            ( 100, 100, sectorProgress.progress )
-
-                                Nothing ->
-                                    ( 100, 100, 100 )
-                      in
-                      div
+                    [ lapTime rated
+                    , div
                         [ css
                             [ property "display" "grid"
                             , property "grid-template-columns" "1fr 1fr 1fr"
                             , property "column-gap" "4px"
                             ]
                         ]
-                        [ sectorCell { time = sector_1, personalBest = s1_best, fastest = analysis.sector_1_fastest, progress = s1_progress }
-                        , sectorCell { time = sector_2, personalBest = s2_best, fastest = analysis.sector_2_fastest, progress = s2_progress }
-                        , sectorCell { time = sector_3, personalBest = s3_best, fastest = analysis.sector_3_fastest, progress = s3_progress }
+                        [ sectorCell slots.sector_1
+                        , sectorCell slots.sector_2
+                        , sectorCell slots.sector_3
                         ]
                     ]
             )
-            currentLapBest
-            currentLapSectors
+            currentLapRated
+            currentLapSectorSlots
             |> Maybe.withDefault (text "-")
 
 

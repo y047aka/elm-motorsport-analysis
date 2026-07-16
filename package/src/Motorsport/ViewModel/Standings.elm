@@ -106,6 +106,9 @@ type alias Entry =
     , lapsCompleted : Int
     , currentLapTime : Maybe Duration
     , currentLapBest : Maybe Duration
+
+    -- currentLapSectors は生タイム（Debug ページ等のデータ表示用）。
+    -- 進捗・性能判定は currentLapSectorSlots を単一の情報源とする。
     , currentLapSectors : Maybe SectorTimes
     , currentLapSectorSlots : Maybe CurrentSectorSlots
     , currentLapMiniSectors : Maybe MiniSectors

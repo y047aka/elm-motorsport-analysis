@@ -279,7 +279,6 @@ config season analysis lapHistory =
         , currentLapColumn_Wec
             { getter = identity
             , sorter = compareBy (.currentLapTime >> Maybe.withDefault 0)
-            , analysis = analysis
             }
         , lastLapColumn_Wec
             { getter = identity
