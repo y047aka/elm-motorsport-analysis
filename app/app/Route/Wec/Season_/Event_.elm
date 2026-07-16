@@ -11,7 +11,6 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (Html, button, div, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
@@ -232,7 +231,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { eventSummary, analysis, raceControl, viewModel } m =
+view app { eventSummary, raceControl, viewModel } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -247,7 +246,7 @@ view app { eventSummary, analysis, raceControl, viewModel } m =
                 [ navigation eventSummary raceControl m.mode
                 , case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis viewModel m
+                        trackerView eventSummary viewModel m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -256,8 +255,8 @@ view app { eventSummary, analysis, raceControl, viewModel } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> ViewModel -> Model -> Html Msg
-trackerView eventSummary analysis ({ standings } as viewModel) m =
+trackerView : EventSummary -> ViewModel -> Model -> Html Msg
+trackerView eventSummary ({ standings } as viewModel) m =
     div
         [ css
             [ property "grid-row" "2"
@@ -300,7 +299,7 @@ trackerView eventSummary analysis ({ standings } as viewModel) m =
                     ]
                     [ TrackerChart.view
                         { season = eventSummary.season, eventName = eventSummary.name }
-                        analysis
+                        viewModel.reference
                         standings
                     ]
                 ]

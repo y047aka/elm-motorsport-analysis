@@ -9,7 +9,6 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
@@ -18,6 +17,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Reference exposing (Reference)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -173,20 +173,20 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl, viewModel } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, raceControl, viewModel } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Formula E"
         , body =
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis viewModel.lapHistory) leaderboardState viewModel.standings
+                    Leaderboard.view (config eventSummary.season viewModel.reference viewModel.lapHistory) leaderboardState viewModel.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view { season = 2025, eventName = "" } analysis viewModel.standings
+                    TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } viewModel.reference viewModel.standings
             ]
         }
 
@@ -257,8 +257,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Analysis -> LapHistory -> Leaderboard.Config Entry Msg
-config season analysis lapHistory =
+config : Int -> Reference -> LapHistory -> Leaderboard.Config Entry Msg
+config season reference lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -288,12 +288,12 @@ config season analysis lapHistory =
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = analysis
+            , reference = reference
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = analysis
+            , reference = reference
             , coefficient = 1.2
             }
         ]

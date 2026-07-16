@@ -7,7 +7,6 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -15,8 +14,8 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Reference exposing (Reference)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
@@ -136,7 +135,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
+view app { viewModel_F1, raceControl_F1 } { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Leaderboard"
         , body =
@@ -167,11 +166,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    let
-                        viewModel =
-                            ViewModel.compute { season = 0 } analysis_F1 raceControl_F1
-                    in
-                    Leaderboard.view (config analysis_F1 viewModel.lapHistory) leaderboardState viewModel.standings
+                    Leaderboard.view (config viewModel_F1.reference viewModel_F1.lapHistory) leaderboardState viewModel_F1.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -179,8 +174,8 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> LapHistory -> Leaderboard.Config Entry Msg
-config analysis lapHistory =
+config : Reference -> LapHistory -> Leaderboard.Config Entry Msg
+config reference lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -205,12 +200,12 @@ config analysis lapHistory =
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = analysis
+            , reference = reference
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , reference = analysis
+            , reference = reference
             , coefficient = 1.2
             }
         ]

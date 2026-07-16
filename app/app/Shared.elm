@@ -17,11 +17,11 @@ import FatalError exposing (FatalError)
 import Html exposing (Html)
 import Html.Styled
 import Http
-import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
+import Motorsport.ViewModel.Reference exposing (Scope(..))
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
@@ -53,8 +53,7 @@ type alias Model =
     { eventSummary : EventSummary
     , raceControl_F1 : RaceControl.Model
     , raceControl : RaceControl.Model
-    , analysis_F1 : Analysis
-    , analysis : Analysis
+    , viewModel_F1 : ViewModel
     , viewModel : ViewModel
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
@@ -79,15 +78,14 @@ init flags maybePagePath =
         raceControlInit =
             RaceControl.placeholder
 
-        analysisInit =
-            Analysis.finished raceControlInit
+        viewModelInit =
+            ViewModel.compute { season = 0 } WholeRace raceControlInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , raceControl_F1 = RaceControl.placeholder
+      , raceControl_F1 = raceControlInit
       , raceControl = raceControlInit
-      , analysis_F1 = Analysis.finished RaceControl.placeholder
-      , analysis = analysisInit
-      , viewModel = ViewModel.compute { season = 0 } analysisInit raceControlInit
+      , viewModel_F1 = viewModelInit
+      , viewModel = viewModelInit
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
@@ -132,7 +130,7 @@ update msg m =
             in
             ( { m
                 | raceControl_F1 = rcNew
-                , analysis_F1 = Analysis.finished rcNew
+                , viewModel_F1 = ViewModel.compute { season = 0 } WholeRace rcNew
               }
             , Effect.none
             )
@@ -214,17 +212,13 @@ update msg m =
                     RaceControl.fromCars (TimelineEvent.fromCars cars) cars
                         |> Maybe.withDefault RaceControl.placeholder
 
-                analysisNew =
-                    Analysis.finished rcNew
-
                 modelEventSummary =
                     m.eventSummary
             in
             ( { m
                 | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl = rcNew
-                , analysis = analysisNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } WholeRace rcNew
               }
             , Effect.none
             )
@@ -239,7 +233,7 @@ update msg m =
             in
             ( { m
                 | raceControl_F1 = rcNew
-                , analysis_F1 = Analysis.fromRaceControl rcNew
+                , viewModel_F1 = ViewModel.compute { season = 0 } UpToElapsed rcNew
               }
             , Effect.none
             )
@@ -248,14 +242,10 @@ update msg m =
             let
                 rcNew =
                     RaceControl.update raceControlMsg m.raceControl
-
-                analysisNew =
-                    Analysis.fromRaceControl rcNew
             in
             ( { m
                 | raceControl = rcNew
-                , analysis = analysisNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } UpToElapsed rcNew
               }
             , Effect.none
             )
@@ -281,14 +271,10 @@ finalizeWecIfReady m =
                 rcNew =
                     RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
                         |> Maybe.withDefault RaceControl.placeholder
-
-                analysisNew =
-                    Analysis.finished rcNew
             in
             ( { m
                 | raceControl = rcNew
-                , analysis = analysisNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } WholeRace rcNew
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
