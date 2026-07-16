@@ -340,13 +340,15 @@ renderCar direction car { angle, x, y } =
     in
     g []
         [ g [ Attributes.transform [ Translate x y ] ]
-            [ Lazy.lazy2 carMarker car.positionInClass car.classColor ]
+            -- Lazy は引数を参照等価（===）で比較する。Css.Color レコードは
+            -- compute のたびに再生成されるため、値比較が成立する String を渡す。
+            [ Lazy.lazy2 carMarker car.positionInClass car.classColor.value ]
         , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]
 
 
-carMarker : Int -> Css.Color -> Svg msg
-carMarker positionInClass classColor =
+carMarker : Int -> String -> Svg msg
+carMarker positionInClass classColorValue =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
@@ -365,7 +367,7 @@ carMarker positionInClass classColor =
         [ Attributes.cx (px 0)
         , Attributes.cy (px 0)
         , Attributes.r (px carSize)
-        , fill classColor.value
+        , fill classColorValue
         , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
         ]
         []
