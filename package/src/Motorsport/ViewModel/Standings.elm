@@ -134,7 +134,7 @@ type alias SectorProgress =
 
 
 {-| 現在ラップのセクターごとの「進捗 + 性能判定」。
-donut 表示などが Analysis を追加供給されずに描けるよう、compute 時に判定済み。
+donut 表示などが Reference を追加供給されずに描けるよう、compute 時に判定済み。
 -}
 type alias CurrentSectorSlots =
     { sector_1 : { progress : Float, rated : RatedTime }
