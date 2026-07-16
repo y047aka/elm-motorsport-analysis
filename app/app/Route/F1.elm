@@ -15,8 +15,9 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
+import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings exposing (Entry)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -167,17 +168,10 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
             , case mode of
                 Leaderboard ->
                     let
-                        standings =
-                            Standings.compute { season = 0 } analysis_F1
-                                { elapsed = Clock.getElapsed raceControl_F1.clock
-                                , lapCount = raceControl_F1.lapCount
-                                , cars = raceControl_F1.cars
-                                }
-
-                        history =
-                            LapHistory.compute { elapsed = Clock.getElapsed raceControl_F1.clock } raceControl_F1.cars
+                        viewModel =
+                            ViewModel.compute { season = 0 } analysis_F1 raceControl_F1
                     in
-                    Leaderboard.view (config analysis_F1 history) leaderboardState standings
+                    Leaderboard.view (config analysis_F1 viewModel.lapHistory) leaderboardState viewModel.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -186,7 +180,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
 
 
 config : Analysis -> LapHistory -> Leaderboard.Config Entry Msg
-config analysis history =
+config analysis lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -209,12 +203,12 @@ config analysis history =
             }
         , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = \item -> LapHistory.get item.metadata.carNumber history
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = \item -> LapHistory.get item.metadata.carNumber history
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

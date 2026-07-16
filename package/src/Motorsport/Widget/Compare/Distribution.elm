@@ -46,19 +46,19 @@ laps within the lap range, keeps only racing laps at or below the IQR upper fenc
 excluding pit and out laps.
 -}
 seriesOf : LapHistory -> ( Int, Int ) -> Entry -> LapTimeDistribution.Series
-seriesOf history range entry =
+seriesOf lapHistory range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
-    , times = racingTimes history range entry
+    , times = racingTimes lapHistory range entry
     , lastLap = entry.lastLap |> Maybe.map .time
     }
 
 
 racingTimes : LapHistory -> ( Int, Int ) -> Entry -> List Int
-racingTimes history ( minLap, maxLap ) entry =
+racingTimes lapHistory ( minLap, maxLap ) entry =
     let
         times =
-            LapHistory.get entry.metadata.carNumber history
+            LapHistory.get entry.metadata.carNumber lapHistory
                 |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
                 |> List.map .time
     in

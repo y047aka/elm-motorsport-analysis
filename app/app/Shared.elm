@@ -19,11 +19,9 @@ import Html.Styled
 import Http
 import Motorsport.Analysis as Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Car)
-import Motorsport.Clock as Clock
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
-import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
+import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Pages.Flags
 import Pages.PageUrl exposing (PageUrl)
 import Route exposing (Route)
@@ -57,8 +55,7 @@ type alias Model =
     , raceControl : RaceControl.Model
     , analysis_F1 : Analysis
     , analysis : Analysis
-    , standings : Standings
-    , lapHistory : LapHistory
+    , viewModel : ViewModel
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
@@ -84,17 +81,13 @@ init flags maybePagePath =
 
         analysisInit =
             Analysis.finished raceControlInit
-
-        viewModels =
-            computeViewModels { season = 0 } analysisInit raceControlInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl_F1 = RaceControl.placeholder
       , raceControl = raceControlInit
       , analysis_F1 = Analysis.finished RaceControl.placeholder
       , analysis = analysisInit
-      , standings = viewModels.standings
-      , lapHistory = viewModels.lapHistory
+      , viewModel = ViewModel.compute { season = 0 } analysisInit raceControlInit
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
@@ -224,9 +217,6 @@ update msg m =
                 analysisNew =
                     Analysis.finished rcNew
 
-                viewModels =
-                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
-
                 modelEventSummary =
                     m.eventSummary
             in
@@ -234,8 +224,7 @@ update msg m =
                 | eventSummary = { modelEventSummary | name = decoded.name }
                 , raceControl = rcNew
                 , analysis = analysisNew
-                , standings = viewModels.standings
-                , lapHistory = viewModels.lapHistory
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
               }
             , Effect.none
             )
@@ -262,15 +251,11 @@ update msg m =
 
                 analysisNew =
                     Analysis.fromRaceControl rcNew
-
-                viewModels =
-                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
                 , analysis = analysisNew
-                , standings = viewModels.standings
-                , lapHistory = viewModels.lapHistory
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
               }
             , Effect.none
             )
@@ -299,15 +284,11 @@ finalizeWecIfReady m =
 
                 analysisNew =
                     Analysis.finished rcNew
-
-                viewModels =
-                    computeViewModels { season = m.eventSummary.season } analysisNew rcNew
             in
             ( { m
                 | raceControl = rcNew
                 , analysis = analysisNew
-                , standings = viewModels.standings
-                , lapHistory = viewModels.lapHistory
+                , viewModel = ViewModel.compute { season = m.eventSummary.season } analysisNew rcNew
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
@@ -316,26 +297,6 @@ finalizeWecIfReady m =
 
         _ ->
             ( m, Effect.none )
-
-
-{-| ドメインモデル（RaceControl）から view へ渡す計算済みモデルを構築する。
-raceControl / analysis を更新するすべての箇所で呼ぶ。
--}
-computeViewModels : { season : Int } -> Analysis -> RaceControl.Model -> { standings : Standings, lapHistory : LapHistory }
-computeViewModels season analysis raceControl =
-    let
-        elapsed =
-            Clock.getElapsed raceControl.clock
-    in
-    { standings =
-        Standings.compute season
-            analysis
-            { elapsed = elapsed
-            , lapCount = raceControl.lapCount
-            , cars = raceControl.cars
-            }
-    , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.cars
-    }
 
 
 

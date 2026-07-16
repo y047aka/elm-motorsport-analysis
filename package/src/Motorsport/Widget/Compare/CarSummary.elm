@@ -40,7 +40,7 @@ placeholderCard =
 
 
 carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
-carSummary lapRange distScale history item =
+carSummary lapRange distScale lapHistory item =
     div
         [ css
             [ property "display" "grid"
@@ -51,7 +51,7 @@ carSummary lapRange distScale history item =
         ]
         [ header item
         , summaryStats item
-        , lapTimePanel lapRange distScale history item
+        , lapTimePanel lapRange distScale lapHistory item
         ]
 
 
@@ -62,7 +62,7 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 stability, comparable across cars).
 -}
 lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
-lapTimePanel maybeRange maybeScale history item =
+lapTimePanel maybeRange maybeScale lapHistory item =
     div
         [ css
             [ glassPanel
@@ -84,7 +84,7 @@ lapTimePanel maybeRange maybeScale history item =
                 ( Just range, Just { domain, maxDensity } ) ->
                     LapTimeDistribution.view
                         { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                        [ Distribution.seriesOf history range item ]
+                        [ Distribution.seriesOf lapHistory range item ]
 
                 _ ->
                     text ""

@@ -173,20 +173,20 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl, standings, lapHistory } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, analysis, raceControl, viewModel } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Formula E"
         , body =
             [ header shared
             , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis lapHistory) leaderboardState standings
+                    Leaderboard.view (config eventSummary.season analysis viewModel.lapHistory) leaderboardState viewModel.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view { season = 2025, eventName = "" } analysis standings
+                    TrackerChart.view { season = 2025, eventName = "" } analysis viewModel.standings
             ]
         }
 
@@ -258,7 +258,7 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
 
 
 config : Int -> Analysis -> LapHistory -> Leaderboard.Config Entry Msg
-config season analysis history =
+config season analysis lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -287,12 +287,12 @@ config season analysis history =
             }
         , bestTimeColumn { getter = .bestLap }
         , performanceColumn
-            { getter = \item -> LapHistory.get item.metadata.carNumber history
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             }
         , histogramColumn
-            { getter = \item -> LapHistory.get item.metadata.carNumber history
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
             , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
             , analysis = analysis
             , coefficient = 1.2

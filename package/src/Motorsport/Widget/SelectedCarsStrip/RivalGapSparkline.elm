@@ -51,7 +51,7 @@ ahead and behind are found internally as in-class neighbors in this list.
 
 -}
 view : LapHistory -> List Entry -> Entry -> Html msg
-view history allCars item =
+view lapHistory allCars item =
     let
         neighbors =
             findNeighbors allCars item
@@ -60,13 +60,13 @@ view history allCars item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (GapChart.carLine history (Recent currentLap) Related)
+            neighbors.ahead |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
 
         behindLines =
-            neighbors.behind |> List.map (GapChart.carLine history (Recent currentLap) Related)
+            neighbors.behind |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
 
         focusedLine =
-            GapChart.carLine history (Recent currentLap) Focused item
+            GapChart.carLine lapHistory (Recent currentLap) Focused item
 
         -- Display the nearest rival on each side plus the focused car
         -- (ahead → focused → behind); missing neighbors are dropped.

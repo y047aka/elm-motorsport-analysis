@@ -8,16 +8,17 @@ import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisP
 import Motorsport.Class exposing (Class)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel exposing (ViewModel)
+import Motorsport.ViewModel.LapHistory as LapHistory
 import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)
 
 
-view : { width : Float, height : Float } -> { standings : Standings, history : LapHistory } -> { class : Class, highlighted : List String } -> Html msg
-view size data target =
-    case buildClassProgressionData data target of
+view : { width : Float, height : Float } -> ViewModel -> { class : Class, highlighted : List String } -> Html msg
+view size viewModel target =
+    case buildClassProgressionData viewModel target of
         Ok series ->
             positionProgressionChart size series
 
@@ -30,11 +31,11 @@ draws. Shared so the sparkline can be drawn over the same range (X axis). When t
 is nothing to display, returns `Nothing`. Computed with the same threshold (the
 recent window) and the same point-extraction condition as the chart itself.
 -}
-lapRange : { standings : Standings, history : LapHistory } -> Class -> Maybe ( Int, Int )
-lapRange data class =
+lapRange : ViewModel -> Class -> Maybe ( Int, Int )
+lapRange viewModel class =
     let
         lapNumbers =
-            classPositionPoints data class
+            classPositionPoints viewModel class
                 |> List.concatMap (Tuple.second >> List.map .lapNumber)
     in
     Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
@@ -52,22 +53,22 @@ classCarsOf standings class =
 keeping only cars with two or more points. Centralizes the point-extraction
 condition here so the chart itself and `lapRange` share the same X axis.
 -}
-classPositionPoints : { standings : Standings, history : LapHistory } -> Class -> List ( Entry, List PositionPoint )
-classPositionPoints { standings, history } class =
+classPositionPoints : ViewModel -> Class -> List ( Entry, List PositionPoint )
+classPositionPoints ({ standings, lapHistory } as viewModel) class =
     let
         lapThreshold =
-            calculateLapThreshold { standings = standings, history = history }
+            calculateLapThreshold viewModel
     in
     classCarsOf standings class
-        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber history) ))
+        |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber lapHistory) ))
         |> List.filter (\( _, points ) -> List.length points >= 2)
 
 
-buildClassProgressionData : { standings : Standings, history : LapHistory } -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
-buildClassProgressionData data { class, highlighted } =
+buildClassProgressionData : ViewModel -> { class : Class, highlighted : List String } -> Result String (List PositionSeries)
+buildClassProgressionData viewModel { class, highlighted } =
     let
         series =
-            classPositionPoints data class
+            classPositionPoints viewModel class
                 |> List.map
                     (\( item, points ) ->
                         { points = points
@@ -121,8 +122,8 @@ positionHistoryWindowMillis =
     6 * 60 * 60 * 1000
 
 
-calculateLapThreshold : { standings : Standings, history : LapHistory } -> Int
-calculateLapThreshold { standings, history } =
+calculateLapThreshold : ViewModel -> Int
+calculateLapThreshold { standings, lapHistory } =
     let
         currentRaceTime =
             Standings.elapsed standings
@@ -131,7 +132,7 @@ calculateLapThreshold { standings, history } =
             max 0 (currentRaceTime - positionHistoryWindowMillis)
     in
     Standings.leader standings
-        |> Maybe.map (\l -> LapHistory.get l.metadata.carNumber history)
+        |> Maybe.map (\l -> LapHistory.get l.metadata.carNumber lapHistory)
         |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
         |> Maybe.map .lap
         |> Maybe.withDefault 1

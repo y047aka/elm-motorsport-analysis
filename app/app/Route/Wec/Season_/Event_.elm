@@ -16,8 +16,7 @@ import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.ViewModel.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings exposing (Standings)
+import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
@@ -233,7 +232,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
+view app { eventSummary, analysis, raceControl, viewModel } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -248,7 +247,7 @@ view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
                 [ navigation eventSummary raceControl m.mode
                 , case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis { standings = standings, history = lapHistory } m
+                        trackerView eventSummary analysis viewModel m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -257,8 +256,8 @@ view app { eventSummary, analysis, raceControl, standings, lapHistory } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> { standings : Standings, history : LapHistory } -> Model -> Html Msg
-trackerView eventSummary analysis { standings, history } m =
+trackerView : EventSummary -> Analysis -> ViewModel -> Model -> Html Msg
+trackerView eventSummary analysis ({ standings } as viewModel) m =
     div
         [ css
             [ property "grid-row" "2"
@@ -316,14 +315,14 @@ trackerView eventSummary analysis { standings, history } m =
                 { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
                 }
-                { standings = standings, history = history }
+                viewModel
             ]
         , CarDetailPopover.view
             { activeChart = m.detailChart
             , onToggleCar = ToggleDetailCar
             , onSelectChart = SelectDetailChart
             }
-            { standings = standings, history = history }
+            viewModel
             m.detailCarNumbers
         ]
 

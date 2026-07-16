@@ -15,8 +15,9 @@ import Css exposing (property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
@@ -50,10 +51,10 @@ viewComparison :
     , activeChart : Chart
     , onSelectChart : Chart -> msg
     }
-    -> { standings : Standings, history : LapHistory }
+    -> ViewModel
     -> List String
     -> Html msg
-viewComparison { onToggleCar, activeChart, onSelectChart } { standings, history } selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHistory } as viewModel) selectedCarNumbers =
     let
         entriesByNumber =
             Standings.toList standings
@@ -72,12 +73,12 @@ viewComparison { onToggleCar, activeChart, onSelectChart } { standings, history 
                     first.metadata.class
 
                 lapRange =
-                    PositionProgression.lapRange { standings = standings, history = history } class
+                    PositionProgression.lapRange viewModel class
 
                 distSeries =
                     case lapRange of
                         Just range ->
-                            List.map (Distribution.seriesOf history range) selectedEntries
+                            List.map (Distribution.seriesOf lapHistory range) selectedEntries
 
                         Nothing ->
                             []
@@ -108,21 +109,21 @@ viewComparison { onToggleCar, activeChart, onSelectChart } { standings, history 
                         , property "column-gap" "16px"
                         ]
                     ]
-                    (List.map (CarSummary.carSummary lapRange distScale history) selectedEntries
+                    (List.map (CarSummary.carSummary lapRange distScale lapHistory) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
                 , ChartTabs.chartTabs onSelectChart
                     activeChart
                     [ ( GapChart
                       , "Gap to group avg"
-                      , \() -> gapChart lapRange history selectedEntries
+                      , \() -> gapChart lapRange lapHistory selectedEntries
                       )
                     , ( PositionChart
                       , "Position progression"
                       , \() ->
                             PositionProgression.view
                                 { width = 1000, height = 250 }
-                                { standings = standings, history = history }
+                                viewModel
                                 { class = class
                                 , highlighted = selectedCarNumbers
                                 }
@@ -134,10 +135,10 @@ viewComparison { onToggleCar, activeChart, onSelectChart } { standings, history 
 {-| Chart combining the relative gaps measured against the selected cars' group average.
 -}
 gapChart : Maybe ( Int, Int ) -> LapHistory -> List Entry -> Html msg
-gapChart maybeRange history entries =
+gapChart maybeRange lapHistory entries =
     case maybeRange of
         Just range ->
-            GapChart.gapChartView range history entries
+            GapChart.gapChartView range lapHistory entries
 
         Nothing ->
             text ""

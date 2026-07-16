@@ -24,7 +24,7 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
 view : LapHistory -> List Entry -> Entry -> Html msg
-view history allCars item =
+view lapHistory allCars item =
     div
         [ css
             [ property "display" "grid"
@@ -53,7 +53,7 @@ view history allCars item =
                 ]
                 [ cardHeader item
                 , SectorAndLaps.view item
-                , RivalGapSparkline.view history allCars item
+                , RivalGapSparkline.view lapHistory allCars item
                 ]
             ]
         ]
