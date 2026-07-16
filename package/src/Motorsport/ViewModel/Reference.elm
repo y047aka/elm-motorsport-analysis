@@ -19,10 +19,10 @@ import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 type alias Reference =
     { fastestLapTime : Duration
     , slowestLapTime : Duration
-    , sector_1_fastest : Duration
-    , sector_2_fastest : Duration
-    , sector_3_fastest : Duration
-    , miniSectorFastest : LeMans2025MiniSectorFastest
+    , fastestSector_1 : Duration
+    , fastestSector_2 : Duration
+    , fastestSector_3 : Duration
+    , fastestMiniSectors : LeMans2025MiniSectorFastest
     }
 
 
@@ -56,8 +56,8 @@ compute scope { clock, cars } =
     in
     { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
-    , sector_1_fastest = lapsByCar |> findFastestBy .sector_1 |> Maybe.withDefault 0
-    , sector_2_fastest = lapsByCar |> findFastestBy .sector_2 |> Maybe.withDefault 0
-    , sector_3_fastest = lapsByCar |> findFastestBy .sector_3 |> Maybe.withDefault 0
-    , miniSectorFastest = calculateMiniSectorFastest lapsByCar
+    , fastestSector_1 = lapsByCar |> findFastestBy .sector_1 |> Maybe.withDefault 0
+    , fastestSector_2 = lapsByCar |> findFastestBy .sector_2 |> Maybe.withDefault 0
+    , fastestSector_3 = lapsByCar |> findFastestBy .sector_3 |> Maybe.withDefault 0
+    , fastestMiniSectors = calculateMiniSectorFastest lapsByCar
     }

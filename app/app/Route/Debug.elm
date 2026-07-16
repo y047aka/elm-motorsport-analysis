@@ -161,9 +161,9 @@ view app { viewModel, raceControl } { leaderboardState } =
                 , div []
                     [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.reference.fastestLapTime) ]
                     , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.reference.slowestLapTime) ]
-                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.reference.sector_1_fastest) ]
-                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.reference.sector_2_fastest) ]
-                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.reference.sector_3_fastest) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.reference.fastestSector_1) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.reference.fastestSector_2) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.reference.fastestSector_3) ]
                     ]
                 ]
             , let
@@ -196,7 +196,7 @@ config reference standings =
                         (\{ sector_1, s1_best } ->
                             { time = sector_1
                             , personalBest = s1_best
-                            , fastest = reference.sector_1_fastest
+                            , fastest = reference.fastestSector_1
                             , progress = 100
                             }
                         )
@@ -214,7 +214,7 @@ config reference standings =
                         (\{ sector_2, s2_best } ->
                             { time = sector_2
                             , personalBest = s2_best
-                            , fastest = reference.sector_2_fastest
+                            , fastest = reference.fastestSector_2
                             , progress = 100
                             }
                         )
@@ -232,7 +232,7 @@ config reference standings =
                         (\{ sector_3, s3_best } ->
                             { time = sector_3
                             , personalBest = s3_best
-                            , fastest = reference.sector_3_fastest
+                            , fastest = reference.fastestSector_3
                             , progress = 100
                             }
                         )

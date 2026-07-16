@@ -51,10 +51,10 @@ buildConfig :
     Layout LeMans2025MiniSector
     ->
         { a
-            | sector_1_fastest : Duration
-            , sector_2_fastest : Duration
-            , sector_3_fastest : Duration
-            , miniSectorFastest : LeMans2025MiniSectorFastest
+            | fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
         }
     -> TrackConfig
 buildConfig layout reference =
@@ -65,17 +65,17 @@ buildConfig layout reference =
         totalTime =
             if isLeMans2025 then
                 LeMans.miniSectorOrder
-                    |> List.map (\mini -> LeMans.miniSectorAccessor mini reference.miniSectorFastest)
+                    |> List.map (\mini -> LeMans.miniSectorAccessor mini reference.fastestMiniSectors)
                     |> List.sum
                     |> toFloat
 
             else
-                toFloat (reference.sector_1_fastest + reference.sector_2_fastest + reference.sector_3_fastest)
+                toFloat (reference.fastestSector_1 + reference.fastestSector_2 + reference.fastestSector_3)
 
         miniRatio miniSector =
             let
                 value =
-                    LeMans.miniSectorAccessor miniSector reference.miniSectorFastest
+                    LeMans.miniSectorAccessor miniSector reference.fastestMiniSectors
                         |> toFloat
 
                 defaultRatio =
@@ -111,7 +111,7 @@ buildConfig layout reference =
 
 computeSectorShares :
     Layout LeMans2025MiniSector
-    -> { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> { s1 : Float, s2 : Float, s3 : Float }
@@ -135,9 +135,9 @@ computeSectorShares layout reference totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    { s1 = sectorShare reference.sector_1_fastest layout.s1
-    , s2 = sectorShare reference.sector_2_fastest layout.s2
-    , s3 = sectorShare reference.sector_3_fastest layout.s3
+    { s1 = sectorShare reference.fastestSector_1 layout.s1
+    , s2 = sectorShare reference.fastestSector_2 layout.s2
+    , s3 = sectorShare reference.fastestSector_3 layout.s3
     }
 
 

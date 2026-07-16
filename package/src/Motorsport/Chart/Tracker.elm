@@ -97,10 +97,10 @@ view :
     { season : Int, eventName : String }
     ->
         { a
-            | sector_1_fastest : Duration
-            , sector_2_fastest : Duration
-            , sector_3_fastest : Duration
-            , miniSectorFastest : LeMans2025MiniSectorFastest
+            | fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
         }
     -> Standings
     -> Svg msg

@@ -154,10 +154,10 @@ compute :
     ->
         { a
             | fastestLapTime : Duration
-            , sector_1_fastest : Duration
-            , sector_2_fastest : Duration
-            , sector_3_fastest : Duration
-            , miniSectorFastest : LeMans2025MiniSectorFastest
+            , fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
         }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
@@ -253,10 +253,10 @@ fromLaps { season } baseMetadata laps =
     let
         fastest =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , sector_1_fastest = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
-            , sector_2_fastest = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
-            , sector_3_fastest = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
-            , miniSectorFastest = calculateMiniSectorFastest [ laps ]
+            , fastestSector_1 = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
+            , fastestSector_2 = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
+            , fastestSector_3 = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
+            , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
             }
 
         entries =
@@ -354,7 +354,7 @@ extractSectorTimes lap =
 
 
 extractCurrentSectorSlots :
-    { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Maybe SectorProgress
     -> Lap
     -> CurrentSectorSlots
@@ -376,25 +376,25 @@ extractCurrentSectorSlots fastest sectorProgress lap =
                 Nothing ->
                     ( 100, 100, 100 )
     in
-    { sector_1 = { progress = s1_progress, rated = rateTime fastest.sector_1_fastest { time = lap.sector_1, personalBest = lap.s1_best } }
-    , sector_2 = { progress = s2_progress, rated = rateTime fastest.sector_2_fastest { time = lap.sector_2, personalBest = lap.s2_best } }
-    , sector_3 = { progress = s3_progress, rated = rateTime fastest.sector_3_fastest { time = lap.sector_3, personalBest = lap.s3_best } }
+    { sector_1 = { progress = s1_progress, rated = rateTime fastest.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
+    , sector_2 = { progress = s2_progress, rated = rateTime fastest.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
+    , sector_3 = { progress = s3_progress, rated = rateTime fastest.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
     }
 
 
 extractSectorPerformance :
-    { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Lap
     -> SectorPerformance
 extractSectorPerformance fastest lap =
-    { sector_1 = rateTime fastest.sector_1_fastest { time = lap.sector_1, personalBest = lap.s1_best }
-    , sector_2 = rateTime fastest.sector_2_fastest { time = lap.sector_2, personalBest = lap.s2_best }
-    , sector_3 = rateTime fastest.sector_3_fastest { time = lap.sector_3, personalBest = lap.s3_best }
+    { sector_1 = rateTime fastest.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
+    , sector_2 = rateTime fastest.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
+    , sector_3 = rateTime fastest.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
 extractMiniSectorPerformance :
-    { a | miniSectorFastest : LeMans2025MiniSectorFastest }
+    { a | fastestMiniSectors : LeMans2025MiniSectorFastest }
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance fastest lap =
@@ -408,21 +408,21 @@ extractMiniSectorPerformance fastest lap =
                             msd.time
                             msd.best
                 in
-                { scl2 = rateMiniSector ms.scl2 fastest.miniSectorFastest.scl2
-                , z4 = rateMiniSector ms.z4 fastest.miniSectorFastest.z4
-                , ip1 = rateMiniSector ms.ip1 fastest.miniSectorFastest.ip1
-                , z12 = rateMiniSector ms.z12 fastest.miniSectorFastest.z12
-                , sclc = rateMiniSector ms.sclc fastest.miniSectorFastest.sclc
-                , a7_1 = rateMiniSector ms.a7_1 fastest.miniSectorFastest.a7_1
-                , ip2 = rateMiniSector ms.ip2 fastest.miniSectorFastest.ip2
-                , a8_1 = rateMiniSector ms.a8_1 fastest.miniSectorFastest.a8_1
-                , sclb = rateMiniSector ms.sclb fastest.miniSectorFastest.sclb
-                , porin = rateMiniSector ms.porin fastest.miniSectorFastest.porin
-                , porout = rateMiniSector ms.porout fastest.miniSectorFastest.porout
-                , pitref = rateMiniSector ms.pitref fastest.miniSectorFastest.pitref
-                , scl1 = rateMiniSector ms.scl1 fastest.miniSectorFastest.scl1
-                , fordout = rateMiniSector ms.fordout fastest.miniSectorFastest.fordout
-                , fl = rateMiniSector ms.fl fastest.miniSectorFastest.fl
+                { scl2 = rateMiniSector ms.scl2 fastest.fastestMiniSectors.scl2
+                , z4 = rateMiniSector ms.z4 fastest.fastestMiniSectors.z4
+                , ip1 = rateMiniSector ms.ip1 fastest.fastestMiniSectors.ip1
+                , z12 = rateMiniSector ms.z12 fastest.fastestMiniSectors.z12
+                , sclc = rateMiniSector ms.sclc fastest.fastestMiniSectors.sclc
+                , a7_1 = rateMiniSector ms.a7_1 fastest.fastestMiniSectors.a7_1
+                , ip2 = rateMiniSector ms.ip2 fastest.fastestMiniSectors.ip2
+                , a8_1 = rateMiniSector ms.a8_1 fastest.fastestMiniSectors.a8_1
+                , sclb = rateMiniSector ms.sclb fastest.fastestMiniSectors.sclb
+                , porin = rateMiniSector ms.porin fastest.fastestMiniSectors.porin
+                , porout = rateMiniSector ms.porout fastest.fastestMiniSectors.porout
+                , pitref = rateMiniSector ms.pitref fastest.fastestMiniSectors.pitref
+                , scl1 = rateMiniSector ms.scl1 fastest.fastestMiniSectors.scl1
+                , fordout = rateMiniSector ms.fordout fastest.fastestMiniSectors.fordout
+                , fl = rateMiniSector ms.fl fastest.fastestMiniSectors.fl
                 }
             )
 
