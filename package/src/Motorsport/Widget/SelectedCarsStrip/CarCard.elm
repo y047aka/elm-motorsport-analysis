@@ -7,7 +7,7 @@ status, above the driver name, sector performance, and rival gap sparkline.
 
 -}
 
-import Css exposing (backgroundColor, before, num, opacity, property, qt)
+import Css exposing (before, num, opacity, property, qt)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
 import Motorsport.Car exposing (Status(..))
@@ -132,7 +132,7 @@ positionLabel item =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , backgroundColor item.classColor
+                , property "background-color" item.classColor
                 ]
             ]
         ]
