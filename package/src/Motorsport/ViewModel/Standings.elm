@@ -47,7 +47,10 @@ type Standings
         { elapsed : Duration
         , lapCount : Int
         , entries : SortedList ByPosition Entry
-        , entriesByClass : List ( ClassInfo, SortedList ByPosition Entry )
+        -- Entries are kept as plain lists here (already position-sorted by
+        -- groupEntriesByClass): the Lamdera compiler used by elm-pages fails
+        -- to generate wire codecs for a phantom-typed SortedList inside a tuple.
+        , entriesByClass : List ( ClassInfo, List Entry )
         }
 
 
@@ -318,11 +321,11 @@ fromList entries =
         }
 
 
-groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, SortedList ByPosition Entry )
+groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )
 groupEntriesByClass sortedEntries =
     sortedEntries
         |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( classInfoOf first, Ordering.byPosition (first :: SortedList.toList rest) ))
+        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: SortedList.toList rest ))
 
 
 {-| Extracts a class's display info from an entry.
@@ -496,7 +499,6 @@ toList (Standings s) =
 toClassList : Standings -> List ( ClassInfo, List Entry )
 toClassList (Standings s) =
     s.entriesByClass
-        |> List.map (Tuple.mapSecond SortedList.toList)
 
 
 leader : Standings -> Maybe Entry
