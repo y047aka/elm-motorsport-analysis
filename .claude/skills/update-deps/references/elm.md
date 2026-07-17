@@ -28,14 +28,16 @@ Use `--yes` to skip interactive confirmation.
 
 2. Run `elm-json upgrade --yes app/elm.json`.
 
-3. Restore dillonkearns packages by executing each command from the `restore commands` section of step 1's output.
+3. Run `elm-json upgrade --unsafe --yes app/elm.json`. The `--unsafe` flag is required to detect and install major version updates; without it only semver-compatible updates are applied.
+
+4. Restore dillonkearns packages by executing each command from the `restore commands` section of step 1's output. This applies to changes made by both the normal and `--unsafe` runs.
 
 ### Other elm.json files
 
-Upgrade normally:
+Upgrade normally, then check majors with `--unsafe`:
 ```bash
 elm-json upgrade --yes package/elm.json
-elm-json upgrade --yes review/elm.json
+elm-json upgrade --unsafe --yes package/elm.json
 ```
 
 ## Verify
