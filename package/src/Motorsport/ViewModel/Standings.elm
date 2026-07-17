@@ -1,42 +1,40 @@
-module Motorsport.Standings exposing
-    ( Standings, StandingsEntry
+module Motorsport.ViewModel.Standings exposing
+    ( Standings, Entry, ClassInfo
     , SectorProgress, MiniSectorProgress
-    , SectorTimes
+    , SectorTimes, CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
-    , init, fromLaps, fromList
-    , toList, toClassList, leader, lapCount
-    , getCarHistory
+    , compute, fromLaps, fromList
+    , toList, toClassList, leader, lapCount, elapsed
+    , classInfoOf
     , groupCarsByCloseIntervals
-    , getRecentLaps
     )
 
 {-|
 
-@docs Standings, StandingsEntry
+@docs Standings, Entry, ClassInfo
 @docs SectorProgress, MiniSectorProgress
-@docs SectorTimes
+@docs SectorTimes, CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
-@docs init, fromLaps, fromList
+@docs compute, fromLaps, fromList
 
-@docs toList, toClassList, leader, lapCount
+@docs toList, toClassList, leader, lapCount, elapsed
 
-@docs getCarHistory
+@docs classInfoOf
 
 @docs groupCarsByCloseIntervals
 
-@docs getRecentLaps
-
 -}
 
+import Css
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Class exposing (Class)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectors, completedLapsAt)
+import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
@@ -46,11 +44,21 @@ import SortedList exposing (SortedList)
 
 type Standings
     = Standings
-        { laps : Int
-        , entries : SortedList ByPosition StandingsEntry
-        , entriesByClass : List ( Class, SortedList ByPosition StandingsEntry )
-        , lapHistory : Dict String (List Lap)
+        { elapsed : Duration
+        , lapCount : Int
+        , entries : SortedList ByPosition Entry
+        , entriesByClass : List ( ClassInfo, SortedList ByPosition Entry )
         }
+
+
+{-| Display info needed by class headers and badges.
+The season-dependent color resolution is already done at compute time.
+-}
+type alias ClassInfo =
+    { class : Class
+    , name : String
+    , color : Css.Color
+    }
 
 
 type alias SectorTimes =
@@ -89,24 +97,30 @@ type alias MiniSectorPerformance =
     }
 
 
-type alias StandingsEntry =
+type alias Entry =
     { position : Int
     , positionInClass : Int
     , status : Status
     , metadata : Car.Metadata
+    , classColor : Css.Color
     , lapsCompleted : Int
     , currentLapTime : Maybe Duration
     , currentLapBest : Maybe Duration
+
+    -- currentLapSectors holds raw times (for data display such as the Debug page).
+    -- currentLapSectorStates is the single source of truth for progress and performance rating.
     , currentLapSectors : Maybe SectorTimes
+    , currentLapSectorStates : Maybe CurrentSectorStates
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
+    , currentLapRated : Maybe RatedTime
     , sector : Maybe SectorProgress
     , miniSector : Maybe MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
-    , lastLap : Maybe RatedTime
-    , bestLap : Maybe RatedTime
+    , lastLapRated : Maybe RatedTime
+    , bestLapRated : Maybe RatedTime
     , lastLapSectors : Maybe SectorPerformance
     , lastLapMiniSectors : Maybe MiniSectorPerformance
     , currentDriver : Maybe Driver
@@ -119,23 +133,35 @@ type alias SectorProgress =
     }
 
 
+{-| Per-sector "progress + performance rating" for the current lap.
+Rated at compute time so donut displays can render without being supplied BestTimes separately.
+-}
+type alias CurrentSectorStates =
+    { sector_1 : { progress : Float, rated : RatedTime }
+    , sector_2 : { progress : Float, rated : RatedTime }
+    , sector_3 : { progress : Float, rated : RatedTime }
+    }
+
+
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector
     , progress : Float
     }
 
 
-init :
-    { a
-        | fastestLapTime : Duration
-        , sector_1_fastest : Duration
-        , sector_2_fastest : Duration
-        , sector_3_fastest : Duration
-        , miniSectorFastest : LeMans2025MiniSectorFastest
-    }
+compute :
+    { season : Int }
+    ->
+        { a
+            | fastestLapTime : Duration
+            , fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
+        }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
-init fastest config =
+compute { season } bestTimes config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -145,9 +171,6 @@ init fastest config =
 
         positionsInClass =
             positionsInClassByCarNumber config.cars
-
-        raceClock =
-            { elapsed = config.elapsed }
 
         entries =
             carsList
@@ -178,12 +201,17 @@ init fastest config =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
+                        , classColor = Class.toHexColor season metadata.class
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
                         , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
+                        , currentLapSectorStates = currentLap |> Maybe.map (extractCurrentSectorStates bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
+                        , currentLapRated =
+                            currentLap
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -192,14 +220,14 @@ init fastest config =
                             currentLap
                                 |> Maybe.map (\lap -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lap.time))
                                 |> Maybe.withDefault 0
-                        , lastLap =
+                        , lastLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
-                        , bestLap =
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
+                        , bestLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
-                        , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance fastest)
-                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance fastest)
+                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                        , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
+                        , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance bestTimes)
                         , currentDriver = car.currentDriver
                         }
                     )
@@ -208,34 +236,27 @@ init fastest config =
             Ordering.byPosition entries
     in
     Standings
-        { laps = config.lapCount
+        { elapsed = config.elapsed
+        , lapCount = config.lapCount
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory =
-            carsList
-                |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
-                |> Dict.fromList
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
 
 
-{-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
+{-| For debugging: builds a Standings from a single car's lap list.
 
-各ラップを1つの StandingsEntry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
-`lapHistory` / `carLapData` はラップ番号文字列をキーとして構築されるため、不変条件が保たれる。
+Treats each lap as one Entry, setting `metadata.carNumber` to the lap-number string.
 
 -}
-fromLaps : Car.Metadata -> List Lap -> Standings
-fromLaps baseMetadata laps =
+fromLaps : { season : Int } -> Car.Metadata -> List Lap -> Standings
+fromLaps { season } baseMetadata laps =
     let
-        fastest =
+        bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , sector_1_fastest = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
-            , sector_2_fastest = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
-            , sector_3_fastest = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
-            , miniSectorFastest = calculateMiniSectorFastest [ laps ]
+            , fastestSector_1 = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
+            , fastestSector_2 = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
+            , fastestSector_3 = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
+            , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
             }
 
         entries =
@@ -246,64 +267,72 @@ fromLaps baseMetadata laps =
                         , positionInClass = index + 1
                         , status = Car.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
+                        , classColor = Class.toHexColor season baseMetadata.class
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
                         , currentLapSectors = Just (extractSectorTimes lap)
+                        , currentLapSectorStates = Just (extractCurrentSectorStates bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
+                        , currentLapRated = Nothing
                         , sector = Nothing
                         , miniSector = Nothing
                         , gapToLeader = Gap.None
                         , intervalToAhead = Gap.None
                         , currentLapProgress = 0
-                        , lastLap =
-                            Just (rateTime fastest.fastestLapTime { time = lap.time, personalBest = lap.best })
-                        , bestLap =
-                            Just (rateTime fastest.fastestLapTime { time = lap.best, personalBest = lap.best })
-                        , lastLapSectors = Just (extractSectorPerformance fastest lap)
-                        , lastLapMiniSectors = extractMiniSectorPerformance fastest lap
+                        , lastLapRated =
+                            Just (rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
+                        , bestLapRated =
+                            Just (rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                        , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
+                        , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap
                         , currentDriver = Just lap.driver
                         }
                     )
 
         sortedEntries =
             Ordering.byPosition entries
-
-        lapKey lap =
-            String.fromInt lap.lap
     in
     Standings
-        { laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
+        { elapsed = 0
+        , lapCount = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory =
-            laps
-                |> List.map (\lap -> ( lapKey lap, [ lap ] ))
-                |> Dict.fromList
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
 
 
-{-| `StandingsEntry` のリストから `Standings` を組み立てる。テスト用途などで直接エントリを指定したい場合に使う。
+{-| Builds a Standings from a list of `Entry`. Used to specify entries directly, e.g. in tests.
 -}
-fromList : List StandingsEntry -> Standings
+fromList : List Entry -> Standings
 fromList entries =
     let
         sortedEntries =
             Ordering.byPosition entries
     in
     Standings
-        { laps = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
+        { elapsed = 0
+        , lapCount = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
-        , entriesByClass =
-            sortedEntries
-                |> SortedList.gatherEqualsBy (.metadata >> .class)
-                |> List.map (\( first, rest ) -> ( first.metadata.class, Ordering.byPosition (first :: SortedList.toList rest) ))
-        , lapHistory = Dict.empty
+        , entriesByClass = groupEntriesByClass sortedEntries
         }
+
+
+groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, SortedList ByPosition Entry )
+groupEntriesByClass sortedEntries =
+    sortedEntries
+        |> SortedList.gatherEqualsBy (.metadata >> .class)
+        |> List.map (\( first, rest ) -> ( classInfoOf first, Ordering.byPosition (first :: SortedList.toList rest) ))
+
+
+{-| Extracts a class's display info from an entry.
+-}
+classInfoOf : Entry -> ClassInfo
+classInfoOf entry =
+    { class = entry.metadata.class
+    , name = Class.toString entry.metadata.class
+    , color = entry.classColor
+    }
 
 
 rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime
@@ -324,22 +353,51 @@ extractSectorTimes lap =
     }
 
 
+extractCurrentSectorStates :
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    -> Maybe SectorProgress
+    -> Lap
+    -> CurrentSectorStates
+extractCurrentSectorStates bestTimes sectorProgress lap =
+    let
+        ( s1_progress, s2_progress, s3_progress ) =
+            case sectorProgress of
+                Just { sector, progress } ->
+                    case sector of
+                        S1 ->
+                            ( progress, 0, 0 )
+
+                        S2 ->
+                            ( 100, progress, 0 )
+
+                        S3 ->
+                            ( 100, 100, progress )
+
+                Nothing ->
+                    ( 100, 100, 100 )
+    in
+    { sector_1 = { progress = s1_progress, rated = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
+    , sector_2 = { progress = s2_progress, rated = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
+    , sector_3 = { progress = s3_progress, rated = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
+    }
+
+
 extractSectorPerformance :
-    { a | sector_1_fastest : Duration, sector_2_fastest : Duration, sector_3_fastest : Duration }
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Lap
     -> SectorPerformance
-extractSectorPerformance fastest lap =
-    { sector_1 = rateTime fastest.sector_1_fastest { time = lap.sector_1, personalBest = lap.s1_best }
-    , sector_2 = rateTime fastest.sector_2_fastest { time = lap.sector_2, personalBest = lap.s2_best }
-    , sector_3 = rateTime fastest.sector_3_fastest { time = lap.sector_3, personalBest = lap.s3_best }
+extractSectorPerformance bestTimes lap =
+    { sector_1 = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
+    , sector_2 = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
+    , sector_3 = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
 extractMiniSectorPerformance :
-    { a | miniSectorFastest : LeMans2025MiniSectorFastest }
+    { a | fastestMiniSectors : LeMans2025MiniSectorFastest }
     -> Lap
     -> Maybe MiniSectorPerformance
-extractMiniSectorPerformance fastest lap =
+extractMiniSectorPerformance bestTimes lap =
     lap.miniSectors
         |> Maybe.map
             (\ms ->
@@ -350,31 +408,23 @@ extractMiniSectorPerformance fastest lap =
                             msd.time
                             msd.best
                 in
-                { scl2 = rateMiniSector ms.scl2 fastest.miniSectorFastest.scl2
-                , z4 = rateMiniSector ms.z4 fastest.miniSectorFastest.z4
-                , ip1 = rateMiniSector ms.ip1 fastest.miniSectorFastest.ip1
-                , z12 = rateMiniSector ms.z12 fastest.miniSectorFastest.z12
-                , sclc = rateMiniSector ms.sclc fastest.miniSectorFastest.sclc
-                , a7_1 = rateMiniSector ms.a7_1 fastest.miniSectorFastest.a7_1
-                , ip2 = rateMiniSector ms.ip2 fastest.miniSectorFastest.ip2
-                , a8_1 = rateMiniSector ms.a8_1 fastest.miniSectorFastest.a8_1
-                , sclb = rateMiniSector ms.sclb fastest.miniSectorFastest.sclb
-                , porin = rateMiniSector ms.porin fastest.miniSectorFastest.porin
-                , porout = rateMiniSector ms.porout fastest.miniSectorFastest.porout
-                , pitref = rateMiniSector ms.pitref fastest.miniSectorFastest.pitref
-                , scl1 = rateMiniSector ms.scl1 fastest.miniSectorFastest.scl1
-                , fordout = rateMiniSector ms.fordout fastest.miniSectorFastest.fordout
-                , fl = rateMiniSector ms.fl fastest.miniSectorFastest.fl
+                { scl2 = rateMiniSector ms.scl2 bestTimes.fastestMiniSectors.scl2
+                , z4 = rateMiniSector ms.z4 bestTimes.fastestMiniSectors.z4
+                , ip1 = rateMiniSector ms.ip1 bestTimes.fastestMiniSectors.ip1
+                , z12 = rateMiniSector ms.z12 bestTimes.fastestMiniSectors.z12
+                , sclc = rateMiniSector ms.sclc bestTimes.fastestMiniSectors.sclc
+                , a7_1 = rateMiniSector ms.a7_1 bestTimes.fastestMiniSectors.a7_1
+                , ip2 = rateMiniSector ms.ip2 bestTimes.fastestMiniSectors.ip2
+                , a8_1 = rateMiniSector ms.a8_1 bestTimes.fastestMiniSectors.a8_1
+                , sclb = rateMiniSector ms.sclb bestTimes.fastestMiniSectors.sclb
+                , porin = rateMiniSector ms.porin bestTimes.fastestMiniSectors.porin
+                , porout = rateMiniSector ms.porout bestTimes.fastestMiniSectors.porout
+                , pitref = rateMiniSector ms.pitref bestTimes.fastestMiniSectors.pitref
+                , scl1 = rateMiniSector ms.scl1 bestTimes.fastestMiniSectors.scl1
+                , fordout = rateMiniSector ms.fordout bestTimes.fastestMiniSectors.fordout
+                , fl = rateMiniSector ms.fl bestTimes.fastestMiniSectors.fl
                 }
             )
-
-
-{-| carNumber からラップ履歴を取得する
--}
-getCarHistory : String -> Standings -> List Lap
-getCarHistory carNumber (Standings s) =
-    Dict.get carNumber s.lapHistory
-        |> Maybe.withDefault []
 
 
 type alias TimingState =
@@ -438,28 +488,35 @@ positionsInClassByCarNumber raceOrder =
         |> Dict.fromList
 
 
-toList : Standings -> List StandingsEntry
+toList : Standings -> List Entry
 toList (Standings s) =
     SortedList.toList s.entries
 
 
-toClassList : Standings -> List ( Class, List StandingsEntry )
+toClassList : Standings -> List ( ClassInfo, List Entry )
 toClassList (Standings s) =
     s.entriesByClass
         |> List.map (Tuple.mapSecond SortedList.toList)
 
 
-leader : Standings -> Maybe StandingsEntry
+leader : Standings -> Maybe Entry
 leader (Standings s) =
     SortedList.head s.entries
 
 
 lapCount : Standings -> Int
 lapCount (Standings s) =
-    s.laps
+    s.lapCount
 
 
-groupCarsByCloseIntervals : Standings -> List (List StandingsEntry)
+{-| The race elapsed time this Standings represents; the elapsed passed to compute is baked in.
+-}
+elapsed : Standings -> Duration
+elapsed (Standings s) =
+    s.elapsed
+
+
+groupCarsByCloseIntervals : Standings -> List (List Entry)
 groupCarsByCloseIntervals (Standings s) =
     let
         isCloseToNext current =
@@ -485,14 +542,3 @@ groupCarsByCloseIntervals (Standings s) =
     SortedList.toList s.entries
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
-
-
-getRecentLaps : { count : Int, currentLap : Int } -> List Lap -> List Lap
-getRecentLaps { count, currentLap } lapList =
-    let
-        targetRange =
-            List.range (currentLap - count) currentLap
-    in
-    lapList
-        |> List.filter (\lap -> List.member lap.lap targetRange)
-        |> List.sortBy .lap

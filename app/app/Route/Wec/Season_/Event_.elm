@@ -11,12 +11,11 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (Html, button, div, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Clock as Clock exposing (State(..))
+import Motorsport.Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings
+import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
@@ -232,7 +231,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { eventSummary, analysis, raceControl } m =
+view app { eventSummary, raceControl, viewModel } m =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -245,17 +244,9 @@ view app { eventSummary, analysis, raceControl } m =
                     ]
                 ]
                 [ navigation eventSummary raceControl m.mode
-                , let
-                    standings =
-                        Standings.init analysis
-                            { elapsed = Clock.getElapsed raceControl.clock
-                            , lapCount = raceControl.lapCount
-                            , cars = raceControl.cars
-                            }
-                  in
-                  case m.mode of
+                , case m.mode of
                     Tracker ->
-                        trackerView eventSummary analysis raceControl standings m
+                        trackerView eventSummary viewModel m
 
                     Events ->
                         RaceEvents.view EventsMsg m.eventsState raceControl
@@ -264,8 +255,8 @@ view app { eventSummary, analysis, raceControl } m =
         }
 
 
-trackerView : EventSummary -> Analysis -> RaceControl.Model -> Standings.Standings -> Model -> Html Msg
-trackerView eventSummary analysis raceControl standings m =
+trackerView : EventSummary -> ViewModel -> Model -> Html Msg
+trackerView eventSummary ({ standings } as viewModel) m =
     div
         [ css
             [ property "grid-row" "2"
@@ -287,9 +278,10 @@ trackerView eventSummary analysis raceControl standings m =
                 ]
             ]
             [ LiveStandingsWidget.view
-                { eventSummary = eventSummary
-                , standings = standings
-                , onSelectCar = \item -> ShowCarDetail item.metadata.carNumber
+                { standings = standings
+
+                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
+                , onSelectCar = ShowCarDetail
                 , popoverTarget = CarDetailPopover.popoverId
                 }
             ]
@@ -307,7 +299,7 @@ trackerView eventSummary analysis raceControl standings m =
                     ]
                     [ TrackerChart.view
                         { season = eventSummary.season, eventName = eventSummary.name }
-                        analysis
+                        viewModel.bestTimes
                         standings
                     ]
                 ]
@@ -319,22 +311,17 @@ trackerView eventSummary analysis raceControl standings m =
             []
         , div [ css [ property "grid-column" "1 / -1" ] ]
             [ SelectedCarsStrip.view
-                { season = eventSummary.season
-                , analysis = analysis
-                , offset = m.stripOffset
+                { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
                 }
-                standings
+                viewModel
             ]
         , CarDetailPopover.view
-            { season = eventSummary.season
-            , analysis = analysis
-            , clock = raceControl.clock
-            , activeChart = m.detailChart
+            { activeChart = m.detailChart
             , onToggleCar = ToggleDetailCar
             , onSelectChart = SelectDetailChart
             }
-            standings
+            viewModel
             m.detailCarNumbers
         ]
 

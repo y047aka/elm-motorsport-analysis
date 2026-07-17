@@ -85,7 +85,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis_F1, raceControl_F1 } _ =
+view app { viewModel_F1, raceControl_F1 } _ =
     { title = "LapTime Chart By Driver"
-    , body = [ LapTimeChartsByDriver.view analysis_F1 raceControl_F1 ]
+    , body = [ LapTimeChartsByDriver.view viewModel_F1.bestTimes raceControl_F1 ]
     }

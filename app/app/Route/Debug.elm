@@ -9,7 +9,6 @@ import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
@@ -18,7 +17,8 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -126,7 +126,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis, raceControl } { leaderboardState } =
+view app { viewModel, raceControl } { leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Wec"
         , body =
@@ -159,11 +159,11 @@ view app { analysis, raceControl } { leaderboardState } =
                     , text (Clock.getElapsed clock |> Duration.toString)
                     ]
                 , div []
-                    [ div [] [ text "fastestLapTime: ", text (Duration.toString analysis.fastestLapTime) ]
-                    , div [] [ text "slowestLapTime: ", text (Duration.toString analysis.slowestLapTime) ]
-                    , div [] [ text "s1_fastest: ", text (Duration.toString analysis.sector_1_fastest) ]
-                    , div [] [ text "s2_fastest: ", text (Duration.toString analysis.sector_2_fastest) ]
-                    , div [] [ text "s3_fastest: ", text (Duration.toString analysis.sector_3_fastest) ]
+                    [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
+                    , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_1) ]
+                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_2) ]
+                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_3) ]
                     ]
                 ]
             , let
@@ -171,16 +171,16 @@ view app { analysis, raceControl } { leaderboardState } =
                     raceControl.cars
                         |> RunningOrder.toList
                         |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                        |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
-                        |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+                        |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
+                        |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
               in
-              DataView.view (config analysis standings) leaderboardState (Standings.toList standings)
+              DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
             ]
         }
 
 
-config : Analysis -> Standings -> Leaderboard.Config StandingsEntry Msg
-config analysis standings =
+config : BestTimes -> Standings -> Leaderboard.Config Entry Msg
+config bestTimes standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -196,7 +196,7 @@ config analysis standings =
                         (\{ sector_1, s1_best } ->
                             { time = sector_1
                             , personalBest = s1_best
-                            , fastest = analysis.sector_1_fastest
+                            , fastest = bestTimes.fastestSector_1
                             , progress = 100
                             }
                         )
@@ -214,7 +214,7 @@ config analysis standings =
                         (\{ sector_2, s2_best } ->
                             { time = sector_2
                             , personalBest = s2_best
-                            , fastest = analysis.sector_2_fastest
+                            , fastest = bestTimes.fastestSector_2
                             , progress = 100
                             }
                         )
@@ -232,7 +232,7 @@ config analysis standings =
                         (\{ sector_3, s3_best } ->
                             { time = sector_3
                             , personalBest = s3_best
-                            , fastest = analysis.sector_3_fastest
+                            , fastest = bestTimes.fastestSector_3
                             , progress = 100
                             }
                         )
@@ -244,8 +244,8 @@ config analysis standings =
             }
         , lastLapColumn_F1
             { getter = identity
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLap }
+        , bestTimeColumn { getter = .bestLapRated }
         ]
     }

@@ -15,11 +15,12 @@ module Motorsport.Chart.Tracker.Config exposing
 -}
 
 import List.Extra
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings exposing (MiniSectorProgress, SectorProgress, StandingsEntry)
+import Motorsport.ViewModel.Standings exposing (MiniSectorProgress, SectorProgress, Entry)
 
 
 type alias TrackConfig =
@@ -46,8 +47,17 @@ type alias MiniSectorShare =
     }
 
 
-buildConfig : Layout LeMans2025MiniSector -> Analysis -> TrackConfig
-buildConfig layout analysis =
+buildConfig :
+    Layout LeMans2025MiniSector
+    ->
+        { a
+            | fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
+        }
+    -> TrackConfig
+buildConfig layout bestTimes =
     let
         isLeMans2025 =
             Circuit.hasMiniSectors layout
@@ -55,17 +65,17 @@ buildConfig layout analysis =
         totalTime =
             if isLeMans2025 then
                 LeMans.miniSectorOrder
-                    |> List.map (\mini -> LeMans.miniSectorAccessor mini analysis.miniSectorFastest)
+                    |> List.map (\mini -> LeMans.miniSectorAccessor mini bestTimes.fastestMiniSectors)
                     |> List.sum
                     |> toFloat
 
             else
-                toFloat (analysis.sector_1_fastest + analysis.sector_2_fastest + analysis.sector_3_fastest)
+                toFloat (bestTimes.fastestSector_1 + bestTimes.fastestSector_2 + bestTimes.fastestSector_3)
 
         miniRatio miniSector =
             let
                 value =
-                    LeMans.miniSectorAccessor miniSector analysis.miniSectorFastest
+                    LeMans.miniSectorAccessor miniSector bestTimes.fastestMiniSectors
                         |> toFloat
 
                 defaultRatio =
@@ -79,7 +89,7 @@ buildConfig layout analysis =
                 value / totalTime
 
         shares =
-            computeSectorShares layout analysis totalTime miniRatio
+            computeSectorShares layout bestTimes totalTime miniRatio
     in
     [ { sector = S1
       , start = 0
@@ -101,11 +111,11 @@ buildConfig layout analysis =
 
 computeSectorShares :
     Layout LeMans2025MiniSector
-    -> Analysis
+    -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> { s1 : Float, s2 : Float, s3 : Float }
-computeSectorShares layout analysis totalTime miniRatio =
+computeSectorShares layout bestTimes totalTime miniRatio =
     let
         sectorShare fastestTime miniSectors =
             case miniSectors of
@@ -125,9 +135,9 @@ computeSectorShares layout analysis totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    { s1 = sectorShare analysis.sector_1_fastest layout.s1
-    , s2 = sectorShare analysis.sector_2_fastest layout.s2
-    , s3 = sectorShare analysis.sector_3_fastest layout.s3
+    { s1 = sectorShare bestTimes.fastestSector_1 layout.s1
+    , s2 = sectorShare bestTimes.fastestSector_2 layout.s2
+    , s3 = sectorShare bestTimes.fastestSector_3 layout.s3
     }
 
 
@@ -155,7 +165,7 @@ buildMiniSectors miniSectors sectorStart miniRatio =
                 |> WithMiniSectors
 
 
-computeProgress : TrackConfig -> StandingsEntry -> Float
+computeProgress : TrackConfig -> Entry -> Float
 computeProgress config car =
     if car.currentLapProgress > 0 then
         car.currentLapProgress

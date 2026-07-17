@@ -11,9 +11,9 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class exposing (Class)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (ClassInfo, Standings, Entry)
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its
@@ -24,7 +24,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
     let
         classCars =
             Standings.toClassList standings
-                |> List.Extra.find (\( class_, _ ) -> class_ == class)
+                |> List.Extra.find (\( classInfo, _ ) -> classInfo.class == class)
                 |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
     in
@@ -45,7 +45,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
         )
 
 
-carSelectorChip : (String -> msg) -> Bool -> StandingsEntry -> Html msg
+carSelectorChip : (String -> msg) -> Bool -> Entry -> Html msg
 carSelectorChip onToggleCar isSelected item =
     let
         manufacturerColor =
@@ -82,8 +82,8 @@ carSelectorChip onToggleCar isSelected item =
         [ text ("#" ++ item.metadata.carNumber) ]
 
 
-classBadge : Int -> Class -> Html msg
-classBadge season class =
+classBadge : ClassInfo -> Html msg
+classBadge classInfo =
     div
         [ css
             [ property "display" "flex"
@@ -98,8 +98,8 @@ classBadge season class =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , Css.backgroundColor (Class.toHexColor season class)
+                , Css.backgroundColor classInfo.color
                 ]
             ]
         ]
-        [ text (Class.toString class) ]
+        [ text classInfo.name ]

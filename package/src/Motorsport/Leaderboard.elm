@@ -59,7 +59,6 @@ import Html.Styled exposing (Html, div, img, span, text)
 import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import List.Extra
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Circuit.LeMans as LeMans
@@ -67,10 +66,9 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
-import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Sector exposing (Sector(..))
-import Motorsport.Standings as Standings exposing (MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, SectorTimes, Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 
 
@@ -207,13 +205,13 @@ bestTimeColumn { getter } =
 histogramColumn :
     { getter : data -> List Lap
     , sorter : data -> data -> Order
-    , analysis : Analysis
+    , bestTimes : { a | fastestLapTime : Duration, slowestLapTime : Duration }
     , coefficient : Float
     }
     -> Column data msg
-histogramColumn { getter, sorter, analysis, coefficient } =
+histogramColumn { getter, sorter, bestTimes, coefficient } =
     { name = "Histogram"
-    , view = getter >> Lazy.lazy3 Histogram.view analysis coefficient
+    , view = getter >> Lazy.lazy3 Histogram.view bestTimes coefficient
     , sorter = sorter
     , filter = \_ _ -> True
     }
@@ -222,12 +220,12 @@ histogramColumn { getter, sorter, analysis, coefficient } =
 performanceColumn :
     { getter : data -> List Lap
     , sorter : data -> data -> Order
-    , analysis : Analysis
+    , bestTimes : { a | fastestLapTime : Duration }
     }
     -> Column data msg
-performanceColumn { getter, sorter, analysis } =
+performanceColumn { getter, sorter, bestTimes } =
     { name = "Performance"
-    , view = getter >> performanceHistory analysis
+    , view = getter >> performanceHistory bestTimes
     , sorter = sorter
     , filter = \_ _ -> True
     }
@@ -338,7 +336,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 
 lastLapColumn_F1 :
-    { getter : data -> { a | lastLap : Maybe RatedTime }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -346,7 +344,7 @@ lastLapColumn_F1 { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
-            >> .lastLap
+            >> .lastLapRated
             >> Maybe.map
                 (\{ time, performance } ->
                     span
@@ -373,71 +371,57 @@ currentLapColumn_Wec :
         ->
             { a
                 | status : Status
-                , currentLapElapsed : Duration
-                , currentLapBest : Maybe Duration
-                , currentLapSectors : Maybe SectorTimes
-                , sector : Maybe SectorProgress
+                , currentLapRated : Maybe RatedTime
+                , currentLapSectorStates : Maybe CurrentSectorStates
             }
     , sorter : data -> data -> Order
-    , analysis : Analysis
     }
     -> Column data msg
-currentLapColumn_Wec { getter, sorter, analysis } =
+currentLapColumn_Wec { getter, sorter } =
     { name = "Current Lap"
-    , view = getter >> Lazy.lazy2 viewCurrentLapColumn_Wec analysis
+    , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
     , sorter = sorter
     , filter = \_ _ -> True
     }
 
 
 viewCurrentLapColumn_Wec :
-    Analysis
-    ->
-        { a
-            | status : Status
-            , currentLapElapsed : Duration
-            , currentLapBest : Maybe Duration
-            , currentLapSectors : Maybe SectorTimes
-            , sector : Maybe SectorProgress
-        }
+    { a
+        | status : Status
+        , currentLapRated : Maybe RatedTime
+        , currentLapSectorStates : Maybe CurrentSectorStates
+    }
     -> Html msg
-viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, currentLapBest, currentLapSectors, sector } =
+viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
     let
-        lapTime { time, personalBest } =
+        lapTime { time, performance } =
             div
                 [ css
                     [ textAlign center
-                    , let
-                        status_ =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
-                      in
-                      if Performance.isStandard status_ then
+                    , if Performance.isStandard performance then
                         batch []
 
                       else
-                        Performance.toColorVariable status_
+                        Performance.toColorVariable performance
                             |> property "color"
                     ]
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell sector_ =
+        sectorCell { progress, rated } =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
                     , batch <|
-                        if sector_.progress < 100 then
-                            [ width (pct sector_.progress)
+                        if progress < 100 then
+                            [ width (pct progress)
                             , backgroundColor (oklch 1 0 0)
                             ]
 
                         else
                             [ width (pct 100)
-                            , property "background-color"
-                                (performanceLevel sector_
-                                    |> Performance.toColorVariable
-                                )
+                            , property "background-color" (Performance.toColorVariable rated.performance)
                             ]
                     ]
                 ]
@@ -448,41 +432,24 @@ viewCurrentLapColumn_Wec analysis { status, currentLapElapsed, currentLapBest, c
 
     else
         Maybe.map2
-            (\best { sector_1, sector_2, sector_3, s1_best, s2_best, s3_best } ->
+            (\rated slots ->
                 div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                    [ lapTime { time = currentLapElapsed, personalBest = best }
-                    , let
-                        ( s1_progress, s2_progress, s3_progress ) =
-                            case sector of
-                                Just sectorProgress ->
-                                    case sectorProgress.sector of
-                                        S1 ->
-                                            ( sectorProgress.progress, 0, 0 )
-
-                                        S2 ->
-                                            ( 100, sectorProgress.progress, 0 )
-
-                                        S3 ->
-                                            ( 100, 100, sectorProgress.progress )
-
-                                Nothing ->
-                                    ( 100, 100, 100 )
-                      in
-                      div
+                    [ lapTime rated
+                    , div
                         [ css
                             [ property "display" "grid"
                             , property "grid-template-columns" "1fr 1fr 1fr"
                             , property "column-gap" "4px"
                             ]
                         ]
-                        [ sectorCell { time = sector_1, personalBest = s1_best, fastest = analysis.sector_1_fastest, progress = s1_progress }
-                        , sectorCell { time = sector_2, personalBest = s2_best, fastest = analysis.sector_2_fastest, progress = s2_progress }
-                        , sectorCell { time = sector_3, personalBest = s3_best, fastest = analysis.sector_3_fastest, progress = s3_progress }
+                        [ sectorCell slots.sector_1
+                        , sectorCell slots.sector_2
+                        , sectorCell slots.sector_3
                         ]
                     ]
             )
-            currentLapBest
-            currentLapSectors
+            currentLapRated
+            currentLapSectorStates
             |> Maybe.withDefault (text "-")
 
 
@@ -499,19 +466,19 @@ currentLapColumn_LeMans24h :
                 , miniSector : Maybe MiniSectorProgress
             }
     , sorter : data -> data -> Order
-    , analysis : Analysis
+    , bestTimes : { b | fastestLapTime : Duration, fastestMiniSectors : LeMans2025MiniSectorFastest }
     }
     -> Column data msg
-currentLapColumn_LeMans24h { getter, sorter, analysis } =
+currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
     { name = "Current Lap"
-    , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h analysis
+    , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h bestTimes
     , sorter = sorter
     , filter = \_ _ -> True
     }
 
 
 viewCurrentLapColumn_LeMans24h :
-    Analysis
+    { b | fastestLapTime : Duration, fastestMiniSectors : LeMans2025MiniSectorFastest }
     ->
         { a
             | status : Status
@@ -522,7 +489,7 @@ viewCurrentLapColumn_LeMans24h :
             , miniSector : Maybe MiniSectorProgress
         }
     -> Html msg
-viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapBest, currentLapMiniSectors, miniSector } =
+viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLapBest, currentLapMiniSectors, miniSector } =
     let
         lapTime { time, personalBest } =
             div
@@ -530,7 +497,7 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
                     [ textAlign center
                     , let
                         status_ =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = analysis.fastestLapTime }
+                            performanceLevel { time = time, personalBest = personalBest, fastest = bestTimes.fastestLapTime }
                       in
                       if Performance.isStandard status_ then
                         batch []
@@ -578,23 +545,23 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
                                 LeMans.calculateMiniSectorProgress miniSector
                           in
                           div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                            [ sectorCell { time = Maybe.andThen (.scl2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl2 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.scl2, progress = progressMap.scl2 }
-                            , sectorCell { time = Maybe.andThen (.z4 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z4 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.z4, progress = progressMap.z4 }
-                            , sectorCell { time = Maybe.andThen (.ip1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip1 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.ip1, progress = progressMap.ip1 }
+                            [ sectorCell { time = Maybe.andThen (.scl2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl2 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.scl2, progress = progressMap.scl2 }
+                            , sectorCell { time = Maybe.andThen (.z4 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z4 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.z4, progress = progressMap.z4 }
+                            , sectorCell { time = Maybe.andThen (.ip1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip1 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.ip1, progress = progressMap.ip1 }
                             , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.z12 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z12 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.z12, progress = progressMap.z12 }
-                            , sectorCell { time = Maybe.andThen (.sclc >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclc >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.sclc, progress = progressMap.sclc }
-                            , sectorCell { time = Maybe.andThen (.a7_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.a7_1, progress = progressMap.a7_1 }
-                            , sectorCell { time = Maybe.andThen (.ip2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip2 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.ip2, progress = progressMap.ip2 }
+                            , sectorCell { time = Maybe.andThen (.z12 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z12 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.z12, progress = progressMap.z12 }
+                            , sectorCell { time = Maybe.andThen (.sclc >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclc >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.sclc, progress = progressMap.sclc }
+                            , sectorCell { time = Maybe.andThen (.a7_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.a7_1, progress = progressMap.a7_1 }
+                            , sectorCell { time = Maybe.andThen (.ip2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip2 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.ip2, progress = progressMap.ip2 }
                             , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.a8_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.a8_1, progress = progressMap.a8_1 }
-                            , sectorCell { time = Maybe.andThen (.sclb >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclb >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.sclb, progress = progressMap.sclb }
-                            , sectorCell { time = Maybe.andThen (.porin >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porin >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.porin, progress = progressMap.porin }
-                            , sectorCell { time = Maybe.andThen (.porout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porout >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.porout, progress = progressMap.porout }
-                            , sectorCell { time = Maybe.andThen (.pitref >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.pitref >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.pitref, progress = progressMap.pitref }
-                            , sectorCell { time = Maybe.andThen (.scl1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl1 >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.scl1, progress = progressMap.scl1 }
-                            , sectorCell { time = Maybe.andThen (.fordout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fordout >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.fordout, progress = progressMap.fordout }
-                            , sectorCell { time = Maybe.andThen (.fl >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fl >> .best) currentLapMiniSectors, fastest = analysis.miniSectorFastest.fl, progress = progressMap.fl }
+                            , sectorCell { time = Maybe.andThen (.a8_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.a8_1, progress = progressMap.a8_1 }
+                            , sectorCell { time = Maybe.andThen (.sclb >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclb >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.sclb, progress = progressMap.sclb }
+                            , sectorCell { time = Maybe.andThen (.porin >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porin >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.porin, progress = progressMap.porin }
+                            , sectorCell { time = Maybe.andThen (.porout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porout >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.porout, progress = progressMap.porout }
+                            , sectorCell { time = Maybe.andThen (.pitref >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.pitref >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.pitref, progress = progressMap.pitref }
+                            , sectorCell { time = Maybe.andThen (.scl1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl1 >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.scl1, progress = progressMap.scl1 }
+                            , sectorCell { time = Maybe.andThen (.fordout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fordout >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.fordout, progress = progressMap.fordout }
+                            , sectorCell { time = Maybe.andThen (.fl >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fl >> .best) currentLapMiniSectors, fastest = bestTimes.fastestMiniSectors.fl, progress = progressMap.fl }
                             ]
                         ]
                 )
@@ -602,7 +569,7 @@ viewCurrentLapColumn_LeMans24h analysis { status, currentLapElapsed, currentLapB
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -614,8 +581,8 @@ lastLapColumn_Wec { getter, sorter } =
     }
 
 
-viewLastLapColumn_Wec : { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
-viewLastLapColumn_Wec { lastLap, lastLapSectors } =
+viewLastLapColumn_Wec : { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
+viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -641,7 +608,7 @@ viewLastLapColumn_Wec { lastLap, lastLapSectors } =
                 ]
                 []
     in
-    case lastLap of
+    case lastLapRated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
@@ -668,7 +635,7 @@ viewLastLapColumn_Wec { lastLap, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -680,8 +647,8 @@ lastLapColumn_LeMans24h { getter, sorter } =
     }
 
 
-viewLastLapColumn_LeMans24h : { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
-viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
+viewLastLapColumn_LeMans24h : { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
+viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -712,7 +679,7 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
                 ]
                 []
     in
-    case lastLap of
+    case lastLapRated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
@@ -750,7 +717,7 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
 -- VIEW
 
 
-view : Config StandingsEntry msg -> Model -> Standings -> Html msg
+view : Config Entry msg -> Model -> Standings -> Html msg
 view config state standings =
     DataView.view config state (Standings.toList standings)
 
@@ -760,14 +727,14 @@ view config state standings =
 
 
 performanceHistory : { a | fastestLapTime : Duration } -> List Lap -> Html msg
-performanceHistory analysis laps =
+performanceHistory bestTimes laps =
     div
         [ css
             [ property "display" "grid"
             , property "grid-template-columns" "repeat(7, auto)"
             ]
         ]
-        [ Lazy.lazy2 performanceHistory_ analysis laps ]
+        [ Lazy.lazy2 performanceHistory_ bestTimes laps ]
 
 
 performanceHistory_ : { a | fastestLapTime : Duration } -> List Lap -> Html msg

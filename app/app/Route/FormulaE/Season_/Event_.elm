@@ -9,7 +9,6 @@ import FatalError exposing (FatalError)
 import Html.Styled as Html exposing (Html, div, h1, img, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, src, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock as Clock exposing (State(..))
@@ -17,7 +16,9 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, currentLapColumn_Wec, customColumn, driverAndTeamColumn_Wec, histogramColumn, initialSort, intColumn, lastLapColumn_Wec, performanceColumn, veryCustomColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings exposing (StandingsEntry)
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -172,28 +173,20 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app ({ eventSummary, analysis, raceControl } as shared) { mode, leaderboardState } =
+view app ({ eventSummary, raceControl, viewModel } as shared) { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Formula E"
         , body =
             [ header shared
-            , let
-                standings =
-                    Standings.init analysis
-                        { elapsed = Clock.getElapsed raceControl.clock
-                        , lapCount = raceControl.lapCount
-                        , cars = raceControl.cars
-                        }
-              in
-              case mode of
+            , case mode of
                 Leaderboard ->
-                    Leaderboard.view (config eventSummary.season analysis standings) leaderboardState standings
+                    Leaderboard.view (config eventSummary.season viewModel.bestTimes viewModel.lapHistory) leaderboardState viewModel.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl
 
                 Tracker ->
-                    TrackerChart.view { season = 2025, eventName = "" } analysis standings
+                    TrackerChart.view { season = eventSummary.season, eventName = eventSummary.name } viewModel.bestTimes viewModel.standings
             ]
         }
 
@@ -264,8 +257,8 @@ statusBar { clock, lapTotal, lapCount, timeLimit } =
         ]
 
 
-config : Int -> Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
-config season analysis standings =
+config : Int -> BestTimes -> LapHistory -> Leaderboard.Config Entry Msg
+config season bestTimes lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -286,22 +279,21 @@ config season analysis standings =
         , currentLapColumn_Wec
             { getter = identity
             , sorter = compareBy (.currentLapTime >> Maybe.withDefault 0)
-            , analysis = analysis
             }
         , lastLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLap }
+        , bestTimeColumn { getter = .bestLapRated }
         , performanceColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+            , bestTimes = bestTimes
             }
         , histogramColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+            , bestTimes = bestTimes
             , coefficient = 1.2
             }
         ]

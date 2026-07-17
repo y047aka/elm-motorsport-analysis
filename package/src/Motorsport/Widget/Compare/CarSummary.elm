@@ -10,11 +10,11 @@ Compare widget, plus the placeholder that fills an unselected slot.
 import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Gap as Gap
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
@@ -39,8 +39,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> StandingsEntry -> Html msg
-carSummary analysis lapRange distScale standings item =
+carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+carSummary lapRange distScale lapHistory item =
     div
         [ css
             [ property "display" "grid"
@@ -51,7 +51,7 @@ carSummary analysis lapRange distScale standings item =
         ]
         [ header item
         , summaryStats item
-        , lapTimePanel analysis lapRange distScale standings item
+        , lapTimePanel lapRange distScale lapHistory item
         ]
 
 
@@ -61,8 +61,8 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 `distScale` so the three columns share one scale (height = peak sharpness = pace
 stability, comparable across cars).
 -}
-lapTimePanel : Analysis -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> Standings -> StandingsEntry -> Html msg
-lapTimePanel analysis maybeRange maybeScale standings item =
+lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+lapTimePanel maybeRange maybeScale lapHistory item =
     div
         [ css
             [ glassPanel
@@ -73,7 +73,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
         ]
         [ panelLabel "Lap time"
         , div [ css [ property "padding-bottom" "4px" ] ]
-            [ SectorAndLaps.view analysis item ]
+            [ SectorAndLaps.view item ]
         , div
             [ css
                 [ property "padding-top" "4px"
@@ -84,7 +84,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
                 ( Just range, Just { domain, maxDensity } ) ->
                     LapTimeDistribution.view
                         { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                        [ Distribution.seriesOf standings range item ]
+                        [ Distribution.seriesOf lapHistory range item ]
 
                 _ ->
                     text ""
@@ -92,7 +92,7 @@ lapTimePanel analysis maybeRange maybeScale standings item =
         ]
 
 
-header : StandingsEntry -> Html msg
+header : Entry -> Html msg
 header item =
     div
         [ css
@@ -120,7 +120,7 @@ header item =
 {-| As in the leaderboard, emphasizes the driver currently at the wheel and dims
 the others.
 -}
-driverList : StandingsEntry -> Html msg
+driverList : Entry -> Html msg
 driverList item =
     div
         [ css
@@ -186,7 +186,7 @@ statusBadge status =
             text ""
 
 
-summaryStats : StandingsEntry -> Html msg
+summaryStats : Entry -> Html msg
 summaryStats item =
     div
         [ css

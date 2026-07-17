@@ -12,7 +12,8 @@ import Html.Styled exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 {-| Shows the car's relationship to its rivals ahead and behind as the history of
@@ -49,8 +50,8 @@ clipped outside the band as an IQR outlier.
 ahead and behind are found internally as in-class neighbors in this list.
 
 -}
-view : Standings -> List StandingsEntry -> StandingsEntry -> Html msg
-view standings allCars item =
+view : LapHistory -> List Entry -> Entry -> Html msg
+view lapHistory allCars item =
     let
         neighbors =
             findNeighbors allCars item
@@ -59,13 +60,13 @@ view standings allCars item =
             item.lapsCompleted
 
         aheadLines =
-            neighbors.ahead |> List.map (GapChart.carLine standings (Recent currentLap) Related)
+            neighbors.ahead |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
 
         behindLines =
-            neighbors.behind |> List.map (GapChart.carLine standings (Recent currentLap) Related)
+            neighbors.behind |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
 
         focusedLine =
-            GapChart.carLine standings (Recent currentLap) Focused item
+            GapChart.carLine lapHistory (Recent currentLap) Focused item
 
         -- Display the nearest rival on each side plus the focused car
         -- (ahead → focused → behind); missing neighbors are dropped.
@@ -114,8 +115,8 @@ uses only the nearest one on each side (`List.head`); the reference population
 uses all of them. Fewer cars are available at the front/back or class edges.
 -}
 type alias Neighbors =
-    { ahead : List StandingsEntry
-    , behind : List StandingsEntry
+    { ahead : List Entry
+    , behind : List Entry
     }
 
 
@@ -124,7 +125,7 @@ overall standings by class preserves order, so the result is the in-class order
 as-is. At class edges only the available cars are returned (out-of-range indices
 are dropped).
 -}
-findNeighbors : List StandingsEntry -> StandingsEntry -> Neighbors
+findNeighbors : List Entry -> Entry -> Neighbors
 findNeighbors allCars item =
     let
         classmates =

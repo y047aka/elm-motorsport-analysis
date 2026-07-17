@@ -7,7 +7,6 @@ import FatalError exposing (FatalError)
 import Html.Styled exposing (header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.PositionHistory as PositionHistoryChart
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -15,7 +14,9 @@ import Motorsport.Duration as Duration
 import Motorsport.Gap as Gap
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, customColumn, driverNameColumn_F1, histogramColumn, initialSort, intColumn, lastLapColumn_F1, performanceColumn, stringColumn)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.Standings as Standings exposing (StandingsEntry)
+import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Utils exposing (compareBy)
 import PagesMsg exposing (PagesMsg)
 import RouteBuilder exposing (App, StatefulRoute)
@@ -134,7 +135,7 @@ view :
     -> Shared.Model
     -> Model
     -> View (PagesMsg Msg)
-view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
+view app { viewModel_F1, raceControl_F1 } { mode, leaderboardState } =
     View.map PagesMsg.fromMsg
         { title = "Leaderboard"
         , body =
@@ -165,15 +166,7 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
                 ]
             , case mode of
                 Leaderboard ->
-                    let
-                        standings =
-                            Standings.init analysis_F1
-                                { elapsed = Clock.getElapsed raceControl_F1.clock
-                                , lapCount = raceControl_F1.lapCount
-                                , cars = raceControl_F1.cars
-                                }
-                    in
-                    Leaderboard.view (config analysis_F1 standings) leaderboardState standings
+                    Leaderboard.view (config viewModel_F1.bestTimes viewModel_F1.lapHistory) leaderboardState viewModel_F1.standings
 
                 PositionHistory ->
                     PositionHistoryChart.view raceControl_F1
@@ -181,8 +174,8 @@ view app { analysis_F1, raceControl_F1 } { mode, leaderboardState } =
         }
 
 
-config : Analysis -> Standings.Standings -> Leaderboard.Config StandingsEntry Msg
-config analysis standings =
+config : BestTimes -> LapHistory -> Leaderboard.Config Entry Msg
+config bestTimes lapHistory =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -201,18 +194,18 @@ config analysis standings =
             }
         , lastLapColumn_F1
             { getter = identity
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLap }
+        , bestTimeColumn { getter = .bestLapRated }
         , performanceColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+            , bestTimes = bestTimes
             }
         , histogramColumn
-            { getter = \item -> Standings.getCarHistory item.metadata.carNumber standings
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
-            , analysis = analysis
+            { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+            , bestTimes = bestTimes
             , coefficient = 1.2
             }
         ]

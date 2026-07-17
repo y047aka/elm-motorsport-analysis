@@ -12,8 +12,8 @@ import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Analysis exposing (Analysis)
-import Motorsport.Standings as Standings exposing (Standings)
+import Motorsport.ViewModel exposing (ViewModel)
+import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
 
@@ -22,14 +22,12 @@ import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 internally, so callers may store them as-is.
 -}
 view :
-    { season : Int
-    , analysis : Analysis
-    , offset : Int
+    { offset : Int
     , onScrollTo : Int -> msg
     }
-    -> Standings
+    -> ViewModel
     -> Html msg
-view config standings =
+view config { standings, lapHistory } =
     let
         allCars =
             Standings.toList standings
@@ -68,11 +66,7 @@ view config standings =
                         ]
                     ]
                     (List.map
-                        (CarCard.view
-                            { season = config.season, analysis = config.analysis }
-                            standings
-                            allCars
-                        )
+                        (CarCard.view lapHistory allCars)
                         window
                     )
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)

@@ -10,12 +10,11 @@ status, above the driver name, sector performance, and rival gap sparkline.
 import Css exposing (backgroundColor, before, num, opacity, property, qt)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Car exposing (Status(..))
-import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.LapHistory exposing (LapHistory)
+import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
@@ -24,8 +23,8 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
-view : { season : Int, analysis : Analysis } -> Standings -> List StandingsEntry -> StandingsEntry -> Html msg
-view { season, analysis } standings allCars item =
+view : LapHistory -> List Entry -> Entry -> Html msg
+view lapHistory allCars item =
     div
         [ css
             [ property "display" "grid"
@@ -40,7 +39,7 @@ view { season, analysis } standings allCars item =
                 , property "column-gap" "16px"
                 ]
             ]
-            [ positionLabel season item
+            [ positionLabel item
             , gapsRow item
             , statusBadge item.status
             ]
@@ -53,14 +52,14 @@ view { season, analysis } standings allCars item =
                     ]
                 ]
                 [ cardHeader item
-                , SectorAndLaps.view analysis item
-                , RivalGapSparkline.view standings allCars item
+                , SectorAndLaps.view item
+                , RivalGapSparkline.view lapHistory allCars item
                 ]
             ]
         ]
 
 
-cardHeader : StandingsEntry -> Html msg
+cardHeader : Entry -> Html msg
 cardHeader item =
     div
         [ css
@@ -119,8 +118,8 @@ statusBadge status =
             text ""
 
 
-positionLabel : Int -> StandingsEntry -> Html msg
-positionLabel season item =
+positionLabel : Entry -> Html msg
+positionLabel item =
     div
         [ css
             [ property "display" "flex"
@@ -133,14 +132,14 @@ positionLabel season item =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , backgroundColor (Class.toHexColor season item.metadata.class)
+                , backgroundColor item.classColor
                 ]
             ]
         ]
         [ text ("P" ++ String.fromInt item.position) ]
 
 
-gapsRow : StandingsEntry -> Html msg
+gapsRow : Entry -> Html msg
 gapsRow item =
     div
         [ css

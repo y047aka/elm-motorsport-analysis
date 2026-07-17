@@ -1,14 +1,14 @@
 module Motorsport.Chart.Tracker exposing (view)
 
 import Css
-import Motorsport.Analysis exposing (Analysis)
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
-import Motorsport.Class as Class exposing (Class)
 import Motorsport.Direction exposing (Direction(..))
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector as Sector
-import Motorsport.Standings as Standings exposing (Standings, StandingsEntry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -74,8 +74,8 @@ constants =
     }
 
 
-{-| トラック上の進捗値（0-1）を角度（ラジアン）に変換するスケール関数
-回転方向に応じて12時の位置から時計回り、または反時計回りに0-2πの範囲で変換
+{-| Scale function converting a track progress value (0-1) into an angle (radians).
+Depending on rotation direction, maps to 0-2π clockwise or counter-clockwise from the 12 o'clock position.
 -}
 progressToAngleScale : Direction -> ContinuousScale Float
 progressToAngleScale direction =
@@ -85,16 +85,26 @@ progressToAngleScale direction =
     in
     case direction of
         Clockwise ->
-            -- 12時の位置から時計回りに0-2πの範囲で変換
+            -- Map to 0-2π clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
         CounterClockwise ->
-            -- 12時の位置から反時計回りに0-2πの範囲で変換
+            -- Map to 0-2π counter-clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view : { season : Int, eventName : String } -> Analysis -> Standings -> Svg msg
-view { season, eventName } analysis standings =
+view :
+    { season : Int, eventName : String }
+    ->
+        { a
+            | fastestSector_1 : Duration
+            , fastestSector_2 : Duration
+            , fastestSector_3 : Duration
+            , fastestMiniSectors : LeMans2025MiniSectorFastest
+        }
+    -> Standings
+    -> Svg msg
+view { season, eventName } bestTimes standings =
     let
         layout =
             if season == 2025 && eventName == "24 Hours of Le Mans" then
@@ -107,7 +117,7 @@ view { season, eventName } analysis standings =
                 Circuit.clockwise
 
         config =
-            Config.buildConfig layout analysis
+            Config.buildConfig layout bestTimes
     in
     viewWithConfig layout.direction config standings
 
@@ -297,7 +307,7 @@ renderCars direction config standings =
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> StandingsEntry -> Svg msg
+renderCarOnTrack : Direction -> TrackConfig -> Entry -> Svg msg
 renderCarOnTrack direction config car =
     let
         coords =
@@ -306,7 +316,7 @@ renderCarOnTrack direction config car =
     renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> StandingsEntry -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> Entry -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -324,12 +334,9 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> StandingsEntry -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Direction -> Entry -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
-        { carNumber, class } =
-            car.metadata
-
         { cx, cy } =
             constants.track
 
@@ -344,13 +351,15 @@ renderCar direction car { angle, x, y } =
     in
     g []
         [ g [ Attributes.transform [ Translate x y ] ]
-            [ Lazy.lazy2 carMarker car.positionInClass class ]
-        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = carNumber }
+            -- Lazy compares its arguments by reference equality (===). A Css.Color record is
+            -- recreated on every compute, so pass a String, which compares by value.
+            [ Lazy.lazy2 carMarker car.positionInClass car.classColor.value ]
+        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]
 
 
-carMarker : Int -> Class -> Svg msg
-carMarker positionInClass class =
+carMarker : Int -> String -> Svg msg
+carMarker positionInClass classColorValue =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
@@ -369,7 +378,7 @@ carMarker positionInClass class =
         [ Attributes.cx (px 0)
         , Attributes.cy (px 0)
         , Attributes.r (px carSize)
-        , fill (Class.toHexColor 2025 class |> .value)
+        , fill classColorValue
         , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
         ]
         []
