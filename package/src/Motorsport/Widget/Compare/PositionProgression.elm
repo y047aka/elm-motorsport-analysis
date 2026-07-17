@@ -41,8 +41,8 @@ lapRange viewModel class =
     Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
 
 
-classCarsOf : Standings -> Class -> List Entry
-classCarsOf standings class =
+classEntriesOf : Standings -> Class -> List Entry
+classEntriesOf standings class =
     Standings.toClassList standings
         |> List.Extra.find (\( classInfo, _ ) -> classInfo.class == class)
         |> Maybe.map Tuple.second
@@ -59,7 +59,7 @@ classPositionPoints ({ standings, lapHistory } as viewModel) class =
         lapThreshold =
             calculateLapThreshold viewModel
     in
-    classCarsOf standings class
+    classEntriesOf standings class
         |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber lapHistory) ))
         |> List.filter (\( _, points ) -> List.length points >= 2)
 

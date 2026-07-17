@@ -45,7 +45,7 @@ import SortedList exposing (SortedList)
 type Standings
     = Standings
         { elapsed : Duration
-        , laps : Int
+        , lapCount : Int
         , entries : SortedList ByPosition Entry
         , entriesByClass : List ( ClassInfo, SortedList ByPosition Entry )
         }
@@ -237,7 +237,7 @@ compute { season } bestTimes config =
     in
     Standings
         { elapsed = config.elapsed
-        , laps = config.lapCount
+        , lapCount = config.lapCount
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
@@ -296,7 +296,7 @@ fromLaps { season } baseMetadata laps =
     in
     Standings
         { elapsed = 0
-        , laps = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
+        , lapCount = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
@@ -312,7 +312,7 @@ fromList entries =
     in
     Standings
         { elapsed = 0
-        , laps = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
+        , lapCount = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
@@ -506,7 +506,7 @@ leader (Standings s) =
 
 lapCount : Standings -> Int
 lapCount (Standings s) =
-    s.laps
+    s.lapCount
 
 
 {-| この Standings が表すレース経過時間。compute に渡した elapsed が焼き込まれている。

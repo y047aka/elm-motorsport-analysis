@@ -24,7 +24,7 @@ type alias ViewModel =
 
 
 compute : { season : Int } -> Scope -> RaceControl.Model -> ViewModel
-compute season scope raceControl =
+compute seasonConfig scope raceControl =
     let
         elapsed =
             Clock.getElapsed raceControl.clock
@@ -33,7 +33,7 @@ compute season scope raceControl =
             BestTimes.compute scope raceControl
     in
     { standings =
-        Standings.compute season
+        Standings.compute seasonConfig
             bestTimes
             { elapsed = elapsed
             , lapCount = raceControl.lapCount
