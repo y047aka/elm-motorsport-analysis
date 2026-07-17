@@ -36,20 +36,19 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
-import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector exposing (Sector(..))
-import SortedList exposing (SortedList)
+import Motorsport.Utils exposing (compareBy)
 
 
 type Standings
     = Standings
+        -- Entries are stored as plain, position-sorted lists: the Lamdera
+        -- compiler used by elm-pages cannot generate wire codecs for the
+        -- phantom-typed SortedList.
         { elapsed : Duration
         , lapCount : Int
-        , entries : SortedList ByPosition Entry
-        -- Entries are kept as plain lists here (already position-sorted by
-        -- groupEntriesByClass): the Lamdera compiler used by elm-pages fails
-        -- to generate wire codecs for a phantom-typed SortedList inside a tuple.
+        , entries : List Entry
         , entriesByClass : List ( ClassInfo, List Entry )
         }
 
@@ -236,7 +235,7 @@ compute { season } bestTimes config =
                     )
 
         sortedEntries =
-            Ordering.byPosition entries
+            List.sortWith (compareBy .position) entries
     in
     Standings
         { elapsed = config.elapsed
@@ -295,7 +294,7 @@ fromLaps { season } baseMetadata laps =
                     )
 
         sortedEntries =
-            Ordering.byPosition entries
+            List.sortWith (compareBy .position) entries
     in
     Standings
         { elapsed = 0
@@ -311,7 +310,7 @@ fromList : List Entry -> Standings
 fromList entries =
     let
         sortedEntries =
-            Ordering.byPosition entries
+            List.sortWith (compareBy .position) entries
     in
     Standings
         { elapsed = 0
@@ -321,11 +320,11 @@ fromList entries =
         }
 
 
-groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )
+groupEntriesByClass : List Entry -> List ( ClassInfo, List Entry )
 groupEntriesByClass sortedEntries =
     sortedEntries
-        |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: SortedList.toList rest ))
+        |> List.Extra.gatherEqualsBy (.metadata >> .class)
+        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: rest ))
 
 
 {-| Extracts a class's display info from an entry.
@@ -493,7 +492,7 @@ positionsInClassByCarNumber raceOrder =
 
 toList : Standings -> List Entry
 toList (Standings s) =
-    SortedList.toList s.entries
+    s.entries
 
 
 toClassList : Standings -> List ( ClassInfo, List Entry )
@@ -503,7 +502,7 @@ toClassList (Standings s) =
 
 leader : Standings -> Maybe Entry
 leader (Standings s) =
-    SortedList.head s.entries
+    List.head s.entries
 
 
 lapCount : Standings -> Int
@@ -541,6 +540,6 @@ groupCarsByCloseIntervals (Standings s) =
                     in
                     (first :: group) :: groupCars remaining
     in
-    SortedList.toList s.entries
+    s.entries
         |> groupCars
         |> List.filter (\group -> List.length group >= 2)
