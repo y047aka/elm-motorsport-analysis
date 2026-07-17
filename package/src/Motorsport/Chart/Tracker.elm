@@ -74,8 +74,8 @@ constants =
     }
 
 
-{-| トラック上の進捗値（0-1）を角度（ラジアン）に変換するスケール関数
-回転方向に応じて12時の位置から時計回り、または反時計回りに0-2πの範囲で変換
+{-| Scale function converting a track progress value (0-1) into an angle (radians).
+Depending on rotation direction, maps to 0-2π clockwise or counter-clockwise from the 12 o'clock position.
 -}
 progressToAngleScale : Direction -> ContinuousScale Float
 progressToAngleScale direction =
@@ -85,11 +85,11 @@ progressToAngleScale direction =
     in
     case direction of
         Clockwise ->
-            -- 12時の位置から時計回りに0-2πの範囲で変換
+            -- Map to 0-2π clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn + 2 * pi ) ( 0, 1 )
 
         CounterClockwise ->
-            -- 12時の位置から反時計回りに0-2πの範囲で変換
+            -- Map to 0-2π counter-clockwise from the 12 o'clock position
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
@@ -351,8 +351,8 @@ renderCar direction car { angle, x, y } =
     in
     g []
         [ g [ Attributes.transform [ Translate x y ] ]
-            -- Lazy は引数を参照等価（===）で比較する。Css.Color レコードは
-            -- compute のたびに再生成されるため、値比較が成立する String を渡す。
+            -- Lazy compares its arguments by reference equality (===). A Css.Color record is
+            -- recreated on every compute, so pass a String, which compares by value.
             [ Lazy.lazy2 carMarker car.positionInClass car.classColor.value ]
         , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]

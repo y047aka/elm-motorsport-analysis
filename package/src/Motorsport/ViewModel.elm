@@ -1,9 +1,9 @@
 module Motorsport.ViewModel exposing (ViewModel, compute)
 
-{-| view へ渡す計算済みモデルの束。
+{-| The bundle of computed models handed to the view.
 
-ドメインモデル（`RaceControl.Model`）から view が必要とする
-すべての計算済みモデルを構築する、ドメイン → ViewModel 変換の単一の入口。
+The single entry point of the domain → ViewModel conversion: builds every
+computed model the view needs from the domain model (`RaceControl.Model`).
 
 @docs ViewModel, compute
 

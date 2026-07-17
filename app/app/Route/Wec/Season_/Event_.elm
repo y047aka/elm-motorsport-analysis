@@ -280,7 +280,7 @@ trackerView eventSummary ({ standings } as viewModel) m =
             [ LiveStandingsWidget.view
                 { standings = standings
 
-                -- クロージャではなくコンストラクタを直接渡す（行の Lazy を効かせるため）
+                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
                 , onSelectCar = ShowCarDetail
                 , popoverTarget = CarDetailPopover.popoverId
                 }

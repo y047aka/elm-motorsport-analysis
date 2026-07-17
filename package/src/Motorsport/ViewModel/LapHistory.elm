@@ -4,10 +4,10 @@ module Motorsport.ViewModel.LapHistory exposing
     , get, recentLaps
     )
 
-{-| 現在時刻までに完了したラップの車両別スライス。
+{-| A per-car slice of the laps completed up to the current time.
 
-生の `Lap` を保持するが、時刻でスライス済みという意味で計算済みモデル層に属する。
-ラップ履歴の時系列走査を必要とするチャート系モジュールだけがこれを消費する。
+Holds raw `Lap` values but belongs to the computed-model layer in the sense that
+it is already sliced by time. Only chart modules that scan lap history over time consume this.
 
 @docs LapHistory
 @docs compute
@@ -33,7 +33,7 @@ compute raceClock cars =
         |> LapHistory
 
 
-{-| carNumber からラップ履歴を取得する
+{-| Get the lap history for a carNumber.
 -}
 get : String -> LapHistory -> List Lap
 get carNumber (LapHistory histories) =

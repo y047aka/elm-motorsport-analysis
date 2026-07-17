@@ -16,9 +16,9 @@ import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 type alias Props msg =
     { standings : Standings
 
-    -- 選択された車両の carNumber を返す。
-    -- Lazy を効かせるため、view ごとに再生成されるクロージャではなく
-    -- Msg コンストラクタなどの安定した参照を渡すこと。
+    -- Returns the carNumber of the selected car.
+    -- To keep Lazy effective, pass a stable reference such as a Msg constructor,
+    -- not a closure that is recreated on every view.
     , onSelectCar : String -> msg
     , popoverTarget : String
     }

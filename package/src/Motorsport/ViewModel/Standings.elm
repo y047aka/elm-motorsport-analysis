@@ -51,8 +51,8 @@ type Standings
         }
 
 
-{-| クラス見出し・バッジが必要とする表示情報。
-season 依存の色解決は compute 時に済ませてある。
+{-| Display info needed by class headers and badges.
+The season-dependent color resolution is already done at compute time.
 -}
 type alias ClassInfo =
     { class : Class
@@ -107,8 +107,8 @@ type alias Entry =
     , currentLapTime : Maybe Duration
     , currentLapBest : Maybe Duration
 
-    -- currentLapSectors は生タイム（Debug ページ等のデータ表示用）。
-    -- 進捗・性能判定は currentLapSectorStates を単一の情報源とする。
+    -- currentLapSectors holds raw times (for data display such as the Debug page).
+    -- currentLapSectorStates is the single source of truth for progress and performance rating.
     , currentLapSectors : Maybe SectorTimes
     , currentLapSectorStates : Maybe CurrentSectorStates
     , currentLapMiniSectors : Maybe MiniSectors
@@ -133,8 +133,8 @@ type alias SectorProgress =
     }
 
 
-{-| 現在ラップのセクターごとの「進捗 + 性能判定」。
-donut 表示などが BestTimes を追加供給されずに描けるよう、compute 時に判定済み。
+{-| Per-sector "progress + performance rating" for the current lap.
+Rated at compute time so donut displays can render without being supplied BestTimes separately.
 -}
 type alias CurrentSectorStates =
     { sector_1 : { progress : Float, rated : RatedTime }
@@ -243,9 +243,9 @@ compute { season } bestTimes config =
         }
 
 
-{-| デバッグ用: 1台分のラップリストから Standings を組み立てる。
+{-| For debugging: builds a Standings from a single car's lap list.
 
-各ラップを1つの Entry として扱い、`metadata.carNumber` にラップ番号文字列をセットする。
+Treats each lap as one Entry, setting `metadata.carNumber` to the lap-number string.
 
 -}
 fromLaps : { season : Int } -> Car.Metadata -> List Lap -> Standings
@@ -302,7 +302,7 @@ fromLaps { season } baseMetadata laps =
         }
 
 
-{-| `Entry` のリストから `Standings` を組み立てる。テスト用途などで直接エントリを指定したい場合に使う。
+{-| Builds a Standings from a list of `Entry`. Used to specify entries directly, e.g. in tests.
 -}
 fromList : List Entry -> Standings
 fromList entries =
@@ -325,7 +325,7 @@ groupEntriesByClass sortedEntries =
         |> List.map (\( first, rest ) -> ( classInfoOf first, Ordering.byPosition (first :: SortedList.toList rest) ))
 
 
-{-| エントリからクラスの表示情報を取り出す。
+{-| Extracts a class's display info from an entry.
 -}
 classInfoOf : Entry -> ClassInfo
 classInfoOf entry =
@@ -509,7 +509,7 @@ lapCount (Standings s) =
     s.lapCount
 
 
-{-| この Standings が表すレース経過時間。compute に渡した elapsed が焼き込まれている。
+{-| The race elapsed time this Standings represents; the elapsed passed to compute is baked in.
 -}
 elapsed : Standings -> Duration
 elapsed (Standings s) =

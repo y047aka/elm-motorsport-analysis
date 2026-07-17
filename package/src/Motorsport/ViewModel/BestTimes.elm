@@ -1,9 +1,9 @@
 module Motorsport.ViewModel.BestTimes exposing (BestTimes, Scope(..), compute)
 
-{-| 集計スコープ内の最速値（比較基準）。
+{-| The fastest times within the aggregation scope (the comparison baseline).
 
-widget が個々のタイムを性能判定・スケーリングする際の基準となる集計値。
-ドメインモデル（RunningOrder）を走査して構築する。
+The aggregated values a widget uses as the baseline when rating and scaling
+individual times. Built by scanning the domain model (RunningOrder).
 
 @docs BestTimes, Scope, compute
 
@@ -26,10 +26,10 @@ type alias BestTimes =
     }
 
 
-{-| 集計スコープ。
+{-| Aggregation scope.
 
-  - `WholeRace`: 全ラップを基準にする（データ読み込み直後など、再生位置に依存しない基準値）
-  - `UpToElapsed`: clock の経過時間までに完了したラップのみを基準にする（再生中）
+  - `WholeRace`: baseline over all laps (playback-position-independent, e.g. right after data load)
+  - `UpToElapsed`: baseline over only the laps completed up to the clock's elapsed time (during playback)
 
 -}
 type Scope
