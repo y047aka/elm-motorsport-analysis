@@ -3,10 +3,8 @@ module Shared exposing (Data, Model, Msg(..), template)
 import BackendTask exposing (BackendTask)
 import Css exposing (height, vh)
 import Css.Global exposing (global)
-import Data.FormulaE as FormulaE
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
-import Data.Series.FormulaE
 import Data.Series.Wec
 import Data.Wec as Wec
 import Data.Wec.Laps as WecLaps
@@ -95,8 +93,6 @@ type Msg
     = FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
     | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
-    | FetchJson_FormulaE { season : String, event : String }
-    | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
     | RaceControlMsg RaceControl.Msg
 
 
@@ -149,46 +145,6 @@ update msg m =
             finalizeWecIfReady { m | pendingWecLaps = Just rawLaps }
 
         LapsLoaded_Wec (Err _) ->
-            ( m, Effect.none )
-
-        FetchJson_FormulaE options ->
-            let
-                eventSummary =
-                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.FormulaE.fromString options.event)
-                        |> Maybe.andThen Series.toEventSummary_FormulaE
-                        |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
-            in
-            ( { m | eventSummary = eventSummary }
-            , Effect.fromCmd <|
-                Http.get
-                    { url = eventSummary.jsonPath
-                    , expect = Http.expectJson JsonLoaded_FormulaE FormulaE.eventDecoder
-                    }
-            )
-
-        JsonLoaded_FormulaE (Ok decoded) ->
-            let
-                cars =
-                    decoded.startingGrid
-                        |> List.map Car.fromStartingGrid
-                        |> FormulaE.attachLaps decoded.laps
-
-                rcNew =
-                    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
-                        |> Maybe.withDefault RaceControl.placeholder
-
-                modelEventSummary =
-                    m.eventSummary
-            in
-            ( { m
-                | eventSummary = { modelEventSummary | name = decoded.name }
-                , raceControl = rcNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } WholeRace rcNew
-              }
-            , Effect.none
-            )
-
-        JsonLoaded_FormulaE (Err _) ->
             ( m, Effect.none )
 
         RaceControlMsg raceControlMsg ->

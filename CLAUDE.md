@@ -58,11 +58,10 @@ nix run .#cli-test           # Run Rust tests
 
 **`/app/app/Route/`** - Page routes
 - `Wec/Season_/Event_.elm` - WEC event pages
-- `FormulaE/Season_/Event_.elm` - Formula E event pages
 
 **`/app/src/`** - Shared modules
 - `Css/` - Type-safe styling (Color, Palette, Typography)
-- `Data/` - Series configurations (FormulaE, WEC)
+- `Data/` - Series configurations (WEC)
 - `UI/` - Reusable components (Button, Label, Table)
 
 **`/package/src/Motorsport/`** - Domain models
