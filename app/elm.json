@@ -11,8 +11,8 @@
         "direct": {
             "NoRedInk/elm-json-decode-pipeline": "1.0.1",
             "avh4/elm-color": "1.0.0",
-            "dillonkearns/elm-form": "3.0.1",
-            "dillonkearns/elm-pages": "12.1.2",
+            "dillonkearns/elm-form": "3.1.0",
+            "dillonkearns/elm-pages": "12.3.0",
             "elm/browser": "1.0.2",
             "elm/core": "1.0.5",
             "elm/html": "1.0.1",
@@ -32,6 +32,7 @@
             "y047aka/elm-css-palette": "3.0.0"
         },
         "indirect": {
+            "BrianHicks/elm-string-graphemes": "1.0.4",
             "Chadtech/elm-bool-extra": "2.4.2",
             "MaybeJustJames/yaml": "2.1.7",
             "danyx23/elm-mimetype": "4.0.1",
@@ -65,9 +66,9 @@
             "jluckyiv/elm-utc-date-strings": "1.0.0",
             "justinmimbs/date": "4.1.0",
             "justinmimbs/time-extra": "1.2.0",
-            "mdgriffith/elm-codegen": "6.0.2",
-            "miniBill/elm-codec": "2.3.0",
-            "miniBill/elm-unicode": "1.1.1",
+            "mdgriffith/elm-codegen": "6.0.3",
+            "miniBill/elm-codec": "2.3.1",
+            "miniBill/elm-unicode": "1.1.2",
             "noahzgordon/elm-color-extra": "1.0.2",
             "pithub/elm-parser-bug-workaround": "1.0.0",
             "pithub/elm-parser-extra": "1.0.0",

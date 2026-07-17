@@ -26,8 +26,8 @@ importers:
         specifier: 0.4.0
         version: 0.4.0
       elm-pages:
-        specifier: 3.3.4
-        version: 3.3.4(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(tslib@1.14.1)
+        specifier: 3.5.1
+        version: 3.5.1(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(tslib@1.14.1)
       tailwindcss:
         specifier: 4.3.3
         version: 4.3.3
@@ -1045,8 +1045,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  elm-pages@3.3.4:
-    resolution: {integrity: sha512-j974jh6qPXkZMsRRJ0I85hzT/miM95twLWcZUeyhTme+/h6YTqMIfEgxa1Xcn+OqlcCxeyPJ/fRBLG69a+tNEQ==}
+  elm-pages@3.5.1:
+    resolution: {integrity: sha512-EWEVXHsAZcFJPOduzn1MCYixwmf7QgIY7+ABJKNI+eqibJDTDhzoyj/glBhZBDJ5MtXNaqxQSqUQHZ8xWv7BrA==}
     hasBin: true
 
   emoji-regex@8.0.0:
@@ -1416,11 +1416,6 @@ packages:
 
   js-yaml@3.14.1:
     resolution: {integrity: sha512-okMH7OXXJ7YrN9Ok3/SXrnu4iX9yOk+25nqX4imS2npuvTYDmo/QEZoqwZkYaIDk3jVvBOTOIEgEhaLOynBS9g==}
-    hasBin: true
-
-  jsesc@3.1.0:
-    resolution: {integrity: sha512-/sM3dO2FOzXjKQhJuo0Q173wf2KOo8t4I8vHy6lF9poUp7bKT0/NHE8fPX23PwfhnykfqnC2xRxOnVw5XuGIaA==}
-    engines: {node: '>=6'}
     hasBin: true
 
   jsonfile@6.2.0:
@@ -3088,7 +3083,7 @@ snapshots:
       ts-union: 2.3.0
       typescript: 5.9.3
 
-  elm-pages@3.3.4(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(tslib@1.14.1):
+  elm-pages@3.5.1(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(tslib@1.14.1):
     dependencies:
       '@sindresorhus/merge-streams': 4.0.0
       busboy: 1.6.0
@@ -3106,7 +3101,6 @@ snapshots:
       fs-extra: 11.3.4
       globby: 16.2.0
       gray-matter: 4.0.3
-      jsesc: 3.1.0
       kleur: 4.1.5
       make-fetch-happen: 15.0.5
       memfs: 4.57.1(tslib@1.14.1)
@@ -3578,8 +3572,6 @@ snapshots:
     dependencies:
       argparse: 1.0.10
       esprima: 4.0.1
-
-  jsesc@3.1.0: {}
 
   jsonfile@6.2.0:
     dependencies:
