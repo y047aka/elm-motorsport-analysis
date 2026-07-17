@@ -57,9 +57,8 @@ nix run .#cli-test           # Run Rust tests
 ### Key Elm Modules
 
 **`/app/app/Route/`** - Page routes
-- `GapChart.elm` - Gap analysis visualization
-- `LapTimeCharts.elm` - Lap time comparison charts
-- `F1/` - Formula 1 specific pages
+- `Wec/Season_/Event_.elm` - WEC event pages
+- `FormulaE/Season_/Event_.elm` - Formula E event pages
 
 **`/app/src/`** - Shared modules
 - `Css/` - Type-safe styling (Color, Palette, Typography)

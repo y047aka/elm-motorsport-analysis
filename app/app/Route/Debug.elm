@@ -13,7 +13,7 @@ import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn_F1, sectorTimeColumn)
+import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
@@ -242,7 +242,7 @@ config bestTimes standings =
             , getter = .currentLapSectors >> Maybe.map (.s3_best >> Duration.toString) >> Maybe.withDefault ""
             , sorter = compareBy (.currentLapSectors >> Maybe.map .s3_best >> Maybe.withDefault 0)
             }
-        , lastLapColumn_F1
+        , lastLapColumn
             { getter = identity
             , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }

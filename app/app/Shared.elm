@@ -3,8 +3,6 @@ module Shared exposing (Data, Model, Msg(..), template)
 import BackendTask exposing (BackendTask)
 import Css exposing (height, vh)
 import Css.Global exposing (global)
-import Data.F1.Decoder as F1
-import Data.F1.Preprocess as Preprocess_F1
 import Data.FormulaE as FormulaE
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
@@ -51,9 +49,7 @@ type alias Data =
 
 type alias Model =
     { eventSummary : EventSummary
-    , raceControl_F1 : RaceControl.Model
     , raceControl : RaceControl.Model
-    , viewModel_F1 : ViewModel
     , viewModel : ViewModel
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
@@ -82,9 +78,7 @@ init flags maybePagePath =
             ViewModel.compute { season = 0 } WholeRace raceControlInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , raceControl_F1 = raceControlInit
       , raceControl = raceControlInit
-      , viewModel_F1 = viewModelInit
       , viewModel = viewModelInit
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
@@ -98,46 +92,17 @@ init flags maybePagePath =
 
 
 type Msg
-    = FetchJson String
-    | JsonLoaded (Result Http.Error (List F1.Car))
-    | FetchJson_Wec { season : String, event : String }
+    = FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
     | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
     | FetchJson_FormulaE { season : String, event : String }
     | JsonLoaded_FormulaE (Result Http.Error FormulaE.Event)
-    | RaceControlMsg_F1 RaceControl.Msg
     | RaceControlMsg RaceControl.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        FetchJson url ->
-            ( m
-            , Effect.fromCmd <|
-                Http.get
-                    { url = url
-                    , expect = Http.expectJson JsonLoaded F1.decoder
-                    }
-            )
-
-        JsonLoaded (Ok decoded) ->
-            let
-                rcNew =
-                    Preprocess_F1.preprocess decoded
-                        |> RaceControl.fromCars []
-                        |> Maybe.withDefault RaceControl.placeholder
-            in
-            ( { m
-                | raceControl_F1 = rcNew
-                , viewModel_F1 = ViewModel.compute { season = 0 } WholeRace rcNew
-              }
-            , Effect.none
-            )
-
-        JsonLoaded (Err _) ->
-            ( m, Effect.none )
-
         FetchJson_Wec options ->
             let
                 eventSummary =
@@ -225,18 +190,6 @@ update msg m =
 
         JsonLoaded_FormulaE (Err _) ->
             ( m, Effect.none )
-
-        RaceControlMsg_F1 raceControlMsg ->
-            let
-                rcNew =
-                    RaceControl.update raceControlMsg m.raceControl_F1
-            in
-            ( { m
-                | raceControl_F1 = rcNew
-                , viewModel_F1 = ViewModel.compute { season = 0 } UpToElapsed rcNew
-              }
-            , Effect.none
-            )
 
         RaceControlMsg raceControlMsg ->
             let
