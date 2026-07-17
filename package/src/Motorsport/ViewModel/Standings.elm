@@ -437,10 +437,10 @@ type alias TimingState =
 
 
 init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
-init_timing elapsed rivals car =
+init_timing raceElapsed rivals car =
     let
         raceClock =
-            { elapsed = elapsed }
+            { elapsed = raceElapsed }
 
         currentLap =
             Maybe.withDefault Lap.empty car.currentLap
@@ -467,10 +467,10 @@ init_timing elapsed rivals car =
     , sector = currentSector
     , miniSector = currentMiniSector
     , gapToLeader =
-        Maybe.map2 (Gap.at elapsed) rivals.leader (Just car)
+        Maybe.map2 (Gap.at raceElapsed) rivals.leader (Just car)
             |> Maybe.withDefault Gap.None
     , intervalToAhead =
-        Maybe.map2 (Gap.at elapsed) rivals.rival (Just car)
+        Maybe.map2 (Gap.at raceElapsed) rivals.rival (Just car)
             |> Maybe.withDefault Gap.None
     }
 
