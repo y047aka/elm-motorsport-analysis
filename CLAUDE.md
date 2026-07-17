@@ -87,4 +87,4 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 
 ## Environment
 
-Nix flake provides reproducible dev environment (Node.js 24, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.
+Nix flake provides reproducible dev environment (Node.js 26, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.

@@ -39,7 +39,7 @@
         mkNodeApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm ] ++ elmTools;
             text = cmd;
           };
 
@@ -48,7 +48,7 @@
         mkVrtApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
             text = ''
               export FONTCONFIG_FILE=${playwrightEnv.FONTCONFIG_FILE}
               export PLAYWRIGHT_BROWSERS_PATH=${playwrightEnv.PLAYWRIGHT_BROWSERS_PATH}
@@ -93,7 +93,7 @@
 
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
         });
 
         apps = {
