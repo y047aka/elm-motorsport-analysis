@@ -5,7 +5,7 @@ mod Motorsport.TestMetadata {
     use Motorsport.Wec.RawLap
     use Util.Duration
     use Util.HourClock.Hour
-    use Util.Json
+    use Util.Json.Encode
 
     /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
     def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap =
@@ -127,7 +127,7 @@ mod Motorsport.TestMetadata {
     def testToJsonRendersExpectedKeys(): Unit \ Assert =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
-        let json = Json.render(Metadata.toJson(meta));
+        let json = Encode.render(Metadata.toJson(meta));
         // 主要キーが出現することを確認 (構造アサーション)。
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
