@@ -20,9 +20,13 @@ import SortedList exposing (SortedList)
 This type ensures that collections ordered by racing position
 cannot be mixed with other ordering types at compile time.
 
+The constructor is unexposed and carries no data; it must not contain
+`Never`, because the Lamdera compiler used by elm-pages cannot generate
+wire codecs for types containing `Never`.
+
 -}
 type ByPosition
-    = ByPosition Never
+    = ByPosition
 
 
 {-| Create a position-ordered collection from items with a position field
