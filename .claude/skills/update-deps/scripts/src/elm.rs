@@ -3,7 +3,7 @@ use std::fs;
 use serde_json::Value;
 
 pub fn versions_report() -> Result<(), String> {
-    let files = ["app/elm.json", "package/elm.json", "review/elm.json"];
+    let files = ["app/elm.json", "package/elm.json"];
 
     for f in &files {
         let raw = fs::read_to_string(f).map_err(|e| format!("{f}: {e}"))?;

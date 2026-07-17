@@ -205,7 +205,6 @@ pub fn pin_versions() -> Result<(), String> {
         ("package.json", ""),
         ("app/package.json", "app"),
         ("package/package.json", "package"),
-        ("review/package.json", "review"),
     ];
 
     for &(file, ws_prefix) in workspaces {

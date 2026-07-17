@@ -46,7 +46,6 @@ nix run .#cli-test           # Run Rust tests
 - **`/app`** - elm-pages 3.x web application (frontend)
 - **`/package`** - Reusable Elm library (motorsport domain models)
 - **`/cli`** - Rust CLI for CSV→JSON data processing
-- **`/review`** - elm-review configuration
 
 ### Frontend Stack
 - **Elm 0.19.1** with elm-pages 3.x (full-stack framework)
