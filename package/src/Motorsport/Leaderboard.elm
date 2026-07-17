@@ -68,7 +68,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorSlots, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings, Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
 
 
@@ -372,7 +372,7 @@ currentLapColumn_Wec :
             { a
                 | status : Status
                 , currentLapRated : Maybe RatedTime
-                , currentLapSectorSlots : Maybe CurrentSectorSlots
+                , currentLapSectorStates : Maybe CurrentSectorStates
             }
     , sorter : data -> data -> Order
     }
@@ -389,10 +389,10 @@ viewCurrentLapColumn_Wec :
     { a
         | status : Status
         , currentLapRated : Maybe RatedTime
-        , currentLapSectorSlots : Maybe CurrentSectorSlots
+        , currentLapSectorStates : Maybe CurrentSectorStates
     }
     -> Html msg
-viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorSlots } =
+viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
     let
         lapTime { time, performance } =
             div
@@ -449,7 +449,7 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorSlots } =
                     ]
             )
             currentLapRated
-            currentLapSectorSlots
+            currentLapSectorStates
             |> Maybe.withDefault (text "-")
 
 

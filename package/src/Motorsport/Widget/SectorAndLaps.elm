@@ -136,7 +136,7 @@ sectors are filled with their performance color.
 -}
 currentSectorPie : Entry -> Html msg
 currentSectorPie item =
-    case ( item.currentLapSectorSlots, Car.hasRetired item.status ) of
+    case ( item.currentLapSectorStates, Car.hasRetired item.status ) of
         ( Just slots, False ) ->
             sectorPie
                 [ currentSectorSlot slots.sector_1

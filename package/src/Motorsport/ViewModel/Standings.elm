@@ -1,7 +1,7 @@
 module Motorsport.ViewModel.Standings exposing
     ( Standings, Entry, ClassInfo
     , SectorProgress, MiniSectorProgress
-    , SectorTimes, CurrentSectorSlots
+    , SectorTimes, CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount, elapsed
@@ -13,7 +13,7 @@ module Motorsport.ViewModel.Standings exposing
 
 @docs Standings, Entry, ClassInfo
 @docs SectorProgress, MiniSectorProgress
-@docs SectorTimes, CurrentSectorSlots
+@docs SectorTimes, CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
 
@@ -108,9 +108,9 @@ type alias Entry =
     , currentLapBest : Maybe Duration
 
     -- currentLapSectors は生タイム（Debug ページ等のデータ表示用）。
-    -- 進捗・性能判定は currentLapSectorSlots を単一の情報源とする。
+    -- 進捗・性能判定は currentLapSectorStates を単一の情報源とする。
     , currentLapSectors : Maybe SectorTimes
-    , currentLapSectorSlots : Maybe CurrentSectorSlots
+    , currentLapSectorStates : Maybe CurrentSectorStates
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
     , currentLapRated : Maybe RatedTime
@@ -136,7 +136,7 @@ type alias SectorProgress =
 {-| 現在ラップのセクターごとの「進捗 + 性能判定」。
 donut 表示などが BestTimes を追加供給されずに描けるよう、compute 時に判定済み。
 -}
-type alias CurrentSectorSlots =
+type alias CurrentSectorStates =
     { sector_1 : { progress : Float, rated : RatedTime }
     , sector_2 : { progress : Float, rated : RatedTime }
     , sector_3 : { progress : Float, rated : RatedTime }
@@ -206,7 +206,7 @@ compute { season } bestTimes config =
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
                         , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
-                        , currentLapSectorSlots = currentLap |> Maybe.map (extractCurrentSectorSlots bestTimes timing.sector)
+                        , currentLapSectorStates = currentLap |> Maybe.map (extractCurrentSectorStates bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
                         , currentLapRated =
@@ -272,7 +272,7 @@ fromLaps { season } baseMetadata laps =
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
                         , currentLapSectors = Just (extractSectorTimes lap)
-                        , currentLapSectorSlots = Just (extractCurrentSectorSlots bestTimes Nothing lap)
+                        , currentLapSectorStates = Just (extractCurrentSectorStates bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
                         , currentLapRated = Nothing
@@ -353,12 +353,12 @@ extractSectorTimes lap =
     }
 
 
-extractCurrentSectorSlots :
+extractCurrentSectorStates :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Maybe SectorProgress
     -> Lap
-    -> CurrentSectorSlots
-extractCurrentSectorSlots bestTimes sectorProgress lap =
+    -> CurrentSectorStates
+extractCurrentSectorStates bestTimes sectorProgress lap =
     let
         ( s1_progress, s2_progress, s3_progress ) =
             case sectorProgress of
