@@ -1,6 +1,6 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, backgroundColor, before, hover, property, qt)
+import Css exposing (after, before, hover, property, qt)
 import Html.Styled exposing (Html, button, div, li, text)
 import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
@@ -57,7 +57,7 @@ view props =
                                 , property "width" "0.2em"
                                 , property "height" "1.2em"
                                 , property "border-radius" "2px"
-                                , backgroundColor classInfo.color
+                                , property "background-color" classInfo.color
                                 ]
                             ]
                         ]

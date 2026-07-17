@@ -98,7 +98,7 @@ classBadge classInfo =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , Css.backgroundColor classInfo.color
+                , Css.property "background-color" classInfo.color
                 ]
             ]
         ]

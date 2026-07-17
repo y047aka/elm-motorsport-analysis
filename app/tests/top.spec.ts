@@ -4,7 +4,7 @@ import { waitForPageReady } from './helpers';
 test.describe('Top Page Visual Tests', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/', { waitUntil: 'load' });
-    await waitForPageReady(page, 'text=Formula E 2025');
+    await waitForPageReady(page, 'text=WEC 2024');
   });
 
   test('should render the main page correctly', async ({ page }) => {

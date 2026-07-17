@@ -25,7 +25,6 @@ module Motorsport.ViewModel.Standings exposing
 
 -}
 
-import Css
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
@@ -47,7 +46,11 @@ type Standings
         { elapsed : Duration
         , lapCount : Int
         , entries : SortedList ByPosition Entry
-        , entriesByClass : List ( ClassInfo, SortedList ByPosition Entry )
+
+        -- Entries are kept as plain lists here (already position-sorted):
+        -- the Lamdera compiler used by elm-pages fails to generate wire
+        -- codecs for a phantom-typed SortedList inside a tuple.
+        , entriesByClass : List ( ClassInfo, List Entry )
         }
 
 
@@ -57,7 +60,10 @@ The season-dependent color resolution is already done at compute time.
 type alias ClassInfo =
     { class : Class
     , name : String
-    , color : Css.Color
+
+    -- A raw CSS color string rather than Css.Color: the Lamdera compiler
+    -- used by elm-pages cannot generate wire codecs for elm-css's Color.
+    , color : String
     }
 
 
@@ -102,7 +108,8 @@ type alias Entry =
     , positionInClass : Int
     , status : Status
     , metadata : Car.Metadata
-    , classColor : Css.Color
+    -- A raw CSS color string; see ClassInfo.color.
+    , classColor : String
     , lapsCompleted : Int
     , currentLapTime : Maybe Duration
     , currentLapBest : Maybe Duration
@@ -201,7 +208,7 @@ compute { season } bestTimes config =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
-                        , classColor = Class.toHexColor season metadata.class
+                        , classColor = (Class.toHexColor season metadata.class).value
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
@@ -267,7 +274,7 @@ fromLaps { season } baseMetadata laps =
                         , positionInClass = index + 1
                         , status = Car.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
-                        , classColor = Class.toHexColor season baseMetadata.class
+                        , classColor = (Class.toHexColor season baseMetadata.class).value
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
@@ -318,11 +325,11 @@ fromList entries =
         }
 
 
-groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, SortedList ByPosition Entry )
+groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )
 groupEntriesByClass sortedEntries =
     sortedEntries
         |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( classInfoOf first, Ordering.byPosition (first :: SortedList.toList rest) ))
+        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: SortedList.toList rest ))
 
 
 {-| Extracts a class's display info from an entry.
@@ -437,10 +444,10 @@ type alias TimingState =
 
 
 init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
-init_timing elapsed rivals car =
+init_timing raceElapsed rivals car =
     let
         raceClock =
-            { elapsed = elapsed }
+            { elapsed = raceElapsed }
 
         currentLap =
             Maybe.withDefault Lap.empty car.currentLap
@@ -467,10 +474,10 @@ init_timing elapsed rivals car =
     , sector = currentSector
     , miniSector = currentMiniSector
     , gapToLeader =
-        Maybe.map2 (Gap.at elapsed) rivals.leader (Just car)
+        Maybe.map2 (Gap.at raceElapsed) rivals.leader (Just car)
             |> Maybe.withDefault Gap.None
     , intervalToAhead =
-        Maybe.map2 (Gap.at elapsed) rivals.rival (Just car)
+        Maybe.map2 (Gap.at raceElapsed) rivals.rival (Just car)
             |> Maybe.withDefault Gap.None
     }
 
@@ -496,7 +503,6 @@ toList (Standings s) =
 toClassList : Standings -> List ( ClassInfo, List Entry )
 toClassList (Standings s) =
     s.entriesByClass
-        |> List.map (Tuple.mapSecond SortedList.toList)
 
 
 leader : Standings -> Maybe Entry

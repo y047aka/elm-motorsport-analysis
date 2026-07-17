@@ -6,9 +6,9 @@ module Motorsport.Leaderboard exposing
     , sectorTimeColumn, bestTimeColumn
     , histogramColumn, performanceColumn
     , carNumberColumn_Wec
-    , driverNameColumn_F1, driverAndTeamColumn_Wec
+    , driverAndTeamColumn_Wec
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
-    , lastLapColumn_F1, lastLapColumn_Wec, lastLapColumn_LeMans24h
+    , lastLapColumn, lastLapColumn_Wec, lastLapColumn_LeMans24h
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -40,9 +40,9 @@ module Motorsport.Leaderboard exposing
 @docs sectorTimeColumn, bestTimeColumn
 @docs histogramColumn, performanceColumn
 @docs carNumberColumn_Wec
-@docs driverNameColumn_F1, driverAndTeamColumn_Wec
+@docs driverAndTeamColumn_Wec
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
-@docs lastLapColumn_F1, lastLapColumn_Wec, lastLapColumn_LeMans24h
+@docs lastLapColumn, lastLapColumn_Wec, lastLapColumn_LeMans24h
 
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
@@ -277,23 +277,6 @@ viewCarNumberColumn_Wec season { carNumber, class, manufacturer } =
         )
 
 
-driverNameColumn_F1 : { label : String, getter : data -> String } -> Column data msg
-driverNameColumn_F1 { label, getter } =
-    let
-        formatName name =
-            String.split " " name
-                |> List.reverse
-                |> List.head
-                |> Maybe.map String.toUpper
-                |> Maybe.withDefault ""
-    in
-    { name = label
-    , view = getter >> formatName >> text
-    , sorter = compareBy getter
-    , filter = \data query -> getter data |> String.startsWith query
-    }
-
-
 driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } } -> Column data msg
 driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
@@ -335,12 +318,12 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
-lastLapColumn_F1 :
+lastLapColumn :
     { getter : data -> { a | lastLapRated : Maybe RatedTime }
     , sorter : data -> data -> Order
     }
     -> Column data msg
-lastLapColumn_F1 { getter, sorter } =
+lastLapColumn { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
