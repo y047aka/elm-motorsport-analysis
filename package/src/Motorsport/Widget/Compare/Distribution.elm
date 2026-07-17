@@ -50,7 +50,7 @@ seriesOf lapHistory range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
     , times = racingTimes lapHistory range entry
-    , lastLap = entry.lastLap |> Maybe.map .time
+    , lastLap = entry.lastLapRated |> Maybe.map .time
     }
 
 

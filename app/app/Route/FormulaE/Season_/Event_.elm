@@ -282,17 +282,17 @@ config season bestTimes lapHistory =
             }
         , lastLapColumn_Wec
             { getter = identity
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLap }
+        , bestTimeColumn { getter = .bestLapRated }
         , performanceColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             , bestTimes = bestTimes
             }
         , histogramColumn
             { getter = \item -> LapHistory.get item.metadata.carNumber lapHistory
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             , bestTimes = bestTimes
             , coefficient = 1.2
             }

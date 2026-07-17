@@ -119,8 +119,8 @@ type alias Entry =
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
-    , lastLap : Maybe RatedTime
-    , bestLap : Maybe RatedTime
+    , lastLapRated : Maybe RatedTime
+    , bestLapRated : Maybe RatedTime
     , lastLapSectors : Maybe SectorPerformance
     , lastLapMiniSectors : Maybe MiniSectorPerformance
     , currentDriver : Maybe Driver
@@ -220,10 +220,10 @@ compute { season } bestTimes config =
                             currentLap
                                 |> Maybe.map (\lap -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lap.time))
                                 |> Maybe.withDefault 0
-                        , lastLap =
+                        , lastLapRated =
                             car.lastLap
                                 |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
-                        , bestLap =
+                        , bestLapRated =
                             car.lastLap
                                 |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
@@ -281,9 +281,9 @@ fromLaps { season } baseMetadata laps =
                         , gapToLeader = Gap.None
                         , intervalToAhead = Gap.None
                         , currentLapProgress = 0
-                        , lastLap =
+                        , lastLapRated =
                             Just (rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
-                        , bestLap =
+                        , bestLapRated =
                             Just (rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
                         , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap

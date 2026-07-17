@@ -110,7 +110,7 @@ lastLapTimeCell item =
             [ property "font-size" "13px"
             , property "font-variant-numeric" "tabular-nums"
             , property "text-align" "right"
-            , case item.lastLap of
+            , case item.lastLapRated of
                 Just { performance } ->
                     applyPerformanceColor performance
 
@@ -118,7 +118,7 @@ lastLapTimeCell item =
                     batch []
             ]
         ]
-        [ text (item.lastLap |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+        [ text (item.lastLapRated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
 applyPerformanceColor : Performance.PerformanceLevel -> Css.Style

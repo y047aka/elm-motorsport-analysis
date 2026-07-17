@@ -336,7 +336,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 
 lastLapColumn_F1 :
-    { getter : data -> { a | lastLap : Maybe RatedTime }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -344,7 +344,7 @@ lastLapColumn_F1 { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
-            >> .lastLap
+            >> .lastLapRated
             >> Maybe.map
                 (\{ time, performance } ->
                     span
@@ -569,7 +569,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -581,8 +581,8 @@ lastLapColumn_Wec { getter, sorter } =
     }
 
 
-viewLastLapColumn_Wec : { a | lastLap : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
-viewLastLapColumn_Wec { lastLap, lastLapSectors } =
+viewLastLapColumn_Wec : { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
+viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -608,7 +608,7 @@ viewLastLapColumn_Wec { lastLap, lastLapSectors } =
                 ]
                 []
     in
-    case lastLap of
+    case lastLapRated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
@@ -635,7 +635,7 @@ viewLastLapColumn_Wec { lastLap, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
+    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -647,8 +647,8 @@ lastLapColumn_LeMans24h { getter, sorter } =
     }
 
 
-viewLastLapColumn_LeMans24h : { a | lastLap : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
-viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
+viewLastLapColumn_LeMans24h : { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
+viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
     let
         lapTimeView { time, performance } =
             div
@@ -679,7 +679,7 @@ viewLastLapColumn_LeMans24h { lastLap, lastLapMiniSectors } =
                 ]
                 []
     in
-    case lastLap of
+    case lastLapRated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime

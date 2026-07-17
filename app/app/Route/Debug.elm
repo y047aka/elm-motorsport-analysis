@@ -244,8 +244,8 @@ config bestTimes standings =
             }
         , lastLapColumn_F1
             { getter = identity
-            , sorter = compareBy (.lastLap >> Maybe.map .time >> Maybe.withDefault 0)
+            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
             }
-        , bestTimeColumn { getter = .bestLap }
+        , bestTimeColumn { getter = .bestLapRated }
         ]
     }
