@@ -16,9 +16,9 @@ Update npm package first, then Elm packages.
 
 ### Step 1: Update npm package
 
-elm-pages must be pinned exact (no caret). Always use `--save-exact` (omitting it adds `^`):
+elm-pages must be pinned exact (no caret). Always use `--save-exact` (omitting it adds `^`). This repository uses pnpm workspaces — never use `npm install` (it creates a stray `package-lock.json`):
 ```bash
-npm install --save-exact elm-pages@<version> -w app
+pnpm add --save-exact --save-dev --filter app elm-pages@<version>
 ```
 
 ### Step 2: Identify the required Elm package version
@@ -96,6 +96,6 @@ When elm-pages is updated:
    ```
 2. If the bundled vite major version changed, update the user's vite in `app/package.json` to match:
    ```bash
-   npm install --save-exact vite@<version> -w app
+   pnpm add --save-exact --save-dev --filter app vite@<version>
    ```
 3. If only a minor/patch bump, no action is needed — minor version mismatch between the user's vite and elm-pages's bundled vite is acceptable since `defineConfig` is stable across minors.

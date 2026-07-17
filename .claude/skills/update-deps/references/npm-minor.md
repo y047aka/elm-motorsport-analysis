@@ -5,9 +5,11 @@ Semver-compatible (patch and minor) updates for npm packages.
 ## Audit
 
 ```bash
-pnpm outdated --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-outdated-audit
+pnpm -r outdated --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-outdated-audit
 pnpm audit --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-security-audit
 ```
+
+The `-r` flag is required: without it, `pnpm outdated` only checks the workspace root and misses outdated packages in workspace projects such as `app`.
 
 The first script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
 
