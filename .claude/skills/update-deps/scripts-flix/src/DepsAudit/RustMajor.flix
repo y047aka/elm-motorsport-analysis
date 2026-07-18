@@ -11,8 +11,7 @@ mod DepsAudit.RustMajor {
     pub def cargoTomlFiles(): List[String] =
         "cli/Cargo.toml" ::
         "cli/cli/Cargo.toml" ::
-        "cli/motorsport/Cargo.toml" ::
-        ".claude/skills/update-deps/scripts/Cargo.toml" :: Nil
+        "cli/motorsport/Cargo.toml" :: Nil
 
     /// Parse (name, constraint) pairs from Cargo.toml contents,
     /// first occurrence wins, sorted by name.
