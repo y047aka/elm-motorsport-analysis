@@ -1,11 +1,12 @@
 ///
 /// elm-pages-* subcommands. Port of scripts/src/elm_pages.rs.
-/// (elm-pages-audit and elm-pages-compat-key follow in a later step.)
 ///
 mod DepsAudit.ElmPages {
 
+    use Sys.Env
     use Util.Json.Json
     use Util.Json.Json.{JObject, JString}
+    use DepsAudit.Io
 
     /// Render the dillonkearns package report from app/elm.json content.
     pub def renderElmGuard(raw: String): Result[String, String] =
@@ -66,8 +67,122 @@ mod DepsAudit.ElmPages {
 
     /// Standard hint printed when no cached Elm package matches.
     pub def noMatchHint(): String =
-        "matchingElmVersion: no-match" + "\n" +
-        "Install latest to populate cache: elm-json install --yes 'dillonkearns/elm-pages@latest' -- app/elm.json"
+        List.join("\n", noMatchHintLines())
+
+    def noMatchHintLines(): List[String] =
+        "matchingElmVersion: no-match" ::
+        "Install latest to populate cache: elm-json install --yes 'dillonkearns/elm-pages@latest' -- app/elm.json" :: Nil
+
+    // --- elm-pages-compat-key / the compatibilityKey section of elm-pages-audit ---
+
+    ///
+    /// Every state `resolveCompatKey` can end in. Computing this as data —
+    /// once — lets the two callers (the standalone subcommand, and the
+    /// section embedded in elm-pages-audit) decide how to present the same
+    /// outcome without each re-walking the filesystem and re-parsing Elm
+    /// source to get there.
+    ///
+    pub enum CompatKeyOutcome with Eq, ToString {
+        case KeyFileNotFound(String)  // the path shown in the "not found" message
+        case KeyParseFailed
+        case HomeNotSet(Int64)
+        case NoMatchingVersion(Int64)
+        case MatchFound(Int64, String)
+    }
+
+    /// What to print and exit with, split by stream so the caller doesn't
+    /// have to know which lines are errors.
+    pub type alias CliOutput = {
+        stdout = List[String],
+        stderr = List[String],
+        exitCode = Int32
+    }
+
+    /// Locate the npm-shipped CompatibilityKey.elm, parse its key, and (if
+    /// possible) search the $HOME Elm package cache for a matching version.
+    pub def resolveCompatKey(): CompatKeyOutcome \ {IO, Env} =
+        match findNpmKeyFile() {
+            case None =>
+                let cwd = Env.getProp("user.dir") |> Option.getWithDefault(".");
+                let shown = List.head(npmKeyFileCandidates()) |> Option.getWithDefault("");
+                CompatKeyOutcome.KeyFileNotFound("${cwd}/${shown}")
+            case Some(keyFile) => match Io.readFile(keyFile) |> Result.map(parseCompatKey) {
+                case Err(_)       => CompatKeyOutcome.KeyParseFailed
+                case Ok(None)     => CompatKeyOutcome.KeyParseFailed
+                case Ok(Some(npmKey)) => match Env.getVar("HOME") {
+                    case None       => CompatKeyOutcome.HomeNotSet(npmKey)
+                    case Some(home) => match findMatchingVersion(home, npmKey) {
+                        case Some(v) => CompatKeyOutcome.MatchFound(npmKey, v)
+                        case None    => CompatKeyOutcome.NoMatchingVersion(npmKey)
+                    }
+                }
+            }
+        }
+
+    /// Render for the standalone `elm-pages-compat-key` subcommand: a
+    /// missing key file, a parse failure, or a missing $HOME are hard
+    /// failures (stderr, exit 1) — the caller asked specifically for this
+    /// value and got nothing usable.
+    pub def renderCompatKeyStandalone(outcome: CompatKeyOutcome): CliOutput =
+        match outcome {
+            case CompatKeyOutcome.KeyFileNotFound(path) =>
+                { stdout = Nil, stderr = "${path} not found" :: "Run npm install first." :: Nil, exitCode = 1 }
+            case CompatKeyOutcome.KeyParseFailed =>
+                { stdout = Nil, stderr = "could not parse compatibilityKey from npm source" :: Nil, exitCode = 1 }
+            case CompatKeyOutcome.HomeNotSet(npmKey) =>
+                { stdout = "npmKey: ${npmKey}" :: Nil, stderr = "HOME not set" :: Nil, exitCode = 1 }
+            case other => commonCompatKeyOutput(other)
+        }
+
+    /// Render for the compatibilityKey section of `elm-pages-audit`: never
+    /// fails the whole command — every branch is informational stdout,
+    /// exit 0. This is the only difference from the standalone renderer.
+    pub def renderCompatKeyForAudit(outcome: CompatKeyOutcome): CliOutput =
+        match outcome {
+            case CompatKeyOutcome.KeyFileNotFound(_) =>
+                { stdout = "npmKey: unknown (file not found — run npm install first)" :: Nil, stderr = Nil, exitCode = 0 }
+            case CompatKeyOutcome.KeyParseFailed =>
+                { stdout = "npmKey: unknown (could not parse)" :: Nil, stderr = Nil, exitCode = 0 }
+            case CompatKeyOutcome.HomeNotSet(npmKey) =>
+                { stdout = "npmKey: ${npmKey}" :: "matchingElmVersion: unknown (HOME not set)" :: Nil, stderr = Nil, exitCode = 0 }
+            case other => commonCompatKeyOutput(other)
+        }
+
+    /// The two outcomes both renderers treat identically.
+    def commonCompatKeyOutput(outcome: CompatKeyOutcome): CliOutput =
+        match outcome {
+            case CompatKeyOutcome.NoMatchingVersion(npmKey) =>
+                { stdout = "npmKey: ${npmKey}" :: noMatchHintLines(), stderr = Nil, exitCode = 0 }
+            case CompatKeyOutcome.MatchFound(npmKey, v) =>
+                { stdout = "npmKey: ${npmKey}" :: "matchingElmVersion: ${v}" :: Nil, stderr = Nil, exitCode = 0 }
+            case _ =>
+                { stdout = Nil, stderr = "unreachable compatibilityKey outcome" :: Nil, exitCode = 1 }
+        }
+
+    /// First CompatibilityKey.elm that actually exists, if any.
+    def findNpmKeyFile(): Option[String] \ IO =
+        npmKeyFileCandidates() |> List.find(p -> Io.exists(p))
+
+    /// Highest cached elm-pages version whose compatibilityKey equals npmKey.
+    def findMatchingVersion(home: String, npmKey: Int64): Option[String] \ IO =
+        let cacheDir = "${home}/${cacheDirBelowHome()}";
+        if (not Io.exists(cacheDir))
+            None
+        else
+            let entries = Io.listDir(cacheDir) |> Result.getWithDefault(Nil);
+            entries
+                |> List.filter(name -> {
+                    let keyFile = "${cacheDir}/${name}/src/Pages/Internal/Platform/CompatibilityKey.elm";
+                    if (not Io.exists(keyFile))
+                        false
+                    else
+                        match Io.readFile(keyFile) |> Result.map(parseCompatKey) {
+                            case Ok(Some(k)) => k == npmKey
+                            case _           => false
+                        }
+                })
+                |> List.sortWith((a, b) -> DepsAudit.Semver.compareSemver(a, b))
+                |> List.last
 
     /// The version header section of elm-pages-audit
     /// (current from app/package.json content, latest from stdin).

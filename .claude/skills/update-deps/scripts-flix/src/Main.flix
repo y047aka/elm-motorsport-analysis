@@ -16,9 +16,11 @@ use DepsAudit.RustMajor
 ///
 /// deps-audit: audit helpers for the update-deps skill.
 ///
-/// Flix port of the Rust implementation in ../scripts. Subcommands are
-/// added incrementally; unimplemented ones exit with an error so the
-/// Rust version remains authoritative until parity is verified.
+/// Flix port of the Rust implementation in ../scripts. Each `cmdXxx`
+/// handler chains its steps with `forM`/`yield` over `Result[String, _]`
+/// (every `Io.*` and `DepsAudit.*` rendering function already returns that
+/// type), so the steps read top-to-bottom in the order they execute, with
+/// a single `Err`/`Ok` match at the end rather than one nested per step.
 ///
 def main(): Unit \ {Env, IO, Exit, Console, Clock} =
     let code = match Env.getArgs() {
@@ -32,7 +34,7 @@ def dispatch(cmd: String): Int32 \ {IO, Console, Clock, Env} =
         case "rust-minor-audit"       => cmdRustMinorAudit()
         case "nix-channel-audit"      => cmdNixChannelAudit()
         case "nix-flakelock-audit"    => cmdNixFlakelockAudit()
-        case "elm-versions-report"    => elmVersionsReport("app/elm.json" :: "package/elm.json" :: Nil)
+        case "elm-versions-report"    => cmdElmVersionsReport()
         case "elm-pages-elm-guard"    => cmdElmPagesElmGuard()
         case "elm-pages-vite-version" => cmdElmPagesViteVersion()
         case "elm-pages-compat-key"   => cmdElmPagesCompatKey()
@@ -58,79 +60,39 @@ def cmdNixChannelAudit(): Int32 \ {IO, Console, Clock} =
     }
 
 def cmdNixFlakelockAudit(): Int32 \ {IO, Console} =
-    match Io.readFile("flake.lock") {
-        case Err(e) => Console.eprintln(e); 1
-        case Ok(content) => match Nix.renderFlakelockAudit(content) {
-            case Err(e)   => Console.eprintln(e); 1
-            case Ok(body) => Console.println(body); 0
-        }
-    }
+    finish(forM (
+        content <- Io.readFile("flake.lock");
+        body    <- Nix.renderFlakelockAudit(content)
+    ) yield body)
 
 def cmdElmPagesElmGuard(): Int32 \ {IO, Console} =
-    match Io.readFile("app/elm.json") {
-        case Err(e) => Console.eprintln(e); 1
-        case Ok(raw) => match ElmPages.renderElmGuard(raw) {
-            case Err(e)   => Console.eprintln(e); 1
-            case Ok(body) => Console.println(body); 0
-        }
-    }
+    finish(forM (
+        raw  <- Io.readFile("app/elm.json");
+        body <- ElmPages.renderElmGuard(raw)
+    ) yield body)
 
 def cmdElmPagesViteVersion(): Int32 \ {IO, Console} =
     let path = bundledVitePackageJsonPath();
-    match Io.readFile(path) {
-        case Err(e) => Console.eprintln(e); 1
-        case Ok(raw) => match ElmPages.renderViteVersion(path, raw) {
-            case Err(e)   => Console.eprintln(e); 1
-            case Ok(v)    => Console.println(v); 0
-        }
-    }
+    finish(forM (
+        raw <- Io.readFile(path);
+        v   <- ElmPages.renderViteVersion(path, raw)
+    ) yield v)
 
 def cmdElmPagesCompatKey(): Int32 \ {IO, Console, Env} =
-    match findNpmKeyFile() {
-        case None =>
-            let cwd = Env.getProp("user.dir") |> Option.getWithDefault(".");
-            let shown = List.head(ElmPages.npmKeyFileCandidates()) |> Option.getWithDefault("");
-            Console.eprintln("${cwd}/${shown} not found");
-            Console.eprintln("Run npm install first.");
-            1
-        case Some(keyFile) =>
-            match Io.readFile(keyFile) {
-            case Err(e) => Console.eprintln(e); 1
-            case Ok(source) => match ElmPages.parseCompatKey(source) {
-                case None => Console.eprintln("could not parse compatibilityKey from npm source"); 1
-                case Some(npmKey) =>
-                    Console.println("npmKey: ${npmKey}");
-                    match Env.getVar("HOME") {
-                        case None => Console.eprintln("HOME not set"); 1
-                        case Some(home) =>
-                            Console.println(matchingVersionReport(home, npmKey));
-                            0
-                    }
-            }
-        }
-    }
+    printCliOutput(ElmPages.renderCompatKeyStandalone(ElmPages.resolveCompatKey()))
 
 def cmdElmPagesAudit(): Int32 \ {IO, Console, Env} =
-    let latestRaw = String.trim(Report.readStdin());
-    let latest = if (latestRaw == "") None else Some(latestRaw);
-    match Io.readFile("app/package.json") {
-        case Err(e) => Console.eprintln(e); 1
-        case Ok(pkgRaw) => match ElmPages.renderAuditVersionSection(pkgRaw, latest) {
-            case Err(e) => Console.eprintln(e); 1
-            case Ok(versionSection) => match Io.readFile("app/elm.json") {
-                case Err(e) => Console.eprintln(e); 1
-                case Ok(elmJsonRaw) => match ElmPages.renderAuditPackagesSection(elmJsonRaw) {
-                    case Err(e) => Console.eprintln(e); 1
-                    case Ok(packagesSection) =>
-                        Console.println(versionSection);
-                        Console.println("");
-                        Console.println(packagesSection);
-                        Console.println("");
-                        Console.println("--- compatibilityKey ---");
-                        auditCompatKeySection()
-                }
-            }
-        }
+    let latest = optionFromTrimmed(Report.readStdin());
+    match (forM (
+        pkgRaw          <- Io.readFile("app/package.json");
+        versionSection  <- ElmPages.renderAuditVersionSection(pkgRaw, latest);
+        elmJsonRaw      <- Io.readFile("app/elm.json");
+        packagesSection <- ElmPages.renderAuditPackagesSection(elmJsonRaw)
+    ) yield "${versionSection}\n\n${packagesSection}\n\n--- compatibilityKey ---") {
+        case Err(e)   => Console.eprintln(e); 1
+        case Ok(body) =>
+            Console.println(body);
+            printCliOutput(ElmPages.renderCompatKeyForAudit(ElmPages.resolveCompatKey()))
     }
 
 def cmdNpmOutdatedAudit(): Int32 \ {IO, Console} =
@@ -173,12 +135,41 @@ def cmdRustMajorAudit(): Int32 \ {IO, Console} =
     0
 
 def cmdNpmPinVersions(): Int32 \ {IO, Console} =
-    match Io.readFile("package-lock.json") {
-        case Err(e) => Console.eprintln(e); 1
-        case Ok(lockRaw) => match Util.Json.parse(lockRaw) {
-            case Err(e)    => Console.eprintln("package-lock.json: ${e}"); 1
-            case Ok(lock)  => pinVersions(lock, Npm.pinWorkspaces())
+    match (forM (
+        lockRaw <- Io.readFile("package-lock.json");
+        lock    <- Util.Json.parse(lockRaw) |> Result.mapErr(e -> "package-lock.json: ${e}")
+    ) yield lock) {
+        case Err(e)   => Console.eprintln(e); 1
+        case Ok(lock) => match Result.traverse(pinOneWorkspace(lock), Npm.pinWorkspaces()) {
+            case Err(e) => Console.eprintln(e); 1
+            case Ok(_)  => 0
         }
+    }
+
+/// Read, pin, and write back one workspace's package.json.
+def pinOneWorkspace(lock: Util.Json.Json, workspace: (String, String)): Result[String, Unit] \ IO =
+    let (file, wsPrefix) = workspace;
+    forM (
+        raw     <- Io.readFile(file);
+        updated <- Npm.pinFile(file, raw, lock, wsPrefix);
+        _       <- Io.writeFile(file, updated)
+    ) yield ()
+
+def cmdElmVersionsReport(): Int32 \ {IO, Console} =
+    let files = "app/elm.json" :: "package/elm.json" :: Nil;
+    match Result.traverse(reportOneElmJson, files) {
+        case Err(e) => Console.eprintln(e); 1
+        case Ok(_)  => 0
+    }
+
+/// Read, render, and print one elm.json's version report.
+def reportOneElmJson(f: String): Result[String, Unit] \ {IO, Console} =
+    forM (
+        raw  <- Io.readFile(f);
+        body <- Elm.renderVersionsReport(f, raw)
+    ) yield {
+        Console.println(body);
+        Console.println("")
     }
 
 /// The bundled (nested) vite package.json, falling back to the hoisted one.
@@ -187,22 +178,6 @@ def bundledVitePackageJsonPath(): String \ IO =
     candidates
         |> List.find(p -> Io.exists(p))
         |> Option.getWithDefault(List.last(candidates) |> Option.getWithDefault(""))
-
-/// Rewrite each workspace package.json in turn, stopping at the first error.
-def pinVersions(lock: Util.Json.Json, workspaces: List[(String, String)]): Int32 \ {IO, Console} =
-    match workspaces {
-        case Nil => 0
-        case (file, wsPrefix) :: rest => match Io.readFile(file) {
-            case Err(e) => Console.eprintln(e); 1
-            case Ok(raw) => match Npm.pinFile(file, raw, lock, wsPrefix) {
-                case Err(e) => Console.eprintln(e); 1
-                case Ok(updated) => match Io.writeFile(file, updated) {
-                    case Err(e) => Console.eprintln(e); 1
-                    case Ok(_)  => pinVersions(lock, rest)
-                }
-            }
-        }
-    }
 
 /// Latest version of a crate via `cargo search <name> --limit 1`.
 ///
@@ -241,73 +216,25 @@ def readAllStdOut(so: Sys.StdOut.StdOut): String \ IO = region rc {
     loop(Nil) |> List.reverse |> List.flatten |> List.toVector |> String.fromBytes
 }
 
-/// First CompatibilityKey.elm that actually exists, if any.
-def findNpmKeyFile(): Option[String] \ IO =
-    ElmPages.npmKeyFileCandidates() |> List.find(p -> Io.exists(p))
+/// `None` for blank/whitespace-only input, `Some` otherwise — the shape
+/// `elm-pages-audit` needs for the "latest version from stdin" argument.
+def optionFromTrimmed(s: String): Option[String] =
+    let trimmed = String.trim(s);
+    if (trimmed == "") None else Some(trimmed)
 
-/// The graceful compatibilityKey tail of elm-pages-audit (never fails).
-def auditCompatKeySection(): Int32 \ {IO, Console, Env} =
-    match findNpmKeyFile() {
-        case None =>
-            Console.println("npmKey: unknown (file not found — run npm install first)");
-            0
-        case Some(keyFile) =>
-            match Io.readFile(keyFile) |> Result.map(ElmPages.parseCompatKey) {
-            case Err(_) => Console.println("npmKey: unknown (could not parse)"); 0
-            case Ok(None) => Console.println("npmKey: unknown (could not parse)"); 0
-            case Ok(Some(npmKey)) =>
-                Console.println("npmKey: ${npmKey}");
-                match Env.getVar("HOME") {
-                    case None => Console.println("matchingElmVersion: unknown (HOME not set)"); 0
-                    case Some(home) =>
-                        Console.println(matchingVersionReport(home, npmKey));
-                        0
-                }
-        }
+/// The shared tail of every `read -> render` command: print the body on
+/// success, the message on stderr on failure.
+def finish(result: Result[String, String]): Int32 \ Console =
+    match result {
+        case Err(e)    => Console.eprintln(e); 1
+        case Ok(body)  => Console.println(body); 0
     }
 
-/// "matchingElmVersion: ..." body, searching the $HOME package cache.
-def matchingVersionReport(home: String, npmKey: Int64): String \ IO =
-    let cacheDir = "${home}/${ElmPages.cacheDirBelowHome()}";
-    if (not Io.exists(cacheDir))
-        ElmPages.noMatchHint()
-    else
-        match findMatchingVersion(cacheDir, npmKey) {
-            case Some(v) => "matchingElmVersion: ${v}"
-            case None    => ElmPages.noMatchHint()
-        }
-
-/// Highest cached elm-pages version whose compatibilityKey equals npmKey.
-def findMatchingVersion(cacheDir: String, npmKey: Int64): Option[String] \ IO =
-    let entries = Io.listDir(cacheDir) |> Result.getWithDefault(Nil);
-    let matches = entries |> List.filter(name -> {
-        let keyFile = "${cacheDir}/${name}/src/Pages/Internal/Platform/CompatibilityKey.elm";
-        if (not Io.exists(keyFile))
-            false
-        else
-            match Io.readFile(keyFile) |> Result.map(ElmPages.parseCompatKey) {
-                case Ok(Some(k)) => k == npmKey
-                case _           => false
-            }
-    });
-    matches
-        |> List.sortWith((a, b) -> DepsAudit.Semver.compareSemver(a, b))
-        |> List.last
-
-def elmVersionsReport(files: List[String]): Int32 \ {IO, Console} =
-    match files {
-        case Nil => 0
-        case f :: rest => match Io.readFile(f) {
-            case Err(e) => Console.eprintln(e); 1
-            case Ok(raw) => match Elm.renderVersionsReport(f, raw) {
-                case Err(e)   => Console.eprintln(e); 1
-                case Ok(body) =>
-                    Console.println(body);
-                    Console.println("");
-                    elmVersionsReport(rest)
-            }
-        }
-    }
+/// Print a `CliOutput`'s lines to the right stream and return its exit code.
+def printCliOutput(out: ElmPages.CliOutput): Int32 \ Console =
+    List.forEach(Console.println, out#stdout);
+    List.forEach(Console.eprintln, out#stderr);
+    out#exitCode
 
 def usage(): Int32 \ Console =
     Console.eprintln("usage: deps-audit <subcommand>");
