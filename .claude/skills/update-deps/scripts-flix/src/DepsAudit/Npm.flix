@@ -42,6 +42,10 @@ mod DepsAudit.Npm {
                     if (i#current != i#wanted)
                         Some("${name}: ${i#current} -> ${i#wanted} (${i#dependent})")
                     else None);
+                // `latest != wanted`, not a numeric comparison: an earlier
+                // TypeScript predecessor used `parseInt(latest) > parseInt(current)`,
+                // which silently dropped same-major bumps (e.g. 2.4.9 -> 2.4.10)
+                // from this section. Keep this as `!=`.
                 let major = infos |> List.filterMap(match (name, i) ->
                     if (i#latest != i#wanted)
                         Some("${name}: ${i#current} -> ${i#latest} (${i#dependent})")
