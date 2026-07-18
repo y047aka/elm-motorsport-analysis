@@ -91,15 +91,18 @@
             '';
           };
 
-        # Audit helpers for the update-deps skill. Runs from the repo root
-        # (subcommands resolve paths like flake.lock and app/elm.json
-        # relative to the cwd); rebuilds the jar when sources changed.
-        # cargo is needed by the rust-major-audit subcommand.
+        # Audit helpers for the update-deps skill. The jar is located via the
+        # git root so the caller's working directory is left untouched —
+        # subcommands resolve flake.lock, app/elm.json and node_modules
+        # relative to the cwd, and some (elm-pages-compat-key) are meant to
+        # be run from app/. Rebuilds the jar when sources changed; cargo is
+        # needed by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
-          runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo ];
+          runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
           text = ''
-            dir=.claude/skills/update-deps/scripts-flix
+            root=$(git rev-parse --show-toplevel)
+            dir=$root/.claude/skills/update-deps/scripts-flix
             jar=$dir/artifact/scripts-flix.jar
             if [ ! -f "$jar" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
               (cd "$dir" && flix build-jar) >&2

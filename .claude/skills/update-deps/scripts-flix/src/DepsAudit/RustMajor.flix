@@ -52,9 +52,13 @@ mod DepsAudit.RustMajor {
         List.reverse(found)
 
     /// Latest version from one `cargo search <name> --limit 1` output.
-    /// Matches the Rust behavior: the line must start with the crate name
-    /// (with '-' and '_' treated as equivalent), and the version is the
-    /// first double-quoted string on that line.
+    /// The line must start with the crate name (with '-' and '_' treated
+    /// as equivalent), and the version is the first double-quoted string
+    /// on that line.
+    ///
+    /// Deviation from the Rust version, whose greedy `.*"([^"]+)"` picked
+    /// the *last* quoted run and so returned a word from the description
+    /// whenever that description contained quotes.
     pub def parseSearchOutput(name: String, output: String): Option[String] =
         String.splitOn({substr = "\n"}, output)
             |> List.findMap(line -> {

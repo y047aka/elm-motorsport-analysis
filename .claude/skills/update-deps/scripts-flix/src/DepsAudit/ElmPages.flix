@@ -41,9 +41,16 @@ mod DepsAudit.ElmPages {
         "node_modules/elm-pages/node_modules/vite/package.json" ::
         "node_modules/vite/package.json" :: Nil
 
-    /// Relative path of the CompatibilityKey.elm shipped in the npm package.
-    pub def npmKeyFileRelPath(): String =
-        "node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm"
+    /// Candidate paths of the CompatibilityKey.elm shipped in the npm
+    /// package, in lookup order.
+    ///
+    /// pnpm installs elm-pages into the `app` workspace, so the repo-root
+    /// path only exists in a hoisted layout. The Rust version looked at the
+    /// cwd alone and therefore reported "file not found" whenever it was run
+    /// from the repository root — which is where the skill runs everything.
+    pub def npmKeyFileCandidates(): List[String] =
+        "node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm" ::
+        "app/node_modules/elm-pages/src/Pages/Internal/Platform/CompatibilityKey.elm" :: Nil
 
     /// The elm-pages package cache below $HOME.
     pub def cacheDirBelowHome(): String =

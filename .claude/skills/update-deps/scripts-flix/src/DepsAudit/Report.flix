@@ -10,11 +10,6 @@ mod DepsAudit.Report {
     pub def linesOrNone(lines: List[String]): String =
         if (List.isEmpty(lines)) "none" else List.join("\n", lines)
 
-    /// Print a "--- title ---" section followed by its body.
-    pub def printSection(title: String, body: String): Unit \ Console =
-        Console.println("--- ${title} ---");
-        Console.println(body)
-
     /// Read all of stdin as one string (lines joined with '\n').
     pub def readStdin(): String \ Console =
         def loop(acc) = match Console.readln() {

@@ -9,13 +9,15 @@ mod DepsAudit.Nix {
 
     /// Render the channel report from flake.nix content and the current
     /// epoch time in seconds.
+    ///
+    /// Both channel spellings are recognised: the plain `nixos-YY.MM` this
+    /// repository uses, and the `nixpkgs-YY.MM-darwin` form the Rust version
+    /// assumed (it only matched the latter, so the audit reported
+    /// `channel: unknown` on every run here).
     pub def renderChannelAudit(flakeContent: String, nowSecs: Int64): String =
-        let rgx = regex"nixpkgs/nixpkgs-(\\d+)\\.(\\d+)-darwin";
-        match Regex.capture(rgx, flakeContent) {
-            case yyS :: mmS :: Nil =>
-                let yy = Int64.fromString(yyS) |> Option.getWithDefault(0i64);
-                let mm = Int64.fromString(mmS) |> Option.getWithDefault(0i64);
-                let current = "current channel: nixpkgs-${yy}.${pad2(mm)}-darwin";
+        match parseChannel(flakeContent) {
+            case Some((label, yy, mm)) =>
+                let current = "current channel: ${channelLabel(label, yy, mm)}";
                 let (nowYearFull, nowMonth, _) = Date.daysToYmd(nowSecs / 86400i64);
                 let nowYear = nowYearFull - (nowYearFull / 100i64) * 100i64;
                 match latestStableChannel(nowYear, nowMonth) {
@@ -23,11 +25,42 @@ mod DepsAudit.Nix {
                         let currentNum = yy * 100i64 + mm;
                         let latestNum = ly * 100i64 + lm;
                         let suffix = if (latestNum > currentNum) "  <- UPGRADE AVAILABLE" else "  (up to date)";
-                        current + "\n" + "latest channel:  nixpkgs-${ly}.${pad2(lm)}-darwin${suffix}"
+                        current + "\n" + "latest channel:  ${channelLabel(label, ly, lm)}${suffix}"
                     case None =>
                         current + "\n" + "latest channel: unknown"
                 }
-            case _ => "channel: unknown"
+            case None => "channel: unknown"
+        }
+
+    /// Which spelling of the channel a flake.nix uses.
+    pub enum ChannelStyle with Eq {
+        case Nixos          // nixos-YY.MM
+        case NixpkgsDarwin  // nixpkgs-YY.MM-darwin
+    }
+
+    /// Extract the pinned channel, trying both spellings.
+    pub def parseChannel(flakeContent: String): Option[(ChannelStyle, Int64, Int64)] =
+        let darwinRgx = regex"nixpkgs-(\\d+)\\.(\\d+)-darwin";
+        let nixosRgx = regex"nixos-(\\d+)\\.(\\d+)";
+        match Regex.capture(darwinRgx, flakeContent) {
+            case yyS :: mmS :: Nil => pair(ChannelStyle.NixpkgsDarwin, yyS, mmS)
+            case _ => match Regex.capture(nixosRgx, flakeContent) {
+                case yyS :: mmS :: Nil => pair(ChannelStyle.Nixos, yyS, mmS)
+                case _                 => None
+            }
+        }
+
+    def pair(style: ChannelStyle, yyS: String, mmS: String): Option[(ChannelStyle, Int64, Int64)] =
+        forM (
+            yy <- Int64.fromString(yyS);
+            mm <- Int64.fromString(mmS)
+        ) yield (style, yy, mm)
+
+    /// Render a channel label in the same spelling the flake uses.
+    pub def channelLabel(style: ChannelStyle, yy: Int64, mm: Int64): String =
+        match style {
+            case ChannelStyle.Nixos         => "nixos-${yy}.${pad2(mm)}"
+            case ChannelStyle.NixpkgsDarwin => "nixpkgs-${yy}.${pad2(mm)}-darwin"
         }
 
     /// Latest stable channel label (May/November releases from 24.05 on).
@@ -54,9 +87,10 @@ mod DepsAudit.Nix {
                     match getKey("locked", node) {
                         case Some(locked) =>
                             let date = match getKey("lastModified", locked) {
-                                case Some(JNumber(ts)) =>
-                                    let secs = BigDecimal.tryToInt64(ts) |> Option.getWithDefault(0i64);
-                                    Date.epochSecondsToIsoDate(secs)
+                                case Some(JNumber(ts)) => match BigDecimal.tryToInt64(ts) {
+                                    case Some(secs) => Date.epochSecondsToIsoDate(secs)
+                                    case None       => "?"
+                                }
                                 case _ => "?"
                             };
                             let rev = match getKey("rev", locked) {

@@ -86,14 +86,15 @@ def cmdElmPagesViteVersion(): Int32 \ {IO, Console} =
     }
 
 def cmdElmPagesCompatKey(): Int32 \ {IO, Console, Env} =
-    let keyFile = ElmPages.npmKeyFileRelPath();
-    if (not Io.exists(keyFile)) {
-        let cwd = Env.getProp("user.dir") |> Option.getWithDefault(".");
-        Console.eprintln("${cwd}/${keyFile} not found");
-        Console.eprintln("Run npm install first.");
-        1
-    } else {
-        match Io.readFile(keyFile) {
+    match findNpmKeyFile() {
+        case None =>
+            let cwd = Env.getProp("user.dir") |> Option.getWithDefault(".");
+            let shown = List.head(ElmPages.npmKeyFileCandidates()) |> Option.getWithDefault("");
+            Console.eprintln("${cwd}/${shown} not found");
+            Console.eprintln("Run npm install first.");
+            1
+        case Some(keyFile) =>
+            match Io.readFile(keyFile) {
             case Err(e) => Console.eprintln(e); 1
             case Ok(source) => match ElmPages.parseCompatKey(source) {
                 case None => Console.eprintln("could not parse compatibilityKey from npm source"); 1
@@ -204,9 +205,14 @@ def pinVersions(lock: Util.Json.Json, workspaces: List[(String, String)]): Int32
     }
 
 /// Latest version of a crate via `cargo search <name> --limit 1`.
+///
+/// Runs through `sh -c` so stderr can be discarded by the shell: draining
+/// only stdout from Flix would deadlock if a chatty stderr (cargo prints
+/// "Updating crates.io index" there) filled its pipe buffer. Crate names
+/// are `[\w-]+` per `RustMajor.parseDeps`, so they need no shell quoting.
 def fetchLatestCrate(name: String): Option[String] \ IO =
     Sys.Process.runWithIO(() ->
-        match Sys.Process.exec("cargo", "search" :: name :: "--limit" :: "1" :: Nil) {
+        match Sys.Process.exec("sh", "-c" :: "cargo search ${name} --limit 1 2>/dev/null" :: Nil) {
             case Err(_) => None
             case Ok(ph) =>
                 let out = match Sys.Process.stdout(ph) {
@@ -219,28 +225,34 @@ def fetchLatestCrate(name: String): Option[String] \ IO =
 
 /// Drain a process's stdout into a string.
 def readAllStdOut(so: Sys.StdOut.StdOut): String \ IO = region rc {
-    def loop(acc) = {
+    // Chunks are collected in reverse and flattened once, so appending
+    // stays linear rather than quadratic.
+    def loop(chunks) = {
         let buf = Array.repeat(rc, 4096, 0i8);
         match Readable.read(buf, so) {
             case Ok(n) =>
                 if (n > 0)
-                    loop(acc ::: (Array.slice(rc, start = 0, end = n, buf) |> Array.toList))
+                    loop((Array.slice(rc, start = 0, end = n, buf) |> Array.toList) :: chunks)
                 else
-                    acc
-            case Err(_) => acc
+                    chunks
+            case Err(_) => chunks
         }
     };
-    loop(Nil) |> List.toVector |> String.fromBytes
+    loop(Nil) |> List.reverse |> List.flatten |> List.toVector |> String.fromBytes
 }
+
+/// First CompatibilityKey.elm that actually exists, if any.
+def findNpmKeyFile(): Option[String] \ IO =
+    ElmPages.npmKeyFileCandidates() |> List.find(p -> Io.exists(p))
 
 /// The graceful compatibilityKey tail of elm-pages-audit (never fails).
 def auditCompatKeySection(): Int32 \ {IO, Console, Env} =
-    let keyFile = ElmPages.npmKeyFileRelPath();
-    if (not Io.exists(keyFile)) {
-        Console.println("npmKey: unknown (file not found — run npm install first)");
-        0
-    } else {
-        match Io.readFile(keyFile) |> Result.map(ElmPages.parseCompatKey) {
+    match findNpmKeyFile() {
+        case None =>
+            Console.println("npmKey: unknown (file not found — run npm install first)");
+            0
+        case Some(keyFile) =>
+            match Io.readFile(keyFile) |> Result.map(ElmPages.parseCompatKey) {
             case Err(_) => Console.println("npmKey: unknown (could not parse)"); 0
             case Ok(None) => Console.println("npmKey: unknown (could not parse)"); 0
             case Ok(Some(npmKey)) =>

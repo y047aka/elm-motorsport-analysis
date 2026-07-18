@@ -30,8 +30,14 @@ mod DepsAudit.Npm {
                     case JObject(m) => Map.toList(m)
                     case _          => Nil
                 };
-                let infos = entries |> List.filterMap(match (name, v) ->
-                    Option.map(i -> (name, i), parseInfo(v)));
+                let parsed = entries |> List.map(match (name, v) -> (name, parseInfo(v)));
+                let bad = parsed |> List.filterMap(match (name, i) ->
+                    if (Option.isEmpty(i)) Some(name) else None);
+                if (not List.isEmpty(bad))
+                    Err("unexpected npm outdated format: missing current/wanted/latest for ${List.join(", ", bad)}")
+                else {
+                let infos = parsed |> List.filterMap(match (name, i) ->
+                    Option.map(x -> (name, x), i));
                 let minor = infos |> List.filterMap(match (name, i) ->
                     if (i#current != i#wanted)
                         Some("${name}: ${i#current} -> ${i#wanted} (${i#dependent})")
@@ -58,6 +64,7 @@ mod DepsAudit.Npm {
                     "--- flags ---" ::
                     "playwright-changed: ${playwrightChanged}" :: Nil);
                 Ok((report, vite))
+                }
         }
 
     /// The trailing vite section (bundledMajor is "unknown" when
@@ -97,7 +104,24 @@ mod DepsAudit.Npm {
             current = current,
             wanted = wanted,
             latest = latest,
-            dependent = getString("dependent", v) |> Option.getWithDefault("")
+            dependent = dependentOf(v)
+        }
+
+    /// The dependent workspace project(s).
+    ///
+    /// Deviation from the Rust version, which only read the `dependent`
+    /// string and therefore always printed an empty `()` with modern pnpm:
+    /// pnpm now reports `dependentPackages` (an array of {name, location}).
+    def dependentOf(v: Json): String =
+        match getString("dependent", v) {
+            case Some(d) => d
+            case None    => match getKey("dependentPackages", v) {
+                case Some(JArray(xs)) =>
+                    Vector.toList(xs)
+                        |> List.filterMap(p -> getString("name", p))
+                        |> List.join(", ")
+                case _ => ""
+            }
         }
 
     def majorOf(version: String): Int64 =
@@ -184,37 +208,137 @@ mod DepsAudit.Npm {
     /// resolved in package-lock.json (or, as a fallback, the constraint
     /// with any ^/~ prefix stripped).
     ///
-    /// Unlike the Rust version — which re-serializes the whole document —
-    /// this replaces only the version strings in the original text, so
-    /// key order and formatting are preserved exactly. It also does not
-    /// reproduce a Rust bug where a missing dependencies/devDependencies
-    /// key was injected as `"dependencies": null`.
+    /// Only the version literals inside the `dependencies` and
+    /// `devDependencies` objects are rewritten, so key order and formatting
+    /// survive untouched and sibling sections (`peerDependencies`,
+    /// `overrides`, ...) are left alone. Whitespace around the colon is
+    /// irrelevant, and a dependency that cannot be located in the source
+    /// text is reported as an error rather than skipped — a partial rewrite
+    /// must never look like a success.
+    ///
+    /// Unlike the Rust version this does not inject `"dependencies": null`
+    /// into files that lack the key.
     pub def pinFile(path: String, raw: String, lock: Json, wsPrefix: String): Result[String, String] =
         match Util.Json.parse(raw) {
             case Err(e)  => Err("${path}: ${e}")
             case Ok(pkg) =>
-                let pins = ("dependencies" :: "devDependencies" :: Nil)
-                    |> List.flatMap(key -> match getKey(key, pkg) {
-                        case Some(JObject(m)) =>
-                            Map.toList(m) |> List.filterMap(match (name, v) -> match v {
-                                case JString(cur) =>
-                                    let resolved = match resolveVersion(lock, name, wsPrefix) {
-                                        case Some(r) => r
-                                        case None    => stripConstraintPrefix(cur)
-                                    };
-                                    Some((name, cur, resolved))
-                                case _ => None
-                            })
-                        case _ => Nil
-                    });
-                Ok(List.foldLeft((acc, pin) -> {
-                    let (name, cur, resolved) = pin;
-                    String.replace(
-                        {src = "\"${name}\": \"${cur}\""},
-                        {dst = "\"${name}\": \"${resolved}\""},
-                        acc)
-                }, raw, pins))
+                ("dependencies" :: "devDependencies" :: Nil)
+                    |> List.foldLeft((acc, key) ->
+                        Result.flatMap(text -> pinSection(path, key, pkg, lock, wsPrefix, text), acc), Ok(raw))
         }
+
+    def pinSection(path: String, key: String, pkg: Json, lock: Json, wsPrefix: String, text: String): Result[String, String] =
+        match getKey(key, pkg) {
+            case Some(JObject(m)) =>
+                let pins = Map.toList(m) |> List.filterMap(match (name, v) -> match v {
+                    case JString(cur) =>
+                        let resolved = resolveVersion(lock, name, wsPrefix)
+                            |> Option.getWithDefault(stripConstraintPrefix(cur));
+                        Some((name, cur, resolved))
+                    case _ => None
+                });
+                match objectSpan(key, text) {
+                    case None => Err("${path}: could not locate the \"${key}\" object")
+                    case Some((s, e)) =>
+                        let (rewritten, missing) = applyPins(pins, String.slice(start = s, end = e, text));
+                        if (List.isEmpty(missing))
+                            Ok(String.sliceLeft(end = s, text) + rewritten + String.sliceRight(start = e, text))
+                        else
+                            Err("${path}: could not rewrite ${List.join(", ", missing)} in \"${key}\"")
+                }
+            case _ => Ok(text)
+        }
+
+    /// Apply pins to a section's text; also returns the names that could
+    /// not be located (so the caller can fail loudly).
+    def applyPins(pins: List[(String, String, String)], section: String): (String, List[String]) =
+        let (text, missing) = List.foldLeft((acc, pin) -> {
+            let (t, ms) = acc;
+            let (name, cur, resolved) = pin;
+            match findEntryValue(name, t) {
+                case None => (t, name :: ms)
+                case Some((vs, ve, value)) =>
+                    if (value != cur)
+                        (t, name :: ms)
+                    else if (cur == resolved)
+                        (t, ms)
+                    else
+                        (String.sliceLeft(end = vs, t) + "\"${resolved}\"" + String.sliceRight(start = ve, t), ms)
+            }
+        }, (section, Nil), pins);
+        (text, List.reverse(missing))
+
+    /// Locate `"name" : "value"` (any whitespace around the colon) and
+    /// return the span of the quoted value plus its content.
+    def findEntryValue(name: String, text: String): Option[(Int32, Int32, String)] =
+        let needle = "\"${name}\"";
+        let len = String.length(text);
+        def afterWs(i) = if (i < len and Char.isWhitespace(String.charAt(i, text))) afterWs(i + 1) else i;
+        def closingQuote(j) =
+            if (j >= len) None
+            else {
+                let c = String.charAt(j, text);
+                if (c == '\\') closingQuote(j + 2)
+                else if (c == '"') Some(j)
+                else closingQuote(j + 1)
+            };
+        def search(fromIdx) =
+            match String.indexOfLeftWithOffset({substr = needle}, {offset = fromIdx}, text) {
+                case None => None
+                case Some(k) =>
+                    let colon = afterWs(k + String.length(needle));
+                    let vq = if (colon < len and String.charAt(colon, text) == ':') afterWs(colon + 1) else -1;
+                    if (vq >= 0 and vq < len and String.charAt(vq, text) == '"')
+                        match closingQuote(vq + 1) {
+                            case Some(q) => Some((vq, q + 1, String.slice(start = vq + 1, end = q, text)))
+                            case None    => None
+                        }
+                    else
+                        search(k + 1)
+            };
+        search(0)
+
+    /// Span [start, end) of the object literal that follows `"key":`.
+    def objectSpan(key: String, text: String): Option[(Int32, Int32)] =
+        let len = String.length(text);
+        def afterWs(i) = if (i < len and Char.isWhitespace(String.charAt(i, text))) afterWs(i + 1) else i;
+        match String.indexOf({substr = "\"${key}\""}, text) {
+            case None => None
+            case Some(k) =>
+                let colon = afterWs(k + String.length(key) + 2);
+                if (colon < len and String.charAt(colon, text) == ':') {
+                    let open = afterWs(colon + 1);
+                    if (open < len and String.charAt(open, text) == '{')
+                        matchingBrace(text, open) |> Option.map(close -> (open, close))
+                    else
+                        None
+                } else
+                    None
+        }
+
+    /// Index just past the `}` matching the `{` at `openIdx`, skipping
+    /// braces that appear inside string literals.
+    def matchingBrace(text: String, openIdx: Int32): Option[Int32] =
+        let len = String.length(text);
+        def loop(i, depth, inStr, esc) =
+            if (i >= len) None
+            else {
+                let c = String.charAt(i, text);
+                if (inStr) {
+                    if (esc) loop(i + 1, depth, true, false)
+                    else if (c == '\\') loop(i + 1, depth, true, true)
+                    else if (c == '"') loop(i + 1, depth, false, false)
+                    else loop(i + 1, depth, true, false)
+                } else if (c == '"')
+                    loop(i + 1, depth, true, false)
+                else if (c == '{')
+                    loop(i + 1, depth + 1, false, false)
+                else if (c == '}')
+                    (if (depth == 1) Some(i + 1) else loop(i + 1, depth - 1, false, false))
+                else
+                    loop(i + 1, depth, false, false)
+            };
+        loop(openIdx, 0, false, false)
 
     def resolveVersion(lock: Json, name: String, wsPrefix: String): Option[String] =
         let packages = getKey("packages", lock);
