@@ -5,7 +5,7 @@ Major version updates for npm packages (exceeding the current semver range).
 ## Audit
 
 ```bash
-pnpm -r outdated --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-outdated-audit
+pnpm -r outdated --json 2>/dev/null | nix run .#deps-audit -- npm-outdated-audit
 ```
 
 The `-r` flag is required: without it, `pnpm outdated` only checks the workspace root and misses outdated packages in workspace projects such as `app`.

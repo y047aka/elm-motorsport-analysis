@@ -91,6 +91,23 @@
             '';
           };
 
+        # Audit helpers for the update-deps skill. Runs from the repo root
+        # (subcommands resolve paths like flake.lock and app/elm.json
+        # relative to the cwd); rebuilds the jar when sources changed.
+        # cargo is needed by the rust-major-audit subcommand.
+        depsAuditApp = pkgs.writeShellApplication {
+          name = "deps-audit";
+          runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo ];
+          text = ''
+            dir=.claude/skills/update-deps/scripts-flix
+            jar=$dir/artifact/scripts-flix.jar
+            if [ ! -f "$jar" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+              (cd "$dir" && flix build-jar) >&2
+            fi
+            java -jar "$jar" "$@"
+          '';
+        };
+
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
           buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
@@ -111,6 +128,7 @@
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
           flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec/2025"}/bin/flix-run";                             meta.description = "Run Flix project (CSV -> JSON)"; };
+          deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });
 }

@@ -7,7 +7,7 @@ Check `which elm-json` first. If unavailable, tell the user to run `direnv reloa
 `elm-json upgrade` has no `--dry-run`. Report current pinned versions:
 
 ```bash
-cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-versions-report
+nix run .#deps-audit -- elm-versions-report
 ```
 
 ## Update
@@ -22,7 +22,7 @@ Use `--yes` to skip interactive confirmation.
 
 1. Capture dillonkearns package versions and restore commands:
    ```bash
-   cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-elm-guard
+   nix run .#deps-audit -- elm-pages-elm-guard
    ```
    Save the output (the `restore commands` section contains the commands needed in step 3).
 
