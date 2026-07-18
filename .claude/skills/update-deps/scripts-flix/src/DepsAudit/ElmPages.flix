@@ -6,6 +6,7 @@ mod DepsAudit.ElmPages {
     use Sys.Env
     use Util.Json.Json
     use Util.Json.Json.{JObject, JString}
+    use DepsAudit.Cli
     use DepsAudit.Io
 
     /// Render the dillonkearns package report from app/elm.json content.
@@ -90,14 +91,6 @@ mod DepsAudit.ElmPages {
         case MatchFound(Int64, String)
     }
 
-    /// What to print and exit with, split by stream so the caller doesn't
-    /// have to know which lines are errors.
-    pub type alias CliOutput = {
-        stdout = List[String],
-        stderr = List[String],
-        exitCode = Int32
-    }
-
     /// Locate the npm-shipped CompatibilityKey.elm, parse its key, and (if
     /// possible) search the $HOME Elm package cache for a matching version.
     pub def resolveCompatKey(): CompatKeyOutcome \ {IO, Env} =
@@ -123,40 +116,40 @@ mod DepsAudit.ElmPages {
     /// missing key file, a parse failure, or a missing $HOME are hard
     /// failures (stderr, exit 1) — the caller asked specifically for this
     /// value and got nothing usable.
-    pub def renderCompatKeyStandalone(outcome: CompatKeyOutcome): CliOutput =
+    pub def renderCompatKeyStandalone(outcome: CompatKeyOutcome): Cli.Output =
         match outcome {
             case CompatKeyOutcome.KeyFileNotFound(path) =>
-                { stdout = Nil, stderr = "${path} not found" :: "Run npm install first." :: Nil, exitCode = 1 }
+                Cli.failLines("${path} not found" :: "Run npm install first." :: Nil)
             case CompatKeyOutcome.KeyParseFailed =>
-                { stdout = Nil, stderr = "could not parse compatibilityKey from npm source" :: Nil, exitCode = 1 }
+                Cli.fail("could not parse compatibilityKey from npm source")
             case CompatKeyOutcome.HomeNotSet(npmKey) =>
-                { stdout = "npmKey: ${npmKey}" :: Nil, stderr = "HOME not set" :: Nil, exitCode = 1 }
+                Cli.append(Cli.okText("npmKey: ${npmKey}"), Cli.fail("HOME not set"))
             case other => commonCompatKeyOutput(other)
         }
 
     /// Render for the compatibilityKey section of `elm-pages-audit`: never
     /// fails the whole command — every branch is informational stdout,
     /// exit 0. This is the only difference from the standalone renderer.
-    pub def renderCompatKeyForAudit(outcome: CompatKeyOutcome): CliOutput =
+    pub def renderCompatKeyForAudit(outcome: CompatKeyOutcome): Cli.Output =
         match outcome {
             case CompatKeyOutcome.KeyFileNotFound(_) =>
-                { stdout = "npmKey: unknown (file not found — run npm install first)" :: Nil, stderr = Nil, exitCode = 0 }
+                Cli.okText("npmKey: unknown (file not found — run npm install first)")
             case CompatKeyOutcome.KeyParseFailed =>
-                { stdout = "npmKey: unknown (could not parse)" :: Nil, stderr = Nil, exitCode = 0 }
+                Cli.okText("npmKey: unknown (could not parse)")
             case CompatKeyOutcome.HomeNotSet(npmKey) =>
-                { stdout = "npmKey: ${npmKey}" :: "matchingElmVersion: unknown (HOME not set)" :: Nil, stderr = Nil, exitCode = 0 }
+                Cli.ok("npmKey: ${npmKey}" :: "matchingElmVersion: unknown (HOME not set)" :: Nil)
             case other => commonCompatKeyOutput(other)
         }
 
     /// The two outcomes both renderers treat identically.
-    def commonCompatKeyOutput(outcome: CompatKeyOutcome): CliOutput =
+    def commonCompatKeyOutput(outcome: CompatKeyOutcome): Cli.Output =
         match outcome {
             case CompatKeyOutcome.NoMatchingVersion(npmKey) =>
-                { stdout = "npmKey: ${npmKey}" :: noMatchHintLines(), stderr = Nil, exitCode = 0 }
+                Cli.ok("npmKey: ${npmKey}" :: noMatchHintLines())
             case CompatKeyOutcome.MatchFound(npmKey, v) =>
-                { stdout = "npmKey: ${npmKey}" :: "matchingElmVersion: ${v}" :: Nil, stderr = Nil, exitCode = 0 }
+                Cli.ok("npmKey: ${npmKey}" :: "matchingElmVersion: ${v}" :: Nil)
             case _ =>
-                { stdout = Nil, stderr = "unreachable compatibilityKey outcome" :: Nil, exitCode = 1 }
+                Cli.fail("unreachable compatibilityKey outcome")
         }
 
     /// First CompatibilityKey.elm that actually exists, if any.
