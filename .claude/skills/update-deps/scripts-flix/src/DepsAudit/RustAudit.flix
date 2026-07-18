@@ -1,0 +1,39 @@
+///
+/// rust-minor-audit: classify `cargo update --dry-run` output into minor
+/// and patch updates. Port of scripts/src/rust_audit.rs (minor_audit).
+///
+mod DepsAudit.RustAudit {
+
+    use DepsAudit.Report
+    use DepsAudit.Semver
+
+    /// Render the full report for the given stdin content.
+    pub def renderMinorAudit(input: String): String =
+        let updates =
+            String.splitOn({substr = "\n"}, String.trim(input))
+                |> List.filterMap(parseUpdateLine);
+        let minor = updates
+            |> List.filterMap(match (name, f, t) ->
+                if (Semver.isMinorBump(f, t)) Some("${name}: ${f} -> ${t}") else None);
+        let patch = updates
+            |> List.filterMap(match (name, f, t) ->
+                if (Semver.isMinorBump(f, t)) None else Some("${name}: ${f} -> ${t}"));
+        List.join("\n",
+            "--- minor updates ---" ::
+            Report.linesOrNone(minor) ::
+            "" ::
+            "--- patch updates ---" ::
+            Report.linesOrNone(patch) ::
+            "" ::
+            "--- summary ---" ::
+            "minor: ${List.length(minor)}, patch: ${List.length(patch)}" :: Nil)
+
+    /// Parse one "Updating foo v1.2.3 -> v1.2.4" line.
+    def parseUpdateLine(line: String): Option[(String, String, String)] =
+        let rgx = regex"^\\s+(?:Updating|Locking)\\s+(\\S+)\\s+v(\\S+)\\s+->\\s+v(\\S+)";
+        match Regex.capture(rgx, line) {
+            case name :: f :: t :: Nil => Some((name, f, t))
+            case _                     => None
+        }
+
+}
