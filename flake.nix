@@ -73,6 +73,24 @@
             '';
           };
 
+        # Tauri v2 ネイティブアプリ用ランナー。app/ を cwd にして cargo-tauri を
+        # 実行する（cargo-tauri が ./src-tauri/tauri.conf.json を検出し、
+        # beforeDevCommand=`pnpm run start` を app/ で実行する）。
+        # Linux では OS 標準 WebView 一式（webkitgtk 等）が必要。macOS/Windows は
+        # OS 標準 WebView を使うため追加のシステム依存は不要。
+        mkTauriApp = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri pkgs.pkg-config ]
+              ++ elmTools
+              ++ pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [ webkitgtk_4_1 libsoup_3 gtk3 ])
+              ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
+            text = ''
+              cd app
+              ${cmd}
+            '';
+          };
+
         flix = pkgs.flix.overrideAttrs (old: rec {
           version = "0.75.1";
           src = pkgs.fetchurl {
@@ -113,7 +131,9 @@
 
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri pkg-config playwright-test ]
+            ++ [ flix ] ++ elmTools
+            ++ lib.optionals stdenv.isLinux [ webkitgtk_4_1 libsoup_3 gtk3 ];
         });
 
         apps = {
@@ -125,6 +145,8 @@
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/app app/src package/src"}/bin/format";           meta.description = "Format Elm code (elm-format)"; };
+          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
+          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
           cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
           cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2025"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };

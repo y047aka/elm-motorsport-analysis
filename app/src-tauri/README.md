@@ -30,25 +30,33 @@ app/
 
 ## 前提ツール
 
-- Rust ツールチェーン（`cargo`）
-- Node.js + pnpm（既存）+ elm ツールチェーン（`nix develop` で提供）
-- Tauri CLI: `cargo install tauri-cli --version '^2'`（または `pnpm add -D @tauri-apps/cli`）
-- Linux で起動する場合はシステム WebView 一式（`webkit2gtk-4.1`, `libappindicator` 等）。
-  macOS/Windows は OS 標準 WebView を利用するため追加不要。
+Tauri ツールチェーン（`cargo-tauri`）は **flake に統合済み**。`nix develop` / `nix run` を使えば
+個別インストールは不要。
+- macOS/Windows … OS 標準 WebView を利用するため追加のシステム依存は不要。
+- Linux … WebView 一式（`webkitgtk_4_1`, `libsoup_3`, `gtk3`）が必要。flake が自動で用意する。
+
+nix を使わず素の環境で動かす場合のみ、`cargo install tauri-cli --version '^2' --locked`
+（または `cd app && pnpm add -D @tauri-apps/cli@^2`）で CLI を導入する。
 
 ## 起動手順（開発）
 
+**推奨（flake 経由）** — リポジトリルートで:
+
 ```bash
-# リポジトリルートで依存を用意
+# 依存を用意（初回のみ）
 nix develop --command pnpm install --frozen-lockfile
 
 # アイコンをプレースホルダから生成（初回のみ / .icns・.ico を含め全サイズ生成）
-cd app/src-tauri
-cargo tauri icon icons/icon.png
+nix develop --command bash -c 'cd app/src-tauri && cargo tauri icon icons/icon.png'
 
 # 開発起動（beforeDevCommand で `pnpm run start` が走り、:1234 の elm-pages dev を読み込む）
-cargo tauri dev
+nix run .#tauri-dev
 ```
+
+> **cwd に注意**: `cargo tauri` は `app/` を cwd にして実行すること
+> （`nix run .#tauri-dev` は内部で `cd app` 済み）。beforeDevCommand の `pnpm run start` は
+> `app/package.json` を基準に動くため、`app/src-tauri/` を cwd にすると失敗する。
+> 手動起動する場合は `cd app && cargo tauri dev`。
 
 ## 動作確認チェックリスト
 
@@ -60,22 +68,22 @@ cargo tauri dev
 ## 本番ビルド
 
 ```bash
-cd app/src-tauri
-cargo tauri build   # beforeBuildCommand で `pnpm run build` → dist を同梱してネイティブバイナリを生成
+# beforeBuildCommand で `pnpm run build` → dist を同梱してネイティブバイナリを生成
+nix run .#tauri-build
 ```
 
 ## この環境での検証状況（正直な記録）
 
 本 PoC を作成した remote 実行環境には **webkit2gtk / Tauri CLI / elm・nix ツールチェーンが無い**ため、
-`cargo tauri dev` による GUI 起動と `cargo tauri build` の実行検証は **未実施**。
-構成一式は Tauri v2 の標準スキーマに沿って用意済みで、上記前提ツールの揃った環境（メンテナのローカル / nix）で
+`nix run .#tauri-dev` による GUI 起動と `nix run .#tauri-build` の実行検証は **未実施**。
+flake / 構成一式は Tauri v2 の標準スキーマに沿って用意済みで、上記前提ツールの揃った環境（メンテナのローカル / nix）で
 起動確認を行うこと。
 
 ## 残課題（実装フェーズ）
 
 1. **アイコン**: プレースホルダを実アイコンへ差し替え。
-2. **Nix flake**: `nix develop` に Tauri ツールチェーン（`cargo-tauri` + Linux の WebView 依存）を追加し、
-   `nix run .#tauri-dev` / `.#tauri-build` を用意。
+2. ~~**Nix flake**: `nix develop` に Tauri ツールチェーンを追加。~~ → **対応済み**
+   （`mkTauriApp` / `nix run .#tauri-dev` / `.#tauri-build` / devShell に `cargo-tauri` 追加）。
 3. **CI 差し替え**: `.github/workflows/gh-pages.yml` を廃し、`tauri build` によるマルチプラットフォーム
    （macOS / Windows / Linux）リリースワークフローへ移行。
 4. **Rust CLI 統合方針**: `motorsport` クレート（`../../cli/motorsport`）をライブラリ結合するか、
