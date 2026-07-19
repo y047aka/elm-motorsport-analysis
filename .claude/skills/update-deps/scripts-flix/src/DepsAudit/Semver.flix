@@ -6,11 +6,41 @@
 /// components are split on '.', unparsable components are dropped,
 /// and missing components compare as 0.
 ///
+/// `Semver` is a parsed version as a value with `Eq`/`Order`, so
+/// version ordering travels with the type: sorting version strings is
+/// `List.sortBy(Semver.parse)` rather than a hand-written comparator.
+/// Trailing zero components are normalized away at parse time, which is
+/// what makes the derived `Eq` agree with `Order` ("1.2" == "1.2.0").
+///
 mod DepsAudit.Semver {
+
+    /// A parsed version: its numeric components, without trailing zeros.
+    /// Only `parse` constructs one, so the normalization is an invariant.
+    pub enum Semver(List[Int64]) with Eq, ToString
+
+    instance Order[Semver] {
+        pub def compare(x: Semver, y: Semver): Comparison =
+            let Semver.Semver(xs) = x;
+            let Semver.Semver(ys) = y;
+            // Both lists are free of trailing zeros, so the longer one is
+            // greater when they share a prefix — no zero-padding needed.
+            Order.compare(xs, ys)
+    }
+
+    /// Parse a version string ("1.2.3" -> Semver(1 :: 2 :: 3 :: Nil)),
+    /// dropping unparsable components and trailing zeros.
+    pub def parse(version: String): Semver =
+        Semver.Semver(components(version) |> dropTrailingZeros)
 
     /// Numeric components of a version string ("1.2.3" -> 1 :: 2 :: 3 :: Nil).
     pub def components(version: String): List[Int64] =
         String.splitOn({substr = "."}, version) |> List.filterMap(Int64.fromString)
+
+    def dropTrailingZeros(parts: List[Int64]): List[Int64] =
+        parts
+            |> List.reverse
+            |> List.dropWhile(p -> p == 0i64)
+            |> List.reverse
 
     /// Strip leading constraint operators ("^1.2", "~1.2", ">=1.2" -> "1.2").
     pub def baseVersion(constraint: String): String =
@@ -37,32 +67,17 @@ mod DepsAudit.Semver {
     /// component increases. When `from` is all zeros, any non-zero `to`
     /// counts as minor.
     pub def isMinorBump(oldVersion: String, newVersion: String): Bool =
-        let fp = components(oldVersion);
-        let tp = components(newVersion);
-        match firstNonZeroIndex(fp) {
-            case None      => List.exists(p -> p != 0i64, tp)
+        let oldParts = components(oldVersion);
+        let newParts = components(newVersion);
+        match firstNonZeroIndex(oldParts) {
+            case None      => List.exists(p -> p != 0i64, newParts)
             case Some(idx) =>
                 let next = idx + 1;
-                match (List.nth(next, fp), List.nth(next, tp)) {
-                    case (Some(f), Some(t)) => t > f
-                    case _                  => false
+                match (List.nth(next, oldParts), List.nth(next, newParts)) {
+                    case (Some(oldC), Some(newC)) => newC > oldC
+                    case _                        => false
                 }
         }
-
-    /// Numeric comparison of version strings; missing components are 0.
-    pub def compareSemver(a: String, b: String): Comparison =
-        let pa = components(a);
-        let pb = components(b);
-        def loop(xs, ys) = match (xs, ys) {
-            case (Nil, Nil)           => Comparison.EqualTo
-            case (x :: xr, Nil)       => if (x != 0i64) Comparison.GreaterThan else loop(xr, Nil)
-            case (Nil, y :: yr)       => if (y != 0i64) Comparison.LessThan else loop(Nil, yr)
-            case (x :: xr, y :: yr)   =>
-                if (x > y) Comparison.GreaterThan
-                else if (x < y) Comparison.LessThan
-                else loop(xr, yr)
-        };
-        loop(pa, pb)
 
     def firstNonZeroIndex(parts: List[Int64]): Option[Int32] =
         def loop(idx, rest) = match rest {

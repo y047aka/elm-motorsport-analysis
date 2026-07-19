@@ -74,7 +74,7 @@ mod DepsAudit.TestElmPages {
         let dirs = Map#{cacheDir() => "10.0.1" :: Nil};
         let outcome = runInMemory(files, dirs, () ->
             ElmPages.resolveCompatKeyAt(Some("/repo"), Some("/home/tester")));
-        Assert.assertEq(expected = CompatKeyOutcome.NoMatchingVersion(42i64), outcome)
+        Assert.assertEq(expected = CompatKeyOutcome.Resolved(42i64, None), outcome)
 
     @Test
     def testMatchFoundPicksHighestVersion(): Unit \ Assert =
@@ -87,6 +87,6 @@ mod DepsAudit.TestElmPages {
         let dirs = Map#{cacheDir() => "9.0.0" :: "10.1.0" :: "10.0.1" :: Nil};
         let outcome = runInMemory(files, dirs, () ->
             ElmPages.resolveCompatKeyAt(Some("/repo"), Some("/home/tester")));
-        Assert.assertEq(expected = CompatKeyOutcome.MatchFound(42i64, "10.1.0"), outcome)
+        Assert.assertEq(expected = CompatKeyOutcome.Resolved(42i64, Some("10.1.0")), outcome)
 
 }

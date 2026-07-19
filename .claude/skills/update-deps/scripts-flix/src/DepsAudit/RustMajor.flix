@@ -16,18 +16,15 @@ mod DepsAudit.RustMajor {
     /// Parse (name, constraint) pairs from Cargo.toml contents,
     /// first occurrence wins, sorted by name.
     pub def parseDeps(contents: List[String]): List[(String, String)] =
-        let all = contents |> List.flatMap(parseOne);
-        let deduped = List.foldLeft((acc, entry) -> {
+        let all = contents |> List.flatMap(parseCargoToml);
+        let (_, deduped) = List.foldLeft((acc, entry) -> {
+            let (seen, kept) = acc;
             let (name, _) = entry;
-            if (List.exists(match (n, _) -> n == name, acc)) acc else entry :: acc
-        }, Nil, all);
-        deduped |> List.sortWith((a, b) -> {
-            let (na, _) = a;
-            let (nb, _) = b;
-            Order.compare(na, nb)
-        })
+            if (Set.memberOf(name, seen)) acc else (Set.insert(name, seen), entry :: kept)
+        }, (Set.empty(), Nil), all);
+        deduped |> List.sortBy(fst)
 
-    def parseOne(content: String): List[(String, String)] =
+    def parseCargoToml(content: String): List[(String, String)] =
         let sectionRgx = regex"^\\[(workspace\\.)?(dev-)?dependencies\\]";
         let anySectionRgx = regex"^\\[";
         let simpleRgx = regex"^([\\w-]+)\\s*=\\s*\"([^\"]+)\"";
@@ -62,12 +59,21 @@ mod DepsAudit.RustMajor {
     pub def parseSearchOutput(name: String, output: String): Option[String] =
         String.splitOn({substr = "\n"}, output)
             |> List.findMap(line -> {
-                let lhs = String.takeWhileLeft(c -> c != ' ' and c != '\t', line);
-                if (normalize(lhs) == normalize(name) and String.length(lhs) < String.length(line))
+                let leadingName = String.takeWhileLeft(c -> c != ' ' and c != '\t', line);
+                if (normalize(leadingName) == normalize(name) and String.length(leadingName) < String.length(line))
                     firstQuoted(line)
                 else
                     None
             })
+
+    def normalize(s: String): String =
+        String.replace({src = "-"}, {dst = "_"}, s)
+
+    def firstQuoted(line: String): Option[String] =
+        match String.splitOn({substr = "\""}, line) {
+            case _ :: quoted :: _ => Some(quoted)
+            case _                => None
+        }
 
     /// Render the final report given resolved (name, constraint, latest).
     pub def renderMajorAudit(resolved: List[(String, String, Option[String])]): String =
@@ -88,14 +94,5 @@ mod DepsAudit.RustMajor {
         Report.sections(
             ("major updates", Report.linesOrNone(majors)) ::
             ("up to date", Report.linesOrNone(upToDate)) :: Nil)
-
-    def normalize(s: String): String =
-        String.replace({src = "-"}, {dst = "_"}, s)
-
-    def firstQuoted(line: String): Option[String] =
-        match String.splitOn({substr = "\""}, line) {
-            case _ :: quoted :: _ => Some(quoted)
-            case _                => None
-        }
 
 }

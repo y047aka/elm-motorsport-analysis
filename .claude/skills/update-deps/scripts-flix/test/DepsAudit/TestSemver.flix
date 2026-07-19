@@ -55,16 +55,19 @@ mod DepsAudit.TestSemver {
     def testIsMinorBumpZeroSeries(): Unit \ Assert =
         Assert.assertTrue(Semver.isMinorBump("0.11.10", "0.11.11"))
 
-    @Test
-    def testCompareSemverLess(): Unit \ Assert =
-        Assert.assertTrue(Semver.compareSemver("12.1.2", "12.3.0") == Comparison.LessThan)
+    // --- the Semver type: Eq/Order agree, trailing zeros are normalized ---
 
     @Test
-    def testCompareSemverEqualWithMissing(): Unit \ Assert =
-        Assert.assertTrue(Semver.compareSemver("1.2", "1.2.0") == Comparison.EqualTo)
+    def testParseNormalizesTrailingZeros(): Unit \ Assert =
+        Assert.assertTrue(Semver.parse("1.2") == Semver.parse("1.2.0"))
 
     @Test
-    def testCompareSemverGreater(): Unit \ Assert =
-        Assert.assertTrue(Semver.compareSemver("10.0.0", "9.9.9") == Comparison.GreaterThan)
+    def testOrderSortsVersionStrings(): Unit \ Assert =
+        let sorted = List.sortBy(Semver.parse, "12.3.0" :: "9.9.9" :: "12.1.2" :: Nil);
+        Assert.assertTrue(sorted == "9.9.9" :: "12.1.2" :: "12.3.0" :: Nil)
+
+    @Test
+    def testOrderNumericNotLexicographic(): Unit \ Assert =
+        Assert.assertTrue(Order.compare(Semver.parse("1.10"), Semver.parse("1.9")) == Comparison.GreaterThan)
 
 }

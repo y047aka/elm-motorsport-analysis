@@ -24,7 +24,8 @@ mod DepsAudit.Date {
         let (y, m, d) = daysToYmd(secs / 86400i64);
         "${padYear(y)}-${pad2(m)}-${pad2(d)}"
 
-    def pad2(n: Int64): String =
+    /// Zero-pad to two digits ("7" -> "07").
+    pub def pad2(n: Int64): String =
         if (n < 10i64) "0${n}" else "${n}"
 
     def padYear(n: Int64): String =

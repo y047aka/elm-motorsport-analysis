@@ -13,11 +13,11 @@ mod DepsAudit.RustAudit {
             String.splitOn({substr = "\n"}, String.trim(input))
                 |> List.filterMap(parseUpdateLine);
         let minor = updates
-            |> List.filterMap(match (name, f, t) ->
-                if (Semver.isMinorBump(f, t)) Some("${name}: ${f} -> ${t}") else None);
+            |> List.filterMap(match (name, oldV, newV) ->
+                if (Semver.isMinorBump(oldV, newV)) Some("${name}: ${oldV} -> ${newV}") else None);
         let patch = updates
-            |> List.filterMap(match (name, f, t) ->
-                if (Semver.isMinorBump(f, t)) None else Some("${name}: ${f} -> ${t}"));
+            |> List.filterMap(match (name, oldV, newV) ->
+                if (Semver.isMinorBump(oldV, newV)) None else Some("${name}: ${oldV} -> ${newV}"));
         Report.sections(
             ("minor updates", Report.linesOrNone(minor)) ::
             ("patch updates", Report.linesOrNone(patch)) ::
@@ -32,8 +32,8 @@ mod DepsAudit.RustAudit {
     def parseUpdateLine(line: String): Option[(String, String, String)] =
         let rgx = regex"^\\s*(?:Updating|Locking)\\s+(\\S+)\\s+v(\\S+)\\s+->\\s+v(\\S+)";
         match Regex.capture(rgx, line) {
-            case name :: f :: t :: Nil => Some((name, f, t))
-            case _                     => None
+            case name :: oldV :: newV :: Nil => Some((name, oldV, newV))
+            case _                           => None
         }
 
 }

@@ -1,5 +1,6 @@
 mod DepsAudit.TestElm {
 
+    use DepsAudit.Cli
     use DepsAudit.Elm
     use DepsAudit.ElmPages
     use DepsAudit.JsonUtil
@@ -111,71 +112,69 @@ mod DepsAudit.TestElm {
 
     // --- CompatKeyOutcome rendering ---
     //
-    // resolveCompatKey() itself needs the filesystem and $HOME, so it isn't
-    // unit-tested here; these tests cover the two pure renderers against
-    // every outcome directly, without touching disk. Before this, the
-    // standalone-vs-audit difference (hard failure vs. graceful degrade)
-    // was only reachable by running the actual subcommand.
+    // The lookup itself is covered in TestElmPages; these tests cover the
+    // two pure renderers (hard failure vs. graceful degrade) against every
+    // outcome directly, without touching disk.
 
     @Test
     def testCompatKeyStandaloneFileNotFound(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.KeyFileNotFound("/repo/node_modules/elm-pages/.../CompatibilityKey.elm"));
-        Assert.assertTrue(out#exitCode == 1);
-        Assert.assertTrue(List.isEmpty(out#stdout));
-        Assert.assertTrue(String.contains({substr = "not found"}, List.head(out#stderr) |> Option.getWithDefault("")))
+        Assert.assertTrue(Cli.exitCode(out) == 1);
+        Assert.assertTrue(List.isEmpty(Cli.stdout(out)));
+        Assert.assertTrue(String.contains({substr = "not found"}, List.head(Cli.stderr(out)) |> Option.getWithDefault("")))
 
     @Test
     def testCompatKeyForAuditFileNotFound(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.KeyFileNotFound("irrelevant/here"));
-        Assert.assertTrue(out#exitCode == 0);
-        Assert.assertTrue(List.isEmpty(out#stderr));
-        Assert.assertTrue(String.contains({substr = "npmKey: unknown (file not found"}, List.head(out#stdout) |> Option.getWithDefault("")))
+        Assert.assertTrue(Cli.exitCode(out) == 0);
+        Assert.assertTrue(List.isEmpty(Cli.stderr(out)));
+        Assert.assertTrue(String.contains({substr = "npmKey: unknown (file not found"}, List.head(Cli.stdout(out)) |> Option.getWithDefault("")))
 
     @Test
     def testCompatKeyStandaloneParseFailed(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.KeyParseFailed);
-        Assert.assertTrue(out#exitCode == 1);
-        Assert.assertTrue(List.exists(l -> String.contains({substr = "could not parse"}, l), out#stderr))
+        Assert.assertTrue(Cli.exitCode(out) == 1);
+        Assert.assertTrue(List.exists(l -> String.contains({substr = "could not parse"}, l), Cli.stderr(out)))
 
     @Test
     def testCompatKeyForAuditParseFailed(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.KeyParseFailed);
-        Assert.assertTrue(out#exitCode == 0);
-        Assert.assertTrue(List.exists(l -> String.contains({substr = "unknown (could not parse)"}, l), out#stdout))
+        Assert.assertTrue(Cli.exitCode(out) == 0);
+        Assert.assertTrue(List.exists(l -> String.contains({substr = "unknown (could not parse)"}, l), Cli.stdout(out)))
 
     @Test
     def testCompatKeyStandaloneHomeNotSet(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.HomeNotSet(29i64));
-        Assert.assertTrue(out#exitCode == 1);
-        Assert.assertTrue(List.memberOf("npmKey: 29", out#stdout));
-        Assert.assertTrue(List.memberOf("HOME not set", out#stderr))
+        Assert.assertTrue(Cli.exitCode(out) == 1);
+        Assert.assertTrue(List.memberOf("npmKey: 29", Cli.stdout(out)));
+        Assert.assertTrue(List.memberOf("HOME not set", Cli.stderr(out)))
 
     @Test
     def testCompatKeyForAuditHomeNotSet(): Unit \ Assert =
         let out = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.HomeNotSet(29i64));
-        Assert.assertTrue(out#exitCode == 0);
-        Assert.assertTrue(List.isEmpty(out#stderr));
-        Assert.assertTrue(List.exists(l -> String.contains({substr = "unknown (HOME not set)"}, l), out#stdout))
+        Assert.assertTrue(Cli.exitCode(out) == 0);
+        Assert.assertTrue(List.isEmpty(Cli.stderr(out)));
+        Assert.assertTrue(List.exists(l -> String.contains({substr = "unknown (HOME not set)"}, l), Cli.stdout(out)))
 
-    /// NoMatchingVersion and MatchFound render identically in both modes.
+    /// A resolved key (match or no-match) renders identically in both modes.
     @Test
     def testCompatKeyNoMatchIsGracefulInBothModes(): Unit \ Assert =
-        let standalone = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.NoMatchingVersion(29i64));
-        let audit = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.NoMatchingVersion(29i64));
-        Assert.assertTrue(standalone#exitCode == 0);
-        Assert.assertTrue(audit#exitCode == 0);
-        Assert.assertTrue(standalone#stdout == audit#stdout);
-        Assert.assertTrue(List.exists(l -> String.contains({substr = "no-match"}, l), standalone#stdout))
+        let standalone = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.Resolved(29i64, None));
+        let audit = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.Resolved(29i64, None));
+        Assert.assertTrue(Cli.exitCode(standalone) == 0);
+        Assert.assertTrue(Cli.exitCode(audit) == 0);
+        Assert.assertTrue(Cli.stdout(standalone) == Cli.stdout(audit));
+        Assert.assertTrue(List.exists(l -> String.contains({substr = "no-match"}, l), Cli.stdout(standalone)))
 
     @Test
     def testCompatKeyMatchFoundIsIdenticalInBothModes(): Unit \ Assert =
-        let standalone = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.MatchFound(29i64, "12.3.0"));
-        let audit = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.MatchFound(29i64, "12.3.0"));
-        Assert.assertTrue(standalone#stdout == audit#stdout);
-        Assert.assertTrue(standalone#stderr == audit#stderr);
-        Assert.assertTrue(standalone#exitCode == audit#exitCode);
-        Assert.assertTrue(standalone#exitCode == 0);
-        Assert.assertTrue(List.memberOf("npmKey: 29", standalone#stdout));
-        Assert.assertTrue(List.memberOf("matchingElmVersion: 12.3.0", standalone#stdout))
+        let standalone = ElmPages.renderCompatKeyStandalone(ElmPages.CompatKeyOutcome.Resolved(29i64, Some("12.3.0")));
+        let audit = ElmPages.renderCompatKeyForAudit(ElmPages.CompatKeyOutcome.Resolved(29i64, Some("12.3.0")));
+        Assert.assertTrue(Cli.stdout(standalone) == Cli.stdout(audit));
+        Assert.assertTrue(Cli.stderr(standalone) == Cli.stderr(audit));
+        Assert.assertTrue(Cli.exitCode(standalone) == Cli.exitCode(audit));
+        Assert.assertTrue(Cli.exitCode(standalone) == 0);
+        Assert.assertTrue(List.memberOf("npmKey: 29", Cli.stdout(standalone)));
+        Assert.assertTrue(List.memberOf("matchingElmVersion: 12.3.0", Cli.stdout(standalone)))
 
 }

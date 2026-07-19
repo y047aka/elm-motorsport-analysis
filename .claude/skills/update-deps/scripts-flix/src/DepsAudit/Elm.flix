@@ -20,7 +20,7 @@ mod DepsAudit.Elm {
         List.join("\n", header :: body)
 
     def applicationBody(elmJson: Json): List[String] =
-        let at = path -> entries(JsonUtil.getAt(path, elmJson));
+        let at = path -> entryLines(JsonUtil.getAt(path, elmJson));
         let direct = at("dependencies" :: "direct" :: Nil);
         let indirect = at("dependencies" :: "indirect" :: Nil);
         let testDirect = at("test-dependencies" :: "direct" :: Nil);
@@ -32,15 +32,15 @@ mod DepsAudit.Elm {
             base ::: ("test-direct:" :: testDirect) ::: ("test-indirect:" :: testIndirect)
 
     def packageBody(elmJson: Json): List[String] =
-        let deps = entries(JsonUtil.getKey("dependencies", elmJson));
-        let testDeps = entries(JsonUtil.getKey("test-dependencies", elmJson));
+        let deps = entryLines(JsonUtil.getKey("dependencies", elmJson));
+        let testDeps = entryLines(JsonUtil.getKey("test-dependencies", elmJson));
         let base = "dependencies:" :: deps;
         if (List.isEmpty(testDeps)) base
         else base ::: ("test-dependencies:" :: testDeps)
 
     /// "  name: version" lines for a JSON object of string values,
     /// in sorted key order.
-    def entries(obj: Option[Json]): List[String] =
+    def entryLines(obj: Option[Json]): List[String] =
         match obj {
             case Some(JObject(m)) =>
                 Map.toList(m) |> List.filterMap(match (name, v) -> match v {

@@ -8,6 +8,12 @@ mod DepsAudit.Nix {
     use DepsAudit.Date
     use DepsAudit.JsonUtil
 
+    /// Which spelling of the channel a flake.nix uses.
+    pub enum ChannelStyle with Eq {
+        case Nixos          // nixos-YY.MM
+        case NixpkgsDarwin  // nixpkgs-YY.MM-darwin
+    }
+
     /// Render the channel report from flake.nix content and the current
     /// epoch time in seconds.
     ///
@@ -17,41 +23,36 @@ mod DepsAudit.Nix {
     /// `channel: unknown` on every run here).
     pub def renderChannelAudit(flakeContent: String, nowSecs: Int64): String =
         match parseChannel(flakeContent) {
-            case Some((label, yy, mm)) =>
-                let current = "current channel: ${channelLabel(label, yy, mm)}";
-                let (nowYearFull, nowMonth, _) = Date.daysToYmd(nowSecs / 86400i64);
-                let nowYear = nowYearFull - (nowYearFull / 100i64) * 100i64;
-                match latestStableChannel(nowYear, nowMonth) {
-                    case Some((ly, lm)) =>
+            case Some((style, yy, mm)) =>
+                let current = "current channel: ${channelLabel(style, yy, mm)}";
+                let (nowYear, nowMonth, _) = Date.daysToYmd(nowSecs / 86400i64);
+                let nowYy = nowYear - (nowYear / 100i64) * 100i64;
+                match latestStableChannel(nowYy, nowMonth) {
+                    case Some((latestYy, latestMm)) =>
                         let currentNum = yy * 100i64 + mm;
-                        let latestNum = ly * 100i64 + lm;
+                        let latestNum = latestYy * 100i64 + latestMm;
                         let suffix = if (latestNum > currentNum) "  <- UPGRADE AVAILABLE" else "  (up to date)";
-                        current + "\n" + "latest channel:  ${channelLabel(label, ly, lm)}${suffix}"
+                        current + "\n" + "latest channel:  ${channelLabel(style, latestYy, latestMm)}${suffix}"
                     case None =>
                         current + "\n" + "latest channel: unknown"
                 }
             case None => "channel: unknown"
         }
 
-    /// Which spelling of the channel a flake.nix uses.
-    pub enum ChannelStyle with Eq {
-        case Nixos          // nixos-YY.MM
-        case NixpkgsDarwin  // nixpkgs-YY.MM-darwin
-    }
-
     /// Extract the pinned channel, trying both spellings.
     pub def parseChannel(flakeContent: String): Option[(ChannelStyle, Int64, Int64)] =
         let darwinRgx = regex"nixpkgs-(\\d+)\\.(\\d+)-darwin";
         let nixosRgx = regex"nixos-(\\d+)\\.(\\d+)";
         match Regex.capture(darwinRgx, flakeContent) {
-            case yyS :: mmS :: Nil => pair(ChannelStyle.NixpkgsDarwin, yyS, mmS)
+            case yyS :: mmS :: Nil => channelFrom(ChannelStyle.NixpkgsDarwin, yyS, mmS)
             case _ => match Regex.capture(nixosRgx, flakeContent) {
-                case yyS :: mmS :: Nil => pair(ChannelStyle.Nixos, yyS, mmS)
+                case yyS :: mmS :: Nil => channelFrom(ChannelStyle.Nixos, yyS, mmS)
                 case _                 => None
             }
         }
 
-    def pair(style: ChannelStyle, yyS: String, mmS: String): Option[(ChannelStyle, Int64, Int64)] =
+    /// A channel triple from its captured year/month strings.
+    def channelFrom(style: ChannelStyle, yyS: String, mmS: String): Option[(ChannelStyle, Int64, Int64)] =
         forM (
             yy <- Int64.fromString(yyS);
             mm <- Int64.fromString(mmS)
@@ -60,18 +61,18 @@ mod DepsAudit.Nix {
     /// Render a channel label in the same spelling the flake uses.
     pub def channelLabel(style: ChannelStyle, yy: Int64, mm: Int64): String =
         match style {
-            case ChannelStyle.Nixos         => "nixos-${yy}.${pad2(mm)}"
-            case ChannelStyle.NixpkgsDarwin => "nixpkgs-${yy}.${pad2(mm)}-darwin"
+            case ChannelStyle.Nixos         => "nixos-${yy}.${Date.pad2(mm)}"
+            case ChannelStyle.NixpkgsDarwin => "nixpkgs-${yy}.${Date.pad2(mm)}-darwin"
         }
 
     /// Latest stable channel label (May/November releases from 24.05 on).
-    def latestStableChannel(nowYear: Int64, nowMonth: Int64): Option[(Int64, Int64)] =
-        def loop(y, acc) =
-            if (y > nowYear) acc
+    def latestStableChannel(nowYy: Int64, nowMonth: Int64): Option[(Int64, Int64)] =
+        def loop(y, latest) =
+            if (y > nowYy) latest
             else {
-                let acc1 = if (y < nowYear or 5i64 <= nowMonth) Some((y, 5i64)) else acc;
-                let acc2 = if (y < nowYear or 11i64 <= nowMonth) Some((y, 11i64)) else acc1;
-                loop(y + 1i64, acc2)
+                let afterMay = if (y < nowYy or 5i64 <= nowMonth) Some((y, 5i64)) else latest;
+                let afterNov = if (y < nowYy or 11i64 <= nowMonth) Some((y, 11i64)) else afterMay;
+                loop(y + 1i64, afterNov)
             };
         loop(24i64, None)
 
@@ -99,8 +100,5 @@ mod DepsAudit.Nix {
             |> Option.map(r -> String.takeLeft(12, r))
             |> Option.getWithDefault("?");
         "${name}: pinned ${date} (rev ${rev})"
-
-    def pad2(n: Int64): String =
-        if (n < 10i64) "0${n}" else "${n}"
 
 }

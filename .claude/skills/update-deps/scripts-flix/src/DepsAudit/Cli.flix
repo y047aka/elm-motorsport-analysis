@@ -8,25 +8,30 @@
 /// the terminal, and makes command results comparable in tests without
 /// capturing a stream.
 ///
+/// `Output` is opaque: it can only be built through the constructors below,
+/// so an exit code never disagrees with the streams it came with. Combining
+/// outputs is `append`/`empty` — a monoid — and the `SemiGroup`/`Monoid`
+/// instances make that structure available to the stdlib's combinators.
+///
 mod DepsAudit.Cli {
 
     use Sys.Console
 
     /// Lines destined for each stream, plus the exit code. Values in
     /// `stdout`/`stderr` may themselves be multi-line.
-    pub type alias Output = {
+    pub enum Output({
         stdout = List[String],
         stderr = List[String],
         exitCode = Int32
-    }
+    })
 
     // --- constructing ---
 
     pub def empty(): Output =
-        { stdout = Nil, stderr = Nil, exitCode = 0 }
+        Output.Output({ stdout = Nil, stderr = Nil, exitCode = 0 })
 
     pub def ok(lines: List[String]): Output =
-        { stdout = lines, stderr = Nil, exitCode = 0 }
+        Output.Output({ stdout = lines, stderr = Nil, exitCode = 0 })
 
     pub def okText(text: String): Output =
         ok(text :: Nil)
@@ -35,17 +40,18 @@ mod DepsAudit.Cli {
         failLines(message :: Nil)
 
     pub def failLines(lines: List[String]): Output =
-        { stdout = Nil, stderr = lines, exitCode = 1 }
+        Output.Output({ stdout = Nil, stderr = lines, exitCode = 1 })
 
     // --- combining ---
 
     /// Concatenate both streams in order. A non-zero exit code from the
     /// left wins, so a failure is never masked by later success.
-    pub def append(a: Output, b: Output): Output = {
-        stdout = a#stdout ::: b#stdout,
-        stderr = a#stderr ::: b#stderr,
-        exitCode = if (a#exitCode != 0) a#exitCode else b#exitCode
-    }
+    pub def append(a: Output, b: Output): Output =
+        Output.Output({
+            stdout = stdout(a) ::: stdout(b),
+            stderr = stderr(a) ::: stderr(b),
+            exitCode = if (exitCode(a) != 0) exitCode(a) else exitCode(b)
+        })
 
     /// Lift a `Result` whose `Ok` is the text to print.
     pub def fromResult(r: Result[String, String]): Output =
@@ -60,13 +66,27 @@ mod DepsAudit.Cli {
 
     /// Run `next` only if what came before succeeded, appending its output.
     pub def andThen(next: Unit -> Output \ ef, out: Output): Output \ ef =
-        if (out#exitCode != 0) out else append(out, next())
+        if (exitCode(out) != 0) out else append(out, next())
 
     /// Apply `f` to each element in order, concatenating the outputs and
     /// skipping the remainder once one fails. Output already produced by
     /// earlier elements is kept — a partial run reports what it managed.
     pub def traverseUntilFailure(f: a -> Output \ ef, xs: List[a]): Output \ ef =
-        List.foldLeft((acc, x) -> if (acc#exitCode != 0) acc else append(acc, f(x)), empty(), xs)
+        List.foldLeft((acc, x) -> if (exitCode(acc) != 0) acc else append(acc, f(x)), empty(), xs)
+
+    // --- observing ---
+
+    pub def stdout(out: Output): List[String] =
+        let Output.Output(r) = out;
+        r#stdout
+
+    pub def stderr(out: Output): List[String] =
+        let Output.Output(r) = out;
+        r#stderr
+
+    pub def exitCode(out: Output): Int32 =
+        let Output.Output(r) = out;
+        r#exitCode
 
     // --- process boundary ---
 
@@ -81,8 +101,18 @@ mod DepsAudit.Cli {
     /// Write an `Output` to the real streams and return its exit code.
     /// The only place in the program that prints.
     pub def emit(out: Output): Int32 \ Console =
-        List.forEach(Console.println, out#stdout);
-        List.forEach(Console.eprintln, out#stderr);
-        out#exitCode
+        List.forEach(Console.println, stdout(out));
+        List.forEach(Console.eprintln, stderr(out));
+        exitCode(out)
 
+}
+
+instance SemiGroup[DepsAudit.Cli.Output] {
+    pub def combine(a: DepsAudit.Cli.Output, b: DepsAudit.Cli.Output): DepsAudit.Cli.Output =
+        DepsAudit.Cli.append(a, b)
+}
+
+instance Monoid[DepsAudit.Cli.Output] {
+    pub def empty(): DepsAudit.Cli.Output =
+        DepsAudit.Cli.empty()
 }

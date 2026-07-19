@@ -113,7 +113,7 @@ def cmdElmPagesCompatKey(): Cli.Output \ {FileIO, Env} =
     ElmPages.renderCompatKeyStandalone(ElmPages.resolveCompatKey())
 
 def cmdElmPagesAudit(): Cli.Output \ {FileIO, Console, Env} =
-    let latest = optionFromTrimmed(Cli.readStdin());
+    let latest = nonBlank(Cli.readStdin());
     let pkgPath = "app/package.json";
     let elmJsonPath = "app/elm.json";
     Cli.fromResult(forM (
@@ -192,9 +192,9 @@ def cmdRustMajorAudit(): Cli.Output \ {FileIO, CrateRegistry} =
 
 // --- shared helpers ---
 
-/// `None` for blank/whitespace-only input, `Some` otherwise — the shape
-/// `elm-pages-audit` needs for the "latest version from stdin" argument.
-def optionFromTrimmed(s: String): Option[String] =
+/// `None` for blank/whitespace-only input, `Some(trimmed)` otherwise — the
+/// shape `elm-pages-audit` needs for the "latest version from stdin" argument.
+def nonBlank(s: String): Option[String] =
     let trimmed = String.trim(s);
     if (trimmed == "") None else Some(trimmed)
 
