@@ -3,3 +3,11 @@
 
 # tauri-build が生成する権限スキーマ等
 /gen/schemas
+
+# `cargo tauri icon` が生成する非デスクトップ用アイコン（本 PoC はデスクトップのみ）。
+# デスクトップ用（icon.icns / icon.ico / 32x32・128x128・128x128@2x・icon.png）のみコミットする。
+/icons/android
+/icons/ios
+/icons/Square*Logo.png
+/icons/StoreLogo.png
+/icons/64x64.png
