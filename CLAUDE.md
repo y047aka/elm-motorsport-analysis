@@ -46,7 +46,6 @@ nix run .#cli-test           # Run Rust tests
 - **`/app`** - elm-pages 3.x web application (frontend)
 - **`/package`** - Reusable Elm library (motorsport domain models)
 - **`/cli`** - Rust CLI for CSV→JSON data processing
-- **`/review`** - elm-review configuration
 
 ### Frontend Stack
 - **Elm 0.19.1** with elm-pages 3.x (full-stack framework)
@@ -87,4 +86,4 @@ CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
 
 ## Environment
 
-Nix flake provides reproducible dev environment (Node.js 24, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.
+Nix flake provides reproducible dev environment (Node.js 26, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.

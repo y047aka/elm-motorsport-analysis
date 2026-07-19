@@ -16,11 +16,11 @@ mod Cli.Args {
         case Output(String)
     }
 
-    def optionDescrs(): List[GetOpt.OptionDescr[CliOption]] =
+    def optionDescrs(): List[Util.GetOpt.OptionDescr[CliOption]] =
         {
             optionIds     = Nil,
             optionNames   = "output" :: Nil,
-            argDescriptor = GetOpt.ArgDescr.ReqArg(s -> Some(CliOption.Output(s)), "<file>"),
+            argDescriptor = Util.GetOpt.ArgDescr.ReqArg(s -> Some(CliOption.Output(s)), "<file>"),
             explanation   = "write metadata JSON to <file>"
         } :: Nil
 
@@ -32,7 +32,7 @@ mod Cli.Args {
         ) yield { inputPath = input, outputFile = out }
 
     def getOptResult(args: List[String]): Result[ArgsError, {options = List[CliOption], nonOptions = List[String]}] =
-        match GetOpt.getOpt(GetOpt.ArgOrder.Permute, optionDescrs(), args) {
+        match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, optionDescrs(), args) {
             case Validation.Failure(errors) => Err(ArgsError.ParseErrors(Nec.toList(errors)))
             case Validation.Success(result) => Ok(result)
         }
@@ -52,6 +52,6 @@ mod Cli.Args {
         }
 
     pub def usage(): String =
-        GetOpt.usageInfo("Usage: flix-run <input.csv|dir>", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: flix-run <input.csv|dir>", optionDescrs())
 
 }

@@ -5,9 +5,11 @@ Semver-compatible (patch and minor) updates for npm packages.
 ## Audit
 
 ```bash
-pnpm outdated --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-outdated-audit
-pnpm audit --json 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-security-audit
+pnpm -r outdated --json 2>/dev/null | nix run .#deps-audit -- npm-outdated-audit
+pnpm audit --json 2>/dev/null | nix run .#deps-audit -- npm-security-audit
 ```
+
+The `-r` flag is required: without it, `pnpm outdated` only checks the workspace root and misses outdated packages in workspace projects such as `app`.
 
 The first script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
 
@@ -21,7 +23,7 @@ After updating, pin all dependency versions using the resolved versions from `pn
 (not the semver constraint, which may differ from the installed version for pre-release packages):
 
 ```bash
-cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- npm-pin-versions
+nix run .#deps-audit -- npm-pin-versions
 ```
 
 Then run `pnpm install` to sync `pnpm-lock.yaml` with the pinned versions:

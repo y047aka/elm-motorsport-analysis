@@ -1,0 +1,6 @@
+[package]
+name        = "deps-audit"
+description = "Audit helpers for the update-deps skill"
+version     = "0.1.0"
+flix        = "0.75.1"
+authors     = ["Yoshitaka Totsuka"]

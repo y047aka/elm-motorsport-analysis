@@ -7,7 +7,7 @@ Update flake inputs to the latest commit within the current channel.
 Check pinned revision dates in flake.lock:
 
 ```bash
-cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- nix-flakelock-audit
+nix run .#deps-audit -- nix-flakelock-audit
 ```
 
 ## Update

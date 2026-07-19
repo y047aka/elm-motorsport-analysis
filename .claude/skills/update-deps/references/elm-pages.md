@@ -5,7 +5,7 @@ Coordinated update of the elm-pages ecosystem (npm package + dillonkearns/* Elm 
 ## Audit
 
 ```bash
-npm view elm-pages dist-tags.latest 2>/dev/null | cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-audit
+npm view elm-pages dist-tags.latest 2>/dev/null | nix run .#deps-audit -- elm-pages-audit
 ```
 
 The script reports current/latest versions, dillonkearns package versions with restore commands, and compatibilityKey matching status.
@@ -16,9 +16,9 @@ Update npm package first, then Elm packages.
 
 ### Step 1: Update npm package
 
-elm-pages must be pinned exact (no caret). Always use `--save-exact` (omitting it adds `^`):
+elm-pages must be pinned exact (no caret). Always use `--save-exact` (omitting it adds `^`). This repository uses pnpm workspaces — never use `npm install` (it creates a stray `package-lock.json`):
 ```bash
-npm install --save-exact elm-pages@<version> -w app
+pnpm add --save-exact --save-dev --filter app elm-pages@<version>
 ```
 
 ### Step 2: Identify the required Elm package version
@@ -26,7 +26,7 @@ npm install --save-exact elm-pages@<version> -w app
 The npm package ships Elm source with a compatibilityKey integer. The Elm package installed from package.elm-lang.org must have the same key.
 
 ```bash
-cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-compat-key
+nix run .#deps-audit -- elm-pages-compat-key
 ```
 
 If the script reports `matchingElmVersion: no-match`, follow its instruction to install the latest Elm package to populate the cache, then re-run the script.
@@ -92,10 +92,10 @@ When elm-pages is updated:
 
 1. Check elm-pages's new bundled vite version:
    ```bash
-   cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- elm-pages-vite-version
+   nix run .#deps-audit -- elm-pages-vite-version
    ```
 2. If the bundled vite major version changed, update the user's vite in `app/package.json` to match:
    ```bash
-   npm install --save-exact vite@<version> -w app
+   pnpm add --save-exact --save-dev --filter app vite@<version>
    ```
 3. If only a minor/patch bump, no action is needed — minor version mismatch between the user's vite and elm-pages's bundled vite is acceptable since `defineConfig` is stable across minors.

@@ -4,23 +4,23 @@ Upgrade the nixpkgs channel to a newer release.
 
 ## Audit
 
-Read `flake.nix` to extract the current channel name. Channels follow the pattern `nixpkgs-YY.MM-darwin` (e.g. `nixpkgs-25.05-darwin`). NixOS releases new stable channels every 6 months: May (05) and November (11).
+Read `flake.nix` to extract the current channel name. This repository pins `nixos-YY.MM` (e.g. `nixos-26.05`); the audit also recognises the `nixpkgs-YY.MM-darwin` spelling. NixOS releases new stable channels every 6 months: May (05) and November (11).
 
 ```bash
-cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- nix-channel-audit
+nix run .#deps-audit -- nix-channel-audit
 ```
 
 ## Update
 
 Edit the `nixpkgs.url` in `flake.nix` to point to the new channel, then run `nix flake update`.
 
-Example (upgrading from 25.05 to 25.11):
+Example (upgrading from 25.11 to 26.05):
 ```nix
 # before
-nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-25.05-darwin";
+nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
 
 # after
-nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-25.11-darwin";
+nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
 ```
 
 After editing `flake.nix`, run:

@@ -21,8 +21,7 @@ allowed-tools:
   - Bash(which *)
   - Bash(cat node_modules/*)
   - Bash(pnpm view *)
-  - Bash(cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- **)
-  - Bash(*| cargo run --manifest-path .claude/skills/update-deps/scripts/Cargo.toml -- **)
+  - Bash(*| nix run .#deps-audit -- **)
   - Read
   - Edit
   - Write

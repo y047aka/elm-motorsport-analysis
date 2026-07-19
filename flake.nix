@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-26.05";
     flake-utils.url = "github:numtide/flake-utils";
   };
 
@@ -39,7 +39,7 @@
         mkNodeApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm ] ++ elmTools;
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm ] ++ elmTools;
             text = cmd;
           };
 
@@ -48,7 +48,7 @@
         mkVrtApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_24 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.playwright-test ] ++ elmTools;
             text = ''
               export FONTCONFIG_FILE=${playwrightEnv.FONTCONFIG_FILE}
               export PLAYWRIGHT_BROWSERS_PATH=${playwrightEnv.PLAYWRIGHT_BROWSERS_PATH}
@@ -74,10 +74,10 @@
           };
 
         flix = pkgs.flix.overrideAttrs (old: rec {
-          version = "0.72.0";
+          version = "0.75.1";
           src = pkgs.fetchurl {
             url = "https://github.com/flix/flix/releases/download/v${version}/flix.jar";
-            hash = "sha256-87WDphvCBJf5M46NtKGCTEu6k0g6SF/yttmRrEA8Nis=";
+            hash = "sha256-4xd3AK6tiiKkLJEOc7+4oyb+/bq04+rq9tVcMopr2Tg=";
           };
         });
 
@@ -91,9 +91,29 @@
             '';
           };
 
+        # Audit helpers for the update-deps skill. The jar is located via the
+        # git root so the caller's working directory is left untouched —
+        # subcommands resolve flake.lock, app/elm.json and node_modules
+        # relative to the cwd, and some (elm-pages-compat-key) are meant to
+        # be run from app/. Rebuilds the jar when sources changed; cargo is
+        # needed by the rust-major-audit subcommand.
+        depsAuditApp = pkgs.writeShellApplication {
+          name = "deps-audit";
+          runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
+          text = ''
+            root=$(git rev-parse --show-toplevel)
+            dir=$root/.claude/skills/update-deps/scripts-flix
+            jar=$dir/artifact/scripts-flix.jar
+            if [ ! -f "$jar" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+              (cd "$dir" && flix build-jar) >&2
+            fi
+            java -jar "$jar" "$@"
+          '';
+        };
+
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_24 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt playwright-test ] ++ [ flix ] ++ elmTools;
         });
 
         apps = {
@@ -111,6 +131,7 @@
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
           flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec/2025"}/bin/flix-run";                             meta.description = "Run Flix project (CSV -> JSON)"; };
+          deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });
 }
