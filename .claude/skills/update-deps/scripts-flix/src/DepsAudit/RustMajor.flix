@@ -85,12 +85,9 @@ mod DepsAudit.RustMajor {
         let classified = resolved |> List.map(classify);
         let majors = classified |> List.filterMap(match (m, _) -> m);
         let upToDate = classified |> List.filterMap(match (_, u) -> u);
-        List.join("\n",
-            "--- major updates ---" ::
-            Report.linesOrNone(majors) ::
-            "" ::
-            "--- up to date ---" ::
-            Report.linesOrNone(upToDate) :: Nil)
+        Report.sections(
+            ("major updates", Report.linesOrNone(majors)) ::
+            ("up to date", Report.linesOrNone(upToDate)) :: Nil)
 
     def normalize(s: String): String =
         String.replace({src = "-"}, {dst = "_"}, s)

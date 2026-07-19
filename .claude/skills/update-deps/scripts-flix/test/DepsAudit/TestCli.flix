@@ -1,5 +1,6 @@
 mod DepsAudit.TestCli {
 
+    use Sys.Console
     use DepsAudit.Cli
 
     // Every subcommand is assembled from these combinators, so their
@@ -86,5 +87,35 @@ mod DepsAudit.TestCli {
         let out = Cli.traverseUntilFailure(x -> Cli.okText(x), (Nil: List[String]));
         Assert.assertTrue(List.isEmpty(out#stdout));
         Assert.assertTrue(out#exitCode == 0)
+
+    // --- process boundary ---
+    //
+    // The stdlib `Console` effect is the standard way to reach this
+    // process's stdin, and — being an effect — it can be served from
+    // memory just like `FileIO`: no custom stdin abstraction needed.
+
+    /// Run `f` with a Console whose stdin yields `lines` and whose
+    /// prints are swallowed.
+    def withStdin(lines: List[String], f: Unit -> a \ ef): a \ ef - Console = region rc {
+        let remaining = Ref.fresh(rc, lines);
+        run { f() } with handler Console {
+            def readln(k) = match Ref.get(remaining) {
+                case Nil     => k(None)
+                case l :: ls => { Ref.put(ls, remaining); k(Some(l)) }
+            }
+            def print(_, k)    = k()
+            def eprint(_, k)   = k()
+            def println(_, k)  = k()
+            def eprintln(_, k) = k()
+        }
+    }
+
+    @Test
+    def testReadStdinJoinsLines(): Unit \ Assert =
+        Assert.assertEq(expected = "a\nb", withStdin("a" :: "b" :: Nil, () -> Cli.readStdin()))
+
+    @Test
+    def testReadStdinEmptyInput(): Unit \ Assert =
+        Assert.assertEq(expected = "", withStdin(Nil, () -> Cli.readStdin()))
 
 }

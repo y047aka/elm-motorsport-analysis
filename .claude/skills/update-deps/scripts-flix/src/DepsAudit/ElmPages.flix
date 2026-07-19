@@ -5,43 +5,57 @@ mod DepsAudit.ElmPages {
 
     use Sys.Env
     use Util.Json.Json
-    use Util.Json.Json.{JObject, JString}
+    use Util.Json.Json.JString
     use DepsAudit.Cli
-    use DepsAudit.Io
+    use DepsAudit.Io.FileIO
+    use DepsAudit.JsonUtil
 
-    /// Render the dillonkearns package report from app/elm.json content.
-    pub def renderElmGuard(raw: String): Result[String, String] =
-        match Util.Json.parse(raw) {
-            case Err(e)      => Err("app/elm.json: ${e}")
-            case Ok(elmJson) =>
-                let deps = getKey("dependencies", elmJson);
-                let direct = collectDillonkearns(deps |> Option.flatMap(d -> getKey("direct", d)));
-                let indirect = collectDillonkearns(deps |> Option.flatMap(d -> getKey("indirect", d)));
-                let header =
-                    "--- dillonkearns packages ---" ::
-                    List.map(match (n, v) -> "${n}: ${v} (direct)", direct) :::
-                    List.map(match (n, v) -> "${n}: ${v} (indirect)", indirect);
-                let restore =
-                    "" ::
-                    "--- restore commands (direct only; indirect restored transitively) ---" ::
-                    List.map(match (n, v) -> "elm-json install --yes '${n}@${v}' -- app/elm.json", direct);
-                Ok(List.join("\n", header ::: restore))
-        }
+    /// Render the dillonkearns package report from a parsed elm.json.
+    pub def renderElmGuard(elmJson: Json): String =
+        let (direct, indirect) = dillonkearnsDeps(elmJson);
+        let header =
+            "--- dillonkearns packages ---" ::
+            List.map(match (n, v) -> "${n}: ${v} (direct)", direct) :::
+            List.map(match (n, v) -> "${n}: ${v} (indirect)", indirect);
+        let restore =
+            "" ::
+            "--- restore commands (direct only; indirect restored transitively) ---" ::
+            restoreCommands(direct);
+        List.join("\n", header ::: restore)
 
-    /// Extract the version string from a vite package.json.
-    pub def renderViteVersion(path: String, raw: String): Result[String, String] =
-        match Util.Json.parse(raw) {
-            case Err(e)   => Err("${path}: ${e}")
-            case Ok(pkg)  => match getKey("version", pkg) {
-                case Some(JString(v)) => Ok(v)
-                case _                => Err("vite package.json missing version")
-            }
-        }
+    /// Extract the version string from a parsed vite package.json.
+    pub def renderViteVersion(pkg: Json): Result[String, String] =
+        JsonUtil.getString("version", pkg)
+            |> Option.toOk("vite package.json missing version")
 
     /// The nested-then-hoisted lookup order for elm-pages's bundled vite.
     pub def vitePackageJsonCandidates(): List[String] =
         "node_modules/elm-pages/node_modules/vite/package.json" ::
         "node_modules/vite/package.json" :: Nil
+
+    /// The bundled (nested) vite package.json, falling back to the hoisted one.
+    pub def bundledVitePackageJsonPath(): String \ FileIO =
+        let candidates = vitePackageJsonCandidates();
+        candidates
+            |> List.find(p -> FileIO.exists(p))
+            |> Option.getWithDefault(List.last(candidates) |> Option.getWithDefault(""))
+
+    /// Major component of the bundled vite's version — "unknown" when its
+    /// package.json is missing or unparsable.
+    pub def bundledViteMajor(): String \ FileIO =
+        FileIO.read(bundledVitePackageJsonPath())
+            |> Result.map(bundledMajorFromPackageJson)
+            |> Result.getWithDefault("unknown")
+
+    /// Major component of a vite package.json's version string.
+    pub def bundledMajorFromPackageJson(raw: String): String =
+        let major = forM (
+            pkg <- Util.Json.parse(raw) |> Result.toOption;
+            v   <- JsonUtil.getString("version", pkg);
+            m   <- List.head(String.splitOn({substr = "."}, v));
+            n   <- Int64.fromString(m)
+        ) yield "${n}";
+        major |> Option.getWithDefault("unknown")
 
     /// Candidate paths of the CompatibilityKey.elm shipped in the npm
     /// package, in lookup order.
@@ -93,16 +107,22 @@ mod DepsAudit.ElmPages {
 
     /// Locate the npm-shipped CompatibilityKey.elm, parse its key, and (if
     /// possible) search the $HOME Elm package cache for a matching version.
-    pub def resolveCompatKey(): CompatKeyOutcome \ {IO, Env} =
+    pub def resolveCompatKey(): CompatKeyOutcome \ {FileIO, Env} =
+        resolveCompatKeyAt(Env.getProp("user.dir"), Env.getVar("HOME"))
+
+    /// `resolveCompatKey` with its environment inputs (cwd for the "not
+    /// found" message, $HOME) as arguments — the whole lookup then only
+    /// needs `FileIO`, so tests can drive it with an in-memory handler.
+    pub def resolveCompatKeyAt(cwdOpt: Option[String], homeOpt: Option[String]): CompatKeyOutcome \ FileIO =
         match findNpmKeyFile() {
             case None =>
-                let cwd = Env.getProp("user.dir") |> Option.getWithDefault(".");
+                let cwd = cwdOpt |> Option.getWithDefault(".");
                 let shown = List.head(npmKeyFileCandidates()) |> Option.getWithDefault("");
                 CompatKeyOutcome.KeyFileNotFound("${cwd}/${shown}")
-            case Some(keyFile) => match Io.readFile(keyFile) |> Result.map(parseCompatKey) {
+            case Some(keyFile) => match FileIO.read(keyFile) |> Result.map(parseCompatKey) {
                 case Err(_)       => CompatKeyOutcome.KeyParseFailed
                 case Ok(None)     => CompatKeyOutcome.KeyParseFailed
-                case Ok(Some(npmKey)) => match Env.getVar("HOME") {
+                case Ok(Some(npmKey)) => match homeOpt {
                     case None       => CompatKeyOutcome.HomeNotSet(npmKey)
                     case Some(home) => match findMatchingVersion(home, npmKey) {
                         case Some(v) => CompatKeyOutcome.MatchFound(npmKey, v)
@@ -153,23 +173,23 @@ mod DepsAudit.ElmPages {
         }
 
     /// First CompatibilityKey.elm that actually exists, if any.
-    def findNpmKeyFile(): Option[String] \ IO =
-        npmKeyFileCandidates() |> List.find(p -> Io.exists(p))
+    def findNpmKeyFile(): Option[String] \ FileIO =
+        npmKeyFileCandidates() |> List.find(p -> FileIO.exists(p))
 
     /// Highest cached elm-pages version whose compatibilityKey equals npmKey.
-    def findMatchingVersion(home: String, npmKey: Int64): Option[String] \ IO =
+    def findMatchingVersion(home: String, npmKey: Int64): Option[String] \ FileIO =
         let cacheDir = "${home}/${cacheDirBelowHome()}";
-        if (not Io.exists(cacheDir))
+        if (not FileIO.exists(cacheDir))
             None
         else
-            let entries = Io.listDir(cacheDir) |> Result.getWithDefault(Nil);
+            let entries = FileIO.list(cacheDir) |> Result.getWithDefault(Nil);
             entries
                 |> List.filter(name -> {
                     let keyFile = "${cacheDir}/${name}/src/Pages/Internal/Platform/CompatibilityKey.elm";
-                    if (not Io.exists(keyFile))
+                    if (not FileIO.exists(keyFile))
                         false
                     else
-                        match Io.readFile(keyFile) |> Result.map(parseCompatKey) {
+                        match FileIO.read(keyFile) |> Result.map(parseCompatKey) {
                             case Ok(Some(k)) => k == npmKey
                             case _           => false
                         }
@@ -179,49 +199,46 @@ mod DepsAudit.ElmPages {
 
     /// The version header section of elm-pages-audit
     /// (current from app/package.json content, latest from stdin).
-    pub def renderAuditVersionSection(pkgRaw: String, latest: Option[String]): Result[String, String] =
-        match Util.Json.parse(pkgRaw) {
-            case Err(e)  => Err("app/package.json: ${e}")
-            case Ok(pkg) =>
-                let lookup = key -> getKey(key, pkg) |> Option.flatMap(d -> getKey("elm-pages", d));
-                let current = match lookup("dependencies") {
-                    case Some(JString(v)) => v
-                    case _                => match lookup("devDependencies") {
-                        case Some(JString(v)) => v
-                        case _                => "unknown"
-                    }
-                };
-                let head = "--- elm-pages version ---" :: "current: ${current}" :: Nil;
-                let tail = match latest {
-                    case Some(v) =>
-                        "latest:  ${v}" ::
-                        "status:  ${if (current == v) "up to date" else "update available"}" :: Nil
-                    case None => "latest:  unknown (npm view failed)" :: Nil
-                };
-                Ok(List.join("\n", head ::: tail))
-        }
+    pub def renderAuditVersionSection(pkg: Json, latest: Option[String]): String =
+        let lookup = key -> JsonUtil.getKey(key, pkg)
+            |> Option.flatMap(d -> JsonUtil.getString("elm-pages", d));
+        let current = lookup("dependencies")
+            |> Option.withDefault(default = lookup("devDependencies"))
+            |> Option.getWithDefault("unknown");
+        let head = "--- elm-pages version ---" :: "current: ${current}" :: Nil;
+        let tail = match latest {
+            case Some(v) =>
+                "latest:  ${v}" ::
+                "status:  ${if (current == v) "up to date" else "update available"}" :: Nil
+            case None => "latest:  unknown (npm view failed)" :: Nil
+        };
+        List.join("\n", head ::: tail)
 
     /// The dillonkearns section of elm-pages-audit (headers differ from elm-guard).
-    pub def renderAuditPackagesSection(elmJsonRaw: String): Result[String, String] =
-        match Util.Json.parse(elmJsonRaw) {
-            case Err(e)      => Err("app/elm.json: ${e}")
-            case Ok(elmJson) =>
-                let deps = getKey("dependencies", elmJson);
-                let direct = collectDillonkearns(deps |> Option.flatMap(d -> getKey("direct", d)));
-                let indirect = collectDillonkearns(deps |> Option.flatMap(d -> getKey("indirect", d)));
-                Ok(List.join("\n",
-                    "--- dillonkearns packages (app/elm.json) ---" ::
-                    List.map(match (n, v) -> "${n}: ${v} (direct)", direct) :::
-                    List.map(match (n, v) -> "${n}: ${v} (indirect)", indirect) :::
-                    "" ::
-                    "--- restore commands (for /update-deps elm) ---" ::
-                    List.map(match (n, v) -> "elm-json install --yes '${n}@${v}' -- app/elm.json", direct)))
-        }
+    pub def renderAuditPackagesSection(elmJson: Json): String =
+        let (direct, indirect) = dillonkearnsDeps(elmJson);
+        List.join("\n",
+            "--- dillonkearns packages (app/elm.json) ---" ::
+            List.map(match (n, v) -> "${n}: ${v} (direct)", direct) :::
+            List.map(match (n, v) -> "${n}: ${v} (indirect)", indirect) :::
+            "" ::
+            "--- restore commands (for /update-deps elm) ---" ::
+            restoreCommands(direct))
+
+    /// The (direct, indirect) dillonkearns entries of an application
+    /// elm.json's `dependencies` object.
+    def dillonkearnsDeps(elmJson: Json): (List[(String, String)], List[(String, String)]) =
+        let at = key -> collectDillonkearns(JsonUtil.getAt("dependencies" :: key :: Nil, elmJson));
+        (at("direct"), at("indirect"))
+
+    /// The elm-json invocations that would restore the given direct pins.
+    def restoreCommands(direct: List[(String, String)]): List[String] =
+        List.map(match (n, v) -> "elm-json install --yes '${n}@${v}' -- app/elm.json", direct)
 
     /// dillonkearns/* entries of a dependency object, in sorted key order.
     pub def collectDillonkearns(obj: Option[Json]): List[(String, String)] =
         match obj {
-            case Some(JObject(m)) =>
+            case Some(Json.JObject(m)) =>
                 Map.toList(m) |> List.filterMap(match (name, v) -> match v {
                     case JString(s) =>
                         if (String.startsWith({prefix = "dillonkearns/"}, name))
@@ -231,10 +248,5 @@ mod DepsAudit.ElmPages {
                 })
             case _ => Nil
         }
-
-    pub def getKey(key: String, j: Json): Option[Json] = match j {
-        case JObject(m) => Map.get(key, m)
-        case _          => None
-    }
 
 }

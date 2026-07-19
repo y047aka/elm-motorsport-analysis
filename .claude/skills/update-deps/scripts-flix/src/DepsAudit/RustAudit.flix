@@ -18,15 +18,10 @@ mod DepsAudit.RustAudit {
         let patch = updates
             |> List.filterMap(match (name, f, t) ->
                 if (Semver.isMinorBump(f, t)) None else Some("${name}: ${f} -> ${t}"));
-        List.join("\n",
-            "--- minor updates ---" ::
-            Report.linesOrNone(minor) ::
-            "" ::
-            "--- patch updates ---" ::
-            Report.linesOrNone(patch) ::
-            "" ::
-            "--- summary ---" ::
-            "minor: ${List.length(minor)}, patch: ${List.length(patch)}" :: Nil)
+        Report.sections(
+            ("minor updates", Report.linesOrNone(minor)) ::
+            ("patch updates", Report.linesOrNone(patch)) ::
+            ("summary", "minor: ${List.length(minor)}, patch: ${List.length(patch)}") :: Nil)
 
     /// Parse one "Updating foo v1.2.3 -> v1.2.4" line.
     ///

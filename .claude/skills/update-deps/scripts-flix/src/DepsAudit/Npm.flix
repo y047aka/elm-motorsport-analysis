@@ -10,100 +10,78 @@ mod DepsAudit.Npm {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JArray, JString, JBool}
+    use DepsAudit.JsonUtil
     use DepsAudit.Report
 
     // --- npm-outdated-audit ---
 
     pub def emptyOutdatedReport(): String =
-        List.join("\n",
-            "--- minor updates ---" :: "none" :: "" ::
-            "--- major updates ---" :: "none" :: Nil)
+        Report.sections(
+            ("minor updates", "none") ::
+            ("major updates", "none") :: Nil)
 
-    /// Main report (without the vite section). Also returns the vite
-    /// entry (current, latest) when present so the caller can append
-    /// the filesystem-dependent vite section.
-    pub def renderOutdatedAudit(input: String): Result[String, (String, Option[(String, String)])] =
-        match Util.Json.parse(input) {
-            case Err(e)    => Err("unexpected npm outdated format: ${e}")
-            case Ok(data)  =>
-                let entries = match data {
-                    case JObject(m) => Map.toList(m)
-                    case _          => Nil
-                };
-                let parsed = entries |> List.map(match (name, v) -> (name, parseInfo(v)));
-                let bad = parsed |> List.filterMap(match (name, i) ->
-                    if (Option.isEmpty(i)) Some(name) else None);
-                if (not List.isEmpty(bad))
-                    Err("unexpected npm outdated format: missing current/wanted/latest for ${List.join(", ", bad)}")
-                else {
-                let infos = parsed |> List.filterMap(match (name, i) ->
-                    Option.map(x -> (name, x), i));
-                let minor = infos |> List.filterMap(match (name, i) ->
-                    if (i#current != i#wanted)
-                        Some("${name}: ${i#current} -> ${i#wanted} (${i#dependent})")
-                    else None);
-                // `latest != wanted`, not a numeric comparison: an earlier
-                // TypeScript predecessor used `parseInt(latest) > parseInt(current)`,
-                // which silently dropped same-major bumps (e.g. 2.4.9 -> 2.4.10)
-                // from this section. Keep this as `!=`.
-                let major = infos |> List.filterMap(match (name, i) ->
-                    if (i#latest != i#wanted)
-                        Some("${name}: ${i#current} -> ${i#latest} (${i#dependent})")
-                    else None);
-                let playwrightChanged = match List.findMap(match (name, i) ->
-                    if (name == "@playwright/test") Some(i) else None, infos) {
-                    case Some(pw) =>
-                        pw#current != pw#wanted or majorOf(pw#latest) > majorOf(pw#current)
-                    case None => false
-                };
-                let vite = List.findMap(match (name, i) ->
-                    if (name == "vite") Some((i#current, i#latest)) else None, infos);
-                let report = List.join("\n",
-                    "--- minor updates ---" ::
-                    Report.linesOrNone(minor) ::
-                    "" ::
-                    "--- major updates ---" ::
-                    Report.linesOrNone(major) ::
-                    "" ::
-                    "--- flags ---" ::
-                    "playwright-changed: ${playwrightChanged}" :: Nil);
-                Ok((report, vite))
-                }
+    /// Main report (without the vite section) from the parsed outdated
+    /// document. Also returns the vite entry (current, latest) when present
+    /// so the caller can append the filesystem-dependent vite section.
+    pub def renderOutdatedAudit(data: Json): Result[String, (String, Option[(String, String)])] =
+        forM (
+            infos <- parseInfos(data)
+        ) yield {
+            let minor = infos |> List.filterMap(match (name, i) ->
+                if (i#current != i#wanted)
+                    Some("${name}: ${i#current} -> ${i#wanted} (${i#dependent})")
+                else None);
+            // `latest != wanted`, not a numeric comparison: an earlier
+            // TypeScript predecessor used `parseInt(latest) > parseInt(current)`,
+            // which silently dropped same-major bumps (e.g. 2.4.9 -> 2.4.10)
+            // from this section. Keep this as `!=`.
+            let major = infos |> List.filterMap(match (name, i) ->
+                if (i#latest != i#wanted)
+                    Some("${name}: ${i#current} -> ${i#latest} (${i#dependent})")
+                else None);
+            let playwrightChanged = match List.findMap(match (name, i) ->
+                if (name == "@playwright/test") Some(i) else None, infos) {
+                case Some(pw) =>
+                    pw#current != pw#wanted or majorOf(pw#latest) > majorOf(pw#current)
+                case None => false
+            };
+            let vite = List.findMap(match (name, i) ->
+                if (name == "vite") Some((i#current, i#latest)) else None, infos);
+            let report = Report.sections(
+                ("minor updates", Report.linesOrNone(minor)) ::
+                ("major updates", Report.linesOrNone(major)) ::
+                ("flags", "playwright-changed: ${playwrightChanged}") :: Nil);
+            (report, vite)
         }
+
+    /// The (name, info) entries of the outdated document, failing when any
+    /// entry lacks current/wanted/latest.
+    def parseInfos(data: Json): Result[String, List[(String, OutdatedInfo)]] =
+        let entries = match data {
+            case JObject(m) => Map.toList(m)
+            case _          => Nil
+        };
+        let parsed = entries |> List.map(match (name, v) -> (name, parseInfo(v)));
+        let bad = parsed |> List.filterMap(match (name, i) ->
+            if (Option.isEmpty(i)) Some(name) else None);
+        if (not List.isEmpty(bad))
+            Err("unexpected npm outdated format: missing current/wanted/latest for ${List.join(", ", bad)}")
+        else
+            Ok(parsed |> List.filterMap(match (name, i) -> Option.map(x -> (name, x), i)))
 
     /// The trailing vite section (bundledMajor is "unknown" when
     /// the bundled package.json is missing or unparsable).
     pub def renderViteSection(current: String, latest: String, bundledMajor: String): String =
-        List.join("\n",
-            "" ::
-            "--- vite ---" ::
-            "current: ${current}" ::
-            "latest: ${latest}" ::
-            "bundled-major: ${bundledMajor}" :: Nil)
-
-    /// Major component of the bundled vite version string.
-    pub def bundledMajorFromPackageJson(raw: String): String =
-        match Util.Json.parse(raw) {
-            case Err(_)  => "unknown"
-            case Ok(pkg) => match getKey("version", pkg) {
-                case Some(JString(v)) => match List.head(String.splitOn({substr = "."}, v)) {
-                    case Some(m) => match Int64.fromString(m) {
-                        case Some(n) => "${n}"
-                        case None    => "unknown"
-                    }
-                    case None => "unknown"
-                }
-                case _ => "unknown"
-            }
-        }
+        "\n" + Report.sections(
+            ("vite", "current: ${current}\nlatest: ${latest}\nbundled-major: ${bundledMajor}") :: Nil)
 
     type alias OutdatedInfo = {current = String, wanted = String, latest = String, dependent = String}
 
     def parseInfo(v: Json): Option[OutdatedInfo] =
         forM (
-            current <- getString("current", v);
-            wanted  <- getString("wanted", v);
-            latest  <- getString("latest", v)
+            current <- JsonUtil.getString("current", v);
+            wanted  <- JsonUtil.getString("wanted", v);
+            latest  <- JsonUtil.getString("latest", v)
         ) yield {
             current = current,
             wanted = wanted,
@@ -117,12 +95,12 @@ mod DepsAudit.Npm {
     /// string and therefore always printed an empty `()` with modern pnpm:
     /// pnpm now reports `dependentPackages` (an array of {name, location}).
     def dependentOf(v: Json): String =
-        match getString("dependent", v) {
+        match JsonUtil.getString("dependent", v) {
             case Some(d) => d
-            case None    => match getKey("dependentPackages", v) {
+            case None    => match JsonUtil.getKey("dependentPackages", v) {
                 case Some(JArray(xs)) =>
                     Vector.toList(xs)
-                        |> List.filterMap(p -> getString("name", p))
+                        |> List.filterMap(p -> JsonUtil.getString("name", p))
                         |> List.join(", ")
                 case _ => ""
             }
@@ -137,41 +115,33 @@ mod DepsAudit.Npm {
     // --- npm-security-audit ---
 
     pub def emptySecurityReport(): String =
-        List.join("\n",
-            "--- vulnerabilities ---" :: "none" :: "" ::
-            "--- summary ---" :: "total: 0" :: Nil)
+        Report.sections(
+            ("vulnerabilities", "none") ::
+            ("summary", "total: 0") :: Nil)
 
-    pub def renderSecurityAudit(input: String): Result[String, String] =
-        match Util.Json.parse(input) {
-            case Err(e)   => Err("unexpected npm audit format: ${e}")
-            case Ok(data) =>
-                match getKey("vulnerabilities", data) {
-                    case Some(JObject(m)) =>
-                        let vulns = Map.toList(m);
-                        let results = vulns |> List.map(match (name, info) -> renderVuln(name, info));
-                        let lines = results |> List.map(match (line, _) -> line);
-                        let fixable = results |> List.count(match (_, kind) -> kind == "fixable");
-                        let breaking = results |> List.count(match (_, kind) -> kind == "breaking");
-                        Ok(List.join("\n",
-                            "--- vulnerabilities ---" ::
-                            Report.linesOrNone(lines) ::
-                            "" ::
-                            "--- summary ---" ::
-                            "total: ${List.length(vulns)}" ::
-                            "fixable: ${fixable}" ::
-                            "fixable-breaking: ${breaking}" :: Nil))
-                    case _ => Ok(emptySecurityReport())
-                }
+    /// Render the report from the parsed audit document.
+    pub def renderSecurityAudit(data: Json): String =
+        match JsonUtil.getKey("vulnerabilities", data) {
+            case Some(JObject(m)) =>
+                let vulns = Map.toList(m);
+                let results = vulns |> List.map(match (name, info) -> renderVuln(name, info));
+                let lines = results |> List.map(match (line, _) -> line);
+                let fixable = results |> List.count(match (_, kind) -> kind == "fixable");
+                let breaking = results |> List.count(match (_, kind) -> kind == "breaking");
+                Report.sections(
+                    ("vulnerabilities", Report.linesOrNone(lines)) ::
+                    ("summary", "total: ${List.length(vulns)}\nfixable: ${fixable}\nfixable-breaking: ${breaking}") :: Nil)
+            case _ => emptySecurityReport()
         }
 
     def renderVuln(name: String, info: Json): (String, String) =
-        let severity = getString("severity", info) |> Option.getWithDefault("unknown");
-        let via = match getKey("via", info) {
+        let severity = JsonUtil.getString("severity", info) |> Option.getWithDefault("unknown");
+        let via = match JsonUtil.getKey("via", info) {
             case Some(JArray(xs)) => Vector.toList(xs)
             case _                => Nil
         };
         let titles = via |> List.filterMap(v -> match v {
-            case JObject(_) => getString("title", v)
+            case JObject(_) => JsonUtil.getString("title", v)
             case _          => None
         });
         let viaNames = via |> List.filterMap(v -> match v {
@@ -182,12 +152,12 @@ mod DepsAudit.Npm {
             case t :: _ => t
             case Nil    => if (List.isEmpty(viaNames)) "" else "via ${List.join(", ", viaNames)}"
         };
-        let (fixStr, fixKind) = match getKey("fixAvailable", info) {
+        let (fixStr, fixKind) = match JsonUtil.getKey("fixAvailable", info) {
             case Some(JBool(true))  => ("fix available", "fixable")
             case Some(JBool(false)) => ("no fix available", "none")
             case Some(JObject(fa))  =>
-                let faName = getString("name", JObject(fa)) |> Option.getWithDefault("");
-                let faVersion = getString("version", JObject(fa)) |> Option.getWithDefault("");
+                let faName = JsonUtil.getString("name", JObject(fa)) |> Option.getWithDefault("");
+                let faVersion = JsonUtil.getString("version", JObject(fa)) |> Option.getWithDefault("");
                 let isMajor = match Map.get("isSemVerMajor", fa) {
                     case Some(JBool(b)) => b
                     case _              => false
@@ -210,7 +180,9 @@ mod DepsAudit.Npm {
 
     /// Rewrite one package.json's dependency constraints to the versions
     /// resolved in package-lock.json (or, as a fallback, the constraint
-    /// with any ^/~ prefix stripped).
+    /// with any ^/~ prefix stripped). Takes both the source text (the
+    /// rewrite is textual, to preserve key order and formatting) and its
+    /// parsed form (to know which dependencies exist).
     ///
     /// Only the version literals inside the `dependencies` and
     /// `devDependencies` objects are rewritten, so key order and formatting
@@ -222,17 +194,13 @@ mod DepsAudit.Npm {
     ///
     /// Unlike the Rust version this does not inject `"dependencies": null`
     /// into files that lack the key.
-    pub def pinFile(path: String, raw: String, lock: Json, wsPrefix: String): Result[String, String] =
-        match Util.Json.parse(raw) {
-            case Err(e)  => Err("${path}: ${e}")
-            case Ok(pkg) =>
-                ("dependencies" :: "devDependencies" :: Nil)
-                    |> List.foldLeft((acc, key) ->
-                        Result.flatMap(text -> pinSection(path, key, pkg, lock, wsPrefix, text), acc), Ok(raw))
-        }
+    pub def pinFile(path: String, raw: String, pkg: Json, lock: Json, wsPrefix: String): Result[String, String] =
+        ("dependencies" :: "devDependencies" :: Nil)
+            |> List.foldLeft((acc, key) ->
+                Result.flatMap(text -> pinSection(path, key, pkg, lock, wsPrefix, text), acc), Ok(raw))
 
     def pinSection(path: String, key: String, pkg: Json, lock: Json, wsPrefix: String, text: String): Result[String, String] =
-        match getKey(key, pkg) {
+        match JsonUtil.getKey(key, pkg) {
             case Some(JObject(m)) =>
                 let pins = Map.toList(m) |> List.filterMap(match (name, v) -> match v {
                     case JString(cur) =>
@@ -345,30 +313,12 @@ mod DepsAudit.Npm {
         loop(openIdx, 0, false, false)
 
     def resolveVersion(lock: Json, name: String, wsPrefix: String): Option[String] =
-        let packages = getKey("packages", lock);
-        let lookup = key -> packages
-            |> Option.flatMap(p -> getKey(key, p))
-            |> Option.flatMap(entry -> getString("version", entry));
+        let lookup = key -> JsonUtil.getAt("packages" :: key :: Nil, lock)
+            |> Option.flatMap(entry -> JsonUtil.getString("version", entry));
         let fromWs = if (wsPrefix == "") None else lookup("${wsPrefix}/node_modules/${name}");
-        match fromWs {
-            case Some(v) => Some(v)
-            case None    => lookup("node_modules/${name}")
-        }
+        fromWs |> Option.withDefault(default = lookup("node_modules/${name}"))
 
     def stripConstraintPrefix(constraint: String): String =
         String.dropWhileLeft(c -> c == '^' or c == '~', constraint)
-
-    // --- helpers ---
-
-    def getString(key: String, j: Json): Option[String] =
-        match getKey(key, j) {
-            case Some(JString(s)) => Some(s)
-            case _                => None
-        }
-
-    def getKey(key: String, j: Json): Option[Json] = match j {
-        case JObject(m) => Map.get(key, m)
-        case _          => None
-    }
 
 }

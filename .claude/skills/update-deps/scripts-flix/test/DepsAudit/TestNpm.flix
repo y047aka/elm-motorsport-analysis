@@ -7,8 +7,11 @@ mod DepsAudit.TestNpm {
         Util.Json.parse("{\"packages\":{\"node_modules/vite\":{\"version\":\"7.3.2\"},\"app/node_modules/daisyui\":{\"version\":\"5.6.18\"}}}")
             |> Result.getWithDefault(Util.Json.Json.JNull)
 
+    def jsonOf(s: String): Json =
+        Util.Json.parse(s) |> Result.getWithDefault(Util.Json.Json.JNull)
+
     def pin(raw: String): Result[String, String] =
-        Npm.pinFile("package.json", raw, lock(), "")
+        Npm.pinFile("package.json", raw, jsonOf(raw), lock(), "")
 
     // --- npm-pin-versions: only dependencies/devDependencies ---
 
@@ -68,7 +71,8 @@ mod DepsAudit.TestNpm {
 
     @Test
     def testPinWorkspacePrefixWins(): Unit \ Assert =
-        match Npm.pinFile("app/package.json", "{\"devDependencies\":{\"daisyui\":\"~5.6.0\"}}", lock(), "app") {
+        let raw = "{\"devDependencies\":{\"daisyui\":\"~5.6.0\"}}";
+        match Npm.pinFile("app/package.json", raw, jsonOf(raw), lock(), "app") {
             case Ok(out) => Assert.assertTrue(String.contains({substr = "\"5.6.18\""}, out))
             case Err(_)  => Assert.assertTrue(false)
         }
@@ -78,7 +82,7 @@ mod DepsAudit.TestNpm {
     @Test
     def testOutdatedClassifiesMinorAndMajor(): Unit \ Assert =
         let json = "{\"vite\":{\"current\":\"7.3.2\",\"wanted\":\"7.3.2\",\"latest\":\"8.1.5\"}}";
-        match Npm.renderOutdatedAudit(json) {
+        match Npm.renderOutdatedAudit(jsonOf(json)) {
             case Ok((report, vite)) =>
                 Assert.assertTrue(String.contains({substr = "vite: 7.3.2 -> 8.1.5"}, report));
                 Assert.assertTrue(Option.isEmpty(vite) == false)
@@ -89,7 +93,7 @@ mod DepsAudit.TestNpm {
     /// from the report instead of failing.
     @Test
     def testOutdatedRejectsMalformedEntry(): Unit \ Assert =
-        match Npm.renderOutdatedAudit("{\"vite\":{\"current\":\"7.3.2\"}}") {
+        match Npm.renderOutdatedAudit(jsonOf("{\"vite\":{\"current\":\"7.3.2\"}}")) {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(e) => Assert.assertTrue(String.contains({substr = "vite"}, e))
         }
@@ -99,7 +103,7 @@ mod DepsAudit.TestNpm {
     @Test
     def testOutdatedReadsDependentPackages(): Unit \ Assert =
         let json = "{\"vite\":{\"current\":\"7.3.2\",\"wanted\":\"7.3.2\",\"latest\":\"8.1.5\",\"dependentPackages\":[{\"name\":\"app\"}]}}";
-        match Npm.renderOutdatedAudit(json) {
+        match Npm.renderOutdatedAudit(jsonOf(json)) {
             case Ok((report, _)) => Assert.assertTrue(String.contains({substr = "(app)"}, report))
             case Err(_)          => Assert.assertTrue(false)
         }
@@ -109,25 +113,15 @@ mod DepsAudit.TestNpm {
     @Test
     def testSecurityCountsFixKinds(): Unit \ Assert =
         let json = "{\"vulnerabilities\":{\"a\":{\"severity\":\"high\",\"via\":[\"x\"],\"fixAvailable\":true},\"b\":{\"severity\":\"low\",\"via\":[],\"fixAvailable\":{\"name\":\"v\",\"version\":\"2.0.0\",\"isSemVerMajor\":true}}}}";
-        match Npm.renderSecurityAudit(json) {
-            case Ok(out) =>
-                Assert.assertTrue(String.contains({substr = "total: 2"}, out));
-                Assert.assertTrue(String.contains({substr = "fixable: 1"}, out));
-                Assert.assertTrue(String.contains({substr = "fixable-breaking: 1"}, out));
-                Assert.assertTrue(String.contains({substr = "(BREAKING)"}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
+        let out = Npm.renderSecurityAudit(jsonOf(json));
+        Assert.assertTrue(String.contains({substr = "total: 2"}, out));
+        Assert.assertTrue(String.contains({substr = "fixable: 1"}, out));
+        Assert.assertTrue(String.contains({substr = "fixable-breaking: 1"}, out));
+        Assert.assertTrue(String.contains({substr = "(BREAKING)"}, out))
 
     @Test
     def testSecurityEmptyReport(): Unit \ Assert =
-        match Npm.renderSecurityAudit("{\"vulnerabilities\":{}}") {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "total: 0"}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testBundledMajor(): Unit \ Assert =
-        Assert.assertTrue(Npm.bundledMajorFromPackageJson("{\"version\":\"7.3.1\"}") == "7");
-        Assert.assertTrue(Npm.bundledMajorFromPackageJson("not json") == "unknown")
+        let out = Npm.renderSecurityAudit(jsonOf("{\"vulnerabilities\":{}}"));
+        Assert.assertTrue(String.contains({substr = "total: 0"}, out))
 
 }

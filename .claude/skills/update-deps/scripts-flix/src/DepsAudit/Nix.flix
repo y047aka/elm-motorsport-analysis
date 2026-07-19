@@ -4,8 +4,9 @@
 mod DepsAudit.Nix {
 
     use Util.Json.Json
-    use Util.Json.Json.{JObject, JNumber, JString}
+    use Util.Json.Json.{JObject, JNumber}
     use DepsAudit.Date
+    use DepsAudit.JsonUtil
 
     /// Render the channel report from flake.nix content and the current
     /// epoch time in seconds.
@@ -74,39 +75,30 @@ mod DepsAudit.Nix {
             };
         loop(24i64, None)
 
-    /// Render the flake.lock pin report.
-    pub def renderFlakelockAudit(lockContent: String): Result[String, String] =
-        match Util.Json.parse(lockContent) {
-            case Err(e)   => Err("unexpected flake.lock format: ${e}")
-            case Ok(lock) =>
-                let nodes = match getKey("nodes", lock) {
-                    case Some(JObject(m)) => Map.toList(m)
-                    case _                => Nil
-                };
-                let lines = nodes |> List.filterMap(match (name, node) ->
-                    match getKey("locked", node) {
-                        case Some(locked) =>
-                            let date = match getKey("lastModified", locked) {
-                                case Some(JNumber(ts)) => match BigDecimal.tryToInt64(ts) {
-                                    case Some(secs) => Date.epochSecondsToIsoDate(secs)
-                                    case None       => "?"
-                                }
-                                case _ => "?"
-                            };
-                            let rev = match getKey("rev", locked) {
-                                case Some(JString(r)) => String.takeLeft(12, r)
-                                case _                => "?"
-                            };
-                            Some("${name}: pinned ${date} (rev ${rev})")
-                        case None => None
-                    });
-                Ok(List.join("\n", lines))
-        }
+    /// Render the flake.lock pin report from the parsed lockfile.
+    pub def renderFlakelockAudit(lock: Json): String =
+        let nodes = match JsonUtil.getKey("nodes", lock) {
+            case Some(JObject(m)) => Map.toList(m)
+            case _                => Nil
+        };
+        nodes
+            |> List.filterMap(match (name, node) ->
+                JsonUtil.getKey("locked", node) |> Option.map(locked -> pinLine(name, locked)))
+            |> List.join("\n")
 
-    def getKey(key: String, j: Json): Option[Json] = match j {
-        case JObject(m) => Map.get(key, m)
-        case _          => None
-    }
+    /// One "name: pinned YYYY-MM-DD (rev abc)" line for a locked node.
+    def pinLine(name: String, locked: Json): String =
+        let date = match JsonUtil.getKey("lastModified", locked) {
+            case Some(JNumber(ts)) => match BigDecimal.tryToInt64(ts) {
+                case Some(secs) => Date.epochSecondsToIsoDate(secs)
+                case None       => "?"
+            }
+            case _ => "?"
+        };
+        let rev = JsonUtil.getString("rev", locked)
+            |> Option.map(r -> String.takeLeft(12, r))
+            |> Option.getWithDefault("?");
+        "${name}: pinned ${date} (rev ${rev})"
 
     def pad2(n: Int64): String =
         if (n < 10i64) "0${n}" else "${n}"

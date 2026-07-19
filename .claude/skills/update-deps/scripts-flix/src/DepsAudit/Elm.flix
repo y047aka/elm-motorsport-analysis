@@ -6,43 +6,37 @@ mod DepsAudit.Elm {
 
     use Util.Json.Json
     use Util.Json.Json.{JObject, JString}
+    use DepsAudit.JsonUtil
 
-    /// Render the report for one elm.json file (path, raw content).
-    pub def renderVersionsReport(path: String, raw: String): Result[String, String] =
-        match Util.Json.parse(raw) {
-            case Err(e)      => Err("${path}: ${e}")
-            case Ok(elmJson) =>
-                let typeStr = match getKey("type", elmJson) {
-                    case Some(JString(t)) => t
-                    case _                => "unknown"
-                };
-                let header = "--- ${path} (${typeStr}) ---";
-                let body = match typeStr {
-                    case "application" =>
-                        let deps = getKey("dependencies", elmJson);
-                        let testDeps = getKey("test-dependencies", elmJson);
-                        let direct = entries(deps |> Option.flatMap(d -> getKey("direct", d)));
-                        let indirect = entries(deps |> Option.flatMap(d -> getKey("indirect", d)));
-                        let testDirect = entries(testDeps |> Option.flatMap(d -> getKey("direct", d)));
-                        let testIndirect = entries(testDeps |> Option.flatMap(d -> getKey("indirect", d)));
-                        let base =
-                            ("direct:" :: direct) ::: ("indirect:" :: indirect);
-                        let withTest =
-                            if (List.isEmpty(testDirect) and List.isEmpty(testIndirect))
-                                base
-                            else
-                                base ::: ("test-direct:" :: testDirect) ::: ("test-indirect:" :: testIndirect);
-                        withTest
-                    case "package" =>
-                        let deps = entries(getKey("dependencies", elmJson));
-                        let testDeps = entries(getKey("test-dependencies", elmJson));
-                        let base = "dependencies:" :: deps;
-                        if (List.isEmpty(testDeps)) base
-                        else base ::: ("test-dependencies:" :: testDeps)
-                    case _ => Nil
-                };
-                Ok(List.join("\n", header :: body))
-        }
+    /// Render the report for one parsed elm.json (path appears in the header).
+    pub def renderVersionsReport(path: String, elmJson: Json): String =
+        let typeStr = JsonUtil.getString("type", elmJson) |> Option.getWithDefault("unknown");
+        let header = "--- ${path} (${typeStr}) ---";
+        let body = match typeStr {
+            case "application" => applicationBody(elmJson)
+            case "package"     => packageBody(elmJson)
+            case _             => Nil
+        };
+        List.join("\n", header :: body)
+
+    def applicationBody(elmJson: Json): List[String] =
+        let at = path -> entries(JsonUtil.getAt(path, elmJson));
+        let direct = at("dependencies" :: "direct" :: Nil);
+        let indirect = at("dependencies" :: "indirect" :: Nil);
+        let testDirect = at("test-dependencies" :: "direct" :: Nil);
+        let testIndirect = at("test-dependencies" :: "indirect" :: Nil);
+        let base = ("direct:" :: direct) ::: ("indirect:" :: indirect);
+        if (List.isEmpty(testDirect) and List.isEmpty(testIndirect))
+            base
+        else
+            base ::: ("test-direct:" :: testDirect) ::: ("test-indirect:" :: testIndirect)
+
+    def packageBody(elmJson: Json): List[String] =
+        let deps = entries(JsonUtil.getKey("dependencies", elmJson));
+        let testDeps = entries(JsonUtil.getKey("test-dependencies", elmJson));
+        let base = "dependencies:" :: deps;
+        if (List.isEmpty(testDeps)) base
+        else base ::: ("test-dependencies:" :: testDeps)
 
     /// "  name: version" lines for a JSON object of string values,
     /// in sorted key order.
@@ -55,10 +49,5 @@ mod DepsAudit.Elm {
                 })
             case _ => Nil
         }
-
-    def getKey(key: String, j: Json): Option[Json] = match j {
-        case JObject(m) => Map.get(key, m)
-        case _          => None
-    }
 
 }

@@ -2,6 +2,10 @@ mod DepsAudit.TestElm {
 
     use DepsAudit.Elm
     use DepsAudit.ElmPages
+    use DepsAudit.JsonUtil
+
+    def jsonOf(s: String): Util.Json.Json =
+        Util.Json.parse(s) |> Result.getWithDefault(Util.Json.Json.JNull)
 
     def appElmJson(): String =
         "{\"type\":\"application\"," +
@@ -13,38 +17,30 @@ mod DepsAudit.TestElm {
 
     @Test
     def testVersionsReportApplication(): Unit \ Assert =
-        match Elm.renderVersionsReport("app/elm.json", appElmJson()) {
-            case Ok(out) =>
-                Assert.assertTrue(String.contains({substr = "--- app/elm.json (application) ---"}, out));
-                Assert.assertTrue(String.contains({substr = "direct:"}, out));
-                Assert.assertTrue(String.contains({substr = "  elm/core: 1.0.5"}, out));
-                Assert.assertTrue(String.contains({substr = "test-direct:"}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
+        let out = Elm.renderVersionsReport("app/elm.json", jsonOf(appElmJson()));
+        Assert.assertTrue(String.contains({substr = "--- app/elm.json (application) ---"}, out));
+        Assert.assertTrue(String.contains({substr = "direct:"}, out));
+        Assert.assertTrue(String.contains({substr = "  elm/core: 1.0.5"}, out));
+        Assert.assertTrue(String.contains({substr = "test-direct:"}, out))
 
     /// The test sections are omitted entirely when both are empty.
     @Test
     def testVersionsReportOmitsEmptyTestSections(): Unit \ Assert =
         let json = "{\"type\":\"application\",\"dependencies\":{\"direct\":{\"elm/core\":\"1.0.5\"},\"indirect\":{}},\"test-dependencies\":{\"direct\":{},\"indirect\":{}}}";
-        match Elm.renderVersionsReport("app/elm.json", json) {
-            case Ok(out) => Assert.assertTrue(not String.contains({substr = "test-direct:"}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
+        Assert.assertTrue(not String.contains({substr = "test-direct:"}, Elm.renderVersionsReport("app/elm.json", jsonOf(json))))
 
     @Test
     def testVersionsReportPackage(): Unit \ Assert =
         let json = "{\"type\":\"package\",\"dependencies\":{\"elm/core\":\"1.0.5 <= v < 2.0.0\"},\"test-dependencies\":{}}";
-        match Elm.renderVersionsReport("package/elm.json", json) {
-            case Ok(out) =>
-                Assert.assertTrue(String.contains({substr = "(package)"}, out));
-                Assert.assertTrue(String.contains({substr = "dependencies:"}, out));
-                Assert.assertTrue(not String.contains({substr = "test-dependencies:"}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
+        let out = Elm.renderVersionsReport("package/elm.json", jsonOf(json));
+        Assert.assertTrue(String.contains({substr = "(package)"}, out));
+        Assert.assertTrue(String.contains({substr = "dependencies:"}, out));
+        Assert.assertTrue(not String.contains({substr = "test-dependencies:"}, out))
 
+    /// The parse step is lifted into Main; the path label survives via parseDoc.
     @Test
-    def testVersionsReportRejectsInvalidJson(): Unit \ Assert =
-        match Elm.renderVersionsReport("app/elm.json", "not json") {
+    def testParseDocLabelsInvalidJsonWithPath(): Unit \ Assert =
+        match JsonUtil.parseDoc("app/elm.json", "not json") {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(e) => Assert.assertTrue(String.contains({substr = "app/elm.json"}, e))
         }
@@ -53,17 +49,14 @@ mod DepsAudit.TestElm {
 
     @Test
     def testElmGuardListsDillonkearnsAndRestoreCommands(): Unit \ Assert =
-        match ElmPages.renderElmGuard(appElmJson()) {
-            case Ok(out) =>
-                Assert.assertTrue(String.contains({substr = "dillonkearns/elm-pages: 12.3.0 (direct)"}, out));
-                Assert.assertTrue(String.contains({substr = "dillonkearns/elm-ts-json: 2.1.3 (indirect)"}, out));
-                // restore commands cover direct packages only
-                Assert.assertTrue(String.contains({substr = "elm-json install --yes 'dillonkearns/elm-pages@12.3.0' -- app/elm.json"}, out));
-                Assert.assertTrue(not String.contains({substr = "elm-ts-json@2.1.3"}, out));
-                // non-dillonkearns packages are not listed
-                Assert.assertTrue(not String.contains({substr = "elm/core"}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
+        let out = ElmPages.renderElmGuard(jsonOf(appElmJson()));
+        Assert.assertTrue(String.contains({substr = "dillonkearns/elm-pages: 12.3.0 (direct)"}, out));
+        Assert.assertTrue(String.contains({substr = "dillonkearns/elm-ts-json: 2.1.3 (indirect)"}, out));
+        // restore commands cover direct packages only
+        Assert.assertTrue(String.contains({substr = "elm-json install --yes 'dillonkearns/elm-pages@12.3.0' -- app/elm.json"}, out));
+        Assert.assertTrue(not String.contains({substr = "elm-ts-json@2.1.3"}, out));
+        // non-dillonkearns packages are not listed
+        Assert.assertTrue(not String.contains({substr = "elm/core"}, out))
 
     // --- elm-pages compatibilityKey / vite ---
 
@@ -78,14 +71,14 @@ mod DepsAudit.TestElm {
 
     @Test
     def testViteVersion(): Unit \ Assert =
-        match ElmPages.renderViteVersion("vite/package.json", "{\"version\":\"7.3.1\"}") {
+        match ElmPages.renderViteVersion(jsonOf("{\"version\":\"7.3.1\"}")) {
             case Ok(v)  => Assert.assertTrue(v == "7.3.1")
             case Err(_) => Assert.assertTrue(false)
         }
 
     @Test
     def testViteVersionMissingField(): Unit \ Assert =
-        match ElmPages.renderViteVersion("vite/package.json", "{}") {
+        match ElmPages.renderViteVersion(jsonOf("{}")) {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(e) => Assert.assertTrue(String.contains({substr = "missing version"}, e))
         }
@@ -102,26 +95,19 @@ mod DepsAudit.TestElm {
 
     @Test
     def testAuditVersionSectionUpToDate(): Unit \ Assert =
-        match ElmPages.renderAuditVersionSection("{\"devDependencies\":{\"elm-pages\":\"3.5.1\"}}", Some("3.5.1")) {
-            case Ok(out) =>
-                Assert.assertTrue(String.contains({substr = "current: 3.5.1"}, out));
-                Assert.assertTrue(String.contains({substr = "status:  up to date"}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
+        let out = ElmPages.renderAuditVersionSection(jsonOf("{\"devDependencies\":{\"elm-pages\":\"3.5.1\"}}"), Some("3.5.1"));
+        Assert.assertTrue(String.contains({substr = "current: 3.5.1"}, out));
+        Assert.assertTrue(String.contains({substr = "status:  up to date"}, out))
 
     @Test
     def testAuditVersionSectionUpdateAvailable(): Unit \ Assert =
-        match ElmPages.renderAuditVersionSection("{\"devDependencies\":{\"elm-pages\":\"3.3.4\"}}", Some("3.5.1")) {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "status:  update available"}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
+        let out = ElmPages.renderAuditVersionSection(jsonOf("{\"devDependencies\":{\"elm-pages\":\"3.3.4\"}}"), Some("3.5.1"));
+        Assert.assertTrue(String.contains({substr = "status:  update available"}, out))
 
     @Test
     def testAuditVersionSectionUnknownLatest(): Unit \ Assert =
-        match ElmPages.renderAuditVersionSection("{\"devDependencies\":{\"elm-pages\":\"3.5.1\"}}", None) {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "latest:  unknown (npm view failed)"}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
+        let out = ElmPages.renderAuditVersionSection(jsonOf("{\"devDependencies\":{\"elm-pages\":\"3.5.1\"}}"), None);
+        Assert.assertTrue(String.contains({substr = "latest:  unknown (npm view failed)"}, out))
 
     // --- CompatKeyOutcome rendering ---
     //
