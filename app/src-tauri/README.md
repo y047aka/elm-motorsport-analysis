@@ -84,8 +84,16 @@ flake / 構成一式は Tauri v2 の標準スキーマに沿って用意済み�
 1. **アイコン**: プレースホルダを実アイコンへ差し替え。
 2. ~~**Nix flake**: `nix develop` に Tauri ツールチェーンを追加。~~ → **対応済み**
    （`mkTauriApp` / `nix run .#tauri-dev` / `.#tauri-build` / devShell に `cargo-tauri` 追加）。
-3. **CI 差し替え**: `.github/workflows/gh-pages.yml` を廃し、`tauri build` によるマルチプラットフォーム
-   （macOS / Windows / Linux）リリースワークフローへ移行。
+3. **CI 差し替え**: → **一部対応**。macOS 向けビルドワークフロー
+   `.github/workflows/tauri-build.yml`（手動実行 / `nix run .#tauri-build` で .app・.dmg 生成）を追加。
+   旧 Web 公開ワークフロー `.github/workflows/gh-pages.yml` の削除が残（下記「未了」参照）。
+   Windows / Linux 対応、タグ連動の自動リリースは今後の課題。
 4. **Rust CLI 統合方針**: `motorsport` クレート（`../../cli/motorsport`）をライブラリ結合するか、
    CLI をサイドカー同梱するかを決定（アプリ内データ更新の要否次第）。
 5. **配布・署名・自動更新**: コード署名（macOS notarization / Windows signing）と Tauri Updater の要否判断。
+
+### 未了（要手動対応）
+
+- **`gh-pages.yml` の削除**: Web 公開を完全に終了するには旧ワークフローを削除する必要があるが、
+  remote 実行環境ではワークフローファイルの削除操作が権限で拒否されたため未実施。
+  メンテナのローカルで `git rm .github/workflows/gh-pages.yml` を実行すること。
