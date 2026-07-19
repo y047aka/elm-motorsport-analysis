@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "メインウィンドウ向けの既定 capability。PoC ではコアの既定権限のみ付与している。フロントの JSON 取得は同一オリジン（tauri://localhost）内で完結するため、http / fs 等の追加権限は不要。",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
