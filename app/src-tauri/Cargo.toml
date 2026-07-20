@@ -1,0 +1,25 @@
+[package]
+name = "motorsport-analysis"
+version = "0.1.0"
+description = "Motorsport race analysis (Tauri native app PoC)"
+authors = ["y047aka"]
+edition = "2021"
+
+# NOTE: This package is intentionally kept separate from the Cargo workspace
+# under /cli (there is no Cargo.toml in a parent directory, so it stands alone).
+# To reuse the motorsport crate later, add it as a path dependency:
+#   motorsport = { path = "../../cli/motorsport" }
+
+[lib]
+# Following Tauri v2 convention, the app lives in lib and is invoked from main.rs
+# (so desktop and mobile can share the same entry point).
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

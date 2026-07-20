@@ -1,0 +1,33 @@
+name: Tauri Build (macOS)
+
+# Builds the Tauri v2 native app (macOS) after ending web publishing (GitHub Pages).
+# Manual (workflow_dispatch) only for now; tag-driven releases and other platforms
+# are future work.
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    timeout-minutes: 60
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - name: Install dependencies
+        run: nix develop --command pnpm install --frozen-lockfile
+      - name: Build Tauri app (macOS bundle)
+        # beforeBuildCommand (pnpm run build) produces the elm-pages dist,
+        # which is bundled as frontendDist into the .app / .dmg output.
+        run: nix run .#tauri-build
+      - uses: actions/upload-artifact@v7
+        with:
+          name: motorsport-analysis-macos
+          path: |
+            app/src-tauri/target/release/bundle/macos/*.app
+            app/src-tauri/target/release/bundle/dmg/*.dmg
+          retention-days: 30
+          if-no-files-found: error

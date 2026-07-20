@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "default",
+  "description": "Default capability for the main window. Grants only the core defaults; the frontend's JSON fetches stay same-origin (tauri://localhost), so no extra http/fs permissions are needed.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
