@@ -1,4 +1,4 @@
-// Windows のリリースビルドで裏にコンソールウィンドウを出さない
+// Hide the extra console window on Windows release builds.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {

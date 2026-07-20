@@ -1,8 +1,8 @@
 name: Tauri Build (macOS)
 
-# Web 公開（GitHub Pages）を終了し、Tauri v2 のネイティブアプリ（macOS）を
-# ビルドする。当面は手動実行（workflow_dispatch）のみ。タグ連動の自動リリースや
-# 他プラットフォーム対応は今後の課題（docs/adr/0001 参照）。
+# Builds the Tauri v2 native app (macOS) after ending web publishing (GitHub Pages).
+# Manual (workflow_dispatch) only for now; tag-driven releases and other platforms
+# are future work.
 on:
   workflow_dispatch:
 
@@ -20,8 +20,8 @@ jobs:
       - name: Install dependencies
         run: nix develop --command pnpm install --frozen-lockfile
       - name: Build Tauri app (macOS bundle)
-        # beforeBuildCommand（pnpm run build）で elm-pages の dist を生成し、
-        # それを frontendDist として同梱した .app / .dmg を出力する
+        # beforeBuildCommand (pnpm run build) produces the elm-pages dist,
+        # which is bundled as frontendDist into the .app / .dmg output.
         run: nix run .#tauri-build
       - uses: actions/upload-artifact@v7
         with:

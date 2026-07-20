@@ -1,14 +1,14 @@
-// Tauri v2 アプリのエントリポイント。
+// Entry point for the Tauri v2 app.
 //
-// PoC 段階では追加のネイティブ機能（プラグイン / コマンド）は導入していない。
-// 既存フロントエンドは以下の理由により無改修で動作する見込み:
-//   - elm-pages のビルド出力（app/dist）を frontendDist として配信する
-//   - レースデータ（/static/wec/**/*.json）や画像は dist ルートに含まれるため、
-//     Http.get の絶対パス "/static/..." は tauri://localhost/static/... として
-//     同一オリジンで解決される（追加の権限付与は不要）
+// No extra native features (plugins / commands) are wired up yet. The existing
+// frontend runs unchanged because:
+//   - the elm-pages build output (app/dist) is served as frontendDist
+//   - race data (/static/wec/**/*.json) and images live at the dist root, so
+//     Http.get's absolute paths "/static/..." resolve same-origin as
+//     tauri://localhost/static/... (no extra permissions required)
 //
-// 将来 Rust バックエンドへ機能を寄せる場合は、ここに tauri::command を登録し、
-// motorsport クレート（../../cli/motorsport）を取り込んでデータ処理を行う。
+// To move logic into the Rust backend later, register tauri::command here and
+// pull in the motorsport crate (../../cli/motorsport) for data processing.
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

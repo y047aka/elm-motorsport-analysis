@@ -73,11 +73,11 @@
             '';
           };
 
-        # Tauri v2 ネイティブアプリ用ランナー。app/ を cwd にして cargo-tauri を
-        # 実行する（cargo-tauri が ./src-tauri/tauri.conf.json を検出し、
-        # beforeDevCommand=`pnpm run start` を app/ で実行する）。
-        # Linux では OS 標準 WebView 一式（webkitgtk 等）が必要。macOS/Windows は
-        # OS 標準 WebView を使うため追加のシステム依存は不要。
+        # Runner for the Tauri v2 native app. Runs cargo-tauri with app/ as the cwd
+        # (cargo-tauri finds ./src-tauri/tauri.conf.json and runs
+        # beforeDevCommand=`pnpm run start` from app/).
+        # Linux needs the system WebView stack (webkitgtk etc.); macOS/Windows use
+        # the OS-provided WebView, so no extra system dependencies are required.
         mkTauriApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
