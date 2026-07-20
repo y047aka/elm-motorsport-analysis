@@ -4,18 +4,16 @@
   "scripts": {
     "css:build": "tailwindcss -i style.css -o public/style.css --minify",
     "css:watch": "tailwindcss -i style.css -o public/style.css --watch",
-    "start": "pnpm run css:build && elm-pages dev",
-    "build": "pnpm run css:build && elm-pages build",
+    "start": "pnpm run css:build && vite",
+    "build": "pnpm run css:build && vite build",
     "test": "playwright test"
   },
   "devDependencies": {
     "@tailwindcss/cli": "4.3.3",
     "@types/node": "26.1.1",
     "daisyui": "5.6.18",
-    "elm-codegen": "0.6.3",
-    "elm-optimize-level-2": "0.4.0",
-    "elm-pages": "3.5.1",
     "tailwindcss": "4.3.3",
-    "vite": "7.3.2"
+    "vite": "7.3.2",
+    "vite-plugin-elm": "3.0.1"
   }
 }

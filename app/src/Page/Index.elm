@@ -1,55 +1,22 @@
-module Route.Index exposing (ActionData, Data, Model, Msg, route)
+module Page.Index exposing (view)
 
-import BackendTask exposing (BackendTask)
+{-| The top page. It is stateless, so it exposes only a `view`.
+
+@docs view
+
+-}
+
 import Css exposing (block, color, display, em, fontSize, inherit)
 import Data.Series.Wec_2024 exposing (wec_2024)
 import Data.Series.Wec_2025 exposing (wec_2025)
-import FatalError exposing (FatalError)
-import Html.Styled exposing (Html, a, div, h2, section, text)
-import Html.Styled.Attributes exposing (attribute, css, href)
-import PagesMsg exposing (PagesMsg)
+import Html.Styled exposing (Html, div, h2, section, text)
+import Html.Styled.Attributes exposing (attribute, css)
 import Route exposing (Route)
-import RouteBuilder exposing (App, StatelessRoute)
-import Shared
 import View exposing (View)
 
 
-type alias RouteParams =
-    {}
-
-
-route : StatelessRoute RouteParams Data ActionData
-route =
-    RouteBuilder.single { head = \_ -> [], data = data }
-        |> RouteBuilder.buildNoState { view = view }
-
-
-type alias Model =
-    {}
-
-
-type alias Msg =
-    ()
-
-
-type alias Data =
-    {}
-
-
-type alias ActionData =
-    {}
-
-
-data : BackendTask FatalError Data
-data =
-    BackendTask.succeed Data
-
-
-view :
-    App Data ActionData RouteParams
-    -> Shared.Model
-    -> View (PagesMsg Msg)
-view app shared =
+view : View msg
+view =
     { title = "Race Analysis"
     , body =
         [ div [ attribute "data-theme" "forest" ]
@@ -58,7 +25,7 @@ view app shared =
                     (\eventSummary ->
                         link
                             { label = eventSummary.name
-                            , path = Route.Wec__Season___Event_ { season = "2025", event = eventSummary.id }
+                            , route = Route.WecEvent { season = "2025", event = eventSummary.id }
                             }
                     )
                     wec_2025
@@ -68,7 +35,7 @@ view app shared =
                     (\eventSummary ->
                         link
                             { label = eventSummary.name
-                            , path = Route.Wec__Season___Event_ { season = "2024", event = eventSummary.id }
+                            , route = Route.WecEvent { season = "2024", event = eventSummary.id }
                             }
                     )
                     wec_2024
@@ -86,10 +53,10 @@ section_ title children =
         )
 
 
-link : { label : String, path : Route } -> Html msg
+link : { label : String, route : Route } -> Html msg
 link props =
-    a
-        [ href (Route.toString props.path)
+    Html.Styled.a
+        [ Route.href props.route
         , css [ display block, color inherit ]
         ]
         [ text props.label ]

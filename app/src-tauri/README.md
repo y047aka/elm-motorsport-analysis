@@ -1,11 +1,11 @@
 # Tauri (native app)
 
-Tauri v2 shell that packages the elm-pages frontend as a native desktop app.
+Tauri v2 shell that packages the Elm SPA frontend as a native desktop app.
 
 ## Develop
 
 ```bash
-nix run .#tauri-dev      # runs `pnpm run start` (elm-pages dev, :1234) in a WebView
+nix run .#tauri-dev      # runs `pnpm run start` (Vite dev, :1234) in a WebView
 ```
 
 ## Build

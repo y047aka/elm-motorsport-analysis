@@ -10,8 +10,8 @@ Motorsport race analysis and visualization application. Monorepo with Elm fronte
 
 ### Development
 ```bash
-nix run .#dev                # elm-pages dev server (localhost:1234)
-nix run .#build              # Production build
+nix run .#dev                # Vite dev server (localhost:1234)
+nix run .#build              # Production build (Vite)
 ```
 
 ### Testing
@@ -43,22 +43,30 @@ nix run .#cli-test           # Run Rust tests
 ## Architecture
 
 ### Monorepo Structure (pnpm workspaces)
-- **`/app`** - elm-pages 3.x web application (frontend)
+- **`/app`** - Elm SPA web application (frontend), bundled by Vite
 - **`/package`** - Reusable Elm library (motorsport domain models)
 - **`/cli`** - Rust CLI for CSV→JSON data processing
 
 ### Frontend Stack
-- **Elm 0.19.1** with elm-pages 3.x (full-stack framework)
+- **Elm 0.19.1** SPA built on `Browser.application` (framework-less; no elm-pages)
 - **Tailwind CSS 4.x** + elm-css for styling
-- **Vite** for bundling
+- **Vite** for bundling (`vite-plugin-elm`)
 - **Playwright** for visual regression testing
 
-### Key Elm Modules
+### SPA architecture (`/app/src/`)
 
-**`/app/app/Route/`** - Page routes
-- `Wec/Season_/Event_.elm` - WEC event pages
+The application is a hand-written multi-page SPA. `index.ts` boots
+`Elm.Main.init`; `Main.elm` owns the `Browser.application` and wires everything
+together. Data is fetched at runtime via `Http` (no `BackendTask`).
 
-**`/app/src/`** - Shared modules
+- `Main.elm` - `Browser.application`: top-level Model/Msg, URL handling, page dispatch
+- `Route.elm` - client-side routing (`Url.Parser`): `/`, `/debug`, `/wec/:season/:event`
+- `Shared.elm` / `Shared/Msg.elm` - app-wide state (race control, view model) + data loading
+- `Effect.elm` - elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
+- `View.elm` - `{ title, body }` document type
+- `Page/` - one module per page (`Index`, `Debug`, `Wec/Event`), plain TEA
+
+**`/app/src/`** - Shared view/data modules
 - `Css/` - Type-safe styling (Color, Palette, Typography)
 - `Data/` - Series configurations (WEC)
 - `UI/` - Reusable components (Button, Label, Table)

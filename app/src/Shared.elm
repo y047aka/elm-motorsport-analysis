@@ -1,48 +1,29 @@
-module Shared exposing (Data, Model, Msg(..), template)
+module Shared exposing (Model, init, update, subscriptions)
 
-import BackendTask exposing (BackendTask)
-import Css exposing (height, vh)
-import Css.Global exposing (global)
+{-| Application-wide state, preserved from the elm-pages version. The data is
+loaded at runtime via `Http`, so no `BackendTask` is involved.
+
+@docs Model, init, update, subscriptions
+
+-}
+
 import Data.Series as Series
 import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.Wec
 import Data.Wec as Wec
 import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
-import FatalError exposing (FatalError)
-import Html exposing (Html)
-import Html.Styled
 import Http
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
-import Pages.Flags
-import Pages.PageUrl exposing (PageUrl)
-import Route exposing (Route)
-import SharedTemplate exposing (SharedTemplate)
-import UrlPath exposing (UrlPath)
-import View exposing (View)
-
-
-template : SharedTemplate Msg Model Data msg
-template =
-    { init = init
-    , update = update
-    , view = view
-    , data = data
-    , subscriptions = subscriptions
-    , onPageChange = Nothing
-    }
-
-
-type alias Data =
-    ()
+import Shared.Msg exposing (Msg(..))
 
 
 
--- INIT
+-- MODEL
 
 
 type alias Model =
@@ -54,20 +35,8 @@ type alias Model =
     }
 
 
-init :
-    Pages.Flags.Flags
-    ->
-        Maybe
-            { path :
-                { path : UrlPath
-                , query : Maybe String
-                , fragment : Maybe String
-                }
-            , metadata : route
-            , pageUrl : Maybe PageUrl
-            }
-    -> ( Model, Effect Msg )
-init flags maybePagePath =
+init : flags -> ( Model, Effect Msg )
+init _ =
     let
         raceControlInit =
             RaceControl.placeholder
@@ -89,13 +58,6 @@ init flags maybePagePath =
 -- UPDATE
 
 
-type Msg
-    = FetchJson_Wec { season : String, event : String }
-    | JsonLoaded_Wec (Result Http.Error Wec.Event)
-    | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
-    | RaceControlMsg RaceControl.Msg
-
-
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
@@ -111,7 +73,7 @@ update msg m =
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
-            , Effect.fromCmd <|
+            , Effect.sendCmd <|
                 Cmd.batch
                     [ Http.get
                         { url = eventSummary.jsonPath
@@ -198,40 +160,6 @@ finalizeWecIfReady m =
 -- SUBSCRIPTIONS
 
 
-subscriptions : UrlPath -> Model -> Sub Msg
-subscriptions _ _ =
+subscriptions : Model -> Sub Msg
+subscriptions _ =
     Sub.none
-
-
-data : BackendTask FatalError Data
-data =
-    BackendTask.succeed ()
-
-
-
--- VIEW
-
-
-view :
-    Data
-    ->
-        { path : UrlPath
-        , route : Maybe Route
-        }
-    -> Model
-    -> (Msg -> msg)
-    -> View msg
-    -> { body : List (Html msg), title : String }
-view sharedData page model toMsg pageView =
-    { title = pageView.title
-    , body =
-        let
-            globalReset =
-                global
-                    [ Css.Global.html [ height (vh 100) ]
-                    , Css.Global.body [ height (vh 100) ]
-                    ]
-        in
-        List.map Html.Styled.toUnstyled
-            (globalReset :: pageView.body)
-    }

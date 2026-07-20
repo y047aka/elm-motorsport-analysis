@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: nix develop --command pnpm install --frozen-lockfile
       - name: Build Tauri app (macOS bundle)
-        # beforeBuildCommand (pnpm run build) produces the elm-pages dist,
+        # beforeBuildCommand (pnpm run build) produces the Vite dist,
         # which is bundled as frontendDist into the .app / .dmg output.
         run: nix run .#tauri-build
       - uses: actions/upload-artifact@v7
