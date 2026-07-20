@@ -76,14 +76,13 @@
         # Runner for the Tauri v2 native app. Runs cargo-tauri with app/ as the cwd
         # (cargo-tauri finds ./src-tauri/tauri.conf.json and runs
         # beforeDevCommand=`pnpm run start` from app/).
-        # Linux needs the system WebView stack (webkitgtk etc.); macOS/Windows use
-        # the OS-provided WebView, so no extra system dependencies are required.
+        # Targets macOS, which uses the OS-provided WebView (no extra system deps).
+        # Targeting Linux would additionally need pkg-config + webkitgtk_4_1/libsoup_3/gtk3.
         mkTauriApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri pkgs.pkg-config ]
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri ]
               ++ elmTools
-              ++ pkgs.lib.optionals pkgs.stdenv.isLinux (with pkgs; [ webkitgtk_4_1 libsoup_3 gtk3 ])
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
             text = ''
               cd app
@@ -131,9 +130,8 @@
 
       in {
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri pkg-config playwright-test ]
-            ++ [ flix ] ++ elmTools
-            ++ lib.optionals stdenv.isLinux [ webkitgtk_4_1 libsoup_3 gtk3 ];
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test ]
+            ++ [ flix ] ++ elmTools;
         });
 
         apps = {
