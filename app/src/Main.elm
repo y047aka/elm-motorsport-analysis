@@ -60,19 +60,19 @@ init flags url key =
             Shared.init flags
 
         ( page, pageCmd ) =
-            initPage key (Route.fromUrl url)
+            initPage (Route.fromUrl url)
     in
     ( { key = key, url = url, shared = shared, page = page }
     , Cmd.batch
         [ sharedEffect
-            |> Effect.toCmd { key = key, fromPageMsg = SharedMsg, fromSharedMsg = SharedMsg }
+            |> Effect.toCmd { fromPageMsg = SharedMsg, fromSharedMsg = SharedMsg }
         , pageCmd
         ]
     )
 
 
-initPage : Nav.Key -> Maybe Route -> ( Page, Cmd Msg )
-initPage key maybeRoute =
+initPage : Maybe Route -> ( Page, Cmd Msg )
+initPage maybeRoute =
     case maybeRoute of
         Nothing ->
             ( NotFoundPage, Cmd.none )
@@ -82,17 +82,17 @@ initPage key maybeRoute =
 
         Just Route.Debug ->
             Page.Debug.init
-                |> Tuple.mapBoth DebugPage (toPageCmd key DebugMsg)
+                |> Tuple.mapBoth DebugPage (toPageCmd DebugMsg)
 
         Just (Route.WecEvent params) ->
             Page.Wec.Event.init params
-                |> Tuple.mapBoth WecEventPage (toPageCmd key WecEventMsg)
+                |> Tuple.mapBoth WecEventPage (toPageCmd WecEventMsg)
 
 
-toPageCmd : Nav.Key -> (pageMsg -> Msg) -> Effect pageMsg -> Cmd Msg
-toPageCmd key fromPageMsg effect =
+toPageCmd : (pageMsg -> Msg) -> Effect pageMsg -> Cmd Msg
+toPageCmd fromPageMsg effect =
     Effect.toCmd
-        { key = key, fromPageMsg = fromPageMsg, fromSharedMsg = SharedMsg }
+        { fromPageMsg = fromPageMsg, fromSharedMsg = SharedMsg }
         effect
 
 
@@ -122,7 +122,7 @@ update msg model =
         ( ChangedUrl url, _ ) ->
             let
                 ( page, pageCmd ) =
-                    initPage model.key (Route.fromUrl url)
+                    initPage (Route.fromUrl url)
             in
             ( { model | url = url, page = page }, pageCmd )
 
@@ -133,7 +133,7 @@ update msg model =
             in
             ( { model | shared = shared }
             , effect
-                |> Effect.toCmd { key = model.key, fromPageMsg = SharedMsg, fromSharedMsg = SharedMsg }
+                |> Effect.toCmd { fromPageMsg = SharedMsg, fromSharedMsg = SharedMsg }
             )
 
         ( DebugMsg pageMsg, DebugPage pageModel ) ->
@@ -152,7 +152,7 @@ update msg model =
 updatePage : Model -> (pageModel -> Page) -> (pageMsg -> Msg) -> ( pageModel, Effect pageMsg ) -> ( Model, Cmd Msg )
 updatePage model toPage fromPageMsg ( pageModel, effect ) =
     ( { model | page = toPage pageModel }
-    , toPageCmd model.key fromPageMsg effect
+    , toPageCmd fromPageMsg effect
     )
 
 
