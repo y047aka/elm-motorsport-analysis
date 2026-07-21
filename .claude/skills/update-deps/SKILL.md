@@ -1,7 +1,7 @@
 ---
 name: update-deps
 description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Nix flake).
-argument-hint: "[npm|elm|elm-pages|rust|nix] [minor|major]"
+argument-hint: "[npm|elm|rust|nix] [minor|major]"
 disable-model-invocation: true
 allowed-tools:
   - Bash(pnpm audit *)
@@ -43,7 +43,6 @@ Each ecosystem's audit, update, and verify procedures are documented in `referen
 | Rust | `references/rust-minor.md` | `references/rust-major.md` |
 | Nix | `references/nix-minor.md` | `references/nix-major.md` |
 | Elm | `references/elm.md` | — |
-| elm-pages | `references/elm-pages.md` | — |
 
 Read the relevant reference file(s) before executing each phase.
 
@@ -54,10 +53,10 @@ Read the relevant reference file(s) before executing each phase.
 Run `git status --short`. If there are uncommitted changes, warn the user and suggest committing or stashing first.
 
 Parse `$ARGUMENTS`:
-- **No arguments**: Process all ecosystems except elm-pages. Only minor scope (major requires explicit specification).
+- **No arguments**: Process all ecosystems. Only minor scope (major requires explicit specification).
 - **Ecosystem only** (e.g., `npm`): Process that ecosystem. For npm/rust/nix, audit both minor and major, then ask the user which to apply.
 - **Ecosystem + scope** (e.g., `npm minor` or `rust major`): Process only that specific scope. Read only the corresponding reference file.
-- `elm` and `elm-pages` ignore the minor/major qualifier (they have a single reference file each).
+- `elm` ignores the minor/major qualifier (it has a single reference file).
 
 ### Phase 1: Audit
 
@@ -65,7 +64,7 @@ For each target ecosystem:
 - **Scope specified** (`minor` or `major`): Read only the corresponding reference file and run its Audit steps.
 - **Ecosystem only** (no scope, npm/rust/nix): Read both minor and major reference files and run both Audit steps.
 - **No arguments**: Read only the minor reference files and run their Audit steps.
-- **Elm / elm-pages**: Read the single reference file and run its Audit steps.
+- **Elm**: Read the single reference file and run its Audit steps.
 
 If multiple reference files share the same audit command (e.g., `npm outdated`), run it once and interpret the output from both perspectives.
 
@@ -81,11 +80,11 @@ Do NOT make any changes yet. Present the results as a consolidated report.
 
 Collect **Verify** commands from each updated ecosystem's reference file and deduplicate before running. Reference table:
 
-| Command | npm | Elm | elm-pages | Rust | Nix |
-|---|:---:|:---:|:---:|:---:|:---:|
-| `nix run .#test` | x | x | x | | x |
-| `nix run .#build` | x | x | x | | x |
-| `nix run .#cli-test` | | | | x | x |
+| Command | npm | Elm | Rust | Nix |
+|---|:---:|:---:|:---:|:---:|
+| `nix run .#test` | x | x | | x |
+| `nix run .#build` | x | x | | x |
+| `nix run .#cli-test` | | | x | x |
 
 Show `git diff --stat` so the user can see what changed.
 

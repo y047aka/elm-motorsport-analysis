@@ -11,7 +11,7 @@ pnpm audit --json 2>/dev/null | nix run .#deps-audit -- npm-security-audit
 
 The `-r` flag is required: without it, `pnpm outdated` only checks the workspace root and misses outdated packages in workspace projects such as `app`.
 
-The first script classifies outdated packages into minor and major sections, and flags Playwright/vite changes. Focus on the `minor updates` section.
+The first script classifies outdated packages into minor and major sections, and flags Playwright changes. Focus on the `minor updates` section.
 
 The second script classifies security vulnerabilities by severity and fix availability. Note `fixable-breaking` count — these fixes require `--force` and may introduce breaking changes.
 
@@ -35,7 +35,7 @@ pnpm install
 ### Special handling
 
 - **Playwright version change**: If the script reports `playwright-changed: true`, remind the user to run `pnpm exec playwright install` and warn that VRT snapshots may need updating via `nix run .#test-vrt`.
-- **vite version change**: If the script's `vite` section shows the update would cross the `bundled-major` version boundary, do not update vite. Never remove vite — without it, elm-pages silently falls back to default config, ignoring `elm-pages.config.mjs`.
+- **vite version change**: Check `vite-plugin-elm`'s `peerDependencies` range for `vite` (in `app/node_modules/vite-plugin-elm/package.json`) before bumping past a major boundary.
 
 ## Verify
 

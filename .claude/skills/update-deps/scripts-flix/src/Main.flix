@@ -8,7 +8,6 @@ use DepsAudit.Cli
 use DepsAudit.Crates
 use DepsAudit.Crates.CrateRegistry
 use DepsAudit.Elm
-use DepsAudit.ElmPages
 use DepsAudit.Io
 use DepsAudit.Io.FileIO
 use DepsAudit.JsonUtil
@@ -43,22 +42,18 @@ use DepsAudit.RustMajor
 def main(): Unit \ {Env, IO, Exit, Console, Clock} =
     Exit.exit(Cli.emit(Io.runWithIO(() -> Crates.runWithIO(() -> route(Env.getArgs())))))
 
-def route(args: List[String]): Cli.Output \ {FileIO, CrateRegistry, Console, Clock, Env} =
+def route(args: List[String]): Cli.Output \ {FileIO, CrateRegistry, Console, Clock} =
     match args {
         case cmd :: Nil => dispatch(cmd)
         case _          => usage()
     }
 
-def dispatch(cmd: String): Cli.Output \ {FileIO, CrateRegistry, Console, Clock, Env} =
+def dispatch(cmd: String): Cli.Output \ {FileIO, CrateRegistry, Console, Clock} =
     match cmd {
         case "rust-minor-audit"       => cmdRustMinorAudit()
         case "nix-channel-audit"      => cmdNixChannelAudit()
         case "nix-flakelock-audit"    => cmdNixFlakelockAudit()
         case "elm-versions-report"    => cmdElmVersionsReport()
-        case "elm-pages-elm-guard"    => cmdElmPagesElmGuard()
-        case "elm-pages-vite-version" => cmdElmPagesViteVersion()
-        case "elm-pages-compat-key"   => cmdElmPagesCompatKey()
-        case "elm-pages-audit"        => cmdElmPagesAudit()
         case "npm-outdated-audit"     => cmdNpmOutdatedAudit()
         case "npm-security-audit"     => cmdNpmSecurityAudit()
         case "rust-major-audit"       => cmdRustMajorAudit()
@@ -92,64 +87,17 @@ def reportOneElmJson(f: String): Cli.Output \ FileIO =
         elmJson <- JsonUtil.parseDoc(f, raw)
     ) yield Elm.renderVersionsReport(f, elmJson))
 
-// --- elm-pages ---
-
-def cmdElmPagesElmGuard(): Cli.Output \ FileIO =
-    let path = "app/elm.json";
-    Cli.fromResult(forM (
-        raw     <- FileIO.read(path);
-        elmJson <- JsonUtil.parseDoc(path, raw)
-    ) yield ElmPages.renderElmGuard(elmJson))
-
-def cmdElmPagesViteVersion(): Cli.Output \ FileIO =
-    let path = ElmPages.bundledVitePackageJsonPath();
-    Cli.fromResult(forM (
-        raw     <- FileIO.read(path);
-        pkg     <- JsonUtil.parseDoc(path, raw);
-        version <- ElmPages.renderViteVersion(pkg)
-    ) yield version)
-
-def cmdElmPagesCompatKey(): Cli.Output \ {FileIO, Env} =
-    ElmPages.renderCompatKeyStandalone(ElmPages.resolveCompatKey())
-
-def cmdElmPagesAudit(): Cli.Output \ {FileIO, Console, Env} =
-    let latest = nonBlank(Cli.readStdin());
-    let pkgPath = "app/package.json";
-    let elmJsonPath = "app/elm.json";
-    Cli.fromResult(forM (
-        pkgRaw     <- FileIO.read(pkgPath);
-        pkg        <- JsonUtil.parseDoc(pkgPath, pkgRaw);
-        elmJsonRaw <- FileIO.read(elmJsonPath);
-        elmJson    <- JsonUtil.parseDoc(elmJsonPath, elmJsonRaw)
-    ) yield {
-        let versionSection = ElmPages.renderAuditVersionSection(pkg, latest);
-        let packagesSection = ElmPages.renderAuditPackagesSection(elmJson);
-        "${versionSection}\n\n${packagesSection}\n\n--- compatibilityKey ---"
-    })
-        |> Cli.andThen(() -> ElmPages.renderCompatKeyForAudit(ElmPages.resolveCompatKey()))
-
 // --- npm ---
 
-def cmdNpmOutdatedAudit(): Cli.Output \ {FileIO, Console} =
+def cmdNpmOutdatedAudit(): Cli.Output \ Console =
     let input = String.trim(Cli.readStdin());
     if (input == "")
         Cli.okText(Npm.emptyOutdatedReport())
     else
-        Cli.fromResultWith(match (report, vite) ->
-            Cli.okText(report) |> Cli.andThen(() -> viteSection(vite)),
-            forM (
-                data <- JsonUtil.parseDoc("unexpected npm outdated format", input);
-                r    <- Npm.renderOutdatedAudit(data)
-            ) yield r)
-
-/// The trailing vite section, present when npm outdated reported a vite
-/// entry. The bundled major comes off disk via `ElmPages.bundledViteMajor`.
-def viteSection(vite: Option[(String, String)]): Cli.Output \ FileIO =
-    match vite {
-        case None => Cli.empty()
-        case Some((current, latest)) =>
-            Cli.okText(Npm.renderViteSection(current, latest, ElmPages.bundledViteMajor()))
-    }
+        Cli.fromResult(forM (
+            data <- JsonUtil.parseDoc("unexpected npm outdated format", input);
+            r    <- Npm.renderOutdatedAudit(data)
+        ) yield r)
 
 def cmdNpmSecurityAudit(): Cli.Output \ Console =
     let input = String.trim(Cli.readStdin());
@@ -192,12 +140,6 @@ def cmdRustMajorAudit(): Cli.Output \ {FileIO, CrateRegistry} =
 
 // --- shared helpers ---
 
-/// `None` for blank/whitespace-only input, `Some(trimmed)` otherwise — the
-/// shape `elm-pages-audit` needs for the "latest version from stdin" argument.
-def nonBlank(s: String): Option[String] =
-    let trimmed = String.trim(s);
-    if (trimmed == "") None else Some(trimmed)
-
 def usage(): Cli.Output =
     Cli.failLines(
         "usage: deps-audit <subcommand>" ::
@@ -207,10 +149,6 @@ def usage(): Cli.Output =
         "  npm-outdated-audit" ::
         "  npm-pin-versions" ::
         "  elm-versions-report" ::
-        "  elm-pages-audit" ::
-        "  elm-pages-compat-key" ::
-        "  elm-pages-elm-guard" ::
-        "  elm-pages-vite-version" ::
         "  rust-major-audit" ::
         "  rust-minor-audit" ::
         "  nix-channel-audit" ::

@@ -7,12 +7,7 @@
   outputs = { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
-            "lamdera"
-          ];
-        };
+        pkgs = nixpkgs.legacyPackages.${system};
 
         elmTools = with pkgs.elmPackages; [
           elm
@@ -21,7 +16,6 @@
           elm-review
           elm-test
           elm-verify-examples
-          lamdera
         ];
 
         playwrightEnv = {
@@ -111,9 +105,8 @@
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
-        # relative to the cwd, and some (elm-pages-compat-key) are meant to
-        # be run from app/. Rebuilds the jar when sources changed; cargo is
-        # needed by the rust-major-audit subcommand.
+        # relative to the cwd. Rebuilds the jar when sources changed; cargo
+        # is needed by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];

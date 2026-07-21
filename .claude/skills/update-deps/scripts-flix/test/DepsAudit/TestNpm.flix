@@ -83,9 +83,8 @@ mod DepsAudit.TestNpm {
     def testOutdatedClassifiesMinorAndMajor(): Unit \ Assert =
         let json = "{\"vite\":{\"current\":\"7.3.2\",\"wanted\":\"7.3.2\",\"latest\":\"8.1.5\"}}";
         match Npm.renderOutdatedAudit(jsonOf(json)) {
-            case Ok((report, vite)) =>
-                Assert.assertTrue(String.contains({substr = "vite: 7.3.2 -> 8.1.5"}, report));
-                Assert.assertTrue(Option.isEmpty(vite) == false)
+            case Ok(report) =>
+                Assert.assertTrue(String.contains({substr = "vite: 7.3.2 -> 8.1.5"}, report))
             case Err(_) => Assert.assertTrue(false)
         }
 
@@ -104,8 +103,8 @@ mod DepsAudit.TestNpm {
     def testOutdatedReadsDependentPackages(): Unit \ Assert =
         let json = "{\"vite\":{\"current\":\"7.3.2\",\"wanted\":\"7.3.2\",\"latest\":\"8.1.5\",\"dependentPackages\":[{\"name\":\"app\"}]}}";
         match Npm.renderOutdatedAudit(jsonOf(json)) {
-            case Ok((report, _)) => Assert.assertTrue(String.contains({substr = "(app)"}, report))
-            case Err(_)          => Assert.assertTrue(false)
+            case Ok(report) => Assert.assertTrue(String.contains({substr = "(app)"}, report))
+            case Err(_)      => Assert.assertTrue(false)
         }
 
     // --- npm-security-audit ---

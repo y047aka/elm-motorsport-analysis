@@ -20,10 +20,8 @@ mod DepsAudit.Npm {
             ("minor updates", "none") ::
             ("major updates", "none") :: Nil)
 
-    /// Main report (without the vite section) from the parsed outdated
-    /// document. Also returns the vite entry (current, latest) when present
-    /// so the caller can append the filesystem-dependent vite section.
-    pub def renderOutdatedAudit(data: Json): Result[String, (String, Option[(String, String)])] =
+    /// Report from the parsed outdated document.
+    pub def renderOutdatedAudit(data: Json): Result[String, String] =
         forM (
             infos <- parseInfos(data)
         ) yield {
@@ -45,13 +43,10 @@ mod DepsAudit.Npm {
                     pw#current != pw#wanted or majorOf(pw#latest) > majorOf(pw#current)
                 case None => false
             };
-            let vite = List.findMap(match (name, i) ->
-                if (name == "vite") Some((i#current, i#latest)) else None, infos);
-            let report = Report.sections(
+            Report.sections(
                 ("minor updates", Report.linesOrNone(minor)) ::
                 ("major updates", Report.linesOrNone(major)) ::
-                ("flags", "playwright-changed: ${playwrightChanged}") :: Nil);
-            (report, vite)
+                ("flags", "playwright-changed: ${playwrightChanged}") :: Nil)
         }
 
     type alias OutdatedInfo = {current = String, wanted = String, latest = String, dependent = String}
@@ -107,12 +102,6 @@ mod DepsAudit.Npm {
             |> List.head
             |> Option.flatMap(Int64.fromString)
             |> Option.getWithDefault(0i64)
-
-    /// The trailing vite section (bundledMajor is "unknown" when
-    /// the bundled package.json is missing or unparsable).
-    pub def renderViteSection(current: String, latest: String, bundledMajor: String): String =
-        "\n" + Report.sections(
-            ("vite", "current: ${current}\nlatest: ${latest}\nbundled-major: ${bundledMajor}") :: Nil)
 
     // --- npm-security-audit ---
 

@@ -5,7 +5,7 @@ import Css
 
 type Color
     = ColorValue
-        -- Css.Colorと同じだが、lamderaの型推論が上手くいかないため、プロティを直接記述している
+        -- Css.Colorと同じだが、Lamderaコンパイラの型推論が上手くいかなかったため、プロパティを直接記述している
         { red : Int
         , green : Int
         , blue : Int

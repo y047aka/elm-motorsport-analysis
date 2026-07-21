@@ -48,8 +48,8 @@ type Standings
         , entries : SortedList ByPosition Entry
 
         -- Entries are kept as plain lists here (already position-sorted):
-        -- the Lamdera compiler used by elm-pages fails to generate wire
-        -- codecs for a phantom-typed SortedList inside a tuple.
+        -- the Lamdera compiler failed to generate wire codecs for a
+        -- phantom-typed SortedList inside a tuple.
         , entriesByClass : List ( ClassInfo, List Entry )
         }
 
@@ -62,7 +62,7 @@ type alias ClassInfo =
     , name : String
 
     -- A raw CSS color string rather than Css.Color: the Lamdera compiler
-    -- used by elm-pages cannot generate wire codecs for elm-css's Color.
+    -- could not generate wire codecs for elm-css's Color.
     , color : String
     }
 
