@@ -47,9 +47,10 @@ type Standings
         , lapCount : Int
         , entries : SortedList ByPosition Entry
 
-        -- Entries are kept as plain lists here (already position-sorted):
-        -- the Lamdera compiler failed to generate wire codecs for a
-        -- phantom-typed SortedList inside a tuple.
+        -- Plain lists here (already position-sorted by construction, see
+        -- groupEntriesByClass): consumers of toClassList only ever render
+        -- these entries, never re-sort them, so the phantom-typed SortedList
+        -- guarantee isn't worth the extra unwrapping at each call site.
         , entriesByClass : List ( ClassInfo, List Entry )
         }
 
@@ -61,8 +62,10 @@ type alias ClassInfo =
     { class : Class
     , name : String
 
-    -- A raw CSS color string rather than Css.Color: the Lamdera compiler
-    -- could not generate wire codecs for elm-css's Color.
+    -- A raw CSS color string rather than Css.Color: every consumer feeds
+    -- this straight into a raw string sink (Svg fill, Css.property
+    -- "background-color"), so storing the extracted value avoids
+    -- re-extracting it at each call site.
     , color : String
     }
 
