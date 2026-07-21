@@ -7,12 +7,7 @@
   outputs = { nixpkgs, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        pkgs = import nixpkgs {
-          inherit system;
-          config.allowUnfreePredicate = pkg: builtins.elem (nixpkgs.lib.getName pkg) [
-            "lamdera"
-          ];
-        };
+        pkgs = nixpkgs.legacyPackages.${system};
 
         elmTools = with pkgs.elmPackages; [
           elm
@@ -21,7 +16,6 @@
           elm-review
           elm-test
           elm-verify-examples
-          lamdera
         ];
 
         playwrightEnv = {
@@ -111,9 +105,8 @@
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
-        # relative to the cwd, and some (elm-pages-compat-key) are meant to
-        # be run from app/. Rebuilds the jar when sources changed; cargo is
-        # needed by the rust-major-audit subcommand.
+        # relative to the cwd. Rebuilds the jar when sources changed; cargo
+        # is needed by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
@@ -135,14 +128,14 @@
         });
 
         apps = {
-          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "pnpm start"}/bin/dev";                                              meta.description = "Start elm-pages dev server (localhost:1234)"; };
+          dev                  = { type = "app"; program = "${mkNodeApp "dev"                  "pnpm start"}/bin/dev";                                              meta.description = "Start Vite dev server (localhost:1234)"; };
           build                = { type = "app"; program = "${mkNodeApp "build"                "pnpm run build"}/bin/build";                                         meta.description = "Production build"; };
           test                 = { type = "app"; program = "${mkNodeApp "test"                 "pnpm test"}/bin/test";                                               meta.description = "Run Elm package tests (elm-verify-examples + elm-test)"; };
           test-vrt             = { type = "app"; program = "${mkVrtApp  "test-vrt"             "cd app && playwright test"}/bin/test-vrt";                           meta.description = "Run Playwright VRT tests"; };
           update-snapshots-vrt = { type = "app"; program = "${mkVrtApp  "update-snapshots-vrt" "cd app && playwright test --update-snapshots"}/bin/update-snapshots-vrt"; meta.description = "Update Playwright VRT snapshots"; };
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
-          format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/app app/src package/src"}/bin/format";           meta.description = "Format Elm code (elm-format)"; };
+          format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };

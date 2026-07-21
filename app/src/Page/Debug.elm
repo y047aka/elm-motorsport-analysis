@@ -1,47 +1,33 @@
-module Route.Debug exposing (ActionData, Data, Model, Msg, route)
+module Page.Debug exposing (Model, Msg, init, update, view)
 
-import BackendTask exposing (BackendTask)
+{-| Debug page (`/debug`). Migrated from the elm-pages route to plain TEA.
+
+@docs Model, Msg, init, update, view
+
+-}
+
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
-import FatalError exposing (FatalError)
 import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
 import Motorsport.Class
 import Motorsport.Clock as Clock
-import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
-import Motorsport.ViewModel.BestTimes exposing (BestTimes)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
-import PagesMsg exposing (PagesMsg)
-import RouteBuilder exposing (App, StatefulRoute)
+import Motorsport.ViewModel.BestTimes exposing (BestTimes)
+import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
 import Shared
-import Task
+import Shared.Msg
 import UI.Button exposing (button, labeledButton)
 import UI.Label exposing (basicLabel)
 import View exposing (View)
-
-
-type alias RouteParams =
-    {}
-
-
-route : StatefulRoute RouteParams Data ActionData Model Msg
-route =
-    RouteBuilder.single { head = \_ -> [], data = data }
-        |> RouteBuilder.buildWithSharedState
-            { init = init
-            , update = update
-            , subscriptions = \_ _ _ _ -> Sub.none
-            , view = view
-            }
 
 
 
@@ -54,18 +40,12 @@ type alias Model =
     }
 
 
-init :
-    App Data ActionData RouteParams
-    -> Shared.Model
-    -> ( Model, Effect Msg )
-init app shared =
+init : ( Model, Effect Msg )
+init =
     ( { leaderboardState = initialSort "Position"
       , query = ""
       }
-    , Effect.fromCmd
-        (Task.succeed (Shared.FetchJson_Wec { season = "2024", event = "le_mans_24h" })
-            |> Task.perform SharedMsg
-        )
+    , Effect.sendSharedMsg (Shared.Msg.FetchJson_Wec { season = "2024", event = "le_mans_24h" })
     )
 
 
@@ -74,109 +54,77 @@ init app shared =
 
 
 type Msg
-    = SharedMsg Shared.Msg
-    | RaceControlMsg RaceControl.Msg
+    = RaceControlMsg RaceControl.Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
-update :
-    App Data ActionData RouteParams
-    -> Shared.Model
-    -> Msg
-    -> Model
-    -> ( Model, Effect Msg, Maybe Shared.Msg )
-update app shared msg model =
+update : Msg -> Model -> ( Model, Effect Msg )
+update msg model =
     case msg of
-        SharedMsg sharedMsg ->
-            ( model, Effect.none, Just sharedMsg )
-
         RaceControlMsg raceControlMsg ->
-            ( model, Effect.none, Just (Shared.RaceControlMsg raceControlMsg) )
+            ( model, Effect.sendSharedMsg (Shared.Msg.RaceControlMsg raceControlMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { model | leaderboardState = Leaderboard.update leaderboardMsg model.leaderboardState }
             , Effect.none
-            , Nothing
             )
-
-
-
--- DATA
-
-
-type alias Data =
-    {}
-
-
-type alias ActionData =
-    {}
-
-
-data : BackendTask FatalError Data
-data =
-    BackendTask.succeed {}
 
 
 
 -- VIEW
 
 
-view :
-    App Data ActionData RouteParams
-    -> Shared.Model
-    -> Model
-    -> View (PagesMsg Msg)
-view app { viewModel, raceControl } { leaderboardState } =
-    View.map PagesMsg.fromMsg
-        { title = "Wec"
-        , body =
-            let
-                { clock, lapTotal, lapCount } =
-                    raceControl
-            in
-            [ header
-                [ css
-                    [ position sticky
-                    , top zero
-                    , displayFlex
-                    , justifyContent spaceBetween
-                    , backgroundColor (hsl 0 0 0.4)
-                    ]
+view : Shared.Model -> Model -> View Msg
+view { viewModel, raceControl } { leaderboardState } =
+    { title = "Wec"
+    , body =
+        let
+            { clock, lapTotal, lapCount } =
+                raceControl
+        in
+        [ header
+            [ css
+                [ position sticky
+                , top zero
+                , displayFlex
+                , justifyContent spaceBetween
+                , backgroundColor (hsl 0 0 0.4)
                 ]
-                [ nav []
-                    [ input
-                        [ type_ "range"
-                        , Attributes.max <| String.fromInt lapTotal
-                        , value (String.fromInt lapCount)
-                        , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
-                        ]
-                        []
-                    , labeledButton []
-                        [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
-                        , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                        , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
-                        ]
-                    , text (Clock.getElapsed clock |> Duration.toString)
-                    ]
-                , div []
-                    [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
-                    , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
-                    , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_1) ]
-                    , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_2) ]
-                    , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_3) ]
-                    ]
-                ]
-            , let
-                standings =
-                    raceControl.cars
-                        |> RunningOrder.toList
-                        |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                        |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
-                        |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
-              in
-              DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
             ]
-        }
+            [ nav []
+                [ input
+                    [ type_ "range"
+                    , Attributes.max <| String.fromInt lapTotal
+                    , value (String.fromInt lapCount)
+                    , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+                    ]
+                    []
+                , labeledButton []
+                    [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                    , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
+                    , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                    ]
+                , text (Clock.getElapsed clock |> Duration.toString)
+                ]
+            , div []
+                [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
+                , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_1) ]
+                , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_2) ]
+                , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_3) ]
+                ]
+            ]
+        , let
+            standings =
+                raceControl.cars
+                    |> RunningOrder.toList
+                    |> List.Extra.find (\car -> car.metadata.carNumber == "2")
+                    |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
+                    |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+          in
+          DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
+        ]
+    }
 
 
 config : BestTimes -> Standings -> Leaderboard.Config Entry Msg

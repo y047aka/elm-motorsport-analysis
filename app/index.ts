@@ -1,16 +1,9 @@
-type ElmPagesInit = {
-  load: (elmLoaded: Promise<unknown>) => Promise<void>;
-  flags: unknown;
-};
+import { Elm } from "./src/Main.elm";
 
-const config: ElmPagesInit = {
-  load: async function (elmLoaded) {
-    const app = await elmLoaded;
-    console.log("App loaded", app);
-  },
-  flags: function () {
-    return "You can decode this in Shared.elm using Json.Decode.string!";
-  },
-};
+const node = document.getElementById("app");
 
-export default config;
+Elm.Main.init({
+  node,
+  // A plain string flag, decoded in Shared.elm (currently ignored there).
+  flags: "You can decode this in Shared.elm using Json.Decode.string!",
+});
