@@ -1,14 +1,7 @@
-module UI.Label exposing (basicLabel, label)
+module UI.Label exposing (basicLabel)
 
 import Html.Styled as Html exposing (Attribute, Html)
 import Html.Styled.Attributes exposing (class)
-
-
-{-| Basic label/badge using daisyUI badge class
--}
-label : List (Attribute msg) -> List (Html msg) -> Html msg
-label attrs children =
-    Html.div (class "badge" :: attrs) children
 
 
 {-| Outlined badge

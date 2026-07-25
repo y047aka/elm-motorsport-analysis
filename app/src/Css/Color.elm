@@ -1,4 +1,4 @@
-module Css.Color exposing (Color(..), currentColor, gray, oklch, transparent)
+module Css.Color exposing (Color(..), oklch, transparent)
 
 import Css
 
@@ -17,19 +17,9 @@ type Color
     | Transparent
 
 
-currentColor : Color
-currentColor =
-    CurrentColor
-
-
 transparent : Color
 transparent =
     Transparent
-
-
-gray : Color
-gray =
-    ColorValue (Css.hex "#eee")
 
 
 oklch : Float -> Float -> Float -> Css.Color

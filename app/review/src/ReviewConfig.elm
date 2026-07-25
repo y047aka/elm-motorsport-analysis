@@ -35,6 +35,7 @@ import NoUnused.CustomTypeConstructorArgs
 import NoUnused.CustomTypeConstructors
 import NoUnused.Dependencies
 import NoUnused.Exports
+import NoUnused.Modules
 import NoUnused.Parameters
 import NoUnused.Patterns
 import NoUnused.Variables
@@ -48,7 +49,7 @@ config =
       NoSimpleLetBody.rule
 
     -- jfmengels/elm-review-cognitive-complexity
-    , CognitiveComplexity.rule 15
+    -- , CognitiveComplexity.rule 15
 
     -- jfmengels/elm-review-common
     , NoConfusingPrefixOperator.rule
@@ -67,19 +68,20 @@ config =
         }
 
     -- jfmengels/elm-review-performance
-    , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
+    -- , NoUnoptimizedRecursion.rule (NoUnoptimizedRecursion.optOutWithComment "IGNORE TCO")
 
     -- jfmengels/elm-review-the-elm-architecture
     , NoConfusingPrefixOperator.rule
     , NoRecursiveUpdate.rule
-    , NoUselessSubscriptions.rule
+    -- , NoUselessSubscriptions.rule
 
     -- jfmengels/elm-review-unused
-    , NoUnused.CustomTypeConstructorArgs.rule
+    -- , NoUnused.CustomTypeConstructorArgs.rule
     -- , NoUnused.CustomTypeConstructors.rule []
     -- , NoUnused.Dependencies.rule
     -- , NoUnused.Exports.rule
-    , NoUnused.Parameters.rule
+    , NoUnused.Modules.rule
+    -- , NoUnused.Parameters.rule
     , NoUnused.Patterns.rule
-    , NoUnused.Variables.rule
+    -- , NoUnused.Variables.rule
     ]
