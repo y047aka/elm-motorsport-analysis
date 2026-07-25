@@ -10,6 +10,7 @@ wec_2026 =
         [ Imola_6h
         , Spa_6h
         , LeMans_24h
+        , SaoPaulo_6h
         ]
 
 
@@ -44,6 +45,14 @@ toEventSummary_Wec_2026 event =
             , name = "24 Hours of Le Mans"
             , season = 2026
             , date = "2026-06-13"
+            , jsonPath = jsonPath
+            }
+
+        SaoPaulo_6h ->
+            { id = id
+            , name = "6 Hours of São Paulo"
+            , season = 2026
+            , date = "2026-07-12"
             , jsonPath = jsonPath
             }
 
