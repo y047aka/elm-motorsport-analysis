@@ -1,97 +1,72 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Motorsport race analysis and visualization app. pnpm workspaces monorepo:
 
-## Project Overview
+- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css)
+- **`/package`** — reusable Elm library (motorsport domain models)
+- **`/cli`** — Rust CLI for CSV→JSON data processing
 
-Motorsport race analysis and visualization application. Monorepo with Elm frontend and Rust CLI.
+Data flow: CSV telemetry → Rust CLI → JSON → Elm visualization.
 
 ## Commands
 
-### Development
-```bash
-nix run .#dev                # Vite dev server (localhost:1234)
-nix run .#build              # Production build (Vite)
-```
+All commands run through the Nix flake; `nix flake show` lists everything.
 
-### Testing
-```bash
-nix run .#test               # Elm package tests (elm-verify-examples + elm-test)
-nix run .#test-vrt           # Playwright VRT tests
-nix run .#update-snapshots-vrt  # Update Playwright VRT snapshots
-```
+| Command | Purpose |
+| --- | --- |
+| `nix run .#dev` | Vite dev server (localhost:1234) |
+| `nix run .#build` | Production build |
+| `nix run .#test` | elm-verify-examples + elm-test |
+| `nix run .#test-vrt` | Playwright VRT |
+| `nix run .#update-snapshots-vrt` | Update VRT snapshots |
+| `nix run .#review-app` / `.#review-package` | elm-review |
+| `nix run .#format` | elm-format |
+| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | Rust CLI build / test / CSV→JSON |
+| `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
+| `nix run .#flix-build` / `.#flix-test` / `.#deps-audit` | Flix helpers for `/update-deps` |
 
-### Code Quality
-```bash
-nix run .#review-app         # elm-review on app
-nix run .#review-package     # elm-review on package
-nix run .#format             # Format Elm code (elm-format)
-```
+`/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
-### Rust CLI
-```bash
-nix run .#cli-build          # Build CLI
-nix run .#cli-test           # Run Rust tests
-```
-
-### Dependency Management
-```bash
-/update-deps                 # Audit and update all dependencies (Claude skill)
-/update-deps [npm|elm|rust|nix]  # Target a specific ecosystem
-```
+Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins the
+toolchain and sets the working directory for each one.
 
 ## Architecture
 
-### Monorepo Structure (pnpm workspaces)
-- **`/app`** - Elm SPA web application (frontend), bundled by Vite
-- **`/package`** - Reusable Elm library (motorsport domain models)
-- **`/cli`** - Rust CLI for CSV→JSON data processing
+**`/app/src/`** — hand-written multi-page SPA on `Browser.application` (framework-less;
+no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via `Http`.
 
-### Frontend Stack
-- **Elm 0.19.1** SPA built on `Browser.application` (framework-less; no elm-pages)
-- **Tailwind CSS 4.x** + elm-css for styling
-- **Vite** for bundling (`vite-plugin-elm`)
-- **Playwright** for visual regression testing
+- `Main.elm` — top-level Model/Msg, URL handling, page dispatch
+- `Route.elm` — `Url.Parser` routes: `/`, `/debug`, `/wec/:season/:event`
+- `Shared.elm` — app-wide state (race control, view model) + data loading
+- `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
+- `Page/` — one module per page, plain TEA
+- `Css/` (Color, Palette, Typography), `Data/` (series config), `UI/` (Button, Label, Table)
 
-### SPA architecture (`/app/src/`)
-
-The application is a hand-written multi-page SPA. `index.ts` boots
-`Elm.Main.init`; `Main.elm` owns the `Browser.application` and wires everything
-together. Data is fetched at runtime via `Http` (no `BackendTask`).
-
-- `Main.elm` - `Browser.application`: top-level Model/Msg, URL handling, page dispatch
-- `Route.elm` - client-side routing (`Url.Parser`): `/`, `/debug`, `/wec/:season/:event`
-- `Shared.elm` / `Shared/Msg.elm` - app-wide state (race control, view model) + data loading
-- `Effect.elm` - elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
-- `View.elm` - `{ title, body }` document type
-- `Page/` - one module per page (`Index`, `Debug`, `Wec/Event`), plain TEA
-
-**`/app/src/`** - Shared view/data modules
-- `Css/` - Type-safe styling (Color, Palette, Typography)
-- `Data/` - Series configurations (WEC)
-- `UI/` - Reusable components (Button, Label, Table)
-
-**`/package/src/Motorsport/`** - Domain models
-- `Car.elm`, `Driver.elm`, `Lap.elm`, `Gap.elm`
-- `ViewModel.elm`, `ViewModel/` - Computed models for views (Standings, LapHistory, BestTimes)
-- `Chart/` - Chart rendering (GapChart, BoxPlot)
-
-### Data Flow
-CSV telemetry → Rust CLI parsing → JSON → Elm frontend visualization
+**`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
+`ViewModel/` for computed view state (Standings, LapHistory, BestTimes),
+`Chart/` for rendering (GapChart, BoxPlot).
 
 ## Testing
 
-### Playwright VRT
-- Local: runs directly on host, 1% pixel ratio tolerance for cross-platform diffs
-- CI: runs on ubuntu-latest, strict 0 pixel tolerance
-- Snapshot updates: run `nix run .#update-snapshots-vrt` locally, or trigger workflow_dispatch in CI to auto-push to branch
-- Test files in `/app/tests/`
-
-### Elm Tests
-- Unit tests: `elm-test`
-- Example verification: `elm-verify-examples` (docstring examples)
-- Benchmarks: `/package/benchmark/`
+- **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring examples.
+  Benchmarks live in `/package/benchmark/`.
+- **VRT** (`/app/tests/`) — local runs allow 1% pixel tolerance for cross-platform
+  diffs; CI (ubuntu-latest) is strict 0. Update snapshots locally, or trigger the
+  workflow_dispatch in CI to auto-push to the branch.
 
 ## Environment
 
-Nix flake provides reproducible dev environment (Node.js 26, Rust toolchain). Use `direnv allow` or `nix develop`. Run `nix flake show` to list all available `nix run` commands.
+Nix flake provides the reproducible dev environment (Node.js 26, Rust toolchain).
+Use `direnv allow` or `nix develop`.
+
+## Permissions
+
+`.claude/settings.json` follows one rule: **allow broadly, then carve out the
+destructive flags with `ask`** — `ask` wins over `allow`, so `Bash(git branch:*)`
+can stay open while `-D` still prompts. Before adding a narrow `allow` entry, check
+whether a broader one plus an `ask` carve-out covers it; that keeps read-only flags
+(`--show-current`, `-r`, ...) from silently falling through to a prompt. `deny` is
+reserved for the genuinely irreversible: force push, publish, `sudo`, secret files.
+
+Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
+rules can enforce the secret-file `deny` entries, which Bash bypasses.
