@@ -1,0 +1,731 @@
+{
+  "name": "6 Hours of Spa",
+  "startingGrid": [
+    {
+      "position": 11,
+      "car": {
+        "carNumber": "007",
+        "drivers": [
+          {
+            "name": "Harry TINCKNELL"
+          },
+          {
+            "name": "Tom GAMBLE"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Aston Martin Thor Team",
+        "manufacturer": "Aston Martin"
+      }
+    },
+    {
+      "position": 7,
+      "car": {
+        "carNumber": "009",
+        "drivers": [
+          {
+            "name": "Marco SØRENSEN"
+          },
+          {
+            "name": "Alex RIBERAS"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Aston Martin Thor Team",
+        "manufacturer": "Aston Martin"
+      }
+    },
+    {
+      "position": 28,
+      "car": {
+        "carNumber": "10",
+        "drivers": [
+          {
+            "name": "Antares AU"
+          },
+          {
+            "name": "Thomas FLEMING"
+          },
+          {
+            "name": "Marvin KIRCHHÖFER"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Garage 59",
+        "manufacturer": "McLaren"
+      }
+    },
+    {
+      "position": 0,
+      "car": {
+        "carNumber": "12",
+        "drivers": [
+          {
+            "name": "Will STEVENS"
+          },
+          {
+            "name": "Louis DELÉTRAZ"
+          },
+          {
+            "name": "Norman NATO"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Cadillac Hertz Team Jota",
+        "manufacturer": "Cadillac"
+      }
+    },
+    {
+      "position": 5,
+      "car": {
+        "carNumber": "15",
+        "drivers": [
+          {
+            "name": "Kevin MAGNUSSEN"
+          },
+          {
+            "name": "Raffaele MARCIELLO"
+          },
+          {
+            "name": "Dries VANTHOOR"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "BMW M Team WRT",
+        "manufacturer": "BMW"
+      }
+    },
+    {
+      "position": 16,
+      "car": {
+        "carNumber": "17",
+        "drivers": [
+          {
+            "name": "André LOTTERER"
+          },
+          {
+            "name": "Mathys JAUBERT"
+          },
+          {
+            "name": "Luis Felipe DERANI"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Genesis Magma Racing",
+        "manufacturer": "Genesis"
+      }
+    },
+    {
+      "position": 13,
+      "car": {
+        "carNumber": "19",
+        "drivers": [
+          {
+            "name": "Daniel JUNCADELLA"
+          },
+          {
+            "name": "Mathieu JAMINET"
+          },
+          {
+            "name": "Paul-Loup CHATIN"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Genesis Magma Racing",
+        "manufacturer": "Genesis"
+      }
+    },
+    {
+      "position": 10,
+      "car": {
+        "carNumber": "20",
+        "drivers": [
+          {
+            "name": "René RAST"
+          },
+          {
+            "name": "Sheldon VAN DER LINDE"
+          },
+          {
+            "name": "Robin FRIJNS"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "BMW M Team WRT",
+        "manufacturer": "BMW"
+      }
+    },
+    {
+      "position": 20,
+      "car": {
+        "carNumber": "21",
+        "drivers": [
+          {
+            "name": "François HÉRIAU"
+          },
+          {
+            "name": "Simon MANN"
+          },
+          {
+            "name": "Alessio ROVERA"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Vista AF Corse",
+        "manufacturer": "Ferrari"
+      }
+    },
+    {
+      "position": 33,
+      "car": {
+        "carNumber": "23",
+        "drivers": [
+          {
+            "name": "Gray NEWELL"
+          },
+          {
+            "name": "Eduardo BARRICHELLO"
+          },
+          {
+            "name": "Jonny ADAM"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Heart of Racing Team",
+        "manufacturer": "Aston Martin"
+      }
+    },
+    {
+      "position": 19,
+      "car": {
+        "carNumber": "27",
+        "drivers": [
+          {
+            "name": "Ian JAMES"
+          },
+          {
+            "name": "Zacharie ROBICHON"
+          },
+          {
+            "name": "Mattia DRUDI"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Heart of Racing Team",
+        "manufacturer": "Aston Martin"
+      }
+    },
+    {
+      "position": 24,
+      "car": {
+        "carNumber": "32",
+        "drivers": [
+          {
+            "name": "Darren LEUNG"
+          },
+          {
+            "name": "Sean GELAEL"
+          },
+          {
+            "name": "Augusto FARFUS"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Team WRT",
+        "manufacturer": "BMW"
+      }
+    },
+    {
+      "position": 27,
+      "car": {
+        "carNumber": "33",
+        "drivers": [
+          {
+            "name": "Blake MCDONALD"
+          },
+          {
+            "name": "Jonny EDGAR"
+          },
+          {
+            "name": "Nicky CATSBURG"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "TF Sport",
+        "manufacturer": "Corvette"
+      }
+    },
+    {
+      "position": 21,
+      "car": {
+        "carNumber": "34",
+        "drivers": [
+          {
+            "name": "Salih YOLUÇ"
+          },
+          {
+            "name": "Peter DEMPSEY"
+          },
+          {
+            "name": "Charlie EASTWOOD"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Racing Team Turkey by TF",
+        "manufacturer": "Corvette"
+      }
+    },
+    {
+      "position": 2,
+      "car": {
+        "carNumber": "35",
+        "drivers": [
+          {
+            "name": "Ferdinand HABSBURG"
+          },
+          {
+            "name": "António FÉLIX DA COSTA"
+          },
+          {
+            "name": "Charles MILESI"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Alpine Endurance Team",
+        "manufacturer": "Alpine"
+      }
+    },
+    {
+      "position": 3,
+      "car": {
+        "carNumber": "36",
+        "drivers": [
+          {
+            "name": "Frédéric MAKOWIECKI"
+          },
+          {
+            "name": "Victor MARTINS"
+          },
+          {
+            "name": "Jules GOUNON"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Alpine Endurance Team",
+        "manufacturer": "Alpine"
+      }
+    },
+    {
+      "position": 4,
+      "car": {
+        "carNumber": "38",
+        "drivers": [
+          {
+            "name": "Earl BAMBER"
+          },
+          {
+            "name": "Sébastien BOURDAIS"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Cadillac Hertz Team Jota",
+        "manufacturer": "Cadillac"
+      }
+    },
+    {
+      "position": 6,
+      "car": {
+        "carNumber": "50",
+        "drivers": [
+          {
+            "name": "Miguel MOLINA"
+          },
+          {
+            "name": "Nicklas NIELSEN"
+          },
+          {
+            "name": "Antonio FUOCO"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Ferrari AF Corse",
+        "manufacturer": "Ferrari"
+      }
+    },
+    {
+      "position": 14,
+      "car": {
+        "carNumber": "51",
+        "drivers": [
+          {
+            "name": "Antonio GIOVINAZZI"
+          },
+          {
+            "name": "James CALADO"
+          },
+          {
+            "name": "Alessandro PIER GUIDI"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Ferrari AF Corse",
+        "manufacturer": "Ferrari"
+      }
+    },
+    {
+      "position": 34,
+      "car": {
+        "carNumber": "54",
+        "drivers": [
+          {
+            "name": "Thomas FLOHR"
+          },
+          {
+            "name": "Francesco CASTELLACCI"
+          },
+          {
+            "name": "Davide RIGON"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Vista AF Corse",
+        "manufacturer": "Ferrari"
+      }
+    },
+    {
+      "position": 30,
+      "car": {
+        "carNumber": "58",
+        "drivers": [
+          {
+            "name": "Alexander WEST"
+          },
+          {
+            "name": "Finn GEHRSITZ"
+          },
+          {
+            "name": "Benjamin GOETHE"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Garage 59",
+        "manufacturer": "McLaren"
+      }
+    },
+    {
+      "position": 25,
+      "car": {
+        "carNumber": "61",
+        "drivers": [
+          {
+            "name": "Martin BERRY"
+          },
+          {
+            "name": "Rui ANDRADE"
+          },
+          {
+            "name": "Maxime MARTIN"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Iron Lynx",
+        "manufacturer": "Mercedes"
+      }
+    },
+    {
+      "position": 29,
+      "car": {
+        "carNumber": "69",
+        "drivers": [
+          {
+            "name": "Anthony MCINTOSH"
+          },
+          {
+            "name": "Parker THOMPSON"
+          },
+          {
+            "name": "Daniel HARPER"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Team WRT",
+        "manufacturer": "BMW"
+      }
+    },
+    {
+      "position": 12,
+      "car": {
+        "carNumber": "7",
+        "drivers": [
+          {
+            "name": "Mike CONWAY"
+          },
+          {
+            "name": "Nyck DE VRIES"
+          },
+          {
+            "name": "Kamui KOBAYASHI"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Toyota Racing",
+        "manufacturer": "Toyota"
+      }
+    },
+    {
+      "position": 18,
+      "car": {
+        "carNumber": "77",
+        "drivers": [
+          {
+            "name": "Eric POWELL"
+          },
+          {
+            "name": "Sebastian PRIAULX"
+          },
+          {
+            "name": "Ben TUCK"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Proton Competition",
+        "manufacturer": "Ford"
+      }
+    },
+    {
+      "position": 17,
+      "car": {
+        "carNumber": "78",
+        "drivers": [
+          {
+            "name": "Tom VAN ROMPUY"
+          },
+          {
+            "name": "Hadrien DAVID"
+          },
+          {
+            "name": "Esteban MASSON"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Akkodis ASP Team",
+        "manufacturer": "Lexus"
+      }
+    },
+    {
+      "position": 32,
+      "car": {
+        "carNumber": "79",
+        "drivers": [
+          {
+            "name": "Johannes ZELGER"
+          },
+          {
+            "name": "Matteo CRESSONI"
+          },
+          {
+            "name": "Lin HODENIUS"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Iron Lynx",
+        "manufacturer": "Mercedes"
+      }
+    },
+    {
+      "position": 15,
+      "car": {
+        "carNumber": "8",
+        "drivers": [
+          {
+            "name": "Brendon HARTLEY"
+          },
+          {
+            "name": "Ryo HIRAKAWA"
+          },
+          {
+            "name": "Sébastien BUEMI"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Toyota Racing",
+        "manufacturer": "Toyota"
+      }
+    },
+    {
+      "position": 9,
+      "car": {
+        "carNumber": "83",
+        "drivers": [
+          {
+            "name": "Philip HANSON"
+          },
+          {
+            "name": "Yifei YE"
+          },
+          {
+            "name": "Robert KUBICA"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "AF Corse",
+        "manufacturer": "Ferrari"
+      }
+    },
+    {
+      "position": 23,
+      "car": {
+        "carNumber": "87",
+        "drivers": [
+          {
+            "name": "Petru UMBRÄRESCU"
+          },
+          {
+            "name": "Clemens SCHMID"
+          },
+          {
+            "name": "José María LÓPEZ"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Akkodis ASP Team",
+        "manufacturer": "Lexus"
+      }
+    },
+    {
+      "position": 22,
+      "car": {
+        "carNumber": "88",
+        "drivers": [
+          {
+            "name": "Stefano GATTUSO"
+          },
+          {
+            "name": "Giammarco LEVORATO"
+          },
+          {
+            "name": "Logan SARGEANT"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Proton Competition",
+        "manufacturer": "Ford"
+      }
+    },
+    {
+      "position": 31,
+      "car": {
+        "carNumber": "91",
+        "drivers": [
+          {
+            "name": "James COTTINGHAM"
+          },
+          {
+            "name": "Timur BOGUSLAVSKIY"
+          },
+          {
+            "name": "Ayhancan GÜVEN"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "Manthey DK Engineering",
+        "manufacturer": "Porsche"
+      }
+    },
+    {
+      "position": 26,
+      "car": {
+        "carNumber": "92",
+        "drivers": [
+          {
+            "name": "Yasser SHAHIN"
+          },
+          {
+            "name": "Riccardo PERA"
+          },
+          {
+            "name": "Richard LIETZ"
+          }
+        ],
+        "class": "LMGT3",
+        "group": "",
+        "team": "The Bend Manthey",
+        "manufacturer": "Porsche"
+      }
+    },
+    {
+      "position": 8,
+      "car": {
+        "carNumber": "93",
+        "drivers": [
+          {
+            "name": "Paul DI RESTA"
+          },
+          {
+            "name": "Nick CASSIDY"
+          },
+          {
+            "name": "Stoffel VANDOORNE"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Peugeot Totalenergies",
+        "manufacturer": "Peugeot"
+      }
+    },
+    {
+      "position": 1,
+      "car": {
+        "carNumber": "94",
+        "drivers": [
+          {
+            "name": "Loïc DUVAL"
+          },
+          {
+            "name": "Théo POURCHAIRE"
+          },
+          {
+            "name": "Malthe JAKOBSEN"
+          }
+        ],
+        "class": "HYPERCAR",
+        "group": "",
+        "team": "Peugeot Totalenergies",
+        "manufacturer": "Peugeot"
+      }
+    }
+  ]
+}
