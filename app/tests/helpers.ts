@@ -31,6 +31,9 @@ export async function waitForPageReady(page: Page, contentSelector: string) {
 export async function setLapCount(page: Page, lap: number) {
   const slider = page.locator('input[type="range"]');
   await slider.waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  // The slider renders with max="0" until the race JSON has been fetched, and a
+  // value set before that is clamped back to 0. Wait for the lap data to land.
+  await expect(slider).not.toHaveAttribute('max', '0', { timeout: WAIT_TIMEOUT });
   await page.evaluate((lapCount) => {
     const el = document.querySelector('input[type="range"]') as HTMLInputElement;
     const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
