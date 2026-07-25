@@ -9,6 +9,7 @@ module Page.Index exposing (view)
 import Css exposing (block, color, display, em, fontSize, inherit)
 import Data.Series.Wec_2024 exposing (wec_2024)
 import Data.Series.Wec_2025 exposing (wec_2025)
+import Data.Series.Wec_2026 exposing (wec_2026)
 import Html.Styled exposing (Html, div, h2, section, text)
 import Html.Styled.Attributes exposing (attribute, css)
 import Route exposing (Route)
@@ -20,7 +21,17 @@ view =
     { title = "Race Analysis"
     , body =
         [ div [ attribute "data-theme" "forest" ]
-            [ section_ "WEC 2025"
+            [ section_ "WEC 2026"
+                (List.map
+                    (\eventSummary ->
+                        link
+                            { label = eventSummary.name
+                            , route = Route.WecEvent { season = "2026", event = eventSummary.id }
+                            }
+                    )
+                    wec_2026
+                )
+            , section_ "WEC 2025"
                 (List.map
                     (\eventSummary ->
                         link
