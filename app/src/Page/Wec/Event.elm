@@ -13,7 +13,7 @@ import Data.Series.EventSummary exposing (EventSummary)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
-import Html.Styled exposing (Html, button, div, main_, nav, text)
+import Html.Styled exposing (Html, a, button, div, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
@@ -24,6 +24,7 @@ import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
+import Route
 import Shared
 import Shared.Msg
 import Task
@@ -270,7 +271,10 @@ navigation eventSummary raceControl currentMode =
             , property "column-gap" "40px"
             ]
         ]
-        [ div [ Attributes.class "text-sm whitespace-nowrap" ] [ text headerTitle ]
+        [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
+            [ backLink
+            , div [ Attributes.class "text-sm" ] [ text headerTitle ]
+            ]
         , PlaybackControls.view
             { raceControl = raceControl
             , onStart = StartRace
@@ -279,6 +283,20 @@ navigation eventSummary raceControl currentMode =
             }
         , viewModeSelector currentMode
         ]
+
+
+{-| The app now ships as a native window without browser back navigation, so the
+race list has to be reachable from the page itself.
+-}
+backLink : Html Msg
+backLink =
+    a
+        [ Route.href Route.Index
+        , Attributes.class "btn btn-sm btn-square btn-ghost opacity-60 hover:opacity-100"
+        , attribute "aria-label" "Back to the race list"
+        , Attributes.title "Back to the race list"
+        ]
+        [ text "←" ]
 
 
 viewModeSelector : Mode -> Html Msg
