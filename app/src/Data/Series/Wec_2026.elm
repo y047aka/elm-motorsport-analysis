@@ -9,6 +9,7 @@ wec_2026 =
     List.map toEventSummary_Wec_2026
         [ Imola_6h
         , Spa_6h
+        , LeMans_24h
         ]
 
 
@@ -35,6 +36,14 @@ toEventSummary_Wec_2026 event =
             , name = "6 Hours of Spa"
             , season = 2026
             , date = "2026-05-09"
+            , jsonPath = jsonPath
+            }
+
+        LeMans_24h ->
+            { id = id
+            , name = "24 Hours of Le Mans"
+            , season = 2026
+            , date = "2026-06-13"
             , jsonPath = jsonPath
             }
 
