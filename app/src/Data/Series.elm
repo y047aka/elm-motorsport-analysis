@@ -4,7 +4,7 @@ import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.Wec exposing (Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
 import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
-
+import Data.Series.Wec_2026 exposing (carImageFileName_2026, toEventSummary_Wec_2026)
 
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary
 toEventSummary ( season, event ) =
@@ -14,6 +14,9 @@ toEventSummary ( season, event ) =
 
         2025 ->
             Just (toEventSummary_Wec_2025 event)
+
+        2026 ->
+            Just (toEventSummary_Wec_2026 event)
 
         _ ->
             Nothing
@@ -37,6 +40,10 @@ carImageUrl_Wec season carNumber =
         2025 ->
             carImageFileName_2025 carNumber
                 |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2025", String.dropLeft 6 fileName ])
+
+        2026 ->
+            carImageFileName_2026 carNumber
+                |> Maybe.map (\fileName -> String.concat [ "/static/images/wec/2026", String.dropLeft 6 fileName ])
 
         _ ->
             Nothing

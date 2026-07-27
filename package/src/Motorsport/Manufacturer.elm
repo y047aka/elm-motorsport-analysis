@@ -28,6 +28,7 @@ type Manufacturer
     | Corvette
     | Ferrari
     | Ford
+    | Genesis
     | Lexus
     | McLaren
     | Mercedes
@@ -60,6 +61,9 @@ fromString str =
 
         "Ford" ->
             Ford
+
+        "Genesis" ->
+            Genesis
 
         "Lexus" ->
             Lexus
@@ -106,6 +110,9 @@ toString manufacturer =
 
         Ford ->
             "Ford"
+
+        Genesis ->
+            "Genesis"
 
         Lexus ->
             "Lexus"
@@ -159,6 +166,9 @@ toColor manufacturer =
         Ford ->
             -- Ford Blue
             oklch 0.45 0.25 260
+
+        Genesis ->
+            oklch 0.6 0 0
 
         Lexus ->
             -- Lexus Dark Red
@@ -241,6 +251,9 @@ toLogoUrl manufacturer =
 
         Ford ->
             Just "/assets/manufacturer-logos/ford.png"
+
+        Genesis ->
+            Just "/assets/manufacturer-logos/genesis.png"
 
         Lexus ->
             Just "/assets/manufacturer-logos/lexus.png"
