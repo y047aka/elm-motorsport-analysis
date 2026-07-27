@@ -114,7 +114,7 @@ carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
     , CarNumberBadge.viewRow item
     , div [ class "text-xs opacity-70" ]
-        [ text (item.currentDriver |> Maybe.map (.name >> Driver.toSurnameDisplay) |> Maybe.withDefault "") ]
+        [ text (item.currentDriver |> Maybe.withDefault Driver.unknown |> Driver.toSurname) ]
     , div [ class "text-xs text-right" ]
         [ text (Gap.toString item.intervalToAhead) ]
     , if item.status == Car.InPit then

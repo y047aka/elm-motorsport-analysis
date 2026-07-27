@@ -17,7 +17,7 @@ import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
 import List.Extra
 import Motorsport.Car exposing (Car, CarNumber)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 
@@ -242,7 +242,7 @@ lapDecoder : Decoder Lap
 lapDecoder =
     Decode.succeed Lap
         |> required "car_number" string
-        |> required "driver" (Decode.map Driver string)
+        |> required "driver" (Decode.map Driver.fromName string)
         |> required "lap" int
         |> required "position" (Decode.maybe int)
         |> required "time" durationDecoder

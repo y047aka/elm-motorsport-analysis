@@ -3,7 +3,7 @@ module Motorsport.TimelineEventTest exposing (suite)
 import Expect
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -203,7 +203,7 @@ carWithLaps : List Lap -> Car
 carWithLaps laps =
     { metadata =
         { carNumber = "1"
-        , drivers = [ Driver "Test Driver" ]
+        , drivers = [ Driver.fromName "Test Driver" ]
         , class = Class.none
         , group = "H"
         , team = "Test Team"
@@ -226,7 +226,7 @@ lapAt lapNumber elapsed =
     in
     { base
         | carNumber = "1"
-        , driver = Driver "Test Driver"
+        , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
         , elapsed = elapsed

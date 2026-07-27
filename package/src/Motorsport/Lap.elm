@@ -22,7 +22,7 @@ module Motorsport.Lap exposing
 
 import List.Extra
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Sector as Sector exposing (Sector(..))
 
@@ -75,7 +75,7 @@ type alias MiniSectorData =
 empty : Lap
 empty =
     { carNumber = ""
-    , driver = Driver ""
+    , driver = Driver.unknown
     , lap = 0
     , position = Nothing
     , time = 0

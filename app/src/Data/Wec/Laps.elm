@@ -18,7 +18,7 @@ import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import List.Extra
 import Motorsport.Car exposing (Car, CarNumber)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 
@@ -176,7 +176,7 @@ accumulate raw ( bests, acc ) =
 
         lap =
             { carNumber = raw.carNumber
-            , driver = Driver raw.driverName
+            , driver = Driver.fromName raw.driverName
             , lap = raw.lapNumber
             , position = Nothing
             , time = raw.lapTime

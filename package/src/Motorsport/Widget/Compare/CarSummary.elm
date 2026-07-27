@@ -12,6 +12,7 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
+import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings exposing (Entry)
@@ -122,6 +123,12 @@ the others.
 -}
 driverList : Entry -> Html msg
 driverList item =
+    let
+        isCurrentDriver driver =
+            item.currentDriver
+                |> Maybe.map (Driver.isSame driver)
+                |> Maybe.withDefault False
+    in
     div
         [ css
             [ property "display" "flex"
@@ -133,20 +140,16 @@ driverList item =
         ]
         (List.map
             (\driver ->
-                let
-                    isCurrentDriver =
-                        Maybe.map .name item.currentDriver == Just driver.name
-                in
                 div
                     [ css
-                        [ if isCurrentDriver then
+                        [ if isCurrentDriver driver then
                             opacity (num 1)
 
                           else
                             opacity (num 0.4)
                         ]
                     ]
-                    [ text driver.name ]
+                    [ text (Driver.toFullName driver) ]
             )
             item.metadata.drivers
         )

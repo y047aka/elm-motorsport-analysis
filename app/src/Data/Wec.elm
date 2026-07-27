@@ -15,7 +15,7 @@ import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Manufacturer as Manufacturer
 
 
@@ -67,5 +67,5 @@ carMetadataDecoder =
 
 driverDecoder : Decoder Driver
 driverDecoder =
-    Decode.map Driver
+    Decode.map Driver.fromName
         (field "name" string)

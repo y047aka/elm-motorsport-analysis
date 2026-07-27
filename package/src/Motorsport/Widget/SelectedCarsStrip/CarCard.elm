@@ -78,7 +78,7 @@ cardHeader item =
                 , property "text-overflow" "ellipsis"
                 ]
             ]
-            [ text (item.currentDriver |> Maybe.map (.name >> Driver.toDisplayName) |> Maybe.withDefault "") ]
+            [ text (item.currentDriver |> Maybe.withDefault Driver.unknown |> Driver.toFullName) ]
         ]
 
 

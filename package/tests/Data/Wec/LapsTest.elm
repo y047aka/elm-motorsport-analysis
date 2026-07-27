@@ -5,7 +5,7 @@ import Expect
 import Json.Decode as Decode
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Test exposing (Test, describe, test)
 
@@ -140,7 +140,7 @@ placeholderCar : String -> Car
 placeholderCar carNumber =
     { metadata =
         { carNumber = carNumber
-        , drivers = [ Driver "D" ]
+        , drivers = [ Driver.fromName "D" ]
         , class = Class.none
         , group = ""
         , team = ""

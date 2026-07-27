@@ -58,12 +58,11 @@ import DataView.Options exposing (Options, PaginationOption(..), SelectingOption
 import Html.Styled exposing (Html, div, img, span, text)
 import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
-import List.Extra
 import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
@@ -289,30 +288,25 @@ driverAndTeamColumn_Wec { getter } =
 viewDriverAndTeamColumn_Wec : { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } -> Html msg
 viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
     let
-        formatName name =
-            String.split " " name
-                |> List.Extra.unconsLast
-                |> Maybe.map (\( lastName, rest ) -> String.join "." (List.map (String.left 1) rest ++ [ String.toUpper lastName ]))
-                |> Maybe.withDefault (String.toUpper name)
+        isCurrentDriver driver =
+            currentDriver
+                |> Maybe.map (Driver.isSame driver)
+                |> Maybe.withDefault False
     in
     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
         [ div [] [ text metadata.team ]
         , div [ css [ displayFlex, property "column-gap" "10px" ] ] <|
             List.map
                 (\driver ->
-                    let
-                        isCurrentDriver =
-                            Maybe.map .name currentDriver == Just driver.name
-                    in
                     div
                         [ css
                             [ fontSize (px 10)
                             , fontStyle italic
-                            , when (not isCurrentDriver)
+                            , when (not (isCurrentDriver driver))
                                 (color (hsl 0 0 0.75))
                             ]
                         ]
-                        [ text (formatName driver.name) ]
+                        [ text (Driver.toInitialAndSurname driver) ]
                 )
                 metadata.drivers
         ]

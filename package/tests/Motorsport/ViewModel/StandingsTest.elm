@@ -3,7 +3,7 @@ module Motorsport.ViewModel.StandingsTest exposing (suite)
 import Expect
 import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
 import Motorsport.Manufacturer as Manufacturer
@@ -106,6 +106,6 @@ createMetadata carNumber =
     , class = Class.none
     , group = "Test Group"
     , team = "Test Team"
-    , drivers = [ Driver "Test Driver" ]
+    , drivers = [ Driver.fromName "Test Driver" ]
     , manufacturer = Manufacturer.Other
     }
