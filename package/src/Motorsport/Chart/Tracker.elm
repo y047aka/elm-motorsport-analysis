@@ -8,7 +8,7 @@ import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.Standings as Standings exposing (Standings, Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)

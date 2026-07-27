@@ -13,7 +13,7 @@ import Html.Styled.Events exposing (onClick)
 import List.Extra
 import Motorsport.Class exposing (Class)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.ViewModel.Standings as Standings exposing (ClassInfo, Standings, Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (ClassInfo, Entry, Standings)
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its

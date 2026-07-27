@@ -40,14 +40,16 @@ batch =
     Batch
 
 
-{-| Run a `Cmd` as an effect. -}
+{-| Run a `Cmd` as an effect.
+-}
 sendCmd : Cmd msg -> Effect msg
 sendCmd =
     SendCmd
 
 
 {-| Ask the shared model to handle a message. Pages use this to load data or to
-delegate to shared state (e.g. race control). -}
+delegate to shared state (e.g. race control).
+-}
 sendSharedMsg : Shared.Msg.Msg -> Effect msg
 sendSharedMsg =
     SendSharedMsg
@@ -71,7 +73,8 @@ map fn effect =
 
 
 {-| Interpret an `Effect` into a real `Cmd`. Called from `Main`, which owns the
-top-level `Msg` type. -}
+top-level `Msg` type.
+-}
 toCmd :
     { fromPageMsg : pageMsg -> mainMsg
     , fromSharedMsg : Shared.Msg.Msg -> mainMsg

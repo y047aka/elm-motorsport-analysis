@@ -111,6 +111,7 @@ type alias Entry =
     , positionInClass : Int
     , status : Status
     , metadata : Car.Metadata
+
     -- A raw CSS color string; see ClassInfo.color.
     , classColor : String
     , lapsCompleted : Int

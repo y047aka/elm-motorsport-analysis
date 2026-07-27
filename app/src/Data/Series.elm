@@ -6,6 +6,7 @@ import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_
 import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
 import Data.Series.Wec_2026 exposing (carImageFileName_2026, toEventSummary_Wec_2026)
 
+
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary
 toEventSummary ( season, event ) =
     case season of

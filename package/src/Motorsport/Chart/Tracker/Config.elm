@@ -20,7 +20,7 @@ import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector exposing (Sector(..))
-import Motorsport.ViewModel.Standings exposing (MiniSectorProgress, SectorProgress, Entry)
+import Motorsport.ViewModel.Standings exposing (Entry, MiniSectorProgress, SectorProgress)
 
 
 type alias TrackConfig =

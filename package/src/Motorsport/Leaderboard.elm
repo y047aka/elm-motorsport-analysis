@@ -68,8 +68,8 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings, Entry)
 import Motorsport.Utils exposing (compareBy)
+import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings)
 
 
 

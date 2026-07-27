@@ -30,13 +30,15 @@ parser =
         ]
 
 
-{-| Parse a `Url` into a `Route`. Returns `Nothing` for unknown paths. -}
+{-| Parse a `Url` into a `Route`. Returns `Nothing` for unknown paths.
+-}
 fromUrl : Url -> Maybe Route
 fromUrl =
     Parser.parse parser
 
 
-{-| Render a `Route` as an absolute path. -}
+{-| Render a `Route` as an absolute path.
+-}
 toString : Route -> String
 toString route =
     case route of
@@ -50,7 +52,8 @@ toString route =
             "/wec/" ++ season ++ "/" ++ event
 
 
-{-| A convenient `href` attribute for internal links. -}
+{-| A convenient `href` attribute for internal links.
+-}
 href : Route -> Html.Styled.Attribute msg
 href route =
     Html.Styled.Attributes.href (toString route)
