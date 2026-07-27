@@ -118,7 +118,7 @@ compareLapsInSameLap clock a b =
         currentSector_b =
             currentSector clock b
     in
-    case Basics.compare (Sector.toString currentSector_a) (Sector.toString currentSector_b) of
+    case Sector.compare currentSector_a currentSector_b of
         LT ->
             GT
 

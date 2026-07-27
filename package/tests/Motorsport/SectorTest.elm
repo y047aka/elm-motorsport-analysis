@@ -1,0 +1,64 @@
+module Motorsport.SectorTest exposing (tests)
+
+import Expect
+import Motorsport.Sector as Sector exposing (Sector(..))
+import Test exposing (..)
+
+
+tests : Test
+tests =
+    describe "Motorsport.Sector"
+        [ describe "compare"
+            [ test "orders `all` the way a car drives it" <|
+                \_ ->
+                    List.sortWith Sector.compare [ S3, S1, S2 ]
+                        |> Expect.equal Sector.all
+            , test "is reflexive" <|
+                \_ ->
+                    Sector.all
+                        |> List.map (\sector -> Sector.compare sector sector)
+                        |> Expect.equal [ EQ, EQ, EQ ]
+            , test "is antisymmetric" <|
+                \_ ->
+                    pairs Sector.all
+                        |> List.map (\( a, b ) -> ( Sector.compare a b, Sector.compare b a ))
+                        |> List.filter (\( ab, ba ) -> ab /= flip ba)
+                        |> Expect.equalLists []
+            ]
+        , describe "next / previous"
+            [ test "next steps through every sector but the last" <|
+                \_ ->
+                    List.map Sector.next Sector.all
+                        |> Expect.equal [ Just S2, Just S3, Nothing ]
+            , test "previous undoes next" <|
+                \_ ->
+                    Sector.all
+                        |> List.map (\sector -> Sector.next sector |> Maybe.andThen Sector.previous)
+                        |> Expect.equal [ Just S1, Just S2, Nothing ]
+            , test "next moves forward in `compare` order" <|
+                \_ ->
+                    Sector.all
+                        |> List.filterMap (\sector -> Maybe.map (Sector.compare sector) (Sector.next sector))
+                        |> Expect.equal [ LT, LT ]
+            ]
+        ]
+
+
+{-| Every ordered pair of distinct elements.
+-}
+pairs : List a -> List ( a, a )
+pairs xs =
+    List.concatMap (\a -> List.map (Tuple.pair a) xs) xs
+
+
+flip : Order -> Order
+flip order =
+    case order of
+        LT ->
+            GT
+
+        EQ ->
+            EQ
+
+        GT ->
+            LT
