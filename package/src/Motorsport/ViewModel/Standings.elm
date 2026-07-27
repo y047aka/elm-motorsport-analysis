@@ -477,25 +477,13 @@ init_timing raceElapsed rivals car =
 
         currentSector =
             let
-                durations =
-                    { s1 = currentLap.sector_1, s2 = currentLap.sector_2, s3 = currentLap.sector_3 }
-
-                -- The lap's sectors run back to back from the end of the last
-                -- lap, so a sector starts once every sector before it is done.
-                startOf sector =
-                    Sector.toList durations
-                        |> List.filter (\( s, _ ) -> Sector.compare s sector == LT)
-                        |> List.map Tuple.second
-                        |> List.foldl (+) lastLap.elapsed
-
-                sector_ =
-                    Lap.currentSector raceClock currentLap
+                segment =
+                    Lap.currentSegment raceClock currentLap
             in
             Just
-                { sector = sector_
+                { sector = segment.sector
                 , progress =
-                    min 100
-                        ((toFloat (raceClock.elapsed - startOf sector_) / toFloat (Sector.get sector_ durations)) * 100)
+                    min 100 ((toFloat (raceClock.elapsed - segment.start) / toFloat segment.time) * 100)
                 }
 
         currentMiniSector =

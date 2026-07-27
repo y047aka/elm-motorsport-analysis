@@ -3,7 +3,8 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , currentSector
+    , Segment, sectors, contains
+    , currentSegment, currentSector
     , currentMiniSector, miniSectorProgressAt
     , sectorToElapsed
     )
@@ -15,7 +16,11 @@ module Motorsport.Lap exposing
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
-@docs currentSector
+
+## Sectors as segments of the lap
+
+@docs Segment, sectors, contains
+@docs currentSegment, currentSector
 @docs currentMiniSector, miniSectorProgressAt
 
 -}
@@ -24,7 +29,7 @@ import List.Extra
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 
 
 type alias Lap =
@@ -196,37 +201,77 @@ findCurrentLap clock =
 -- SECTOR
 
 
-currentSector : Clock -> Lap -> Sector
-currentSector clock lap =
+{-| One sector of one lap, as the stretch of race time the car spends in it.
+
+`start` is measured from the start of the race, the same scale as `Lap.elapsed`
+and the race clock, so it can be compared against either without conversion.
+
+-}
+type alias Segment =
+    { sector : Sector
+    , start : Duration
+    , time : Duration
+    }
+
+
+{-| Cut a lap into its three sectors.
+
+The lap record stores only how long each sector took, so where a sector begins
+has to be added up. This is the one place that addition happens: everything
+downstream reads `start` instead of re-deriving it.
+
+The lap knows when it ended and how long it took, which is enough — the
+previous lap is not consulted, so a missing or non-adjacent one cannot throw
+the sectors off.
+
+-}
+sectors : Lap -> BySector Segment
+sectors lap =
     let
-        elapsed_lastLap =
+        start =
             lap.elapsed - lap.time
     in
-    if clock.elapsed >= elapsed_lastLap && clock.elapsed < (elapsed_lastLap + lap.sector_1) then
-        S1
+    { s1 = { sector = S1, start = start, time = lap.sector_1 }
+    , s2 = { sector = S2, start = start + lap.sector_1, time = lap.sector_2 }
+    , s3 = { sector = S3, start = start + lap.sector_1 + lap.sector_2, time = lap.sector_3 }
+    }
 
-    else if clock.elapsed >= (elapsed_lastLap + lap.sector_1) && clock.elapsed < (elapsed_lastLap + lap.sector_1 + lap.sector_2) then
-        S2
 
-    else
-        S3
+{-| Whether a moment of race time falls inside a segment. Half-open: the
+instant a sector ends belongs to the next one.
+-}
+contains : Duration -> Segment -> Bool
+contains elapsed segment =
+    elapsed >= segment.start && elapsed < (segment.start + segment.time)
+
+
+{-| The segment the car is driving at the given moment.
+
+Moments outside the lap fall through to the final sector, which is what
+callers want for a lap that is already over.
+
+-}
+currentSegment : Clock -> Lap -> Segment
+currentSegment clock lap =
+    let
+        segments =
+            sectors lap
+    in
+    segments
+        |> Sector.toList
+        |> List.Extra.find (\( _, segment ) -> contains clock.elapsed segment)
+        |> Maybe.map Tuple.second
+        |> Maybe.withDefault segments.s3
+
+
+currentSector : Clock -> Lap -> Sector
+currentSector clock lap =
+    (currentSegment clock lap).sector
 
 
 sectorToElapsed : Lap -> Sector -> Duration
 sectorToElapsed lap sector =
-    let
-        elapsed_lastLap =
-            lap.elapsed - lap.time
-    in
-    case sector of
-        S1 ->
-            elapsed_lastLap
-
-        S2 ->
-            elapsed_lastLap + lap.sector_1
-
-        S3 ->
-            elapsed_lastLap + lap.sector_1 + lap.sector_2
+    (Sector.get sector (sectors lap)).start
 
 
 miniSectorOrder : List LeMans2025MiniSector
