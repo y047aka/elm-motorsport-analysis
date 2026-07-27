@@ -67,6 +67,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings)
 
@@ -419,10 +420,7 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
                             , property "column-gap" "4px"
                             ]
                         ]
-                        [ sectorCell slots.sector_1
-                        , sectorCell slots.sector_2
-                        , sectorCell slots.sector_3
-                        ]
+                        (List.map sectorCell (Sector.values slots))
                     ]
             )
             currentLapRated
@@ -590,7 +588,7 @@ viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
                 , case lastLapSectors of
-                    Just { sector_1, sector_2, sector_3 } ->
+                    Just slots ->
                         div
                             [ css
                                 [ property "display" "grid"
@@ -598,10 +596,7 @@ viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
                                 , property "column-gap" "4px"
                                 ]
                             ]
-                            [ sectorCell sector_1
-                            , sectorCell sector_2
-                            , sectorCell sector_3
-                            ]
+                            (List.map sectorCell (Sector.values slots))
 
                     Nothing ->
                         text ""

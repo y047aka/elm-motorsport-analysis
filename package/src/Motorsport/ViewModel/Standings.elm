@@ -37,7 +37,7 @@ import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
-import Motorsport.Sector exposing (Sector(..))
+import Motorsport.Sector as Sector exposing (BySector, Sector)
 import SortedList exposing (SortedList)
 
 
@@ -81,10 +81,7 @@ type alias SectorTimes =
 
 
 type alias SectorPerformance =
-    { sector_1 : RatedTime
-    , sector_2 : RatedTime
-    , sector_3 : RatedTime
-    }
+    BySector RatedTime
 
 
 type alias MiniSectorPerformance =
@@ -148,10 +145,7 @@ type alias SectorProgress =
 Rated at compute time so donut displays can render without being supplied BestTimes separately.
 -}
 type alias CurrentSectorStates =
-    { sector_1 : { progress : Float, rated : RatedTime }
-    , sector_2 : { progress : Float, rated : RatedTime }
-    , sector_3 : { progress : Float, rated : RatedTime }
-    }
+    BySector { progress : Float, rated : RatedTime }
 
 
 type alias MiniSectorProgress =
@@ -371,26 +365,28 @@ extractCurrentSectorStates :
     -> CurrentSectorStates
 extractCurrentSectorStates bestTimes sectorProgress lap =
     let
-        ( s1_progress, s2_progress, s3_progress ) =
+        -- Sectors the car has already driven through count as complete, the one
+        -- it is in reports its own progress, and the ones ahead are untouched.
+        -- With no sector in progress the lap is over, so all three are complete.
+        progressOf sector =
             case sectorProgress of
-                Just { sector, progress } ->
-                    case sector of
-                        S1 ->
-                            ( progress, 0, 0 )
+                Just current ->
+                    case Sector.compare sector current.sector of
+                        LT ->
+                            100
 
-                        S2 ->
-                            ( 100, progress, 0 )
+                        EQ ->
+                            current.progress
 
-                        S3 ->
-                            ( 100, 100, progress )
+                        GT ->
+                            0
 
                 Nothing ->
-                    ( 100, 100, 100 )
+                    100
     in
-    { sector_1 = { progress = s1_progress, rated = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
-    , sector_2 = { progress = s2_progress, rated = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
-    , sector_3 = { progress = s3_progress, rated = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
-    }
+    Sector.map2 (\progress rated -> { progress = progress, rated = rated })
+        (Sector.initialize progressOf)
+        (extractSectorPerformance bestTimes lap)
 
 
 extractSectorPerformance :
@@ -398,9 +394,29 @@ extractSectorPerformance :
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    { sector_1 = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
-    , sector_2 = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
-    , sector_3 = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
+    Sector.map2 rateTime (fastestBySector bestTimes) (timesBySector lap)
+
+
+{-| The two adapters below are where the flat `sector_1` / `s1_best` /
+`fastestSector_1` fields of the source records turn into per-sector values.
+Keeping them here means the flattening is written once rather than at each site
+that needs to look a sector up.
+-}
+fastestBySector :
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    -> BySector Duration
+fastestBySector bestTimes =
+    { s1 = bestTimes.fastestSector_1
+    , s2 = bestTimes.fastestSector_2
+    , s3 = bestTimes.fastestSector_3
+    }
+
+
+timesBySector : Lap -> BySector { time : Duration, personalBest : Duration }
+timesBySector lap =
+    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
+    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
+    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
@@ -460,15 +476,27 @@ init_timing raceElapsed rivals car =
             Maybe.withDefault Lap.empty car.lastLap
 
         currentSector =
-            case Lap.currentSector raceClock currentLap of
-                S1 ->
-                    Just { sector = S1, progress = min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100) }
+            let
+                durations =
+                    { s1 = currentLap.sector_1, s2 = currentLap.sector_2, s3 = currentLap.sector_3 }
 
-                S2 ->
-                    Just { sector = S2, progress = min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100) }
+                -- The lap's sectors run back to back from the end of the last
+                -- lap, so a sector starts once every sector before it is done.
+                startOf sector =
+                    Sector.toList durations
+                        |> List.filter (\( s, _ ) -> Sector.compare s sector == LT)
+                        |> List.map Tuple.second
+                        |> List.foldl (+) lastLap.elapsed
 
-                S3 ->
-                    Just { sector = S3, progress = min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100) }
+                sector_ =
+                    Lap.currentSector raceClock currentLap
+            in
+            Just
+                { sector = sector_
+                , progress =
+                    min 100
+                        ((toFloat (raceClock.elapsed - startOf sector_) / toFloat (Sector.get sector_ durations)) * 100)
+                }
 
         currentMiniSector =
             Lap.miniSectorProgressAt raceClock ( currentLap, lastLap )

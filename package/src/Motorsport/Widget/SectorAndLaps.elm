@@ -13,6 +13,7 @@ import Html.Styled.Attributes exposing (css)
 import Motorsport.Car as Car
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Sector as Sector
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Path.Styled as Path
 import Shape
@@ -138,11 +139,7 @@ currentSectorPie : Entry -> Html msg
 currentSectorPie item =
     case ( item.currentLapSectorStates, Car.hasRetired item.status ) of
         ( Just slots, False ) ->
-            sectorPie
-                [ currentSectorSlot slots.sector_1
-                , currentSectorSlot slots.sector_2
-                , currentSectorSlot slots.sector_3
-                ]
+            sectorPie (List.map currentSectorSlot (Sector.values slots))
 
         _ ->
             emptyPie

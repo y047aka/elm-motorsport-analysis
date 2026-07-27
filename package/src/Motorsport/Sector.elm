@@ -3,6 +3,9 @@ module Motorsport.Sector exposing
     , all
     , compare, next, previous
     , toString
+    , BySector, initialize, get
+    , map, map2, indexedMap
+    , values, toList
     )
 
 {-|
@@ -11,6 +14,13 @@ module Motorsport.Sector exposing
 @docs all
 @docs compare, next, previous
 @docs toString
+
+
+## Values held per sector
+
+@docs BySector, initialize, get
+@docs map, map2, indexedMap
+@docs values, toList
 
 -}
 
@@ -137,3 +147,113 @@ toString sector =
 
         S3 ->
             "S3"
+
+
+
+-- VALUES HELD PER SECTOR
+
+
+{-| Three values, one per sector — a sector time, a progress percentage, a
+fastest time to compare against.
+
+Source records spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
+leaves callers writing the same three-way `case` to pick one out. Convert once
+at the boundary and the picking becomes [`get`](#get).
+
+-}
+type alias BySector a =
+    { s1 : a
+    , s2 : a
+    , s3 : a
+    }
+
+
+{-| Build one value per sector.
+
+    initialize toString
+    --> { s1 = "S1", s2 = "S2", s3 = "S3" }
+
+-}
+initialize : (Sector -> a) -> BySector a
+initialize f =
+    { s1 = f S1
+    , s2 = f S2
+    , s3 = f S3
+    }
+
+
+{-| Read out the value for one sector.
+
+    get S2 (initialize toString)
+    --> "S2"
+
+-}
+get : Sector -> BySector a -> a
+get sector bySector =
+    case sector of
+        S1 ->
+            bySector.s1
+
+        S2 ->
+            bySector.s2
+
+        S3 ->
+            bySector.s3
+
+
+{-|
+
+    map String.length (initialize toString)
+    --> { s1 = 2, s2 = 2, s3 = 2 }
+
+-}
+map : (a -> b) -> BySector a -> BySector b
+map f bySector =
+    { s1 = f bySector.s1
+    , s2 = f bySector.s2
+    , s3 = f bySector.s3
+    }
+
+
+{-| Combine two sets of per-sector values sector by sector — a time with the
+fastest time to rate it against, a progress with its rating.
+-}
+map2 : (a -> b -> c) -> BySector a -> BySector b -> BySector c
+map2 f a b =
+    { s1 = f a.s1 b.s1
+    , s2 = f a.s2 b.s2
+    , s3 = f a.s3 b.s3
+    }
+
+
+{-| [`map`](#map), with the sector each value belongs to.
+-}
+indexedMap : (Sector -> a -> b) -> BySector a -> BySector b
+indexedMap f bySector =
+    { s1 = f S1 bySector.s1
+    , s2 = f S2 bySector.s2
+    , s3 = f S3 bySector.s3
+    }
+
+
+{-| The three values in sector order — for rendering a row or a column of
+cells, where the sector itself is implied by position.
+
+    values (initialize toString)
+    --> [ "S1", "S2", "S3" ]
+
+-}
+values : BySector a -> List a
+values bySector =
+    [ bySector.s1, bySector.s2, bySector.s3 ]
+
+
+{-| The three values in sector order, each paired with its sector.
+
+    toList (initialize toString)
+    --> [ ( S1, "S1" ), ( S2, "S2" ), ( S3, "S3" ) ]
+
+-}
+toList : BySector a -> List ( Sector, a )
+toList bySector =
+    [ ( S1, bySector.s1 ), ( S2, bySector.s2 ), ( S3, bySector.s3 ) ]
