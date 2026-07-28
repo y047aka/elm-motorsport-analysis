@@ -1,6 +1,5 @@
 module Motorsport.ViewModel.Standings exposing
     ( Standings, Entry, ClassInfo
-    , SectorProgress, MiniSectorProgress
     , SectorTimes, CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
@@ -12,7 +11,6 @@ module Motorsport.ViewModel.Standings exposing
 {-|
 
 @docs Standings, Entry, ClassInfo
-@docs SectorProgress, MiniSectorProgress
 @docs SectorTimes, CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
@@ -104,8 +102,8 @@ type alias Entry =
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
     , currentLapRated : Maybe RatedTime
-    , sector : Maybe SectorProgress
-    , miniSector : Maybe MiniSectorProgress
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
@@ -117,19 +115,11 @@ type alias Entry =
     }
 
 
-type alias SectorProgress =
-    Lap.SectorProgress
-
-
 {-| Per-sector "progress + performance rating" for the current lap.
 Rated at compute time so donut displays can render without being supplied BestTimes separately.
 -}
 type alias CurrentSectorStates =
     BySector { progress : Float, rated : RatedTime }
-
-
-type alias MiniSectorProgress =
-    Lap.MiniSectorProgress
 
 
 compute :
@@ -335,7 +325,7 @@ extractSectorTimes lap =
 
 extractCurrentSectorStates :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
-    -> Maybe SectorProgress
+    -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
 extractCurrentSectorStates bestTimes sectorProgress lap =
@@ -405,8 +395,8 @@ extractMiniSectorPerformance bestTimes lap =
 
 type alias TimingState =
     { currentLapElapsed : Duration
-    , sector : Maybe SectorProgress
-    , miniSector : Maybe MiniSectorProgress
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     }

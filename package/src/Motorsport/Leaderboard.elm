@@ -64,12 +64,12 @@ import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSectors)
+import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
 import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
-import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, MiniSectorProgress, SectorPerformance, SectorProgress, Standings)
+import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance, Standings)
 
 
 

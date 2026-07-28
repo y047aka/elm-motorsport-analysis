@@ -150,6 +150,10 @@ map2 f a b =
 
 
 {-| The values in track order.
+
+Order comes from [`miniSectorOrder`](#miniSectorOrder), so it cannot drift from
+it — the same arrangement as [`Sector.values`](Motorsport-Sector#values).
+
 -}
 values : ByMiniSector a -> List a
 values byMiniSector =

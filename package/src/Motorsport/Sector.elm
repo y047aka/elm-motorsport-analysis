@@ -180,13 +180,15 @@ map2 f a b =
 {-| The three values in sector order — for rendering a row or a column of
 cells, where the sector itself is implied by position.
 
+Order comes from [`all`](#all), so it cannot drift from it.
+
     values (initialize toString)
     --> [ "S1", "S2", "S3" ]
 
 -}
 values : BySector a -> List a
 values bySector =
-    [ bySector.s1, bySector.s2, bySector.s3 ]
+    List.map (\sector -> get sector bySector) all
 
 
 {-| The three values in sector order, each paired with its sector.
@@ -197,4 +199,4 @@ values bySector =
 -}
 toList : BySector a -> List ( Sector, a )
 toList bySector =
-    [ ( S1, bySector.s1 ), ( S2, bySector.s2 ), ( S3, bySector.s3 ) ]
+    List.map (\sector -> ( sector, get sector bySector )) all
