@@ -1,6 +1,6 @@
 module Motorsport.Circuit.LeMans exposing
     ( LeMans2025MiniSector(..)
-    , miniSectorAccessor
+    , ByMiniSector, initialize, get, map2, values
     , calculateMiniSectorProgress
     , layout, miniSectorDefaultRatio, miniSectorOrder, miniSectorToString
     )
@@ -9,14 +9,17 @@ module Motorsport.Circuit.LeMans exposing
 
 @docs LeMans2025MiniSector
 
-@docs miniSectorAccessor
+
+## Values held per mini sector
+
+@docs ByMiniSector, initialize, get, map2, values
+
 @docs calculateMiniSectorProgress
 
 -}
 
 import List.Extra
 import Motorsport.Direction exposing (Direction(..))
-import Motorsport.Duration exposing (Duration)
 
 
 {-| Le Mans 2025 specific mini sectors
@@ -37,6 +40,120 @@ type LeMans2025MiniSector
     | SCL1
     | FORDOUT
     | FL
+
+
+{-| Fifteen values, one per mini sector — the counterpart of
+[`BySector`](Motorsport-Sector#BySector) at the finer granularity, and a
+transparent record for the same reasons.
+
+Fields are in track order, so a record literal and
+[`miniSectorOrder`](#miniSectorOrder) read the same way round.
+
+-}
+type alias ByMiniSector a =
+    { scl2 : a
+    , z4 : a
+    , ip1 : a
+    , z12 : a
+    , sclc : a
+    , a7_1 : a
+    , ip2 : a
+    , a8_1 : a
+    , sclb : a
+    , porin : a
+    , porout : a
+    , pitref : a
+    , scl1 : a
+    , fordout : a
+    , fl : a
+    }
+
+
+{-| Build one value per mini sector.
+-}
+initialize : (LeMans2025MiniSector -> a) -> ByMiniSector a
+initialize f =
+    { scl2 = f SCL2
+    , z4 = f Z4
+    , ip1 = f IP1
+    , z12 = f Z12
+    , sclc = f SCLC
+    , a7_1 = f A7_1
+    , ip2 = f IP2
+    , a8_1 = f A8_1
+    , sclb = f SCLB
+    , porin = f PORIN
+    , porout = f POROUT
+    , pitref = f PITREF
+    , scl1 = f SCL1
+    , fordout = f FORDOUT
+    , fl = f FL
+    }
+
+
+{-| Read out the value for one mini sector.
+-}
+get : LeMans2025MiniSector -> ByMiniSector a -> a
+get mini byMiniSector =
+    case mini of
+        SCL2 ->
+            byMiniSector.scl2
+
+        Z4 ->
+            byMiniSector.z4
+
+        IP1 ->
+            byMiniSector.ip1
+
+        Z12 ->
+            byMiniSector.z12
+
+        SCLC ->
+            byMiniSector.sclc
+
+        A7_1 ->
+            byMiniSector.a7_1
+
+        IP2 ->
+            byMiniSector.ip2
+
+        A8_1 ->
+            byMiniSector.a8_1
+
+        SCLB ->
+            byMiniSector.sclb
+
+        PORIN ->
+            byMiniSector.porin
+
+        POROUT ->
+            byMiniSector.porout
+
+        PITREF ->
+            byMiniSector.pitref
+
+        SCL1 ->
+            byMiniSector.scl1
+
+        FORDOUT ->
+            byMiniSector.fordout
+
+        FL ->
+            byMiniSector.fl
+
+
+{-| Combine two sets of per-mini-sector values, mini sector by mini sector.
+-}
+map2 : (a -> b -> c) -> ByMiniSector a -> ByMiniSector b -> ByMiniSector c
+map2 f a b =
+    initialize (\mini -> f (get mini a) (get mini b))
+
+
+{-| The values in track order.
+-}
+values : ByMiniSector a -> List a
+values byMiniSector =
+    List.map (\mini -> get mini byMiniSector) miniSectorOrder
 
 
 {-| Le Mans 2025 layout (sectors with their mini sectors)
@@ -162,82 +279,6 @@ miniSectorDefaultRatio miniSector =
         |> Maybe.map .ratio
 
 
-{-| Get accessor function for a specific mini sector
-This is useful for extracting fastest times from analysis records
-Takes a record with Duration fields named after each mini sector
--}
-miniSectorAccessor :
-    LeMans2025MiniSector
-    ->
-        ({ scl2 : Duration
-         , z4 : Duration
-         , ip1 : Duration
-         , z12 : Duration
-         , sclc : Duration
-         , a7_1 : Duration
-         , ip2 : Duration
-         , a8_1 : Duration
-         , sclb : Duration
-         , porin : Duration
-         , porout : Duration
-         , pitref : Duration
-         , scl1 : Duration
-         , fordout : Duration
-         , fl : Duration
-         }
-         -> Duration
-        )
-miniSectorAccessor mini =
-    case mini of
-        SCL2 ->
-            .scl2
-
-        Z4 ->
-            .z4
-
-        IP1 ->
-            .ip1
-
-        Z12 ->
-            .z12
-
-        SCLC ->
-            .sclc
-
-        A7_1 ->
-            .a7_1
-
-        IP2 ->
-            .ip2
-
-        A8_1 ->
-            .a8_1
-
-        SCLB ->
-            .sclb
-
-        PORIN ->
-            .porin
-
-        POROUT ->
-            .porout
-
-        PITREF ->
-            .pitref
-
-        SCL1 ->
-            .scl1
-
-        FORDOUT ->
-            .fordout
-
-        FL ->
-            .fl
-
-
-{-| Calculate progress values for all mini sectors based on current mini sector and progress
-Returns a record with progress (0 to 1) for each mini sector
--}
 calculateMiniSectorProgress :
     Maybe { miniSector : LeMans2025MiniSector, progress : Float }
     ->

@@ -29,7 +29,7 @@ module Motorsport.Lap exposing
 -}
 
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
@@ -55,22 +55,7 @@ type alias Lap =
 
 
 type alias MiniSectors =
-    { scl2 : MiniSectorData
-    , z4 : MiniSectorData
-    , ip1 : MiniSectorData
-    , z12 : MiniSectorData
-    , sclc : MiniSectorData
-    , a7_1 : MiniSectorData
-    , ip2 : MiniSectorData
-    , a8_1 : MiniSectorData
-    , sclb : MiniSectorData
-    , porin : MiniSectorData
-    , porout : MiniSectorData
-    , pitref : MiniSectorData
-    , scl1 : MiniSectorData
-    , fordout : MiniSectorData
-    , fl : MiniSectorData
-    }
+    ByMiniSector MiniSectorData
 
 
 type alias MiniSectorData =
@@ -429,63 +414,14 @@ miniSectorToElapsed lap miniSector =
           )
 
 
-miniSectorData : MiniSectors -> LeMans2025MiniSector -> MiniSectorData
-miniSectorData miniSectors mini =
-    case mini of
-        SCL2 ->
-            miniSectors.scl2
-
-        Z4 ->
-            miniSectors.z4
-
-        IP1 ->
-            miniSectors.ip1
-
-        Z12 ->
-            miniSectors.z12
-
-        SCLC ->
-            miniSectors.sclc
-
-        A7_1 ->
-            miniSectors.a7_1
-
-        IP2 ->
-            miniSectors.ip2
-
-        A8_1 ->
-            miniSectors.a8_1
-
-        SCLB ->
-            miniSectors.sclb
-
-        PORIN ->
-            miniSectors.porin
-
-        POROUT ->
-            miniSectors.porout
-
-        PITREF ->
-            miniSectors.pitref
-
-        SCL1 ->
-            miniSectors.scl1
-
-        FORDOUT ->
-            miniSectors.fordout
-
-        FL ->
-            miniSectors.fl
-
-
 miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorElapsed miniSectors mini =
-    miniSectorData miniSectors mini |> .elapsed
+    LeMans.get mini miniSectors |> .elapsed
 
 
 miniSectorTime : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorTime miniSectors mini =
-    miniSectorData miniSectors mini |> .time
+    LeMans.get mini miniSectors |> .time
 
 
 miniSectorStartElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration

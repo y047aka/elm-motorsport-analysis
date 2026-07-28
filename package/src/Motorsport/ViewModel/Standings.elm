@@ -28,6 +28,7 @@ module Motorsport.ViewModel.Standings exposing
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
@@ -84,22 +85,7 @@ type alias SectorPerformance =
 
 
 type alias MiniSectorPerformance =
-    { scl2 : Maybe RatedTime
-    , z4 : Maybe RatedTime
-    , ip1 : Maybe RatedTime
-    , z12 : Maybe RatedTime
-    , sclc : Maybe RatedTime
-    , a7_1 : Maybe RatedTime
-    , ip2 : Maybe RatedTime
-    , a8_1 : Maybe RatedTime
-    , sclb : Maybe RatedTime
-    , porin : Maybe RatedTime
-    , porout : Maybe RatedTime
-    , pitref : Maybe RatedTime
-    , scl1 : Maybe RatedTime
-    , fordout : Maybe RatedTime
-    , fl : Maybe RatedTime
-    }
+    ByMiniSector (Maybe RatedTime)
 
 
 type alias Entry =
@@ -420,33 +406,15 @@ extractMiniSectorPerformance :
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =
+    let
+        rate recorded fastestTime =
+            Maybe.map2
+                (\time personalBest -> rateTime fastestTime { time = time, personalBest = personalBest })
+                recorded.time
+                recorded.best
+    in
     lap.miniSectors
-        |> Maybe.map
-            (\ms ->
-                let
-                    rateMiniSector msd fastestTime =
-                        Maybe.map2
-                            (\t b -> rateTime fastestTime { time = t, personalBest = b })
-                            msd.time
-                            msd.best
-                in
-                { scl2 = rateMiniSector ms.scl2 bestTimes.fastestMiniSectors.scl2
-                , z4 = rateMiniSector ms.z4 bestTimes.fastestMiniSectors.z4
-                , ip1 = rateMiniSector ms.ip1 bestTimes.fastestMiniSectors.ip1
-                , z12 = rateMiniSector ms.z12 bestTimes.fastestMiniSectors.z12
-                , sclc = rateMiniSector ms.sclc bestTimes.fastestMiniSectors.sclc
-                , a7_1 = rateMiniSector ms.a7_1 bestTimes.fastestMiniSectors.a7_1
-                , ip2 = rateMiniSector ms.ip2 bestTimes.fastestMiniSectors.ip2
-                , a8_1 = rateMiniSector ms.a8_1 bestTimes.fastestMiniSectors.a8_1
-                , sclb = rateMiniSector ms.sclb bestTimes.fastestMiniSectors.sclb
-                , porin = rateMiniSector ms.porin bestTimes.fastestMiniSectors.porin
-                , porout = rateMiniSector ms.porout bestTimes.fastestMiniSectors.porout
-                , pitref = rateMiniSector ms.pitref bestTimes.fastestMiniSectors.pitref
-                , scl1 = rateMiniSector ms.scl1 bestTimes.fastestMiniSectors.scl1
-                , fordout = rateMiniSector ms.fordout bestTimes.fastestMiniSectors.fordout
-                , fl = rateMiniSector ms.fl bestTimes.fastestMiniSectors.fl
-                }
-            )
+        |> Maybe.map (\ms -> LeMans.map2 rate ms bestTimes.fastestMiniSectors)
 
 
 type alias TimingState =

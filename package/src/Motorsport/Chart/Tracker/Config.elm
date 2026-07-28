@@ -64,8 +64,7 @@ buildConfig layout bestTimes =
 
         totalTime =
             if isLeMans2025 then
-                LeMans.miniSectorOrder
-                    |> List.map (\mini -> LeMans.miniSectorAccessor mini bestTimes.fastestMiniSectors)
+                LeMans.values bestTimes.fastestMiniSectors
                     |> List.sum
                     |> toFloat
 
@@ -75,7 +74,7 @@ buildConfig layout bestTimes =
         miniRatio miniSector =
             let
                 value =
-                    LeMans.miniSectorAccessor miniSector bestTimes.fastestMiniSectors
+                    LeMans.get miniSector bestTimes.fastestMiniSectors
                         |> toFloat
 
                 defaultRatio =
