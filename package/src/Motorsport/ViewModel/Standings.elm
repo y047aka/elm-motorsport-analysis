@@ -70,14 +70,11 @@ type alias ClassInfo =
     }
 
 
+{-| A lap's three sector times, each with that driver's best for the sector to
+rate it against.
+-}
 type alias SectorTimes =
-    { sector_1 : Duration
-    , sector_2 : Duration
-    , sector_3 : Duration
-    , s1_best : Duration
-    , s2_best : Duration
-    , s3_best : Duration
-    }
+    BySector { time : Duration, personalBest : Duration }
 
 
 type alias SectorPerformance =
@@ -330,12 +327,9 @@ rateTime fastest { time, personalBest } =
 
 extractSectorTimes : Lap -> SectorTimes
 extractSectorTimes lap =
-    { sector_1 = lap.sector_1
-    , sector_2 = lap.sector_2
-    , sector_3 = lap.sector_3
-    , s1_best = lap.s1_best
-    , s2_best = lap.s2_best
-    , s3_best = lap.s3_best
+    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
+    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
+    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
@@ -375,13 +369,13 @@ extractSectorPerformance :
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 rateTime (fastestBySector bestTimes) (timesBySector lap)
+    Sector.map2 rateTime (fastestBySector bestTimes) (extractSectorTimes lap)
 
 
-{-| The two adapters below are where the flat `sector_1` / `s1_best` /
-`fastestSector_1` fields of the source records turn into per-sector values.
-Keeping them here means the flattening is written once rather than at each site
-that needs to look a sector up.
+{-| Where the flat `fastestSector_1` / `_2` / `_3` fields of the best-times
+record turn into per-sector values. `extractSectorTimes` does the same for a
+lap. Between them, the flattening is written once rather than at each site that
+needs to look a sector up.
 -}
 fastestBySector :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
@@ -390,14 +384,6 @@ fastestBySector bestTimes =
     { s1 = bestTimes.fastestSector_1
     , s2 = bestTimes.fastestSector_2
     , s3 = bestTimes.fastestSector_3
-    }
-
-
-timesBySector : Lap -> BySector { time : Duration, personalBest : Duration }
-timesBySector lap =
-    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
-    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
-    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 

@@ -20,6 +20,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
@@ -136,64 +137,57 @@ config bestTimes standings =
         , carNumberColumn_Wec 2025 { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lapsCompleted }
-        , sectorTimeColumn
-            { label = "S1"
-            , getter =
-                .currentLapSectors
-                    >> Maybe.map
-                        (\{ sector_1, s1_best } ->
-                            { time = sector_1
-                            , personalBest = s1_best
-                            , fastest = bestTimes.fastestSector_1
-                            , progress = 1
-                            }
-                        )
-            }
-        , customColumn
-            { label = "S1 Best"
-            , getter = .currentLapSectors >> Maybe.map (.s1_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLapSectors >> Maybe.map .s1_best >> Maybe.withDefault 0)
-            }
-        , sectorTimeColumn
-            { label = "S2"
-            , getter =
-                .currentLapSectors
-                    >> Maybe.map
-                        (\{ sector_2, s2_best } ->
-                            { time = sector_2
-                            , personalBest = s2_best
-                            , fastest = bestTimes.fastestSector_2
-                            , progress = 1
-                            }
-                        )
-            }
-        , customColumn
-            { label = "S2 Best"
-            , getter = .currentLapSectors >> Maybe.map (.s2_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLapSectors >> Maybe.map .s2_best >> Maybe.withDefault 0)
-            }
-        , sectorTimeColumn
-            { label = "S3"
-            , getter =
-                .currentLapSectors
-                    >> Maybe.map
-                        (\{ sector_3, s3_best } ->
-                            { time = sector_3
-                            , personalBest = s3_best
-                            , fastest = bestTimes.fastestSector_3
-                            , progress = 1
-                            }
-                        )
-            }
-        , customColumn
-            { label = "S3 Best"
-            , getter = .currentLapSectors >> Maybe.map (.s3_best >> Duration.toString) >> Maybe.withDefault ""
-            , sorter = compareBy (.currentLapSectors >> Maybe.map .s3_best >> Maybe.withDefault 0)
-            }
-        , lastLapColumn
-            { getter = identity
-            , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
-            }
-        , bestTimeColumn { getter = .bestLapRated }
         ]
+            ++ sectorColumns bestTimes
+            ++ [ lastLapColumn
+                    { getter = identity
+                    , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+                    }
+               , bestTimeColumn { getter = .bestLapRated }
+               ]
     }
+
+
+{-| Raw sector times, best-per-sector, and the rating of each, one pair of
+columns per sector.
+-}
+sectorColumns : BestTimes -> List (DataView.Column Entry Msg)
+sectorColumns bestTimes =
+    let
+        fastest sector =
+            case sector of
+                S1 ->
+                    bestTimes.fastestSector_1
+
+                S2 ->
+                    bestTimes.fastestSector_2
+
+                S3 ->
+                    bestTimes.fastestSector_3
+
+        times sector =
+            .currentLapSectors >> Maybe.map (Sector.get sector)
+    in
+    Sector.all
+        |> List.concatMap
+            (\sector ->
+                [ sectorTimeColumn
+                    { label = Sector.toString sector
+                    , getter =
+                        times sector
+                            >> Maybe.map
+                                (\{ time, personalBest } ->
+                                    { time = time
+                                    , personalBest = personalBest
+                                    , fastest = fastest sector
+                                    , progress = 1
+                                    }
+                                )
+                    }
+                , customColumn
+                    { label = Sector.toString sector ++ " Best"
+                    , getter = times sector >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
+                    , sorter = compareBy (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
+                    }
+                ]
+            )

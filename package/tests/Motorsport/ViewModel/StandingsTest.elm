@@ -6,7 +6,9 @@ import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.ViewModel.Standings as Standings exposing (Entry)
 import Test exposing (Test, describe, test)
 
@@ -14,7 +16,23 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Standings"
-        [ describe "groupCarsByCloseIntervals"
+        [ describe "currentLapSectors"
+            [ test "keeps each sector's time and personal best with the sector they belong to" <|
+                \_ ->
+                    Standings.fromLaps { season = 2025 } (createMetadata "1") [ sectorFixtureLap ]
+                        |> Standings.toList
+                        |> List.head
+                        |> Maybe.andThen .currentLapSectors
+                        |> Maybe.map Sector.toList
+                        |> Expect.equal
+                            (Just
+                                [ ( S1, { time = 1000, personalBest = 900 } )
+                                , ( S2, { time = 2000, personalBest = 1900 } )
+                                , ( S3, { time = 3000, personalBest = 2900 } )
+                                ]
+                            )
+            ]
+        , describe "groupCarsByCloseIntervals"
             [ test "groups cars with gaps <= 1.5 seconds" <|
                 \_ ->
                     let
@@ -109,3 +127,25 @@ createMetadata carNumber =
     , drivers = [ Driver.fromName "Test Driver" ]
     , manufacturer = Manufacturer.Other
     }
+
+
+{-| Distinct times and bests per sector, so a mix-up between them shows up.
+-}
+sectorFixtureLap : Lap
+sectorFixtureLap =
+    { empty
+        | lap = 1
+        , time = 6000
+        , elapsed = 6000
+        , sector_1 = 1000
+        , sector_2 = 2000
+        , sector_3 = 3000
+        , s1_best = 900
+        , s2_best = 1900
+        , s3_best = 2900
+    }
+
+
+empty : Lap
+empty =
+    Lap.empty
