@@ -145,7 +145,7 @@ config bestTimes standings =
                             { time = sector_1
                             , personalBest = s1_best
                             , fastest = bestTimes.fastestSector_1
-                            , progress = 100
+                            , progress = 1
                             }
                         )
             }
@@ -163,7 +163,7 @@ config bestTimes standings =
                             { time = sector_2
                             , personalBest = s2_best
                             , fastest = bestTimes.fastestSector_2
-                            , progress = 100
+                            , progress = 1
                             }
                         )
             }
@@ -181,7 +181,7 @@ config bestTimes standings =
                             { time = sector_3
                             , personalBest = s3_best
                             , fastest = bestTimes.fastestSector_3
-                            , progress = 100
+                            , progress = 1
                             }
                         )
             }

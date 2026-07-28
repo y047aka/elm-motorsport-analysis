@@ -186,7 +186,7 @@ progressFromSector : List SectorConfig -> SectorProgress -> Float
 progressFromSector sectors { sector, progress } =
     sectors
         |> List.Extra.find (\sectorConfig -> sectorConfig.sector == sector)
-        |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
+        |> Maybe.map (\{ start, share } -> start + progress * share)
         |> Maybe.withDefault 0
 
 

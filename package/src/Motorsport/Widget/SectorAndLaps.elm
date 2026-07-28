@@ -150,8 +150,8 @@ white partial fill while in progress, full performance color once completed.
 -}
 currentSectorSlot : { progress : Float, rated : RatedTime } -> ( String, Float )
 currentSectorSlot { progress, rated } =
-    if progress < 100 then
-        ( "oklch(1 0 0)", progress / 100 )
+    if progress < 1 then
+        ( "oklch(1 0 0)", progress )
 
     else
         ( Performance.toColorVariable rated.performance, 1 )

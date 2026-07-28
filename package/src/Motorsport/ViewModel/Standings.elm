@@ -28,7 +28,6 @@ module Motorsport.ViewModel.Standings exposing
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
-import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
@@ -37,7 +36,7 @@ import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
-import Motorsport.Sector as Sector exposing (BySector, Sector)
+import Motorsport.Sector as Sector exposing (BySector)
 import SortedList exposing (SortedList)
 
 
@@ -136,9 +135,7 @@ type alias Entry =
 
 
 type alias SectorProgress =
-    { sector : Sector
-    , progress : Float
-    }
+    Lap.SectorProgress
 
 
 {-| Per-sector "progress + performance rating" for the current lap.
@@ -149,9 +146,7 @@ type alias CurrentSectorStates =
 
 
 type alias MiniSectorProgress =
-    { miniSector : LeMans2025MiniSector
-    , progress : Float
-    }
+    Lap.MiniSectorProgress
 
 
 compute :
@@ -373,7 +368,7 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
                 Just current ->
                     case Sector.compare sector current.sector of
                         LT ->
-                            100
+                            1
 
                         EQ ->
                             current.progress
@@ -382,7 +377,7 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
                             0
 
                 Nothing ->
-                    100
+                    1
     in
     Sector.map2 (\progress rated -> { progress = progress, rated = rated })
         (Sector.initialize progressOf)
@@ -477,18 +472,13 @@ init_timing raceElapsed rivals car =
 
         currentSector =
             let
-                ( sector, segment ) =
-                    Lap.currentSegment raceClock currentLap
+                sectorProgress =
+                    Lap.progressAt raceClock currentLap
             in
-            Just
-                { sector = sector
-                , progress =
-                    min 100 ((toFloat (raceClock.elapsed - segment.start) / toFloat segment.time) * 100)
-                }
+            Just { sectorProgress | progress = min 1 sectorProgress.progress }
 
         currentMiniSector =
-            Lap.miniSectorProgressAt raceClock ( currentLap, lastLap )
-                |> Maybe.map (\( ms, p ) -> { miniSector = ms, progress = p })
+            Lap.miniSectorProgressAt raceClock { current = currentLap, previous = lastLap }
     in
     { currentLapElapsed = raceClock.elapsed - lastLap.elapsed
     , sector = currentSector

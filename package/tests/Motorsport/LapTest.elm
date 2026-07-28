@@ -44,7 +44,23 @@ tests =
                         |> (\segment -> segment.start + segment.time)
                         |> Expect.equal lap.elapsed
             ]
-        , describe "currentSegment"
+        , describe "progressAt"
+            [ test "measures how far through the current sector the moment is" <|
+                \_ ->
+                    [ 4000, 4500, 5000, 8500 ]
+                        |> List.map (\elapsed -> Lap.progressAt { elapsed = elapsed } lap)
+                        |> Expect.equal
+                            [ { sector = S1, progress = 0 }
+                            , { sector = S1, progress = 0.5 }
+                            , { sector = S2, progress = 0 }
+                            , { sector = S3, progress = 0.5 }
+                            ]
+            , test "reports past the end of a lap that is already over, rather than capping" <|
+                \_ ->
+                    (Lap.progressAt { elapsed = 11500 } lap).progress
+                        |> Expect.greaterThan 1
+            ]
+        , describe "currentSector"
             [ test "picks the sector holding the moment, and hands over on the boundary" <|
                 \_ ->
                     [ 4000, 4999, 5000, 6999, 7000, 9999 ]
@@ -58,18 +74,15 @@ tests =
                 \_ ->
                     Lap.currentSector { elapsed = 3999 } lap
                         |> Expect.equal S3
-            , test "agrees with sectorStart on where the current sector started" <|
+            , test "agrees with sectorStart, where progress is zero" <|
                 \_ ->
-                    [ 4500, 6000, 8000 ]
-                        |> List.map
-                            (\elapsed ->
-                                let
-                                    ( sector, segment ) =
-                                        Lap.currentSegment { elapsed = elapsed } lap
-                                in
-                                ( segment.start, Lap.sectorStart lap sector )
-                            )
-                        |> List.filter (\( a, b ) -> a /= b)
-                        |> Expect.equalLists []
+                    Sector.all
+                        |> List.map (Lap.sectorStart lap)
+                        |> List.map (\start -> Lap.progressAt { elapsed = start } lap)
+                        |> Expect.equal
+                            [ { sector = S1, progress = 0 }
+                            , { sector = S2, progress = 0 }
+                            , { sector = S3, progress = 0 }
+                            ]
             ]
         ]

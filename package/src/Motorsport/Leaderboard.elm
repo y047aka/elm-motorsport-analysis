@@ -177,7 +177,7 @@ sectorTimeColumn { label, getter } =
                             [ height (px 18)
                             , borderRadius (px 1)
                             , property "background-color" <|
-                                if sector.progress < 100 then
+                                if sector.progress < 1 then
                                     "oklch(1 0 0 / 0.9)"
 
                                 else
@@ -392,8 +392,8 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
                     [ height (px 3)
                     , borderRadius (px 1)
                     , batch <|
-                        if progress < 100 then
-                            [ width (pct progress)
+                        if progress < 1 then
+                            [ width (pct (progress * 100))
                             , backgroundColor (oklch 1 0 0)
                             ]
 

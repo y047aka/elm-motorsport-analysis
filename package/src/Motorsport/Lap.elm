@@ -3,9 +3,9 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , Segment, sectors
-    , currentSegment, currentSector, sectorStart
-    , currentMiniSector, miniSectorProgressAt
+    , Segment, sectors, sectorStart
+    , SectorProgress, progressAt, currentSector
+    , MiniSectorProgress, currentMiniSector, miniSectorProgressAt
     )
 
 {-|
@@ -18,9 +18,13 @@ module Motorsport.Lap exposing
 
 ## Sectors as segments of the lap
 
-@docs Segment, sectors
-@docs currentSegment, currentSector, sectorStart
-@docs currentMiniSector, miniSectorProgressAt
+@docs Segment, sectors, sectorStart
+
+
+## Where the car is on the lap
+
+@docs SectorProgress, progressAt, currentSector
+@docs MiniSectorProgress, currentMiniSector, miniSectorProgressAt
 
 -}
 
@@ -273,6 +277,31 @@ currentSector clock lap =
     Tuple.first (currentSegment clock lap)
 
 
+{-| How far around the lap the car is: which sector, and how far through it as
+a fraction of that sector.
+
+Not clamped — a moment past the end of the lap gives a fraction above 1, and
+one before it starts gives a negative. Whether that should be capped is a
+question about what is being drawn, so it is left to the caller.
+
+-}
+type alias SectorProgress =
+    { sector : Sector
+    , progress : Float
+    }
+
+
+progressAt : Clock -> Lap -> SectorProgress
+progressAt clock lap =
+    let
+        ( sector, segment ) =
+            currentSegment clock lap
+    in
+    { sector = sector
+    , progress = toFloat (clock.elapsed - segment.start) / toFloat segment.time
+    }
+
+
 {-| When a given sector of a given lap began.
 
 `currentSegment` covers the common case of asking about the sector a car is in
@@ -330,11 +359,21 @@ currentMiniSector clock lap =
             )
 
 
-miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( LeMans2025MiniSector, Float )
-miniSectorProgressAt clock ( currentLap, lastLap ) =
-    case currentMiniSector clock currentLap of
+{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress). Clamped
+to 0..1, unlike its sector-level sibling, because a mini-sector's own recorded
+time is the only thing bounding it.
+-}
+type alias MiniSectorProgress =
+    { miniSector : LeMans2025MiniSector
+    , progress : Float
+    }
+
+
+miniSectorProgressAt : Clock -> { current : Lap, previous : Lap } -> Maybe MiniSectorProgress
+miniSectorProgressAt clock { current, previous } =
+    case currentMiniSector clock current of
         Just miniSector ->
-            currentLap.miniSectors
+            current.miniSectors
                 |> Maybe.andThen
                     (\miniSectors ->
                         let
@@ -348,7 +387,7 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
                             ( Just start_, Just duration_ ) ->
                                 let
                                     elapsedSinceStart =
-                                        clock.elapsed - (lastLap.elapsed + start_)
+                                        clock.elapsed - (previous.elapsed + start_)
 
                                     progress =
                                         if duration_ <= 0 then
@@ -356,13 +395,11 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
 
                                         else
                                             toFloat elapsedSinceStart / toFloat duration_
-
-                                    clamped =
-                                        progress
-                                            |> Basics.max 0
-                                            |> Basics.min 1
                                 in
-                                Just ( miniSector, clamped )
+                                Just
+                                    { miniSector = miniSector
+                                    , progress = progress |> Basics.max 0 |> Basics.min 1
+                                    }
 
                             _ ->
                                 Nothing
