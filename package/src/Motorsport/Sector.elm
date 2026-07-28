@@ -1,7 +1,7 @@
 module Motorsport.Sector exposing
     ( Sector(..)
     , all
-    , compare, next, previous
+    , compare
     , toString
     , BySector, initialize, get, map2
     , values, toList
@@ -11,7 +11,7 @@ module Motorsport.Sector exposing
 
 @docs Sector
 @docs all
-@docs compare, next, previous
+@docs compare
 @docs toString
 
 
@@ -80,51 +80,6 @@ toIndex sector =
 
         S3 ->
             2
-
-
-{-| The sector a car enters next, or `Nothing` at the end of the lap — crossing
-the line starts a new lap, which this module knows nothing about.
-
-    next S1
-    --> Just S2
-
-    next S3
-    --> Nothing
-
--}
-next : Sector -> Maybe Sector
-next sector =
-    case sector of
-        S1 ->
-            Just S2
-
-        S2 ->
-            Just S3
-
-        S3 ->
-            Nothing
-
-
-{-| The sector a car just left, or `Nothing` at the start of the lap.
-
-    previous S3
-    --> Just S2
-
-    previous S1
-    --> Nothing
-
--}
-previous : Sector -> Maybe Sector
-previous sector =
-    case sector of
-        S1 ->
-            Nothing
-
-        S2 ->
-            Just S1
-
-        S3 ->
-            Just S2
 
 
 {-| Convert a sector to its string representation. For display only — ordering

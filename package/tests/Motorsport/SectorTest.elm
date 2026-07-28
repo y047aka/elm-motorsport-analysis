@@ -25,22 +25,6 @@ tests =
                         |> List.filter (\( ab, ba ) -> ab /= flip ba)
                         |> Expect.equalLists []
             ]
-        , describe "next / previous"
-            [ test "next steps through every sector but the last" <|
-                \_ ->
-                    List.map Sector.next Sector.all
-                        |> Expect.equal [ Just S2, Just S3, Nothing ]
-            , test "previous undoes next" <|
-                \_ ->
-                    Sector.all
-                        |> List.map (\sector -> Sector.next sector |> Maybe.andThen Sector.previous)
-                        |> Expect.equal [ Just S1, Just S2, Nothing ]
-            , test "next moves forward in `compare` order" <|
-                \_ ->
-                    Sector.all
-                        |> List.filterMap (\sector -> Maybe.map (Sector.compare sector) (Sector.next sector))
-                        |> Expect.equal [ LT, LT ]
-            ]
         ]
 
 
