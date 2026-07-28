@@ -3,9 +3,9 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , currentSector
-    , currentMiniSector, miniSectorProgressAt
-    , sectorToElapsed
+    , Segment, sectors, sectorStart
+    , SectorProgress, progressAt, currentSector
+    , MiniSectorProgress, currentMiniSector, miniSectorProgressAt
     )
 
 {-|
@@ -15,16 +15,24 @@ module Motorsport.Lap exposing
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
-@docs currentSector
-@docs currentMiniSector, miniSectorProgressAt
+
+## Sectors as segments of the lap
+
+@docs Segment, sectors, sectorStart
+
+
+## Where the car is on the lap
+
+@docs SectorProgress, progressAt, currentSector
+@docs MiniSectorProgress, currentMiniSector, miniSectorProgressAt
 
 -}
 
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 
 
 type alias Lap =
@@ -47,22 +55,7 @@ type alias Lap =
 
 
 type alias MiniSectors =
-    { scl2 : MiniSectorData
-    , z4 : MiniSectorData
-    , ip1 : MiniSectorData
-    , z12 : MiniSectorData
-    , sclc : MiniSectorData
-    , a7_1 : MiniSectorData
-    , ip2 : MiniSectorData
-    , a8_1 : MiniSectorData
-    , sclb : MiniSectorData
-    , porin : MiniSectorData
-    , porout : MiniSectorData
-    , pitref : MiniSectorData
-    , scl1 : MiniSectorData
-    , fordout : MiniSectorData
-    , fl : MiniSectorData
-    }
+    ByMiniSector MiniSectorData
 
 
 type alias MiniSectorData =
@@ -112,25 +105,25 @@ compareAt clock a b =
 compareLapsInSameLap : Clock -> Lap -> Lap -> Order
 compareLapsInSameLap clock a b =
     let
-        currentSector_a =
-            currentSector clock a
+        ( sector_a, segment_a ) =
+            currentSegment clock a
 
-        currentSector_b =
-            currentSector clock b
+        ( sector_b, segment_b ) =
+            currentSegment clock b
     in
-    case Basics.compare (Sector.toString currentSector_a) (Sector.toString currentSector_b) of
+    case Sector.compare sector_a sector_b of
         LT ->
             GT
 
         EQ ->
-            compareLapsInSameSector clock a b currentSector_a
+            compareLapsInSameSector clock a b segment_a segment_b
 
         GT ->
             LT
 
 
-compareLapsInSameSector : Clock -> Lap -> Lap -> Sector -> Order
-compareLapsInSameSector clock a b currentSector_ =
+compareLapsInSameSector : Clock -> Lap -> Lap -> Segment -> Segment -> Order
+compareLapsInSameSector clock a b segment_a segment_b =
     case ( a.miniSectors, b.miniSectors ) of
         ( Just _, Just _ ) ->
             case ( currentMiniSector clock a, currentMiniSector clock b ) of
@@ -152,15 +145,18 @@ compareLapsInSameSector clock a b currentSector_ =
                     GT
 
                 ( Nothing, Nothing ) ->
-                    compareLapsWithSectorElapsed a b currentSector_
+                    compareBySegmentStart segment_a segment_b
 
         _ ->
-            compareLapsWithSectorElapsed a b currentSector_
+            compareBySegmentStart segment_a segment_b
 
 
-compareLapsWithSectorElapsed : Lap -> Lap -> Sector -> Order
-compareLapsWithSectorElapsed a b currentSector_ =
-    Basics.compare (sectorToElapsed a currentSector_) (sectorToElapsed b currentSector_)
+{-| Both cars are in the same sector of the same lap, so whichever entered it
+first is ahead.
+-}
+compareBySegmentStart : Segment -> Segment -> Order
+compareBySegmentStart segment_a segment_b =
+    Basics.compare segment_a.start segment_b.start
 
 
 completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
@@ -196,37 +192,101 @@ findCurrentLap clock =
 -- SECTOR
 
 
+{-| One sector of one lap, as the stretch of race time the car spends in it.
+
+`start` is on the same scale as `Lap.elapsed` and the race clock, so it can be
+compared against either without conversion.
+
+Which sector it is belongs to the position in a
+[`BySector`](Motorsport-Sector#BySector), not to the value.
+
+-}
+type alias Segment =
+    { start : Duration
+    , time : Duration
+    }
+
+
+{-| Cut a lap into its three sectors.
+
+The lap stores only how long each sector took, so where one begins has to be
+added up; this is the only place that happens. It adds up from the lap's own
+end and duration, never the previous lap's, which may be missing or not
+adjacent.
+
+-}
+sectors : Lap -> BySector Segment
+sectors lap =
+    let
+        start =
+            lap.elapsed - lap.time
+    in
+    { s1 = { start = start, time = lap.sector_1 }
+    , s2 = { start = start + lap.sector_1, time = lap.sector_2 }
+    , s3 = { start = start + lap.sector_1 + lap.sector_2, time = lap.sector_3 }
+    }
+
+
+{-| Whether a moment of race time falls inside a segment. Half-open: the
+instant a sector ends belongs to the next one.
+-}
+contains : Duration -> Segment -> Bool
+contains raceElapsed segment =
+    raceElapsed >= segment.start && raceElapsed < (segment.start + segment.time)
+
+
+{-| The segment the car is driving at the given moment. Moments outside the lap
+fall through to the final sector, which is what callers want for a lap that is
+already over.
+-}
+currentSegment : Clock -> Lap -> ( Sector, Segment )
+currentSegment clock lap =
+    let
+        segments =
+            sectors lap
+    in
+    segments
+        |> Sector.toList
+        |> List.Extra.find (\( _, segment ) -> contains clock.elapsed segment)
+        |> Maybe.withDefault ( S3, segments.s3 )
+
+
 currentSector : Clock -> Lap -> Sector
 currentSector clock lap =
+    Tuple.first (currentSegment clock lap)
+
+
+{-| How far around the lap the car is: which sector, and how far through it as
+a fraction of that sector.
+
+Not clamped: past the end of the lap gives more than 1, before its start gives
+a negative, and a sector with no recorded time gives infinity or NaN. Capping
+is a question about what is being drawn, so it is left to the caller.
+
+-}
+type alias SectorProgress =
+    { sector : Sector
+    , progress : Float
+    }
+
+
+progressAt : Clock -> Lap -> SectorProgress
+progressAt clock lap =
     let
-        elapsed_lastLap =
-            lap.elapsed - lap.time
+        ( sector, segment ) =
+            currentSegment clock lap
     in
-    if clock.elapsed >= elapsed_lastLap && clock.elapsed < (elapsed_lastLap + lap.sector_1) then
-        S1
-
-    else if clock.elapsed >= (elapsed_lastLap + lap.sector_1) && clock.elapsed < (elapsed_lastLap + lap.sector_1 + lap.sector_2) then
-        S2
-
-    else
-        S3
+    { sector = sector
+    , progress = toFloat (clock.elapsed - segment.start) / toFloat segment.time
+    }
 
 
-sectorToElapsed : Lap -> Sector -> Duration
-sectorToElapsed lap sector =
-    let
-        elapsed_lastLap =
-            lap.elapsed - lap.time
-    in
-    case sector of
-        S1 ->
-            elapsed_lastLap
-
-        S2 ->
-            elapsed_lastLap + lap.sector_1
-
-        S3 ->
-            elapsed_lastLap + lap.sector_1 + lap.sector_2
+{-| When a given sector of a given lap began — for asking about a sector the
+car is not in, or a lap it is not on.
+-}
+sectorStart : Lap -> Sector -> Duration
+sectorStart lap sector =
+    (Sector.get sector (sectors lap)).start
 
 
 miniSectorOrder : List LeMans2025MiniSector
@@ -275,11 +335,20 @@ currentMiniSector clock lap =
             )
 
 
-miniSectorProgressAt : Clock -> ( Lap, Lap ) -> Maybe ( LeMans2025MiniSector, Float )
-miniSectorProgressAt clock ( currentLap, lastLap ) =
-    case currentMiniSector clock currentLap of
+{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress), clamped
+to 0..1.
+-}
+type alias MiniSectorProgress =
+    { miniSector : LeMans2025MiniSector
+    , progress : Float
+    }
+
+
+miniSectorProgressAt : Clock -> { current : Lap, previous : Lap } -> Maybe MiniSectorProgress
+miniSectorProgressAt clock { current, previous } =
+    case currentMiniSector clock current of
         Just miniSector ->
-            currentLap.miniSectors
+            current.miniSectors
                 |> Maybe.andThen
                     (\miniSectors ->
                         let
@@ -293,7 +362,7 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
                             ( Just start_, Just duration_ ) ->
                                 let
                                     elapsedSinceStart =
-                                        clock.elapsed - (lastLap.elapsed + start_)
+                                        clock.elapsed - (previous.elapsed + start_)
 
                                     progress =
                                         if duration_ <= 0 then
@@ -301,13 +370,11 @@ miniSectorProgressAt clock ( currentLap, lastLap ) =
 
                                         else
                                             toFloat elapsedSinceStart / toFloat duration_
-
-                                    clamped =
-                                        progress
-                                            |> Basics.max 0
-                                            |> Basics.min 1
                                 in
-                                Just ( miniSector, clamped )
+                                Just
+                                    { miniSector = miniSector
+                                    , progress = progress |> Basics.max 0 |> Basics.min 1
+                                    }
 
                             _ ->
                                 Nothing
@@ -337,63 +404,14 @@ miniSectorToElapsed lap miniSector =
           )
 
 
-miniSectorData : MiniSectors -> LeMans2025MiniSector -> MiniSectorData
-miniSectorData miniSectors mini =
-    case mini of
-        SCL2 ->
-            miniSectors.scl2
-
-        Z4 ->
-            miniSectors.z4
-
-        IP1 ->
-            miniSectors.ip1
-
-        Z12 ->
-            miniSectors.z12
-
-        SCLC ->
-            miniSectors.sclc
-
-        A7_1 ->
-            miniSectors.a7_1
-
-        IP2 ->
-            miniSectors.ip2
-
-        A8_1 ->
-            miniSectors.a8_1
-
-        SCLB ->
-            miniSectors.sclb
-
-        PORIN ->
-            miniSectors.porin
-
-        POROUT ->
-            miniSectors.porout
-
-        PITREF ->
-            miniSectors.pitref
-
-        SCL1 ->
-            miniSectors.scl1
-
-        FORDOUT ->
-            miniSectors.fordout
-
-        FL ->
-            miniSectors.fl
-
-
 miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorElapsed miniSectors mini =
-    miniSectorData miniSectors mini |> .elapsed
+    LeMans.get mini miniSectors |> .elapsed
 
 
 miniSectorTime : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorTime miniSectors mini =
-    miniSectorData miniSectors mini |> .time
+    LeMans.get mini miniSectors |> .time
 
 
 miniSectorStartElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration

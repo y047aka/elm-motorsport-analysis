@@ -18,9 +18,10 @@ import List.Extra
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
-import Motorsport.Sector exposing (Sector(..))
-import Motorsport.ViewModel.Standings exposing (Entry, MiniSectorProgress, SectorProgress)
+import Motorsport.Sector exposing (BySector, Sector(..))
+import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 type alias TrackConfig =
@@ -64,8 +65,7 @@ buildConfig layout bestTimes =
 
         totalTime =
             if isLeMans2025 then
-                LeMans.miniSectorOrder
-                    |> List.map (\mini -> LeMans.miniSectorAccessor mini bestTimes.fastestMiniSectors)
+                LeMans.values bestTimes.fastestMiniSectors
                     |> List.sum
                     |> toFloat
 
@@ -75,7 +75,7 @@ buildConfig layout bestTimes =
         miniRatio miniSector =
             let
                 value =
-                    LeMans.miniSectorAccessor miniSector bestTimes.fastestMiniSectors
+                    LeMans.get miniSector bestTimes.fastestMiniSectors
                         |> toFloat
 
                 defaultRatio =
@@ -114,7 +114,7 @@ computeSectorShares :
     -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
-    -> { s1 : Float, s2 : Float, s3 : Float }
+    -> BySector Float
 computeSectorShares layout bestTimes totalTime miniRatio =
     let
         sectorShare fastestTime miniSectors =
@@ -186,7 +186,7 @@ progressFromSector : List SectorConfig -> SectorProgress -> Float
 progressFromSector sectors { sector, progress } =
     sectors
         |> List.Extra.find (\sectorConfig -> sectorConfig.sector == sector)
-        |> Maybe.map (\{ start, share } -> start + (progress / 100) * share)
+        |> Maybe.map (\{ start, share } -> start + progress * share)
         |> Maybe.withDefault 0
 
 

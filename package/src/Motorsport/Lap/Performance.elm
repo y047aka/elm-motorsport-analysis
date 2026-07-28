@@ -21,6 +21,7 @@ module Motorsport.Lap.Performance exposing
 -}
 
 import List.Extra
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 
@@ -102,22 +103,7 @@ toColorVariable level =
 
 
 type alias LeMans2025MiniSectorFastest =
-    { scl2 : Duration
-    , z4 : Duration
-    , ip1 : Duration
-    , z12 : Duration
-    , sclc : Duration
-    , a7_1 : Duration
-    , ip2 : Duration
-    , a8_1 : Duration
-    , sclb : Duration
-    , porin : Duration
-    , porout : Duration
-    , pitref : Duration
-    , scl1 : Duration
-    , fordout : Duration
-    , fl : Duration
-    }
+    ByMiniSector Duration
 
 
 calculateMiniSectorFastest : List (List Lap) -> LeMans2025MiniSectorFastest
@@ -139,19 +125,4 @@ calculateMiniSectorFastest laps =
                 |> Maybe.withDefault 0
     in
     -- TODO: 畳み込みを使うとより高速に計算できる
-    { scl2 = fastestTimeFor .scl2
-    , z4 = fastestTimeFor .z4
-    , ip1 = fastestTimeFor .ip1
-    , z12 = fastestTimeFor .z12
-    , sclc = fastestTimeFor .sclc
-    , a7_1 = fastestTimeFor .a7_1
-    , ip2 = fastestTimeFor .ip2
-    , a8_1 = fastestTimeFor .a8_1
-    , sclb = fastestTimeFor .sclb
-    , porin = fastestTimeFor .porin
-    , porout = fastestTimeFor .porout
-    , pitref = fastestTimeFor .pitref
-    , scl1 = fastestTimeFor .scl1
-    , fordout = fastestTimeFor .fordout
-    , fl = fastestTimeFor .fl
-    }
+    LeMans.initialize (\mini -> fastestTimeFor (LeMans.get mini))

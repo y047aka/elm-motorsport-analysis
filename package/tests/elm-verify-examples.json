@@ -1,4 +1,4 @@
 {
   "root": "../src",
-  "tests": ["Motorsport.Driver", "Motorsport.Duration"]
+  "tests": ["Motorsport.Driver", "Motorsport.Duration", "Motorsport.Sector"]
 }

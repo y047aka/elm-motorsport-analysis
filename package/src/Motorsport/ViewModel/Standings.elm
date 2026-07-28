@@ -1,6 +1,5 @@
 module Motorsport.ViewModel.Standings exposing
     ( Standings, Entry, ClassInfo
-    , SectorProgress, MiniSectorProgress
     , SectorTimes, CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
@@ -12,7 +11,6 @@ module Motorsport.ViewModel.Standings exposing
 {-|
 
 @docs Standings, Entry, ClassInfo
-@docs SectorProgress, MiniSectorProgress
 @docs SectorTimes, CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
@@ -28,7 +26,7 @@ module Motorsport.ViewModel.Standings exposing
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
-import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
@@ -37,7 +35,7 @@ import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
-import Motorsport.Sector exposing (Sector(..))
+import Motorsport.Sector as Sector exposing (BySector)
 import SortedList exposing (SortedList)
 
 
@@ -70,40 +68,19 @@ type alias ClassInfo =
     }
 
 
+{-| A lap's three sector times, each with that driver's best for the sector to
+rate it against.
+-}
 type alias SectorTimes =
-    { sector_1 : Duration
-    , sector_2 : Duration
-    , sector_3 : Duration
-    , s1_best : Duration
-    , s2_best : Duration
-    , s3_best : Duration
-    }
+    BySector { time : Duration, personalBest : Duration }
 
 
 type alias SectorPerformance =
-    { sector_1 : RatedTime
-    , sector_2 : RatedTime
-    , sector_3 : RatedTime
-    }
+    BySector RatedTime
 
 
 type alias MiniSectorPerformance =
-    { scl2 : Maybe RatedTime
-    , z4 : Maybe RatedTime
-    , ip1 : Maybe RatedTime
-    , z12 : Maybe RatedTime
-    , sclc : Maybe RatedTime
-    , a7_1 : Maybe RatedTime
-    , ip2 : Maybe RatedTime
-    , a8_1 : Maybe RatedTime
-    , sclb : Maybe RatedTime
-    , porin : Maybe RatedTime
-    , porout : Maybe RatedTime
-    , pitref : Maybe RatedTime
-    , scl1 : Maybe RatedTime
-    , fordout : Maybe RatedTime
-    , fl : Maybe RatedTime
-    }
+    ByMiniSector (Maybe RatedTime)
 
 
 type alias Entry =
@@ -125,8 +102,8 @@ type alias Entry =
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
     , currentLapRated : Maybe RatedTime
-    , sector : Maybe SectorProgress
-    , miniSector : Maybe MiniSectorProgress
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     , currentLapProgress : Float
@@ -138,26 +115,11 @@ type alias Entry =
     }
 
 
-type alias SectorProgress =
-    { sector : Sector
-    , progress : Float
-    }
-
-
 {-| Per-sector "progress + performance rating" for the current lap.
 Rated at compute time so donut displays can render without being supplied BestTimes separately.
 -}
 type alias CurrentSectorStates =
-    { sector_1 : { progress : Float, rated : RatedTime }
-    , sector_2 : { progress : Float, rated : RatedTime }
-    , sector_3 : { progress : Float, rated : RatedTime }
-    }
-
-
-type alias MiniSectorProgress =
-    { miniSector : LeMans2025MiniSector
-    , progress : Float
-    }
+    BySector { progress : Float, rated : RatedTime }
 
 
 compute :
@@ -355,42 +317,40 @@ rateTime fastest { time, personalBest } =
 
 extractSectorTimes : Lap -> SectorTimes
 extractSectorTimes lap =
-    { sector_1 = lap.sector_1
-    , sector_2 = lap.sector_2
-    , sector_3 = lap.sector_3
-    , s1_best = lap.s1_best
-    , s2_best = lap.s2_best
-    , s3_best = lap.s3_best
+    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
+    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
+    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
     }
 
 
 extractCurrentSectorStates :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
-    -> Maybe SectorProgress
+    -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
 extractCurrentSectorStates bestTimes sectorProgress lap =
     let
-        ( s1_progress, s2_progress, s3_progress ) =
+        -- Sectors already driven through are complete, the ones ahead
+        -- untouched; no sector in progress at all means the lap is over.
+        progressOf sector =
             case sectorProgress of
-                Just { sector, progress } ->
-                    case sector of
-                        S1 ->
-                            ( progress, 0, 0 )
+                Just current ->
+                    case Sector.compare sector current.sector of
+                        LT ->
+                            1
 
-                        S2 ->
-                            ( 100, progress, 0 )
+                        EQ ->
+                            current.progress
 
-                        S3 ->
-                            ( 100, 100, progress )
+                        GT ->
+                            0
 
                 Nothing ->
-                    ( 100, 100, 100 )
+                    1
     in
-    { sector_1 = { progress = s1_progress, rated = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best } }
-    , sector_2 = { progress = s2_progress, rated = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best } }
-    , sector_3 = { progress = s3_progress, rated = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best } }
-    }
+    Sector.map2 (\progress rated -> { progress = progress, rated = rated })
+        (Sector.initialize progressOf)
+        (extractSectorPerformance bestTimes lap)
 
 
 extractSectorPerformance :
@@ -398,9 +358,19 @@ extractSectorPerformance :
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    { sector_1 = rateTime bestTimes.fastestSector_1 { time = lap.sector_1, personalBest = lap.s1_best }
-    , sector_2 = rateTime bestTimes.fastestSector_2 { time = lap.sector_2, personalBest = lap.s2_best }
-    , sector_3 = rateTime bestTimes.fastestSector_3 { time = lap.sector_3, personalBest = lap.s3_best }
+    Sector.map2 rateTime (fastestBySector bestTimes) (extractSectorTimes lap)
+
+
+{-| Turns the best-times record's flat `fastestSector_1` / `_2` / `_3` into
+per-sector values; `extractSectorTimes` does the same for a lap.
+-}
+fastestBySector :
+    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    -> BySector Duration
+fastestBySector bestTimes =
+    { s1 = bestTimes.fastestSector_1
+    , s2 = bestTimes.fastestSector_2
+    , s3 = bestTimes.fastestSector_3
     }
 
 
@@ -409,39 +379,21 @@ extractMiniSectorPerformance :
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =
+    let
+        rate recorded fastestTime =
+            Maybe.map2
+                (\time personalBest -> rateTime fastestTime { time = time, personalBest = personalBest })
+                recorded.time
+                recorded.best
+    in
     lap.miniSectors
-        |> Maybe.map
-            (\ms ->
-                let
-                    rateMiniSector msd fastestTime =
-                        Maybe.map2
-                            (\t b -> rateTime fastestTime { time = t, personalBest = b })
-                            msd.time
-                            msd.best
-                in
-                { scl2 = rateMiniSector ms.scl2 bestTimes.fastestMiniSectors.scl2
-                , z4 = rateMiniSector ms.z4 bestTimes.fastestMiniSectors.z4
-                , ip1 = rateMiniSector ms.ip1 bestTimes.fastestMiniSectors.ip1
-                , z12 = rateMiniSector ms.z12 bestTimes.fastestMiniSectors.z12
-                , sclc = rateMiniSector ms.sclc bestTimes.fastestMiniSectors.sclc
-                , a7_1 = rateMiniSector ms.a7_1 bestTimes.fastestMiniSectors.a7_1
-                , ip2 = rateMiniSector ms.ip2 bestTimes.fastestMiniSectors.ip2
-                , a8_1 = rateMiniSector ms.a8_1 bestTimes.fastestMiniSectors.a8_1
-                , sclb = rateMiniSector ms.sclb bestTimes.fastestMiniSectors.sclb
-                , porin = rateMiniSector ms.porin bestTimes.fastestMiniSectors.porin
-                , porout = rateMiniSector ms.porout bestTimes.fastestMiniSectors.porout
-                , pitref = rateMiniSector ms.pitref bestTimes.fastestMiniSectors.pitref
-                , scl1 = rateMiniSector ms.scl1 bestTimes.fastestMiniSectors.scl1
-                , fordout = rateMiniSector ms.fordout bestTimes.fastestMiniSectors.fordout
-                , fl = rateMiniSector ms.fl bestTimes.fastestMiniSectors.fl
-                }
-            )
+        |> Maybe.map (\ms -> LeMans.map2 rate ms bestTimes.fastestMiniSectors)
 
 
 type alias TimingState =
     { currentLapElapsed : Duration
-    , sector : Maybe SectorProgress
-    , miniSector : Maybe MiniSectorProgress
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     }
@@ -460,19 +412,14 @@ init_timing raceElapsed rivals car =
             Maybe.withDefault Lap.empty car.lastLap
 
         currentSector =
-            case Lap.currentSector raceClock currentLap of
-                S1 ->
-                    Just { sector = S1, progress = min 100 ((toFloat (raceClock.elapsed - lastLap.elapsed) / toFloat currentLap.sector_1) * 100) }
-
-                S2 ->
-                    Just { sector = S2, progress = min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1)) / toFloat currentLap.sector_2) * 100) }
-
-                S3 ->
-                    Just { sector = S3, progress = min 100 ((toFloat (raceClock.elapsed - (lastLap.elapsed + currentLap.sector_1 + currentLap.sector_2)) / toFloat currentLap.sector_3) * 100) }
+            let
+                sectorProgress =
+                    Lap.progressAt raceClock currentLap
+            in
+            Just { sectorProgress | progress = min 1 sectorProgress.progress }
 
         currentMiniSector =
-            Lap.miniSectorProgressAt raceClock ( currentLap, lastLap )
-                |> Maybe.map (\( ms, p ) -> { miniSector = ms, progress = p })
+            Lap.miniSectorProgressAt raceClock { current = currentLap, previous = lastLap }
     in
     { currentLapElapsed = raceClock.elapsed - lastLap.elapsed
     , sector = currentSector
