@@ -330,9 +330,8 @@ extractCurrentSectorStates :
     -> CurrentSectorStates
 extractCurrentSectorStates bestTimes sectorProgress lap =
     let
-        -- Sectors the car has already driven through count as complete, the one
-        -- it is in reports its own progress, and the ones ahead are untouched.
-        -- With no sector in progress the lap is over, so all three are complete.
+        -- Sectors already driven through are complete, the ones ahead
+        -- untouched; no sector in progress at all means the lap is over.
         progressOf sector =
             case sectorProgress of
                 Just current ->
@@ -362,10 +361,8 @@ extractSectorPerformance bestTimes lap =
     Sector.map2 rateTime (fastestBySector bestTimes) (extractSectorTimes lap)
 
 
-{-| Where the flat `fastestSector_1` / `_2` / `_3` fields of the best-times
-record turn into per-sector values. `extractSectorTimes` does the same for a
-lap. Between them, the flattening is written once rather than at each site that
-needs to look a sector up.
+{-| Turns the best-times record's flat `fastestSector_1` / `_2` / `_3` into
+per-sector values; `extractSectorTimes` does the same for a lap.
 -}
 fastestBySector :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }

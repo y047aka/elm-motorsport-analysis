@@ -28,7 +28,7 @@ tests =
         ]
 
 
-{-| Every ordered pair of distinct elements.
+{-| Every ordered pair, including each element with itself.
 -}
 pairs : List a -> List ( a, a )
 pairs xs =

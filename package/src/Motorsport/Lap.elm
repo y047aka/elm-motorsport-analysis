@@ -194,12 +194,11 @@ findCurrentLap clock =
 
 {-| One sector of one lap, as the stretch of race time the car spends in it.
 
-`start` is measured from the start of the race, the same scale as `Lap.elapsed`
-and the race clock, so it can be compared against either without conversion.
+`start` is on the same scale as `Lap.elapsed` and the race clock, so it can be
+compared against either without conversion.
 
-Which sector a segment belongs to is not stored here. It is the position the
-segment occupies in a [`BySector`](Motorsport-Sector#BySector), and duplicating
-it in the value would allow the two to disagree.
+Which sector it is belongs to the position in a
+[`BySector`](Motorsport-Sector#BySector), not to the value.
 
 -}
 type alias Segment =
@@ -210,13 +209,10 @@ type alias Segment =
 
 {-| Cut a lap into its three sectors.
 
-The lap record stores only how long each sector took, so where a sector begins
-has to be added up. This is the one place that addition happens: everything
-downstream reads `start` instead of re-deriving it.
-
-The lap knows when it ended and how long it took, which is enough — the
-previous lap is not consulted, so a missing or non-adjacent one cannot throw
-the sectors off.
+The lap stores only how long each sector took, so where one begins has to be
+added up; this is the only place that happens. It adds up from the lap's own
+end and duration, never the previous lap's, which may be missing or not
+adjacent.
 
 -}
 sectors : Lap -> BySector Segment
@@ -239,11 +235,9 @@ contains raceElapsed segment =
     raceElapsed >= segment.start && raceElapsed < (segment.start + segment.time)
 
 
-{-| The segment the car is driving at the given moment.
-
-Moments outside the lap fall through to the final sector, which is what
-callers want for a lap that is already over.
-
+{-| The segment the car is driving at the given moment. Moments outside the lap
+fall through to the final sector, which is what callers want for a lap that is
+already over.
 -}
 currentSegment : Clock -> Lap -> ( Sector, Segment )
 currentSegment clock lap =
@@ -265,9 +259,9 @@ currentSector clock lap =
 {-| How far around the lap the car is: which sector, and how far through it as
 a fraction of that sector.
 
-Not clamped — a moment past the end of the lap gives a fraction above 1, and
-one before it starts gives a negative. Whether that should be capped is a
-question about what is being drawn, so it is left to the caller.
+Not clamped: past the end of the lap gives more than 1, before its start gives
+a negative, and a sector with no recorded time gives infinity or NaN. Capping
+is a question about what is being drawn, so it is left to the caller.
 
 -}
 type alias SectorProgress =
@@ -287,11 +281,8 @@ progressAt clock lap =
     }
 
 
-{-| When a given sector of a given lap began.
-
-`currentSegment` covers the common case of asking about the sector a car is in
-right now; this is for asking about some other sector, or some other lap.
-
+{-| When a given sector of a given lap began — for asking about a sector the
+car is not in, or a lap it is not on.
 -}
 sectorStart : Lap -> Sector -> Duration
 sectorStart lap sector =
@@ -344,9 +335,8 @@ currentMiniSector clock lap =
             )
 
 
-{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress). Clamped
-to 0..1, unlike its sector-level sibling, because a mini-sector's own recorded
-time is the only thing bounding it.
+{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress), clamped
+to 0..1.
 -}
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector

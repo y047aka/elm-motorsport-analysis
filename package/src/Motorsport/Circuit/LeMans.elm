@@ -42,13 +42,9 @@ type LeMans2025MiniSector
     | FL
 
 
-{-| Fifteen values, one per mini sector — the counterpart of
-[`BySector`](Motorsport-Sector#BySector) at the finer granularity, and a
-transparent record for the same reasons.
-
-Fields are in track order, so a record literal and
-[`miniSectorOrder`](#miniSectorOrder) read the same way round.
-
+{-| Fifteen values, one per mini sector — [`BySector`](Motorsport-Sector#BySector)
+at the finer granularity, transparent for the same reasons. Fields are in track
+order.
 -}
 type alias ByMiniSector a =
     { scl2 : a
@@ -150,10 +146,6 @@ map2 f a b =
 
 
 {-| The values in track order.
-
-Order comes from [`miniSectorOrder`](#miniSectorOrder), so it cannot drift from
-it — the same arrangement as [`Sector.values`](Motorsport-Sector#values).
-
 -}
 values : ByMiniSector a -> List a
 values byMiniSector =

@@ -35,9 +35,7 @@ type Sector
     | S3
 
 
-{-| Every sector, in the order a car drives them. Iterate over this rather than
-writing `S1`/`S2`/`S3` out by hand, so adding a sector is a compiler error
-instead of a silent omission.
+{-| Every sector, in the order a car drives them.
 
     all
     --> [ S1, S2, S3 ]
@@ -66,9 +64,6 @@ compare a b =
     Basics.compare (toIndex a) (toIndex b)
 
 
-{-| Zero-based position around the lap. Kept private: it is an implementation
-detail of the ordering, not a number worth handing out.
--}
 toIndex : Sector -> Int
 toIndex sector =
     case sector of
@@ -113,17 +108,11 @@ Source records spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
 leaves callers writing the same three-way `case` to pick one out. Convert once
 at the boundary and the picking becomes [`get`](#get).
 
-Deliberately a transparent record rather than an opaque type. There is no
-invariant to protect — any three values of a type are a valid `BySector` — and
-the alternative is worse at the point of construction: an opaque type would be
-built through `fromValues : a -> a -> a -> BySector a`, three positional
-arguments of the same type, which is easier to get wrong than the named fields
-it would replace. Values that already have this shape (a circuit's sector
-shares, say) become a `BySector` by annotation alone.
-
-The cost is that `s1` / `s2` / `s3` are public API. Read through
-[`get`](#get) and [`values`](#values) anyway: those keep working if the field
-names ever change, and they say which sector is meant.
+A transparent record, not an opaque type: there is no invariant to protect, and
+an opaque type would be built from three positional arguments of the same type
+— easier to get wrong than the named fields it would replace. The cost is that
+`s1` / `s2` / `s3` are public, so prefer [`get`](#get) and [`values`](#values),
+which say which sector is meant.
 
 -}
 type alias BySector a =
@@ -179,8 +168,6 @@ map2 f a b =
 
 {-| The three values in sector order — for rendering a row or a column of
 cells, where the sector itself is implied by position.
-
-Order comes from [`all`](#all), so it cannot drift from it.
 
     values (initialize toString)
     --> [ "S1", "S2", "S3" ]

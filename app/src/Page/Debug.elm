@@ -148,9 +148,6 @@ config bestTimes standings =
     }
 
 
-{-| Raw sector times, best-per-sector, and the rating of each, one pair of
-columns per sector.
--}
 sectorColumns : BestTimes -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
