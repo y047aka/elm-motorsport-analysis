@@ -158,6 +158,18 @@ Source records spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
 leaves callers writing the same three-way `case` to pick one out. Convert once
 at the boundary and the picking becomes [`get`](#get).
 
+Deliberately a transparent record rather than an opaque type. There is no
+invariant to protect — any three values of a type are a valid `BySector` — and
+the alternative is worse at the point of construction: an opaque type would be
+built through `fromValues : a -> a -> a -> BySector a`, three positional
+arguments of the same type, which is easier to get wrong than the named fields
+it would replace. Values that already have this shape (a circuit's sector
+shares, say) become a `BySector` by annotation alone.
+
+The cost is that `s1` / `s2` / `s3` are public API. Read through
+[`get`](#get) and [`values`](#values) anyway: those keep working if the field
+names ever change, and they say which sector is meant.
+
 -}
 type alias BySector a =
     { s1 : a

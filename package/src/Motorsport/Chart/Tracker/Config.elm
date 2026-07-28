@@ -19,7 +19,7 @@ import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
-import Motorsport.Sector exposing (Sector(..))
+import Motorsport.Sector exposing (BySector, Sector(..))
 import Motorsport.ViewModel.Standings exposing (Entry, MiniSectorProgress, SectorProgress)
 
 
@@ -114,7 +114,7 @@ computeSectorShares :
     -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
-    -> { s1 : Float, s2 : Float, s3 : Float }
+    -> BySector Float
 computeSectorShares layout bestTimes totalTime miniRatio =
     let
         sectorShare fastestTime miniSectors =

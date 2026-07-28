@@ -477,11 +477,11 @@ init_timing raceElapsed rivals car =
 
         currentSector =
             let
-                segment =
+                ( sector, segment ) =
                     Lap.currentSegment raceClock currentLap
             in
             Just
-                { sector = segment.sector
+                { sector = sector
                 , progress =
                     min 100 ((toFloat (raceClock.elapsed - segment.start) / toFloat segment.time) * 100)
                 }

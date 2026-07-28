@@ -43,12 +43,6 @@ tests =
                     (Lap.sectors lap).s3
                         |> (\segment -> segment.start + segment.time)
                         |> Expect.equal lap.elapsed
-            , test "labels each segment with its own sector" <|
-                \_ ->
-                    Lap.sectors lap
-                        |> Sector.toList
-                        |> List.filter (\( sector, segment ) -> sector /= segment.sector)
-                        |> Expect.equalLists []
             ]
         , describe "currentSegment"
             [ test "picks the sector holding the moment, and hands over on the boundary" <|
@@ -70,10 +64,10 @@ tests =
                         |> List.map
                             (\elapsed ->
                                 let
-                                    segment =
+                                    ( sector, segment ) =
                                         Lap.currentSegment { elapsed = elapsed } lap
                                 in
-                                ( segment.start, Lap.sectorStart lap segment.sector )
+                                ( segment.start, Lap.sectorStart lap sector )
                             )
                         |> List.filter (\( a, b ) -> a /= b)
                         |> Expect.equalLists []

@@ -116,13 +116,13 @@ compareAt clock a b =
 compareLapsInSameLap : Clock -> Lap -> Lap -> Order
 compareLapsInSameLap clock a b =
     let
-        segment_a =
+        ( sector_a, segment_a ) =
             currentSegment clock a
 
-        segment_b =
+        ( sector_b, segment_b ) =
             currentSegment clock b
     in
-    case Sector.compare segment_a.sector segment_b.sector of
+    case Sector.compare sector_a sector_b of
         LT ->
             GT
 
@@ -208,16 +208,13 @@ findCurrentLap clock =
 `start` is measured from the start of the race, the same scale as `Lap.elapsed`
 and the race clock, so it can be compared against either without conversion.
 
-Carrying `sector` is redundant inside a [`BySector`](Motorsport-Sector#BySector),
-where the position already says which sector it is. It is here for
-[`currentSegment`](#currentSegment), whose whole answer is which sector the car
-is in — without the field, every caller would have to thread the sector
-alongside the segment.
+Which sector a segment belongs to is not stored here. It is the position the
+segment occupies in a [`BySector`](Motorsport-Sector#BySector), and duplicating
+it in the value would allow the two to disagree.
 
 -}
 type alias Segment =
-    { sector : Sector
-    , start : Duration
+    { start : Duration
     , time : Duration
     }
 
@@ -239,9 +236,9 @@ sectors lap =
         start =
             lap.elapsed - lap.time
     in
-    { s1 = { sector = S1, start = start, time = lap.sector_1 }
-    , s2 = { sector = S2, start = start + lap.sector_1, time = lap.sector_2 }
-    , s3 = { sector = S3, start = start + lap.sector_1 + lap.sector_2, time = lap.sector_3 }
+    { s1 = { start = start, time = lap.sector_1 }
+    , s2 = { start = start + lap.sector_1, time = lap.sector_2 }
+    , s3 = { start = start + lap.sector_1 + lap.sector_2, time = lap.sector_3 }
     }
 
 
@@ -259,7 +256,7 @@ Moments outside the lap fall through to the final sector, which is what
 callers want for a lap that is already over.
 
 -}
-currentSegment : Clock -> Lap -> Segment
+currentSegment : Clock -> Lap -> ( Sector, Segment )
 currentSegment clock lap =
     let
         segments =
@@ -268,13 +265,12 @@ currentSegment clock lap =
     segments
         |> Sector.toList
         |> List.Extra.find (\( _, segment ) -> contains clock.elapsed segment)
-        |> Maybe.map Tuple.second
-        |> Maybe.withDefault segments.s3
+        |> Maybe.withDefault ( S3, segments.s3 )
 
 
 currentSector : Clock -> Lap -> Sector
 currentSector clock lap =
-    (currentSegment clock lap).sector
+    Tuple.first (currentSegment clock lap)
 
 
 {-| When a given sector of a given lap began.
