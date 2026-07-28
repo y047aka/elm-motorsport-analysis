@@ -31,8 +31,9 @@ tests =
             [ test "starts each sector where the one before it ended" <|
                 \_ ->
                     Lap.sectors lap
-                        |> Sector.map .start
-                        |> Expect.equal { s1 = 4000, s2 = 5000, s3 = 7000 }
+                        |> Sector.values
+                        |> List.map .start
+                        |> Expect.equal [ 4000, 5000, 7000 ]
             , test "measures the first sector from the start of the lap, not the previous lap record" <|
                 \_ ->
                     (Lap.sectors lap).s1.start
@@ -45,18 +46,9 @@ tests =
             , test "labels each segment with its own sector" <|
                 \_ ->
                     Lap.sectors lap
-                        |> Sector.map .sector
-                        |> Expect.equal { s1 = S1, s2 = S2, s3 = S3 }
-            ]
-        , describe "contains"
-            [ test "includes the instant the sector starts" <|
-                \_ ->
-                    Lap.contains 5000 (Lap.sectors lap).s2
-                        |> Expect.equal True
-            , test "excludes the instant the sector ends" <|
-                \_ ->
-                    Lap.contains 7000 (Lap.sectors lap).s2
-                        |> Expect.equal False
+                        |> Sector.toList
+                        |> List.filter (\( sector, segment ) -> sector /= segment.sector)
+                        |> Expect.equalLists []
             ]
         , describe "currentSegment"
             [ test "picks the sector holding the moment, and hands over on the boundary" <|
@@ -72,7 +64,7 @@ tests =
                 \_ ->
                     Lap.currentSector { elapsed = 3999 } lap
                         |> Expect.equal S3
-            , test "agrees with sectorToElapsed on where the current sector started" <|
+            , test "agrees with sectorStart on where the current sector started" <|
                 \_ ->
                     [ 4500, 6000, 8000 ]
                         |> List.map
@@ -81,7 +73,7 @@ tests =
                                     segment =
                                         Lap.currentSegment { elapsed = elapsed } lap
                                 in
-                                ( segment.start, Lap.sectorToElapsed lap segment.sector )
+                                ( segment.start, Lap.sectorStart lap segment.sector )
                             )
                         |> List.filter (\( a, b ) -> a /= b)
                         |> Expect.equalLists []

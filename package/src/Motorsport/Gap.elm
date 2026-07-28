@@ -36,7 +36,7 @@ lapDiffAt elapsed carA carB =
                 |> Maybe.map (Lap.currentSector raceClock)
 
         isNotLapped =
-            case ( Maybe.map2 Lap.sectorToElapsed carA.currentLap currentSector, Maybe.map2 Lap.sectorToElapsed carB.currentLap currentSector ) of
+            case ( Maybe.map2 Lap.sectorStart carA.currentLap currentSector, Maybe.map2 Lap.sectorStart carB.currentLap currentSector ) of
                 ( Just a, Just b ) ->
                     a >= b
 
@@ -72,7 +72,7 @@ secondsAt elapsed carA carB =
     in
     case ( carB_currentSector, targetLap, carB.currentLap ) of
         ( Just sector, Just targetLap_, Just currentLap ) ->
-            Seconds (Lap.sectorToElapsed currentLap sector - Lap.sectorToElapsed targetLap_ sector)
+            Seconds (Lap.sectorStart currentLap sector - Lap.sectorStart targetLap_ sector)
 
         _ ->
             None

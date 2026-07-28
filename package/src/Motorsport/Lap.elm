@@ -3,10 +3,9 @@ module Motorsport.Lap exposing
     , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , Segment, sectors, contains
-    , currentSegment, currentSector
+    , Segment, sectors
+    , currentSegment, currentSector, sectorStart
     , currentMiniSector, miniSectorProgressAt
-    , sectorToElapsed
     )
 
 {-|
@@ -19,8 +18,8 @@ module Motorsport.Lap exposing
 
 ## Sectors as segments of the lap
 
-@docs Segment, sectors, contains
-@docs currentSegment, currentSector
+@docs Segment, sectors
+@docs currentSegment, currentSector, sectorStart
 @docs currentMiniSector, miniSectorProgressAt
 
 -}
@@ -117,25 +116,25 @@ compareAt clock a b =
 compareLapsInSameLap : Clock -> Lap -> Lap -> Order
 compareLapsInSameLap clock a b =
     let
-        currentSector_a =
-            currentSector clock a
+        segment_a =
+            currentSegment clock a
 
-        currentSector_b =
-            currentSector clock b
+        segment_b =
+            currentSegment clock b
     in
-    case Sector.compare currentSector_a currentSector_b of
+    case Sector.compare segment_a.sector segment_b.sector of
         LT ->
             GT
 
         EQ ->
-            compareLapsInSameSector clock a b currentSector_a
+            compareLapsInSameSector clock a b segment_a segment_b
 
         GT ->
             LT
 
 
-compareLapsInSameSector : Clock -> Lap -> Lap -> Sector -> Order
-compareLapsInSameSector clock a b currentSector_ =
+compareLapsInSameSector : Clock -> Lap -> Lap -> Segment -> Segment -> Order
+compareLapsInSameSector clock a b segment_a segment_b =
     case ( a.miniSectors, b.miniSectors ) of
         ( Just _, Just _ ) ->
             case ( currentMiniSector clock a, currentMiniSector clock b ) of
@@ -157,15 +156,18 @@ compareLapsInSameSector clock a b currentSector_ =
                     GT
 
                 ( Nothing, Nothing ) ->
-                    compareLapsWithSectorElapsed a b currentSector_
+                    compareBySegmentStart segment_a segment_b
 
         _ ->
-            compareLapsWithSectorElapsed a b currentSector_
+            compareBySegmentStart segment_a segment_b
 
 
-compareLapsWithSectorElapsed : Lap -> Lap -> Sector -> Order
-compareLapsWithSectorElapsed a b currentSector_ =
-    Basics.compare (sectorToElapsed a currentSector_) (sectorToElapsed b currentSector_)
+{-| Both cars are in the same sector of the same lap, so whichever entered it
+first is ahead.
+-}
+compareBySegmentStart : Segment -> Segment -> Order
+compareBySegmentStart segment_a segment_b =
+    Basics.compare segment_a.start segment_b.start
 
 
 completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
@@ -206,6 +208,12 @@ findCurrentLap clock =
 `start` is measured from the start of the race, the same scale as `Lap.elapsed`
 and the race clock, so it can be compared against either without conversion.
 
+Carrying `sector` is redundant inside a [`BySector`](Motorsport-Sector#BySector),
+where the position already says which sector it is. It is here for
+[`currentSegment`](#currentSegment), whose whole answer is which sector the car
+is in — without the field, every caller would have to thread the sector
+alongside the segment.
+
 -}
 type alias Segment =
     { sector : Sector
@@ -241,8 +249,8 @@ sectors lap =
 instant a sector ends belongs to the next one.
 -}
 contains : Duration -> Segment -> Bool
-contains elapsed segment =
-    elapsed >= segment.start && elapsed < (segment.start + segment.time)
+contains raceElapsed segment =
+    raceElapsed >= segment.start && raceElapsed < (segment.start + segment.time)
 
 
 {-| The segment the car is driving at the given moment.
@@ -269,8 +277,14 @@ currentSector clock lap =
     (currentSegment clock lap).sector
 
 
-sectorToElapsed : Lap -> Sector -> Duration
-sectorToElapsed lap sector =
+{-| When a given sector of a given lap began.
+
+`currentSegment` covers the common case of asking about the sector a car is in
+right now; this is for asking about some other sector, or some other lap.
+
+-}
+sectorStart : Lap -> Sector -> Duration
+sectorStart lap sector =
     (Sector.get sector (sectors lap)).start
 
 

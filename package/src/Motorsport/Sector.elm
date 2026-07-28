@@ -3,8 +3,7 @@ module Motorsport.Sector exposing
     , all
     , compare, next, previous
     , toString
-    , BySector, initialize, get
-    , map, map2, indexedMap
+    , BySector, initialize, get, map2
     , values, toList
     )
 
@@ -18,8 +17,7 @@ module Motorsport.Sector exposing
 
 ## Values held per sector
 
-@docs BySector, initialize, get
-@docs map, map2, indexedMap
+@docs BySector, initialize, get, map2
 @docs values, toList
 
 -}
@@ -201,20 +199,6 @@ get sector bySector =
             bySector.s3
 
 
-{-|
-
-    map String.length (initialize toString)
-    --> { s1 = 2, s2 = 2, s3 = 2 }
-
--}
-map : (a -> b) -> BySector a -> BySector b
-map f bySector =
-    { s1 = f bySector.s1
-    , s2 = f bySector.s2
-    , s3 = f bySector.s3
-    }
-
-
 {-| Combine two sets of per-sector values sector by sector — a time with the
 fastest time to rate it against, a progress with its rating.
 -}
@@ -223,16 +207,6 @@ map2 f a b =
     { s1 = f a.s1 b.s1
     , s2 = f a.s2 b.s2
     , s3 = f a.s3 b.s3
-    }
-
-
-{-| [`map`](#map), with the sector each value belongs to.
--}
-indexedMap : (Sector -> a -> b) -> BySector a -> BySector b
-indexedMap f bySector =
-    { s1 = f S1 bySector.s1
-    , s2 = f S2 bySector.s2
-    , s3 = f S3 bySector.s3
     }
 
 
