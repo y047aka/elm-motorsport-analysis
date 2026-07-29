@@ -165,7 +165,13 @@ compute { season } bestTimes config =
 
                             timing =
                                 init_timing config.elapsed
-                                    { leader = Just leaderCar
+                                    { leader =
+                                        -- The leader is not behind itself; it has no gap to report.
+                                        if index == 0 then
+                                            Nothing
+
+                                        else
+                                            Just leaderCar
                                     , rival = List.Extra.getAt (index - 1) carsList
                                     }
                                     car
@@ -251,8 +257,8 @@ fromLaps { season } baseMetadata laps =
                         , currentLapRated = Nothing
                         , sector = Nothing
                         , miniSector = Nothing
-                        , gapToLeader = Gap.None
-                        , intervalToAhead = Gap.None
+                        , gapToLeader = Gap.none
+                        , intervalToAhead = Gap.none
                         , currentLapProgress = 0
                         , lastLapRated =
                             Just (rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
@@ -424,13 +430,18 @@ init_timing raceElapsed rivals car =
     { currentLapElapsed = raceClock.elapsed - lastLap.elapsed
     , sector = currentSector
     , miniSector = currentMiniSector
-    , gapToLeader =
-        Maybe.map2 (Gap.at raceElapsed) rivals.leader (Just car)
-            |> Maybe.withDefault Gap.None
-    , intervalToAhead =
-        Maybe.map2 (Gap.at raceElapsed) rivals.rival (Just car)
-            |> Maybe.withDefault Gap.None
+    , gapToLeader = gapTo raceClock car rivals.leader
+    , intervalToAhead = gapTo raceClock car rivals.rival
     }
+
+
+{-| The gap from `car` to the car ahead of it, or none where there is no such car.
+-}
+gapTo : { elapsed : Duration } -> Car -> Maybe Car -> Gap
+gapTo raceClock car ahead =
+    ahead
+        |> Maybe.map (\aheadCar -> Gap.at raceClock { ahead = aheadCar, behind = car })
+        |> Maybe.withDefault Gap.none
 
 
 positionsInClassByCarNumber : RunningOrder -> Dict String Int
@@ -473,16 +484,18 @@ elapsed (Standings s) =
     s.elapsed
 
 
+{-| How close two cars have to be for the standings to show them as a battle.
+-}
+closeIntervalThreshold : Duration
+closeIntervalThreshold =
+    1500
+
+
 groupCarsByCloseIntervals : Standings -> List (List Entry)
 groupCarsByCloseIntervals (Standings s) =
     let
         isCloseToNext current =
-            case current.intervalToAhead of
-                Gap.Seconds duration ->
-                    duration <= 1500
-
-                _ ->
-                    False
+            Gap.isWithin closeIntervalThreshold current.intervalToAhead
 
         groupCars cars =
             case cars of

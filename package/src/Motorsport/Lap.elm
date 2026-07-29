@@ -284,8 +284,8 @@ progressAt clock lap =
 {-| When a given sector of a given lap began — for asking about a sector the
 car is not in, or a lap it is not on.
 -}
-sectorStart : Lap -> Sector -> Duration
-sectorStart lap sector =
+sectorStart : Sector -> Lap -> Duration
+sectorStart sector lap =
     (Sector.get sector (sectors lap)).start
 
 

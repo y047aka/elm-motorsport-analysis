@@ -77,7 +77,7 @@ tests =
             , test "agrees with sectorStart, where progress is zero" <|
                 \_ ->
                     Sector.all
-                        |> List.map (Lap.sectorStart lap)
+                        |> List.map (\sector -> Lap.sectorStart sector lap)
                         |> List.map (\start -> Lap.progressAt { elapsed = start } lap)
                         |> Expect.equal
                             [ { sector = S1, progress = 0 }
