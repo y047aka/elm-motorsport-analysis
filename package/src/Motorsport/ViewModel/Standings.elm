@@ -1,6 +1,6 @@
 module Motorsport.ViewModel.Standings exposing
     ( Standings, Entry, ClassInfo
-    , SectorTimes, CurrentSectorStates
+    , CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount, elapsed
@@ -11,7 +11,7 @@ module Motorsport.ViewModel.Standings exposing
 {-|
 
 @docs Standings, Entry, ClassInfo
-@docs SectorTimes, CurrentSectorStates
+@docs CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
 
@@ -68,13 +68,6 @@ type alias ClassInfo =
     }
 
 
-{-| A lap's three sector times, each with that driver's best for the sector to
-rate it against.
--}
-type alias SectorTimes =
-    Lap.SectorTimes
-
-
 type alias SectorPerformance =
     BySector RatedTime
 
@@ -97,7 +90,7 @@ type alias Entry =
 
     -- currentLapSectors holds raw times (for data display such as the Debug page).
     -- currentLapSectorStates is the single source of truth for progress and performance rating.
-    , currentLapSectors : Maybe SectorTimes
+    , currentLapSectors : Maybe Lap.SectorTimes
     , currentLapSectorStates : Maybe CurrentSectorStates
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
