@@ -56,8 +56,8 @@ compute scope { clock, cars } =
     in
     { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
-    , fastestSector_1 = lapsByCar |> findFastestBy .sector_1 |> Maybe.withDefault 0
-    , fastestSector_2 = lapsByCar |> findFastestBy .sector_2 |> Maybe.withDefault 0
-    , fastestSector_3 = lapsByCar |> findFastestBy .sector_3 |> Maybe.withDefault 0
+    , fastestSector_1 = lapsByCar |> findFastestBy (.sectors >> .s1 >> .time) |> Maybe.withDefault 0
+    , fastestSector_2 = lapsByCar |> findFastestBy (.sectors >> .s2 >> .time) |> Maybe.withDefault 0
+    , fastestSector_3 = lapsByCar |> findFastestBy (.sectors >> .s3 >> .time) |> Maybe.withDefault 0
     , fastestMiniSectors = calculateMiniSectorFastest lapsByCar
     }

@@ -72,7 +72,7 @@ type alias ClassInfo =
 rate it against.
 -}
 type alias SectorTimes =
-    BySector { time : Duration, personalBest : Duration }
+    Lap.SectorTimes
 
 
 type alias SectorPerformance =
@@ -182,7 +182,7 @@ compute bestTimes config =
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
-                        , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
+                        , currentLapSectors = currentLap |> Maybe.map .sectors
                         , currentLapSectorStates = currentLap |> Maybe.map (extractCurrentSectorStates bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
@@ -230,9 +230,9 @@ fromLaps baseMetadata laps =
     let
         bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , fastestSector_1 = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
-            , fastestSector_2 = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
-            , fastestSector_3 = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
+            , fastestSector_1 = [ laps ] |> findFastestBy (.sectors >> .s1 >> .time) |> Maybe.withDefault 0
+            , fastestSector_2 = [ laps ] |> findFastestBy (.sectors >> .s2 >> .time) |> Maybe.withDefault 0
+            , fastestSector_3 = [ laps ] |> findFastestBy (.sectors >> .s3 >> .time) |> Maybe.withDefault 0
             , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
             }
 
@@ -248,7 +248,7 @@ fromLaps baseMetadata laps =
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
-                        , currentLapSectors = Just (extractSectorTimes lap)
+                        , currentLapSectors = Just lap.sectors
                         , currentLapSectorStates = Just (extractCurrentSectorStates bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
@@ -319,14 +319,6 @@ rateTime fastest { time, personalBest } =
     }
 
 
-extractSectorTimes : Lap -> SectorTimes
-extractSectorTimes lap =
-    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
-    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
-    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
-    }
-
-
 extractCurrentSectorStates :
     { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
     -> Maybe Lap.SectorProgress
@@ -362,7 +354,7 @@ extractSectorPerformance :
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 rateTime (fastestBySector bestTimes) (extractSectorTimes lap)
+    Sector.map2 rateTime (fastestBySector bestTimes) lap.sectors
 
 
 {-| Turns the best-times record's flat `fastestSector_1` / `_2` / `_3` into

@@ -1,9 +1,10 @@
 module Motorsport.Lap exposing
     ( Lap, empty
+    , SectorTime, SectorTimes
     , MiniSectors, MiniSectorData
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
-    , Segment, sectors, sectorStart
+    , Segment, segments, sectorStart
     , SectorProgress, progressAt, currentSector
     , MiniSectorProgress, currentMiniSector, miniSectorProgressAt
     )
@@ -11,6 +12,7 @@ module Motorsport.Lap exposing
 {-|
 
 @docs Lap, empty
+@docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorData
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
@@ -18,7 +20,7 @@ module Motorsport.Lap exposing
 
 ## Sectors as segments of the lap
 
-@docs Segment, sectors, sectorStart
+@docs Segment, segments, sectorStart
 
 
 ## Where the car is on the lap
@@ -42,16 +44,29 @@ type alias Lap =
     , position : Maybe Int
     , time : Duration
     , best : Duration
-    , sector_1 : Duration
-    , sector_2 : Duration
-    , sector_3 : Duration
-    , s1_best : Duration
-    , s2_best : Duration
-    , s3_best : Duration
+    , sectors : SectorTimes
     , elapsed : Duration
     , pitTime : Maybe Duration
     , miniSectors : Maybe MiniSectors
     }
+
+
+{-| How long one sector of this lap took, next to the driver's best for that
+sector up to and including this lap — the baseline a time is rated against.
+
+The two are kept together because nothing reads one without the other.
+
+-}
+type alias SectorTime =
+    { time : Duration
+    , personalBest : Duration
+    }
+
+
+{-| A lap's three sector times.
+-}
+type alias SectorTimes =
+    BySector SectorTime
 
 
 type alias MiniSectors =
@@ -72,12 +87,7 @@ empty =
     , lap = 0
     , position = Nothing
     , time = 0
-    , sector_1 = 0
-    , sector_2 = 0
-    , sector_3 = 0
-    , s1_best = 0
-    , s2_best = 0
-    , s3_best = 0
+    , sectors = Sector.initialize (always { time = 0, personalBest = 0 })
     , best = 0
     , elapsed = 0
     , pitTime = Nothing
@@ -215,15 +225,15 @@ end and duration, never the previous lap's, which may be missing or not
 adjacent.
 
 -}
-sectors : Lap -> BySector Segment
-sectors lap =
+segments : Lap -> BySector Segment
+segments lap =
     let
         start =
             lap.elapsed - lap.time
     in
-    { s1 = { start = start, time = lap.sector_1 }
-    , s2 = { start = start + lap.sector_1, time = lap.sector_2 }
-    , s3 = { start = start + lap.sector_1 + lap.sector_2, time = lap.sector_3 }
+    { s1 = { start = start, time = lap.sectors.s1.time }
+    , s2 = { start = start + lap.sectors.s1.time, time = lap.sectors.s2.time }
+    , s3 = { start = start + lap.sectors.s1.time + lap.sectors.s2.time, time = lap.sectors.s3.time }
     }
 
 
@@ -242,13 +252,13 @@ already over.
 currentSegment : Clock -> Lap -> ( Sector, Segment )
 currentSegment clock lap =
     let
-        segments =
-            sectors lap
+        lapSegments =
+            segments lap
     in
-    segments
+    lapSegments
         |> Sector.toList
         |> List.Extra.find (\( _, segment ) -> contains clock.elapsed segment)
-        |> Maybe.withDefault ( S3, segments.s3 )
+        |> Maybe.withDefault ( S3, lapSegments.s3 )
 
 
 currentSector : Clock -> Lap -> Sector
@@ -286,7 +296,7 @@ car is not in, or a lap it is not on.
 -}
 sectorStart : Sector -> Lap -> Duration
 sectorStart sector lap =
-    (Sector.get sector (sectors lap)).start
+    (Sector.get sector (segments lap)).start
 
 
 miniSectorOrder : List LeMans2025MiniSector

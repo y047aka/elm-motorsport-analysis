@@ -137,12 +137,11 @@ sectorFixtureLap =
         | lap = 1
         , time = 6000
         , elapsed = 6000
-        , sector_1 = 1000
-        , sector_2 = 2000
-        , sector_3 = 3000
-        , s1_best = 900
-        , s2_best = 1900
-        , s3_best = 2900
+        , sectors =
+            { s1 = { time = 1000, personalBest = 900 }
+            , s2 = { time = 2000, personalBest = 1900 }
+            , s3 = { time = 3000, personalBest = 2900 }
+            }
     }
 
 

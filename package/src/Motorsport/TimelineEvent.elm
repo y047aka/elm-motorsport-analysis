@@ -14,12 +14,12 @@ module Motorsport.TimelineEvent exposing
 
 import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (optional, required)
+import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
 import Motorsport.Car exposing (Car, CarNumber)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 
 
 type alias TimelineEvent =
@@ -247,15 +247,27 @@ lapDecoder =
         |> required "position" (Decode.maybe int)
         |> required "time" durationDecoder
         |> required "best" durationDecoder
-        |> required "sector_1" durationDecoder
-        |> required "sector_2" durationDecoder
-        |> required "sector_3" durationDecoder
-        |> required "s1_best" durationDecoder
-        |> required "s2_best" durationDecoder
-        |> required "s3_best" durationDecoder
+        |> custom sectorsDecoder
         |> required "elapsed" durationDecoder
         |> optional "pit_time" (Decode.maybe durationDecoder) Nothing
         |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
+
+
+{-| The wire format still spells the sectors out flat, and pairs each time with
+its best under a differently shaped key. This is where that stops.
+-}
+sectorsDecoder : Decoder Lap.SectorTimes
+sectorsDecoder =
+    let
+        sectorTime timeKey bestKey =
+            Decode.map2 (\time personalBest -> { time = time, personalBest = personalBest })
+                (field timeKey durationDecoder)
+                (field bestKey durationDecoder)
+    in
+    Decode.map3 (\s1 s2 s3 -> { s1 = s1, s2 = s2, s3 = s3 })
+        (sectorTime "sector_1" "s1_best")
+        (sectorTime "sector_2" "s2_best")
+        (sectorTime "sector_3" "s3_best")
 
 
 type alias MiniSectors =

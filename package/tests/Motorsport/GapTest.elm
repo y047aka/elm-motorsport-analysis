@@ -55,9 +55,11 @@ lap lapNumber =
         | lap = lapNumber
         , time = 10000
         , elapsed = lapNumber * 10000
-        , sector_1 = 2000
-        , sector_2 = 3000
-        , sector_3 = 5000
+        , sectors =
+            { s1 = { time = 2000, personalBest = 0 }
+            , s2 = { time = 3000, personalBest = 0 }
+            , s3 = { time = 5000, personalBest = 0 }
+            }
     }
 
 
