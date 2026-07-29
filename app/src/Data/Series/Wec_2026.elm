@@ -1,4 +1,4 @@
-module Data.Series.Wec_2026 exposing (carImageFileName_2026, toEventSummary_Wec_2026, wec_2026)
+module Data.Series.Wec_2026 exposing (carImageFileName_2026, wec_2026)
 
 import Data.Series.EventSummary exposing (EventSummary)
 import Data.Series.Wec exposing (Wec(..))
