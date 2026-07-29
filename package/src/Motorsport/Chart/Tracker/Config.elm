@@ -94,17 +94,17 @@ buildConfig layout bestTimes =
     [ { sector = S1
       , start = 0
       , share = shares.s1
-      , miniSectorData = buildMiniSectors layout.s1 0 miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s1 0 miniRatio
       }
     , { sector = S2
       , start = shares.s1
       , share = shares.s2
-      , miniSectorData = buildMiniSectors layout.s2 shares.s1 miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s2 shares.s1 miniRatio
       }
     , { sector = S3
       , start = shares.s1 + shares.s2
       , share = shares.s3
-      , miniSectorData = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s3 (shares.s1 + shares.s2) miniRatio
       }
     ]
 
@@ -135,10 +135,7 @@ computeSectorShares layout bestTimes totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    -- Circuit.Layout still spells its sectors out flat.
-    Sector.map2 sectorShare
-        bestTimes.fastestSectors
-        { s1 = layout.s1, s2 = layout.s2, s3 = layout.s3 }
+    Sector.map2 sectorShare bestTimes.fastestSectors layout.sectors
 
 
 buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData
