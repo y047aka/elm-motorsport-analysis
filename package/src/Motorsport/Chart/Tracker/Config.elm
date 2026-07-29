@@ -16,10 +16,9 @@ module Motorsport.Chart.Tracker.Config exposing
 
 import List.Extra
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.ViewModel.Standings exposing (Entry)
 
@@ -53,7 +52,7 @@ buildConfig :
     ->
         { a
             | fastestSectors : BySector Duration
-            , fastestMiniSectors : LeMans2025MiniSectorFastest
+            , fastestMiniSectors : ByMiniSector Duration
         }
     -> TrackConfig
 buildConfig layout bestTimes =

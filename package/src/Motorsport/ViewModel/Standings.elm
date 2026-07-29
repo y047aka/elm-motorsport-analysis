@@ -32,7 +32,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
+import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -126,7 +126,7 @@ compute :
     { a
         | fastestLapTime : Duration
         , fastestSectors : BySector Duration
-        , fastestMiniSectors : LeMans2025MiniSectorFastest
+        , fastestMiniSectors : ByMiniSector Duration
     }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
@@ -360,7 +360,7 @@ extractSectorPerformance bestTimes lap =
 
 
 extractMiniSectorPerformance :
-    { a | fastestMiniSectors : LeMans2025MiniSectorFastest }
+    { a | fastestMiniSectors : ByMiniSector Duration }
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =

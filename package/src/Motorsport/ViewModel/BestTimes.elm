@@ -9,10 +9,11 @@ individual times. Built by scanning the domain model (RunningOrder).
 
 -}
 
+import Motorsport.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
+import Motorsport.Lap.Performance exposing (calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector as Sector exposing (BySector)
 
@@ -21,7 +22,7 @@ type alias BestTimes =
     { fastestLapTime : Duration
     , slowestLapTime : Duration
     , fastestSectors : BySector Duration
-    , fastestMiniSectors : LeMans2025MiniSectorFastest
+    , fastestMiniSectors : ByMiniSector Duration
     }
 
 
