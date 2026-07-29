@@ -159,6 +159,12 @@ get sector bySector =
 
 {-| Combine two sets of per-sector values sector by sector — a time with the
 fastest time to rate it against, a progress with its rating.
+
+Pairing is by sector, never by position, so the two sets cannot be misaligned.
+
+    map2 (++) (initialize toString) (initialize toString)
+    --> { s1 = "S1S1", s2 = "S2S2", s3 = "S3S3" }
+
 -}
 map2 : (a -> b -> c) -> BySector a -> BySector b -> BySector c
 map2 f a b =
