@@ -104,9 +104,11 @@ toString sector =
 {-| Three values, one per sector — a sector time, a progress percentage, a
 fastest time to compare against.
 
-Source records spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
-leaves callers writing the same three-way `case` to pick one out. Convert once
-at the boundary and the picking becomes [`get`](#get).
+The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
+would leave callers writing the same three-way `case` to pick one out. Converting
+once at the boundary — `Data.Wec.Laps.accumulate` and
+`Motorsport.TimelineEvent.lapDecoder`, the two places a `Lap` is built — makes
+the picking [`get`](#get) everywhere after.
 
 A transparent record, not an opaque type: there is no invariant to protect, and
 an opaque type would be built from three positional arguments of the same type
@@ -157,6 +159,12 @@ get sector bySector =
 
 {-| Combine two sets of per-sector values sector by sector — a time with the
 fastest time to rate it against, a progress with its rating.
+
+Pairing is by sector, never by position, so the two sets cannot be misaligned.
+
+    map2 (++) (initialize toString) (initialize toString)
+    --> { s1 = "S1S1", s2 = "S2S2", s3 = "S3S3" }
+
 -}
 map2 : (a -> b -> c) -> BySector a -> BySector b -> BySector c
 map2 f a b =

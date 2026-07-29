@@ -3,11 +3,10 @@ module Motorsport.Chart.Tracker exposing (view)
 import Css
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
-import Motorsport.Circuit.LeMans as LeMans
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
-import Motorsport.Sector as Sector
+import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
@@ -97,10 +96,8 @@ view :
     { season : Int, eventName : String }
     ->
         { a
-            | fastestSector_1 : Duration
-            , fastestSector_2 : Duration
-            , fastestSector_3 : Duration
-            , fastestMiniSectors : LeMans2025MiniSectorFastest
+            | fastestSectors : BySector Duration
+            , fastestMiniSectors : ByMiniSector Duration
         }
     -> Standings
     -> Svg msg

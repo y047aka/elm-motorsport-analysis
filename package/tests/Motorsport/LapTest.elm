@@ -13,9 +13,11 @@ lap =
     { empty
         | time = 6000
         , elapsed = 10000
-        , sector_1 = 1000
-        , sector_2 = 2000
-        , sector_3 = 3000
+        , sectors =
+            { s1 = { time = 1000, personalBest = 0 }
+            , s2 = { time = 2000, personalBest = 0 }
+            , s3 = { time = 3000, personalBest = 0 }
+            }
     }
 
 
@@ -27,20 +29,20 @@ empty =
 tests : Test
 tests =
     describe "Motorsport.Lap"
-        [ describe "sectors"
+        [ describe "segments"
             [ test "starts each sector where the one before it ended" <|
                 \_ ->
-                    Lap.sectors lap
+                    Lap.segments lap
                         |> Sector.values
                         |> List.map .start
                         |> Expect.equal [ 4000, 5000, 7000 ]
             , test "measures the first sector from the start of the lap, not the previous lap record" <|
                 \_ ->
-                    (Lap.sectors lap).s1.start
+                    (Lap.segments lap).s1.start
                         |> Expect.equal (lap.elapsed - lap.time)
             , test "ends the last sector where the lap ended" <|
                 \_ ->
-                    (Lap.sectors lap).s3
+                    (Lap.segments lap).s3
                         |> (\segment -> segment.start + segment.time)
                         |> Expect.equal lap.elapsed
             ]

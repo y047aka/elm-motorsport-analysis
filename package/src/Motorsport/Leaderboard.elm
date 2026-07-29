@@ -60,12 +60,12 @@ import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
-import Motorsport.Circuit.LeMans as LeMans
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
-import Motorsport.Lap.Performance as Performance exposing (LeMans2025MiniSectorFastest, RatedTime, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
@@ -441,7 +441,7 @@ currentLapColumn_LeMans24h :
                 , miniSector : Maybe MiniSectorProgress
             }
     , sorter : data -> data -> Order
-    , bestTimes : { b | fastestLapTime : Duration, fastestMiniSectors : LeMans2025MiniSectorFastest }
+    , bestTimes : { b | fastestLapTime : Duration, fastestMiniSectors : ByMiniSector Duration }
     }
     -> Column data msg
 currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
@@ -453,7 +453,7 @@ currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
 
 
 viewCurrentLapColumn_LeMans24h :
-    { b | fastestLapTime : Duration, fastestMiniSectors : LeMans2025MiniSectorFastest }
+    { b | fastestLapTime : Duration, fastestMiniSectors : ByMiniSector Duration }
     ->
         { a
             | status : Status

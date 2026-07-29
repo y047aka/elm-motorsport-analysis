@@ -16,11 +16,10 @@ module Motorsport.Chart.Tracker.Config exposing
 
 import List.Extra
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
-import Motorsport.Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.ViewModel.Standings exposing (Entry)
 
 
@@ -52,10 +51,8 @@ buildConfig :
     Layout LeMans2025MiniSector
     ->
         { a
-            | fastestSector_1 : Duration
-            , fastestSector_2 : Duration
-            , fastestSector_3 : Duration
-            , fastestMiniSectors : LeMans2025MiniSectorFastest
+            | fastestSectors : BySector Duration
+            , fastestMiniSectors : ByMiniSector Duration
         }
     -> TrackConfig
 buildConfig layout bestTimes =
@@ -70,7 +67,9 @@ buildConfig layout bestTimes =
                     |> toFloat
 
             else
-                toFloat (bestTimes.fastestSector_1 + bestTimes.fastestSector_2 + bestTimes.fastestSector_3)
+                Sector.values bestTimes.fastestSectors
+                    |> List.sum
+                    |> toFloat
 
         miniRatio miniSector =
             let
@@ -94,24 +93,24 @@ buildConfig layout bestTimes =
     [ { sector = S1
       , start = 0
       , share = shares.s1
-      , miniSectorData = buildMiniSectors layout.s1 0 miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s1 0 miniRatio
       }
     , { sector = S2
       , start = shares.s1
       , share = shares.s2
-      , miniSectorData = buildMiniSectors layout.s2 shares.s1 miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s2 shares.s1 miniRatio
       }
     , { sector = S3
       , start = shares.s1 + shares.s2
       , share = shares.s3
-      , miniSectorData = buildMiniSectors layout.s3 (shares.s1 + shares.s2) miniRatio
+      , miniSectorData = buildMiniSectors layout.sectors.s3 (shares.s1 + shares.s2) miniRatio
       }
     ]
 
 
 computeSectorShares :
     Layout LeMans2025MiniSector
-    -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    -> { a | fastestSectors : BySector Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> BySector Float
@@ -135,10 +134,7 @@ computeSectorShares layout bestTimes totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    { s1 = sectorShare bestTimes.fastestSector_1 layout.s1
-    , s2 = sectorShare bestTimes.fastestSector_2 layout.s2
-    , s3 = sectorShare bestTimes.fastestSector_3 layout.s3
-    }
+    Sector.map2 sectorShare bestTimes.fastestSectors layout.sectors
 
 
 buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData

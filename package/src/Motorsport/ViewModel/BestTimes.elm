@@ -9,20 +9,20 @@ individual times. Built by scanning the domain model (RunningOrder).
 
 -}
 
+import Motorsport.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (completedLapsAt)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
+import Motorsport.Lap.Performance exposing (calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
+import Motorsport.Sector as Sector exposing (BySector)
 
 
 type alias BestTimes =
     { fastestLapTime : Duration
     , slowestLapTime : Duration
-    , fastestSector_1 : Duration
-    , fastestSector_2 : Duration
-    , fastestSector_3 : Duration
-    , fastestMiniSectors : LeMans2025MiniSectorFastest
+    , fastestSectors : BySector Duration
+    , fastestMiniSectors : ByMiniSector Duration
     }
 
 
@@ -56,8 +56,12 @@ compute scope { clock, cars } =
     in
     { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
-    , fastestSector_1 = lapsByCar |> findFastestBy .sector_1 |> Maybe.withDefault 0
-    , fastestSector_2 = lapsByCar |> findFastestBy .sector_2 |> Maybe.withDefault 0
-    , fastestSector_3 = lapsByCar |> findFastestBy .sector_3 |> Maybe.withDefault 0
+    , fastestSectors =
+        Sector.initialize
+            (\sector ->
+                lapsByCar
+                    |> findFastestBy (.sectors >> Sector.get sector >> .time)
+                    |> Maybe.withDefault 0
+            )
     , fastestMiniSectors = calculateMiniSectorFastest lapsByCar
     }

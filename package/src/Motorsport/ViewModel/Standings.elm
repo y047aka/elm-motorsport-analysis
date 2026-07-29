@@ -1,6 +1,6 @@
 module Motorsport.ViewModel.Standings exposing
     ( Standings, Entry, ClassInfo
-    , SectorTimes, CurrentSectorStates
+    , CurrentSectorStates
     , SectorPerformance, MiniSectorPerformance
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount, elapsed
@@ -11,7 +11,7 @@ module Motorsport.ViewModel.Standings exposing
 {-|
 
 @docs Standings, Entry, ClassInfo
-@docs SectorTimes, CurrentSectorStates
+@docs CurrentSectorStates
 @docs SectorPerformance, MiniSectorPerformance
 @docs compute, fromLaps, fromList
 
@@ -32,7 +32,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
-import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest, RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
+import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -68,13 +68,6 @@ type alias ClassInfo =
     }
 
 
-{-| A lap's three sector times, each with that driver's best for the sector to
-rate it against.
--}
-type alias SectorTimes =
-    BySector { time : Duration, personalBest : Duration }
-
-
 type alias SectorPerformance =
     BySector RatedTime
 
@@ -97,7 +90,7 @@ type alias Entry =
 
     -- currentLapSectors holds raw times (for data display such as the Debug page).
     -- currentLapSectorStates is the single source of truth for progress and performance rating.
-    , currentLapSectors : Maybe SectorTimes
+    , currentLapSectors : Maybe Lap.SectorTimes
     , currentLapSectorStates : Maybe CurrentSectorStates
     , currentLapMiniSectors : Maybe MiniSectors
     , currentLapElapsed : Duration
@@ -125,10 +118,8 @@ type alias CurrentSectorStates =
 compute :
     { a
         | fastestLapTime : Duration
-        , fastestSector_1 : Duration
-        , fastestSector_2 : Duration
-        , fastestSector_3 : Duration
-        , fastestMiniSectors : LeMans2025MiniSectorFastest
+        , fastestSectors : BySector Duration
+        , fastestMiniSectors : ByMiniSector Duration
     }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
@@ -182,7 +173,7 @@ compute bestTimes config =
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
-                        , currentLapSectors = currentLap |> Maybe.map extractSectorTimes
+                        , currentLapSectors = currentLap |> Maybe.map .sectors
                         , currentLapSectorStates = currentLap |> Maybe.map (extractCurrentSectorStates bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
@@ -230,9 +221,13 @@ fromLaps baseMetadata laps =
     let
         bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , fastestSector_1 = [ laps ] |> findFastestBy .sector_1 |> Maybe.withDefault 0
-            , fastestSector_2 = [ laps ] |> findFastestBy .sector_2 |> Maybe.withDefault 0
-            , fastestSector_3 = [ laps ] |> findFastestBy .sector_3 |> Maybe.withDefault 0
+            , fastestSectors =
+                Sector.initialize
+                    (\sector ->
+                        [ laps ]
+                            |> findFastestBy (.sectors >> Sector.get sector >> .time)
+                            |> Maybe.withDefault 0
+                    )
             , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
             }
 
@@ -248,7 +243,7 @@ fromLaps baseMetadata laps =
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best
-                        , currentLapSectors = Just (extractSectorTimes lap)
+                        , currentLapSectors = Just lap.sectors
                         , currentLapSectorStates = Just (extractCurrentSectorStates bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
                         , currentLapElapsed = 0
@@ -319,16 +314,8 @@ rateTime fastest { time, personalBest } =
     }
 
 
-extractSectorTimes : Lap -> SectorTimes
-extractSectorTimes lap =
-    { s1 = { time = lap.sector_1, personalBest = lap.s1_best }
-    , s2 = { time = lap.sector_2, personalBest = lap.s2_best }
-    , s3 = { time = lap.sector_3, personalBest = lap.s3_best }
-    }
-
-
 extractCurrentSectorStates :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    { a | fastestSectors : BySector Duration }
     -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
@@ -358,28 +345,15 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
 
 
 extractSectorPerformance :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    { a | fastestSectors : BySector Duration }
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 rateTime (fastestBySector bestTimes) (extractSectorTimes lap)
-
-
-{-| Turns the best-times record's flat `fastestSector_1` / `_2` / `_3` into
-per-sector values; `extractSectorTimes` does the same for a lap.
--}
-fastestBySector :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
-    -> BySector Duration
-fastestBySector bestTimes =
-    { s1 = bestTimes.fastestSector_1
-    , s2 = bestTimes.fastestSector_2
-    , s3 = bestTimes.fastestSector_3
-    }
+    Sector.map2 rateTime bestTimes.fastestSectors lap.sectors
 
 
 extractMiniSectorPerformance :
-    { a | fastestMiniSectors : LeMans2025MiniSectorFastest }
+    { a | fastestMiniSectors : ByMiniSector Duration }
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =

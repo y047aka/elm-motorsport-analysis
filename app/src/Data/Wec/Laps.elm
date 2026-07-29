@@ -21,6 +21,7 @@ import Motorsport.Car exposing (Car, CarNumber)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Sector as Sector exposing (BySector)
 
 
 type alias RawLap =
@@ -140,15 +141,13 @@ finalizeCarLaps raws =
 
 type alias Bests =
     { lap : Maybe Duration
-    , s1 : Maybe Duration
-    , s2 : Maybe Duration
-    , s3 : Maybe Duration
+    , sectors : BySector (Maybe Duration)
     }
 
 
 bestsInit : Bests
 bestsInit =
-    { lap = Nothing, s1 = Nothing, s2 = Nothing, s3 = Nothing }
+    { lap = Nothing, sectors = Sector.initialize (always Nothing) }
 
 
 minMaybe : Maybe Duration -> Maybe Duration -> Maybe Duration
@@ -167,11 +166,13 @@ minMaybe current new =
 accumulate : RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
 accumulate raw ( bests, acc ) =
     let
+        -- The raw record spells the sectors out flat; this is where that stops.
+        rawSectors =
+            { s1 = raw.s1, s2 = raw.s2, s3 = raw.s3 }
+
         newBests =
             { lap = minMaybe bests.lap (Just raw.lapTime)
-            , s1 = minMaybe bests.s1 raw.s1
-            , s2 = minMaybe bests.s2 raw.s2
-            , s3 = minMaybe bests.s3 raw.s3
+            , sectors = Sector.map2 minMaybe bests.sectors rawSectors
             }
 
         lap =
@@ -181,12 +182,15 @@ accumulate raw ( bests, acc ) =
             , position = Nothing
             , time = raw.lapTime
             , best = newBests.lap |> Maybe.withDefault 0
-            , sector_1 = raw.s1 |> Maybe.withDefault 0
-            , sector_2 = raw.s2 |> Maybe.withDefault 0
-            , sector_3 = raw.s3 |> Maybe.withDefault 0
-            , s1_best = newBests.s1 |> Maybe.withDefault 0
-            , s2_best = newBests.s2 |> Maybe.withDefault 0
-            , s3_best = newBests.s3 |> Maybe.withDefault 0
+            , sectors =
+                Sector.map2
+                    (\time personalBest ->
+                        { time = time |> Maybe.withDefault 0
+                        , personalBest = personalBest |> Maybe.withDefault 0
+                        }
+                    )
+                    rawSectors
+                    newBests.sectors
             , elapsed = raw.elapsed
             , pitTime = raw.pitTime
             , miniSectors = Nothing

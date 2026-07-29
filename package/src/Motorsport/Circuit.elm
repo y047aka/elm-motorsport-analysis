@@ -16,6 +16,7 @@ module Motorsport.Circuit exposing
 
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Direction exposing (Direction(..))
+import Motorsport.Sector as Sector exposing (BySector)
 
 
 {-| Circuit information
@@ -29,12 +30,14 @@ type alias Circuit miniSector =
 {-| Circuit sector layout
 Generic layout type that can represent any circuit configuration
 The miniSector type parameter allows different circuits to use their specific mini sector types
+
+Which way the cars go round is a property of the circuit, not of any one sector,
+so it sits beside the sectors rather than among them.
+
 -}
 type alias Layout miniSector =
     { direction : Direction
-    , s1 : List miniSector
-    , s2 : List miniSector
-    , s3 : List miniSector
+    , sectors : BySector (List miniSector)
     }
 
 
@@ -43,9 +46,7 @@ type alias Layout miniSector =
 clockwise : Layout miniSector
 clockwise =
     { direction = Clockwise
-    , s1 = []
-    , s2 = []
-    , s3 = []
+    , sectors = Sector.initialize (always [])
     }
 
 
@@ -54,9 +55,7 @@ clockwise =
 counterClockwise : Layout miniSector
 counterClockwise =
     { direction = CounterClockwise
-    , s1 = []
-    , s2 = []
-    , s3 = []
+    , sectors = Sector.initialize (always [])
     }
 
 
@@ -70,8 +69,8 @@ leMans2025 =
 {-| Check if a layout contains mini sectors
 -}
 hasMiniSectors : Layout miniSector -> Bool
-hasMiniSectors { s1, s2, s3 } =
-    not (List.isEmpty s1) && not (List.isEmpty s2) && not (List.isEmpty s3)
+hasMiniSectors { sectors } =
+    Sector.values sectors |> List.all (List.isEmpty >> not)
 
 
 {-| Get the default ratio for a specific sector
