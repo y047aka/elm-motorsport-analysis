@@ -180,7 +180,7 @@ compute { season } bestTimes config =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
-                        , classColor = (Class.toHexColor season metadata.class).value
+                        , classColor = (Class.toColor { season = season } metadata.class).value
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
@@ -246,7 +246,7 @@ fromLaps { season } baseMetadata laps =
                         , positionInClass = index + 1
                         , status = Car.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
-                        , classColor = (Class.toHexColor season baseMetadata.class).value
+                        , classColor = (Class.toColor { season = season } baseMetadata.class).value
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best

@@ -96,7 +96,7 @@ createStandingsEntryWithGap position carNumber gap =
     , positionInClass = 1
     , status = Racing
     , metadata = createMetadata carNumber
-    , classColor = (Class.toHexColor 2025 Class.none).value
+    , classColor = (Class.toColor { season = 2025 } Class.none).value
     , lapsCompleted = 5
     , currentLapTime = Nothing
     , currentLapBest = Nothing

@@ -235,7 +235,7 @@ carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class 
 carNumberColumn_Wec season { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec season
-    , sorter = compareBy (getter >> .class >> Class.toString)
+    , sorter = \a b -> Class.compare (getter a).class (getter b).class
     , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 

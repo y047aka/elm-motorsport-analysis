@@ -1,19 +1,18 @@
 module Motorsport.Widget exposing
     ( container
-    , classHeader, emptyState
+    , emptyState
     )
 
 {-|
 
 @docs container
-@docs classHeader, emptyState
+@docs emptyState
 
 -}
 
 import Css exposing (..)
 import Html.Styled exposing (Html, div, h3, text)
 import Html.Styled.Attributes exposing (class, css)
-import Motorsport.Class as Class exposing (Class)
 
 
 {-| Create a standard widget container with consistent styling
@@ -44,39 +43,3 @@ emptyState message =
             ]
         ]
         [ text message ]
-
-
-{-| Create a class header with class indicator and name, plus additional content
--}
-classHeader : Class -> List (Html msg) -> Html msg
-classHeader class additionalContent =
-    div
-        [ css
-            [ property "display" "flex"
-            , justifyContent spaceBetween
-            , alignItems center
-            , property "column-gap" "5px"
-            , fontSize (px 14)
-            , property "font-weight" "600"
-            ]
-        ]
-        [ div
-            [ css
-                [ property "display" "grid"
-                , property "grid-template-columns" "auto 1fr"
-                , alignItems center
-                , property "column-gap" "5px"
-                , before
-                    [ property "content" (qt "")
-                    , display block
-                    , width (px 15)
-                    , height (px 15)
-                    , backgroundColor (Class.toHexColor 2025 class)
-                    , borderRadius (px 4)
-                    ]
-                ]
-            ]
-            [ text (Class.toString class) ]
-        , div [ css [ fontSize (rem 0.75), color (hsl 0 0 0.6) ] ]
-            additionalContent
-        ]
