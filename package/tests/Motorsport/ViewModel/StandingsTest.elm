@@ -5,7 +5,7 @@ import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Gap as Gap exposing (Gap(..))
+import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Sector as Sector exposing (Sector(..))
@@ -70,8 +70,8 @@ suite =
                     let
                         entries =
                             [ createStandingsEntry 1 "1" 1000
-                            , createStandingsEntryWithGap 2 "2" Gap.None
-                            , createStandingsEntryWithGap 3 "3" (Gap.Laps 1)
+                            , createStandingsEntryWithGap 2 "2" Gap.none
+                            , createStandingsEntryWithGap 3 "3" (Gap.laps 1)
                             ]
 
                     in
@@ -87,7 +87,7 @@ suite =
 
 createStandingsEntry : Int -> String -> Duration -> Entry
 createStandingsEntry position carNumber interval =
-    createStandingsEntryWithGap position carNumber (Gap.Seconds interval)
+    createStandingsEntryWithGap position carNumber (Gap.seconds interval)
 
 
 createStandingsEntryWithGap : Int -> String -> Gap -> Entry
@@ -107,7 +107,7 @@ createStandingsEntryWithGap position carNumber gap =
     , currentLapRated = Nothing
     , sector = Nothing
     , miniSector = Nothing
-    , gapToLeader = Gap.None
+    , gapToLeader = Gap.none
     , intervalToAhead = gap
     , currentLapProgress = 0
     , lastLapRated = Nothing

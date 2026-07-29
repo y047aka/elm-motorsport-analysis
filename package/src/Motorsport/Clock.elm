@@ -110,13 +110,20 @@ update now msg m =
 
         Set duration ->
             case m.state of
+                -- Moving the clock before the race has been started leaves it
+                -- stopped, at the moment asked for -- the same state as pausing
+                -- there. Ignoring it instead would leave the clock reading zero
+                -- while the rest of the race control had moved on.
+                Initial ->
+                    { m | state = Paused duration }
+
                 Started _ timer ->
                     { m | state = Started duration timer }
 
                 Paused _ ->
                     { m | state = Paused duration }
 
-                _ ->
+                Finished ->
                     m
 
         SetPlaybackSpeed newSpeed ->

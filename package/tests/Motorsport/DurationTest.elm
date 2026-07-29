@@ -11,7 +11,7 @@ import Test exposing (..)
 tests : Test
 tests =
     describe "Duration round-trip"
-        [ fuzz (Fuzz.intRange 0 99999999) "Fuzz test" <|
+        [ fuzz (Fuzz.intRange -99999999 99999999) "Fuzz test" <|
             \duration ->
                 let
                     durationString =
