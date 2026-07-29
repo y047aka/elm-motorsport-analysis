@@ -20,7 +20,7 @@ import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
 import Motorsport.Lap.Performance exposing (LeMans2025MiniSectorFastest)
-import Motorsport.Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.ViewModel.Standings exposing (Entry)
 
 
@@ -52,9 +52,7 @@ buildConfig :
     Layout LeMans2025MiniSector
     ->
         { a
-            | fastestSector_1 : Duration
-            , fastestSector_2 : Duration
-            , fastestSector_3 : Duration
+            | fastestSectors : BySector Duration
             , fastestMiniSectors : LeMans2025MiniSectorFastest
         }
     -> TrackConfig
@@ -70,7 +68,9 @@ buildConfig layout bestTimes =
                     |> toFloat
 
             else
-                toFloat (bestTimes.fastestSector_1 + bestTimes.fastestSector_2 + bestTimes.fastestSector_3)
+                Sector.values bestTimes.fastestSectors
+                    |> List.sum
+                    |> toFloat
 
         miniRatio miniSector =
             let
@@ -111,7 +111,7 @@ buildConfig layout bestTimes =
 
 computeSectorShares :
     Layout LeMans2025MiniSector
-    -> { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    -> { a | fastestSectors : BySector Duration }
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> BySector Float
@@ -135,10 +135,10 @@ computeSectorShares layout bestTimes totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    { s1 = sectorShare bestTimes.fastestSector_1 layout.s1
-    , s2 = sectorShare bestTimes.fastestSector_2 layout.s2
-    , s3 = sectorShare bestTimes.fastestSector_3 layout.s3
-    }
+    -- Circuit.Layout still spells its sectors out flat.
+    Sector.map2 sectorShare
+        bestTimes.fastestSectors
+        { s1 = layout.s1, s2 = layout.s2, s3 = layout.s3 }
 
 
 buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData

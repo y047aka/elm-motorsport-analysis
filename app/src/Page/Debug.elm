@@ -20,7 +20,7 @@ import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumber
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
 import Motorsport.RunningOrder as RunningOrder
-import Motorsport.Sector as Sector exposing (Sector(..))
+import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
@@ -108,12 +108,19 @@ view { viewModel, raceControl } { leaderboardState } =
                 , text (Clock.getElapsed clock |> Duration.toString)
                 ]
             , div []
-                [ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
-                , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
-                , div [] [ text "s1_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_1) ]
-                , div [] [ text "s2_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_2) ]
-                , div [] [ text "s3_fastest: ", text (Duration.toString viewModel.bestTimes.fastestSector_3) ]
-                ]
+                ([ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
+                 , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                 ]
+                    ++ (Sector.toList viewModel.bestTimes.fastestSectors
+                            |> List.map
+                                (\( sector, fastest ) ->
+                                    div []
+                                        [ text (Sector.toString sector ++ "_fastest: ")
+                                        , text (Duration.toString fastest)
+                                        ]
+                                )
+                       )
+                )
             ]
         , let
             standings =
@@ -152,15 +159,7 @@ sectorColumns : BestTimes -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
         fastest sector =
-            case sector of
-                S1 ->
-                    bestTimes.fastestSector_1
-
-                S2 ->
-                    bestTimes.fastestSector_2
-
-                S3 ->
-                    bestTimes.fastestSector_3
+            Sector.get sector bestTimes.fastestSectors
 
         times sector =
             .currentLapSectors >> Maybe.map (Sector.get sector)

@@ -125,9 +125,7 @@ type alias CurrentSectorStates =
 compute :
     { a
         | fastestLapTime : Duration
-        , fastestSector_1 : Duration
-        , fastestSector_2 : Duration
-        , fastestSector_3 : Duration
+        , fastestSectors : BySector Duration
         , fastestMiniSectors : LeMans2025MiniSectorFastest
     }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
@@ -230,9 +228,13 @@ fromLaps baseMetadata laps =
     let
         bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , fastestSector_1 = [ laps ] |> findFastestBy (.sectors >> .s1 >> .time) |> Maybe.withDefault 0
-            , fastestSector_2 = [ laps ] |> findFastestBy (.sectors >> .s2 >> .time) |> Maybe.withDefault 0
-            , fastestSector_3 = [ laps ] |> findFastestBy (.sectors >> .s3 >> .time) |> Maybe.withDefault 0
+            , fastestSectors =
+                Sector.initialize
+                    (\sector ->
+                        [ laps ]
+                            |> findFastestBy (.sectors >> Sector.get sector >> .time)
+                            |> Maybe.withDefault 0
+                    )
             , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
             }
 
@@ -320,7 +322,7 @@ rateTime fastest { time, personalBest } =
 
 
 extractCurrentSectorStates :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    { a | fastestSectors : BySector Duration }
     -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
@@ -350,24 +352,11 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
 
 
 extractSectorPerformance :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
+    { a | fastestSectors : BySector Duration }
     -> Lap
     -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 rateTime (fastestBySector bestTimes) lap.sectors
-
-
-{-| Turns the best-times record's flat `fastestSector_1` / `_2` / `_3` into
-per-sector values; `extractSectorTimes` does the same for a lap.
--}
-fastestBySector :
-    { a | fastestSector_1 : Duration, fastestSector_2 : Duration, fastestSector_3 : Duration }
-    -> BySector Duration
-fastestBySector bestTimes =
-    { s1 = bestTimes.fastestSector_1
-    , s2 = bestTimes.fastestSector_2
-    , s3 = bestTimes.fastestSector_3
-    }
+    Sector.map2 rateTime bestTimes.fastestSectors lap.sectors
 
 
 extractMiniSectorPerformance :
