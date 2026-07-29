@@ -231,17 +231,17 @@ performanceColumn { getter, sorter, bestTimes } =
     }
 
 
-carNumberColumn_Wec : Int -> { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
-carNumberColumn_Wec season { getter } =
+carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
+carNumberColumn_Wec { getter } =
     { name = "#"
-    , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec season
+    , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
     , sorter = \a b -> Class.compare (getter a).class (getter b).class
     , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 
 
-viewCarNumberColumn_Wec : Int -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
-viewCarNumberColumn_Wec season { carNumber, class, manufacturer } =
+viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
+viewCarNumberColumn_Wec { carNumber, manufacturer } =
     div
         [ css
             [ width (em 2.5)

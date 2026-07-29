@@ -54,7 +54,7 @@ type Standings
 
 
 {-| Display info needed by class headers and badges.
-The season-dependent color resolution is already done at compute time.
+The color is settled when the class is decoded; see `Motorsport.Class`.
 -}
 type alias ClassInfo =
     { class : Class
@@ -123,18 +123,16 @@ type alias CurrentSectorStates =
 
 
 compute :
-    { season : Int }
-    ->
-        { a
-            | fastestLapTime : Duration
-            , fastestSector_1 : Duration
-            , fastestSector_2 : Duration
-            , fastestSector_3 : Duration
-            , fastestMiniSectors : LeMans2025MiniSectorFastest
-        }
+    { a
+        | fastestLapTime : Duration
+        , fastestSector_1 : Duration
+        , fastestSector_2 : Duration
+        , fastestSector_3 : Duration
+        , fastestMiniSectors : LeMans2025MiniSectorFastest
+    }
     -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
     -> Standings
-compute { season } bestTimes config =
+compute bestTimes config =
     let
         carsList =
             RunningOrder.toList config.cars
@@ -180,7 +178,7 @@ compute { season } bestTimes config =
                         , positionInClass = positionInClass
                         , status = car.status
                         , metadata = metadata
-                        , classColor = (Class.toColor { season = season } metadata.class).value
+                        , classColor = (Class.toColor metadata.class).value
                         , lapsCompleted = lastLap.lap
                         , currentLapTime = currentLap |> Maybe.map .time
                         , currentLapBest = currentLap |> Maybe.map .best
@@ -227,8 +225,8 @@ compute { season } bestTimes config =
 Treats each lap as one Entry, setting `metadata.carNumber` to the lap-number string.
 
 -}
-fromLaps : { season : Int } -> Car.Metadata -> List Lap -> Standings
-fromLaps { season } baseMetadata laps =
+fromLaps : Car.Metadata -> List Lap -> Standings
+fromLaps baseMetadata laps =
     let
         bestTimes =
             { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
@@ -246,7 +244,7 @@ fromLaps { season } baseMetadata laps =
                         , positionInClass = index + 1
                         , status = Car.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
-                        , classColor = (Class.toColor { season = season } baseMetadata.class).value
+                        , classColor = (Class.toColor baseMetadata.class).value
                         , lapsCompleted = lap.lap
                         , currentLapTime = Just lap.time
                         , currentLapBest = Just lap.best

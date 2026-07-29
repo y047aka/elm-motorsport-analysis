@@ -5,10 +5,25 @@ import Data.Series.Wec exposing (Wec)
 import Data.Series.Wec_2024 exposing (carImageFileName_2024, toEventSummary_Wec_2024)
 import Data.Series.Wec_2025 exposing (carImageFileName_2025, toEventSummary_Wec_2025)
 import Data.Series.Wec_2026 exposing (carImageFileName_2026, toEventSummary_Wec_2026)
+import Motorsport.Class.Era as Era
 
 
+{-| The event, if the app can show it: it needs a table for the season and an
+era to read that season's classes against.
+
+Requiring the era keeps the seasons that load a subset of the seasons whose
+grid is known -- a table added without its era resolves to `Nothing` instead of
+loading with every class read against whichever grid is current.
+
+-}
 toEventSummary : ( Int, Wec ) -> Maybe EventSummary
 toEventSummary ( season, event ) =
+    Era.fromSeason season
+        |> Maybe.andThen (\_ -> forSeason season event)
+
+
+forSeason : Int -> Wec -> Maybe EventSummary
+forSeason season event =
     case season of
         2024 ->
             Just (toEventSummary_Wec_2024 event)

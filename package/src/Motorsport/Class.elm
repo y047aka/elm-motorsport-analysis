@@ -1,6 +1,6 @@
 module Motorsport.Class exposing
     ( Class
-    , all
+    , classesOf
     , compare
     , fromString, toString
     , none
@@ -10,7 +10,7 @@ module Motorsport.Class exposing
 {-|
 
 @docs Class
-@docs all
+@docs classesOf
 @docs compare
 @docs fromString, toString
 @docs none
@@ -20,101 +20,121 @@ module Motorsport.Class exposing
 
 import Css
 import Css.Color exposing (oklch)
+import List.Extra
+import Motorsport.Class.Era as Era exposing (Era)
 
 
-{-| The category a car races in.
+{-| The category a car races in, as it stood in the era it was read for.
 
-Opaque: a `Class` only ever comes from [`fromString`](#fromString) or
-[`none`](#none), so every value in the app is one the series actually runs.
-Ordering goes through [`compare`](#compare) and display through
-[`toString`](#toString) -- the constructors are not the interface.
+Opaque, and only built by [`fromString`](#fromString) or [`none`](#none). A
+`Class` carries the order and the color that era gave it, settled once at the
+boundary, so [`compare`](#compare) and [`toColor`](#toColor) are plain
+functions of the value and nothing downstream needs to know what an era is.
 
-Categories from different eras sit in the same type: `LMGTE Am` ran until 2023
-and `LMGT3` replaced it in 2024, so no one season shows both.
+The `index` is a position in the era's grid counted from zero, not the class's
+number in a classification: LMGTE Am, the fourth class of 2023, has index 2 on
+that season's grid of three.
 
 -}
 type Class
     = None
-    | LMH
-    | LMP1
+    | Racing { category : Category, index : Int, color : Css.Color }
+
+
+{-| Which category, regardless of era -- only the name it prints depends on it.
+-}
+type Category
+    = Hypercar
     | LMP2
     | LMGTE_Pro
     | LMGTE_Am
     | LMGT3
-    | InnovativeCar
 
 
-{-| Every class a car races in, fastest category first -- the order a
-classification lists them in: see [`compare`](#compare).
-
-    List.map toString all
-    --> [ "HYPERCAR", "LMP1", "LMP2", "LMGTE Pro", "LMGTE Am", "LMGT3", "INNOVATIVE CAR" ]
-
-[`none`](#none) is not in this list. It stands for a car whose class is unknown,
-which is not a category anyone races in.
-
--}
-all : List Class
-all =
-    [ LMH, LMP1, LMP2, LMGTE_Pro, LMGTE_Am, LMGT3, InnovativeCar ]
-
-
-{-| The class with no cars in it -- a placeholder for a car whose class is not
-known yet.
+{-| The class of a car whose class is not known. It raced in no era, so it is
+drawn black and sorts after every class that did.
 -}
 none : Class
 none =
     None
 
 
-{-| Order classes the way a classification does: the fastest category first,
-then down to GT, and cars outside the classification last.
 
-    Maybe.map2 Motorsport.Class.compare (fromString "HYPERCAR") (fromString "LMGT3")
-    --> Just LT
+-- THE GRID
 
-`INNOVATIVE CAR` (the Garage 56 entry) races but is not classified, so it sorts
-after every class that is. [`none`](#none) sorts after that again.
+
+{-| Every category that raced in an era, in the order a classification lists
+them, each with the color it was drawn in.
+
+The single source of era-dependent knowledge: a new era is a case here, a new
+season is nothing at all. Order and color are kept apart -- the order is the
+order the rows are written in -- so either can change without the other.
 
 -}
-compare : Class -> Class -> Order
-compare a b =
-    Basics.compare (toIndex a) (toIndex b)
+grid : Era -> List ( Category, Css.Color )
+grid era =
+    case era of
+        Era.GteProAndAm ->
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGTE_Pro, green )
+            , ( LMGTE_Am, orange )
+            ]
+
+        Era.GteAmAsFourthClass ->
+            -- Keeping fourth, LMGTE Am kept the orange it already had.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGTE_Am, orange )
+            ]
+
+        Era.Gt3AsFourthClass ->
+            -- Taking over fourth, LMGT3 took LMGTE Am's orange with it.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGT3, orange )
+            ]
+
+        Era.Gt3AsThirdClass ->
+            -- Moving up to third, LMGT3 took the green LMGTE Pro had held.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGT3, green )
+            ]
 
 
-toIndex : Class -> Int
-toIndex class =
-    case class of
-        LMH ->
-            0
-
-        LMP1 ->
-            1
-
-        LMP2 ->
-            2
-
-        LMGTE_Pro ->
-            3
-
-        LMGTE_Am ->
-            4
-
-        LMGT3 ->
-            5
-
-        InnovativeCar ->
-            6
-
-        None ->
-            7
+{-| Every class a car raced in that era, fastest category first. Never
+[`none`](#none), which is not a category anyone races in.
+-}
+classesOf : Era -> List Class
+classesOf era =
+    grid era
+        |> List.indexedMap
+            (\index ( category, color ) ->
+                Racing { category = category, index = index, color = color }
+            )
 
 
-{-| Convert a class to the name the series prints for it. For display only --
-ordering goes through [`compare`](#compare).
+{-| Read a class name as it appears in the source data, as of an era. The only
+place an era is spent.
 
-    Maybe.map toString (fromString "LMGTE Pro")
-    --> Just "LMGTE Pro"
+A name that era's grid does not list -- `"None"`, a category from another era,
+anything the series has not run before -- reads as [`none`](#none): a car this
+grid cannot place, rather than one given an order and a color it never held.
+
+-}
+fromString : Era -> String -> Class
+fromString era name =
+    classesOf era
+        |> List.Extra.find (\class -> toString class == name)
+        |> Maybe.withDefault None
+
+
+{-| The name the series prints for a class, which does not vary by era. For
+display only -- ordering goes through [`compare`](#compare).
+
+    toString none
+    --> "None"
 
 -}
 toString : Class -> String
@@ -123,11 +143,15 @@ toString class =
         None ->
             "None"
 
-        LMH ->
-            "HYPERCAR"
+        Racing { category } ->
+            categoryToString category
 
-        LMP1 ->
-            "LMP1"
+
+categoryToString : Category -> String
+categoryToString category =
+    case category of
+        Hypercar ->
+            "HYPERCAR"
 
         LMP2 ->
             "LMP2"
@@ -141,86 +165,39 @@ toString class =
         LMGT3 ->
             "LMGT3"
 
-        InnovativeCar ->
-            "INNOVATIVE CAR"
 
+{-| Order classes the way a classification does, fastest category first.
 
-{-| Read the class name as it appears in the source data.
-
-    fromString "NOT A CLASS"
-    --> Nothing
-
-Every name [`toString`](#toString) produces for a class in [`all`](#all) reads
-back, but `"None"` does not: [`none`](#none) marks missing data rather than
-naming a category, so it cannot be asked for.
+Classes that came in the same position on their own grids -- LMGTE Pro in 2021
+and LMGT3 in 2025 -- compare equal, because position is all this compares.
 
 -}
-fromString : String -> Maybe Class
-fromString class =
-    case class of
-        "HYPERCAR" ->
-            Just LMH
+compare : Class -> Class -> Order
+compare a b =
+    case ( a, b ) of
+        ( Racing x, Racing y ) ->
+            Basics.compare x.index y.index
 
-        "LMP1" ->
-            Just LMP1
+        ( Racing _, None ) ->
+            LT
 
-        "LMP2" ->
-            Just LMP2
+        ( None, Racing _ ) ->
+            GT
 
-        "LMGTE Pro" ->
-            Just LMGTE_Pro
-
-        "LMGTE Am" ->
-            Just LMGTE_Am
-
-        "LMGT3" ->
-            Just LMGT3
-
-        "INNOVATIVE CAR" ->
-            Just InnovativeCar
-
-        _ ->
-            Nothing
+        ( None, None ) ->
+            EQ
 
 
-{-| The color a class is drawn in.
-
-The season matters because the palette is reused as the grid changes: `LMGT3`
-took over the GT slot in 2024, and it is drawn in the green that `LMGTE Pro`
-held while the two categories still ran alongside each other -- so a 2024 GT3
-car is orange, like the `LMGTE Am` field it replaced, and a 2025 one is green.
-
+{-| The color a class was drawn in, in its own era.
 -}
-toColor : { season : Int } -> Class -> Css.Color
-toColor { season } class =
+toColor : Class -> Css.Color
+toColor class =
     case class of
+        Racing { color } ->
+            color
+
         None ->
             oklch 0 0 0
-
-        LMH ->
-            red
-
-        LMP1 ->
-            red
-
-        LMP2 ->
-            blue
-
-        LMGTE_Pro ->
-            green
-
-        LMGTE_Am ->
-            orange
-
-        LMGT3 ->
-            if season > 2024 then
-                green
-
-            else
-                orange
-
-        InnovativeCar ->
-            blue
 
 
 red : Css.Color

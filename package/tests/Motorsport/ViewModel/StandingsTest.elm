@@ -19,7 +19,7 @@ suite =
         [ describe "currentLapSectors"
             [ test "keeps each sector's time and personal best with the sector they belong to" <|
                 \_ ->
-                    Standings.fromLaps { season = 2025 } (createMetadata "1") [ sectorFixtureLap ]
+                    Standings.fromLaps (createMetadata "1") [ sectorFixtureLap ]
                         |> Standings.toList
                         |> List.head
                         |> Maybe.andThen .currentLapSectors
@@ -96,7 +96,7 @@ createStandingsEntryWithGap position carNumber gap =
     , positionInClass = 1
     , status = Racing
     , metadata = createMetadata carNumber
-    , classColor = (Class.toColor { season = 2025 } Class.none).value
+    , classColor = (Class.toColor Class.none).value
     , lapsCompleted = 5
     , currentLapTime = Nothing
     , currentLapBest = Nothing

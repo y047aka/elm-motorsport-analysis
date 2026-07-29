@@ -11,10 +11,10 @@ module Data.Wec exposing
 -}
 
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
-import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Car as Car exposing (Status(..))
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class as Class
+import Motorsport.Class.Era exposing (Era)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Manufacturer as Manufacturer
 
@@ -35,31 +35,26 @@ type alias StartingGridItem =
 -- DECODER
 
 
-eventDecoder : Decoder Event
-eventDecoder =
+eventDecoder : Era -> Decoder Event
+eventDecoder era =
     Decode.map2 Event
         (field "name" string)
-        (field "startingGrid" (list startingGridItemDecoder))
+        (field "startingGrid" (list (startingGridItemDecoder era)))
 
 
-startingGridItemDecoder : Decoder StartingGridItem
-startingGridItemDecoder =
+startingGridItemDecoder : Era -> Decoder StartingGridItem
+startingGridItemDecoder era =
     Decode.map2 StartingGridItem
         (field "position" int)
-        (field "car" carMetadataDecoder)
+        (field "car" (carMetadataDecoder era))
 
 
-classDecoder : Decoder Class
-classDecoder =
-    string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
-
-
-carMetadataDecoder : Decoder Car.Metadata
-carMetadataDecoder =
+carMetadataDecoder : Era -> Decoder Car.Metadata
+carMetadataDecoder era =
     Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
-        |> required "class" classDecoder
+        |> required "class" (string |> Decode.map (Class.fromString era))
         |> required "group" string
         |> required "team" string
         |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
