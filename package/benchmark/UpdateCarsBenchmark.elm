@@ -5,9 +5,9 @@ import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture.Generated as Fixture
 import List.Extra
 import Motorsport.Car exposing (Car, Status(..))
+import Motorsport.Car.StatusIndex as StatusIndex
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
-import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 
 
@@ -44,13 +44,15 @@ suite =
                     )
             )
         , Benchmark.scale "new"
-            ([ 25 -- 10,812
-             , 50 -- 10,994
-             , 75 -- 12,744
+            ([ 25
+             , 50
+             , 75
              ]
-                |> List.map (\size -> ( size, TimelineEvent.fromCars cars ))
+                -- The index is built once when the race loads, so it is hoisted
+                -- out of the timed closure the way the real one is.
+                |> List.map (\size -> ( size, StatusIndex.fromTimelineEvents (TimelineEvent.fromCars cars) ))
                 |> List.map
-                    (\( size, events ) ->
+                    (\( size, statusIndex ) ->
                         ( String.fromInt size ++ "%"
                         , \_ ->
                             let
@@ -58,7 +60,14 @@ suite =
                                     { elapsed = floor (toFloat timeLimit * toFloat size / 100) }
                             in
                             cars
-                                |> RaceControl.applyEvents clock.elapsed events
+                                |> List.map
+                                    (\car ->
+                                        { car
+                                            | currentLap = Lap.findCurrentLap clock car.laps
+                                            , lastLap = Lap.findLastLapAt clock car.laps
+                                        }
+                                    )
+                                |> StatusIndex.applyAt clock statusIndex
                                 |> List.sortWith
                                     (\a b ->
                                         Maybe.map2 (Lap.compareAt clock) a.currentLap b.currentLap

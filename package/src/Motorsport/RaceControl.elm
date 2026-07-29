@@ -1,14 +1,15 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), applyEvents, fromCars, placeholder, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), fromCars, placeholder, update)
 
 import List.Extra
-import Motorsport.Car as Car exposing (Car, Status(..))
+import Motorsport.Car as Car exposing (Car)
+import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
-import Motorsport.TimelineEvent as TimelineEvent exposing (EventType(..), TimelineEvent)
+import Motorsport.TimelineEvent exposing (TimelineEvent)
 import Time exposing (Posix, millisToPosix)
 
 
@@ -23,6 +24,7 @@ type alias Model =
     , timeLimit : Int
     , cars : RunningOrder
     , timelineEvents : List TimelineEvent
+    , statusIndex : StatusIndex
     }
 
 
@@ -35,7 +37,7 @@ placeholder =
             , laps = []
             , currentLap = Nothing
             , lastLap = Nothing
-            , status = PreRace
+            , status = Car.PreRace
             , currentDriver = Nothing
             }
     in
@@ -45,6 +47,7 @@ placeholder =
     , timeLimit = 0
     , cars = RunningOrder.singleton { elapsed = 0 } dummyCar
     , timelineEvents = []
+    , statusIndex = StatusIndex.empty
     }
 
 
@@ -59,6 +62,7 @@ fromCars timelineEvents cars =
                 , timeLimit = calcTimeLimit cars
                 , cars = runningOrder
                 , timelineEvents = timelineEvents
+                , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
                 }
             )
 
@@ -105,25 +109,15 @@ update msg m =
         Tick now ->
             case m.clock.state of
                 Clock.Started splitTime { startedAt } ->
-                    if Clock.calcElapsed startedAt now splitTime m.clock.playbackSpeed < m.timeLimit then
-                        let
-                            newElapsed =
-                                Clock.calcElapsed startedAt now splitTime m.clock.playbackSpeed
-
-                            newClock =
-                                { lapCount = lapAt newElapsed (List.map .laps (RunningOrder.toList m.cars))
-                                , elapsed = newElapsed
-                                }
-                        in
+                    let
+                        newElapsed =
+                            Clock.calcElapsed startedAt now splitTime m.clock.playbackSpeed
+                    in
+                    if newElapsed < m.timeLimit then
                         { m
                             | clock = Clock.update now Clock.Tick m.clock
-                            , lapCount = newClock.lapCount
-                            , cars =
-                                m.cars
-                                    |> RunningOrder.toList
-                                    |> applyEvents newElapsed m.timelineEvents
-                                    |> RunningOrder.fromList { elapsed = newClock.elapsed }
-                                    |> Maybe.withDefault m.cars
+                            , lapCount = lapAt newElapsed (List.map .laps (RunningOrder.toList m.cars))
+                            , cars = carsAt { elapsed = newElapsed } m
                         }
 
                     else
@@ -217,16 +211,28 @@ update msg m =
             { m
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
-                , cars =
-                    m.cars
-                        |> RunningOrder.toList
-                        |> updateCarFields { elapsed = elapsed }
-                        |> applyEvents elapsed m.timelineEvents
-                        -- fromList returns Nothing only if the list is empty.
-                        -- toList always returns a non-empty list, so this branch is unreachable.
-                        |> RunningOrder.fromList { elapsed = elapsed }
-                        |> Maybe.withDefault m.cars
+                , cars = carsAt { elapsed = elapsed } m
             }
+
+
+{-| Recompute every car against the clock: the lap it is on, the lap it has just
+finished, and the status it holds at that moment.
+
+Nothing here accumulates. The result is a function of the race data and the
+elapsed time alone, so scrubbing backwards or jumping a whole hour lands on the
+same cars that playing through would have.
+
+-}
+carsAt : { elapsed : Duration } -> Model -> RunningOrder
+carsAt clock m =
+    m.cars
+        |> RunningOrder.toList
+        |> updateCarFields clock
+        |> StatusIndex.applyAt clock m.statusIndex
+        -- fromList returns Nothing only if the list is empty.
+        -- toList always returns a non-empty list, so this branch is unreachable.
+        |> RunningOrder.fromList clock
+        |> Maybe.withDefault m.cars
 
 
 getCurrentTime : Clock.Model -> Posix
@@ -253,92 +259,6 @@ updateCarFields clock =
                 , currentDriver = currentLap |> Maybe.map .driver
             }
         )
-
-
-{-| イベントが車両固有のイベントかどうかを判定する
--}
-isCarEvent : TimelineEvent -> Bool
-isCarEvent { eventType } =
-    case eventType of
-        CarEvent _ _ ->
-            True
-
-        _ ->
-            False
-
-
-{-| イベント情報に基づいて車両のステータスを更新する
--}
-applyEvents : Duration -> List TimelineEvent -> List Car -> List Car
-applyEvents currentElapsed events cars =
-    let
-        activeEvents =
-            List.filter (\{ eventTime } -> (currentElapsed - 1000) < eventTime && eventTime <= currentElapsed) events
-
-        ( carSpecificEvents, globalEvents ) =
-            List.partition isCarEvent activeEvents
-    in
-    cars
-        |> List.map
-            (\car ->
-                let
-                    carEvents =
-                        carSpecificEvents
-                            |> List.filter
-                                (\event ->
-                                    case event.eventType of
-                                        CarEvent carNumber _ ->
-                                            carNumber == car.metadata.carNumber
-
-                                        _ ->
-                                            False
-                                )
-                            |> List.sortBy .eventTime
-
-                    allEvents =
-                        globalEvents ++ carEvents
-                in
-                List.foldl applyEventToCar car allEvents
-            )
-
-
-{-| 単一のイベントを車両に適用する
--}
-applyEventToCar : TimelineEvent -> Car -> Car
-applyEventToCar event car =
-    case event.eventType of
-        RaceStart ->
-            car
-
-        CarEvent _ (TimelineEvent.Start { currentLap }) ->
-            { car
-                | currentLap = Just currentLap
-                , currentDriver = Just currentLap.driver
-                , status = Racing
-            }
-
-        CarEvent _ (TimelineEvent.PitIn { lapNumber, duration }) ->
-            Car.setStatus InPit car
-
-        CarEvent _ (TimelineEvent.PitOut { lapNumber, duration }) ->
-            Car.setStatus Racing car
-
-        CarEvent _ TimelineEvent.Retirement ->
-            Car.setStatus Retired car
-
-        CarEvent _ TimelineEvent.Checkered ->
-            Car.setStatus Car.Checkered car
-
-        CarEvent _ (TimelineEvent.LapCompleted lapNumber { nextLap }) ->
-            let
-                currentLap =
-                    Just nextLap
-            in
-            { car
-                | currentLap = currentLap
-                , lastLap = List.Extra.find (\lap -> lap.lap == lapNumber) car.laps
-                , currentDriver = currentLap |> Maybe.map .driver
-            }
 
 
 lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int
