@@ -1,37 +1,157 @@
-module Motorsport.Class exposing (Class, fromString, none, toHexColor, toString, toStrokePalette)
+module Motorsport.Class exposing
+    ( Class
+    , classesOf
+    , compare
+    , fromString, toString
+    , none
+    , toColor
+    )
+
+{-|
+
+@docs Class
+@docs classesOf
+@docs compare
+@docs fromString, toString
+@docs none
+@docs toColor
+
+-}
 
 import Css
-import Css.Color exposing (Color(..), oklch)
-import Css.Palette.Svg exposing (SvgPalette, empty)
+import Css.Color exposing (oklch)
+import List.Extra
+import Motorsport.Class.Era as Era exposing (Era)
 
 
+{-| The category a car races in, as it stood in the era it was read for.
+
+Opaque, and only built by [`fromString`](#fromString) or [`none`](#none). A
+`Class` carries the order and the color that era gave it, settled once at the
+boundary, so [`compare`](#compare) and [`toColor`](#toColor) are plain
+functions of the value and nothing downstream needs to know what an era is.
+
+The `index` is a position in the era's grid counted from zero, not the class's
+number in a classification: LMGTE Am, the fourth class of 2023, has index 2 on
+that season's grid of three.
+
+-}
 type Class
     = None
-    | LMH
-    | LMP1
+    | Racing { category : Category, index : Int, color : Css.Color }
+
+
+{-| Which category, regardless of era -- only the name it prints depends on it.
+-}
+type Category
+    = Hypercar
     | LMP2
     | LMGTE_Pro
     | LMGTE_Am
     | LMGT3
-    | InnovativeCar
 
 
+{-| The class of a car whose class is not known. It raced in no era, so it is
+drawn black and sorts after every class that did.
+-}
 none : Class
 none =
     None
 
 
+
+-- THE GRID
+
+
+{-| Every category that raced in an era, in the order a classification lists
+them, each with the color it was drawn in.
+
+The single source of era-dependent knowledge: a new era is a case here, a new
+season is nothing at all. Order and color are kept apart -- the order is the
+order the rows are written in -- so either can change without the other.
+
+-}
+grid : Era -> List ( Category, Css.Color )
+grid era =
+    case era of
+        Era.GteProAndAm ->
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGTE_Pro, green )
+            , ( LMGTE_Am, orange )
+            ]
+
+        Era.GteAmAsFourthClass ->
+            -- Keeping fourth, LMGTE Am kept the orange it already had.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGTE_Am, orange )
+            ]
+
+        Era.Gt3AsFourthClass ->
+            -- Taking over fourth, LMGT3 took LMGTE Am's orange with it.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGT3, orange )
+            ]
+
+        Era.Gt3AsThirdClass ->
+            -- Moving up to third, LMGT3 took the green LMGTE Pro had held.
+            [ ( Hypercar, red )
+            , ( LMP2, blue )
+            , ( LMGT3, green )
+            ]
+
+
+{-| Every class a car raced in that era, fastest category first. Never
+[`none`](#none), which is not a category anyone races in.
+-}
+classesOf : Era -> List Class
+classesOf era =
+    grid era
+        |> List.indexedMap
+            (\index ( category, color ) ->
+                Racing { category = category, index = index, color = color }
+            )
+
+
+{-| Read a class name as it appears in the source data, as of an era. The only
+place an era is spent.
+
+A name that era's grid does not list -- `"None"`, a category from another era,
+anything the series has not run before -- reads as [`none`](#none): a car this
+grid cannot place, rather than one given an order and a color it never held.
+
+-}
+fromString : Era -> String -> Class
+fromString era name =
+    classesOf era
+        |> List.Extra.find (\class -> toString class == name)
+        |> Maybe.withDefault None
+
+
+{-| The name the series prints for a class, which does not vary by era. For
+display only -- ordering goes through [`compare`](#compare).
+
+    toString none
+    --> "None"
+
+-}
 toString : Class -> String
 toString class =
     case class of
         None ->
             "None"
 
-        LMH ->
-            "HYPERCAR"
+        Racing { category } ->
+            categoryToString category
 
-        LMP1 ->
-            "LMP1"
+
+categoryToString : Category -> String
+categoryToString category =
+    case category of
+        Hypercar ->
+            "HYPERCAR"
 
         LMP2 ->
             "LMP2"
@@ -45,78 +165,56 @@ toString class =
         LMGT3 ->
             "LMGT3"
 
-        InnovativeCar ->
-            "INNOVATIVE CAR"
+
+{-| Order classes the way a classification does, fastest category first.
+
+Classes that came in the same position on their own grids -- LMGTE Pro in 2021
+and LMGT3 in 2025 -- compare equal, because position is all this compares.
+
+-}
+compare : Class -> Class -> Order
+compare a b =
+    case ( a, b ) of
+        ( Racing x, Racing y ) ->
+            Basics.compare x.index y.index
+
+        ( Racing _, None ) ->
+            LT
+
+        ( None, Racing _ ) ->
+            GT
+
+        ( None, None ) ->
+            EQ
 
 
-fromString : String -> Maybe Class
-fromString class =
+{-| The color a class was drawn in, in its own era.
+-}
+toColor : Class -> Css.Color
+toColor class =
     case class of
-        "HYPERCAR" ->
-            Just LMH
+        Racing { color } ->
+            color
 
-        "LMP1" ->
-            Just LMP1
-
-        "LMP2" ->
-            Just LMP2
-
-        "LMGTE Pro" ->
-            Just LMGTE_Pro
-
-        "LMGTE Am" ->
-            Just LMGTE_Am
-
-        "LMGT3" ->
-            Just LMGT3
-
-        "INNOVATIVE CAR" ->
-            Just InnovativeCar
-
-        _ ->
-            Nothing
-
-
-toStrokePalette : Class -> SvgPalette
-toStrokePalette class =
-    { empty | stroke = ColorValue (toHexColor 2024 class) }
-
-
-toHexColor : Int -> Class -> Css.Color
-toHexColor season class =
-    let
-        { red, blue, green, orange } =
-            { red = oklch 0.5 0.25 29
-            , blue = oklch 0.5 0.25 264
-            , green = oklch 0.5 0.25 142
-            , orange = oklch 0.7 0.2 43
-            }
-    in
-    case class of
         None ->
             oklch 0 0 0
 
-        LMH ->
-            red
 
-        LMP1 ->
-            red
+red : Css.Color
+red =
+    oklch 0.5 0.25 29
 
-        LMP2 ->
-            blue
 
-        LMGTE_Pro ->
-            green
+blue : Css.Color
+blue =
+    oklch 0.5 0.25 264
 
-        LMGTE_Am ->
-            orange
 
-        LMGT3 ->
-            if season > 2024 then
-                green
+green : Css.Color
+green =
+    oklch 0.5 0.25 142
 
-            else
-                orange
 
-        InnovativeCar ->
-            blue
+orange : Css.Color
+orange =
+    oklch 0.7 0.2 43

@@ -120,8 +120,8 @@ view { viewModel, raceControl } { leaderboardState } =
                 raceControl.cars
                     |> RunningOrder.toList
                     |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                    |> Maybe.map (\car -> Standings.fromLaps { season = 2025 } car.metadata (List.take raceControl.lapCount car.laps))
-                    |> Maybe.withDefault (Standings.fromLaps { season = 2025 } { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+                    |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
+                    |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
           in
           DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
         ]
@@ -134,7 +134,7 @@ config bestTimes standings =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec 2025 { getter = .metadata }
+        , carNumberColumn_Wec { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lapsCompleted }
         ]

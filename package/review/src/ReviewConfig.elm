@@ -52,7 +52,7 @@ config =
     -- jfmengels/elm-review-common
     , NoConfusingPrefixOperator.rule
     , NoExposingEverything.rule
-    , NoImportingEverything.rule [ "Css", "Css.Palette.Svg" ]
+    , NoImportingEverything.rule [ "Css" ]
     , NoMissingTypeAnnotation.rule
 
     -- jfmengels/elm-review-debug

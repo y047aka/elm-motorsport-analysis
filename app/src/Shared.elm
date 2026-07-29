@@ -15,6 +15,7 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Car as Car exposing (Car)
+import Motorsport.Class.Era as Era
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
@@ -42,7 +43,7 @@ init _ =
             RaceControl.placeholder
 
         viewModelInit =
-            ViewModel.compute { season = 0 } WholeRace raceControlInit
+            ViewModel.compute WholeRace raceControlInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , raceControl = raceControlInit
@@ -73,17 +74,24 @@ update msg m =
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
-            , Effect.sendCmd <|
-                Cmd.batch
-                    [ Http.get
-                        { url = eventSummary.jsonPath
-                        , expect = Http.expectJson JsonLoaded_Wec Wec.eventDecoder
-                        }
-                    , Http.get
-                        { url = lapsPathFor eventSummary.jsonPath
-                        , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
-                        }
-                    ]
+            , case Era.fromSeason eventSummary.season of
+                Just era ->
+                    Effect.sendCmd <|
+                        Cmd.batch
+                            [ Http.get
+                                { url = eventSummary.jsonPath
+                                , expect = Http.expectJson JsonLoaded_Wec (Wec.eventDecoder era)
+                                }
+                            , Http.get
+                                { url = lapsPathFor eventSummary.jsonPath
+                                , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
+                                }
+                            ]
+
+                Nothing ->
+                    -- No grid for this season, so no way to read its classes.
+                    -- Nothing is asked for.
+                    Effect.none
             )
 
         JsonLoaded_Wec (Ok decoded) ->
@@ -116,7 +124,7 @@ update msg m =
             in
             ( { m
                 | raceControl = rcNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } UpToElapsed rcNew
+                , viewModel = ViewModel.compute UpToElapsed rcNew
               }
             , Effect.none
             )
@@ -145,7 +153,7 @@ finalizeWecIfReady m =
             in
             ( { m
                 | raceControl = rcNew
-                , viewModel = ViewModel.compute { season = m.eventSummary.season } WholeRace rcNew
+                , viewModel = ViewModel.compute WholeRace rcNew
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
