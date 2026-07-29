@@ -47,10 +47,19 @@ durationDecoder =
     toString 25614321
     --> "7:06:54.321"
 
+A duration can come out negative — a moment measured against a later one — and
+carries a single leading sign rather than one per part:
+
+    toString (-4321)
+    --> "-4.321"
+
 -}
 toString : Duration -> String
 toString ms =
-    if ms < (60 * 1000) then
+    if ms < 0 then
+        "-" ++ toString (abs ms)
+
+    else if ms < (60 * 1000) then
         toStringInSeconds ms
 
     else if ms < (60 * 60 * 1000) then
@@ -134,9 +143,22 @@ toStringInHours milliseconds =
     fromString "7:06:54.321"
     --> Just 25614321
 
+    fromString "-6:54.321"
+    --> Just -414321
+
 -}
 fromString : String -> Maybe Duration
 fromString str =
+    case String.uncons str of
+        Just ( '-', rest ) ->
+            fromString rest |> Maybe.map negate
+
+        _ ->
+            fromPositiveString str
+
+
+fromPositiveString : String -> Maybe Duration
+fromPositiveString str =
     let
         fromHours h =
             String.toInt h |> Maybe.map ((*) 3600000)
