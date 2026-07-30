@@ -1,12 +1,12 @@
-module Motorsport.TimelineEventTest exposing (suite)
+module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
-import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.Entrant exposing (Entrant)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Test exposing (Test, describe, test)
 
 

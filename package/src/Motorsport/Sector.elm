@@ -107,7 +107,7 @@ fastest time to compare against.
 The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
 would leave callers writing the same three-way `case` to pick one out. Converting
 once at the boundary — `Data.Wec.Laps.accumulate` and
-`Motorsport.TimelineEvent.lapDecoder`, the two places a `Lap` is built — makes
+`Motorsport.Race.TimelineEvent.lapDecoder`, the two places a `Lap` is built — makes
 the picking [`get`](#get) everywhere after.
 
 A transparent record, not an opaque type: there is no invariant to protect, and

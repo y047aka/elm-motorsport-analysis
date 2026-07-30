@@ -17,8 +17,8 @@ it is already sliced by time. Only chart modules that scan lap history over time
 
 import Dict exposing (Dict)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Lap exposing (Lap, completedLapsAt)
+import Motorsport.Race.Entrant exposing (Entrant)
 
 
 type LapHistory

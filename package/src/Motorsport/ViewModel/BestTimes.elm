@@ -10,9 +10,9 @@ individual times. Read off the race's precomputed records; see
 
 -}
 
-import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race exposing (Race)
 import Motorsport.Sector as Sector exposing (BySector)
 

@@ -1,4 +1,4 @@
-module Motorsport.Car.StatusIndex exposing
+module Motorsport.Race.StatusIndex exposing
     ( StatusIndex
     , empty, fromTimelineEvents
     , statusAt
@@ -8,7 +8,7 @@ module Motorsport.Car.StatusIndex exposing
 
 A status is not something playback accumulates as the clock runs -- it is
 a function of the race and the elapsed time. This index makes that function cheap:
-see [`ChangePoints`](Motorsport-ChangePoints), one set of them per car.
+see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 
 @docs StatusIndex
 @docs empty, fromTimelineEvents
@@ -18,10 +18,10 @@ see [`ChangePoints`](Motorsport-ChangePoints), one set of them per car.
 
 import Dict exposing (Dict)
 import Motorsport.Car as Car
-import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (CarNumber)
-import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
+import Motorsport.Race.Entrant exposing (CarNumber)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 {-| The change points of every car that has any, keyed by car number.
@@ -101,7 +101,7 @@ statusChange eventType =
 
 Where a pit exit and the chequered flag land on the same instant the flag wins,
 because the timeline lists it later -- see
-[`ChangePoints.fromList`](Motorsport-ChangePoints#fromList).
+[`ChangePoints.fromList`](Motorsport-Internal-ChangePoints#fromList).
 
     StatusIndex.statusAt { elapsed = 3600000 } "7" index
     -- Racing, InPit, Retired, ...

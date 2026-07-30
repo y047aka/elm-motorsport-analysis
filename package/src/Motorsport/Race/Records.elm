@@ -13,7 +13,7 @@ frame, that is twenty passes over twenty thousand laps.
 A record only moves when it is broken. Over a whole race the fastest lap improves
 a few dozen times; a mini-sector a few hundred. So the moments each one changed
 are collected once, when the race loads, and reading one back at an elapsed time
-is a binary search -- see [`ChangePoints`](Motorsport-ChangePoints).
+is a binary search -- see [`ChangePoints`](Motorsport-Internal-ChangePoints).
 
 `slowestLapTime` is not a record, but it moves the same way and is wanted for the
 same reason: it is the other end of the scale times are drawn against.
@@ -23,11 +23,11 @@ same reason: it is the other end of the scale times are drawn against.
 
 -}
 
-import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (Entrant)
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Race.Entrant exposing (Entrant)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 

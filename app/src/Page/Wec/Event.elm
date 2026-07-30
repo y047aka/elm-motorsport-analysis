@@ -18,10 +18,10 @@ import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock exposing (State(..))
-import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
+import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route

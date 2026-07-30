@@ -7,8 +7,8 @@ import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver
-import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 
 
 decode : String -> List Entrant

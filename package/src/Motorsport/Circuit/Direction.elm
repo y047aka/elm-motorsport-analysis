@@ -1,4 +1,4 @@
-module Motorsport.Direction exposing (Direction(..))
+module Motorsport.Circuit.Direction exposing (Direction(..))
 
 {-|
 

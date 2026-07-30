@@ -6,7 +6,7 @@ module Motorsport.Car exposing
 {-| An entrant as it stands at one moment of the race.
 
 The entry-list fields come straight from
-[`Entrant`](Motorsport-Entrant#Entrant); everything after them is read off the
+[`Entrant`](Motorsport-Race-Entrant#Entrant); everything after them is read off the
 clock -- the lap in progress, the lap just finished, who is driving, what the
 car's status is.
 
@@ -21,8 +21,8 @@ got there.
 
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 
 
 type alias Car =
@@ -40,7 +40,7 @@ type alias Car =
 
 The status is handed in rather than worked out here: it comes from the race's
 precomputed change points, see
-[`Car.StatusIndex.statusAt`](Motorsport-Car-StatusIndex#statusAt).
+[`Race.StatusIndex.statusAt`](Motorsport-Race-StatusIndex#statusAt).
 
 -}
 at : { elapsed : Duration, status : Status } -> Entrant -> Car

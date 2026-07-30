@@ -15,7 +15,7 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Class.Era as Era
-import Motorsport.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))

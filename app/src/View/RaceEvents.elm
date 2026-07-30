@@ -13,8 +13,8 @@ import DataView
 import Html.Styled as Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
 
 

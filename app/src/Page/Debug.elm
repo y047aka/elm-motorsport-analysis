@@ -16,13 +16,13 @@ import List.Extra
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
 import UI.Button exposing (button, labeledButton)

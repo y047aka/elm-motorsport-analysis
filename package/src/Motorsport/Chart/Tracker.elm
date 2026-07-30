@@ -3,8 +3,8 @@ module Motorsport.Chart.Tracker exposing (view)
 import Css
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)

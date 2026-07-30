@@ -1,17 +1,17 @@
-module Motorsport.Car.StatusIndexTest exposing (suite)
+module Motorsport.Race.StatusIndexTest exposing (suite)
 
 import Expect
 import Motorsport.Car as Car
-import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
-import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Race.StatusIndex as StatusIndex exposing (StatusIndex)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "Car.StatusIndex"
+    describe "Race.StatusIndex"
         [ describe "statusAt"
             [ test "a car the race never mentions has not taken the start" <|
                 \_ ->

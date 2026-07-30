@@ -14,9 +14,9 @@ import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture.Generated as Fixture
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Ordering as Ordering
 import Motorsport.Race as Race exposing (Race)
+import Motorsport.Race.Entrant exposing (Entrant)
 
 
 main : BenchmarkProgram

@@ -3,10 +3,10 @@ module Motorsport.RaceTest exposing (suite)
 import Expect
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
-import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race as Race exposing (Race)
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Test exposing (Test, describe, test)
 
 

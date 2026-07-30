@@ -5,8 +5,8 @@ import Expect
 import Json.Decode as Decode
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
-import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Race.Entrant exposing (Entrant)
 import Test exposing (Test, describe, test)
 
 

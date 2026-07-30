@@ -19,8 +19,8 @@ worked out where it is needed.
 
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Race as Race exposing (Race)
+import Motorsport.Race.Entrant exposing (Entrant)
 import Time exposing (Posix)
 
 

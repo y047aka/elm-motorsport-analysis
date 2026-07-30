@@ -17,10 +17,10 @@ import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import List.Extra
-import Motorsport.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Sector as Sector exposing (BySector)
 
 

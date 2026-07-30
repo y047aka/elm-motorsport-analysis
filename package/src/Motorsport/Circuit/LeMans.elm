@@ -19,7 +19,7 @@ module Motorsport.Circuit.LeMans exposing
 -}
 
 import List.Extra
-import Motorsport.Direction exposing (Direction(..))
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Sector as Sector exposing (BySector)
 
 

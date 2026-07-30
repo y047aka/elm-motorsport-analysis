@@ -5,10 +5,10 @@ import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope(..))
 import Test exposing (Test, describe, test)

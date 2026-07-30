@@ -15,8 +15,8 @@ import Json.Decode.Pipeline exposing (required)
 import Motorsport.Class as Class
 import Motorsport.Class.Era exposing (Era)
 import Motorsport.Driver as Driver exposing (Driver)
-import Motorsport.Entrant as Entrant
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race.Entrant as Entrant
 
 
 type alias Event =

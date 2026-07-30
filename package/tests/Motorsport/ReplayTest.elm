@@ -5,9 +5,9 @@ import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
-import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))

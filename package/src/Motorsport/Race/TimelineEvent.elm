@@ -1,4 +1,4 @@
-module Motorsport.TimelineEvent exposing
+module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
     , fromEntrants
     , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
@@ -16,10 +16,10 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
-import Motorsport.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
 
 
 type alias TimelineEvent =

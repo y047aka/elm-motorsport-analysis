@@ -22,12 +22,12 @@ moment is derived from the two -- see [`Car.at`](Motorsport-Car#at).
 import Dict
 import List.Extra
 import Motorsport.Car as Car
-import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
-import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (CarNumber, Entrant)
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
+import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Race.Records as Records exposing (Records)
-import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Race.StatusIndex as StatusIndex exposing (StatusIndex)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 {-| `timelineEvents` is kept for the Events tab, which reads the race as a list of

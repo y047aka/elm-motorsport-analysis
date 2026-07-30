@@ -1,4 +1,4 @@
-module Motorsport.Entrant exposing
+module Motorsport.Race.Entrant exposing
     ( Entrant, Metadata, CarNumber
     , fromStartingGrid
     )
