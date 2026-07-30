@@ -1,14 +1,11 @@
 module Motorsport.RaceControl exposing (Model, Msg(..), fromCars, placeholder, update)
 
 import List.Extra
-import Motorsport.Car as Car exposing (Car)
+import Motorsport.Car exposing (Car)
 import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
-import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
-import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.TimelineEvent exposing (TimelineEvent)
 import Time exposing (Posix, millisToPosix)
 
@@ -17,54 +14,45 @@ import Time exposing (Posix, millisToPosix)
 -- MODEL
 
 
+{-| The cars are held in the order the race data arrived in, not in race order.
+Who is ahead of whom is a reading of the clock, so it belongs to whoever is
+looking -- see `Motorsport.Ordering.byRacePosition`.
+-}
 type alias Model =
     { clock : Clock.Model
     , lapCount : Int
     , lapTotal : Int
     , timeLimit : Int
-    , cars : RunningOrder
+    , cars : List Car
     , timelineEvents : List TimelineEvent
     , statusIndex : StatusIndex
     }
 
 
+{-| A race with nothing in it, to hold the place of one that has not loaded yet.
+-}
 placeholder : Model
 placeholder =
-    let
-        dummyCar =
-            { metadata = { carNumber = "", drivers = [], class = Class.none, group = "", team = "", manufacturer = Manufacturer.Other }
-            , startPosition = 0
-            , laps = []
-            , currentLap = Nothing
-            , lastLap = Nothing
-            , status = Car.PreRace
-            , currentDriver = Nothing
-            }
-    in
     { clock = Clock.init
     , lapCount = 0
     , lapTotal = 0
     , timeLimit = 0
-    , cars = RunningOrder.singleton { elapsed = 0 } dummyCar
+    , cars = []
     , timelineEvents = []
     , statusIndex = StatusIndex.empty
     }
 
 
-fromCars : List TimelineEvent -> List Car -> Maybe Model
+fromCars : List TimelineEvent -> List Car -> Model
 fromCars timelineEvents cars =
-    RunningOrder.fromList { elapsed = 0 } cars
-        |> Maybe.map
-            (\runningOrder ->
-                { clock = Clock.init
-                , lapCount = 0
-                , lapTotal = calcLapTotal cars
-                , timeLimit = calcTimeLimit cars
-                , cars = runningOrder
-                , timelineEvents = timelineEvents
-                , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
-                }
-            )
+    { clock = Clock.init
+    , lapCount = 0
+    , lapTotal = calcLapTotal cars
+    , timeLimit = calcTimeLimit cars
+    , cars = cars
+    , timelineEvents = timelineEvents
+    , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
+    }
 
 
 calcLapTotal : List Car -> Int
@@ -116,7 +104,7 @@ update msg m =
                     if newElapsed < m.timeLimit then
                         { m
                             | clock = Clock.update now Clock.Tick m.clock
-                            , lapCount = lapAt newElapsed (List.map .laps (RunningOrder.toList m.cars))
+                            , lapCount = lapAt newElapsed (List.map .laps m.cars)
                             , cars = carsAt { elapsed = newElapsed } m
                         }
 
@@ -146,7 +134,7 @@ update msg m =
                             Clock.getElapsed m.clock
 
                         lapTimes =
-                            RunningOrder.toList m.cars |> List.map .laps
+                            List.map .laps m.cars
                     in
                     case msg of
                         SkipTime duration ->
@@ -155,7 +143,7 @@ update msg m =
                                     newElapsed =
                                         elapsed_ + duration
                                 in
-                                { lapCount = lapAt newElapsed (List.map .laps (RunningOrder.toList m.cars))
+                                { lapCount = lapAt newElapsed lapTimes
                                 , elapsed = newElapsed
                                 }
 
@@ -223,16 +211,11 @@ elapsed time alone, so scrubbing backwards or jumping a whole hour lands on the
 same cars that playing through would have.
 
 -}
-carsAt : { elapsed : Duration } -> Model -> RunningOrder
+carsAt : { elapsed : Duration } -> Model -> List Car
 carsAt clock m =
     m.cars
-        |> RunningOrder.toList
         |> updateCarFields clock
         |> StatusIndex.applyAt clock m.statusIndex
-        -- fromList returns Nothing only if the list is empty.
-        -- toList always returns a non-empty list, so this branch is unreachable.
-        |> RunningOrder.fromList clock
-        |> Maybe.withDefault m.cars
 
 
 getCurrentTime : Clock.Model -> Posix

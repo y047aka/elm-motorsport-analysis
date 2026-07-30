@@ -34,7 +34,6 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
-import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector as Sector exposing (BySector)
 import SortedList exposing (SortedList)
 
@@ -121,18 +120,21 @@ compute :
         , fastestSectors : BySector Duration
         , fastestMiniSectors : ByMiniSector Duration
     }
-    -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
+    -> { elapsed : Duration, lapCount : Int, cars : List Car }
     -> Standings
 compute bestTimes config =
     let
+        -- The cars arrive in whatever order the race data listed them; the
+        -- running order at this moment of the race is settled here, and every
+        -- position below is read off it.
         carsList =
-            RunningOrder.toList config.cars
+            Ordering.byRacePosition { elapsed = config.elapsed } config.cars
 
         leaderCar =
-            RunningOrder.leader config.cars
+            List.head carsList
 
         positionsInClass =
-            positionsInClassByCarNumber config.cars
+            positionsInClassByCarNumber carsList
 
         entries =
             carsList
@@ -160,7 +162,7 @@ compute bestTimes config =
                                             Nothing
 
                                         else
-                                            Just leaderCar
+                                            leaderCar
                                     , rival = List.Extra.getAt (index - 1) carsList
                                     }
                                     car
@@ -416,10 +418,12 @@ gapTo raceClock car ahead =
         |> Maybe.withDefault Gap.none
 
 
-positionsInClassByCarNumber : RunningOrder -> Dict String Int
-positionsInClassByCarNumber raceOrder =
-    raceOrder
-        |> RunningOrder.toList
+{-| Position within class, keyed by car number. Expects the cars already in
+running order, so gathering by class preserves it.
+-}
+positionsInClassByCarNumber : List Car -> Dict String Int
+positionsInClassByCarNumber carsInRaceOrder =
+    carsInRaceOrder
         |> List.Extra.gatherEqualsBy (.metadata >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->

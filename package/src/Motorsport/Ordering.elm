@@ -1,8 +1,16 @@
-module Motorsport.Ordering exposing (ByPosition, byPosition)
+module Motorsport.Ordering exposing (ByPosition, byPosition, byRacePosition)
 
-{-| Motorsport-specific ordering types
+{-| Motorsport-specific ordering.
 
-This module defines phantom types for motorsport-specific ordering criteria.
+Two different things get called a position. `byRacePosition` works out who is
+actually ahead on track at a moment of the race. `byPosition` sorts by the number
+that ordering has already handed out, and returns a phantom-typed `SortedList` so
+the two cannot be mixed up downstream.
+
+
+# On track
+
+@docs byRacePosition
 
 
 # Position Ordering
@@ -11,8 +19,51 @@ This module defines phantom types for motorsport-specific ordering criteria.
 
 -}
 
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Utils exposing (compareBy)
 import SortedList exposing (SortedList)
+
+
+{-| Sort cars into the order they are running in at a moment of the race.
+
+This carries the domain rule: a car with a lap in progress is ahead of one
+without, and between two cars that are both running, `Lap.compareAt` decides --
+by lap number, then sector, then mini-sector, then elapsed time within the
+current sector.
+
+The result is a plain list, not a `SortedList`: the caller's next move is to
+number the cars off, and it is that number `byPosition` guards.
+
+    Ordering.byRacePosition { elapsed = 3600000 } cars
+    -- The leader first, then the rest in the order they are running
+
+-}
+byRacePosition : { elapsed : Duration } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
+byRacePosition clock =
+    List.sortWith (compareByRacePosition clock)
+
+
+compareByRacePosition :
+    { elapsed : Duration }
+    -> { a | currentLap : Maybe Lap }
+    -> { a | currentLap : Maybe Lap }
+    -> Order
+compareByRacePosition clock a b =
+    case ( a.currentLap, b.currentLap ) of
+        ( Just lapA, Just lapB ) ->
+            Lap.compareAt clock lapA lapB
+
+        ( Just _, Nothing ) ->
+            LT
+
+        ( Nothing, Just _ ) ->
+            GT
+
+        ( Nothing, Nothing ) ->
+            -- Ordering between two cars without lap data is undefined.
+            -- List.sortWith is stable, so their relative order from the input list is preserved.
+            EQ
 
 
 {-| Phantom type representing position-based ordering

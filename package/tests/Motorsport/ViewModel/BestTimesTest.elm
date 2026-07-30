@@ -8,7 +8,6 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.BestTimes as BestTimes exposing (Scope(..))
 import Test exposing (Test, describe, test)
@@ -26,14 +25,14 @@ tests =
                     , car "2" [ lap 1 6000 ( 1100, 1900, 2900 ) ]
                     ]
                         |> fastestSectors WholeRace
-                        |> Expect.equal (Just [ 1000, 1900, 2900 ])
+                        |> Expect.equal [ 1000, 1900, 2900 ]
             , test "ignores a sector with no recorded time rather than calling it the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 ( 1000, 2000, 3000 ) ]
                     , car "2" [ lap 1 6000 ( 0, 0, 0 ) ]
                     ]
                         |> fastestSectors WholeRace
-                        |> Expect.equal (Just [ 1000, 2000, 3000 ])
+                        |> Expect.equal [ 1000, 2000, 3000 ]
             ]
         , describe "Scope"
             [ test "UpToElapsed ignores laps the clock has not reached yet" <|
@@ -45,7 +44,7 @@ tests =
                         ]
                     ]
                         |> fastestSectorsAt 6000 UpToElapsed
-                        |> Expect.equal (Just [ 1000, 2000, 3000 ])
+                        |> Expect.equal [ 1000, 2000, 3000 ]
             , test "WholeRace counts every lap, whatever the clock says" <|
                 \_ ->
                     [ car "1"
@@ -54,7 +53,7 @@ tests =
                         ]
                     ]
                         |> fastestSectorsAt 6000 WholeRace
-                        |> Expect.equal (Just [ 900, 1900, 2900 ])
+                        |> Expect.equal [ 900, 1900, 2900 ]
             ]
         ]
 
@@ -63,28 +62,18 @@ tests =
 -- HELPERS
 
 
-{-| The three fastest sector times in sector order, or `Nothing` if the cars
-could not be put into a running order.
+{-| The three fastest sector times in sector order.
 -}
-fastestSectors : Scope -> List Car -> Maybe (List Duration)
+fastestSectors : Scope -> List Car -> List Duration
 fastestSectors =
     fastestSectorsAt 0
 
 
-fastestSectorsAt : Duration -> Scope -> List Car -> Maybe (List Duration)
+fastestSectorsAt : Duration -> Scope -> List Car -> List Duration
 fastestSectorsAt elapsed scope cars =
-    runningOrder cars
-        |> Maybe.map
-            (\order ->
-                BestTimes.compute scope { clock = clockAt elapsed, cars = order }
-                    |> .fastestSectors
-                    |> Sector.values
-            )
-
-
-runningOrder : List Car -> Maybe RunningOrder
-runningOrder =
-    RunningOrder.fromList { elapsed = 0 }
+    BestTimes.compute scope { clock = clockAt elapsed, cars = cars }
+        |> .fastestSectors
+        |> Sector.values
 
 
 clockAt : Duration -> Clock.Model

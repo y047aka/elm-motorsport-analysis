@@ -149,7 +149,6 @@ finalizeWecIfReady m =
 
                 rcNew =
                     RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
-                        |> Maybe.withDefault RaceControl.placeholder
             in
             ( { m
                 | raceControl = rcNew

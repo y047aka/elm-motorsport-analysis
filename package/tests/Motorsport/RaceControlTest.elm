@@ -8,7 +8,6 @@ import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RunningOrder as RunningOrder
 import Motorsport.TimelineEvent as TimelineEvent
 import Test exposing (Test, describe, test)
 
@@ -95,7 +94,6 @@ initialModel =
             [ retiringCar, survivingCar ]
     in
     RaceControl.fromCars (TimelineEvent.fromCars cars) cars
-        |> Maybe.withDefault RaceControl.placeholder
 
 
 retiringCar : Car
@@ -132,7 +130,6 @@ skipBy duration =
 statusOf : Car.CarNumber -> RaceControl.Model -> Maybe Car.Status
 statusOf carNumber m =
     m.cars
-        |> RunningOrder.toList
         |> List.filter (\car -> car.metadata.carNumber == carNumber)
         |> List.head
         |> Maybe.map .status

@@ -19,7 +19,6 @@ import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
 import Motorsport.RaceControl as RaceControl
-import Motorsport.RunningOrder as RunningOrder
 import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
@@ -125,7 +124,6 @@ view { viewModel, raceControl } { leaderboardState } =
         , let
             standings =
                 raceControl.cars
-                    |> RunningOrder.toList
                     |> List.Extra.find (\car -> car.metadata.carNumber == "2")
                     |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
                     |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
