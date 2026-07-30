@@ -26,6 +26,7 @@ import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Entrant exposing (CarNumber, Entrant)
+import Motorsport.Race.Records as Records exposing (Records)
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
@@ -39,6 +40,7 @@ type alias Race =
     , timelineEvents : List TimelineEvent
     , statusIndex : StatusIndex
     , lapCompletions : ChangePoints Int
+    , records : Records
     }
 
 
@@ -52,6 +54,7 @@ empty =
     , timelineEvents = []
     , statusIndex = StatusIndex.empty
     , lapCompletions = ChangePoints.empty
+    , records = Records.empty
     }
 
 
@@ -69,6 +72,7 @@ fromEntrants entrants =
     , timelineEvents = timelineEvents
     , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
     , lapCompletions = calcLapCompletions entrants
+    , records = Records.fromEntrants entrants
     }
 
 

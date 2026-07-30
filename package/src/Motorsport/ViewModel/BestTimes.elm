@@ -3,17 +3,17 @@ module Motorsport.ViewModel.BestTimes exposing (BestTimes, Scope(..), compute)
 {-| The fastest times within the aggregation scope (the comparison baseline).
 
 The aggregated values a widget uses as the baseline when rating and scaling
-individual times. Built by scanning every entrant's laps.
+individual times. Read off the race's precomputed records; see
+[`Race.Records`](Motorsport-Race-Records).
 
 @docs BestTimes, Scope, compute
 
 -}
 
-import Motorsport.Circuit.LeMans exposing (ByMiniSector)
+import Motorsport.ChangePoints as ChangePoints exposing (ChangePoints)
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Entrant exposing (Entrant)
-import Motorsport.Lap exposing (completedLapsAt)
-import Motorsport.Lap.Performance exposing (calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
+import Motorsport.Race exposing (Race)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -30,31 +30,37 @@ type alias BestTimes =
   - `WholeRace`: baseline over all laps (playback-position-independent, e.g. right after data load)
   - `UpToElapsed`: baseline over only the laps completed up to the clock's elapsed time (during playback)
 
+Which one is asked for decides where the records are read: at the end of the race,
+or at the clock.
+
 -}
 type Scope
     = WholeRace
     | UpToElapsed
 
 
-compute : Scope -> { elapsed : Duration } -> List Entrant -> BestTimes
-compute scope clock entrants =
+compute : Scope -> { elapsed : Duration } -> Race -> BestTimes
+compute scope clock race =
     let
-        lapsByCar =
-            case scope of
+        read : ChangePoints Duration -> Duration
+        read points =
+            (case scope of
                 WholeRace ->
-                    List.map .laps entrants
+                    ChangePoints.last points
 
                 UpToElapsed ->
-                    List.map (.laps >> completedLapsAt clock) entrants
-    in
-    { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
-    , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
-    , fastestSectors =
-        Sector.initialize
-            (\sector ->
-                lapsByCar
-                    |> findFastestBy (.sectors >> Sector.get sector >> .time)
-                    |> Maybe.withDefault 0
+                    ChangePoints.valueAt clock.elapsed points
             )
-    , fastestMiniSectors = calculateMiniSectorFastest lapsByCar
+                -- No lap has set this time yet, or none ever records it.
+                |> Maybe.withDefault 0
+
+        records =
+            race.records
+    in
+    { fastestLapTime = read records.fastestLapTime
+    , slowestLapTime = read records.slowestLapTime
+    , fastestSectors =
+        Sector.initialize (\sector -> read (Sector.get sector records.fastestSectors))
+    , fastestMiniSectors =
+        LeMans.initialize (\mini -> read (LeMans.get mini records.fastestMiniSectors))
     }

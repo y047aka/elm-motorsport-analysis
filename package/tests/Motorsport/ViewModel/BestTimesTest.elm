@@ -1,14 +1,16 @@
 module Motorsport.ViewModel.BestTimesTest exposing (tests)
 
 import Expect
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race as Race
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.BestTimes as BestTimes exposing (Scope(..))
+import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope(..))
 import Test exposing (Test, describe, test)
 
 
@@ -31,6 +33,48 @@ tests =
                     ]
                         |> fastestSectors WholeRace
                         |> Expect.equal [ 1000, 2000, 3000 ]
+            ]
+        , describe "fastestLapTime"
+            [ test "stands at the quickest lap run so far, and moves when it is beaten" <|
+                \_ ->
+                    let
+                        -- Lap 1 ends at 6.000 and lap 2 at 10.000, the quicker of
+                        -- the two.
+                        entrants =
+                            [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
+                    in
+                    [ 0, 5999, 6000, 9999, 10000 ]
+                        |> List.map (\elapsed -> (readAt elapsed UpToElapsed entrants).fastestLapTime)
+                        |> Expect.equal [ 0, 0, 6000, 6000, 5000 ]
+            , test "a lap with no recorded time is not the quickest" <|
+                \_ ->
+                    [ car "1" [ lap 1 0 anySectors, lap 2 6000 anySectors ] ]
+                        |> readAt 0 WholeRace
+                        |> .fastestLapTime
+                        |> Expect.equal 6000
+            ]
+        , describe "slowestLapTime"
+            [ test "stands at the slowest lap run so far" <|
+                \_ ->
+                    [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
+                        |> readAt 0 WholeRace
+                        |> .slowestLapTime
+                        |> Expect.equal 6000
+            ]
+        , describe "fastestMiniSectors"
+            [ test "ignores the mini-sectors of a lap that has no lap time" <|
+                \_ ->
+                    -- The quicker mini-sectors belong to the lap with no time,
+                    -- which the whole-race calculation has always thrown out.
+                    [ car "1"
+                        [ lap 1 0 anySectors |> withMiniSectorsOf 1000
+                        , lap 2 6000 anySectors |> withMiniSectorsOf 2000
+                        ]
+                    ]
+                        |> readAt 0 WholeRace
+                        |> .fastestMiniSectors
+                        |> LeMans.values
+                        |> Expect.equal (List.repeat 15 2000)
             ]
         , describe "Scope"
             [ test "UpToElapsed ignores laps the clock has not reached yet" <|
@@ -60,6 +104,11 @@ tests =
 -- HELPERS
 
 
+readAt : Duration -> Scope -> List Entrant -> BestTimes
+readAt elapsed scope entrants =
+    BestTimes.compute scope { elapsed = elapsed } (Race.fromEntrants entrants)
+
+
 {-| The three fastest sector times in sector order.
 -}
 fastestSectors : Scope -> List Entrant -> List Duration
@@ -69,7 +118,7 @@ fastestSectors =
 
 fastestSectorsAt : Duration -> Scope -> List Entrant -> List Duration
 fastestSectorsAt elapsed scope entrants =
-    BestTimes.compute scope { elapsed = elapsed } entrants
+    readAt elapsed scope entrants
         |> .fastestSectors
         |> Sector.values
 
@@ -88,6 +137,23 @@ lap lapNumber time ( s1, s2, s3 ) =
             , s2 = { time = s2, personalBest = s2 }
             , s3 = { time = s3, personalBest = s3 }
             }
+    }
+
+
+{-| Sector times for the tests that are not about sectors.
+-}
+anySectors : ( Duration, Duration, Duration )
+anySectors =
+    ( 1000, 2000, 3000 )
+
+
+{-| Every mini-sector of the lap taking the same time.
+-}
+withMiniSectorsOf : Duration -> Lap -> Lap
+withMiniSectorsOf time lap_ =
+    { lap_
+        | miniSectors =
+            Just (LeMans.initialize (\_ -> { time = Just time, elapsed = Nothing, best = Nothing }))
     }
 
 
