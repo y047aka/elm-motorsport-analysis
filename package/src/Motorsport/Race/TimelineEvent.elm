@@ -56,6 +56,12 @@ Emits, in this order:
 
 The result is sorted by `eventTime` (stable).
 
+Only the lead changes need anything beyond the lap times: they read
+`Lap.position`, which the source data does not carry and the loader fills in --
+`Data.Wec.Laps.assignPositions` is the only thing that does so today. Entrants
+that reach here without it produce every other event and no lead changes at all,
+silently. If a second loader ever appears, that is the rule it has to keep.
+
 What is deliberately *not* here is a per-lap completion event. Emitting one for
 every car on every lap put fifteen thousand rows of "car 7 completed lap 112" into
 a list meant to be read as the shape of the race -- five in six of everything in
@@ -118,10 +124,11 @@ type alias Leader =
 
 {-| A `TookLead` each time the car at the front of the field changes hands.
 
-The lead is read off `Lap.position`, which the loader assigns per lap by order of
-crossing the line, so a change is only ever seen at a lap boundary. That is the
-granularity a timing feed reports it at anyway: a car that leads briefly between
-two lap lines was never shown as leading.
+The lead is read off `Lap.position`, which the loader -- not the source data --
+assigns per lap by order of crossing the line. A change is therefore only ever
+seen at a lap boundary, which is the granularity a timing feed reports it at
+anyway: a car that leads briefly between two lap lines was never shown as
+leading. Laps with no position assigned yield no leader, and so no changes.
 
 Whoever leads the opening lap has taken it from nobody, so the first leader is not
 an event. Only the changes are.

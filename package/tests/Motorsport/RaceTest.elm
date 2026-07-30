@@ -17,7 +17,7 @@ suite =
             [ test "reads zero until the first car has completed a lap" <|
                 \_ ->
                     [ -1, 0, 89999 ]
-                        |> List.map (\elapsed -> Race.lapCountAt elapsed race)
+                        |> List.map (\elapsed -> Race.lapCountAt { elapsed = elapsed } race)
                         |> Expect.equal [ 0, 0, 0 ]
             , test "goes up the moment the first car of the field crosses the line" <|
                 \_ ->
@@ -25,16 +25,16 @@ suite =
                     -- counter reads 1 from 90.000, not 100.000.
                     Expect.equal
                         ( 0, 1 )
-                        ( Race.lapCountAt 89999 race
-                        , Race.lapCountAt 90000 race
+                        ( Race.lapCountAt { elapsed = 89999 } race
+                        , Race.lapCountAt { elapsed = 90000 } race
                         )
             , test "holds the final count once the laps run out" <|
                 \_ ->
-                    Race.lapCountAt 99999999 race
+                    Race.lapCountAt { elapsed = 99999999 } race
                         |> Expect.equal 3
             , test "a race with no entrants is always on lap zero" <|
                 \_ ->
-                    Race.lapCountAt 500000 Race.empty
+                    Race.lapCountAt { elapsed = 500000 } Race.empty
                         |> Expect.equal 0
             ]
         , describe "elapsedAtLapCount"
@@ -46,18 +46,30 @@ suite =
             , test "round-trips through lapCountAt" <|
                 \_ ->
                     [ 0, 1, 2, 3 ]
-                        |> List.map (\lapCount -> Race.lapCountAt (Race.elapsedAtLapCount lapCount race) race)
+                        |> List.map (\lapCount -> Race.lapCountAt { elapsed = Race.elapsedAtLapCount lapCount race } race)
                         |> Expect.equal [ 0, 1, 2, 3 ]
             , test "the final lap has no next lap to stop before, so it lands on its completion" <|
                 \_ ->
                     -- Car 1 completes lap 3 at 300.000, and nobody goes further.
                     Race.elapsedAtLapCount 3 race
                         |> Expect.equal 300000
+            , test "a count the race never reached lands at the start" <|
+                \_ ->
+                    -- Total on its own: no caller has to have range-checked first.
+                    [ Race.elapsedAtLapCount (-1) race
+                    , Race.elapsedAtLapCount 0 Race.empty
+                    ]
+                        |> Expect.equal [ 0, 0 ]
             ]
         , describe "lapTotal"
             [ test "counts the laps of whichever car went furthest" <|
                 \_ ->
                     race.lapTotal |> Expect.equal 3
+            , test "is the ceiling lapCountAt can actually reach" <|
+                \_ ->
+                    -- Both come off lapCompletions, so they cannot disagree.
+                    Race.lapCountAt { elapsed = 99999999 } race
+                        |> Expect.equal race.lapTotal
             ]
         ]
 

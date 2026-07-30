@@ -201,6 +201,10 @@ accumulate raw ( bests, acc ) =
 
 
 -- POSITIONS
+-- `Lap.position` is not in the source data; it is worked out here. Two things
+-- downstream depend on it having been: the position-progression chart, and the
+-- lead changes in `Motorsport.Race.TimelineEvent`. Both go quiet rather than
+-- fail if it is skipped.
 
 
 assignPositions : List Entrant -> List Entrant

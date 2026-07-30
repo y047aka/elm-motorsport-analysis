@@ -212,7 +212,7 @@ compute bestTimes clock race =
     in
     Standings
         { elapsed = clock.elapsed
-        , lapCount = Race.lapCountAt clock.elapsed race
+        , lapCount = Race.lapCountAt clock race
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }

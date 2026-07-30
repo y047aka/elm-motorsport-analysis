@@ -58,7 +58,7 @@ sits is enough to say what it reads.
 -}
 lapCountAt : Model -> Int
 lapCountAt m =
-    Race.lapCountAt (Clock.getElapsed m.playback) m.race
+    Race.lapCountAt { elapsed = Clock.getElapsed m.playback } m.race
 
 
 

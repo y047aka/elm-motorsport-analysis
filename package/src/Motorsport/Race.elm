@@ -32,6 +32,10 @@ import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 {-| `timelineEvents` is kept for the Events tab, which reads the race as a list of
 things that happened. The indices beside it are for reading it at an instant.
+
+`lapTotal` is read off `lapCompletions` rather than counted separately, so the
+counter's ceiling and `lapCountAt` can never disagree about how long the race was.
+
 -}
 type alias Race =
     { entrants : List Entrant
@@ -59,29 +63,29 @@ empty =
 
 
 {-| Read a race off its entry list, building every index once.
+
+Lead changes are read from `Lap.position`, so entrants that arrive without their
+per-lap positions assigned produce a timeline with no lead changes in it -- see
+[`TimelineEvent.fromEntrants`](Motorsport-Race-TimelineEvent#fromEntrants).
+
 -}
 fromEntrants : List Entrant -> Race
 fromEntrants entrants =
     let
         timelineEvents =
             TimelineEvent.fromEntrants entrants
+
+        lapCompletions =
+            calcLapCompletions entrants
     in
     { entrants = entrants
-    , lapTotal = calcLapTotal entrants
+    , lapTotal = ChangePoints.length lapCompletions
     , timeLimit = calcTimeLimit entrants
     , timelineEvents = timelineEvents
     , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
-    , lapCompletions = calcLapCompletions entrants
+    , lapCompletions = lapCompletions
     , records = Records.fromEntrants entrants
     }
-
-
-calcLapTotal : List Entrant -> Int
-calcLapTotal entrants =
-    entrants
-        |> List.map (.laps >> List.length)
-        |> List.maximum
-        |> Maybe.withDefault 0
 
 
 calcTimeLimit : List Entrant -> Duration
@@ -124,9 +128,9 @@ calcLapCompletions entrants =
 
 {-| How many laps the leading car has completed at a moment of the race.
 -}
-lapCountAt : Duration -> Race -> Int
-lapCountAt elapsed race =
-    ChangePoints.valueAt elapsed race.lapCompletions
+lapCountAt : { elapsed : Duration } -> Race -> Int
+lapCountAt clock race =
+    ChangePoints.valueAt clock.elapsed race.lapCompletions
         |> Maybe.withDefault 0
 
 
@@ -134,18 +138,25 @@ lapCountAt elapsed race =
 
 The last instant it still reads that -- the moment before the next lap is
 completed. Asked for the final lap, where there is no next one, it gives the
-moment that lap was completed instead.
+moment that lap was completed instead. Asked for a count the race never reached,
+it gives the start.
+
+Total on its own, so a caller does not have to have checked the range first.
 
 -}
 elapsedAtLapCount : Int -> Race -> Duration
 elapsedAtLapCount lapCount race =
-    case ChangePoints.timeOf lapCount race.lapCompletions of
-        Just nextCompletion ->
-            nextCompletion - 1
+    if lapCount < 0 then
+        0
 
-        Nothing ->
-            ChangePoints.timeOf (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
-                |> Maybe.withDefault 0
+    else
+        case ChangePoints.timeOf lapCount race.lapCompletions of
+            Just nextCompletion ->
+                nextCompletion - 1
+
+            Nothing ->
+                ChangePoints.timeOf (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
+                    |> Maybe.withDefault 0
 
 
 {-| The status a car holds at a moment of the race.
