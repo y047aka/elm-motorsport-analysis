@@ -36,8 +36,9 @@ compute scope raceControl =
         Standings.compute bestTimes
             { elapsed = elapsed
             , lapCount = raceControl.lapCount
-            , cars = raceControl.cars
+            , entrants = raceControl.entrants
+            , statusIndex = raceControl.statusIndex
             }
-    , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.cars
+    , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.entrants
     , bestTimes = bestTimes
     }

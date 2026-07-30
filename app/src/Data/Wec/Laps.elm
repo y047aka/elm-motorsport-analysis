@@ -17,7 +17,7 @@ import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import List.Extra
-import Motorsport.Car exposing (Car, CarNumber)
+import Motorsport.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
@@ -92,7 +92,7 @@ Mirrors the Rust CLI's `process_laps` + `position_for_lap`
 (`cli/cli/src/stages/transform.rs`).
 
 -}
-attach : List RawLap -> List Car -> List Car
+attach : List RawLap -> List Entrant -> List Entrant
 attach rawLaps cars =
     let
         lapsByCarNumber : Dict CarNumber (List Lap)
@@ -203,7 +203,7 @@ accumulate raw ( bests, acc ) =
 -- POSITIONS
 
 
-assignPositions : List Car -> List Car
+assignPositions : List Entrant -> List Entrant
 assignPositions cars =
     let
         maxLap =
@@ -216,7 +216,7 @@ assignPositions cars =
     List.foldl assignPositionsForLap cars (List.range 1 maxLap)
 
 
-assignPositionsForLap : Int -> List Car -> List Car
+assignPositionsForLap : Int -> List Entrant -> List Entrant
 assignPositionsForLap lapNum cars =
     let
         positionByIdx : Dict Int Int

@@ -1,13 +1,13 @@
 module Motorsport.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , fromCars
+    , fromEntrants
     , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
     )
 
 {-|
 
 @docs TimelineEvent, EventType, CarEventType
-@docs fromCars
+@docs fromEntrants
 @docs decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
 
 -}
@@ -16,7 +16,7 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
-import Motorsport.Car exposing (Car, CarNumber)
+import Motorsport.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -44,12 +44,12 @@ type CarEventType
 -- BUILD
 
 
-{-| Build a sorted list of timeline events from a list of cars.
+{-| Build a sorted list of timeline events from a race's entry list.
 
 Emits, in this order:
 
 1.  RaceStart at time 0
-2.  Per-car Start events at time 0 (with `pitTime` stripped from the embedded lap)
+2.  Per-entrant Start events at time 0 (with `pitTime` stripped from the embedded lap)
 3.  Per-lap LapCompleted events for non-final laps (with `pitTime` stripped from `nextLap`)
 4.  PitIn / PitOut events for laps whose `pitTime` is `Just`
 5.  Retirement / Checkered for the final lap, depending on the rounded time limit
@@ -57,26 +57,26 @@ Emits, in this order:
 The result is sorted by `eventTime` (stable).
 
 -}
-fromCars : List Car -> List TimelineEvent
-fromCars cars =
+fromEntrants : List Entrant -> List TimelineEvent
+fromEntrants entrants =
     let
         timeLimit =
-            calcTimeLimit cars
+            calcTimeLimit entrants
 
         events =
             [ raceStartEvent ]
-                ++ startEvents cars
-                ++ lapCompletedEvents cars
-                ++ pitEvents cars
-                ++ terminalEvents timeLimit cars
+                ++ startEvents entrants
+                ++ lapCompletedEvents entrants
+                ++ pitEvents entrants
+                ++ terminalEvents timeLimit entrants
     in
     List.sortBy .eventTime events
 
 
-calcTimeLimit : List Car -> Duration
-calcTimeLimit cars =
-    cars
-        |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
+calcTimeLimit : List Entrant -> Duration
+calcTimeLimit entrants =
+    entrants
+        |> List.filterMap (\entrant -> List.Extra.last entrant.laps |> Maybe.map .elapsed)
         |> List.maximum
         |> Maybe.map (\t -> (t // (60 * 60 * 1000)) * 60 * 60 * 1000)
         |> Maybe.withDefault 0
@@ -87,31 +87,31 @@ raceStartEvent =
     { eventTime = 0, eventType = RaceStart }
 
 
-startEvents : List Car -> List TimelineEvent
-startEvents cars =
-    cars
+startEvents : List Entrant -> List TimelineEvent
+startEvents entrants =
+    entrants
         |> List.filterMap
-            (\car ->
-                List.head car.laps
+            (\entrant ->
+                List.head entrant.laps
                     |> Maybe.map
                         (\firstLap ->
                             { eventTime = 0
                             , eventType =
-                                CarEvent car.metadata.carNumber
+                                CarEvent entrant.metadata.carNumber
                                     (Start { currentLap = stripPitTime firstLap })
                             }
                         )
             )
 
 
-lapCompletedEvents : List Car -> List TimelineEvent
-lapCompletedEvents cars =
-    cars
+lapCompletedEvents : List Entrant -> List TimelineEvent
+lapCompletedEvents entrants =
+    entrants
         |> List.concatMap
-            (\car ->
+            (\entrant ->
                 let
                     laps =
-                        car.laps
+                        entrant.laps
 
                     pairs =
                         List.map2 Tuple.pair laps (List.drop 1 laps)
@@ -121,19 +121,19 @@ lapCompletedEvents cars =
                         (\( lap, nextLap ) ->
                             { eventTime = lap.elapsed
                             , eventType =
-                                CarEvent car.metadata.carNumber
+                                CarEvent entrant.metadata.carNumber
                                     (LapCompleted lap.lap { nextLap = stripPitTime nextLap })
                             }
                         )
             )
 
 
-pitEvents : List Car -> List TimelineEvent
-pitEvents cars =
-    cars
+pitEvents : List Entrant -> List TimelineEvent
+pitEvents entrants =
+    entrants
         |> List.concatMap
-            (\car ->
-                car.laps
+            (\entrant ->
+                entrant.laps
                     |> List.concatMap
                         (\lap ->
                             case lap.pitTime of
@@ -144,12 +144,12 @@ pitEvents cars =
                                     in
                                     [ { eventTime = pitInTime
                                       , eventType =
-                                            CarEvent car.metadata.carNumber
+                                            CarEvent entrant.metadata.carNumber
                                                 (PitIn { lapNumber = lap.lap, duration = pitDuration })
                                       }
                                     , { eventTime = lap.elapsed
                                       , eventType =
-                                            CarEvent car.metadata.carNumber
+                                            CarEvent entrant.metadata.carNumber
                                                 (PitOut { lapNumber = lap.lap, duration = pitDuration })
                                       }
                                     ]
@@ -160,12 +160,12 @@ pitEvents cars =
             )
 
 
-terminalEvents : Duration -> List Car -> List TimelineEvent
-terminalEvents timeLimit cars =
-    cars
+terminalEvents : Duration -> List Entrant -> List TimelineEvent
+terminalEvents timeLimit entrants =
+    entrants
         |> List.filterMap
-            (\car ->
-                List.Extra.last car.laps
+            (\entrant ->
+                List.Extra.last entrant.laps
                     |> Maybe.map
                         (\finalLap ->
                             let
@@ -177,7 +177,7 @@ terminalEvents timeLimit cars =
                                         Checkered
                             in
                             { eventTime = finalLap.elapsed
-                            , eventType = CarEvent car.metadata.carNumber carEventType
+                            , eventType = CarEvent entrant.metadata.carNumber carEventType
                             }
                         )
             )

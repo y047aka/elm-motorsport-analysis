@@ -3,9 +3,9 @@ module Data.Wec.LapsTest exposing (suite)
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
 import Json.Decode as Decode
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
+import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Test exposing (Test, describe, test)
 
@@ -131,12 +131,12 @@ rawLap carNumber lapNumber lapTime elapsed =
     }
 
 
-placeholderCars : List String -> List Car
+placeholderCars : List String -> List Entrant
 placeholderCars carNumbers =
     carNumbers |> List.map placeholderCar
 
 
-placeholderCar : String -> Car
+placeholderCar : String -> Entrant
 placeholderCar carNumber =
     { metadata =
         { carNumber = carNumber
@@ -148,8 +148,4 @@ placeholderCar carNumber =
         }
     , startPosition = 0
     , laps = []
-    , currentLap = Nothing
-    , lastLap = Nothing
-    , status = Car.PreRace
-    , currentDriver = Nothing
     }

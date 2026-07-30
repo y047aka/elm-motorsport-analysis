@@ -12,10 +12,10 @@ module Data.Wec exposing
 
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Class.Era exposing (Era)
 import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Entrant as Entrant
 import Motorsport.Manufacturer as Manufacturer
 
 
@@ -27,7 +27,7 @@ type alias Event =
 
 type alias StartingGridItem =
     { position : Int
-    , car : Car.Metadata
+    , car : Entrant.Metadata
     }
 
 
@@ -49,9 +49,9 @@ startingGridItemDecoder era =
         (field "car" (carMetadataDecoder era))
 
 
-carMetadataDecoder : Era -> Decoder Car.Metadata
+carMetadataDecoder : Era -> Decoder Entrant.Metadata
 carMetadataDecoder era =
-    Decode.succeed Car.Metadata
+    Decode.succeed Entrant.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" (string |> Decode.map (Class.fromString era))

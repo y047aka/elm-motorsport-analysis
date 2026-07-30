@@ -1,10 +1,11 @@
 module Motorsport.ViewModel.StandingsTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car exposing (Status(..))
+import Motorsport.Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant as Entrant
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
@@ -118,7 +119,7 @@ createStandingsEntryWithGap position carNumber gap =
     }
 
 
-createMetadata : String -> Car.Metadata
+createMetadata : String -> Entrant.Metadata
 createMetadata carNumber =
     { carNumber = carNumber
     , class = Class.none

@@ -1,11 +1,10 @@
-module Motorsport.RaceControl exposing (Model, Msg(..), fromCars, placeholder, update)
+module Motorsport.RaceControl exposing (Model, Msg(..), fromEntrants, placeholder, update)
 
 import List.Extra
-import Motorsport.Car exposing (Car)
 import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap as Lap
+import Motorsport.Entrant exposing (Entrant)
 import Motorsport.TimelineEvent exposing (TimelineEvent)
 import Time exposing (Posix, millisToPosix)
 
@@ -14,16 +13,18 @@ import Time exposing (Posix, millisToPosix)
 -- MODEL
 
 
-{-| The cars are held in the order the race data arrived in, not in race order.
-Who is ahead of whom is a reading of the clock, so it belongs to whoever is
-looking -- see `Motorsport.Ordering.byRacePosition`.
+{-| The race, and where playback has got to in it.
+
+Everything but `clock` and `lapCount` is settled when the race loads and never
+moves again. What each car is doing at the current moment is not held here at
+all: it is derived from an entrant and the clock, in the computed-model layer.
 -}
 type alias Model =
     { clock : Clock.Model
     , lapCount : Int
     , lapTotal : Int
     , timeLimit : Int
-    , cars : List Car
+    , entrants : List Entrant
     , timelineEvents : List TimelineEvent
     , statusIndex : StatusIndex
     }
@@ -37,33 +38,33 @@ placeholder =
     , lapCount = 0
     , lapTotal = 0
     , timeLimit = 0
-    , cars = []
+    , entrants = []
     , timelineEvents = []
     , statusIndex = StatusIndex.empty
     }
 
 
-fromCars : List TimelineEvent -> List Car -> Model
-fromCars timelineEvents cars =
+fromEntrants : List TimelineEvent -> List Entrant -> Model
+fromEntrants timelineEvents entrants =
     { clock = Clock.init
     , lapCount = 0
-    , lapTotal = calcLapTotal cars
-    , timeLimit = calcTimeLimit cars
-    , cars = cars
+    , lapTotal = calcLapTotal entrants
+    , timeLimit = calcTimeLimit entrants
+    , entrants = entrants
     , timelineEvents = timelineEvents
     , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
     }
 
 
-calcLapTotal : List Car -> Int
-calcLapTotal cars =
-    cars
+calcLapTotal : List Entrant -> Int
+calcLapTotal entrants =
+    entrants
         |> List.map (.laps >> List.length)
         |> List.maximum
         |> Maybe.withDefault 0
 
 
-calcTimeLimit : List Car -> Duration
+calcTimeLimit : List Entrant -> Duration
 calcTimeLimit =
     List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
         >> List.filterMap identity
@@ -104,8 +105,7 @@ update msg m =
                     if newElapsed < m.timeLimit then
                         { m
                             | clock = Clock.update now Clock.Tick m.clock
-                            , lapCount = lapAt newElapsed (List.map .laps m.cars)
-                            , cars = carsAt { elapsed = newElapsed } m
+                            , lapCount = lapAt newElapsed (List.map .laps m.entrants)
                         }
 
                     else
@@ -134,7 +134,7 @@ update msg m =
                             Clock.getElapsed m.clock
 
                         lapTimes =
-                            List.map .laps m.cars
+                            List.map .laps m.entrants
                     in
                     case msg of
                         SkipTime duration ->
@@ -199,23 +199,7 @@ update msg m =
             { m
                 | clock = Clock.update dummyPosix (Clock.Set elapsed) m.clock
                 , lapCount = lapCount
-                , cars = carsAt { elapsed = elapsed } m
             }
-
-
-{-| Recompute every car against the clock: the lap it is on, the lap it has just
-finished, and the status it holds at that moment.
-
-Nothing here accumulates. The result is a function of the race data and the
-elapsed time alone, so scrubbing backwards or jumping a whole hour lands on the
-same cars that playing through would have.
-
--}
-carsAt : { elapsed : Duration } -> Model -> List Car
-carsAt clock m =
-    m.cars
-        |> updateCarFields clock
-        |> StatusIndex.applyAt clock m.statusIndex
 
 
 getCurrentTime : Clock.Model -> Posix
@@ -226,22 +210,6 @@ getCurrentTime clock =
 
         _ ->
             millisToPosix 0
-
-
-updateCarFields : { elapsed : Duration } -> List Car -> List Car
-updateCarFields clock =
-    List.map
-        (\car ->
-            let
-                currentLap =
-                    Lap.findCurrentLap clock car.laps
-            in
-            { car
-                | currentLap = currentLap
-                , lastLap = Lap.findLastLapAt clock car.laps
-                , currentDriver = currentLap |> Maybe.map .driver
-            }
-        )
 
 
 lapAt : Int -> List (List { a | lap : Int, elapsed : Duration }) -> Int

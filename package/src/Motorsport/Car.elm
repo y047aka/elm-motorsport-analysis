@@ -1,25 +1,32 @@
 module Motorsport.Car exposing
-    ( Car, Metadata, CarNumber
-    , fromStartingGrid
+    ( Car, at
     , Status(..), hasRetired, statusToString
     )
 
-{-|
+{-| An entrant as it stands at one moment of the race.
 
-@docs Car, Metadata, CarNumber
-@docs fromStartingGrid
+The entry-list fields come straight from
+[`Entrant`](Motorsport-Entrant#Entrant); everything after them is read off the
+clock -- the lap in progress, the lap just finished, who is driving, what the
+car's status is.
+
+None of it is stored between frames. `at` rebuilds the car from an entrant and an
+elapsed time, so the same elapsed always gives the same car, however the clock
+got there.
+
+@docs Car, at
 @docs Status, hasRetired, statusToString
 
 -}
 
-import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant as Entrant exposing (Entrant)
+import Motorsport.Lap as Lap exposing (Lap)
 
 
 type alias Car =
-    { metadata : Metadata
+    { metadata : Entrant.Metadata
     , startPosition : Int
     , laps : List Lap
     , currentLap : Maybe Lap
@@ -29,18 +36,30 @@ type alias Car =
     }
 
 
-type alias Metadata =
-    { carNumber : CarNumber
-    , drivers : List Driver
-    , class : Class
-    , group : String
-    , team : String
-    , manufacturer : Manufacturer
+{-| Read an entrant at a moment of the race.
+
+The status is handed in rather than worked out here: it comes from the race's
+precomputed change points, see
+[`Car.StatusIndex.statusAt`](Motorsport-Car-StatusIndex#statusAt).
+
+-}
+at : { elapsed : Duration, status : Status } -> Entrant -> Car
+at { elapsed, status } entrant =
+    let
+        clock =
+            { elapsed = elapsed }
+
+        currentLap =
+            Lap.findCurrentLap clock entrant.laps
+    in
+    { metadata = entrant.metadata
+    , startPosition = entrant.startPosition
+    , laps = entrant.laps
+    , currentLap = currentLap
+    , lastLap = Lap.findLastLapAt clock entrant.laps
+    , status = status
+    , currentDriver = Maybe.map .driver currentLap
     }
-
-
-type alias CarNumber =
-    String
 
 
 
@@ -77,15 +96,3 @@ statusToString status =
 
         Retired ->
             "Retired"
-
-
-fromStartingGrid : { position : Int, car : Metadata } -> Car
-fromStartingGrid item =
-    { metadata = item.car
-    , startPosition = item.position
-    , laps = []
-    , currentLap = Nothing
-    , lastLap = Nothing
-    , status = PreRace
-    , currentDriver = Nothing
-    }

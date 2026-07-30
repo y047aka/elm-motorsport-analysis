@@ -123,9 +123,9 @@ view { viewModel, raceControl } { leaderboardState } =
             ]
         , let
             standings =
-                raceControl.cars
-                    |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                    |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
+                raceControl.entrants
+                    |> List.Extra.find (\entrant -> entrant.metadata.carNumber == "2")
+                    |> Maybe.map (\entrant -> Standings.fromLaps entrant.metadata (List.take raceControl.lapCount entrant.laps))
                     |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
           in
           DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)

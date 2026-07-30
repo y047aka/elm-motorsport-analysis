@@ -26,10 +26,12 @@ module Motorsport.ViewModel.Standings exposing
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
+import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
@@ -79,7 +81,7 @@ type alias Entry =
     { position : Int
     , positionInClass : Int
     , status : Status
-    , metadata : Car.Metadata
+    , metadata : Entrant.Metadata
 
     -- A raw CSS color string; see ClassInfo.color.
     , classColor : String
@@ -120,15 +122,20 @@ compute :
         , fastestSectors : BySector Duration
         , fastestMiniSectors : ByMiniSector Duration
     }
-    -> { elapsed : Duration, lapCount : Int, cars : List Car }
+    -> { elapsed : Duration, lapCount : Int, entrants : List Entrant, statusIndex : StatusIndex }
     -> Standings
 compute bestTimes config =
     let
-        -- The cars arrive in whatever order the race data listed them; the
-        -- running order at this moment of the race is settled here, and every
-        -- position below is read off it.
+        clock =
+            { elapsed = config.elapsed }
+
+        -- The entry list carries only the laps, so what each car is doing at
+        -- this moment is read off the clock here. Who is ahead of whom follows
+        -- from that, and every position below is read off the resulting order.
         carsList =
-            Ordering.byRacePosition { elapsed = config.elapsed } config.cars
+            config.entrants
+                |> List.map (carAt clock config.statusIndex)
+                |> Ordering.byRacePosition clock
 
         leaderCar =
             List.head carsList
@@ -218,7 +225,7 @@ compute bestTimes config =
 Treats each lap as one Entry, setting `metadata.carNumber` to the lap-number string.
 
 -}
-fromLaps : Car.Metadata -> List Lap -> Standings
+fromLaps : Entrant.Metadata -> List Lap -> Standings
 fromLaps baseMetadata laps =
     let
         bestTimes =
@@ -290,6 +297,15 @@ fromList entries =
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
+
+
+carAt : { elapsed : Duration } -> StatusIndex -> Entrant -> Car
+carAt clock statusIndex entrant =
+    Car.at
+        { elapsed = clock.elapsed
+        , status = StatusIndex.statusAt clock entrant.metadata.carNumber statusIndex
+        }
+        entrant
 
 
 groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )

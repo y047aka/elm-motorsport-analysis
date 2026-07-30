@@ -1,11 +1,11 @@
 module Motorsport.ViewModel.BestTimesTest exposing (tests)
 
 import Expect
-import Motorsport.Car as Car exposing (Car, Status(..))
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Sector as Sector
@@ -64,14 +64,14 @@ tests =
 
 {-| The three fastest sector times in sector order.
 -}
-fastestSectors : Scope -> List Car -> List Duration
+fastestSectors : Scope -> List Entrant -> List Duration
 fastestSectors =
     fastestSectorsAt 0
 
 
-fastestSectorsAt : Duration -> Scope -> List Car -> List Duration
-fastestSectorsAt elapsed scope cars =
-    BestTimes.compute scope { clock = clockAt elapsed, cars = cars }
+fastestSectorsAt : Duration -> Scope -> List Entrant -> List Duration
+fastestSectorsAt elapsed scope entrants =
+    BestTimes.compute scope { clock = clockAt elapsed, entrants = entrants }
         |> .fastestSectors
         |> Sector.values
 
@@ -103,7 +103,7 @@ empty =
     Lap.empty
 
 
-car : Car.CarNumber -> List Lap -> Car
+car : Entrant.CarNumber -> List Lap -> Entrant
 car carNumber laps =
     { metadata =
         { carNumber = carNumber
@@ -115,8 +115,4 @@ car carNumber laps =
         }
     , startPosition = 0
     , laps = laps
-    , currentLap = List.head laps
-    , lastLap = List.head (List.reverse laps)
-    , status = Racing
-    , currentDriver = Nothing
     }

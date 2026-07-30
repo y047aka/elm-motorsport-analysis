@@ -1,14 +1,18 @@
 module Motorsport.RaceControlTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car exposing (Car)
+import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
+import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.RaceControl as RaceControl
 import Motorsport.TimelineEvent as TimelineEvent
+import Motorsport.ViewModel as ViewModel
+import Motorsport.ViewModel.BestTimes exposing (Scope(..))
+import Motorsport.ViewModel.Standings as Standings
 import Test exposing (Test, describe, test)
 
 
@@ -90,24 +94,24 @@ suite =
 initialModel : RaceControl.Model
 initialModel =
     let
-        cars =
+        entrants =
             [ retiringCar, survivingCar ]
     in
-    RaceControl.fromCars (TimelineEvent.fromCars cars) cars
+    RaceControl.fromEntrants (TimelineEvent.fromEntrants entrants) entrants
 
 
-retiringCar : Car
+retiringCar : Entrant
 retiringCar =
-    carWith "1"
+    entrantWith "1"
         [ lapAt "1" 1 100000
         , lapAt "1" 2 200000 |> withPitTime (Just 30000)
         , lapAt "1" 3 300000
         ]
 
 
-survivingCar : Car
+survivingCar : Entrant
 survivingCar =
-    carWith "2"
+    entrantWith "2"
         [ lapAt "2" 1 100000
         , lapAt "2" 2 7300000
         ]
@@ -127,16 +131,21 @@ skipBy duration =
     RaceControl.update (RaceControl.SkipTime duration)
 
 
-statusOf : Car.CarNumber -> RaceControl.Model -> Maybe Car.Status
+{-| The status as the standings show it, which is the whole point: the model
+holds no status of its own, it is read back out of the race at the clock.
+-}
+statusOf : Entrant.CarNumber -> RaceControl.Model -> Maybe Car.Status
 statusOf carNumber m =
-    m.cars
-        |> List.filter (\car -> car.metadata.carNumber == carNumber)
+    ViewModel.compute UpToElapsed m
+        |> .standings
+        |> Standings.toList
+        |> List.filter (\entry -> entry.metadata.carNumber == carNumber)
         |> List.head
         |> Maybe.map .status
 
 
-carWith : Car.CarNumber -> List Lap -> Car
-carWith carNumber laps =
+entrantWith : Entrant.CarNumber -> List Lap -> Entrant
+entrantWith carNumber laps =
     { metadata =
         { carNumber = carNumber
         , drivers = [ Driver.fromName "Test Driver" ]
@@ -147,14 +156,10 @@ carWith carNumber laps =
         }
     , startPosition = 1
     , laps = laps
-    , currentLap = Nothing
-    , lastLap = Nothing
-    , status = Car.PreRace
-    , currentDriver = Nothing
     }
 
 
-lapAt : Car.CarNumber -> Int -> Int -> Lap
+lapAt : Entrant.CarNumber -> Int -> Int -> Lap
 lapAt carNumber lapNumber elapsed =
     let
         base =

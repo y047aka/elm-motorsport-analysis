@@ -1,7 +1,7 @@
 module Motorsport.Car.StatusIndex exposing
     ( StatusIndex
     , empty, fromTimelineEvents
-    , statusAt, applyAt
+    , statusAt
     )
 
 {-| Every moment a car's status changes, collected once from the race timeline.
@@ -16,14 +16,15 @@ rewinding all land on the status that playing through would have reached.
 
 @docs StatusIndex
 @docs empty, fromTimelineEvents
-@docs statusAt, applyAt
+@docs statusAt
 
 -}
 
 import Array exposing (Array)
 import Dict exposing (Dict)
-import Motorsport.Car as Car exposing (Car, CarNumber)
+import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant exposing (CarNumber)
 import Motorsport.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
@@ -116,13 +117,6 @@ statusAt clock carNumber (StatusIndex index) =
         |> Maybe.andThen (lastChangeAt clock.elapsed)
         |> Maybe.map .status
         |> Maybe.withDefault Car.PreRace
-
-
-{-| Stamp each car with the status it holds at a given point in the race.
--}
-applyAt : { elapsed : Duration } -> StatusIndex -> List Car -> List Car
-applyAt clock index =
-    List.map (\car -> { car | status = statusAt clock car.metadata.carNumber index })
 
 
 {-| The last change at or before `elapsed`, or `Nothing` if the car's first change

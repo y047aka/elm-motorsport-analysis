@@ -3,16 +3,16 @@ module Motorsport.ViewModel.BestTimes exposing (BestTimes, Scope(..), compute)
 {-| The fastest times within the aggregation scope (the comparison baseline).
 
 The aggregated values a widget uses as the baseline when rating and scaling
-individual times. Built by scanning every car's lap history.
+individual times. Built by scanning every entrant's laps.
 
 @docs BestTimes, Scope, compute
 
 -}
 
-import Motorsport.Car exposing (Car)
 import Motorsport.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Lap exposing (completedLapsAt)
 import Motorsport.Lap.Performance exposing (calculateMiniSectorFastest, findFastest, findFastestBy, findSlowest)
 import Motorsport.Sector as Sector exposing (BySector)
@@ -37,20 +37,20 @@ type Scope
     | UpToElapsed
 
 
-compute : Scope -> { a | clock : Clock.Model, cars : List Car } -> BestTimes
-compute scope { clock, cars } =
+compute : Scope -> { a | clock : Clock.Model, entrants : List Entrant } -> BestTimes
+compute scope { clock, entrants } =
     let
         lapsByCar =
             case scope of
                 WholeRace ->
-                    List.map .laps cars
+                    List.map .laps entrants
 
                 UpToElapsed ->
                     let
                         raceClock =
                             { elapsed = Clock.getElapsed clock }
                     in
-                    List.map (.laps >> completedLapsAt raceClock) cars
+                    List.map (.laps >> completedLapsAt raceClock) entrants
     in
     { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0
