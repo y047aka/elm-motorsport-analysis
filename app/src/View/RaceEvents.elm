@@ -13,19 +13,19 @@ import DataView
 import Html.Styled as Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Utils exposing (compareBy)
 
 
-view : (DataView.Msg -> msg) -> DataView.Model -> RaceControl.Model -> Html msg
-view toMsg eventsState raceControl =
+view : (DataView.Msg -> msg) -> DataView.Model -> Replay.Model -> Html msg
+view toMsg eventsState replay =
     let
         currentElapsed =
-            Clock.getElapsed raceControl.playback
+            Clock.getElapsed replay.playback
 
         occurredEvents =
-            raceControl.race.timelineEvents
+            replay.race.timelineEvents
                 |> List.filter (\event -> currentElapsed >= event.eventTime)
                 |> List.sortBy .eventTime
     in

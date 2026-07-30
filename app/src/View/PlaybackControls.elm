@@ -2,9 +2,9 @@ module View.PlaybackControls exposing (view)
 
 {-| Playback controls: play/pause, skip, progress bar and speed selector.
 
-Driven purely by a `RaceControl.Model`. Play/pause are surfaced as dedicated
+Driven purely by a `Replay.Model`. Play/pause are surfaced as dedicated
 callbacks because the caller resolves them against `Time.now`; every other
-interaction is forwarded as a `RaceControl.Msg`.
+interaction is forwarded as a `Replay.Msg`.
 
 @docs view
 
@@ -15,35 +15,35 @@ import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import String exposing (dropRight)
 
 
 view :
-    { raceControl : RaceControl.Model
+    { replay : Replay.Model
     , onStart : msg
     , onPause : msg
-    , toRaceControlMsg : RaceControl.Msg -> msg
+    , toReplayMsg : Replay.Msg -> msg
     }
     -> Html msg
 view config =
     div [ Attributes.class "flex items-center gap-8" ]
         [ div [ Attributes.class "flex items-center gap-2" ]
             [ viewPlayPauseButton config
-            , viewSkipControls config.toRaceControlMsg
+            , viewSkipControls config.toReplayMsg
             ]
-        , viewProgressBar config.toRaceControlMsg config.raceControl
-        , viewSpeedControls config.toRaceControlMsg config.raceControl.playback.playbackSpeed
+        , viewProgressBar config.toReplayMsg config.replay
+        , viewSpeedControls config.toReplayMsg config.replay.playback.playbackSpeed
         ]
 
 
 viewPlayPauseButton :
-    { a | raceControl : RaceControl.Model, onStart : msg, onPause : msg }
+    { a | replay : Replay.Model, onStart : msg, onPause : msg }
     -> Html msg
-viewPlayPauseButton { raceControl, onStart, onPause } =
+viewPlayPauseButton { replay, onStart, onPause } =
     let
         ( icon, action, isDisabled ) =
-            case raceControl.playback.state of
+            case replay.playback.state of
                 Initial ->
                     ( "▶", onStart, False )
 
@@ -64,37 +64,37 @@ viewPlayPauseButton { raceControl, onStart, onPause } =
         [ text icon ]
 
 
-viewSkipControls : (RaceControl.Msg -> msg) -> Html msg
-viewSkipControls toRaceControlMsg =
+viewSkipControls : (Replay.Msg -> msg) -> Html msg
+viewSkipControls toReplayMsg =
     div [ Attributes.class "join" ]
-        [ joinButton "+10s" False (toRaceControlMsg (RaceControl.SkipTime (10 * 1000)))
-        , joinButton "+1m" False (toRaceControlMsg (RaceControl.SkipTime (60 * 1000)))
-        , joinButton "+1h" False (toRaceControlMsg (RaceControl.SkipTime (60 * 60 * 1000)))
+        [ joinButton "+10s" False (toReplayMsg (Replay.SkipTime (10 * 1000)))
+        , joinButton "+1m" False (toReplayMsg (Replay.SkipTime (60 * 1000)))
+        , joinButton "+1h" False (toReplayMsg (Replay.SkipTime (60 * 60 * 1000)))
         ]
 
 
-viewSpeedControls : (RaceControl.Msg -> msg) -> Clock.PlaybackSpeed -> Html msg
-viewSpeedControls toRaceControlMsg currentSpeed =
+viewSpeedControls : (Replay.Msg -> msg) -> Clock.PlaybackSpeed -> Html msg
+viewSpeedControls toReplayMsg currentSpeed =
     div [ Attributes.class "join" ]
-        [ speedSegmentButton toRaceControlMsg "1×" Clock.Speed1x (currentSpeed == Clock.Speed1x)
-        , speedSegmentButton toRaceControlMsg "10×" Clock.Speed10x (currentSpeed == Clock.Speed10x)
-        , speedSegmentButton toRaceControlMsg "60×" Clock.Speed60x (currentSpeed == Clock.Speed60x)
+        [ speedSegmentButton toReplayMsg "1×" Clock.Speed1x (currentSpeed == Clock.Speed1x)
+        , speedSegmentButton toReplayMsg "10×" Clock.Speed10x (currentSpeed == Clock.Speed10x)
+        , speedSegmentButton toReplayMsg "60×" Clock.Speed60x (currentSpeed == Clock.Speed60x)
         ]
 
 
-speedSegmentButton : (RaceControl.Msg -> msg) -> String -> Clock.PlaybackSpeed -> Bool -> Html msg
-speedSegmentButton toRaceControlMsg label speed isActive =
-    joinButton label isActive (toRaceControlMsg (RaceControl.SetPlaybackSpeed speed))
+speedSegmentButton : (Replay.Msg -> msg) -> String -> Clock.PlaybackSpeed -> Bool -> Html msg
+speedSegmentButton toReplayMsg label speed isActive =
+    joinButton label isActive (toReplayMsg (Replay.SetPlaybackSpeed speed))
 
 
-viewProgressBar : (RaceControl.Msg -> msg) -> RaceControl.Model -> Html msg
-viewProgressBar toRaceControlMsg ({ playback, race } as raceControl) =
+viewProgressBar : (Replay.Msg -> msg) -> Replay.Model -> Html msg
+viewProgressBar toReplayMsg ({ playback, race } as replay) =
     let
         elapsed =
             Clock.getElapsed playback
 
         lapCount =
-            RaceControl.lapCountAt raceControl
+            Replay.lapCountAt replay
 
         remaining =
             race.timeLimit - elapsed
@@ -110,7 +110,7 @@ viewProgressBar toRaceControlMsg ({ playback, race } as raceControl) =
             , Attributes.min "0"
             , Attributes.max (String.fromInt race.lapTotal)
             , value (String.fromInt lapCount)
-            , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> toRaceControlMsg)
+            , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> toReplayMsg)
             , Attributes.class "range range-xs w-full"
             ]
             []

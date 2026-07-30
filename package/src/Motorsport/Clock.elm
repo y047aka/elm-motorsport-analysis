@@ -134,7 +134,7 @@ setElapsed duration m =
         -- Moving the clock before the race has been started leaves it
         -- stopped, at the moment asked for -- the same state as pausing
         -- there. Ignoring it instead would leave the clock reading zero
-        -- while the rest of the race control had moved on.
+        -- while the rest of the replay had moved on.
         Initial ->
             { m | state = Paused duration }
 

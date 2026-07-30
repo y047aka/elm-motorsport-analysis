@@ -18,7 +18,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
@@ -54,15 +54,15 @@ init =
 
 
 type Msg
-    = RaceControlMsg RaceControl.Msg
+    = ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
-        RaceControlMsg raceControlMsg ->
-            ( model, Effect.sendSharedMsg (Shared.Msg.RaceControlMsg raceControlMsg) )
+        ReplayMsg replayMsg ->
+            ( model, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { model | leaderboardState = Leaderboard.update leaderboardMsg model.leaderboardState }
@@ -75,15 +75,15 @@ update msg model =
 
 
 view : Shared.Model -> Model -> View Msg
-view { viewModel, raceControl } { leaderboardState } =
+view { viewModel, replay } { leaderboardState } =
     { title = "Wec"
     , body =
         let
             { playback, race } =
-                raceControl
+                replay
 
             lapCount =
-                RaceControl.lapCountAt raceControl
+                Replay.lapCountAt replay
         in
         [ header
             [ css
@@ -99,13 +99,13 @@ view { viewModel, raceControl } { leaderboardState } =
                     [ type_ "range"
                     , Attributes.max <| String.fromInt race.lapTotal
                     , value (String.fromInt lapCount)
-                    , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+                    , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
                     ]
                     []
                 , labeledButton []
-                    [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                    [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
                     , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                    , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                    , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
                     ]
                 , text (Clock.getElapsed playback |> Duration.toString)
                 ]

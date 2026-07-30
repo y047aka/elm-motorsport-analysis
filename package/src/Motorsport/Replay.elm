@@ -1,4 +1,4 @@
-module Motorsport.RaceControl exposing
+module Motorsport.Replay exposing
     ( Model, placeholder, fromEntrants
     , Msg(..), update
     , lapCountAt

@@ -10,7 +10,7 @@ computed model the view needs from a race and where playback has got to in it.
 -}
 
 import Motorsport.Clock as Clock
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope)
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
@@ -23,7 +23,7 @@ type alias ViewModel =
     }
 
 
-compute : Scope -> RaceControl.Model -> ViewModel
+compute : Scope -> Replay.Model -> ViewModel
 compute scope { race, playback } =
     let
         clock =

@@ -16,7 +16,7 @@ import Effect exposing (Effect)
 import Http
 import Motorsport.Class.Era as Era
 import Motorsport.Entrant as Entrant exposing (Entrant)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Shared.Msg exposing (Msg(..))
@@ -28,7 +28,7 @@ import Shared.Msg exposing (Msg(..))
 
 type alias Model =
     { eventSummary : EventSummary
-    , raceControl : RaceControl.Model
+    , replay : Replay.Model
     , viewModel : ViewModel
     , pendingWecEntrants : Maybe (List Entrant)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
@@ -38,14 +38,14 @@ type alias Model =
 init : flags -> ( Model, Effect Msg )
 init _ =
     let
-        raceControlInit =
-            RaceControl.placeholder
+        replayInit =
+            Replay.placeholder
 
         viewModelInit =
-            ViewModel.compute WholeRace raceControlInit
+            ViewModel.compute WholeRace replayInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , raceControl = raceControlInit
+      , replay = replayInit
       , viewModel = viewModelInit
       , pendingWecEntrants = Nothing
       , pendingWecLaps = Nothing
@@ -116,14 +116,14 @@ update msg m =
         LapsLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
-        RaceControlMsg raceControlMsg ->
+        ReplayMsg replayMsg ->
             let
-                rcNew =
-                    RaceControl.update raceControlMsg m.raceControl
+                replayNew =
+                    Replay.update replayMsg m.replay
             in
             ( { m
-                | raceControl = rcNew
-                , viewModel = ViewModel.compute UpToElapsed rcNew
+                | replay = replayNew
+                , viewModel = ViewModel.compute UpToElapsed replayNew
               }
             , Effect.none
             )
@@ -146,12 +146,12 @@ finalizeWecIfReady m =
                 entrantsWithLaps =
                     WecLaps.attach rawLaps entrants
 
-                rcNew =
-                    RaceControl.fromEntrants entrantsWithLaps
+                replayNew =
+                    Replay.fromEntrants entrantsWithLaps
             in
             ( { m
-                | raceControl = rcNew
-                , viewModel = ViewModel.compute WholeRace rcNew
+                | replay = replayNew
+                , viewModel = ViewModel.compute WholeRace replayNew
                 , pendingWecEntrants = Nothing
                 , pendingWecLaps = Nothing
               }

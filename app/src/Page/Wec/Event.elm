@@ -19,7 +19,7 @@ import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock exposing (State(..))
 import Motorsport.Leaderboard as Leaderboard exposing (initialSort)
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -86,7 +86,7 @@ type Msg
     = StartRace
     | PauseRace
     | ModeChange Mode
-    | RaceControlMsg RaceControl.Msg
+    | ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | StripScrollTo Int
@@ -99,16 +99,16 @@ update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
         StartRace ->
-            ( m, Task.perform (RaceControl.Start >> RaceControlMsg) Time.now |> Effect.sendCmd )
+            ( m, Task.perform (Replay.Start >> ReplayMsg) Time.now |> Effect.sendCmd )
 
         PauseRace ->
-            ( m, Task.perform (RaceControl.Pause >> RaceControlMsg) Time.now |> Effect.sendCmd )
+            ( m, Task.perform (Replay.Pause >> ReplayMsg) Time.now |> Effect.sendCmd )
 
         ModeChange mode ->
             ( { m | mode = mode }, Effect.none )
 
-        RaceControlMsg raceControlMsg ->
-            ( m, Effect.sendSharedMsg (Shared.Msg.RaceControlMsg raceControlMsg) )
+        ReplayMsg replayMsg ->
+            ( m, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { m | leaderboardState = Leaderboard.update leaderboardMsg m.leaderboardState }
@@ -149,9 +149,9 @@ update msg m =
 
 subscriptions : Shared.Model -> Model -> Sub Msg
 subscriptions shared _ =
-    case shared.raceControl.playback.state of
+    case shared.replay.playback.state of
         Started _ _ ->
-            Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
+            Browser.Events.onAnimationFrame (Replay.Tick >> ReplayMsg)
 
         _ ->
             Sub.none
@@ -162,7 +162,7 @@ subscriptions shared _ =
 
 
 view : Shared.Model -> Model -> View Msg
-view { eventSummary, raceControl, viewModel } m =
+view { eventSummary, replay, viewModel } m =
     { title = "Wec"
     , body =
         [ main_
@@ -173,13 +173,13 @@ view { eventSummary, raceControl, viewModel } m =
                 , property "grid-template-rows" "auto 1fr"
                 ]
             ]
-            [ navigation eventSummary raceControl m.mode
+            [ navigation eventSummary replay m.mode
             , case m.mode of
                 Tracker ->
                     trackerView eventSummary viewModel m
 
                 Events ->
-                    RaceEvents.view EventsMsg m.eventsState raceControl
+                    RaceEvents.view EventsMsg m.eventsState replay
             ]
         ]
     }
@@ -256,8 +256,8 @@ trackerView eventSummary ({ standings } as viewModel) m =
         ]
 
 
-navigation : EventSummary -> RaceControl.Model -> Mode -> Html Msg
-navigation eventSummary raceControl currentMode =
+navigation : EventSummary -> Replay.Model -> Mode -> Html Msg
+navigation eventSummary replay currentMode =
     let
         headerTitle =
             eventSummary.name ++ " (" ++ String.fromInt eventSummary.season ++ ")"
@@ -276,10 +276,10 @@ navigation eventSummary raceControl currentMode =
             , div [ Attributes.class "text-sm" ] [ text headerTitle ]
             ]
         , PlaybackControls.view
-            { raceControl = raceControl
+            { replay = replay
             , onStart = StartRace
             , onPause = PauseRace
-            , toRaceControlMsg = RaceControlMsg
+            , toReplayMsg = ReplayMsg
             }
         , viewModeSelector currentMode
         ]

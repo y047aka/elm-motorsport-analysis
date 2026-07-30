@@ -10,7 +10,7 @@ refer to them without creating an import cycle with `Shared`.
 import Data.Wec as Wec
 import Data.Wec.Laps as WecLaps
 import Http
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 
 
 {-| -}
@@ -18,4 +18,4 @@ type Msg
     = FetchJson_Wec { season : String, event : String }
     | JsonLoaded_Wec (Result Http.Error Wec.Event)
     | LapsLoaded_Wec (Result Http.Error (List WecLaps.RawLap))
-    | RaceControlMsg RaceControl.Msg
+    | ReplayMsg Replay.Msg

@@ -1,4 +1,4 @@
-module Motorsport.RaceControlTest exposing (suite)
+module Motorsport.ReplayTest exposing (suite)
 
 import Expect
 import Motorsport.Car as Car
@@ -8,7 +8,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.RaceControl as RaceControl
+import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Motorsport.ViewModel.Standings as Standings
@@ -17,7 +17,7 @@ import Test exposing (Test, describe, test)
 
 suite : Test
 suite =
-    describe "RaceControl"
+    describe "Replay"
         [ describe "status is a function of the elapsed time, not of the path taken to it"
             [ test "landing inside a pit window puts the car in the pits" <|
                 \_ ->
@@ -76,7 +76,7 @@ suite =
                     -- The end of lap 1 is the instant before car "1" completes
                     -- lap 2, which it spends in the pits.
                     initialModel
-                        |> RaceControl.update (RaceControl.SetCount 1)
+                        |> Replay.update (Replay.SetCount 1)
                         |> statusOf "1"
                         |> Expect.equal (Just Car.InPit)
             ]
@@ -90,13 +90,13 @@ suite =
 -- final lap a retirement rather than a chequered flag.
 
 
-initialModel : RaceControl.Model
+initialModel : Replay.Model
 initialModel =
     let
         entrants =
             [ retiringCar, survivingCar ]
     in
-    RaceControl.fromEntrants entrants
+    Replay.fromEntrants entrants
 
 
 retiringCar : Entrant
@@ -120,20 +120,20 @@ survivingCar =
 -- HELPERS
 
 
-skipTo : Int -> RaceControl.Model -> RaceControl.Model
+skipTo : Int -> Replay.Model -> Replay.Model
 skipTo elapsed m =
     skipBy (elapsed - Clock.getElapsed m.playback) m
 
 
-skipBy : Int -> RaceControl.Model -> RaceControl.Model
+skipBy : Int -> Replay.Model -> Replay.Model
 skipBy duration =
-    RaceControl.update (RaceControl.SkipTime duration)
+    Replay.update (Replay.SkipTime duration)
 
 
 {-| The status as the standings show it, which is the whole point: the model
 holds no status of its own, it is read back out of the race at the clock.
 -}
-statusOf : Entrant.CarNumber -> RaceControl.Model -> Maybe Car.Status
+statusOf : Entrant.CarNumber -> Replay.Model -> Maybe Car.Status
 statusOf carNumber m =
     ViewModel.compute UpToElapsed m
         |> .standings

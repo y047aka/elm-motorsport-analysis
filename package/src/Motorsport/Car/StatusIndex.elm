@@ -6,7 +6,7 @@ module Motorsport.Car.StatusIndex exposing
 
 {-| Every moment a car's status changes, collected once from the race timeline.
 
-A status is not something the race control accumulates as the clock runs -- it is
+A status is not something playback accumulates as the clock runs -- it is
 a function of the race and the elapsed time. This index makes that function cheap:
 see [`ChangePoints`](Motorsport-ChangePoints), one set of them per car.
 
