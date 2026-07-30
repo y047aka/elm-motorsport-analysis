@@ -105,9 +105,13 @@ update msg m =
             { m | playback = Clock.setPlaybackSpeed speed m.playback }
 
         SkipTime duration ->
+            let
+                elapsed =
+                    Clock.getElapsed m.playback
+            in
             -- Skipping is offered forwards, and stops once the race is over.
-            if Clock.getElapsed m.playback < m.race.timeLimit then
-                moveTo (Clock.getElapsed m.playback + duration) m
+            if elapsed < m.race.timeLimit then
+                moveTo (elapsed + duration) m
 
             else
                 m
@@ -120,15 +124,23 @@ update msg m =
                 m
 
         NextLap ->
-            if lapCountAt m < m.race.lapTotal then
-                moveToLap (lapCountAt m + 1) m
+            let
+                lapCount =
+                    lapCountAt m
+            in
+            if lapCount < m.race.lapTotal then
+                moveToLap (lapCount + 1) m
 
             else
                 m
 
         PreviousLap ->
-            if lapCountAt m > 0 then
-                moveToLap (lapCountAt m - 1) m
+            let
+                lapCount =
+                    lapCountAt m
+            in
+            if lapCount > 0 then
+                moveToLap (lapCount - 1) m
 
             else
                 m

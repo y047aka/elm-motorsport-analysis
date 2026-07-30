@@ -71,17 +71,23 @@ fromEntrants entrants =
 
 {-| Walk the laps in the order they were completed, keeping the time each time
 `beats` says the standing one has been improved on.
+
+The `List.reverse` at the end is not cosmetic. The fold prepends, so without it
+the improvements would reach `ChangePoints.fromList` newest-first -- and since
+that sorts stably and reads the *last* of any changes sharing a timestamp, two
+records set on the same instant would resolve to the earlier one.
+
 -}
 improvementsIn :
     (Duration -> Duration -> Bool)
     -> (Lap -> Maybe Duration)
     -> List Lap
     -> ChangePoints Duration
-improvementsIn beats timeOf laps =
+improvementsIn beats timeFrom laps =
     laps
         |> List.foldl
             (\lap ( standing, improvements ) ->
-                case ( timeOf lap, standing ) of
+                case ( timeFrom lap, standing ) of
                     ( Nothing, _ ) ->
                         ( standing, improvements )
 

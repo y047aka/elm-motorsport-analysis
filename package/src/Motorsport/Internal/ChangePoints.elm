@@ -110,4 +110,8 @@ search elapsed points low high =
                     search elapsed points low mid
 
             Nothing ->
+                -- Unreachable: `low >= high` has already been ruled out, so
+                -- `mid` lies in `[low, high)`, and `high` never starts above the
+                -- array's length. Answering with `low` keeps the invariant if it
+                -- ever does happen.
                 low
