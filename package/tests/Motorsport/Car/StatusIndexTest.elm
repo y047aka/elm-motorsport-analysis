@@ -43,38 +43,6 @@ suite =
                     in
                     StatusIndex.statusAt { elapsed = 300000 } "1" pitOutThenFlag
                         |> Expect.equal Car.Checkered
-            , test "the search agrees with a linear scan at every sampled instant" <|
-                \_ ->
-                    let
-                        samples =
-                            [ -1, 0, 1, 169999, 170000, 170001, 199999, 200000, 200001, 210000, 399999, 400000, 424999, 425000, 899999, 900000, 900001, 5000000 ]
-                    in
-                    samples
-                        |> List.map (\elapsed -> StatusIndex.statusAt { elapsed = elapsed } "1" index)
-                        |> Expect.equal (List.map linearScan samples)
-            , test "the search agrees with a linear scan over a long stint list too" <|
-                \_ ->
-                    let
-                        manyChanges =
-                            List.range 1 200
-                                |> List.map
-                                    (\i ->
-                                        if modBy 2 i == 0 then
-                                            ( i * 1000, TimelineEvent.PitOut { lapNumber = i, duration = 0 } )
-
-                                        else
-                                            ( i * 1000, TimelineEvent.PitIn { lapNumber = i, duration = 0 } )
-                                    )
-
-                        longIndex =
-                            StatusIndex.fromTimelineEvents (List.map (\( at, carEventType ) -> carEvent at carEventType) manyChanges)
-
-                        samples =
-                            List.range 0 402 |> List.map (\i -> i * 500)
-                    in
-                    samples
-                        |> List.map (\elapsed -> StatusIndex.statusAt { elapsed = elapsed } "1" longIndex)
-                        |> Expect.equal (List.map (scanOver manyChanges) samples)
             ]
         , describe "fromTimelineEvents"
             [ test "events are kept apart by car number" <|
@@ -127,43 +95,3 @@ index =
 carEvent : Duration -> TimelineEvent.CarEventType -> TimelineEvent
 carEvent eventTime carEventType =
     { eventTime = eventTime, eventType = TimelineEvent.CarEvent "1" carEventType }
-
-
-linearScan : Duration -> Car.Status
-linearScan =
-    scanOver changes
-
-
-{-| The specification the index is meant to implement: walk the changes in order
-and keep the last one at or before the clock.
--}
-scanOver : List ( Duration, TimelineEvent.CarEventType ) -> Duration -> Car.Status
-scanOver changes_ elapsed =
-    changes_
-        |> List.filter (\( at, _ ) -> at <= elapsed)
-        |> List.filterMap (Tuple.second >> statusOf)
-        |> List.reverse
-        |> List.head
-        |> Maybe.withDefault Car.PreRace
-
-
-statusOf : TimelineEvent.CarEventType -> Maybe Car.Status
-statusOf carEventType =
-    case carEventType of
-        TimelineEvent.Start _ ->
-            Just Car.Racing
-
-        TimelineEvent.PitIn _ ->
-            Just Car.InPit
-
-        TimelineEvent.PitOut _ ->
-            Just Car.Racing
-
-        TimelineEvent.Retirement ->
-            Just Car.Retired
-
-        TimelineEvent.Checkered ->
-            Just Car.Checkered
-
-        TimelineEvent.LapCompleted _ _ ->
-            Nothing

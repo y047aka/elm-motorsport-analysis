@@ -2,7 +2,6 @@ module Motorsport.ViewModel.BestTimesTest exposing (tests)
 
 import Expect
 import Motorsport.Class as Class
-import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Entrant as Entrant exposing (Entrant)
@@ -11,7 +10,6 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.BestTimes as BestTimes exposing (Scope(..))
 import Test exposing (Test, describe, test)
-import Time exposing (millisToPosix)
 
 
 tests : Test
@@ -71,14 +69,9 @@ fastestSectors =
 
 fastestSectorsAt : Duration -> Scope -> List Entrant -> List Duration
 fastestSectorsAt elapsed scope entrants =
-    BestTimes.compute scope { clock = clockAt elapsed, entrants = entrants }
+    BestTimes.compute scope { elapsed = elapsed } entrants
         |> .fastestSectors
         |> Sector.values
-
-
-clockAt : Duration -> Clock.Model
-clockAt elapsed =
-    Clock.update (millisToPosix 0) (Clock.Set elapsed) Clock.init
 
 
 {-| A lap of `time`, split into the three given sector times, running from the

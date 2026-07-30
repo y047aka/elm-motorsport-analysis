@@ -26,9 +26,9 @@ type LapHistory
 
 
 compute : { elapsed : Duration } -> List Entrant -> LapHistory
-compute raceClock entrants =
+compute clock entrants =
     entrants
-        |> List.map (\entrant -> ( entrant.metadata.carNumber, completedLapsAt raceClock entrant.laps ))
+        |> List.map (\entrant -> ( entrant.metadata.carNumber, completedLapsAt clock entrant.laps ))
         |> Dict.fromList
         |> LapHistory
 

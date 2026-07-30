@@ -12,13 +12,11 @@ index -- so what is worth measuring is the derivation itself.
 import Benchmark exposing (Benchmark, describe)
 import Benchmark.Runner exposing (BenchmarkProgram, program)
 import Fixture.Generated as Fixture
-import List.Extra
 import Motorsport.Car as Car exposing (Car)
-import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Ordering as Ordering
-import Motorsport.TimelineEvent as TimelineEvent
+import Motorsport.Race as Race exposing (Race)
 
 
 main : BenchmarkProgram
@@ -29,15 +27,9 @@ main =
 suite : Benchmark
 suite =
     let
-        entrants =
-            Fixture.entrants
-
-        timeLimit =
-            calcTimeLimit entrants
-
-        -- Built once when the race loads, as the real one is.
-        statusIndex =
-            StatusIndex.fromTimelineEvents (TimelineEvent.fromEntrants entrants)
+        -- Indices and all, built once as the real race is.
+        race =
+            Race.fromEntrants Fixture.entrants
     in
     describe "cars at an elapsed time" <|
         [ Benchmark.scale "derive + running order"
@@ -51,10 +43,10 @@ suite =
                         , \_ ->
                             let
                                 clock =
-                                    { elapsed = floor (toFloat timeLimit * toFloat size / 100) }
+                                    { elapsed = floor (toFloat race.timeLimit * toFloat size / 100) }
                             in
-                            entrants
-                                |> List.map (carAt clock statusIndex)
+                            race.entrants
+                                |> List.map (carAt clock race)
                                 |> Ordering.byRacePosition clock
                         )
                     )
@@ -62,19 +54,10 @@ suite =
         ]
 
 
-carAt : { elapsed : Duration } -> StatusIndex -> Entrant -> Car
-carAt clock statusIndex entrant =
+carAt : { elapsed : Duration } -> Race -> Entrant -> Car
+carAt clock race entrant =
     Car.at
         { elapsed = clock.elapsed
-        , status = StatusIndex.statusAt clock entrant.metadata.carNumber statusIndex
+        , status = Race.statusAt clock entrant.metadata.carNumber race
         }
         entrant
-
-
-calcTimeLimit : List Entrant -> Duration
-calcTimeLimit =
-    List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
-        >> List.filterMap identity
-        >> List.maximum
-        >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
-        >> Maybe.withDefault 0

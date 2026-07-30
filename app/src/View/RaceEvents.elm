@@ -22,10 +22,10 @@ view : (DataView.Msg -> msg) -> DataView.Model -> RaceControl.Model -> Html msg
 view toMsg eventsState raceControl =
     let
         currentElapsed =
-            Clock.getElapsed raceControl.clock
+            Clock.getElapsed raceControl.playback
 
         occurredEvents =
-            raceControl.timelineEvents
+            raceControl.race.timelineEvents
                 |> List.filter (\event -> currentElapsed >= event.eventTime)
                 |> List.sortBy .eventTime
     in

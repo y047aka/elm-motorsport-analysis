@@ -10,7 +10,6 @@ individual times. Built by scanning every entrant's laps.
 -}
 
 import Motorsport.Circuit.LeMans exposing (ByMiniSector)
-import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Entrant exposing (Entrant)
 import Motorsport.Lap exposing (completedLapsAt)
@@ -37,8 +36,8 @@ type Scope
     | UpToElapsed
 
 
-compute : Scope -> { a | clock : Clock.Model, entrants : List Entrant } -> BestTimes
-compute scope { clock, entrants } =
+compute : Scope -> { elapsed : Duration } -> List Entrant -> BestTimes
+compute scope clock entrants =
     let
         lapsByCar =
             case scope of
@@ -46,11 +45,7 @@ compute scope { clock, entrants } =
                     List.map .laps entrants
 
                 UpToElapsed ->
-                    let
-                        raceClock =
-                            { elapsed = Clock.getElapsed clock }
-                    in
-                    List.map (.laps >> completedLapsAt raceClock) entrants
+                    List.map (.laps >> completedLapsAt clock) entrants
     in
     { fastestLapTime = lapsByCar |> findFastest |> Maybe.map .time |> Maybe.withDefault 0
     , slowestLapTime = lapsByCar |> findSlowest |> Maybe.map .time |> Maybe.withDefault 0

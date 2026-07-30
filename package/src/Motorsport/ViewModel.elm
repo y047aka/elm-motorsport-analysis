@@ -3,7 +3,7 @@ module Motorsport.ViewModel exposing (ViewModel, compute)
 {-| The bundle of computed models handed to the view.
 
 The single entry point of the domain → ViewModel conversion: builds every
-computed model the view needs from the domain model (`RaceControl.Model`).
+computed model the view needs from a race and where playback has got to in it.
 
 @docs ViewModel, compute
 
@@ -24,21 +24,15 @@ type alias ViewModel =
 
 
 compute : Scope -> RaceControl.Model -> ViewModel
-compute scope raceControl =
+compute scope { race, playback } =
     let
-        elapsed =
-            Clock.getElapsed raceControl.clock
+        clock =
+            { elapsed = Clock.getElapsed playback }
 
         bestTimes =
-            BestTimes.compute scope raceControl
+            BestTimes.compute scope clock race.entrants
     in
-    { standings =
-        Standings.compute bestTimes
-            { elapsed = elapsed
-            , lapCount = raceControl.lapCount
-            , entrants = raceControl.entrants
-            , statusIndex = raceControl.statusIndex
-            }
-    , lapHistory = LapHistory.compute { elapsed = elapsed } raceControl.entrants
+    { standings = Standings.compute bestTimes clock race
+    , lapHistory = LapHistory.compute clock race.entrants
     , bestTimes = bestTimes
     }

@@ -79,8 +79,11 @@ view { viewModel, raceControl } { leaderboardState } =
     { title = "Wec"
     , body =
         let
-            { clock, lapTotal, lapCount } =
+            { playback, race } =
                 raceControl
+
+            lapCount =
+                RaceControl.lapCountAt raceControl
         in
         [ header
             [ css
@@ -94,7 +97,7 @@ view { viewModel, raceControl } { leaderboardState } =
             [ nav []
                 [ input
                     [ type_ "range"
-                    , Attributes.max <| String.fromInt lapTotal
+                    , Attributes.max <| String.fromInt race.lapTotal
                     , value (String.fromInt lapCount)
                     , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
                     ]
@@ -104,7 +107,7 @@ view { viewModel, raceControl } { leaderboardState } =
                     , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
                     , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
                     ]
-                , text (Clock.getElapsed clock |> Duration.toString)
+                , text (Clock.getElapsed playback |> Duration.toString)
                 ]
             , div []
                 ([ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
@@ -123,9 +126,9 @@ view { viewModel, raceControl } { leaderboardState } =
             ]
         , let
             standings =
-                raceControl.entrants
+                race.entrants
                     |> List.Extra.find (\entrant -> entrant.metadata.carNumber == "2")
-                    |> Maybe.map (\entrant -> Standings.fromLaps entrant.metadata (List.take raceControl.lapCount entrant.laps))
+                    |> Maybe.map (\entrant -> Standings.fromLaps entrant.metadata (List.take lapCount entrant.laps))
                     |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
           in
           DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)

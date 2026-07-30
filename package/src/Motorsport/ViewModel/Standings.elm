@@ -26,7 +26,6 @@ module Motorsport.ViewModel.Standings exposing
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car, Status)
-import Motorsport.Car.StatusIndex as StatusIndex exposing (StatusIndex)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -36,6 +35,7 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
+import Motorsport.Race as Race exposing (Race)
 import Motorsport.Sector as Sector exposing (BySector)
 import SortedList exposing (SortedList)
 
@@ -122,19 +122,17 @@ compute :
         , fastestSectors : BySector Duration
         , fastestMiniSectors : ByMiniSector Duration
     }
-    -> { elapsed : Duration, lapCount : Int, entrants : List Entrant, statusIndex : StatusIndex }
+    -> { elapsed : Duration }
+    -> Race
     -> Standings
-compute bestTimes config =
+compute bestTimes clock race =
     let
-        clock =
-            { elapsed = config.elapsed }
-
         -- The entry list carries only the laps, so what each car is doing at
         -- this moment is read off the clock here. Who is ahead of whom follows
         -- from that, and every position below is read off the resulting order.
         carsList =
-            config.entrants
-                |> List.map (carAt clock config.statusIndex)
+            race.entrants
+                |> List.map (carAt clock race)
                 |> Ordering.byRacePosition clock
 
         leaderCar =
@@ -162,7 +160,7 @@ compute bestTimes config =
                                 car.currentLap
 
                             timing =
-                                init_timing config.elapsed
+                                init_timing clock.elapsed
                                     { leader =
                                         -- The leader is not behind itself; it has no gap to report.
                                         if index == 0 then
@@ -213,8 +211,8 @@ compute bestTimes config =
             Ordering.byPosition entries
     in
     Standings
-        { elapsed = config.elapsed
-        , lapCount = config.lapCount
+        { elapsed = clock.elapsed
+        , lapCount = Race.lapCountAt clock.elapsed race
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
@@ -299,11 +297,11 @@ fromList entries =
         }
 
 
-carAt : { elapsed : Duration } -> StatusIndex -> Entrant -> Car
-carAt clock statusIndex entrant =
+carAt : { elapsed : Duration } -> Race -> Entrant -> Car
+carAt clock race entrant =
     Car.at
         { elapsed = clock.elapsed
-        , status = StatusIndex.statusAt clock entrant.metadata.carNumber statusIndex
+        , status = Race.statusAt clock entrant.metadata.carNumber race
         }
         entrant
 

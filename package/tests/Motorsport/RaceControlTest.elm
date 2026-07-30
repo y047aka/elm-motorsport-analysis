@@ -9,7 +9,6 @@ import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.RaceControl as RaceControl
-import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Motorsport.ViewModel.Standings as Standings
@@ -97,7 +96,7 @@ initialModel =
         entrants =
             [ retiringCar, survivingCar ]
     in
-    RaceControl.fromEntrants (TimelineEvent.fromEntrants entrants) entrants
+    RaceControl.fromEntrants entrants
 
 
 retiringCar : Entrant
@@ -123,7 +122,7 @@ survivingCar =
 
 skipTo : Int -> RaceControl.Model -> RaceControl.Model
 skipTo elapsed m =
-    skipBy (elapsed - Clock.getElapsed m.clock) m
+    skipBy (elapsed - Clock.getElapsed m.playback) m
 
 
 skipBy : Int -> RaceControl.Model -> RaceControl.Model

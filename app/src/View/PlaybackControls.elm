@@ -33,7 +33,7 @@ view config =
             , viewSkipControls config.toRaceControlMsg
             ]
         , viewProgressBar config.toRaceControlMsg config.raceControl
-        , viewSpeedControls config.toRaceControlMsg config.raceControl.clock.playbackSpeed
+        , viewSpeedControls config.toRaceControlMsg config.raceControl.playback.playbackSpeed
         ]
 
 
@@ -43,7 +43,7 @@ viewPlayPauseButton :
 viewPlayPauseButton { raceControl, onStart, onPause } =
     let
         ( icon, action, isDisabled ) =
-            case raceControl.clock.state of
+            case raceControl.playback.state of
                 Initial ->
                     ( "▶", onStart, False )
 
@@ -88,24 +88,27 @@ speedSegmentButton toRaceControlMsg label speed isActive =
 
 
 viewProgressBar : (RaceControl.Msg -> msg) -> RaceControl.Model -> Html msg
-viewProgressBar toRaceControlMsg { clock, lapTotal, lapCount, timeLimit } =
+viewProgressBar toRaceControlMsg ({ playback, race } as raceControl) =
     let
         elapsed =
-            Clock.getElapsed clock
+            Clock.getElapsed playback
+
+        lapCount =
+            RaceControl.lapCountAt raceControl
 
         remaining =
-            timeLimit - elapsed
+            race.timeLimit - elapsed
     in
     div [ Attributes.class "flex flex-col gap-2 flex-1 min-w-0 text-xs font-medium tabular-nums opacity-70" ]
         [ div [ Attributes.class "flex justify-between" ]
-            [ div [] [ text (Clock.toString clock) ]
-            , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt lapTotal) ]
+            [ div [] [ text (Clock.toString playback) ]
+            , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt race.lapTotal) ]
             , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
         , input
             [ type_ "range"
             , Attributes.min "0"
-            , Attributes.max (String.fromInt lapTotal)
+            , Attributes.max (String.fromInt race.lapTotal)
             , value (String.fromInt lapCount)
             , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> toRaceControlMsg)
             , Attributes.class "range range-xs w-full"

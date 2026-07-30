@@ -21,20 +21,20 @@ tests =
             [ test "moves a clock that has never been started" <|
                 \_ ->
                     Clock.init
-                        |> Clock.update epoch (Clock.Set 39742950)
+                        |> Clock.setElapsed 39742950
                         |> Clock.getElapsed
                         |> Expect.equal 39742950
             , test "leaves the clock stopped, so it does not run on from where it was put" <|
                 \_ ->
                     Clock.init
-                        |> Clock.update epoch (Clock.Set 39742950)
+                        |> Clock.setElapsed 39742950
                         |> Clock.update (millisToPosix 5000) Clock.Tick
                         |> Clock.getElapsed
                         |> Expect.equal 39742950
             , test "carries the moment it was moved to into playback" <|
                 \_ ->
                     Clock.init
-                        |> Clock.update epoch (Clock.Set 39742950)
+                        |> Clock.setElapsed 39742950
                         |> Clock.update epoch Clock.Start
                         |> Clock.update (millisToPosix 5000) Clock.Tick
                         |> Clock.getElapsed
@@ -44,7 +44,7 @@ tests =
                     Clock.init
                         |> Clock.update epoch Clock.Start
                         |> Clock.update epoch Clock.Pause
-                        |> Clock.update epoch (Clock.Set 1000)
+                        |> Clock.setElapsed 1000
                         |> Clock.getElapsed
                         |> Expect.equal 1000
             ]

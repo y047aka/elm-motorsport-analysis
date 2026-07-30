@@ -17,7 +17,6 @@ import Http
 import Motorsport.Class.Era as Era
 import Motorsport.Entrant as Entrant exposing (Entrant)
 import Motorsport.RaceControl as RaceControl
-import Motorsport.TimelineEvent as TimelineEvent
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Shared.Msg exposing (Msg(..))
@@ -148,7 +147,7 @@ finalizeWecIfReady m =
                     WecLaps.attach rawLaps entrants
 
                 rcNew =
-                    RaceControl.fromEntrants (TimelineEvent.fromEntrants entrantsWithLaps) entrantsWithLaps
+                    RaceControl.fromEntrants entrantsWithLaps
             in
             ( { m
                 | raceControl = rcNew

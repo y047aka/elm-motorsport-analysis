@@ -149,7 +149,7 @@ update msg m =
 
 subscriptions : Shared.Model -> Model -> Sub Msg
 subscriptions shared _ =
-    case shared.raceControl.clock.state of
+    case shared.raceControl.playback.state of
         Started _ _ ->
             Browser.Events.onAnimationFrame (RaceControl.Tick >> RaceControlMsg)
 
