@@ -43,7 +43,7 @@ empty =
 
 {-| Build the index from a race's timeline.
 
-Only the events that move a car between statuses are kept; lap completions and the
+Only the events that move a car between statuses are kept; taking the lead and the
 race start itself leave the status where it was.
 
 -}
@@ -93,7 +93,7 @@ statusChange eventType =
         TimelineEvent.CarEvent carNumber TimelineEvent.Checkered ->
             Just ( carNumber, Car.Checkered )
 
-        TimelineEvent.CarEvent _ (TimelineEvent.LapCompleted _ _) ->
+        TimelineEvent.CarEvent _ TimelineEvent.TookLead ->
             Nothing
 
 

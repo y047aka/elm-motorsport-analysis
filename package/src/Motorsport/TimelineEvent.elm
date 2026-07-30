@@ -33,7 +33,7 @@ type EventType
 
 type CarEventType
     = Start { currentLap : Lap }
-    | LapCompleted Int { nextLap : Lap }
+    | TookLead
     | PitIn { lapNumber : Int, duration : Duration }
     | PitOut { lapNumber : Int, duration : Duration }
     | Retirement
@@ -50,11 +50,17 @@ Emits, in this order:
 
 1.  RaceStart at time 0
 2.  Per-entrant Start events at time 0 (with `pitTime` stripped from the embedded lap)
-3.  Per-lap LapCompleted events for non-final laps (with `pitTime` stripped from `nextLap`)
+3.  A TookLead event each time the car at the front of the field changes
 4.  PitIn / PitOut events for laps whose `pitTime` is `Just`
 5.  Retirement / Checkered for the final lap, depending on the rounded time limit
 
 The result is sorted by `eventTime` (stable).
+
+What is deliberately *not* here is a per-lap completion event. Emitting one for
+every car on every lap put fifteen thousand rows of "car 7 completed lap 112" into
+a list meant to be read as the shape of the race -- five in six of everything in
+it, saying nothing a reader could follow. The laps themselves are unaffected: they
+live on the entrant, where every chart and table already reads them.
 
 -}
 fromEntrants : List Entrant -> List TimelineEvent
@@ -66,7 +72,7 @@ fromEntrants entrants =
         events =
             [ raceStartEvent ]
                 ++ startEvents entrants
-                ++ lapCompletedEvents entrants
+                ++ leadChangeEvents entrants
                 ++ pitEvents entrants
                 ++ terminalEvents timeLimit entrants
     in
@@ -104,28 +110,62 @@ startEvents entrants =
             )
 
 
-lapCompletedEvents : List Entrant -> List TimelineEvent
-lapCompletedEvents entrants =
-    entrants
-        |> List.concatMap
-            (\entrant ->
-                let
-                    laps =
-                        entrant.laps
+{-| Who is leading at the end of each lap, in lap order.
+-}
+type alias Leader =
+    { lapNumber : Int, eventTime : Duration, carNumber : CarNumber }
 
-                    pairs =
-                        List.map2 Tuple.pair laps (List.drop 1 laps)
-                in
-                pairs
-                    |> List.map
-                        (\( lap, nextLap ) ->
-                            { eventTime = lap.elapsed
-                            , eventType =
-                                CarEvent entrant.metadata.carNumber
-                                    (LapCompleted lap.lap { nextLap = stripPitTime nextLap })
-                            }
-                        )
+
+{-| A `TookLead` each time the car at the front of the field changes hands.
+
+The lead is read off `Lap.position`, which the loader assigns per lap by order of
+crossing the line, so a change is only ever seen at a lap boundary. That is the
+granularity a timing feed reports it at anyway: a car that leads briefly between
+two lap lines was never shown as leading.
+
+Whoever leads the opening lap has taken it from nobody, so the first leader is not
+an event. Only the changes are.
+
+-}
+leadChangeEvents : List Entrant -> List TimelineEvent
+leadChangeEvents entrants =
+    let
+        leaders : List Leader
+        leaders =
+            entrants
+                |> List.concatMap
+                    (\entrant ->
+                        entrant.laps
+                            |> List.filter (\lap -> lap.position == Just leadPosition)
+                            |> List.map
+                                (\lap ->
+                                    { lapNumber = lap.lap
+                                    , eventTime = lap.elapsed
+                                    , carNumber = entrant.metadata.carNumber
+                                    }
+                                )
+                    )
+                |> List.sortBy .lapNumber
+    in
+    List.map2 Tuple.pair leaders (List.drop 1 leaders)
+        |> List.filterMap
+            (\( previous, current ) ->
+                if previous.carNumber == current.carNumber then
+                    Nothing
+
+                else
+                    Just
+                        { eventTime = current.eventTime
+                        , eventType = CarEvent current.carNumber TookLead
+                        }
             )
+
+
+{-| `Lap.position` counts from zero; see `Data.Wec.Laps.assignPositions`.
+-}
+leadPosition : Int
+leadPosition =
+    0
 
 
 pitEvents : List Entrant -> List TimelineEvent
@@ -342,12 +382,16 @@ carEventTypeDecoder =
                     (field "current_lap" lapDecoder)
                 )
             )
-        , Decode.map2 LapCompleted
-            (field "LapCompleted" (field "lap_number" int))
-            (field "LapCompleted"
-                (Decode.map (\nextLap -> { nextLap = nextLap })
-                    (field "next_lap" lapDecoder)
-                )
+        , Decode.map (\_ -> TookLead)
+            (Decode.string
+                |> Decode.andThen
+                    (\s ->
+                        if s == "TookLead" then
+                            Decode.succeed ()
+
+                        else
+                            Decode.fail "Expected TookLead"
+                    )
             )
         , Decode.map PitIn
             (field "PitIn"

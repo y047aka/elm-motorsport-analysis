@@ -24,10 +24,10 @@ view toMsg eventsState replay =
         currentElapsed =
             Clock.getElapsed replay.playback
 
+        -- The race builds its timeline in time order, and filtering keeps it.
         occurredEvents =
             replay.race.timelineEvents
                 |> List.filter (\event -> currentElapsed >= event.eventTime)
-                |> List.sortBy .eventTime
     in
     div []
         [ Html.h2 [] [ text "Race Events" ]
@@ -73,8 +73,8 @@ eventTypeToString eventType =
         CarEvent _ (Start _) ->
             "Start"
 
-        CarEvent _ (LapCompleted lap _) ->
-            "Lap " ++ String.fromInt lap ++ " Completed"
+        CarEvent _ TookLead ->
+            "Took the Lead"
 
         CarEvent _ (PitIn _) ->
             "Pit In"

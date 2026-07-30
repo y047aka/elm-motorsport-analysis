@@ -28,7 +28,7 @@ suite =
                         ( StatusIndex.statusAt { elapsed = 169999 } "1" index
                         , StatusIndex.statusAt { elapsed = 170000 } "1" index
                         )
-            , test "a lap completion is not a status change" <|
+            , test "taking the lead is not a status change" <|
                 \_ ->
                     StatusIndex.statusAt { elapsed = 210000 } "1" index
                         |> Expect.equal Car.Racing
@@ -69,14 +69,14 @@ suite =
 
 
 {-| One car's race: away at the start, two pit stops, and the flag at 15 minutes.
-The lap completion in the middle is there to be ignored.
+The lead it takes in the middle is there to be ignored.
 -}
 changes : List ( Duration, TimelineEvent.CarEventType )
 changes =
     [ ( 0, TimelineEvent.Start { currentLap = Lap.empty } )
     , ( 170000, TimelineEvent.PitIn { lapNumber = 2, duration = 30000 } )
     , ( 200000, TimelineEvent.PitOut { lapNumber = 2, duration = 30000 } )
-    , ( 210000, TimelineEvent.LapCompleted 2 { nextLap = Lap.empty } )
+    , ( 210000, TimelineEvent.TookLead )
     , ( 400000, TimelineEvent.PitIn { lapNumber = 5, duration = 25000 } )
     , ( 425000, TimelineEvent.PitOut { lapNumber = 5, duration = 25000 } )
     , ( 900000, TimelineEvent.Checkered )
