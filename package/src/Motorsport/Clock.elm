@@ -138,8 +138,13 @@ setElapsed duration m =
         Initial ->
             { m | state = Paused duration }
 
-        Started _ timer ->
-            { m | state = Started duration timer }
+        -- A running clock is re-anchored on the last time it was ticked, the
+        -- same way changing speed re-anchors it. Keeping the old anchor would
+        -- leave the head at the moment asked for *plus* however long playback
+        -- had been running, which grows the longer the race has been playing
+        -- and is multiplied by the playback speed.
+        Started _ { now } ->
+            { m | state = Started duration { now = now, startedAt = now } }
 
         Paused _ ->
             { m | state = Paused duration }

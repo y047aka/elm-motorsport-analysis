@@ -13,6 +13,7 @@ import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Motorsport.ViewModel.Standings as Standings
 import Test exposing (Test, describe, test)
+import Time exposing (millisToPosix)
 
 
 suite : Test
@@ -70,6 +71,23 @@ suite =
                         |> statusOf "2"
                         |> Expect.equal (Just Car.Checkered)
             ]
+        , describe "while the race is running"
+            -- Every case above moves a stopped clock. A running one reports its
+            -- elapsed from an anchor, and moving it has to move the anchor too.
+            [ test "skipping lands on the moment asked for, not that much further on" <|
+                \_ ->
+                    playingAt 100000
+                        |> skipBy 10000
+                        |> elapsedOf
+                        |> Expect.equal 110000
+            , test "and the status follows the head" <|
+                \_ ->
+                    -- 100.000 + 80.000 is inside car "1"'s pit window.
+                    playingAt 100000
+                        |> skipBy 80000
+                        |> statusOf "1"
+                        |> Expect.equal (Just Car.InPit)
+            ]
         , describe "SetCount"
             [ test "moving the lap counter forward carries the status with it" <|
                 \_ ->
@@ -118,6 +136,20 @@ survivingCar =
 
 
 -- HELPERS
+
+
+{-| The fixture with playback started and ticked to `elapsed`.
+-}
+playingAt : Int -> Replay.Model
+playingAt elapsed =
+    initialModel
+        |> Replay.update (Replay.Start (millisToPosix 0))
+        |> Replay.update (Replay.Tick (millisToPosix elapsed))
+
+
+elapsedOf : Replay.Model -> Int
+elapsedOf m =
+    Clock.getElapsed m.playback
 
 
 skipTo : Int -> Replay.Model -> Replay.Model
