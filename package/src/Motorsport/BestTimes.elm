@@ -1,10 +1,12 @@
 module Motorsport.BestTimes exposing
-    ( BestTimes, Snapshot
+    ( BestTimes, Snapshot, Holder, Holders
     , empty, fromLaps
     , at, final
+    , holdersAt, finalHolders
     )
 
-{-| When each of the race's best times was set, and what they stand at.
+{-| When each of the race's best times was set, what they stand at, and who set
+them.
 
 Twenty records make up the baseline a timing screen rates against: the fastest
 lap, three sectors, fifteen mini-sectors, and the slowest lap that the other end
@@ -16,17 +18,20 @@ twenty passes over every lap of the race.
 The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
 rather than under either side it serves, because both sides need it and neither
 owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
-[`ViewModel`](Motorsport-ViewModel) reads them back at the clock. Laps in, times
-out -- it knows nothing of cars, standings or playback, which is what keeps the
+[`ViewModel`](Motorsport-ViewModel) reads them back at the clock. Laps in,
+records out -- everything it knows about a car it reads off the lap that car
+ran, so it needs no standings, no playback and no `Car`, which is what keeps the
 dependency pointing one way from both.
 
-@docs BestTimes, Snapshot
+@docs BestTimes, Snapshot, Holder, Holders
 @docs empty, fromLaps
 @docs at, final
+@docs holdersAt, finalHolders
 
 -}
 
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
@@ -36,11 +41,27 @@ import Motorsport.Sector as Sector exposing (BySector, Sector)
 {-| The whole race's records, each one as a history of when it changed.
 -}
 type alias BestTimes =
-    ByRecord (ChangePoints Duration)
+    ByRecord (ChangePoints Holder)
 
 
-{-| The same records as they stood at one moment -- the comparison baseline a
-widget rates and scales individual times against.
+{-| A record and the lap that set it.
+
+The lap is what a record is: something a particular car ran at a particular
+point in the race. `time` is the record itself -- the lap time, the sector time,
+the mini-sector time -- not the time of the lap it was set on, which for a
+sector record is a different number entirely.
+
+-}
+type alias Holder =
+    { time : Duration
+    , carNumber : String
+    , lap : Int
+    , driver : Driver
+    }
+
+
+{-| The records as they stood at one moment -- the comparison baseline a widget
+rates and scales individual times against.
 
 A record no lap has set yet reads `0`, so a caller that would have to unwrap a
 `Maybe` on all twenty of them does not have to.
@@ -50,7 +71,19 @@ type alias Snapshot =
     ByRecord Duration
 
 
-{-| One value per record: the shape the two types above share, differing only in
+{-| Who held each record at one moment, for a caller that has something to say
+about it beyond the number.
+
+`Nothing` where [`Snapshot`](#Snapshot) reads `0`: no lap has set that record
+yet. There is no car number to stand in for one, so this reading does not
+pretend otherwise.
+
+-}
+type alias Holders =
+    ByRecord (Maybe Holder)
+
+
+{-| One value per record: the shape the readings above share, differing only in
 what they hold.
 
 Everything this module does to the twenty records -- building them, reading them,
@@ -85,8 +118,9 @@ empty =
 
 {-| Read the records off every lap of a race, however the laps arrive.
 
-Whose lap is whose does not come into it: a record belongs to the race, and the
-only thing that decides which lap set it is when it was completed.
+Whose lap is whose does not decide anything: a record belongs to the race, and
+the only thing that settles which lap took it is when that lap was completed.
+The lap that took it is then credited with it -- see [`Holder`](#Holder).
 
 -}
 fromLaps : List Lap -> BestTimes
@@ -105,7 +139,7 @@ line then was rated against.
 -}
 at : { elapsed : Duration } -> BestTimes -> Snapshot
 at clock =
-    map (ChangePoints.valueAt clock.elapsed >> Maybe.withDefault 0)
+    holdersAt clock >> map timeOf
 
 
 {-| The records as the race left them, without having to name a time past the
@@ -113,7 +147,27 @@ end of it.
 -}
 final : BestTimes -> Snapshot
 final =
-    map (ChangePoints.last >> Maybe.withDefault 0)
+    finalHolders >> map timeOf
+
+
+{-| Who held each record at a moment of the race.
+-}
+holdersAt : { elapsed : Duration } -> BestTimes -> Holders
+holdersAt clock =
+    map (ChangePoints.valueAt clock.elapsed)
+
+
+{-| Who ended the race holding each record.
+-}
+finalHolders : BestTimes -> Holders
+finalHolders =
+    map ChangePoints.last
+
+
+timeOf : Maybe Holder -> Duration
+timeOf held =
+    -- No lap has set this record yet, or none ever records it.
+    Maybe.withDefault 0 (Maybe.map .time held)
 
 
 
@@ -153,21 +207,25 @@ improvements :
     (Duration -> Duration -> Bool)
     -> (Lap -> Maybe Duration)
     -> List Lap
-    -> ChangePoints Duration
+    -> ChangePoints Holder
 improvements beats timeFrom laps =
     laps
         |> List.foldl
             (\lap ( standing, collected ) ->
+                let
+                    setBy time =
+                        ( Just time, ( lap.elapsed, holderOf time lap ) :: collected )
+                in
                 case ( timeFrom lap, standing ) of
                     ( Nothing, _ ) ->
                         ( standing, collected )
 
                     ( Just time, Nothing ) ->
-                        ( Just time, ( lap.elapsed, time ) :: collected )
+                        setBy time
 
                     ( Just time, Just standingTime ) ->
                         if beats time standingTime then
-                            ( Just time, ( lap.elapsed, time ) :: collected )
+                            setBy time
 
                         else
                             ( standing, collected )
@@ -176,6 +234,19 @@ improvements beats timeFrom laps =
         |> Tuple.second
         |> List.reverse
         |> ChangePoints.fromList
+
+
+{-| The record `time` is credited to the lap that ran it. `time` comes from the
+extractor rather than the lap, because for a sector record it is one of the
+lap's sector times, not `lap.time`.
+-}
+holderOf : Duration -> Lap -> Holder
+holderOf time lap =
+    { time = time
+    , carNumber = lap.carNumber
+    , lap = lap.lap
+    , driver = lap.driver
+    }
 
 
 lessThan : Duration -> Duration -> Bool

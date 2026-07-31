@@ -1,7 +1,7 @@
 module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
-import Motorsport.BestTimes as BestTimes exposing (BestTimes, Snapshot)
+import Motorsport.BestTimes as BestTimes exposing (BestTimes, Holder, Holders, Snapshot)
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -10,7 +10,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car exposing (Car, CarNumber)
-import Motorsport.Sector as Sector
+import Motorsport.Sector as Sector exposing (Sector(..))
 import Test exposing (Test, describe, test)
 
 
@@ -97,6 +97,47 @@ tests =
                         |> finalSectors
                         |> Expect.equal [ 900, 1900, 2900 ]
             ]
+        , describe "who holds each record"
+            [ test "is the car and lap that set it" <|
+                \_ ->
+                    [ car "1" [ lap 1 6000 anySectors ]
+                    , car "2" [ lap 1 6000 anySectors, lap 2 5000 anySectors ]
+                    ]
+                        |> finalHolderOf .fastestLapTime
+                        |> Expect.equal (Just ( "2", 2, 5000 ))
+            , test "is read per record, so a sector can belong to a car that holds no lap record" <|
+                \_ ->
+                    -- Car 1 is quickest through S1 without ever running the
+                    -- quickest lap.
+                    [ car "1" [ lap 1 6000 ( 1000, 2000, 3000 ) ]
+                    , car "2" [ lap 1 5000 ( 1100, 1900, 2900 ) ]
+                    ]
+                        |> finalHolderOf (.fastestSectors >> Sector.get S1)
+                        |> Expect.equal (Just ( "1", 1, 1000 ))
+            , test "moves to whoever beat the record, as the record moves" <|
+                \_ ->
+                    let
+                        cars =
+                            [ car "1" [ lap 1 6000 anySectors ]
+                            , car "2" [ lap 1 6000 anySectors, lap 2 5000 anySectors ]
+                            ]
+                    in
+                    -- Car 2's quicker lap ends at 10.000; before that the
+                    -- record is car 1's, taken first at 6.000.
+                    [ 0, 6000, 10000 ]
+                        |> List.map
+                            (\elapsed ->
+                                BestTimes.holdersAt { elapsed = elapsed } (recordsOf cars)
+                                    |> .fastestLapTime
+                                    |> Maybe.map .carNumber
+                            )
+                        |> Expect.equal [ Nothing, Just "1", Just "2" ]
+            , test "a record no lap has set has no holder" <|
+                \_ ->
+                    [ car "1" [ lap 1 0 anySectors ] ]
+                        |> finalHolderOf .fastestLapTime
+                        |> Expect.equal Nothing
+            ]
         ]
 
 
@@ -125,6 +166,17 @@ laps over stays covered too.
 recordsOf : List Car -> BestTimes
 recordsOf cars =
     (Race.fromCars cars).bestTimes
+
+
+{-| One record's holder at the end of the race, as the three things that say
+which lap took it.
+-}
+finalHolderOf : (Holders -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
+finalHolderOf pick cars =
+    recordsOf cars
+        |> BestTimes.finalHolders
+        |> pick
+        |> Maybe.map (\held -> ( held.carNumber, held.lap, held.time ))
 
 
 {-| The three fastest sector times in sector order, over the whole race.
@@ -186,6 +238,9 @@ empty =
     Lap.empty
 
 
+{-| The car's number is stamped onto every lap it ran, the way the loaded data
+has it -- which is where a record's holder is read from.
+-}
 car : CarNumber -> List Lap -> Car
 car carNumber laps =
     { metadata =
@@ -197,5 +252,5 @@ car carNumber laps =
         , manufacturer = Manufacturer.Other
         }
     , startPosition = 0
-    , laps = laps
+    , laps = List.map (\lap_ -> { lap_ | carNumber = carNumber }) laps
     }
