@@ -1,7 +1,6 @@
 module Motorsport.ReplayTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -9,6 +8,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Replay as Replay
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.ViewModel as ViewModel
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Motorsport.ViewModel.Standings as Standings
@@ -25,33 +25,33 @@ suite =
                     initialModel
                         |> skipTo 180000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.InPit)
+                        |> Expect.equal (Just Status.InPit)
             , test "landing between the pit exit and the next event leaves the car racing" <|
                 \_ ->
                     initialModel
                         |> skipTo 250000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.Racing)
+                        |> Expect.equal (Just Status.Racing)
             , test "jumping clear past a retirement retires the car" <|
                 \_ ->
                     initialModel
                         |> skipTo 1000000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.Retired)
+                        |> Expect.equal (Just Status.Retired)
             , test "rewinding back into a pit window puts the car back in the pits" <|
                 \_ ->
                     initialModel
                         |> skipTo 200000
                         |> skipBy -20000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.InPit)
+                        |> Expect.equal (Just Status.InPit)
             , test "rewinding from a retirement brings the car back to racing" <|
                 \_ ->
                     initialModel
                         |> skipTo 1000000
                         |> skipTo 250000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.Racing)
+                        |> Expect.equal (Just Status.Racing)
             , test "one jump and many small steps to the same elapsed agree" <|
                 \_ ->
                     let
@@ -69,7 +69,7 @@ suite =
                     initialModel
                         |> skipTo 7300000
                         |> statusOf "2"
-                        |> Expect.equal (Just Car.Checkered)
+                        |> Expect.equal (Just Status.Checkered)
             ]
         , describe "while the race is running"
             -- Every case above moves a stopped clock. A running one reports its
@@ -86,7 +86,7 @@ suite =
                     playingAt 100000
                         |> skipBy 80000
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.InPit)
+                        |> Expect.equal (Just Status.InPit)
             ]
         , describe "SetCount"
             [ test "moving the lap counter forward carries the status with it" <|
@@ -96,7 +96,7 @@ suite =
                     initialModel
                         |> Replay.update (Replay.SetCount 1)
                         |> statusOf "1"
-                        |> Expect.equal (Just Car.InPit)
+                        |> Expect.equal (Just Status.InPit)
             ]
         ]
 
@@ -165,7 +165,7 @@ skipBy duration =
 {-| The status as the standings show it, which is the whole point: the model
 holds no status of its own, it is read back out of the race at the clock.
 -}
-statusOf : Entrant.CarNumber -> Replay.Model -> Maybe Car.Status
+statusOf : Entrant.CarNumber -> Replay.Model -> Maybe Status
 statusOf carNumber m =
     ViewModel.compute UpToElapsed m
         |> .standings

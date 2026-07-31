@@ -1,11 +1,11 @@
 module Motorsport.Race.StatusChangesTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Status as Status
 import Test exposing (Test, describe, test)
 
 
@@ -16,22 +16,22 @@ suite =
             [ test "a car the race never mentions has not taken the start" <|
                 \_ ->
                     StatusChanges.statusAt { elapsed = 500000 } "99" index
-                        |> Expect.equal Car.PreRace
+                        |> Expect.equal Status.PreRace
             , test "an empty index leaves every car pre-race" <|
                 \_ ->
                     StatusChanges.statusAt { elapsed = 500000 } "1" StatusChanges.empty
-                        |> Expect.equal Car.PreRace
+                        |> Expect.equal Status.PreRace
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
-                        ( Car.Racing, Car.InPit )
+                        ( Status.Racing, Status.InPit )
                         ( StatusChanges.statusAt { elapsed = 169999 } "1" index
                         , StatusChanges.statusAt { elapsed = 170000 } "1" index
                         )
             , test "taking the lead is not a status change" <|
                 \_ ->
                     StatusChanges.statusAt { elapsed = 210000 } "1" index
-                        |> Expect.equal Car.Racing
+                        |> Expect.equal Status.Racing
             , test "the last of two changes sharing an instant wins" <|
                 \_ ->
                     let
@@ -42,7 +42,7 @@ suite =
                                 ]
                     in
                     StatusChanges.statusAt { elapsed = 300000 } "1" pitOutThenFlag
-                        |> Expect.equal Car.Checkered
+                        |> Expect.equal Status.Checkered
             ]
         , describe "fromTimelineEvents"
             [ test "events are kept apart by car number" <|
@@ -56,7 +56,7 @@ suite =
                                 ]
                     in
                     Expect.equal
-                        ( Car.Racing, Car.Retired )
+                        ( Status.Racing, Status.Retired )
                         ( StatusChanges.statusAt { elapsed = 200000 } "1" twoCars
                         , StatusChanges.statusAt { elapsed = 200000 } "2" twoCars
                         )

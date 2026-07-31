@@ -21,13 +21,13 @@ moment is derived from the two -- see [`Car.at`](Motorsport-Car#at).
 
 import Dict
 import List.Extra
-import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Status exposing (Status)
 
 
 {-| `timelineEvents` is kept for the Events tab, which reads the race as a list of
@@ -165,6 +165,6 @@ elapsedAtLapCount lapCount race =
 
 {-| The status a car holds at a moment of the race.
 -}
-statusAt : { elapsed : Duration } -> CarNumber -> Race -> Car.Status
+statusAt : { elapsed : Duration } -> CarNumber -> Race -> Status
 statusAt clock carNumber race =
     StatusChanges.statusAt clock carNumber race.statusChanges

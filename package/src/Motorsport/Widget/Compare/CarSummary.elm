@@ -10,10 +10,10 @@ Compare widget, plus the placeholder that fills an unselected slot.
 import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Car exposing (Status(..))
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
+import Motorsport.Status exposing (Status(..))
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge

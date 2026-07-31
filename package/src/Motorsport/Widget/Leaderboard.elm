@@ -58,7 +58,6 @@ import DataView.Options exposing (Options, PaginationOption(..), SelectingOption
 import Html.Styled exposing (Html, div, img, span, text)
 import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
-import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
@@ -68,6 +67,7 @@ import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProg
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance, Standings)
 
@@ -405,7 +405,7 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
                 ]
                 []
     in
-    if Car.hasRetired status then
+    if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
@@ -506,7 +506,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
                 ]
                 []
     in
-    if Car.hasRetired status then
+    if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else

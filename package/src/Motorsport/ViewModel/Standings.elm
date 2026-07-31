@@ -25,7 +25,7 @@ module Motorsport.ViewModel.Standings exposing
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.Car as Car exposing (Car, Status)
+import Motorsport.Car as Car exposing (Car)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
@@ -37,6 +37,7 @@ import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Status as Status exposing (Status)
 import SortedList exposing (SortedList)
 
 
@@ -244,7 +245,7 @@ fromLaps baseMetadata laps =
                     (\index lap ->
                         { position = index + 1
                         , positionInClass = index + 1
-                        , status = Car.Racing
+                        , status = Status.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
                         , classColor = (Class.toColor baseMetadata.class).value
                         , lapsCompleted = lap.lap

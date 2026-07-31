@@ -17,11 +17,11 @@ see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 -}
 
 import Dict exposing (Dict)
-import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Entrant exposing (CarNumber)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
+import Motorsport.Status as Status exposing (Status)
 
 
 {-| The change points of every car that has any, keyed by car number.
@@ -31,7 +31,7 @@ clock -- has not taken the start yet, and reads back as `PreRace`.
 
 -}
 type StatusChanges
-    = StatusChanges (Dict CarNumber (ChangePoints Car.Status))
+    = StatusChanges (Dict CarNumber (ChangePoints Status))
 
 
 {-| An index over no race at all. Every car reads back as `PreRace`.
@@ -57,8 +57,8 @@ fromTimelineEvents events =
 
 collect :
     TimelineEvent
-    -> Dict CarNumber (List ( Duration, Car.Status ))
-    -> Dict CarNumber (List ( Duration, Car.Status ))
+    -> Dict CarNumber (List ( Duration, Status ))
+    -> Dict CarNumber (List ( Duration, Status ))
 collect { eventTime, eventType } acc =
     case statusChange eventType of
         Just ( carNumber, status ) ->
@@ -72,26 +72,26 @@ collect { eventTime, eventType } acc =
             acc
 
 
-statusChange : TimelineEvent.EventType -> Maybe ( CarNumber, Car.Status )
+statusChange : TimelineEvent.EventType -> Maybe ( CarNumber, Status )
 statusChange eventType =
     case eventType of
         TimelineEvent.RaceStart ->
             Nothing
 
         TimelineEvent.CarEvent carNumber (TimelineEvent.Start _) ->
-            Just ( carNumber, Car.Racing )
+            Just ( carNumber, Status.Racing )
 
         TimelineEvent.CarEvent carNumber (TimelineEvent.PitIn _) ->
-            Just ( carNumber, Car.InPit )
+            Just ( carNumber, Status.InPit )
 
         TimelineEvent.CarEvent carNumber (TimelineEvent.PitOut _) ->
-            Just ( carNumber, Car.Racing )
+            Just ( carNumber, Status.Racing )
 
         TimelineEvent.CarEvent carNumber TimelineEvent.Retirement ->
-            Just ( carNumber, Car.Retired )
+            Just ( carNumber, Status.Retired )
 
         TimelineEvent.CarEvent carNumber TimelineEvent.Checkered ->
-            Just ( carNumber, Car.Checkered )
+            Just ( carNumber, Status.Checkered )
 
         TimelineEvent.CarEvent _ TimelineEvent.TookLead ->
             Nothing
@@ -107,8 +107,8 @@ because the timeline lists it later -- see
     -- Racing, InPit, Retired, ...
 
 -}
-statusAt : { elapsed : Duration } -> CarNumber -> StatusChanges -> Car.Status
+statusAt : { elapsed : Duration } -> CarNumber -> StatusChanges -> Status
 statusAt clock carNumber (StatusChanges index) =
     Dict.get carNumber index
         |> Maybe.andThen (ChangePoints.valueAt clock.elapsed)
-        |> Maybe.withDefault Car.PreRace
+        |> Maybe.withDefault Status.PreRace

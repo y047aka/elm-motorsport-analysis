@@ -10,9 +10,9 @@ status, above the driver name, sector performance, and rival gap sparkline.
 import Css exposing (before, num, opacity, property, qt)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
-import Motorsport.Car exposing (Status(..))
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Status exposing (Status(..))
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge

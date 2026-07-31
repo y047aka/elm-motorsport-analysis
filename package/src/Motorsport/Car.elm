@@ -1,7 +1,4 @@
-module Motorsport.Car exposing
-    ( Car, at
-    , Status(..), hasRetired, statusToString
-    )
+module Motorsport.Car exposing (Car, at)
 
 {-| An entrant as it stands at one moment of the race.
 
@@ -15,7 +12,6 @@ elapsed time, so the same elapsed always gives the same car, however the clock
 got there.
 
 @docs Car, at
-@docs Status, hasRetired, statusToString
 
 -}
 
@@ -23,6 +19,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Status exposing (Status)
 
 
 type alias Car =
@@ -60,39 +57,3 @@ at { elapsed, status } entrant =
     , status = status
     , currentDriver = Maybe.map .driver currentLap
     }
-
-
-
--- STATUS
-
-
-type Status
-    = PreRace
-    | Racing
-    | InPit
-    | Checkered
-    | Retired
-
-
-hasRetired : Status -> Bool
-hasRetired =
-    (==) Retired
-
-
-statusToString : Status -> String
-statusToString status =
-    case status of
-        PreRace ->
-            "Pre-Race"
-
-        Racing ->
-            "Racing"
-
-        InPit ->
-            "In Pit"
-
-        Checkered ->
-            "Checkered"
-
-        Retired ->
-            "Retired"
