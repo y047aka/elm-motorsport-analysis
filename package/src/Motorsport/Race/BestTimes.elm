@@ -86,20 +86,20 @@ improvements :
 improvements beats timeFrom laps =
     laps
         |> List.foldl
-            (\lap ( standing, improvements ) ->
+            (\lap ( standing, collected ) ->
                 case ( timeFrom lap, standing ) of
                     ( Nothing, _ ) ->
-                        ( standing, improvements )
+                        ( standing, collected )
 
                     ( Just time, Nothing ) ->
-                        ( Just time, ( lap.elapsed, time ) :: improvements )
+                        ( Just time, ( lap.elapsed, time ) :: collected )
 
                     ( Just time, Just standingTime ) ->
                         if beats time standingTime then
-                            ( Just time, ( lap.elapsed, time ) :: improvements )
+                            ( Just time, ( lap.elapsed, time ) :: collected )
 
                         else
-                            ( standing, improvements )
+                            ( standing, collected )
             )
             ( Nothing, [] )
         |> Tuple.second
