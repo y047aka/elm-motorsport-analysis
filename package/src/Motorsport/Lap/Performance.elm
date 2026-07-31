@@ -1,16 +1,14 @@
 module Motorsport.Lap.Performance exposing
-    ( findFastestBy
-    , calculateMiniSectorFastest
-    , RatedTime
+    ( RatedTime
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
     )
 
-{-|
+{-| How one time reads against the baseline it is rated on.
 
-@docs findFastestBy
-@docs calculateMiniSectorFastest
+What that baseline is comes from [`BestTimes`](Motorsport-BestTimes); this module
+only says what a time coloured against it looks like.
 
 @docs RatedTime
 
@@ -20,18 +18,7 @@ module Motorsport.Lap.Performance exposing
 
 -}
 
-import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
-
-
-findFastestBy : (a -> Duration) -> List (List a) -> Maybe Duration
-findFastestBy getter laps =
-    laps
-        |> List.filterMap (List.filter (getter >> (/=) 0) >> List.Extra.minimumBy getter)
-        |> List.Extra.minimumBy getter
-        |> Maybe.map getter
 
 
 type alias RatedTime =
@@ -78,29 +65,3 @@ toColorVariable level =
 
         Standard ->
             "var(--performance-standard)"
-
-
-
--- FASTEST MINI SECTORS
-
-
-calculateMiniSectorFastest : List (List Lap) -> ByMiniSector Duration
-calculateMiniSectorFastest laps =
-    let
-        validLaps =
-            List.map (List.filter (.time >> (/=) 0)) laps
-
-        fastestTimeFor getter =
-            validLaps
-                |> List.filterMap
-                    (\laps_ ->
-                        laps_
-                            |> List.filterMap (\lap -> lap.miniSectors |> Maybe.andThen (getter >> .time))
-                            |> List.filter ((/=) 0)
-                            |> List.minimum
-                    )
-                |> List.minimum
-                |> Maybe.withDefault 0
-    in
-    -- TODO: 畳み込みを使うとより高速に計算できる
-    LeMans.initialize (\mini -> fastestTimeFor (LeMans.get mini))

@@ -6,6 +6,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap.Performance exposing (PerformanceLevel(..))
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car as Car
 import Motorsport.Sector as Sector exposing (Sector(..))
@@ -33,6 +34,14 @@ suite =
                                 , ( S3, { time = 3000, personalBest = 2900 } )
                                 ]
                             )
+            ]
+        , describe "the baseline fromLaps rates against"
+            [ test "is drawn from the laps it was handed, so the quickest of them reads as fastest" <|
+                \_ ->
+                    Standings.fromLaps (createMetadata "1") [ sectorFixtureLap, quickerLap ]
+                        |> Standings.toList
+                        |> List.map (.lastLapRated >> Maybe.map .performance)
+                        |> Expect.equal [ Just Standard, Just Fastest ]
             ]
         , describe "groupCarsByCloseIntervals"
             [ test "groups cars with gaps <= 1.5 seconds" <|
@@ -144,6 +153,18 @@ sectorFixtureLap =
             , s2 = { time = 2000, personalBest = 1900 }
             , s3 = { time = 3000, personalBest = 2900 }
             }
+    }
+
+
+{-| Quicker than `sectorFixtureLap`, so the two of them give the baseline a
+choice to get wrong.
+-}
+quickerLap : Lap
+quickerLap =
+    { empty
+        | lap = 2
+        , time = 5000
+        , elapsed = 11000
     }
 
 
