@@ -5,18 +5,12 @@ module Motorsport.Race.BestTimes exposing
 
 {-| When each of the race's best times was set.
 
-The comparison baseline a timing screen rates times against is the fastest lap so
-far, the fastest of three sectors, and the fastest of fifteen mini-sectors --
-twenty reductions, each over every lap the race has run. Asked directly, on every
-frame, that is twenty passes over twenty thousand laps.
-
-A record only moves when it is broken. Over a whole race the fastest lap improves
-a few dozen times; a mini-sector a few hundred. So the moments each one changed
-are collected once, when the race loads, and reading one back at an elapsed time
-is a binary search -- see [`ChangePoints`](Motorsport-Internal-ChangePoints).
-
-`slowestLapTime` belongs here for the same reason as the rest: it moves only when
-beaten, and it is what the other end of the scale is drawn against.
+Twenty records make up the baseline a timing screen rates against: the fastest
+lap, three sectors, fifteen mini-sectors, and the slowest lap that the other end
+of the scale is drawn against. Each is a
+[`ChangePoints`](Motorsport-Internal-ChangePoints) over the moments it was
+beaten, which is what keeps reading the baseline off a binary search rather than
+twenty passes over every lap of the race.
 
 @docs BestTimes
 @docs empty, fromCars
@@ -129,8 +123,8 @@ recordedLapTime lap =
     recorded lap.time
 
 
-{-| The exception. The slowest lap takes every lap as it finds it, because a zero
-can never win a maximum unless there is nothing else to win against.
+{-| The exception: a zero can only win a maximum when there is nothing to beat,
+so the slowest lap takes every lap as it finds it.
 -}
 lapTimeAsFound : Lap -> Maybe Duration
 lapTimeAsFound lap =

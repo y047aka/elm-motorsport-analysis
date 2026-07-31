@@ -232,16 +232,13 @@ fromList entries =
         }
 
 
-{-| A car as it stands at one moment of the race.
+{-| A [`Car`](Motorsport-Race-Car) as it stands at one moment of the race,
+rebuilt on every frame rather than stored.
 
 Written as a [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added
 on, because that is the shape the ordering depends on: `Gap.at` and
 `Ordering.runningOrder` reach for `laps` and `currentLap` directly, so those two
 have to stay at the top level rather than nesting inside a `Car`.
-
-Nothing is stored between frames. `carStateAt` rebuilds it from a
-[`Car`](Motorsport-Race-Car) and an elapsed time, so the same elapsed always
-gives the same state, however the clock got there.
 
 -}
 type alias CarState =
@@ -253,12 +250,8 @@ type alias CarState =
         }
 
 
-{-| Read a car at a moment of the race.
-
-The status comes from the race's precomputed change points rather than being
-worked out here; see
-[`Race.statusAt`](Motorsport-Race#statusAt).
-
+{-| Read a car at a moment of the race. The status is looked up rather than
+worked out here; see [`Race.statusAt`](Motorsport-Race#statusAt).
 -}
 carStateAt : { elapsed : Duration } -> Race -> Car -> CarState
 carStateAt clock race car =

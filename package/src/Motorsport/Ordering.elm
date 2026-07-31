@@ -69,24 +69,13 @@ compareOnTrack clock a b =
             EQ
 
 
-{-| Phantom type representing position-based ordering
-
-This type ensures that collections ordered by racing position
-cannot be mixed with other ordering types at compile time.
-
+{-| Phantom type marking a list as ordered by racing position.
 -}
 type ByPosition
     = ByPosition Never
 
 
-{-| Create a position-ordered collection from items with a position field
-
-    items : List { position : Int, name : String }
-
-    sortedItems : SortedList ByPosition { position : Int, name : String }
-    sortedItems =
-        byPosition items
-
+{-| Sort by the position each item has already been given.
 -}
 byPosition : List { a | position : Int } -> SortedList ByPosition { a | position : Int }
 byPosition items =

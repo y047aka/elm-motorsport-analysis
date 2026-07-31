@@ -6,10 +6,8 @@ module Motorsport.ViewModel.Entry exposing
 
 {-| One car's line on the timing screen at one moment of the race.
 
-This is what the view layer is actually made of. Charts, widgets and tables read
-entries; only a handful of them ever ask
-[`Standings`](Motorsport-ViewModel-Standings) for one, and those that do were
-having to import five hundred lines of computation to name the type they render.
+This is what the view layer is actually made of, which is why it lives apart from
+the computation in [`Standings`](Motorsport-ViewModel-Standings) that produces it.
 
 Everything here is already worked out. An entry holds no laps and no clock -- the
 rating, the gaps, the sector progress were all settled when the standings were

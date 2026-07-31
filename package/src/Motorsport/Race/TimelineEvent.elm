@@ -56,17 +56,12 @@ Emits, in this order:
 
 The result is sorted by `eventTime` (stable).
 
-Only the lead changes need anything beyond the lap times: they read
-`Lap.position`, which the source data does not carry and the loader fills in --
-`Data.Wec.Laps.assignPositions` is the only thing that does so today. Cars
-that reach here without it produce every other event and no lead changes at all,
-silently. If a second loader ever appears, that is the rule it has to keep.
+Only the lead changes need anything beyond the lap times; what they need, and
+what happens without it, is on `leadChangeEvents` below.
 
-What is deliberately _not_ here is a per-lap completion event. Emitting one for
-every car on every lap put fifteen thousand rows of "car 7 completed lap 112" into
-a list meant to be read as the shape of the race -- five in six of everything in
-it, saying nothing a reader could follow. The laps themselves are unaffected: they
-live on the car, where every chart and table already reads them.
+There is deliberately no per-lap completion event. One per car per lap was five
+in six of the list and said nothing a reader could follow, and the laps are on
+the car already for everything that reads them.
 
 -}
 fromCars : List Car -> List TimelineEvent

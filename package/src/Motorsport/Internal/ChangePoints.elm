@@ -75,8 +75,8 @@ countUpTo elapsed (ChangePoints points) =
 
 {-| When the `n`th change happened, counting from zero.
 
-Note the argument: this takes a position in the index, where `valueAt` takes a
-moment of the race. Both are `Int`, so only the name tells them apart.
+Takes a position in the index, where `valueAt` takes a moment of the race. Both
+are `Int`, so only the name tells them apart.
 
 -}
 timeOfNth : Int -> ChangePoints a -> Maybe Duration

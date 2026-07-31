@@ -108,9 +108,6 @@ The counter reads the leading car's completed laps, so it goes up the moment the
 first car of the field crosses the line for a lap -- the earliest `elapsed` among
 every lap carrying that number.
 
-This is the index that replaces scanning all fifty-odd cars' lap lists on every
-frame just to answer "which lap are we on".
-
 -}
 calcLapCompletions : List Car -> ChangePoints Int
 calcLapCompletions cars =
