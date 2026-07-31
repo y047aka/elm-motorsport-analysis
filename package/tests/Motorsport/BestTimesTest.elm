@@ -85,9 +85,7 @@ tests =
                         , lap 2 6000 ( 900, 1900, 2900 )
                         ]
                     ]
-                        |> at 6000
-                        |> .fastestSectors
-                        |> Sector.values
+                        |> sectorsAt 6000
                         |> Expect.equal [ 1000, 2000, 3000 ]
             , test "`final` counts every lap, whatever the clock says" <|
                 \_ ->
@@ -134,6 +132,15 @@ recordsOf cars =
 finalSectors : List Car -> List Duration
 finalSectors cars =
     final cars
+        |> .fastestSectors
+        |> Sector.values
+
+
+{-| The same three, as they stood at `elapsed`.
+-}
+sectorsAt : Duration -> List Car -> List Duration
+sectorsAt elapsed cars =
+    at elapsed cars
         |> .fastestSectors
         |> Sector.values
 

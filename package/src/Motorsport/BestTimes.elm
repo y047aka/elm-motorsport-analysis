@@ -1,5 +1,5 @@
 module Motorsport.BestTimes exposing
-    ( BestTimes, Snapshot, ByRecord
+    ( BestTimes, Snapshot
     , empty, fromLaps
     , at, final
     )
@@ -20,7 +20,7 @@ owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
 out -- it knows nothing of cars, standings or playback, which is what keeps the
 dependency pointing one way from both.
 
-@docs BestTimes, Snapshot, ByRecord
+@docs BestTimes, Snapshot
 @docs empty, fromLaps
 @docs at, final
 
@@ -50,12 +50,12 @@ type alias Snapshot =
     ByRecord Duration
 
 
-{-| One value per record.
+{-| One value per record: the shape the two types above share, differing only in
+what they hold.
 
-The two type aliases above differ only in what they hold, which is what lets
-`map` below enumerate the twenty records once for every operation this module
-performs on them -- building, reading, emptying. Adding a record means writing it
-here and in `rules`, and nowhere else.
+Everything this module does to the twenty records -- building them, reading them,
+emptying them -- goes through `map`, so they are enumerated in exactly one place.
+Adding a record is two lines: what it holds, here, and how it is won, in `rules`.
 
 -}
 type alias ByRecord a =
@@ -80,7 +80,7 @@ of it reads zero.
 -}
 empty : BestTimes
 empty =
-    map (always ChangePoints.empty) rules
+    fromLaps []
 
 
 {-| Read the records off every lap of a race, however the laps arrive.
