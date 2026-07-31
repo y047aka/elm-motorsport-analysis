@@ -39,7 +39,7 @@ init : flags -> ( Model, Effect Msg )
 init _ =
     let
         replayInit =
-            Replay.placeholder
+            Replay.empty
 
         viewModelInit =
             ViewModel.compute WholeRace replayInit

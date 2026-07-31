@@ -39,7 +39,7 @@ type alias Records =
     }
 
 
-{-| A race with no laps in it. Every reading comes back `Nothing`.
+{-| No laps recorded yet. Every reading comes back `Nothing`.
 -}
 empty : Records
 empty =
@@ -60,12 +60,12 @@ fromEntrants entrants =
                 |> List.concatMap .laps
                 |> List.sortBy .elapsed
     in
-    { fastestLapTime = improvementsIn lower lapTime laps
-    , slowestLapTime = improvementsIn higher anyLapTime laps
+    { fastestLapTime = improvements lessThan recordedLapTime laps
+    , slowestLapTime = improvements greaterThan lapTimeAsFound laps
     , fastestSectors =
-        Sector.initialize (\sector -> improvementsIn lower (sectorTime sector) laps)
+        Sector.initialize (\sector -> improvements lessThan (recordedSectorTime sector) laps)
     , fastestMiniSectors =
-        LeMans.initialize (\mini -> improvementsIn lower (miniSectorTime mini) laps)
+        LeMans.initialize (\mini -> improvements lessThan (recordedMiniSectorTime mini) laps)
     }
 
 
@@ -78,12 +78,12 @@ that sorts stably and reads the *last* of any changes sharing a timestamp, two
 records set on the same instant would resolve to the earlier one.
 
 -}
-improvementsIn :
+improvements :
     (Duration -> Duration -> Bool)
     -> (Lap -> Maybe Duration)
     -> List Lap
     -> ChangePoints Duration
-improvementsIn beats timeFrom laps =
+improvements beats timeFrom laps =
     laps
         |> List.foldl
             (\lap ( standing, improvements ) ->
@@ -107,44 +107,46 @@ improvementsIn beats timeFrom laps =
         |> ChangePoints.fromList
 
 
-lower : Duration -> Duration -> Bool
-lower a b =
+lessThan : Duration -> Duration -> Bool
+lessThan a b =
     a < b
 
 
-higher : Duration -> Duration -> Bool
-higher a b =
+greaterThan : Duration -> Duration -> Bool
+greaterThan a b =
     a > b
 
 
 
 -- WHAT COUNTS AS A TIME
 -- A zero is a time the source data did not record, not a very quick one, so it
--- is no candidate for a fastest anything. The slowest lap is the exception: it
--- takes every lap as it finds it, because a zero can never win a maximum unless
--- there is nothing else.
+-- is no candidate for a fastest anything. Every extractor below says `recorded`
+-- to mean it drops those -- all but one, and that one says what it does instead.
 
 
-lapTime : Lap -> Maybe Duration
-lapTime lap =
+recordedLapTime : Lap -> Maybe Duration
+recordedLapTime lap =
     recorded lap.time
 
 
-anyLapTime : Lap -> Maybe Duration
-anyLapTime lap =
+{-| The exception. The slowest lap takes every lap as it finds it, because a zero
+can never win a maximum unless there is nothing else to win against.
+-}
+lapTimeAsFound : Lap -> Maybe Duration
+lapTimeAsFound lap =
     Just lap.time
 
 
-sectorTime : Sector -> Lap -> Maybe Duration
-sectorTime sector lap =
+recordedSectorTime : Sector -> Lap -> Maybe Duration
+recordedSectorTime sector lap =
     recorded (Sector.get sector lap.sectors).time
 
 
 {-| Mini-sector times are only trusted on laps that have a lap time, matching
 what the whole-race calculation has always done.
 -}
-miniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
-miniSectorTime mini lap =
+recordedMiniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
+recordedMiniSectorTime mini lap =
     case recorded lap.time of
         Just _ ->
             lap.miniSectors

@@ -94,7 +94,7 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
             Clock.getElapsed playback
 
         lapCount =
-            Replay.lapCountAt replay
+            Replay.lapCount replay
 
         remaining =
             race.timeLimit - elapsed

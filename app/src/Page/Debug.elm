@@ -83,7 +83,7 @@ view { viewModel, replay } { leaderboardState } =
                 replay
 
             lapCount =
-                Replay.lapCountAt replay
+                Replay.lapCount replay
         in
         [ header
             [ css

@@ -150,12 +150,12 @@ elapsedAtLapCount lapCount race =
         0
 
     else
-        case ChangePoints.timeOf lapCount race.lapCompletions of
+        case ChangePoints.timeOfNth lapCount race.lapCompletions of
             Just nextCompletion ->
                 nextCompletion - 1
 
             Nothing ->
-                ChangePoints.timeOf (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
+                ChangePoints.timeOfNth (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
                     |> Maybe.withDefault 0
 
 

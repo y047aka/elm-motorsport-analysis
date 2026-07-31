@@ -47,7 +47,7 @@ suite =
                             in
                             race.entrants
                                 |> List.map (carAt clock race)
-                                |> Ordering.byRacePosition clock
+                                |> Ordering.runningOrder clock
                         )
                     )
             )

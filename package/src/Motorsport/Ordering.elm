@@ -1,8 +1,8 @@
-module Motorsport.Ordering exposing (ByPosition, byPosition, byRacePosition)
+module Motorsport.Ordering exposing (ByPosition, byPosition, runningOrder)
 
 {-| Motorsport-specific ordering.
 
-Two different things get called a position. `byRacePosition` works out who is
+Two different things get called a position. `runningOrder` works out who is
 actually ahead on track at a moment of the race. `byPosition` sorts by the number
 that ordering has already handed out, and returns a phantom-typed `SortedList` so
 the two cannot be mixed up downstream.
@@ -10,7 +10,7 @@ the two cannot be mixed up downstream.
 
 # On track
 
-@docs byRacePosition
+@docs runningOrder
 
 
 # Position Ordering
@@ -35,21 +35,21 @@ current sector.
 The result is a plain list, not a `SortedList`: the caller's next move is to
 number the cars off, and it is that number `byPosition` guards.
 
-    Ordering.byRacePosition { elapsed = 3600000 } cars
+    Ordering.runningOrder { elapsed = 3600000 } cars
     -- The leader first, then the rest in the order they are running
 
 -}
-byRacePosition : { elapsed : Duration } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
-byRacePosition clock =
-    List.sortWith (compareByRacePosition clock)
+runningOrder : { elapsed : Duration } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
+runningOrder clock =
+    List.sortWith (compareOnTrack clock)
 
 
-compareByRacePosition :
+compareOnTrack :
     { elapsed : Duration }
     -> { a | currentLap : Maybe Lap }
     -> { a | currentLap : Maybe Lap }
     -> Order
-compareByRacePosition clock a b =
+compareOnTrack clock a b =
     case ( a.currentLap, b.currentLap ) of
         ( Just lapA, Just lapB ) ->
             Lap.compareAt clock lapA lapB

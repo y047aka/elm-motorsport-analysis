@@ -133,7 +133,7 @@ compute bestTimes clock race =
         carsList =
             race.entrants
                 |> List.map (carAt clock race)
-                |> Ordering.byRacePosition clock
+                |> Ordering.runningOrder clock
 
         leaderCar =
             List.head carsList

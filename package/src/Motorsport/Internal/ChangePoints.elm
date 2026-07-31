@@ -1,7 +1,7 @@
 module Motorsport.Internal.ChangePoints exposing
     ( ChangePoints
     , empty, fromList
-    , valueAt, last, countUpTo, timeOf, length
+    , valueAt, last, countUpTo, timeOfNth, length
     )
 
 {-| A value that changes at known moments of the race, indexed so it can be read
@@ -17,7 +17,7 @@ scrubbed backwards lands on the same value as one that played through.
 
 @docs ChangePoints
 @docs empty, fromList
-@docs valueAt, last, countUpTo, timeOf, length
+@docs valueAt, last, countUpTo, timeOfNth, length
 
 -}
 
@@ -74,9 +74,13 @@ countUpTo elapsed (ChangePoints points) =
 
 
 {-| When the `n`th change happened, counting from zero.
+
+Note the argument: this takes a position in the index, where `valueAt` takes a
+moment of the race. Both are `Int`, so only the name tells them apart.
+
 -}
-timeOf : Int -> ChangePoints a -> Maybe Duration
-timeOf n (ChangePoints points) =
+timeOfNth : Int -> ChangePoints a -> Maybe Duration
+timeOfNth n (ChangePoints points) =
     Array.get n points
         |> Maybe.map Tuple.first
 

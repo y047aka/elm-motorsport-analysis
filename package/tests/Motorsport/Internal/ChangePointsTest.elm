@@ -61,12 +61,12 @@ suite =
                         |> List.map (\elapsed -> ChangePoints.countUpTo elapsed index)
                         |> Expect.equal [ 0, 0, 1, 1, 2, 4, 4, 4 ]
             ]
-        , describe "timeOf"
+        , describe "timeOfNth"
             [ test "gives the moment of the nth change, and nothing past the end" <|
                 \_ ->
-                    [ ChangePoints.timeOf 0 index
-                    , ChangePoints.timeOf 3 index
-                    , ChangePoints.timeOf 4 index
+                    [ ChangePoints.timeOfNth 0 index
+                    , ChangePoints.timeOfNth 3 index
+                    , ChangePoints.timeOfNth 4 index
                     ]
                         |> Expect.equal [ Just 1000, Just 6000, Nothing ]
             ]

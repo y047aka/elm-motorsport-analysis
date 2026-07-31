@@ -1,7 +1,7 @@
 module Motorsport.Replay exposing
-    ( Model, placeholder, fromEntrants
+    ( Model, empty, fromEntrants
     , Msg(..), update
-    , lapCountAt
+    , lapCount
     )
 
 {-| A race, and where playback has got to in it.
@@ -11,9 +11,9 @@ Two fields, and only one of them moves. `race` is settled when the data loads;
 cars are doing at the current moment is a function of `race` and the elapsed time,
 worked out where it is needed.
 
-@docs Model, placeholder, fromEntrants
+@docs Model, empty, fromEntrants
 @docs Msg, update
-@docs lapCountAt
+@docs lapCount
 
 -}
 
@@ -34,10 +34,10 @@ type alias Model =
     }
 
 
-{-| A race with nothing in it, to hold the place of one that has not loaded yet.
+{-| A replay of no race at all, for before one has loaded.
 -}
-placeholder : Model
-placeholder =
+empty : Model
+empty =
     { race = Race.empty
     , playback = Clock.init
     }
@@ -56,8 +56,8 @@ Not a field: the race knows when the counter goes up, so where the playback head
 sits is enough to say what it reads.
 
 -}
-lapCountAt : Model -> Int
-lapCountAt m =
+lapCount : Model -> Int
+lapCount m =
     Race.lapCountAt { elapsed = Clock.getElapsed m.playback } m.race
 
 
@@ -116,31 +116,31 @@ update msg m =
             else
                 m
 
-        SetCount lapCount ->
-            if lapCount >= 0 && lapCount <= m.race.lapTotal then
-                moveToLap lapCount m
+        SetCount wanted ->
+            if wanted >= 0 && wanted <= m.race.lapTotal then
+                moveToLap wanted m
 
             else
                 m
 
         NextLap ->
             let
-                lapCount =
-                    lapCountAt m
+                current =
+                    lapCount m
             in
-            if lapCount < m.race.lapTotal then
-                moveToLap (lapCount + 1) m
+            if current < m.race.lapTotal then
+                moveToLap (current + 1) m
 
             else
                 m
 
         PreviousLap ->
             let
-                lapCount =
-                    lapCountAt m
+                current =
+                    lapCount m
             in
-            if lapCount > 0 then
-                moveToLap (lapCount - 1) m
+            if current > 0 then
+                moveToLap (current - 1) m
 
             else
                 m
@@ -152,5 +152,5 @@ moveTo elapsed m =
 
 
 moveToLap : Int -> Model -> Model
-moveToLap lapCount m =
-    moveTo (Race.elapsedAtLapCount lapCount m.race) m
+moveToLap wanted m =
+    moveTo (Race.elapsedAtLapCount wanted m.race) m
