@@ -21,7 +21,8 @@ import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
-import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg

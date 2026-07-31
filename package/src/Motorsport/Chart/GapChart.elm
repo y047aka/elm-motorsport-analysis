@@ -31,8 +31,8 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings exposing (Entry)
 import Scale
 import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr

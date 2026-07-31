@@ -10,7 +10,8 @@ import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Entrant as Entrant
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status exposing (Status(..))
-import Motorsport.ViewModel.Standings as Standings exposing (Entry)
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings
 import Test exposing (Test, describe, test)
 
 

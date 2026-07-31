@@ -14,7 +14,7 @@ import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
-import Motorsport.ViewModel.Standings exposing (Entry)
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Path.Styled as Path
 import Shape
 import Svg.Styled exposing (Svg, g, svg)

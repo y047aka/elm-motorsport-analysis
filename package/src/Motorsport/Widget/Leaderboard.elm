@@ -69,7 +69,8 @@ import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanc
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance, Standings)
+import Motorsport.ViewModel.Entry exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 
 
 

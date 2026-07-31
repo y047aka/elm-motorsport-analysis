@@ -9,8 +9,9 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.ViewModel exposing (ViewModel)
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.ViewModel.LapHistory as LapHistory
-import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)

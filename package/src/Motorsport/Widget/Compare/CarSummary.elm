@@ -14,8 +14,8 @@ import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Status exposing (Status(..))
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)

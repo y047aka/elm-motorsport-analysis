@@ -1,23 +1,19 @@
 module Motorsport.ViewModel.Standings exposing
-    ( Standings, Entry, ClassInfo
-    , CurrentSectorStates
-    , SectorPerformance, MiniSectorPerformance
+    ( Standings
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount, elapsed
-    , classInfoOf
     , groupCarsByCloseIntervals
     )
 
-{-|
+{-| The whole timing screen at one moment of the race.
 
-@docs Standings, Entry, ClassInfo
-@docs CurrentSectorStates
-@docs SectorPerformance, MiniSectorPerformance
+What a single line of it looks like is [`Entry`](Motorsport-ViewModel-Entry);
+this module is how one gets built and read back.
+
+@docs Standings
 @docs compute, fromLaps, fromList
 
 @docs toList, toClassList, leader, lapCount, elapsed
-
-@docs classInfoOf
 
 @docs groupCarsByCloseIntervals
 
@@ -27,17 +23,17 @@ import Dict exposing (Dict)
 import List.Extra
 import Motorsport.Car as Car exposing (Car)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Class as Class exposing (Class)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Class as Class
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Status as Status exposing (Status)
+import Motorsport.Status as Status
+import Motorsport.ViewModel.Entry as Entry exposing (ClassInfo, CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
 import SortedList exposing (SortedList)
 
 
@@ -53,68 +49,6 @@ type Standings
         -- guarantee isn't worth the extra unwrapping at each call site.
         , entriesByClass : List ( ClassInfo, List Entry )
         }
-
-
-{-| Display info needed by class headers and badges.
-The color is settled when the class is decoded; see `Motorsport.Class`.
--}
-type alias ClassInfo =
-    { class : Class
-    , name : String
-
-    -- A raw CSS color string rather than Css.Color: every consumer feeds
-    -- this straight into a raw string sink (Svg fill, Css.property
-    -- "background-color"), so storing the extracted value avoids
-    -- re-extracting it at each call site.
-    , color : String
-    }
-
-
-type alias SectorPerformance =
-    BySector RatedTime
-
-
-type alias MiniSectorPerformance =
-    ByMiniSector (Maybe RatedTime)
-
-
-type alias Entry =
-    { position : Int
-    , positionInClass : Int
-    , status : Status
-    , metadata : Entrant.Metadata
-
-    -- A raw CSS color string; see ClassInfo.color.
-    , classColor : String
-    , lapsCompleted : Int
-    , currentLapTime : Maybe Duration
-    , currentLapBest : Maybe Duration
-
-    -- currentLapSectors holds raw times (for data display such as the Debug page).
-    -- currentLapSectorStates is the single source of truth for progress and performance rating.
-    , currentLapSectors : Maybe Lap.SectorTimes
-    , currentLapSectorStates : Maybe CurrentSectorStates
-    , currentLapMiniSectors : Maybe MiniSectors
-    , currentLapElapsed : Duration
-    , currentLapRated : Maybe RatedTime
-    , sector : Maybe Lap.SectorProgress
-    , miniSector : Maybe Lap.MiniSectorProgress
-    , gapToLeader : Gap
-    , intervalToAhead : Gap
-    , currentLapProgress : Float
-    , lastLapRated : Maybe RatedTime
-    , bestLapRated : Maybe RatedTime
-    , lastLapSectors : Maybe SectorPerformance
-    , lastLapMiniSectors : Maybe MiniSectorPerformance
-    , currentDriver : Maybe Driver
-    }
-
-
-{-| Per-sector "progress + performance rating" for the current lap.
-Rated at compute time so donut displays can render without being supplied BestTimes separately.
--}
-type alias CurrentSectorStates =
-    BySector { progress : Float, rated : RatedTime }
 
 
 compute :
@@ -311,17 +245,7 @@ groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entr
 groupEntriesByClass sortedEntries =
     sortedEntries
         |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: SortedList.toList rest ))
-
-
-{-| Extracts a class's display info from an entry.
--}
-classInfoOf : Entry -> ClassInfo
-classInfoOf entry =
-    { class = entry.metadata.class
-    , name = Class.toString entry.metadata.class
-    , color = entry.classColor
-    }
+        |> List.map (\( first, rest ) -> ( Entry.classInfoOf first, first :: SortedList.toList rest ))
 
 
 rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime

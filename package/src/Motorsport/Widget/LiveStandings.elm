@@ -9,7 +9,8 @@ import Html.Styled.Lazy as Lazy
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Status as Status
-import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
