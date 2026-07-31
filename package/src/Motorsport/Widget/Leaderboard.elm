@@ -50,6 +50,7 @@ module Motorsport.Widget.Leaderboard exposing
 
 -}
 
+import Compare
 import Css exposing (..)
 import Css.Color exposing (oklch)
 import Css.Extra exposing (when)
@@ -68,7 +69,6 @@ import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanc
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance, Standings)
 
 
@@ -188,7 +188,7 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
     , filter = \_ _ -> True
     }
 
@@ -198,7 +198,7 @@ bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
-        , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+        , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
         }
 
 
@@ -281,7 +281,7 @@ driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : Li
 driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
-    , sorter = compareBy (getter >> .metadata >> .team)
+    , sorter = Compare.by (getter >> .metadata >> .team)
     , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
     }
 

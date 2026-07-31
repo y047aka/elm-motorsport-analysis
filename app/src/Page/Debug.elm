@@ -6,6 +6,7 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 
 -}
 
+import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
@@ -19,7 +20,6 @@ import Motorsport.Duration as Duration
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
-import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
@@ -149,7 +149,7 @@ config bestTimes standings =
             ++ sectorColumns bestTimes
             ++ [ lastLapColumn
                     { getter = identity
-                    , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+                    , sorter = Compare.by (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
                     }
                , bestTimeColumn { getter = .bestLapRated }
                ]
@@ -184,7 +184,7 @@ sectorColumns bestTimes =
                 , customColumn
                     { label = Sector.toString sector ++ " Best"
                     , getter = times sector >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-                    , sorter = compareBy (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
+                    , sorter = Compare.by (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
                     }
                 ]
             )

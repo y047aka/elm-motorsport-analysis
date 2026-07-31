@@ -44,6 +44,7 @@ truth is pretty great!
 -}
 
 import Array exposing (Array)
+import Compare
 import Css exposing (..)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html.Styled exposing (Attribute, Html, button, div, input, span, text)
@@ -53,7 +54,6 @@ import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
-import Motorsport.Utils exposing (compareBy)
 import UI.Table as Table exposing (td, th, tr)
 
 
@@ -262,7 +262,7 @@ stringColumn : { label : String, getter : data -> String } -> Column data msg
 stringColumn { label, getter } =
     { name = label
     , view = getter >> Lazy.lazy text
-    , sorter = compareBy getter
+    , sorter = Compare.by getter
     , filter = getter >> String.startsWith
     }
 
@@ -272,7 +272,7 @@ intColumn : { label : String, getter : data -> Int } -> Column data msg
 intColumn { label, getter } =
     { name = label
     , view = getter >> String.fromInt >> Lazy.lazy text
-    , sorter = compareBy getter
+    , sorter = Compare.by getter
     , filter = getter >> String.fromInt >> String.startsWith
     }
 
@@ -282,7 +282,7 @@ floatColumn : { label : String, getter : data -> Float } -> Column data msg
 floatColumn { label, getter } =
     { name = label
     , view = getter >> String.fromFloat >> Lazy.lazy text
-    , sorter = compareBy getter
+    , sorter = Compare.by getter
     , filter = getter >> String.fromFloat >> String.startsWith
     }
 

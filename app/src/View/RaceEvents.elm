@@ -9,13 +9,13 @@ elapsed time) as a sortable table.
 
 -}
 
+import Compare
 import DataView
 import Html.Styled as Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
-import Motorsport.Utils exposing (compareBy)
 
 
 view : (DataView.Msg -> msg) -> DataView.Model -> Replay.Model -> Html msg
@@ -43,7 +43,7 @@ config toMsg =
         [ DataView.customColumn
             { label = "Time"
             , getter = .eventTime >> Duration.toString
-            , sorter = compareBy .eventTime
+            , sorter = Compare.by .eventTime
             }
         , DataView.stringColumn
             { label = "Car"

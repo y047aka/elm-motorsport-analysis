@@ -19,9 +19,9 @@ the two cannot be mixed up downstream.
 
 -}
 
+import Compare
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Utils exposing (compareBy)
 import SortedList exposing (SortedList)
 
 
@@ -87,4 +87,4 @@ type ByPosition
 -}
 byPosition : List { a | position : Int } -> SortedList ByPosition { a | position : Int }
 byPosition items =
-    SortedList.sortBy (compareBy .position) items
+    SortedList.sortBy (Compare.by .position) items
