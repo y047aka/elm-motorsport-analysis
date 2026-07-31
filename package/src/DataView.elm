@@ -44,7 +44,7 @@ truth is pretty great!
 -}
 
 import Array exposing (Array)
-import Compare
+import Compare exposing (Comparator)
 import Css exposing (..)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
 import Html.Styled exposing (Attribute, Html, button, div, input, span, text)
@@ -252,7 +252,7 @@ type alias Config data msg =
 type alias Column data msg =
     { name : String
     , view : data -> Html msg
-    , sorter : data -> data -> Order
+    , sorter : Comparator data
     , filter : data -> String -> Bool
     }
 
@@ -291,7 +291,7 @@ floatColumn { label, getter } =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : data -> data -> Order
+    , sorter : Comparator data
     }
     -> Column data msg
 customColumn { label, getter, sorter } =
@@ -359,7 +359,7 @@ applySorting sortings columns dataArray indexes =
             in
             case findColumn (Tuple.first s) columns of
                 Just c ->
-                    setOrder dir <| List.sortWith (sorter_ c.sorter dataArray) data
+                    List.sortWith (sorter_ (inDirection dir c.sorter) dataArray) data
 
                 Nothing ->
                     data
@@ -368,17 +368,22 @@ applySorting sortings columns dataArray indexes =
         sortings
 
 
-setOrder : Direction -> List a -> List a
-setOrder direction data =
+{-| Descending sorts the comparator backwards rather than reversing the sorted
+list. Reversing the list would also undo the order of the rows the comparator
+called equal, so a second click on a column would shuffle ties instead of
+leaving them as they came in.
+-}
+inDirection : Direction -> Comparator data -> Comparator data
+inDirection direction comparator =
     case direction of
         Descending ->
-            List.reverse data
+            Compare.reverse comparator
 
         _ ->
-            data
+            comparator
 
 
-sorter_ : (data -> data -> Order) -> Array data -> Int -> Int -> Order
+sorter_ : Comparator data -> Array data -> Int -> Int -> Order
 sorter_ sortFn data a b =
     case ( Array.get a data, Array.get b data ) of
         ( Just ra, Just rb ) ->
