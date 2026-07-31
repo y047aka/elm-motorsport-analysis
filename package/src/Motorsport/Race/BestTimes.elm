@@ -1,6 +1,6 @@
 module Motorsport.Race.BestTimes exposing
     ( BestTimes
-    , empty, fromEntrants
+    , empty, fromCars
     )
 
 {-| When each of the race's best times was set.
@@ -19,7 +19,7 @@ is a binary search -- see [`ChangePoints`](Motorsport-Internal-ChangePoints).
 beaten, and it is what the other end of the scale is drawn against.
 
 @docs BestTimes
-@docs empty, fromEntrants
+@docs empty, fromCars
 
 -}
 
@@ -27,7 +27,7 @@ import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025Min
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Race.Entrant exposing (Entrant)
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
@@ -50,13 +50,13 @@ empty =
     }
 
 
-fromEntrants : List Entrant -> BestTimes
-fromEntrants entrants =
+fromCars : List Car -> BestTimes
+fromCars cars =
     let
         -- Every lap of the race in the order it was completed, which is the
         -- order the records were set in.
         laps =
-            entrants
+            cars
                 |> List.concatMap .laps
                 |> List.sortBy .elapsed
     in

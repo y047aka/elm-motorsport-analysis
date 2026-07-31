@@ -20,7 +20,7 @@ import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -92,7 +92,7 @@ Mirrors the Rust CLI's `process_laps` + `position_for_lap`
 (`cli/cli/src/stages/transform.rs`).
 
 -}
-attach : List RawLap -> List Entrant -> List Entrant
+attach : List RawLap -> List Car -> List Car
 attach rawLaps cars =
     let
         lapsByCarNumber : Dict CarNumber (List Lap)
@@ -207,7 +207,7 @@ accumulate raw ( bests, acc ) =
 -- fail if it is skipped.
 
 
-assignPositions : List Entrant -> List Entrant
+assignPositions : List Car -> List Car
 assignPositions cars =
     let
         maxLap =
@@ -220,7 +220,7 @@ assignPositions cars =
     List.foldl assignPositionsForLap cars (List.range 1 maxLap)
 
 
-assignPositionsForLap : Int -> List Entrant -> List Entrant
+assignPositionsForLap : Int -> List Car -> List Car
 assignPositionsForLap lapNum cars =
     let
         positionByIdx : Dict Int Int

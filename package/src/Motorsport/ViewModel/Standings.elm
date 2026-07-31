@@ -30,7 +30,7 @@ import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.ViewModel.Entry as Entry exposing (ClassInfo, CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
@@ -66,7 +66,7 @@ compute bestTimes clock race =
         -- this moment is read off the clock here. Who is ahead of whom follows
         -- from that, and every position below is read off the resulting order.
         carsList =
-            race.entrants
+            race.cars
                 |> List.map (carStateAt clock race)
                 |> Ordering.runningOrder clock
 
@@ -158,7 +158,7 @@ compute bestTimes clock race =
 Treats each lap as one Entry, setting `metadata.carNumber` to the lap-number string.
 
 -}
-fromLaps : Entrant.Metadata -> List Lap -> Standings
+fromLaps : Car.Metadata -> List Lap -> Standings
 fromLaps baseMetadata laps =
     let
         bestTimes =
@@ -232,45 +232,45 @@ fromList entries =
         }
 
 
-{-| An entrant as it stands at one moment of the race.
+{-| A car as it stands at one moment of the race.
 
 Written as a [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added
 on, because that is the shape the ordering depends on: `Gap.at` and
 `Ordering.runningOrder` reach for `laps` and `currentLap` directly, so those two
-have to stay at the top level rather than nesting inside an `Entrant`.
+have to stay at the top level rather than nesting inside a `Car`.
 
-Nothing is stored between frames. `carStateAt` rebuilds it from an entrant and
-an elapsed time, so the same elapsed always gives the same state, however the
-clock got there.
+Nothing is stored between frames. `carStateAt` rebuilds it from a
+[`Car`](Motorsport-Race-Car) and an elapsed time, so the same elapsed always
+gives the same state, however the clock got there.
 
 -}
 type alias CarState =
     Gap.Competitor
-        { metadata : Entrant.Metadata
+        { metadata : Car.Metadata
         , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Maybe Driver
         }
 
 
-{-| Read an entrant at a moment of the race.
+{-| Read a car at a moment of the race.
 
 The status comes from the race's precomputed change points rather than being
 worked out here; see
 [`Race.statusAt`](Motorsport-Race#statusAt).
 
 -}
-carStateAt : { elapsed : Duration } -> Race -> Entrant -> CarState
-carStateAt clock race entrant =
+carStateAt : { elapsed : Duration } -> Race -> Car -> CarState
+carStateAt clock race car =
     let
         currentLap =
-            Lap.findCurrentLap clock entrant.laps
+            Lap.findCurrentLap clock car.laps
     in
-    { metadata = entrant.metadata
-    , laps = entrant.laps
+    { metadata = car.metadata
+    , laps = car.laps
     , currentLap = currentLap
-    , lastLap = Lap.findLastLapAt clock entrant.laps
-    , status = Race.statusAt clock entrant.metadata.carNumber race
+    , lastLap = Lap.findLastLapAt clock car.laps
+    , status = Race.statusAt clock car.metadata.carNumber race
     , currentDriver = Maybe.map .driver currentLap
     }
 

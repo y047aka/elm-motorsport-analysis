@@ -28,7 +28,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (MiniSectors)
 import Motorsport.Lap.Performance exposing (RatedTime)
-import Motorsport.Race.Entrant as Entrant
+import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Status exposing (Status)
 
@@ -37,7 +37,7 @@ type alias Entry =
     { position : Int
     , positionInClass : Int
     , status : Status
-    , metadata : Entrant.Metadata
+    , metadata : Car.Metadata
 
     -- A raw CSS color string; see ClassInfo.color.
     , classColor : String

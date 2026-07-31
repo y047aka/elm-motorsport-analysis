@@ -6,7 +6,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race as Race exposing (Race)
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Test exposing (Test, describe, test)
 
 
@@ -32,7 +32,7 @@ suite =
                 \_ ->
                     Race.lapCountAt { elapsed = 99999999 } race
                         |> Expect.equal 3
-            , test "a race with no entrants is always on lap zero" <|
+            , test "a race with no cars is always on lap zero" <|
                 \_ ->
                     Race.lapCountAt { elapsed = 500000 } Race.empty
                         |> Expect.equal 0
@@ -82,21 +82,21 @@ suite =
 
 race : Race
 race =
-    Race.fromEntrants
-        [ entrantWith "1"
+    Race.fromCars
+        [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000
             , lapAt "1" 3 300000
             ]
-        , entrantWith "2"
+        , carWith "2"
             [ lapAt "2" 1 90000
             , lapAt "2" 2 7300000
             ]
         ]
 
 
-entrantWith : Entrant.CarNumber -> List Lap -> Entrant
-entrantWith carNumber laps =
+carWith : CarNumber -> List Lap -> Car
+carWith carNumber laps =
     { metadata =
         { carNumber = carNumber
         , drivers = [ Driver.fromName "Test Driver" ]
@@ -110,7 +110,7 @@ entrantWith carNumber laps =
     }
 
 
-lapAt : Entrant.CarNumber -> Int -> Int -> Lap
+lapAt : CarNumber -> Int -> Int -> Lap
 lapAt carNumber lapNumber elapsed =
     let
         base =

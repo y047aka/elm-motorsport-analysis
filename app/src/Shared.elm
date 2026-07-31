@@ -15,7 +15,7 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Class.Era as Era
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
@@ -30,7 +30,7 @@ type alias Model =
     { eventSummary : EventSummary
     , replay : Replay.Model
     , viewModel : ViewModel
-    , pendingWecEntrants : Maybe (List Entrant)
+    , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
 
@@ -47,7 +47,7 @@ init _ =
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , replay = replayInit
       , viewModel = viewModelInit
-      , pendingWecEntrants = Nothing
+      , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
     , Effect.none
@@ -70,7 +70,7 @@ update msg m =
             in
             ( { m
                 | eventSummary = eventSummary
-                , pendingWecEntrants = Nothing
+                , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
             , case Era.fromSeason eventSummary.season of
@@ -95,8 +95,8 @@ update msg m =
 
         JsonLoaded_Wec (Ok decoded) ->
             let
-                entrants =
-                    decoded.startingGrid |> List.map Entrant.fromStartingGrid
+                cars =
+                    decoded.startingGrid |> List.map Car.fromStartingGrid
 
                 modelEventSummary =
                     m.eventSummary
@@ -104,7 +104,7 @@ update msg m =
             finalizeWecIfReady
                 { m
                     | eventSummary = { modelEventSummary | name = decoded.name }
-                    , pendingWecEntrants = Just entrants
+                    , pendingWecCars = Just cars
                 }
 
         JsonLoaded_Wec (Err _) ->
@@ -140,19 +140,19 @@ lapsPathFor jsonPath =
 
 finalizeWecIfReady : Model -> ( Model, Effect Msg )
 finalizeWecIfReady m =
-    case ( m.pendingWecEntrants, m.pendingWecLaps ) of
-        ( Just entrants, Just rawLaps ) ->
+    case ( m.pendingWecCars, m.pendingWecLaps ) of
+        ( Just cars, Just rawLaps ) ->
             let
-                entrantsWithLaps =
-                    WecLaps.attach rawLaps entrants
+                carsWithLaps =
+                    WecLaps.attach rawLaps cars
 
                 replayNew =
-                    Replay.fromEntrants entrantsWithLaps
+                    Replay.fromCars carsWithLaps
             in
             ( { m
                 | replay = replayNew
                 , viewModel = ViewModel.compute WholeRace replayNew
-                , pendingWecEntrants = Nothing
+                , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }
             , Effect.none

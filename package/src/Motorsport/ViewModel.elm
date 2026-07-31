@@ -33,6 +33,6 @@ compute scope { race, playback } =
             BestTimes.compute scope clock race
     in
     { standings = Standings.compute bestTimes clock race
-    , lapHistory = LapHistory.compute clock race.entrants
+    , lapHistory = LapHistory.compute clock race.cars
     , bestTimes = bestTimes
     }

@@ -1,11 +1,11 @@
 module Motorsport.Race exposing
     ( Race
-    , empty, fromEntrants
+    , empty, fromCars
     , lapCountAt, elapsedAtLapCount
     , statusAt
     )
 
-{-| A race, as it is once the data has loaded: entrants, their laps, and the
+{-| A race, as it is once the data has loaded: cars, their laps, and the
 indices that let any moment of it be read back cheaply.
 
 Nothing here moves. Where playback has got to is
@@ -14,7 +14,7 @@ moment is derived from the two, in
 [`ViewModel.Standings`](Motorsport-ViewModel-Standings).
 
 @docs Race
-@docs empty, fromEntrants
+@docs empty, fromCars
 @docs lapCountAt, elapsedAtLapCount
 @docs statusAt
 
@@ -25,7 +25,7 @@ import List.Extra
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes)
-import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status exposing (Status)
@@ -43,7 +43,7 @@ counter's ceiling and `lapCountAt` can never disagree about how long the race wa
 
 -}
 type alias Race =
-    { entrants : List Entrant
+    { cars : List Car
     , lapTotal : Int
     , timeLimit : Duration
     , timelineEvents : List TimelineEvent
@@ -53,11 +53,11 @@ type alias Race =
     }
 
 
-{-| A race with no entrants, to stand in for one that has not loaded yet.
+{-| A race with no cars, to stand in for one that has not loaded yet.
 -}
 empty : Race
 empty =
-    { entrants = []
+    { cars = []
     , lapTotal = 0
     , timeLimit = 0
     , timelineEvents = []
@@ -69,31 +69,31 @@ empty =
 
 {-| Read a race off its entry list, building every index once.
 
-Lead changes are read from `Lap.position`, so entrants that arrive without their
+Lead changes are read from `Lap.position`, so cars that arrive without their
 per-lap positions assigned produce a timeline with no lead changes in it -- see
-[`TimelineEvent.fromEntrants`](Motorsport-Race-TimelineEvent#fromEntrants).
+[`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromEntrants : List Entrant -> Race
-fromEntrants entrants =
+fromCars : List Car -> Race
+fromCars cars =
     let
         timelineEvents =
-            TimelineEvent.fromEntrants entrants
+            TimelineEvent.fromCars cars
 
         lapCompletions =
-            calcLapCompletions entrants
+            calcLapCompletions cars
     in
-    { entrants = entrants
+    { cars = cars
     , lapTotal = ChangePoints.length lapCompletions
-    , timeLimit = calcTimeLimit entrants
+    , timeLimit = calcTimeLimit cars
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
-    , bestTimes = BestTimes.fromEntrants entrants
+    , bestTimes = BestTimes.fromCars cars
     }
 
 
-calcTimeLimit : List Entrant -> Duration
+calcTimeLimit : List Car -> Duration
 calcTimeLimit =
     List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
         >> List.filterMap identity
@@ -112,9 +112,9 @@ This is the index that replaces scanning all fifty-odd cars' lap lists on every
 frame just to answer "which lap are we on".
 
 -}
-calcLapCompletions : List Entrant -> ChangePoints Int
-calcLapCompletions entrants =
-    entrants
+calcLapCompletions : List Car -> ChangePoints Int
+calcLapCompletions cars =
+    cars
         |> List.concatMap .laps
         |> List.foldl
             (\lap earliest ->

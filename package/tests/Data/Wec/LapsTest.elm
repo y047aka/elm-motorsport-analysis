@@ -6,7 +6,7 @@ import Json.Decode as Decode
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.Race.Entrant exposing (Entrant)
+import Motorsport.Race.Car exposing (Car)
 import Test exposing (Test, describe, test)
 
 
@@ -131,12 +131,12 @@ rawLap carNumber lapNumber lapTime elapsed =
     }
 
 
-placeholderCars : List String -> List Entrant
+placeholderCars : List String -> List Car
 placeholderCars carNumbers =
     carNumbers |> List.map placeholderCar
 
 
-placeholderCar : String -> Entrant
+placeholderCar : String -> Car
 placeholderCar carNumber =
     { metadata =
         { carNumber = carNumber

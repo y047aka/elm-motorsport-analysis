@@ -1,13 +1,13 @@
 module Motorsport.Race.TimelineEvent exposing
     ( TimelineEvent, EventType(..), CarEventType(..)
-    , fromEntrants
+    , fromCars
     , decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
     )
 
 {-|
 
 @docs TimelineEvent, EventType, CarEventType
-@docs fromEntrants
+@docs fromCars
 @docs decoder, eventTimeDecoder, eventTypeDecoder, carEventTypeDecoder
 
 -}
@@ -19,7 +19,7 @@ import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
 type alias TimelineEvent =
@@ -49,7 +49,7 @@ type CarEventType
 Emits, in this order:
 
 1.  RaceStart at time 0
-2.  Per-entrant Start events at time 0 (with `pitTime` stripped from the embedded lap)
+2.  Per-car Start events at time 0 (with `pitTime` stripped from the embedded lap)
 3.  A TookLead event each time the car at the front of the field changes
 4.  PitIn / PitOut events for laps whose `pitTime` is `Just`
 5.  Retirement / Checkered for the final lap, depending on the rounded time limit
@@ -58,7 +58,7 @@ The result is sorted by `eventTime` (stable).
 
 Only the lead changes need anything beyond the lap times: they read
 `Lap.position`, which the source data does not carry and the loader fills in --
-`Data.Wec.Laps.assignPositions` is the only thing that does so today. Entrants
+`Data.Wec.Laps.assignPositions` is the only thing that does so today. Cars
 that reach here without it produce every other event and no lead changes at all,
 silently. If a second loader ever appears, that is the rule it has to keep.
 
@@ -66,29 +66,29 @@ What is deliberately _not_ here is a per-lap completion event. Emitting one for
 every car on every lap put fifteen thousand rows of "car 7 completed lap 112" into
 a list meant to be read as the shape of the race -- five in six of everything in
 it, saying nothing a reader could follow. The laps themselves are unaffected: they
-live on the entrant, where every chart and table already reads them.
+live on the car, where every chart and table already reads them.
 
 -}
-fromEntrants : List Entrant -> List TimelineEvent
-fromEntrants entrants =
+fromCars : List Car -> List TimelineEvent
+fromCars cars =
     let
         timeLimit =
-            calcTimeLimit entrants
+            calcTimeLimit cars
 
         events =
             [ raceStartEvent ]
-                ++ startEvents entrants
-                ++ leadChangeEvents entrants
-                ++ pitEvents entrants
-                ++ terminalEvents timeLimit entrants
+                ++ startEvents cars
+                ++ leadChangeEvents cars
+                ++ pitEvents cars
+                ++ terminalEvents timeLimit cars
     in
     List.sortBy .eventTime events
 
 
-calcTimeLimit : List Entrant -> Duration
-calcTimeLimit entrants =
-    entrants
-        |> List.filterMap (\entrant -> List.Extra.last entrant.laps |> Maybe.map .elapsed)
+calcTimeLimit : List Car -> Duration
+calcTimeLimit cars =
+    cars
+        |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
         |> List.maximum
         |> Maybe.map (\t -> (t // (60 * 60 * 1000)) * 60 * 60 * 1000)
         |> Maybe.withDefault 0
@@ -99,17 +99,17 @@ raceStartEvent =
     { eventTime = 0, eventType = RaceStart }
 
 
-startEvents : List Entrant -> List TimelineEvent
-startEvents entrants =
-    entrants
+startEvents : List Car -> List TimelineEvent
+startEvents cars =
+    cars
         |> List.filterMap
-            (\entrant ->
-                List.head entrant.laps
+            (\car ->
+                List.head car.laps
                     |> Maybe.map
                         (\firstLap ->
                             { eventTime = 0
                             , eventType =
-                                CarEvent entrant.metadata.carNumber
+                                CarEvent car.metadata.carNumber
                                     (Start { currentLap = stripPitTime firstLap })
                             }
                         )
@@ -134,21 +134,21 @@ Whoever leads the opening lap has taken it from nobody, so the first leader is n
 an event. Only the changes are.
 
 -}
-leadChangeEvents : List Entrant -> List TimelineEvent
-leadChangeEvents entrants =
+leadChangeEvents : List Car -> List TimelineEvent
+leadChangeEvents cars =
     let
         leaders : List Leader
         leaders =
-            entrants
+            cars
                 |> List.concatMap
-                    (\entrant ->
-                        entrant.laps
+                    (\car ->
+                        car.laps
                             |> List.filter (\lap -> lap.position == Just leadPosition)
                             |> List.map
                                 (\lap ->
                                     { lapNumber = lap.lap
                                     , eventTime = lap.elapsed
-                                    , carNumber = entrant.metadata.carNumber
+                                    , carNumber = car.metadata.carNumber
                                     }
                                 )
                     )
@@ -175,12 +175,12 @@ leadPosition =
     0
 
 
-pitEvents : List Entrant -> List TimelineEvent
-pitEvents entrants =
-    entrants
+pitEvents : List Car -> List TimelineEvent
+pitEvents cars =
+    cars
         |> List.concatMap
-            (\entrant ->
-                entrant.laps
+            (\car ->
+                car.laps
                     |> List.concatMap
                         (\lap ->
                             case lap.pitTime of
@@ -191,12 +191,12 @@ pitEvents entrants =
                                     in
                                     [ { eventTime = pitInTime
                                       , eventType =
-                                            CarEvent entrant.metadata.carNumber
+                                            CarEvent car.metadata.carNumber
                                                 (PitIn { lapNumber = lap.lap, duration = pitDuration })
                                       }
                                     , { eventTime = lap.elapsed
                                       , eventType =
-                                            CarEvent entrant.metadata.carNumber
+                                            CarEvent car.metadata.carNumber
                                                 (PitOut { lapNumber = lap.lap, duration = pitDuration })
                                       }
                                     ]
@@ -207,12 +207,12 @@ pitEvents entrants =
             )
 
 
-terminalEvents : Duration -> List Entrant -> List TimelineEvent
-terminalEvents timeLimit entrants =
-    entrants
+terminalEvents : Duration -> List Car -> List TimelineEvent
+terminalEvents timeLimit cars =
+    cars
         |> List.filterMap
-            (\entrant ->
-                List.Extra.last entrant.laps
+            (\car ->
+                List.Extra.last car.laps
                     |> Maybe.map
                         (\finalLap ->
                             let
@@ -224,7 +224,7 @@ terminalEvents timeLimit entrants =
                                         Checkered
                             in
                             { eventTime = finalLap.elapsed
-                            , eventType = CarEvent entrant.metadata.carNumber carEventType
+                            , eventType = CarEvent car.metadata.carNumber carEventType
                             }
                         )
             )

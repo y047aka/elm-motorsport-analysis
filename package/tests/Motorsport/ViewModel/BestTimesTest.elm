@@ -8,7 +8,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope(..))
 import Test exposing (Test, describe, test)
@@ -40,11 +40,11 @@ tests =
                     let
                         -- Lap 1 ends at 6.000 and lap 2 at 10.000, the quicker of
                         -- the two.
-                        entrants =
+                        cars =
                             [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
                     in
                     [ 0, 5999, 6000, 9999, 10000 ]
-                        |> List.map (\elapsed -> (readAt elapsed UpToElapsed entrants).fastestLapTime)
+                        |> List.map (\elapsed -> (readAt elapsed UpToElapsed cars).fastestLapTime)
                         |> Expect.equal [ 0, 0, 6000, 6000, 5000 ]
             , test "a lap with no recorded time is not the quickest" <|
                 \_ ->
@@ -104,21 +104,21 @@ tests =
 -- HELPERS
 
 
-readAt : Duration -> Scope -> List Entrant -> BestTimes
-readAt elapsed scope entrants =
-    BestTimes.compute scope { elapsed = elapsed } (Race.fromEntrants entrants)
+readAt : Duration -> Scope -> List Car -> BestTimes
+readAt elapsed scope cars =
+    BestTimes.compute scope { elapsed = elapsed } (Race.fromCars cars)
 
 
 {-| The three fastest sector times in sector order.
 -}
-fastestSectors : Scope -> List Entrant -> List Duration
+fastestSectors : Scope -> List Car -> List Duration
 fastestSectors =
     fastestSectorsAt 0
 
 
-fastestSectorsAt : Duration -> Scope -> List Entrant -> List Duration
-fastestSectorsAt elapsed scope entrants =
-    readAt elapsed scope entrants
+fastestSectorsAt : Duration -> Scope -> List Car -> List Duration
+fastestSectorsAt elapsed scope cars =
+    readAt elapsed scope cars
         |> .fastestSectors
         |> Sector.values
 
@@ -162,7 +162,7 @@ empty =
     Lap.empty
 
 
-car : Entrant.CarNumber -> List Lap -> Entrant
+car : CarNumber -> List Lap -> Car
 car carNumber laps =
     { metadata =
         { carNumber = carNumber

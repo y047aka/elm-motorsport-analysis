@@ -5,19 +5,19 @@ import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.Race.Entrant exposing (Entrant)
+import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "TimelineEvent.fromEntrants"
+    describe "TimelineEvent.fromCars"
         [ test "empty cars produces only RaceStart" <|
             \_ ->
                 let
                     events =
-                        TimelineEvent.fromEntrants []
+                        TimelineEvent.fromCars []
                 in
                 Expect.all
                     [ \() -> Expect.equal 1 (List.length events)
@@ -41,7 +41,7 @@ suite =
                         carWithLaps [ lapAt 1 95365, lapAt 2 189575 ]
 
                     events =
-                        TimelineEvent.fromEntrants [ car ]
+                        TimelineEvent.fromCars [ car ]
 
                     -- timeLimit = (189575 // 3600000) * 3600000 = 0
                     -- final_lap.elapsed = 189575 >= 0, so terminal event is Checkered
@@ -67,7 +67,7 @@ suite =
                         carWithLaps [ lapAt 1 9000000 ]
 
                     events =
-                        TimelineEvent.fromEntrants [ car ]
+                        TimelineEvent.fromCars [ car ]
 
                     checkered =
                         events
@@ -89,7 +89,7 @@ suite =
                         carWithLaps [ lapAt 1 95365, lapAt 2 189575 ]
 
                     events =
-                        TimelineEvent.fromEntrants [ car ]
+                        TimelineEvent.fromCars [ car ]
                 in
                 Expect.all
                     [ \() -> Expect.atLeast 3 (List.length events)
@@ -118,7 +118,7 @@ suite =
                         carWithLaps laps
 
                     events =
-                        TimelineEvent.fromEntrants [ car ]
+                        TimelineEvent.fromCars [ car ]
 
                     pitInEvents =
                         events
@@ -203,7 +203,7 @@ suite =
                         carWithLaps laps
 
                     events =
-                        TimelineEvent.fromEntrants [ car ]
+                        TimelineEvent.fromCars [ car ]
 
                     embeddedPitTimes =
                         events
@@ -225,7 +225,7 @@ suite =
 -- HELPERS
 
 
-carWithLaps : List Lap -> Entrant
+carWithLaps : List Lap -> Car
 carWithLaps laps =
     { metadata =
         { carNumber = "1"
@@ -279,7 +279,7 @@ unplaced lap =
     { lap | position = Nothing }
 
 
-carNumbered : String -> List Lap -> Entrant
+carNumbered : String -> List Lap -> Car
 carNumbered carNumber laps =
     let
         base =
@@ -293,9 +293,9 @@ carNumbered carNumber laps =
 
 {-| Every TookLead in the timeline, as (when, who).
 -}
-tookLeadEvents : List Entrant -> List ( Int, String )
-tookLeadEvents entrants =
-    TimelineEvent.fromEntrants entrants
+tookLeadEvents : List Car -> List ( Int, String )
+tookLeadEvents cars =
+    TimelineEvent.fromCars cars
         |> List.filterMap
             (\event ->
                 case event.eventType of

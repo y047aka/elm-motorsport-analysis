@@ -16,7 +16,7 @@ import Motorsport.Class as Class
 import Motorsport.Class.Era exposing (Era)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Race.Entrant as Entrant
+import Motorsport.Race.Car as Car
 
 
 type alias Event =
@@ -27,7 +27,7 @@ type alias Event =
 
 type alias StartingGridItem =
     { position : Int
-    , car : Entrant.Metadata
+    , car : Car.Metadata
     }
 
 
@@ -49,9 +49,9 @@ startingGridItemDecoder era =
         (field "car" (carMetadataDecoder era))
 
 
-carMetadataDecoder : Era -> Decoder Entrant.Metadata
+carMetadataDecoder : Era -> Decoder Car.Metadata
 carMetadataDecoder era =
-    Decode.succeed Entrant.Metadata
+    Decode.succeed Car.Metadata
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" (string |> Decode.map (Class.fromString era))

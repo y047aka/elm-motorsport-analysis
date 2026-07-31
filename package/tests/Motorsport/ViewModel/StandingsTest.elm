@@ -7,7 +7,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.Race.Entrant as Entrant
+import Motorsport.Race.Car as Car
 import Motorsport.Sector as Sector exposing (Sector(..))
 import Motorsport.Status exposing (Status(..))
 import Motorsport.ViewModel.Entry exposing (Entry)
@@ -120,7 +120,7 @@ createStandingsEntryWithGap position carNumber gap =
     }
 
 
-createMetadata : String -> Entrant.Metadata
+createMetadata : String -> Car.Metadata
 createMetadata carNumber =
     { carNumber = carNumber
     , class = Class.none

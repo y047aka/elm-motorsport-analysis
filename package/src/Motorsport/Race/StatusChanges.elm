@@ -19,7 +19,7 @@ see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 import Dict exposing (Dict)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Race.Entrant exposing (CarNumber)
+import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status as Status exposing (Status)
 

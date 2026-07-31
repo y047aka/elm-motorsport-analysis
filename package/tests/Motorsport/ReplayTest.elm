@@ -6,7 +6,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.ViewModel as ViewModel
@@ -111,24 +111,24 @@ suite =
 initialModel : Replay.Model
 initialModel =
     let
-        entrants =
+        cars =
             [ retiringCar, survivingCar ]
     in
-    Replay.fromEntrants entrants
+    Replay.fromCars cars
 
 
-retiringCar : Entrant
+retiringCar : Car
 retiringCar =
-    entrantWith "1"
+    carWith "1"
         [ lapAt "1" 1 100000
         , lapAt "1" 2 200000 |> withPitTime (Just 30000)
         , lapAt "1" 3 300000
         ]
 
 
-survivingCar : Entrant
+survivingCar : Car
 survivingCar =
-    entrantWith "2"
+    carWith "2"
         [ lapAt "2" 1 100000
         , lapAt "2" 2 7300000
         ]
@@ -165,7 +165,7 @@ skipBy duration =
 {-| The status as the standings show it, which is the whole point: the model
 holds no status of its own, it is read back out of the race at the clock.
 -}
-statusOf : Entrant.CarNumber -> Replay.Model -> Maybe Status
+statusOf : CarNumber -> Replay.Model -> Maybe Status
 statusOf carNumber m =
     ViewModel.compute UpToElapsed m
         |> .standings
@@ -175,8 +175,8 @@ statusOf carNumber m =
         |> Maybe.map .status
 
 
-entrantWith : Entrant.CarNumber -> List Lap -> Entrant
-entrantWith carNumber laps =
+carWith : CarNumber -> List Lap -> Car
+carWith carNumber laps =
     { metadata =
         { carNumber = carNumber
         , drivers = [ Driver.fromName "Test Driver" ]
@@ -190,7 +190,7 @@ entrantWith carNumber laps =
     }
 
 
-lapAt : Entrant.CarNumber -> Int -> Int -> Lap
+lapAt : CarNumber -> Int -> Int -> Lap
 lapAt carNumber lapNumber elapsed =
     let
         base =
