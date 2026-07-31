@@ -9,8 +9,7 @@ import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.ViewModel as ViewModel
-import Motorsport.ViewModel.BestTimes exposing (Scope(..))
+import Motorsport.ViewModel as ViewModel exposing (Scope(..))
 import Motorsport.ViewModel.Standings as Standings
 import Test exposing (Test, describe, test)
 import Time exposing (millisToPosix)

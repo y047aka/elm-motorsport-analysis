@@ -1,9 +1,10 @@
 module Motorsport.Race.BestTimes exposing
-    ( BestTimes
+    ( BestTimes, Snapshot, ByRecord
     , empty, fromCars
+    , at, final
     )
 
-{-| When each of the race's best times was set.
+{-| When each of the race's best times was set, and what they stand at.
 
 Twenty records make up the baseline a timing screen rates against: the fastest
 lap, three sectors, fifteen mini-sectors, and the slowest lap that the other end
@@ -12,8 +13,9 @@ of the scale is drawn against. Each is a
 beaten, which is what keeps reading the baseline off a binary search rather than
 twenty passes over every lap of the race.
 
-@docs BestTimes
+@docs BestTimes, Snapshot, ByRecord
 @docs empty, fromCars
+@docs at, final
 
 -}
 
@@ -25,23 +27,54 @@ import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
+{-| The whole race's records, each one as a history of when it changed.
+-}
 type alias BestTimes =
-    { fastestLapTime : ChangePoints Duration
-    , slowestLapTime : ChangePoints Duration
-    , fastestSectors : BySector (ChangePoints Duration)
-    , fastestMiniSectors : ByMiniSector (ChangePoints Duration)
+    ByRecord (ChangePoints Duration)
+
+
+{-| The same records as they stood at one moment -- the comparison baseline a
+widget rates and scales individual times against.
+
+A record no lap has set yet reads `0`, so a caller that would have to unwrap a
+`Maybe` on all twenty of them does not have to.
+
+-}
+type alias Snapshot =
+    ByRecord Duration
+
+
+{-| One value per record.
+
+The two type aliases above differ only in what they hold, which is what lets
+`map` below enumerate the twenty records once for every operation this module
+performs on them -- building, reading, emptying. Adding a record means writing it
+here and in `rules`, and nowhere else.
+
+-}
+type alias ByRecord a =
+    { fastestLapTime : a
+    , slowestLapTime : a
+    , fastestSectors : BySector a
+    , fastestMiniSectors : ByMiniSector a
     }
 
 
-{-| No laps recorded yet. Every reading comes back `Nothing`.
+map : (a -> b) -> ByRecord a -> ByRecord b
+map f records =
+    { fastestLapTime = f records.fastestLapTime
+    , slowestLapTime = f records.slowestLapTime
+    , fastestSectors = Sector.initialize (\sector -> f (Sector.get sector records.fastestSectors))
+    , fastestMiniSectors = LeMans.initialize (\mini -> f (LeMans.get mini records.fastestMiniSectors))
+    }
+
+
+{-| No laps recorded yet. Every reading comes back `Nothing`, so every snapshot
+of it reads zero.
 -}
 empty : BestTimes
 empty =
-    { fastestLapTime = ChangePoints.empty
-    , slowestLapTime = ChangePoints.empty
-    , fastestSectors = Sector.initialize (always ChangePoints.empty)
-    , fastestMiniSectors = LeMans.initialize (always ChangePoints.empty)
-    }
+    map (always ChangePoints.empty) rules
 
 
 fromCars : List Car -> BestTimes
@@ -54,12 +87,46 @@ fromCars cars =
                 |> List.concatMap .laps
                 |> List.sortBy .elapsed
     in
-    { fastestLapTime = improvements lessThan recordedLapTime laps
-    , slowestLapTime = improvements greaterThan lapTimeAsFound laps
+    map (\{ beats, timeFrom } -> improvements beats timeFrom laps) rules
+
+
+{-| The records as they stood at a moment of the race: what a car crossing the
+line then was rated against.
+-}
+at : { elapsed : Duration } -> BestTimes -> Snapshot
+at clock =
+    map (ChangePoints.valueAt clock.elapsed >> Maybe.withDefault 0)
+
+
+{-| The records as the race left them, without having to name a time past the
+end of it.
+-}
+final : BestTimes -> Snapshot
+final =
+    map (ChangePoints.last >> Maybe.withDefault 0)
+
+
+
+-- WHAT EACH RECORD COMPETES FOR
+
+
+{-| What sets one record apart from another: which of a lap's times it is drawn
+from, and which way round a time has to be to beat the standing one.
+-}
+type alias Rule =
+    { beats : Duration -> Duration -> Bool
+    , timeFrom : Lap -> Maybe Duration
+    }
+
+
+rules : ByRecord Rule
+rules =
+    { fastestLapTime = { beats = lessThan, timeFrom = recordedLapTime }
+    , slowestLapTime = { beats = greaterThan, timeFrom = lapTimeAsFound }
     , fastestSectors =
-        Sector.initialize (\sector -> improvements lessThan (recordedSectorTime sector) laps)
+        Sector.initialize (\sector -> { beats = lessThan, timeFrom = recordedSectorTime sector })
     , fastestMiniSectors =
-        LeMans.initialize (\mini -> improvements lessThan (recordedMiniSectorTime mini) laps)
+        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = recordedMiniSectorTime mini })
     }
 
 

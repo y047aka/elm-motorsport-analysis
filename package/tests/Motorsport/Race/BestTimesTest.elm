@@ -1,4 +1,4 @@
-module Motorsport.ViewModel.BestTimesTest exposing (tests)
+module Motorsport.Race.BestTimesTest exposing (tests)
 
 import Expect
 import Motorsport.Circuit.LeMans as LeMans
@@ -8,15 +8,15 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
-import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes, Snapshot)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.BestTimes as BestTimes exposing (BestTimes, Scope(..))
 import Test exposing (Test, describe, test)
 
 
 tests : Test
 tests =
-    describe "Motorsport.ViewModel.BestTimes"
+    describe "Motorsport.Race.BestTimes"
         [ describe "fastestSectors"
             [ test "takes each sector from whichever car was quickest through it" <|
                 \_ ->
@@ -24,14 +24,14 @@ tests =
                     [ car "1" [ lap 1 6000 ( 1000, 2000, 3000 ) ]
                     , car "2" [ lap 1 6000 ( 1100, 1900, 2900 ) ]
                     ]
-                        |> fastestSectors WholeRace
+                        |> finalSectors
                         |> Expect.equal [ 1000, 1900, 2900 ]
             , test "ignores a sector with no recorded time rather than calling it the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 ( 1000, 2000, 3000 ) ]
                     , car "2" [ lap 1 6000 ( 0, 0, 0 ) ]
                     ]
-                        |> fastestSectors WholeRace
+                        |> finalSectors
                         |> Expect.equal [ 1000, 2000, 3000 ]
             ]
         , describe "fastestLapTime"
@@ -44,12 +44,12 @@ tests =
                             [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
                     in
                     [ 0, 5999, 6000, 9999, 10000 ]
-                        |> List.map (\elapsed -> (readAt elapsed UpToElapsed cars).fastestLapTime)
+                        |> List.map (\elapsed -> (at elapsed cars).fastestLapTime)
                         |> Expect.equal [ 0, 0, 6000, 6000, 5000 ]
             , test "a lap with no recorded time is not the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 0 anySectors, lap 2 6000 anySectors ] ]
-                        |> readAt 0 WholeRace
+                        |> final
                         |> .fastestLapTime
                         |> Expect.equal 6000
             ]
@@ -57,7 +57,7 @@ tests =
             [ test "stands at the slowest lap run so far" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
-                        |> readAt 0 WholeRace
+                        |> final
                         |> .slowestLapTime
                         |> Expect.equal 6000
             ]
@@ -71,13 +71,13 @@ tests =
                         , lap 2 6000 anySectors |> withMiniSectorsOf 2000
                         ]
                     ]
-                        |> readAt 0 WholeRace
+                        |> final
                         |> .fastestMiniSectors
                         |> LeMans.values
                         |> Expect.equal (List.repeat 15 2000)
             ]
-        , describe "Scope"
-            [ test "UpToElapsed ignores laps the clock has not reached yet" <|
+        , describe "where the records are read"
+            [ test "`at` ignores laps the clock has not reached yet" <|
                 \_ ->
                     -- The quicker lap ends at 12.000, after the clock at 6.000.
                     [ car "1"
@@ -85,16 +85,18 @@ tests =
                         , lap 2 6000 ( 900, 1900, 2900 )
                         ]
                     ]
-                        |> fastestSectorsAt 6000 UpToElapsed
+                        |> at 6000
+                        |> .fastestSectors
+                        |> Sector.values
                         |> Expect.equal [ 1000, 2000, 3000 ]
-            , test "WholeRace counts every lap, whatever the clock says" <|
+            , test "`final` counts every lap, whatever the clock says" <|
                 \_ ->
                     [ car "1"
                         [ lap 1 6000 ( 1000, 2000, 3000 )
                         , lap 2 6000 ( 900, 1900, 2900 )
                         ]
                     ]
-                        |> fastestSectorsAt 6000 WholeRace
+                        |> finalSectors
                         |> Expect.equal [ 900, 1900, 2900 ]
             ]
         ]
@@ -104,21 +106,30 @@ tests =
 -- HELPERS
 
 
-readAt : Duration -> Scope -> List Car -> BestTimes
-readAt elapsed scope cars =
-    BestTimes.compute scope { elapsed = elapsed } (Race.fromCars cars)
-
-
-{-| The three fastest sector times in sector order.
+{-| The records a race made of these cars ends up with.
 -}
-fastestSectors : Scope -> List Car -> List Duration
-fastestSectors =
-    fastestSectorsAt 0
+final : List Car -> Snapshot
+final cars =
+    BestTimes.final (recordsOf cars)
 
 
-fastestSectorsAt : Duration -> Scope -> List Car -> List Duration
-fastestSectorsAt elapsed scope cars =
-    readAt elapsed scope cars
+{-| The records as they stood at `elapsed`.
+-}
+at : Duration -> List Car -> Snapshot
+at elapsed cars =
+    BestTimes.at { elapsed = elapsed } (recordsOf cars)
+
+
+recordsOf : List Car -> BestTimes
+recordsOf cars =
+    (Race.fromCars cars).bestTimes
+
+
+{-| The three fastest sector times in sector order, over the whole race.
+-}
+finalSectors : List Car -> List Duration
+finalSectors cars =
+    final cars
         |> .fastestSectors
         |> Sector.values
 
