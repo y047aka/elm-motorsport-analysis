@@ -17,10 +17,10 @@ import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import List.Extra
-import Motorsport.Car exposing (Car, CarNumber)
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
+import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -201,6 +201,10 @@ accumulate raw ( bests, acc ) =
 
 
 -- POSITIONS
+-- `Lap.position` is not in the source data; it is worked out here. Two things
+-- downstream depend on it having been: the position-progression chart, and the
+-- lead changes in `Motorsport.Race.TimelineEvent`. Both go quiet rather than
+-- fail if it is skipped.
 
 
 assignPositions : List Car -> List Car

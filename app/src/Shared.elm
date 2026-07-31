@@ -14,10 +14,9 @@ import Data.Wec as Wec
 import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class.Era as Era
-import Motorsport.RaceControl as RaceControl
-import Motorsport.TimelineEvent as TimelineEvent
+import Motorsport.Race.Car as Car exposing (Car)
+import Motorsport.Replay as Replay
 import Motorsport.ViewModel as ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.BestTimes exposing (Scope(..))
 import Shared.Msg exposing (Msg(..))
@@ -29,7 +28,7 @@ import Shared.Msg exposing (Msg(..))
 
 type alias Model =
     { eventSummary : EventSummary
-    , raceControl : RaceControl.Model
+    , replay : Replay.Model
     , viewModel : ViewModel
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
@@ -39,14 +38,14 @@ type alias Model =
 init : flags -> ( Model, Effect Msg )
 init _ =
     let
-        raceControlInit =
-            RaceControl.placeholder
+        replayInit =
+            Replay.empty
 
         viewModelInit =
-            ViewModel.compute WholeRace raceControlInit
+            ViewModel.compute WholeRace replayInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
-      , raceControl = raceControlInit
+      , replay = replayInit
       , viewModel = viewModelInit
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
@@ -117,14 +116,14 @@ update msg m =
         LapsLoaded_Wec (Err _) ->
             ( m, Effect.none )
 
-        RaceControlMsg raceControlMsg ->
+        ReplayMsg replayMsg ->
             let
-                rcNew =
-                    RaceControl.update raceControlMsg m.raceControl
+                replayNew =
+                    Replay.update replayMsg m.replay
             in
             ( { m
-                | raceControl = rcNew
-                , viewModel = ViewModel.compute UpToElapsed rcNew
+                | replay = replayNew
+                , viewModel = ViewModel.compute UpToElapsed replayNew
               }
             , Effect.none
             )
@@ -147,13 +146,12 @@ finalizeWecIfReady m =
                 carsWithLaps =
                     WecLaps.attach rawLaps cars
 
-                rcNew =
-                    RaceControl.fromCars (TimelineEvent.fromCars carsWithLaps) carsWithLaps
-                        |> Maybe.withDefault RaceControl.placeholder
+                replayNew =
+                    Replay.fromCars carsWithLaps
             in
             ( { m
-                | raceControl = rcNew
-                , viewModel = ViewModel.compute WholeRace rcNew
+                | replay = replayNew
+                , viewModel = ViewModel.compute WholeRace replayNew
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }

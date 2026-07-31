@@ -6,10 +6,11 @@ import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
-import Motorsport.Car as Car
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
-import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.Status as Status
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
@@ -117,7 +118,7 @@ carRowContent item =
         [ text (item.currentDriver |> Maybe.withDefault Driver.unknown |> Driver.toSurname) ]
     , div [ class "text-xs text-right" ]
         [ text (Gap.toString item.intervalToAhead) ]
-    , if item.status == Car.InPit then
+    , if item.status == Status.InPit then
         div
             [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
             [ text "P" ]

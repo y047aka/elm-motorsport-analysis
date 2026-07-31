@@ -48,7 +48,7 @@ sendCmd =
 
 
 {-| Ask the shared model to handle a message. Pages use this to load data or to
-delegate to shared state (e.g. race control).
+delegate to shared state (e.g. playback).
 -}
 sendSharedMsg : Shared.Msg.Msg -> Effect msg
 sendSharedMsg =

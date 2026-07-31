@@ -1,4 +1,4 @@
-module Motorsport.Leaderboard exposing
+module Motorsport.Widget.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
     , Model, initialSort
     , Msg, update
@@ -50,6 +50,7 @@ module Motorsport.Leaderboard exposing
 
 -}
 
+import Compare
 import Css exposing (..)
 import Css.Color exposing (oklch)
 import Css.Extra exposing (when)
@@ -58,7 +59,6 @@ import DataView.Options exposing (Options, PaginationOption(..), SelectingOption
 import Html.Styled exposing (Html, div, img, span, text)
 import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
-import Motorsport.Car as Car exposing (Status)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
@@ -68,8 +68,9 @@ import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProg
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
-import Motorsport.Utils exposing (compareBy)
-import Motorsport.ViewModel.Standings as Standings exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance, Standings)
+import Motorsport.Status as Status exposing (Status)
+import Motorsport.ViewModel.Entry exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 
 
 
@@ -188,7 +189,7 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
     , filter = \_ _ -> True
     }
 
@@ -198,7 +199,7 @@ bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
-        , sorter = compareBy (getter >> Maybe.map .time >> Maybe.withDefault 0)
+        , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
         }
 
 
@@ -281,7 +282,7 @@ driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : Li
 driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
-    , sorter = compareBy (getter >> .metadata >> .team)
+    , sorter = Compare.by (getter >> .metadata >> .team)
     , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
     }
 
@@ -405,7 +406,7 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
                 ]
                 []
     in
-    if Car.hasRetired status then
+    if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
@@ -506,7 +507,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
                 ]
                 []
     in
-    if Car.hasRetired status then
+    if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else

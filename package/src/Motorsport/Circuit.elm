@@ -14,8 +14,8 @@ module Motorsport.Circuit exposing
 
 -}
 
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Direction exposing (Direction(..))
 import Motorsport.Sector as Sector exposing (BySector)
 
 

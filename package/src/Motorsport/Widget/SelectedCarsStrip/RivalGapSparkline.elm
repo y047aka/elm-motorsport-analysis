@@ -12,8 +12,8 @@ import Html.Styled exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings exposing (Entry)
 
 
 {-| Shows the car's relationship to its rivals ahead and behind as the history of

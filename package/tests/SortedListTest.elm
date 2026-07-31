@@ -1,8 +1,8 @@
 module SortedListTest exposing (suite)
 
+import Compare
 import Expect
 import Motorsport.Ordering exposing (ByPosition)
-import Motorsport.Utils exposing (compareBy)
 import SortedList exposing (SortedList)
 import Test exposing (Test, describe, test)
 
@@ -27,7 +27,7 @@ suite =
                             ]
 
                         sorted =
-                            SortedList.sortBy (compareBy .position) items
+                            SortedList.sortBy (Compare.by .position) items
 
                         result =
                             SortedList.toList sorted
@@ -45,7 +45,7 @@ suite =
                             ]
 
                         sorted =
-                            SortedList.sortBy (compareBy .position) items
+                            SortedList.sortBy (Compare.by .position) items
 
                         result =
                             SortedList.toList sorted
@@ -62,7 +62,7 @@ suite =
                             [ { position = 1, name = "Only" } ]
 
                         sorted =
-                            SortedList.sortBy (compareBy .position) items
+                            SortedList.sortBy (Compare.by .position) items
 
                         result =
                             SortedList.toList sorted
@@ -80,7 +80,7 @@ suite =
                             ]
 
                         sorted =
-                            SortedList.sortBy (compareBy .position) items
+                            SortedList.sortBy (Compare.by .position) items
 
                         mapped =
                             SortedList.map .name sorted
@@ -100,7 +100,7 @@ suite =
                     let
                         byPosition : SortedList ByPosition TestItem
                         byPosition =
-                            SortedList.sortBy (compareBy .position)
+                            SortedList.sortBy (Compare.by .position)
                                 [ { position = 1, name = "Test" } ]
                     in
                     SortedList.length byPosition

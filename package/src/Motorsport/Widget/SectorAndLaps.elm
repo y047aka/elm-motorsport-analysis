@@ -10,11 +10,11 @@ shared by SelectedCarsStrip and Compare.
 import Css exposing (batch, num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
-import Motorsport.Car as Car
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.Standings exposing (Entry)
+import Motorsport.Status as Status
+import Motorsport.ViewModel.Entry exposing (Entry)
 import Path.Styled as Path
 import Shape
 import Svg.Styled exposing (Svg, g, svg)
@@ -95,7 +95,7 @@ currentLapTimeCell item =
             ]
         ]
         [ text
-            (if Car.hasRetired item.status then
+            (if Status.hasRetired item.status then
                 "-"
 
              else
@@ -137,7 +137,7 @@ sectors are filled with their performance color.
 -}
 currentSectorPie : Entry -> Html msg
 currentSectorPie item =
-    case ( item.currentLapSectorStates, Car.hasRetired item.status ) of
+    case ( item.currentLapSectorStates, Status.hasRetired item.status ) of
         ( Just slots, False ) ->
             sectorPie (List.map currentSectorSlot (Sector.values slots))
 

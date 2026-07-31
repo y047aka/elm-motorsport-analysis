@@ -30,6 +30,7 @@ module Motorsport.Lap exposing
 
 -}
 
+import Compare exposing (Comparator)
 import List.Extra
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
 import Motorsport.Driver as Driver exposing (Driver)
@@ -99,20 +100,21 @@ type alias Clock =
     { elapsed : Duration }
 
 
-compareAt : Clock -> Lap -> Lap -> Order
-compareAt clock a b =
-    case Basics.compare a.lap b.lap of
-        LT ->
-            GT
+{-| Which of two laps is ahead on track, read at a moment of the race.
 
-        EQ ->
-            compareLapsInSameLap clock a b
+Every step of it runs backwards from the plain comparison: the car on the higher
+lap, in the later sector, in the later mini sector is the one in front.
 
-        GT ->
-            LT
+-}
+compareAt : Clock -> Comparator Lap
+compareAt clock =
+    Compare.concat
+        [ Compare.reverse (Compare.by .lap)
+        , compareLapsInSameLap clock
+        ]
 
 
-compareLapsInSameLap : Clock -> Lap -> Lap -> Order
+compareLapsInSameLap : Clock -> Comparator Lap
 compareLapsInSameLap clock a b =
     let
         ( sector_a, segment_a ) =
@@ -121,15 +123,12 @@ compareLapsInSameLap clock a b =
         ( sector_b, segment_b ) =
             currentSegment clock b
     in
-    case Sector.compare sector_a sector_b of
-        LT ->
-            GT
-
+    case Compare.reverse Sector.compare sector_a sector_b of
         EQ ->
             compareLapsInSameSector clock a b segment_a segment_b
 
-        GT ->
-            LT
+        order ->
+            order
 
 
 compareLapsInSameSector : Clock -> Lap -> Lap -> Segment -> Segment -> Order
@@ -138,15 +137,12 @@ compareLapsInSameSector clock a b segment_a segment_b =
         ( Just _, Just _ ) ->
             case ( currentMiniSector clock a, currentMiniSector clock b ) of
                 ( Just ms_a, Just ms_b ) ->
-                    case Basics.compare (miniSectorToIndex ms_a) (miniSectorToIndex ms_b) of
-                        LT ->
-                            GT
-
-                        GT ->
-                            LT
-
+                    case Compare.reverse (Compare.by miniSectorToIndex) ms_a ms_b of
                         EQ ->
                             Basics.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
+
+                        order ->
+                            order
 
                 ( Just _, Nothing ) ->
                     LT

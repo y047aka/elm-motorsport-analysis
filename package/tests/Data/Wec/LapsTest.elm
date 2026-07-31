@@ -3,10 +3,10 @@ module Data.Wec.LapsTest exposing (suite)
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
 import Json.Decode as Decode
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Race.Car exposing (Car)
 import Test exposing (Test, describe, test)
 
 
@@ -148,8 +148,4 @@ placeholderCar carNumber =
         }
     , startPosition = 0
     , laps = []
-    , currentLap = Nothing
-    , lastLap = Nothing
-    , status = Car.PreRace
-    , currentDriver = Nothing
     }

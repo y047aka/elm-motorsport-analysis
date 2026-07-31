@@ -16,8 +16,9 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.ViewModel exposing (ViewModel)
+import Motorsport.ViewModel.Entry as Entry exposing (Entry)
 import Motorsport.ViewModel.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel.Standings as Standings exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
@@ -99,7 +100,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHist
                         , property "column-gap" "12px"
                         ]
                     ]
-                    [ CarSelector.classBadge (Standings.classInfoOf first)
+                    [ CarSelector.classBadge (Entry.classInfoOf first)
                     , CarSelector.carSelector onToggleCar standings class selectedCarNumbers
                     ]
                 , div

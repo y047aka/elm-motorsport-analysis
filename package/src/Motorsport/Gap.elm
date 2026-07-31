@@ -99,9 +99,9 @@ type alias Clock =
 -- MEASURING A GAP
 
 
-{-| Whatever carries a lap history and a lap in progress.
-[`Car`](Motorsport-Car#Car) is the only one in the app; measuring a gap needs
-nothing else from it.
+{-| Whatever carries a lap history and a lap in progress. The standings' own
+car state is the only one in the app; measuring a gap needs nothing else from
+it.
 -}
 type alias Competitor a =
     { a | currentLap : Maybe Lap, laps : List Lap }

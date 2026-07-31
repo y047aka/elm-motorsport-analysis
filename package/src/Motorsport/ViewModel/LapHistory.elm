@@ -18,17 +18,17 @@ it is already sliced by time. Only chart modules that scan lap history over time
 import Dict exposing (Dict)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, completedLapsAt)
-import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
+import Motorsport.Race.Car exposing (Car)
 
 
 type LapHistory
     = LapHistory (Dict String (List Lap))
 
 
-compute : { elapsed : Duration } -> RunningOrder -> LapHistory
-compute raceClock cars =
-    RunningOrder.toList cars
-        |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt raceClock car.laps ))
+compute : { elapsed : Duration } -> List Car -> LapHistory
+compute clock cars =
+    cars
+        |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt clock car.laps ))
         |> Dict.fromList
         |> LapHistory
 

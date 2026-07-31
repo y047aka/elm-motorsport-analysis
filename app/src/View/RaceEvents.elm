@@ -9,25 +9,25 @@ elapsed time) as a sortable table.
 
 -}
 
+import Compare
 import DataView
 import Html.Styled as Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
-import Motorsport.RaceControl as RaceControl
-import Motorsport.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
-import Motorsport.Utils exposing (compareBy)
+import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Replay as Replay
 
 
-view : (DataView.Msg -> msg) -> DataView.Model -> RaceControl.Model -> Html msg
-view toMsg eventsState raceControl =
+view : (DataView.Msg -> msg) -> DataView.Model -> Replay.Model -> Html msg
+view toMsg eventsState replay =
     let
         currentElapsed =
-            Clock.getElapsed raceControl.clock
+            Clock.getElapsed replay.playback
 
+        -- The race builds its timeline in time order, and filtering keeps it.
         occurredEvents =
-            raceControl.timelineEvents
+            replay.race.timelineEvents
                 |> List.filter (\event -> currentElapsed >= event.eventTime)
-                |> List.sortBy .eventTime
     in
     div []
         [ Html.h2 [] [ text "Race Events" ]
@@ -43,7 +43,7 @@ config toMsg =
         [ DataView.customColumn
             { label = "Time"
             , getter = .eventTime >> Duration.toString
-            , sorter = compareBy .eventTime
+            , sorter = Compare.by .eventTime
             }
         , DataView.stringColumn
             { label = "Car"
@@ -73,8 +73,8 @@ eventTypeToString eventType =
         CarEvent _ (Start _) ->
             "Start"
 
-        CarEvent _ (LapCompleted lap _) ->
-            "Lap " ++ String.fromInt lap ++ " Completed"
+        CarEvent _ TookLead ->
+            "Took the Lead"
 
         CarEvent _ (PitIn _) ->
             "Pit In"

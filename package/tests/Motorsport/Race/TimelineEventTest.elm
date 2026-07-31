@@ -1,12 +1,12 @@
-module Motorsport.TimelineEventTest exposing (suite)
+module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
-import Motorsport.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
+import Motorsport.Race.Car exposing (Car)
+import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Test exposing (Test, describe, test)
 
 
@@ -159,7 +159,36 @@ suite =
 
                     _ ->
                         Expect.fail "Expected exactly one PitIn and one PitOut"
-        , test "embedded laps in Start / LapCompleted have pitTime stripped" <|
+        , describe "lead changes"
+            [ test "a field that never changes leader produces no TookLead" <|
+                \_ ->
+                    [ carNumbered "1" [ leading (lapAt 1 95365), leading (lapAt 2 189575) ]
+                    , carNumbered "2" [ running (lapAt 1 96000), running (lapAt 2 190000) ]
+                    ]
+                        |> tookLeadEvents
+                        |> Expect.equal []
+            , test "one event per change, timed at the new leader crossing the line" <|
+                \_ ->
+                    -- Car 1 leads laps 1 and 3; car 2 takes it on lap 2. Two changes.
+                    [ carNumbered "1" [ leading (lapAt 1 95365), running (lapAt 2 191000), leading (lapAt 3 280000) ]
+                    , carNumbered "2" [ running (lapAt 1 96000), leading (lapAt 2 189575), running (lapAt 3 281000) ]
+                    ]
+                        |> tookLeadEvents
+                        |> Expect.equal [ ( 189575, "2" ), ( 280000, "1" ) ]
+            , test "whoever leads the opening lap has taken it from nobody" <|
+                \_ ->
+                    [ carNumbered "1" [ leading (lapAt 1 95365) ]
+                    , carNumbered "2" [ running (lapAt 1 96000) ]
+                    ]
+                        |> tookLeadEvents
+                        |> Expect.equal []
+            , test "laps with no position assigned yield no lead at all" <|
+                \_ ->
+                    [ carWithLaps [ unplaced (lapAt 1 95365), unplaced (lapAt 2 189575) ] ]
+                        |> tookLeadEvents
+                        |> Expect.equal []
+            ]
+        , test "the lap embedded in Start has pitTime stripped" <|
             \_ ->
                 let
                     pitDuration =
@@ -183,9 +212,6 @@ suite =
                                     case e.eventType of
                                         CarEvent _ (Start { currentLap }) ->
                                             Just currentLap.pitTime
-
-                                        CarEvent _ (LapCompleted _ { nextLap }) ->
-                                            Just nextLap.pitTime
 
                                         _ ->
                                             Nothing
@@ -211,10 +237,6 @@ carWithLaps laps =
         }
     , startPosition = 1
     , laps = laps
-    , currentLap = Nothing
-    , lastLap = Nothing
-    , status = Car.PreRace
-    , currentDriver = Nothing
     }
 
 
@@ -236,6 +258,53 @@ lapAt lapNumber elapsed =
 withPitTime : Maybe Int -> Lap -> Lap
 withPitTime pitTime lap =
     { lap | pitTime = pitTime }
+
+
+{-| `Lap.position` counts from zero, so the leader of a lap is position 0.
+-}
+leading : Lap -> Lap
+leading lap =
+    { lap | position = Just 0 }
+
+
+running : Lap -> Lap
+running lap =
+    { lap | position = Just 1 }
+
+
+{-| A lap the loader never got round to placing.
+-}
+unplaced : Lap -> Lap
+unplaced lap =
+    { lap | position = Nothing }
+
+
+carNumbered : String -> List Lap -> Car
+carNumbered carNumber laps =
+    let
+        base =
+            carWithLaps laps
+
+        metadata =
+            base.metadata
+    in
+    { base | metadata = { metadata | carNumber = carNumber } }
+
+
+{-| Every TookLead in the timeline, as (when, who).
+-}
+tookLeadEvents : List Car -> List ( Int, String )
+tookLeadEvents cars =
+    TimelineEvent.fromCars cars
+        |> List.filterMap
+            (\event ->
+                case event.eventType of
+                    CarEvent carNumber TookLead ->
+                        Just ( event.eventTime, carNumber )
+
+                    _ ->
+                        Nothing
+            )
 
 
 isSortedAscending : List Int -> Bool

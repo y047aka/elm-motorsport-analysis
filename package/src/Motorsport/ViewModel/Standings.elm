@@ -1,23 +1,19 @@
 module Motorsport.ViewModel.Standings exposing
-    ( Standings, Entry, ClassInfo
-    , CurrentSectorStates
-    , SectorPerformance, MiniSectorPerformance
+    ( Standings
     , compute, fromLaps, fromList
     , toList, toClassList, leader, lapCount, elapsed
-    , classInfoOf
     , groupCarsByCloseIntervals
     )
 
-{-|
+{-| The whole timing screen at one moment of the race.
 
-@docs Standings, Entry, ClassInfo
-@docs CurrentSectorStates
-@docs SectorPerformance, MiniSectorPerformance
+What a single line of it looks like is [`Entry`](Motorsport-ViewModel-Entry);
+this module is how one gets built and read back.
+
+@docs Standings
 @docs compute, fromLaps, fromList
 
 @docs toList, toClassList, leader, lapCount, elapsed
-
-@docs classInfoOf
 
 @docs groupCarsByCloseIntervals
 
@@ -25,17 +21,19 @@ module Motorsport.ViewModel.Standings exposing
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.Car as Car exposing (Car, Status)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
-import Motorsport.RunningOrder as RunningOrder exposing (RunningOrder)
+import Motorsport.Race as Race exposing (Race)
+import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Status as Status exposing (Status)
+import Motorsport.ViewModel.Entry as Entry exposing (ClassInfo, CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
 import SortedList exposing (SortedList)
 
 
@@ -53,86 +51,30 @@ type Standings
         }
 
 
-{-| Display info needed by class headers and badges.
-The color is settled when the class is decoded; see `Motorsport.Class`.
--}
-type alias ClassInfo =
-    { class : Class
-    , name : String
-
-    -- A raw CSS color string rather than Css.Color: every consumer feeds
-    -- this straight into a raw string sink (Svg fill, Css.property
-    -- "background-color"), so storing the extracted value avoids
-    -- re-extracting it at each call site.
-    , color : String
-    }
-
-
-type alias SectorPerformance =
-    BySector RatedTime
-
-
-type alias MiniSectorPerformance =
-    ByMiniSector (Maybe RatedTime)
-
-
-type alias Entry =
-    { position : Int
-    , positionInClass : Int
-    , status : Status
-    , metadata : Car.Metadata
-
-    -- A raw CSS color string; see ClassInfo.color.
-    , classColor : String
-    , lapsCompleted : Int
-    , currentLapTime : Maybe Duration
-    , currentLapBest : Maybe Duration
-
-    -- currentLapSectors holds raw times (for data display such as the Debug page).
-    -- currentLapSectorStates is the single source of truth for progress and performance rating.
-    , currentLapSectors : Maybe Lap.SectorTimes
-    , currentLapSectorStates : Maybe CurrentSectorStates
-    , currentLapMiniSectors : Maybe MiniSectors
-    , currentLapElapsed : Duration
-    , currentLapRated : Maybe RatedTime
-    , sector : Maybe Lap.SectorProgress
-    , miniSector : Maybe Lap.MiniSectorProgress
-    , gapToLeader : Gap
-    , intervalToAhead : Gap
-    , currentLapProgress : Float
-    , lastLapRated : Maybe RatedTime
-    , bestLapRated : Maybe RatedTime
-    , lastLapSectors : Maybe SectorPerformance
-    , lastLapMiniSectors : Maybe MiniSectorPerformance
-    , currentDriver : Maybe Driver
-    }
-
-
-{-| Per-sector "progress + performance rating" for the current lap.
-Rated at compute time so donut displays can render without being supplied BestTimes separately.
--}
-type alias CurrentSectorStates =
-    BySector { progress : Float, rated : RatedTime }
-
-
 compute :
     { a
         | fastestLapTime : Duration
         , fastestSectors : BySector Duration
         , fastestMiniSectors : ByMiniSector Duration
     }
-    -> { elapsed : Duration, lapCount : Int, cars : RunningOrder }
+    -> { elapsed : Duration }
+    -> Race
     -> Standings
-compute bestTimes config =
+compute bestTimes clock race =
     let
+        -- The entry list carries only the laps, so what each car is doing at
+        -- this moment is read off the clock here. Who is ahead of whom follows
+        -- from that, and every position below is read off the resulting order.
         carsList =
-            RunningOrder.toList config.cars
+            race.cars
+                |> List.map (carStateAt clock race)
+                |> Ordering.runningOrder clock
 
         leaderCar =
-            RunningOrder.leader config.cars
+            List.head carsList
 
         positionsInClass =
-            positionsInClassByCarNumber config.cars
+            positionsInClassByCarNumber carsList
 
         entries =
             carsList
@@ -153,14 +95,14 @@ compute bestTimes config =
                                 car.currentLap
 
                             timing =
-                                init_timing config.elapsed
+                                init_timing clock.elapsed
                                     { leader =
                                         -- The leader is not behind itself; it has no gap to report.
                                         if index == 0 then
                                             Nothing
 
                                         else
-                                            Just leaderCar
+                                            leaderCar
                                     , rival = List.Extra.getAt (index - 1) carsList
                                     }
                                     car
@@ -204,8 +146,8 @@ compute bestTimes config =
             Ordering.byPosition entries
     in
     Standings
-        { elapsed = config.elapsed
-        , lapCount = config.lapCount
+        { elapsed = clock.elapsed
+        , lapCount = Race.lapCountAt clock race
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
         }
@@ -237,7 +179,7 @@ fromLaps baseMetadata laps =
                     (\index lap ->
                         { position = index + 1
                         , positionInClass = index + 1
-                        , status = Car.Racing
+                        , status = Status.Racing
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
                         , classColor = (Class.toColor baseMetadata.class).value
                         , lapsCompleted = lap.lap
@@ -290,21 +232,47 @@ fromList entries =
         }
 
 
+{-| A [`Car`](Motorsport-Race-Car) as it stands at one moment of the race,
+rebuilt on every frame rather than stored.
+
+Written as a [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added
+on, because that is the shape the ordering depends on: `Gap.at` and
+`Ordering.runningOrder` reach for `laps` and `currentLap` directly, so those two
+have to stay at the top level rather than nesting inside a `Car`.
+
+-}
+type alias CarState =
+    Gap.Competitor
+        { metadata : Car.Metadata
+        , lastLap : Maybe Lap
+        , status : Status
+        , currentDriver : Maybe Driver
+        }
+
+
+{-| Read a car at a moment of the race. The status is looked up rather than
+worked out here; see [`Race.statusAt`](Motorsport-Race#statusAt).
+-}
+carStateAt : { elapsed : Duration } -> Race -> Car -> CarState
+carStateAt clock race car =
+    let
+        currentLap =
+            Lap.findCurrentLap clock car.laps
+    in
+    { metadata = car.metadata
+    , laps = car.laps
+    , currentLap = currentLap
+    , lastLap = Lap.findLastLapAt clock car.laps
+    , status = Race.statusAt clock car.metadata.carNumber race
+    , currentDriver = Maybe.map .driver currentLap
+    }
+
+
 groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )
 groupEntriesByClass sortedEntries =
     sortedEntries
         |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( classInfoOf first, first :: SortedList.toList rest ))
-
-
-{-| Extracts a class's display info from an entry.
--}
-classInfoOf : Entry -> ClassInfo
-classInfoOf entry =
-    { class = entry.metadata.class
-    , name = Class.toString entry.metadata.class
-    , color = entry.classColor
-    }
+        |> List.map (\( first, rest ) -> ( Entry.classInfoOf first, first :: SortedList.toList rest ))
 
 
 rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime
@@ -377,7 +345,7 @@ type alias TimingState =
     }
 
 
-init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
+init_timing : Duration -> { leader : Maybe CarState, rival : Maybe CarState } -> CarState -> TimingState
 init_timing raceElapsed rivals car =
     let
         raceClock =
@@ -409,17 +377,19 @@ init_timing raceElapsed rivals car =
 
 {-| The gap from `car` to the car ahead of it, or none where there is no such car.
 -}
-gapTo : { elapsed : Duration } -> Car -> Maybe Car -> Gap
+gapTo : { elapsed : Duration } -> CarState -> Maybe CarState -> Gap
 gapTo raceClock car ahead =
     ahead
         |> Maybe.map (\aheadCar -> Gap.at raceClock { ahead = aheadCar, behind = car })
         |> Maybe.withDefault Gap.none
 
 
-positionsInClassByCarNumber : RunningOrder -> Dict String Int
-positionsInClassByCarNumber raceOrder =
-    raceOrder
-        |> RunningOrder.toList
+{-| Position within class, keyed by car number. Expects the cars already in
+running order, so gathering by class preserves it.
+-}
+positionsInClassByCarNumber : List CarState -> Dict String Int
+positionsInClassByCarNumber carsInRaceOrder =
+    carsInRaceOrder
         |> List.Extra.gatherEqualsBy (.metadata >> .class)
         |> List.concatMap
             (\( firstCar, restCars ) ->

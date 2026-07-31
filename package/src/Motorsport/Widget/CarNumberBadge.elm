@@ -11,7 +11,7 @@ import Css exposing (property)
 import Html.Styled exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (alt, class, css, src)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.ViewModel.Standings exposing (Entry)
+import Motorsport.ViewModel.Entry exposing (Entry)
 
 
 {-| Small stacked badge: logo on top, car number below.

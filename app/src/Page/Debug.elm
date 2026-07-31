@@ -6,6 +6,7 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 
 -}
 
+import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
@@ -16,14 +17,13 @@ import List.Extra
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
-import Motorsport.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Motorsport.Manufacturer
-import Motorsport.RaceControl as RaceControl
-import Motorsport.RunningOrder as RunningOrder
+import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
-import Motorsport.Utils exposing (compareBy)
 import Motorsport.ViewModel.BestTimes exposing (BestTimes)
-import Motorsport.ViewModel.Standings as Standings exposing (Entry, Standings)
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings exposing (Standings)
+import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
 import UI.Button exposing (button, labeledButton)
@@ -55,15 +55,15 @@ init =
 
 
 type Msg
-    = RaceControlMsg RaceControl.Msg
+    = ReplayMsg Replay.Msg
     | LeaderboardMsg Leaderboard.Msg
 
 
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg model =
     case msg of
-        RaceControlMsg raceControlMsg ->
-            ( model, Effect.sendSharedMsg (Shared.Msg.RaceControlMsg raceControlMsg) )
+        ReplayMsg replayMsg ->
+            ( model, Effect.sendSharedMsg (Shared.Msg.ReplayMsg replayMsg) )
 
         LeaderboardMsg leaderboardMsg ->
             ( { model | leaderboardState = Leaderboard.update leaderboardMsg model.leaderboardState }
@@ -76,12 +76,15 @@ update msg model =
 
 
 view : Shared.Model -> Model -> View Msg
-view { viewModel, raceControl } { leaderboardState } =
+view { viewModel, replay } { leaderboardState } =
     { title = "Wec"
     , body =
         let
-            { clock, lapTotal, lapCount } =
-                raceControl
+            { playback, race } =
+                replay
+
+            lapCount =
+                Replay.lapCount replay
         in
         [ header
             [ css
@@ -95,17 +98,17 @@ view { viewModel, raceControl } { leaderboardState } =
             [ nav []
                 [ input
                     [ type_ "range"
-                    , Attributes.max <| String.fromInt lapTotal
+                    , Attributes.max <| String.fromInt race.lapTotal
                     , value (String.fromInt lapCount)
-                    , onInput (String.toInt >> Maybe.withDefault 0 >> RaceControl.SetCount >> RaceControlMsg)
+                    , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
                     ]
                     []
                 , labeledButton []
-                    [ button [ class "join-item", onClick (RaceControlMsg RaceControl.PreviousLap) ] [ text "-" ]
+                    [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
                     , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                    , button [ class "join-item", onClick (RaceControlMsg RaceControl.NextLap) ] [ text "+" ]
+                    , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
                     ]
-                , text (Clock.getElapsed clock |> Duration.toString)
+                , text (Clock.getElapsed playback |> Duration.toString)
                 ]
             , div []
                 ([ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
@@ -124,10 +127,9 @@ view { viewModel, raceControl } { leaderboardState } =
             ]
         , let
             standings =
-                raceControl.cars
-                    |> RunningOrder.toList
+                race.cars
                     |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                    |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take raceControl.lapCount car.laps))
+                    |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take lapCount car.laps))
                     |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
           in
           DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
@@ -148,7 +150,7 @@ config bestTimes standings =
             ++ sectorColumns bestTimes
             ++ [ lastLapColumn
                     { getter = identity
-                    , sorter = compareBy (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+                    , sorter = Compare.by (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
                     }
                , bestTimeColumn { getter = .bestLapRated }
                ]
@@ -183,7 +185,7 @@ sectorColumns bestTimes =
                 , customColumn
                     { label = Sector.toString sector ++ " Best"
                     , getter = times sector >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-                    , sorter = compareBy (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
+                    , sorter = Compare.by (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
                     }
                 ]
             )

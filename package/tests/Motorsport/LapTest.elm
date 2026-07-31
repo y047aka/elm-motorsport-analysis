@@ -87,4 +87,45 @@ tests =
                             , { sector = S3, progress = 0 }
                             ]
             ]
+        , describe "compareAt"
+            -- LT is "ahead", so that sorting with it puts the leader first.
+            [ test "the car on the higher lap is ahead, even when it is behind on track" <|
+                \_ ->
+                    -- The car a lap up is the further back of the two around
+                    -- the lap at this moment, and still ahead.
+                    Lap.compareAt { elapsed = 6500 }
+                        { lapStartingLate | lap = 5 }
+                        { lap | lap = 4 }
+                        |> Expect.equal LT
+            , test "on the same lap, the car in the later sector is ahead" <|
+                \_ ->
+                    -- At 6.500 `lap` is in S2 (5.000-7.000) and
+                    -- `lapStartingLate` is still in S1 (6.000-7.000).
+                    Lap.compareAt { elapsed = 6500 } lap lapStartingLate
+                        |> Expect.equal LT
+            , test "in the same sector, the car that entered it first is ahead" <|
+                \_ ->
+                    -- At 4.800 both are in S1: `lap` entered at 4.000,
+                    -- `lapStartingHalfLate` at 4.500.
+                    Lap.compareAt { elapsed = 4800 } lap lapStartingHalfLate
+                        |> Expect.equal LT
+            , test "two cars running the same lap identically are level" <|
+                \_ ->
+                    Lap.compareAt { elapsed = 6500 } lap lap
+                        |> Expect.equal EQ
+            ]
         ]
+
+
+{-| The same lap, run two seconds later: S1 runs 6.000 to 7.000.
+-}
+lapStartingLate : Lap
+lapStartingLate =
+    { lap | elapsed = 12000 }
+
+
+{-| The same lap, run half a second later: S1 runs 4.500 to 5.500.
+-}
+lapStartingHalfLate : Lap
+lapStartingHalfLate =
+    { lap | elapsed = 10500 }

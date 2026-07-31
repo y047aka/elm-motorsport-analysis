@@ -5,19 +5,19 @@ import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Class as Class exposing (Class)
-import Motorsport.Driver exposing (Driver)
+import Motorsport.Driver as Driver
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 
 
-decode : String -> List Car
+decode : String -> List Entrant
 decode raw =
     Decode.decodeString fixtureDecoder raw
         |> Result.withDefault []
 
 
-fixtureDecoder : Decoder (List Car)
+fixtureDecoder : Decoder (List Entrant)
 fixtureDecoder =
     Decode.map2 Laps.attach
         Laps.decoder
@@ -50,7 +50,7 @@ classDecoder =
     string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
 
 
-carsFromLapsDecoder : Decoder (List Car)
+carsFromLapsDecoder : Decoder (List Entrant)
 carsFromLapsDecoder =
     list lapCarInfoDecoder |> Decode.map extractCars
 
@@ -64,7 +64,7 @@ type alias CarData =
     }
 
 
-extractCars : List LapCarInfo -> List Car
+extractCars : List LapCarInfo -> List Entrant
 extractCars infos =
     infos
         |> List.foldr collectCarData Dict.empty
@@ -98,13 +98,13 @@ collectCarData info acc =
                 acc
 
 
-toPlaceholderCar : ( String, CarData ) -> Car
+toPlaceholderCar : ( String, CarData ) -> Entrant
 toPlaceholderCar ( carNumber, data ) =
-    Car.fromStartingGrid
+    Entrant.fromStartingGrid
         { position = 0
         , car =
             { carNumber = carNumber
-            , drivers = List.map Driver data.drivers
+            , drivers = List.map Driver.fromName data.drivers
             , class = data.class
             , group = data.group
             , team = data.team

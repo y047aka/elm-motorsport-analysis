@@ -1,6 +1,7 @@
 module Motorsport.Clock exposing
     ( Model, State(..), PlaybackSpeed(..), init
     , Msg(..), update
+    , setElapsed, setPlaybackSpeed
     , toString
     , getElapsed
     , defaultSpeed
@@ -10,7 +11,25 @@ module Motorsport.Clock exposing
 {-|
 
 @docs Model, State, PlaybackSpeed, init
+
+
+## Running the clock
+
+These need to know what time it is now, so they take a `Posix`.
+
 @docs Msg, update
+
+
+## Moving the clock
+
+These do not: where the head goes, and how fast it moves from there, are settled
+without reference to the wall clock.
+
+@docs setElapsed, setPlaybackSpeed
+
+
+## Reading the clock
+
 @docs toString
 @docs getElapsed
 @docs defaultSpeed
@@ -71,8 +90,6 @@ type Msg
     | Tick
     | Pause
     | Finish
-    | Set Duration
-    | SetPlaybackSpeed PlaybackSpeed
 
 
 update : Posix -> Msg -> Model -> Model
@@ -108,42 +125,55 @@ update now msg m =
         Finish ->
             { m | state = Finished }
 
-        Set duration ->
-            case m.state of
-                -- Moving the clock before the race has been started leaves it
-                -- stopped, at the moment asked for -- the same state as pausing
-                -- there. Ignoring it instead would leave the clock reading zero
-                -- while the rest of the race control had moved on.
-                Initial ->
-                    { m | state = Paused duration }
 
-                Started _ timer ->
-                    { m | state = Started duration timer }
+{-| Put the playback head at a given point in the race.
+-}
+setElapsed : Duration -> Model -> Model
+setElapsed duration m =
+    case m.state of
+        -- Moving the clock before the race has been started leaves it
+        -- stopped, at the moment asked for -- the same state as pausing
+        -- there. Ignoring it instead would leave the clock reading zero
+        -- while the rest of the replay had moved on.
+        Initial ->
+            { m | state = Paused duration }
 
-                Paused _ ->
-                    { m | state = Paused duration }
+        -- Re-anchored like `setPlaybackSpeed`. Keeping the old anchor would put
+        -- the head at the moment asked for *plus* however long playback had been
+        -- running, times the speed.
+        Started _ { now } ->
+            { m | state = Started duration { now = now, startedAt = now } }
 
-                Finished ->
-                    m
+        Paused _ ->
+            { m | state = Paused duration }
 
-        SetPlaybackSpeed newSpeed ->
-            if newSpeed == m.playbackSpeed then
-                m
+        Finished ->
+            m
 
-            else
-                case m.state of
-                    Started splitTime { startedAt } ->
-                        let
-                            currentElapsed =
-                                calcElapsed startedAt now splitTime m.playbackSpeed
-                        in
-                        { m
-                            | playbackSpeed = newSpeed
-                            , state = Started currentElapsed { now = now, startedAt = now }
-                        }
 
-                    _ ->
-                        { m | playbackSpeed = newSpeed }
+{-| Change how fast playback runs, leaving the head where it is.
+
+A running clock is re-anchored on the last time it was ticked, which is the most
+recent moment it knows about -- so the elapsed it reports does not jump.
+
+-}
+setPlaybackSpeed : PlaybackSpeed -> Model -> Model
+setPlaybackSpeed newSpeed m =
+    if newSpeed == m.playbackSpeed then
+        m
+
+    else
+        case m.state of
+            Started splitTime { now, startedAt } ->
+                { m
+                    | playbackSpeed = newSpeed
+                    , state =
+                        Started (calcElapsed startedAt now splitTime m.playbackSpeed)
+                            { now = now, startedAt = now }
+                }
+
+            _ ->
+                { m | playbackSpeed = newSpeed }
 
 
 toString : Model -> String

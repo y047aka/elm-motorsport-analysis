@@ -1,5 +1,5 @@
 module Motorsport.Lap.Performance exposing
-    ( findPersonalBest, findFastest, findFastestBy, findSlowest
+    ( findFastestBy
     , calculateMiniSectorFastest
     , RatedTime
     , PerformanceLevel(..), performanceLevel
@@ -9,7 +9,7 @@ module Motorsport.Lap.Performance exposing
 
 {-|
 
-@docs findPersonalBest, findFastest, findFastestBy, findSlowest
+@docs findFastestBy
 @docs calculateMiniSectorFastest
 
 @docs RatedTime
@@ -24,24 +24,6 @@ import List.Extra
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-
-
-findPersonalBest : List { a | time : Duration } -> Maybe { a | time : Duration }
-findPersonalBest =
-    List.filter (.time >> (/=) 0)
-        >> List.Extra.minimumBy .time
-
-
-findFastest : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
-findFastest =
-    List.filterMap findPersonalBest
-        >> List.Extra.minimumBy .time
-
-
-findSlowest : List (List { a | time : Duration }) -> Maybe { a | time : Duration }
-findSlowest =
-    List.filterMap (List.Extra.maximumBy .time)
-        >> List.Extra.maximumBy .time
 
 
 findFastestBy : (a -> Duration) -> List (List a) -> Maybe Duration

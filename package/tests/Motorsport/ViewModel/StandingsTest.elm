@@ -1,15 +1,17 @@
 module Motorsport.ViewModel.StandingsTest exposing (suite)
 
 import Expect
-import Motorsport.Car as Car exposing (Status(..))
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race.Car as Car
 import Motorsport.Sector as Sector exposing (Sector(..))
-import Motorsport.ViewModel.Standings as Standings exposing (Entry)
+import Motorsport.Status exposing (Status(..))
+import Motorsport.ViewModel.Entry exposing (Entry)
+import Motorsport.ViewModel.Standings as Standings
 import Test exposing (Test, describe, test)
 
 
