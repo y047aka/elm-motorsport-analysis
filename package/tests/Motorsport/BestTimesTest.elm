@@ -1,6 +1,7 @@
-module Motorsport.Race.BestTimesTest exposing (tests)
+module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
+import Motorsport.BestTimes as BestTimes exposing (BestTimes, Snapshot)
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -8,7 +9,6 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
-import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes, Snapshot)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector
 import Test exposing (Test, describe, test)
@@ -16,7 +16,7 @@ import Test exposing (Test, describe, test)
 
 tests : Test
 tests =
-    describe "Motorsport.Race.BestTimes"
+    describe "Motorsport.BestTimes"
         [ describe "fastestSectors"
             [ test "takes each sector from whichever car was quickest through it" <|
                 \_ ->
@@ -120,6 +120,10 @@ at elapsed cars =
     BestTimes.at { elapsed = elapsed } (recordsOf cars)
 
 
+{-| Built the way the app builds them -- through `Race.fromCars`, rather than
+calling `fromLaps` on a lap list assembled here, so that the race handing its
+laps over stays covered too.
+-}
 recordsOf : List Car -> BestTimes
 recordsOf cars =
     (Race.fromCars cars).bestTimes

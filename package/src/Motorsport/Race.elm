@@ -22,9 +22,9 @@ moment is derived from the two, in
 
 import Dict
 import List.Extra
+import Motorsport.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -89,7 +89,7 @@ fromCars cars =
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
-    , bestTimes = BestTimes.fromCars cars
+    , bestTimes = BestTimes.fromLaps (List.concatMap .laps cars)
     }
 
 

@@ -9,8 +9,8 @@ computed model the view needs from a race and where playback has got to in it.
 
 -}
 
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
-import Motorsport.Race.BestTimes as BestTimes
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
@@ -31,8 +31,7 @@ type alias ViewModel =
     playback)
 
 Which one is asked for decides where the race's record of its best times is read:
-at the end of it, or at the clock. See
-[`Race.BestTimes`](Motorsport-Race-BestTimes).
+at the end of it, or at the clock. See [`BestTimes`](Motorsport-BestTimes).
 
 -}
 type Scope

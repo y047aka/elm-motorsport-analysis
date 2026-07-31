@@ -1,6 +1,6 @@
-module Motorsport.Race.BestTimes exposing
+module Motorsport.BestTimes exposing
     ( BestTimes, Snapshot, ByRecord
-    , empty, fromCars
+    , empty, fromLaps
     , at, final
     )
 
@@ -13,8 +13,15 @@ of the scale is drawn against. Each is a
 beaten, which is what keeps reading the baseline off a binary search rather than
 twenty passes over every lap of the race.
 
+The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
+rather than under either side it serves, because both sides need it and neither
+owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
+[`ViewModel`](Motorsport-ViewModel) reads them back at the clock. Laps in, times
+out -- it knows nothing of cars, standings or playback, which is what keeps the
+dependency pointing one way from both.
+
 @docs BestTimes, Snapshot, ByRecord
-@docs empty, fromCars
+@docs empty, fromLaps
 @docs at, final
 
 -}
@@ -23,7 +30,6 @@ import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025Min
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
@@ -77,17 +83,21 @@ empty =
     map (always ChangePoints.empty) rules
 
 
-fromCars : List Car -> BestTimes
-fromCars cars =
+{-| Read the records off every lap of a race, however the laps arrive.
+
+Whose lap is whose does not come into it: a record belongs to the race, and the
+only thing that decides which lap set it is when it was completed.
+
+-}
+fromLaps : List Lap -> BestTimes
+fromLaps laps =
     let
-        -- Every lap of the race in the order it was completed, which is the
-        -- order the records were set in.
-        laps =
-            cars
-                |> List.concatMap .laps
-                |> List.sortBy .elapsed
+        -- In the order the laps were completed, which is the order the records
+        -- were set in.
+        inOrder =
+            List.sortBy .elapsed laps
     in
-    map (\{ beats, timeFrom } -> improvements beats timeFrom laps) rules
+    map (\{ beats, timeFrom } -> improvements beats timeFrom inOrder) rules
 
 
 {-| The records as they stood at a moment of the race: what a car crossing the

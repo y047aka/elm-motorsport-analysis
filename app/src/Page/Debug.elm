@@ -14,11 +14,11 @@ import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Manufacturer
-import Motorsport.Race.BestTimes as BestTimes
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.ViewModel.Entry exposing (Entry)
