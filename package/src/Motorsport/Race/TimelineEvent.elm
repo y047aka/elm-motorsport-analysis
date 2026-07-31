@@ -62,7 +62,7 @@ Only the lead changes need anything beyond the lap times: they read
 that reach here without it produce every other event and no lead changes at all,
 silently. If a second loader ever appears, that is the rule it has to keep.
 
-What is deliberately *not* here is a per-lap completion event. Emitting one for
+What is deliberately _not_ here is a per-lap completion event. Emitting one for
 every car on every lap put fifteen thousand rows of "car 7 completed lap 112" into
 a list meant to be read as the shape of the race -- five in six of everything in
 it, saying nothing a reader could follow. The laps themselves are unaffected: they

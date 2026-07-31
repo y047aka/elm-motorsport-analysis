@@ -74,7 +74,7 @@ fromEntrants entrants =
 
 The `List.reverse` at the end is not cosmetic. The fold prepends, so without it
 the improvements would reach `ChangePoints.fromList` newest-first -- and since
-that sorts stably and reads the *last* of any changes sharing a timestamp, two
+that sorts stably and reads the _last_ of any changes sharing a timestamp, two
 records set on the same instant would resolve to the earlier one.
 
 -}

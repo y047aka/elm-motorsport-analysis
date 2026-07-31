@@ -1,4 +1,7 @@
-module Motorsport.Ordering exposing (ByPosition, byPosition, runningOrder)
+module Motorsport.Ordering exposing
+    ( runningOrder
+    , ByPosition, byPosition
+    )
 
 {-| Motorsport-specific ordering.
 
