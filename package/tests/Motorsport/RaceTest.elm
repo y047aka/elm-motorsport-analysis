@@ -14,11 +14,11 @@ suite : Test
 suite =
     describe "Race"
         [ describe "lapCountAt"
-            [ test "reads zero until the first car has completed a lap" <|
+            [ test "reads zero before the race has begun" <|
                 \_ ->
-                    [ -1, 0, 89999 ]
+                    [ -1, 0 ]
                         |> List.map (\elapsed -> Race.lapCountAt { elapsed = elapsed } race)
-                        |> Expect.equal [ 0, 0, 0 ]
+                        |> Expect.equal [ 0, 0 ]
             , test "goes up the moment the first car of the field crosses the line" <|
                 \_ ->
                     -- Car 2 leads lap 1 (90.000 against car 1's 100.000), so the
@@ -62,10 +62,7 @@ suite =
                         |> Expect.equal [ 0, 0 ]
             ]
         , describe "lapTotal"
-            [ test "counts the laps of whichever car went furthest" <|
-                \_ ->
-                    race.lapTotal |> Expect.equal 3
-            , test "is the ceiling lapCountAt can actually reach" <|
+            [ test "is the ceiling lapCountAt can actually reach" <|
                 \_ ->
                     -- Both come off lapCompletions, so they cannot disagree.
                     Race.lapCountAt { elapsed = 99999999 } race

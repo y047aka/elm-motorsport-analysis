@@ -20,18 +20,11 @@ suite : Test
 suite =
     describe "Replay"
         [ describe "status is a function of the elapsed time, not of the path taken to it"
-            [ test "landing inside a pit window puts the car in the pits" <|
+            [ test "landing inside a pit window puts the car in the pits, and past it back on track" <|
                 \_ ->
-                    initialModel
-                        |> skipTo 180000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.InPit)
-            , test "landing between the pit exit and the next event leaves the car racing" <|
-                \_ ->
-                    initialModel
-                        |> skipTo 250000
-                        |> statusOf "1"
-                        |> Expect.equal (Just Status.Racing)
+                    [ 180000, 250000 ]
+                        |> List.map (\elapsed -> statusOf "1" (skipTo elapsed initialModel))
+                        |> Expect.equal [ Just Status.InPit, Just Status.Racing ]
             , test "jumping clear past a retirement retires the car" <|
                 \_ ->
                     initialModel
@@ -110,11 +103,7 @@ suite =
 
 initialModel : Replay.Model
 initialModel =
-    let
-        cars =
-            [ retiringCar, survivingCar ]
-    in
-    Replay.fromCars cars
+    Replay.fromCars [ retiringCar, survivingCar ]
 
 
 retiringCar : Car

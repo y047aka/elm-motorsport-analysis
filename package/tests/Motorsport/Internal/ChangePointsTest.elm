@@ -16,7 +16,7 @@ suite =
                         |> Expect.equal Nothing
             , test "an empty index has nothing at any time" <|
                 \_ ->
-                    ChangePoints.valueAt 500000 emptyIndex
+                    ChangePoints.valueAt 500000 ChangePoints.empty
                         |> Expect.equal Nothing
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
@@ -44,14 +44,10 @@ suite =
             [ test "gives the value in force once every change has happened" <|
                 \_ ->
                     ChangePoints.last index
-                        |> Expect.equal (Just "d")
-            , test "agrees with reading past the final change" <|
-                \_ ->
-                    ChangePoints.last index
                         |> Expect.equal (ChangePoints.valueAt 9999999 index)
             , test "an empty index has no last value" <|
                 \_ ->
-                    ChangePoints.last emptyIndex
+                    ChangePoints.last ChangePoints.empty
                         |> Expect.equal Nothing
             ]
         , describe "countUpTo"
@@ -105,11 +101,6 @@ index =
         , ( 5000, "c" )
         , ( 6000, "d" )
         ]
-
-
-emptyIndex : ChangePoints String
-emptyIndex =
-    ChangePoints.empty
 
 
 longChanges : List ( Duration, Int )

@@ -157,6 +157,8 @@ withMiniSectorsOf time lap_ =
     }
 
 
+{-| Record update syntax needs a bare name, so `Lap.empty` gets one.
+-}
 empty : Lap
 empty =
     Lap.empty

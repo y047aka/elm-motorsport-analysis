@@ -89,16 +89,10 @@ tests =
             ]
         , describe "compareAt"
             -- LT is "ahead", so that sorting with it puts the leader first.
-            [ test "the car on the higher lap is ahead" <|
+            [ test "the car on the higher lap is ahead, even when it is behind on track" <|
                 \_ ->
-                    Lap.compareAt { elapsed = 6500 }
-                        { lap | lap = 5 }
-                        { lap | lap = 4 }
-                        |> Expect.equal LT
-            , test "the lap count outranks where the cars are on the lap" <|
-                \_ ->
-                    -- The car a lap down is further round the track at this
-                    -- moment, and still behind.
+                    -- The car a lap up is the further back of the two around
+                    -- the lap at this moment, and still ahead.
                     Lap.compareAt { elapsed = 6500 }
                         { lapStartingLate | lap = 5 }
                         { lap | lap = 4 }

@@ -13,14 +13,13 @@ suite : Test
 suite =
     describe "Race.StatusChanges"
         [ describe "statusAt"
-            [ test "a car the race never mentions has not taken the start" <|
+            [ test "a car the index does not have has not taken the start" <|
                 \_ ->
-                    StatusChanges.statusAt { elapsed = 500000 } "99" index
-                        |> Expect.equal Status.PreRace
-            , test "an empty index leaves every car pre-race" <|
-                \_ ->
-                    StatusChanges.statusAt { elapsed = 500000 } "1" StatusChanges.empty
-                        |> Expect.equal Status.PreRace
+                    Expect.equal
+                        ( Status.PreRace, Status.PreRace )
+                        ( StatusChanges.statusAt { elapsed = 500000 } "99" index
+                        , StatusChanges.statusAt { elapsed = 500000 } "1" StatusChanges.empty
+                        )
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
@@ -71,21 +70,17 @@ suite =
 {-| One car's race: away at the start, two pit stops, and the flag at 15 minutes.
 The lead it takes in the middle is there to be ignored.
 -}
-changes : List ( Duration, TimelineEvent.CarEventType )
-changes =
-    [ ( 0, TimelineEvent.Start { currentLap = Lap.empty } )
-    , ( 170000, TimelineEvent.PitIn { lapNumber = 2, duration = 30000 } )
-    , ( 200000, TimelineEvent.PitOut { lapNumber = 2, duration = 30000 } )
-    , ( 210000, TimelineEvent.TookLead )
-    , ( 400000, TimelineEvent.PitIn { lapNumber = 5, duration = 25000 } )
-    , ( 425000, TimelineEvent.PitOut { lapNumber = 5, duration = 25000 } )
-    , ( 900000, TimelineEvent.Checkered )
-    ]
-
-
 index : StatusChanges
 index =
-    StatusChanges.fromTimelineEvents (List.map (\( at, carEventType ) -> carEvent at carEventType) changes)
+    StatusChanges.fromTimelineEvents
+        [ carEvent 0 (TimelineEvent.Start { currentLap = Lap.empty })
+        , carEvent 170000 (TimelineEvent.PitIn { lapNumber = 2, duration = 30000 })
+        , carEvent 200000 (TimelineEvent.PitOut { lapNumber = 2, duration = 30000 })
+        , carEvent 210000 TimelineEvent.TookLead
+        , carEvent 400000 (TimelineEvent.PitIn { lapNumber = 5, duration = 25000 })
+        , carEvent 425000 (TimelineEvent.PitOut { lapNumber = 5, duration = 25000 })
+        , carEvent 900000 TimelineEvent.Checkered
+        ]
 
 
 
