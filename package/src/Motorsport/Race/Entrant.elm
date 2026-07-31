@@ -6,8 +6,9 @@ module Motorsport.Race.Entrant exposing
 {-| A car as the entry list knows it.
 
 Who the car is, where it started, and every lap it turned. None of it moves as
-the clock does. What the car is _doing_ at a moment of the race is
-[`Car`](Motorsport-Car#Car), read off an entrant and an elapsed time.
+the clock does. What the car is _doing_ at a moment of the race is worked out
+from an entrant and an elapsed time, in
+[`ViewModel.Standings`](Motorsport-ViewModel-Standings).
 
 @docs Entrant, Metadata, CarNumber
 @docs fromStartingGrid

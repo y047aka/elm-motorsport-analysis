@@ -21,9 +21,9 @@ this module is how one gets built and read back.
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.Car as Car exposing (Car)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
@@ -32,7 +32,7 @@ import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Entrant as Entrant exposing (Entrant)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.Status as Status
+import Motorsport.Status as Status exposing (Status)
 import Motorsport.ViewModel.Entry as Entry exposing (ClassInfo, CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
 import SortedList exposing (SortedList)
 
@@ -67,7 +67,7 @@ compute bestTimes clock race =
         -- from that, and every position below is read off the resulting order.
         carsList =
             race.entrants
-                |> List.map (carAt clock race)
+                |> List.map (carStateAt clock race)
                 |> Ordering.runningOrder clock
 
         leaderCar =
@@ -232,13 +232,47 @@ fromList entries =
         }
 
 
-carAt : { elapsed : Duration } -> Race -> Entrant -> Car
-carAt clock race entrant =
-    Car.at
-        { elapsed = clock.elapsed
-        , status = Race.statusAt clock entrant.metadata.carNumber race
+{-| An entrant as it stands at one moment of the race.
+
+Written as a [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added
+on, because that is the shape the ordering depends on: `Gap.at` and
+`Ordering.runningOrder` reach for `laps` and `currentLap` directly, so those two
+have to stay at the top level rather than nesting inside an `Entrant`.
+
+Nothing is stored between frames. `carStateAt` rebuilds it from an entrant and
+an elapsed time, so the same elapsed always gives the same state, however the
+clock got there.
+
+-}
+type alias CarState =
+    Gap.Competitor
+        { metadata : Entrant.Metadata
+        , lastLap : Maybe Lap
+        , status : Status
+        , currentDriver : Maybe Driver
         }
-        entrant
+
+
+{-| Read an entrant at a moment of the race.
+
+The status comes from the race's precomputed change points rather than being
+worked out here; see
+[`Race.statusAt`](Motorsport-Race#statusAt).
+
+-}
+carStateAt : { elapsed : Duration } -> Race -> Entrant -> CarState
+carStateAt clock race entrant =
+    let
+        currentLap =
+            Lap.findCurrentLap clock entrant.laps
+    in
+    { metadata = entrant.metadata
+    , laps = entrant.laps
+    , currentLap = currentLap
+    , lastLap = Lap.findLastLapAt clock entrant.laps
+    , status = Race.statusAt clock entrant.metadata.carNumber race
+    , currentDriver = Maybe.map .driver currentLap
+    }
 
 
 groupEntriesByClass : SortedList ByPosition Entry -> List ( ClassInfo, List Entry )
@@ -318,7 +352,7 @@ type alias TimingState =
     }
 
 
-init_timing : Duration -> { leader : Maybe Car, rival : Maybe Car } -> Car -> TimingState
+init_timing : Duration -> { leader : Maybe CarState, rival : Maybe CarState } -> CarState -> TimingState
 init_timing raceElapsed rivals car =
     let
         raceClock =
@@ -350,7 +384,7 @@ init_timing raceElapsed rivals car =
 
 {-| The gap from `car` to the car ahead of it, or none where there is no such car.
 -}
-gapTo : { elapsed : Duration } -> Car -> Maybe Car -> Gap
+gapTo : { elapsed : Duration } -> CarState -> Maybe CarState -> Gap
 gapTo raceClock car ahead =
     ahead
         |> Maybe.map (\aheadCar -> Gap.at raceClock { ahead = aheadCar, behind = car })
@@ -360,7 +394,7 @@ gapTo raceClock car ahead =
 {-| Position within class, keyed by car number. Expects the cars already in
 running order, so gathering by class preserves it.
 -}
-positionsInClassByCarNumber : List Car -> Dict String Int
+positionsInClassByCarNumber : List CarState -> Dict String Int
 positionsInClassByCarNumber carsInRaceOrder =
     carsInRaceOrder
         |> List.Extra.gatherEqualsBy (.metadata >> .class)
