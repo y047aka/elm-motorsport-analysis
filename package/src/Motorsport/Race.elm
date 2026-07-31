@@ -24,14 +24,18 @@ import List.Extra
 import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
+import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Race.Entrant exposing (CarNumber, Entrant)
-import Motorsport.Race.Records as Records exposing (Records)
-import Motorsport.Race.StatusIndex as StatusIndex exposing (StatusIndex)
+import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 
 
 {-| `timelineEvents` is kept for the Events tab, which reads the race as a list of
-things that happened. The indices beside it are for reading it at an instant.
+things that happened. The three beside it read the same race at an instant, and
+are named for what each records the moments of: `statusChanges` when a car's
+status moved, `lapCompletions` when the lap counter went up, `bestTimes` when a
+record was set. All three are [`ChangePoints`](Motorsport-Internal-ChangePoints)
+underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race was.
@@ -42,9 +46,9 @@ type alias Race =
     , lapTotal : Int
     , timeLimit : Duration
     , timelineEvents : List TimelineEvent
-    , statusIndex : StatusIndex
+    , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
-    , records : Records
+    , bestTimes : BestTimes
     }
 
 
@@ -56,9 +60,9 @@ empty =
     , lapTotal = 0
     , timeLimit = 0
     , timelineEvents = []
-    , statusIndex = StatusIndex.empty
+    , statusChanges = StatusChanges.empty
     , lapCompletions = ChangePoints.empty
-    , records = Records.empty
+    , bestTimes = BestTimes.empty
     }
 
 
@@ -82,9 +86,9 @@ fromEntrants entrants =
     , lapTotal = ChangePoints.length lapCompletions
     , timeLimit = calcTimeLimit entrants
     , timelineEvents = timelineEvents
-    , statusIndex = StatusIndex.fromTimelineEvents timelineEvents
+    , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
-    , records = Records.fromEntrants entrants
+    , bestTimes = BestTimes.fromEntrants entrants
     }
 
 
@@ -163,4 +167,4 @@ elapsedAtLapCount lapCount race =
 -}
 statusAt : { elapsed : Duration } -> CarNumber -> Race -> Car.Status
 statusAt clock carNumber race =
-    StatusIndex.statusAt clock carNumber race.statusIndex
+    StatusChanges.statusAt clock carNumber race.statusChanges

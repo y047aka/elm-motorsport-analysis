@@ -1,9 +1,9 @@
-module Motorsport.Race.Records exposing
-    ( Records
+module Motorsport.Race.BestTimes exposing
+    ( BestTimes
     , empty, fromEntrants
     )
 
-{-| When each of the race's records was set.
+{-| When each of the race's best times was set.
 
 The comparison baseline a timing screen rates times against is the fastest lap so
 far, the fastest of three sectors, and the fastest of fifteen mini-sectors --
@@ -15,10 +15,10 @@ a few dozen times; a mini-sector a few hundred. So the moments each one changed
 are collected once, when the race loads, and reading one back at an elapsed time
 is a binary search -- see [`ChangePoints`](Motorsport-Internal-ChangePoints).
 
-`slowestLapTime` is not a record, but it moves the same way and is wanted for the
-same reason: it is the other end of the scale times are drawn against.
+`slowestLapTime` belongs here for the same reason as the rest: it moves only when
+beaten, and it is what the other end of the scale is drawn against.
 
-@docs Records
+@docs BestTimes
 @docs empty, fromEntrants
 
 -}
@@ -31,7 +31,7 @@ import Motorsport.Race.Entrant exposing (Entrant)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
-type alias Records =
+type alias BestTimes =
     { fastestLapTime : ChangePoints Duration
     , slowestLapTime : ChangePoints Duration
     , fastestSectors : BySector (ChangePoints Duration)
@@ -41,7 +41,7 @@ type alias Records =
 
 {-| No laps recorded yet. Every reading comes back `Nothing`.
 -}
-empty : Records
+empty : BestTimes
 empty =
     { fastestLapTime = ChangePoints.empty
     , slowestLapTime = ChangePoints.empty
@@ -50,7 +50,7 @@ empty =
     }
 
 
-fromEntrants : List Entrant -> Records
+fromEntrants : List Entrant -> BestTimes
 fromEntrants entrants =
     let
         -- Every lap of the race in the order it was completed, which is the

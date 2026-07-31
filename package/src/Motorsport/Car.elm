@@ -40,7 +40,7 @@ type alias Car =
 
 The status is handed in rather than worked out here: it comes from the race's
 precomputed change points, see
-[`Race.StatusIndex.statusAt`](Motorsport-Race-StatusIndex#statusAt).
+[`Race.StatusChanges.statusAt`](Motorsport-Race-StatusChanges#statusAt).
 
 -}
 at : { elapsed : Duration, status : Status } -> Entrant -> Car

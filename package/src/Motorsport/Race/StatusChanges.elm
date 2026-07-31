@@ -1,5 +1,5 @@
-module Motorsport.Race.StatusIndex exposing
-    ( StatusIndex
+module Motorsport.Race.StatusChanges exposing
+    ( StatusChanges
     , empty, fromTimelineEvents
     , statusAt
     )
@@ -10,7 +10,7 @@ A status is not something playback accumulates as the clock runs -- it is
 a function of the race and the elapsed time. This index makes that function cheap:
 see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 
-@docs StatusIndex
+@docs StatusChanges
 @docs empty, fromTimelineEvents
 @docs statusAt
 
@@ -30,15 +30,15 @@ A car missing from the index -- or one whose earliest change is still ahead of t
 clock -- has not taken the start yet, and reads back as `PreRace`.
 
 -}
-type StatusIndex
-    = StatusIndex (Dict CarNumber (ChangePoints Car.Status))
+type StatusChanges
+    = StatusChanges (Dict CarNumber (ChangePoints Car.Status))
 
 
 {-| An index over no race at all. Every car reads back as `PreRace`.
 -}
-empty : StatusIndex
+empty : StatusChanges
 empty =
-    StatusIndex Dict.empty
+    StatusChanges Dict.empty
 
 
 {-| Build the index from a race's timeline.
@@ -47,12 +47,12 @@ Only the events that move a car between statuses are kept; taking the lead and t
 race start itself leave the status where it was.
 
 -}
-fromTimelineEvents : List TimelineEvent -> StatusIndex
+fromTimelineEvents : List TimelineEvent -> StatusChanges
 fromTimelineEvents events =
     events
         |> List.foldl collect Dict.empty
         |> Dict.map (\_ changes -> ChangePoints.fromList (List.reverse changes))
-        |> StatusIndex
+        |> StatusChanges
 
 
 collect :
@@ -103,12 +103,12 @@ Where a pit exit and the chequered flag land on the same instant the flag wins,
 because the timeline lists it later -- see
 [`ChangePoints.fromList`](Motorsport-Internal-ChangePoints#fromList).
 
-    StatusIndex.statusAt { elapsed = 3600000 } "7" index
+    StatusChanges.statusAt { elapsed = 3600000 } "7" index
     -- Racing, InPit, Retired, ...
 
 -}
-statusAt : { elapsed : Duration } -> CarNumber -> StatusIndex -> Car.Status
-statusAt clock carNumber (StatusIndex index) =
+statusAt : { elapsed : Duration } -> CarNumber -> StatusChanges -> Car.Status
+statusAt clock carNumber (StatusChanges index) =
     Dict.get carNumber index
         |> Maybe.andThen (ChangePoints.valueAt clock.elapsed)
         |> Maybe.withDefault Car.PreRace

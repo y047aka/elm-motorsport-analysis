@@ -3,8 +3,9 @@ module Motorsport.ViewModel.BestTimes exposing (BestTimes, Scope(..), compute)
 {-| The fastest times within the aggregation scope (the comparison baseline).
 
 The aggregated values a widget uses as the baseline when rating and scaling
-individual times. Read off the race's precomputed records; see
-[`Race.Records`](Motorsport-Race-Records).
+individual times -- this module is that baseline at one moment, read off the race's
+record of when each of them changed: see
+[`Race.BestTimes`](Motorsport-Race-BestTimes).
 
 @docs BestTimes, Scope, compute
 
@@ -30,7 +31,7 @@ type alias BestTimes =
   - `WholeRace`: baseline over all laps (playback-position-independent, e.g. right after data load)
   - `UpToElapsed`: baseline over only the laps completed up to the clock's elapsed time (during playback)
 
-Which one is asked for decides where the records are read: at the end of the race,
+Which one is asked for decides where the race's record is read: at the end of it,
 or at the clock.
 
 -}
@@ -54,13 +55,13 @@ compute scope clock race =
                 -- No lap has set this time yet, or none ever records it.
                 |> Maybe.withDefault 0
 
-        records =
-            race.records
+        changes =
+            race.bestTimes
     in
-    { fastestLapTime = read records.fastestLapTime
-    , slowestLapTime = read records.slowestLapTime
+    { fastestLapTime = read changes.fastestLapTime
+    , slowestLapTime = read changes.slowestLapTime
     , fastestSectors =
-        Sector.initialize (\sector -> read (Sector.get sector records.fastestSectors))
+        Sector.initialize (\sector -> read (Sector.get sector changes.fastestSectors))
     , fastestMiniSectors =
-        LeMans.initialize (\mini -> read (LeMans.get mini records.fastestMiniSectors))
+        LeMans.initialize (\mini -> read (LeMans.get mini changes.fastestMiniSectors))
     }

@@ -1,47 +1,47 @@
-module Motorsport.Race.StatusIndexTest exposing (suite)
+module Motorsport.Race.StatusChangesTest exposing (suite)
 
 import Expect
 import Motorsport.Car as Car
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap as Lap
-import Motorsport.Race.StatusIndex as StatusIndex exposing (StatusIndex)
+import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Test exposing (Test, describe, test)
 
 
 suite : Test
 suite =
-    describe "Race.StatusIndex"
+    describe "Race.StatusChanges"
         [ describe "statusAt"
             [ test "a car the race never mentions has not taken the start" <|
                 \_ ->
-                    StatusIndex.statusAt { elapsed = 500000 } "99" index
+                    StatusChanges.statusAt { elapsed = 500000 } "99" index
                         |> Expect.equal Car.PreRace
             , test "an empty index leaves every car pre-race" <|
                 \_ ->
-                    StatusIndex.statusAt { elapsed = 500000 } "1" StatusIndex.empty
+                    StatusChanges.statusAt { elapsed = 500000 } "1" StatusChanges.empty
                         |> Expect.equal Car.PreRace
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
                         ( Car.Racing, Car.InPit )
-                        ( StatusIndex.statusAt { elapsed = 169999 } "1" index
-                        , StatusIndex.statusAt { elapsed = 170000 } "1" index
+                        ( StatusChanges.statusAt { elapsed = 169999 } "1" index
+                        , StatusChanges.statusAt { elapsed = 170000 } "1" index
                         )
             , test "taking the lead is not a status change" <|
                 \_ ->
-                    StatusIndex.statusAt { elapsed = 210000 } "1" index
+                    StatusChanges.statusAt { elapsed = 210000 } "1" index
                         |> Expect.equal Car.Racing
             , test "the last of two changes sharing an instant wins" <|
                 \_ ->
                     let
                         pitOutThenFlag =
-                            StatusIndex.fromTimelineEvents
+                            StatusChanges.fromTimelineEvents
                                 [ carEvent 300000 (TimelineEvent.PitOut { lapNumber = 9, duration = 25000 })
                                 , carEvent 300000 TimelineEvent.Checkered
                                 ]
                     in
-                    StatusIndex.statusAt { elapsed = 300000 } "1" pitOutThenFlag
+                    StatusChanges.statusAt { elapsed = 300000 } "1" pitOutThenFlag
                         |> Expect.equal Car.Checkered
             ]
         , describe "fromTimelineEvents"
@@ -49,7 +49,7 @@ suite =
                 \_ ->
                     let
                         twoCars =
-                            StatusIndex.fromTimelineEvents
+                            StatusChanges.fromTimelineEvents
                                 [ { eventTime = 0, eventType = TimelineEvent.CarEvent "1" (TimelineEvent.Start { currentLap = Lap.empty }) }
                                 , { eventTime = 0, eventType = TimelineEvent.CarEvent "2" (TimelineEvent.Start { currentLap = Lap.empty }) }
                                 , { eventTime = 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
@@ -57,8 +57,8 @@ suite =
                     in
                     Expect.equal
                         ( Car.Racing, Car.Retired )
-                        ( StatusIndex.statusAt { elapsed = 200000 } "1" twoCars
-                        , StatusIndex.statusAt { elapsed = 200000 } "2" twoCars
+                        ( StatusChanges.statusAt { elapsed = 200000 } "1" twoCars
+                        , StatusChanges.statusAt { elapsed = 200000 } "2" twoCars
                         )
             ]
         ]
@@ -83,9 +83,9 @@ changes =
     ]
 
 
-index : StatusIndex
+index : StatusChanges
 index =
-    StatusIndex.fromTimelineEvents (List.map (\( at, carEventType ) -> carEvent at carEventType) changes)
+    StatusChanges.fromTimelineEvents (List.map (\( at, carEventType ) -> carEvent at carEventType) changes)
 
 
 
