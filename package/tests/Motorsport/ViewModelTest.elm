@@ -24,11 +24,11 @@ suite =
             [ test "UpToElapsed draws it from the laps run so far" <|
                 \_ ->
                     fastestLapTimeAt 6000 UpToElapsed
-                        |> Expect.equal 6000
+                        |> Expect.equal (Just 6000)
             , test "WholeRace draws it from every lap, the ones ahead of the clock included" <|
                 \_ ->
                     fastestLapTimeAt 6000 WholeRace
-                        |> Expect.equal 5000
+                        |> Expect.equal (Just 5000)
             ]
         ]
 
@@ -38,7 +38,7 @@ suite =
 -- One car improving on itself: a 6.000 lap, then a 5.000 one.
 
 
-fastestLapTimeAt : Duration -> Scope -> Duration
+fastestLapTimeAt : Duration -> Scope -> Maybe Duration
 fastestLapTimeAt elapsed scope =
     replayAt elapsed
         |> ViewModel.compute scope

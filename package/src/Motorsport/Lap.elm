@@ -2,6 +2,7 @@ module Motorsport.Lap exposing
     ( Lap, empty
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorData
+    , recorded
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -14,6 +15,7 @@ module Motorsport.Lap exposing
 @docs Lap, empty
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorData
+@docs recorded
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -95,6 +97,30 @@ empty =
     , pitTime = Nothing
     , miniSectors = Nothing
     }
+
+
+{-| A time as the source data spells it, where a zero stands for a time that was
+not recorded rather than a very quick one.
+
+`time`, `best` and the sector times all carry that convention, and this is the
+only place that knows it. Everything that rates or ranks one of those times
+comes through here, so nothing downstream has to guard against a zero it did not
+expect. Mini-sector times arrive as `Maybe` already and need no lifting.
+
+    recorded 95365
+    --> Just 95365
+
+    recorded 0
+    --> Nothing
+
+-}
+recorded : Duration -> Maybe Duration
+recorded time =
+    if time == 0 then
+        Nothing
+
+    else
+        Just time
 
 
 type alias Clock =

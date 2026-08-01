@@ -33,7 +33,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
@@ -147,16 +147,17 @@ final =
 
 
 {-| One record as a plain time, for the rating and the geometry that only ever
-wanted the number.
+wanted the number and not who set it.
 
-A record no lap has taken comes back `0` -- the same zero the source data uses
-for a time it did not record. See
-[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel).
+A record no lap has taken stays `Nothing`, which is what lets
+[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel)
+rate against it without a guard. The geometry that needs an actual number says
+what an unset record is worth to it, at the point where it needs one.
 
 -}
-timeOf : Maybe Holder -> Duration
-timeOf held =
-    Maybe.withDefault 0 (Maybe.map .time held)
+timeOf : Maybe Holder -> Maybe Duration
+timeOf =
+    Maybe.map .time
 
 
 
@@ -251,13 +252,14 @@ greaterThan a b =
 
 -- WHAT COUNTS AS A TIME
 -- A zero is a time the source data did not record, not a very quick one, so it
--- is no candidate for a fastest anything. Every extractor below says `recorded`
--- to mean it drops those -- all but one, and that one says what it does instead.
+-- is no candidate for a fastest anything. Every extractor below goes through
+-- [`Lap.recorded`](Motorsport-Lap#recorded) to drop those -- all but one, and
+-- that one says what it does instead.
 
 
 recordedLapTime : Lap -> Maybe Duration
 recordedLapTime lap =
-    recorded lap.time
+    Lap.recorded lap.time
 
 
 {-| The exception: a zero can only win a maximum when there is nothing to beat,
@@ -270,7 +272,7 @@ lapTimeAsFound lap =
 
 recordedSectorTime : Sector -> Lap -> Maybe Duration
 recordedSectorTime sector lap =
-    recorded (Sector.get sector lap.sectors).time
+    Lap.recorded (Sector.get sector lap.sectors).time
 
 
 {-| Mini-sector times are only trusted on laps that have a lap time, matching
@@ -278,20 +280,11 @@ what the whole-race calculation has always done.
 -}
 recordedMiniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
 recordedMiniSectorTime mini lap =
-    case recorded lap.time of
+    case Lap.recorded lap.time of
         Just _ ->
             lap.miniSectors
                 |> Maybe.andThen (LeMans.get mini >> .time)
-                |> Maybe.andThen recorded
+                |> Maybe.andThen Lap.recorded
 
         Nothing ->
             Nothing
-
-
-recorded : Duration -> Maybe Duration
-recorded time =
-    if time == 0 then
-        Nothing
-
-    else
-        Just time

@@ -65,7 +65,7 @@ import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
+import Motorsport.Lap as Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
@@ -113,6 +113,28 @@ update =
 
 type alias Config data msg =
     DataView.Config data msg
+
+
+
+-- RATING COLOURS
+
+
+{-| The colour of a rating that may not exist.
+
+A sector, mini-sector or lap the source data has no time for has no rating
+either, and takes the standard colour: there is nothing to rate it against.
+Every cell that paints a rating goes through one of these two, so the fallback
+is decided in one place rather than at each of them.
+
+-}
+colorOfRated : Maybe RatedTime -> String
+colorOfRated =
+    Maybe.map .performance >> colorOfPerformance
+
+
+colorOfPerformance : Maybe Performance.PerformanceLevel -> String
+colorOfPerformance =
+    Maybe.withDefault Performance.Standard >> Performance.toColorVariable
 
 
 
@@ -165,7 +187,7 @@ veryCustomColumn =
 
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, personalBest : Duration, fastest : Duration, progress : Float }
+    , getter : data -> Maybe { time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration, progress : Float }
     }
     -> Column data msg
 sectorTimeColumn { label, getter } =
@@ -401,7 +423,7 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
 
                         else
                             [ width (pct 100)
-                            , property "background-color" (Performance.toColorVariable rated.performance)
+                            , property "background-color" (colorOfRated rated)
                             ]
                     ]
                 ]
@@ -474,7 +496,11 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
                     [ textAlign center
                     , let
                         status_ =
-                            performanceLevel { time = time, personalBest = personalBest, fastest = BestTimes.timeOf bestTimes.fastestLapTime }
+                            performanceLevel
+                                { time = time
+                                , personalBest = Lap.recorded personalBest
+                                , fastest = BestTimes.timeOf bestTimes.fastestLapTime
+                                }
                       in
                       if Performance.isStandard status_ then
                         batch []
@@ -500,8 +526,16 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
                         else
                             [ width (pct 100)
                             , property "background-color"
-                                (performanceLevel { time = Maybe.withDefault 1000000 sector_.time, personalBest = Maybe.withDefault 1000000 sector_.personalBest, fastest = sector_.fastest }
-                                    |> Performance.toColorVariable
+                                (sector_.time
+                                    |> Maybe.map
+                                        (\time ->
+                                            performanceLevel
+                                                { time = time
+                                                , personalBest = sector_.personalBest
+                                                , fastest = sector_.fastest
+                                                }
+                                        )
+                                    |> colorOfPerformance
                                 )
                             ]
                     ]
@@ -575,12 +609,12 @@ viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell { performance } =
+        sectorCell rated =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , property "background-color" (Performance.toColorVariable performance)
+                    , property "background-color" (colorOfRated rated)
                     ]
                 ]
                 []
@@ -638,17 +672,12 @@ viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
                 ]
                 [ text (Duration.toString time) ]
 
-        sectorCell maybeRatedTime =
+        sectorCell rated =
             div
                 [ css
                     [ height (px 3)
                     , borderRadius (px 1)
-                    , property "background-color"
-                        (maybeRatedTime
-                            |> Maybe.map .performance
-                            |> Maybe.withDefault Performance.Standard
-                            |> Performance.toColorVariable
-                        )
+                    , property "background-color" (colorOfRated rated)
                     ]
                 ]
                 []
@@ -717,9 +746,17 @@ performanceHistory_ bestTimes laps =
         fastestLapTime =
             BestTimes.timeOf bestTimes.fastestLapTime
 
-        toCssColor { time, best } =
-            performanceLevel { time = time, personalBest = best, fastest = fastestLapTime }
-                |> Performance.toColorVariable
+        toCssColor lap =
+            Lap.recorded lap.time
+                |> Maybe.map
+                    (\time ->
+                        performanceLevel
+                            { time = time
+                            , personalBest = Lap.recorded lap.best
+                            , fastest = fastestLapTime
+                            }
+                    )
+                |> colorOfPerformance
     in
     div
         [ css

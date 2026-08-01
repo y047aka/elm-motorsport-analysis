@@ -65,13 +65,17 @@ type alias Entry =
 
 {-| Per-sector "progress + performance rating" for the current lap.
 Rated at compute time so donut displays can render without being supplied BestTimes separately.
+
+`rated` is `Nothing` for a sector the source data has no time for, the same way
+a mini-sector's is; there is nothing to colour it by.
+
 -}
 type alias CurrentSectorStates =
-    BySector { progress : Float, rated : RatedTime }
+    BySector { progress : Float, rated : Maybe RatedTime }
 
 
 type alias SectorPerformance =
-    BySector RatedTime
+    BySector (Maybe RatedTime)
 
 
 type alias MiniSectorPerformance =

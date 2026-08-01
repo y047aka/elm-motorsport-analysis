@@ -148,13 +148,19 @@ currentSectorPie item =
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
 white partial fill while in progress, full performance color once completed.
 -}
-currentSectorSlot : { progress : Float, rated : RatedTime } -> ( String, Float )
+currentSectorSlot : { progress : Float, rated : Maybe RatedTime } -> ( String, Float )
 currentSectorSlot { progress, rated } =
     if progress < 1 then
         ( "oklch(1 0 0)", progress )
 
     else
-        ( Performance.toColorVariable rated.performance, 1 )
+        -- A sector the source data has no time for has no rating to colour it by.
+        ( rated
+            |> Maybe.map .performance
+            |> Maybe.withDefault Performance.Standard
+            |> Performance.toColorVariable
+        , 1
+        )
 
 
 {-| Draw three slots as 120° donut arcs. Each element is

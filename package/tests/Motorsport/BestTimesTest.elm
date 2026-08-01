@@ -26,14 +26,14 @@ tests =
                     , car "2" [ lap 1 6000 ( 1100, 1900, 2900 ) ]
                     ]
                         |> finalSectors
-                        |> Expect.equal [ 1000, 1900, 2900 ]
+                        |> Expect.equal [ Just 1000, Just 1900, Just 2900 ]
             , test "ignores a sector with no recorded time rather than calling it the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 ( 1000, 2000, 3000 ) ]
                     , car "2" [ lap 1 6000 ( 0, 0, 0 ) ]
                     ]
                         |> finalSectors
-                        |> Expect.equal [ 1000, 2000, 3000 ]
+                        |> Expect.equal [ Just 1000, Just 2000, Just 3000 ]
             ]
         , describe "fastestLapTime"
             [ test "stands at the quickest lap run so far, and moves when it is beaten" <|
@@ -46,19 +46,19 @@ tests =
                     in
                     [ 0, 5999, 6000, 9999, 10000 ]
                         |> List.map (\elapsed -> timeAt elapsed .fastestLapTime cars)
-                        |> Expect.equal [ 0, 0, 6000, 6000, 5000 ]
+                        |> Expect.equal [ Nothing, Nothing, Just 6000, Just 6000, Just 5000 ]
             , test "a lap with no recorded time is not the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 0 anySectors, lap 2 6000 anySectors ] ]
                         |> finalTime .fastestLapTime
-                        |> Expect.equal 6000
+                        |> Expect.equal (Just 6000)
             ]
         , describe "slowestLapTime"
             [ test "stands at the slowest lap run so far" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
                         |> finalTime .slowestLapTime
-                        |> Expect.equal 6000
+                        |> Expect.equal (Just 6000)
             ]
         , describe "fastestMiniSectors"
             [ test "ignores the mini-sectors of a lap that has no lap time" <|
@@ -71,7 +71,7 @@ tests =
                         ]
                     ]
                         |> finalMiniSectors
-                        |> Expect.equal (List.repeat 15 2000)
+                        |> Expect.equal (List.repeat 15 (Just 2000))
             ]
         , describe "where the records are read"
             [ test "`at` ignores laps the clock has not reached yet" <|
@@ -83,7 +83,7 @@ tests =
                         ]
                     ]
                         |> sectorsAt 6000
-                        |> Expect.equal [ 1000, 2000, 3000 ]
+                        |> Expect.equal [ Just 1000, Just 2000, Just 3000 ]
             , test "`final` counts every lap, whatever the clock says" <|
                 \_ ->
                     [ car "1"
@@ -92,7 +92,7 @@ tests =
                         ]
                     ]
                         |> finalSectors
-                        |> Expect.equal [ 900, 1900, 2900 ]
+                        |> Expect.equal [ Just 900, Just 1900, Just 2900 ]
             ]
         , describe "who holds each record"
             [ test "is the car and lap that set it" <|
@@ -142,16 +142,17 @@ tests =
 -- HELPERS
 
 
-{-| One record as a plain time, at the end of the race.
+{-| One record as a plain time, at the end of the race. `Nothing` is a record
+no lap has taken.
 -}
-finalTime : (Snapshot -> Maybe Holder) -> List Car -> Duration
+finalTime : (Snapshot -> Maybe Holder) -> List Car -> Maybe Duration
 finalTime pick cars =
     BestTimes.timeOf (pick (BestTimes.final (changesOf cars)))
 
 
 {-| The same, as it stood at `elapsed`.
 -}
-timeAt : Duration -> (Snapshot -> Maybe Holder) -> List Car -> Duration
+timeAt : Duration -> (Snapshot -> Maybe Holder) -> List Car -> Maybe Duration
 timeAt elapsed pick cars =
     BestTimes.timeOf (pick (BestTimes.at { elapsed = Instant.fromDuration elapsed } (changesOf cars)))
 
@@ -178,7 +179,7 @@ finalHolderOf pick cars =
 
 {-| The three fastest sector times in sector order, over the whole race.
 -}
-finalSectors : List Car -> List Duration
+finalSectors : List Car -> List (Maybe Duration)
 finalSectors cars =
     BestTimes.final (changesOf cars)
         |> .fastestSectors
@@ -188,7 +189,7 @@ finalSectors cars =
 
 {-| The same three, as they stood at `elapsed`.
 -}
-sectorsAt : Duration -> List Car -> List Duration
+sectorsAt : Duration -> List Car -> List (Maybe Duration)
 sectorsAt elapsed cars =
     BestTimes.at { elapsed = Instant.fromDuration elapsed } (changesOf cars)
         |> .fastestSectors
@@ -198,7 +199,7 @@ sectorsAt elapsed cars =
 
 {-| Every mini-sector record in track order, over the whole race.
 -}
-finalMiniSectors : List Car -> List Duration
+finalMiniSectors : List Car -> List (Maybe Duration)
 finalMiniSectors cars =
     BestTimes.final (changesOf cars)
         |> .fastestMiniSectors

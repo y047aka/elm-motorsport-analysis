@@ -3,7 +3,7 @@ module Motorsport.Chart.Histogram exposing (view)
 import Css exposing (px)
 import Html.Styled exposing (Html)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -49,11 +49,16 @@ view bestTimes coefficient laps =
         fastestLapTime =
             BestTimes.timeOf bestTimes.fastestLapTime
 
-        slowestLapTime =
-            BestTimes.timeOf bestTimes.slowestLapTime
+        -- The axis needs actual numbers; a record no lap has set is worth
+        -- nothing to it, which collapses the scale to a point and draws nothing.
+        fastestMs =
+            Maybe.withDefault 0 fastestLapTime
+
+        slowestMs =
+            Maybe.withDefault 0 (BestTimes.timeOf bestTimes.slowestLapTime)
 
         xScale =
-            xContinuousScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
+            xContinuousScale ( fastestMs, min (toFloat fastestMs * coefficient) (toFloat slowestMs) )
 
         yScale =
             yContinuousScale ( 0, 0 )
@@ -67,7 +72,16 @@ view bestTimes coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
+                Lap.recorded lap.time
+                    |> Maybe.map
+                        (\time ->
+                            performanceLevel
+                                { time = time
+                                , personalBest = Lap.recorded lap.best
+                                , fastest = fastestLapTime
+                                }
+                        )
+                    |> Maybe.withDefault Performance.Standard
                     |> Performance.toColorVariable
 
             else

@@ -118,7 +118,13 @@ compute bestTimes clock race =
                         , currentLapElapsed = timing.currentLapElapsed
                         , currentLapRated =
                             currentLap
-                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        rateTime fastestLapTime
+                                            { time = Just timing.currentLapElapsed
+                                            , personalBest = Lap.recorded lap.best
+                                            }
+                                    )
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -129,10 +135,22 @@ compute bestTimes clock race =
                                 |> Maybe.withDefault 0
                         , lastLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = lap.time, personalBest = lap.best })
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        rateTime fastestLapTime
+                                            { time = Lap.recorded lap.time
+                                            , personalBest = Lap.recorded lap.best
+                                            }
+                                    )
                         , bestLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = lap.best, personalBest = lap.best })
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        rateTime fastestLapTime
+                                            { time = Lap.recorded lap.best
+                                            , personalBest = Lap.recorded lap.best
+                                            }
+                                    )
                         , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
                         , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance bestTimes)
                         , currentDriver = car.currentDriver
@@ -187,9 +205,11 @@ fromLaps baseMetadata laps =
                         , intervalToAhead = Gap.none
                         , currentLapProgress = 0
                         , lastLapRated =
-                            Just (rateTime fastestLapTime { time = lap.time, personalBest = lap.best })
+                            rateTime fastestLapTime
+                                { time = Lap.recorded lap.time, personalBest = Lap.recorded lap.best }
                         , bestLapRated =
-                            Just (rateTime fastestLapTime { time = lap.best, personalBest = lap.best })
+                            rateTime fastestLapTime
+                                { time = Lap.recorded lap.best, personalBest = Lap.recorded lap.best }
                         , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
                         , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap
                         , currentDriver = Just lap.driver
@@ -266,11 +286,22 @@ groupEntriesByClass sortedEntries =
         |> List.map (\( first, rest ) -> ( Entry.classInfoOf first, first :: SortedList.toList rest ))
 
 
-rateTime : Duration -> { time : Duration, personalBest : Duration } -> RatedTime
+{-| Rate a time against the race's record and the car's own, where there is a
+time to rate. A time the source data did not record produces no rating rather
+than an uncoloured one, so a caller renders the same "-" it renders for a car
+with no lap at all.
+-}
+rateTime : Maybe Duration -> { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
 rateTime fastest { time, personalBest } =
-    { time = time
-    , performance = performanceLevel { time = time, personalBest = personalBest, fastest = fastest }
-    }
+    time
+        |> Maybe.map
+            (\recordedTime ->
+                { time = recordedTime
+                , performance =
+                    performanceLevel
+                        { time = recordedTime, personalBest = personalBest, fastest = fastest }
+                }
+            )
 
 
 extractCurrentSectorStates :
@@ -305,7 +336,15 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
 
 extractSectorPerformance : BestTimes.Snapshot -> Lap -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
+    Sector.map2
+        (\fastest sectorTime ->
+            rateTime (BestTimes.timeOf fastest)
+                { time = Lap.recorded sectorTime.time
+                , personalBest = Lap.recorded sectorTime.personalBest
+                }
+        )
+        bestTimes.fastestSectors
+        lap.sectors
 
 
 extractMiniSectorPerformance :
@@ -314,11 +353,9 @@ extractMiniSectorPerformance :
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =
     let
-        rate recorded fastest =
-            Maybe.map2
-                (\time personalBest -> rateTime (BestTimes.timeOf fastest) { time = time, personalBest = personalBest })
-                recorded.time
-                recorded.best
+        rate miniSector fastest =
+            rateTime (BestTimes.timeOf fastest)
+                { time = miniSector.time, personalBest = miniSector.best }
     in
     lap.miniSectors
         |> Maybe.map (\ms -> LeMans.map2 rate ms bestTimes.fastestMiniSectors)

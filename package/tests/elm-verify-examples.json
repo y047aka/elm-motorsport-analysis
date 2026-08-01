@@ -6,6 +6,7 @@
     "Motorsport.Duration",
     "Motorsport.Gap",
     "Motorsport.Instant",
+    "Motorsport.Lap",
     "Motorsport.Sector"
   ]
 }
