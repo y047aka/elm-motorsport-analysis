@@ -17,8 +17,7 @@ import Http
 import Motorsport.Class.Era as Era
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Replay as Replay
-import Motorsport.ViewModel as ViewModel exposing (ViewModel)
-import Motorsport.ViewModel.BestTimes exposing (Scope(..))
+import Motorsport.ViewModel as ViewModel exposing (Scope(..), ViewModel)
 import Shared.Msg exposing (Msg(..))
 
 

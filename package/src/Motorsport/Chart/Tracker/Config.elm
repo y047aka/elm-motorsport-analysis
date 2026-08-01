@@ -15,9 +15,9 @@ module Motorsport.Chart.Tracker.Config exposing
 -}
 
 import List.Extra
+import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
-import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 import Motorsport.ViewModel.Entry exposing (Entry)
@@ -51,8 +51,8 @@ buildConfig :
     Layout LeMans2025MiniSector
     ->
         { a
-            | fastestSectors : BySector Duration
-            , fastestMiniSectors : ByMiniSector Duration
+            | fastestSectors : BySector (Maybe Holder)
+            , fastestMiniSectors : ByMiniSector (Maybe Holder)
         }
     -> TrackConfig
 buildConfig layout bestTimes =
@@ -63,11 +63,13 @@ buildConfig layout bestTimes =
         totalTime =
             if isLeMans2025 then
                 LeMans.values bestTimes.fastestMiniSectors
+                    |> List.map BestTimes.timeOf
                     |> List.sum
                     |> toFloat
 
             else
                 Sector.values bestTimes.fastestSectors
+                    |> List.map BestTimes.timeOf
                     |> List.sum
                     |> toFloat
 
@@ -75,6 +77,7 @@ buildConfig layout bestTimes =
             let
                 value =
                     LeMans.get miniSector bestTimes.fastestMiniSectors
+                        |> BestTimes.timeOf
                         |> toFloat
 
                 defaultRatio =
@@ -110,7 +113,7 @@ buildConfig layout bestTimes =
 
 computeSectorShares :
     Layout LeMans2025MiniSector
-    -> { a | fastestSectors : BySector Duration }
+    -> { a | fastestSectors : BySector (Maybe Holder) }
     -> Float
     -> (LeMans2025MiniSector -> Float)
     -> BySector Float
@@ -134,7 +137,7 @@ computeSectorShares layout bestTimes totalTime miniRatio =
                         |> List.map miniRatio
                         |> List.sum
     in
-    Sector.map2 sectorShare bestTimes.fastestSectors layout.sectors
+    Sector.map2 (BestTimes.timeOf >> sectorShare) bestTimes.fastestSectors layout.sectors
 
 
 buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData

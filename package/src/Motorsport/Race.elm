@@ -22,9 +22,9 @@ moment is derived from the two, in
 
 import Dict
 import List.Extra
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Race.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -34,9 +34,9 @@ import Motorsport.Status exposing (Status)
 {-| `timelineEvents` is kept for the Events tab, which reads the race as a list of
 things that happened. The three beside it read the same race at an instant, and
 are named for what each records the moments of: `statusChanges` when a car's
-status moved, `lapCompletions` when the lap counter went up, `bestTimes` when a
-record was set. All three are [`ChangePoints`](Motorsport-Internal-ChangePoints)
-underneath.
+status moved, `lapCompletions` when the lap counter went up, `bestTimeChanges`
+when a record was set. All three are
+[`ChangePoints`](Motorsport-Internal-ChangePoints) underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race was.
@@ -49,7 +49,7 @@ type alias Race =
     , timelineEvents : List TimelineEvent
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
-    , bestTimes : BestTimes
+    , bestTimeChanges : BestTimes.Changes
     }
 
 
@@ -63,7 +63,7 @@ empty =
     , timelineEvents = []
     , statusChanges = StatusChanges.empty
     , lapCompletions = ChangePoints.empty
-    , bestTimes = BestTimes.empty
+    , bestTimeChanges = BestTimes.empty
     }
 
 
@@ -89,7 +89,7 @@ fromCars cars =
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
-    , bestTimes = BestTimes.fromCars cars
+    , bestTimeChanges = BestTimes.fromLaps (List.concatMap .laps cars)
     }
 
 

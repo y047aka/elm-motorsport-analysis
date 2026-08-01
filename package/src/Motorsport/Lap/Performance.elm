@@ -1,16 +1,14 @@
 module Motorsport.Lap.Performance exposing
-    ( findFastestBy
-    , calculateMiniSectorFastest
-    , RatedTime
+    ( RatedTime
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
     )
 
-{-|
+{-| How one time reads against the baseline it is rated on.
 
-@docs findFastestBy
-@docs calculateMiniSectorFastest
+What that baseline is comes from [`BestTimes`](Motorsport-BestTimes); this module
+only says what a time coloured against it looks like.
 
 @docs RatedTime
 
@@ -20,18 +18,7 @@ module Motorsport.Lap.Performance exposing
 
 -}
 
-import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
-
-
-findFastestBy : (a -> Duration) -> List (List a) -> Maybe Duration
-findFastestBy getter laps =
-    laps
-        |> List.filterMap (List.filter (getter >> (/=) 0) >> List.Extra.minimumBy getter)
-        |> List.Extra.minimumBy getter
-        |> Maybe.map getter
 
 
 type alias RatedTime =
@@ -50,9 +37,22 @@ type PerformanceLevel
     | Standard
 
 
+{-| A zero is a time the source data did not record, not a very quick one, so it
+takes no colour.
+
+Without that first branch it would take both. Nothing has beaten a record that
+has not been set, so an unset baseline reads as zero -- and a zero time matches
+it exactly, which would light up every unrecorded time as the fastest of the
+race until the first real one is set. A car that has yet to set a personal best
+carries a zero for the same reason, and would rate its own missing time as one.
+
+-}
 performanceLevel : { a | time : Duration, personalBest : Duration, fastest : Duration } -> PerformanceLevel
 performanceLevel { time, personalBest, fastest } =
-    if time == fastest then
+    if time == 0 then
+        Standard
+
+    else if time == fastest then
         Fastest
 
     else if time == personalBest then
@@ -78,29 +78,3 @@ toColorVariable level =
 
         Standard ->
             "var(--performance-standard)"
-
-
-
--- FASTEST MINI SECTORS
-
-
-calculateMiniSectorFastest : List (List Lap) -> ByMiniSector Duration
-calculateMiniSectorFastest laps =
-    let
-        validLaps =
-            List.map (List.filter (.time >> (/=) 0)) laps
-
-        fastestTimeFor getter =
-            validLaps
-                |> List.filterMap
-                    (\laps_ ->
-                        laps_
-                            |> List.filterMap (\lap -> lap.miniSectors |> Maybe.andThen (getter >> .time))
-                            |> List.filter ((/=) 0)
-                            |> List.minimum
-                    )
-                |> List.minimum
-                |> Maybe.withDefault 0
-    in
-    -- TODO: 畳み込みを使うとより高速に計算できる
-    LeMans.initialize (\mini -> fastestTimeFor (LeMans.get mini))

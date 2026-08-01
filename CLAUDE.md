@@ -43,8 +43,12 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 - `Css/` (Color, Palette, Typography), `Data/` (series config), `UI/` (Button, Label, Table)
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
-`ViewModel/` for computed view state (Standings, LapHistory, BestTimes),
-`Chart/` for rendering (GapChart, BoxPlot).
+`Race/` for the loaded race and its indices, `ViewModel/` for computed view state
+(Standings, LapHistory), `Chart/` for rendering (GapChart, BoxPlot).
+
+Modules serving both sides sit directly under `Motorsport/` rather than in either
+subdirectory — `BestTimes` is built by `Race` and read by `ViewModel`, so it
+belongs to neither and depends on neither.
 
 ## Testing
 

@@ -21,17 +21,18 @@ this module is how one gets built and read back.
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
+import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Lap.Performance exposing (RatedTime, calculateMiniSectorFastest, findFastestBy, performanceLevel)
+import Motorsport.Lap.Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car)
-import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.ViewModel.Entry as Entry exposing (ClassInfo, CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
 import SortedList exposing (SortedList)
@@ -51,17 +52,12 @@ type Standings
         }
 
 
-compute :
-    { a
-        | fastestLapTime : Duration
-        , fastestSectors : BySector Duration
-        , fastestMiniSectors : ByMiniSector Duration
-    }
-    -> { elapsed : Duration }
-    -> Race
-    -> Standings
+compute : BestTimes.Snapshot -> { elapsed : Duration } -> Race -> Standings
 compute bestTimes clock race =
     let
+        fastestLapTime =
+            BestTimes.timeOf bestTimes.fastestLapTime
+
         -- The entry list carries only the laps, so what each car is doing at
         -- this moment is read off the clock here. Who is ahead of whom follows
         -- from that, and every position below is read off the resulting order.
@@ -121,7 +117,7 @@ compute bestTimes clock race =
                         , currentLapElapsed = timing.currentLapElapsed
                         , currentLapRated =
                             currentLap
-                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
+                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = timing.currentLapElapsed, personalBest = lap.best })
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -132,10 +128,10 @@ compute bestTimes clock race =
                                 |> Maybe.withDefault 0
                         , lastLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
+                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLapRated =
                             car.lastLap
-                                |> Maybe.map (\lap -> rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                                |> Maybe.map (\lap -> rateTime fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
                         , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance bestTimes)
                         , currentDriver = car.currentDriver
@@ -162,16 +158,10 @@ fromLaps : Car.Metadata -> List Lap -> Standings
 fromLaps baseMetadata laps =
     let
         bestTimes =
-            { fastestLapTime = laps |> List.map .time |> List.filter ((/=) 0) |> List.minimum |> Maybe.withDefault 0
-            , fastestSectors =
-                Sector.initialize
-                    (\sector ->
-                        [ laps ]
-                            |> findFastestBy (.sectors >> Sector.get sector >> .time)
-                            |> Maybe.withDefault 0
-                    )
-            , fastestMiniSectors = calculateMiniSectorFastest [ laps ]
-            }
+            BestTimes.final (BestTimes.fromLaps laps)
+
+        fastestLapTime =
+            BestTimes.timeOf bestTimes.fastestLapTime
 
         entries =
             laps
@@ -196,9 +186,9 @@ fromLaps baseMetadata laps =
                         , intervalToAhead = Gap.none
                         , currentLapProgress = 0
                         , lastLapRated =
-                            Just (rateTime bestTimes.fastestLapTime { time = lap.time, personalBest = lap.best })
+                            Just (rateTime fastestLapTime { time = lap.time, personalBest = lap.best })
                         , bestLapRated =
-                            Just (rateTime bestTimes.fastestLapTime { time = lap.best, personalBest = lap.best })
+                            Just (rateTime fastestLapTime { time = lap.best, personalBest = lap.best })
                         , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
                         , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap
                         , currentDriver = Just lap.driver
@@ -283,7 +273,7 @@ rateTime fastest { time, personalBest } =
 
 
 extractCurrentSectorStates :
-    { a | fastestSectors : BySector Duration }
+    BestTimes.Snapshot
     -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
@@ -312,23 +302,20 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
         (extractSectorPerformance bestTimes lap)
 
 
-extractSectorPerformance :
-    { a | fastestSectors : BySector Duration }
-    -> Lap
-    -> SectorPerformance
+extractSectorPerformance : BestTimes.Snapshot -> Lap -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2 rateTime bestTimes.fastestSectors lap.sectors
+    Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
 
 
 extractMiniSectorPerformance :
-    { a | fastestMiniSectors : ByMiniSector Duration }
+    BestTimes.Snapshot
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =
     let
-        rate recorded fastestTime =
+        rate recorded fastest =
             Maybe.map2
-                (\time personalBest -> rateTime fastestTime { time = time, personalBest = personalBest })
+                (\time personalBest -> rateTime (BestTimes.timeOf fastest) { time = time, personalBest = personalBest })
                 recorded.time
                 recorded.best
     in

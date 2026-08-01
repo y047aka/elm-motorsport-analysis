@@ -14,13 +14,13 @@ import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.BestTimes exposing (BestTimes)
 import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
@@ -111,15 +111,15 @@ view { viewModel, replay } { leaderboardState } =
                 , text (Clock.getElapsed playback |> Duration.toString)
                 ]
             , div []
-                ([ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
-                 , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                ([ div [] [ text "fastestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.fastestLapTime)) ]
+                 , div [] [ text "slowestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.slowestLapTime)) ]
                  ]
                     ++ (Sector.toList viewModel.bestTimes.fastestSectors
                             |> List.map
                                 (\( sector, fastest ) ->
                                     div []
                                         [ text (Sector.toString sector ++ "_fastest: ")
-                                        , text (Duration.toString fastest)
+                                        , text (Duration.toString (BestTimes.timeOf fastest))
                                         ]
                                 )
                        )
@@ -137,7 +137,7 @@ view { viewModel, replay } { leaderboardState } =
     }
 
 
-config : BestTimes -> Standings -> Leaderboard.Config Entry Msg
+config : BestTimes.Snapshot -> Standings -> Leaderboard.Config Entry Msg
 config bestTimes standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -157,11 +157,11 @@ config bestTimes standings =
     }
 
 
-sectorColumns : BestTimes -> List (DataView.Column Entry Msg)
+sectorColumns : BestTimes.Snapshot -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
         fastest sector =
-            Sector.get sector bestTimes.fastestSectors
+            BestTimes.timeOf (Sector.get sector bestTimes.fastestSectors)
 
         times sector =
             .currentLapSectors >> Maybe.map (Sector.get sector)
