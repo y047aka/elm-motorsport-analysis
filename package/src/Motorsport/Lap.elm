@@ -2,6 +2,7 @@ module Motorsport.Lap exposing
     ( Lap, empty
     , SectorTime, SectorTimes
     , MiniSectors, MiniSectorData
+    , recorded
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
@@ -14,6 +15,7 @@ module Motorsport.Lap exposing
 @docs Lap, empty
 @docs SectorTime, SectorTimes
 @docs MiniSectors, MiniSectorData
+@docs recorded
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
 
@@ -35,6 +37,7 @@ import List.Extra
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
 
 
@@ -43,10 +46,10 @@ type alias Lap =
     , driver : Driver
     , lap : Int
     , position : Maybe Int
-    , time : Duration
-    , best : Duration
+    , time : Maybe Duration
+    , best : Maybe Duration
     , sectors : SectorTimes
-    , elapsed : Duration
+    , elapsed : Instant
     , pitTime : Maybe Duration
     , miniSectors : Maybe MiniSectors
     }
@@ -55,12 +58,14 @@ type alias Lap =
 {-| How long one sector of this lap took, next to the driver's best for that
 sector up to and including this lap — the baseline a time is rated against.
 
-The two are kept together because nothing reads one without the other.
+The two are kept together because nothing reads one without the other. Either
+can be missing: a sector the source data left blank has no time, and a driver
+who has yet to complete one has no best for it.
 
 -}
 type alias SectorTime =
-    { time : Duration
-    , personalBest : Duration
+    { time : Maybe Duration
+    , personalBest : Maybe Duration
     }
 
 
@@ -87,17 +92,41 @@ empty =
     , driver = Driver.unknown
     , lap = 0
     , position = Nothing
-    , time = 0
-    , sectors = Sector.initialize (always { time = 0, personalBest = 0 })
-    , best = 0
-    , elapsed = 0
+    , time = Nothing
+    , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
+    , best = Nothing
+    , elapsed = Instant.raceStart
     , pitTime = Nothing
     , miniSectors = Nothing
     }
 
 
+{-| A time as the source data spells it, where a zero stands for a time that was
+not recorded rather than a very quick one.
+
+For the loader to call on the way in, so that the zero stops at the boundary and
+a `Lap` never carries one. Sector times arrive spelled as a blank cell and are
+`Nothing` before they get here; a lap time is the one the CLI writes out as
+`0.000` whether it was recorded or not.
+
+    recorded 95365
+    --> Just 95365
+
+    recorded 0
+    --> Nothing
+
+-}
+recorded : Duration -> Maybe Duration
+recorded time =
+    if time == 0 then
+        Nothing
+
+    else
+        Just time
+
+
 type alias Clock =
-    { elapsed : Duration }
+    { elapsed : Instant }
 
 
 {-| Which of two laps is ahead on track, read at a moment of the race.
@@ -139,7 +168,7 @@ compareLapsInSameSector clock a b segment_a segment_b =
                 ( Just ms_a, Just ms_b ) ->
                     case Compare.reverse (Compare.by miniSectorToIndex) ms_a ms_b of
                         EQ ->
-                            Basics.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
+                            Instant.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
 
                         order ->
                             order
@@ -162,19 +191,19 @@ first is ahead.
 -}
 compareBySegmentStart : Segment -> Segment -> Order
 compareBySegmentStart segment_a segment_b =
-    Basics.compare segment_a.start segment_b.start
+    Instant.compare segment_a.start segment_b.start
 
 
-completedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
+completedLapsAt : Clock -> List { a | elapsed : Instant } -> List { a | elapsed : Instant }
 completedLapsAt clock =
-    List.filter (\lap -> lap.elapsed <= clock.elapsed)
+    List.filter (\lap -> Instant.compare lap.elapsed clock.elapsed /= GT)
 
 
-imcompletedLapsAt : Clock -> List { a | elapsed : Duration } -> List { a | elapsed : Duration }
+imcompletedLapsAt : Clock -> List { a | elapsed : Instant } -> List { a | elapsed : Instant }
 imcompletedLapsAt clock laps =
     let
         incompletedLaps =
-            List.filter (\lap -> lap.elapsed > clock.elapsed) laps
+            List.filter (\lap -> Instant.compare lap.elapsed clock.elapsed == GT) laps
     in
     case incompletedLaps of
         [] ->
@@ -184,12 +213,12 @@ imcompletedLapsAt clock laps =
             incompletedLaps
 
 
-findLastLapAt : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findLastLapAt : Clock -> List { a | elapsed : Instant } -> Maybe { a | elapsed : Instant }
 findLastLapAt clock =
     completedLapsAt clock >> List.Extra.last
 
 
-findCurrentLap : Clock -> List { a | elapsed : Duration } -> Maybe { a | elapsed : Duration }
+findCurrentLap : Clock -> List { a | elapsed : Instant } -> Maybe { a | elapsed : Instant }
 findCurrentLap clock =
     imcompletedLapsAt clock >> List.head
 
@@ -208,37 +237,56 @@ Which sector it is belongs to the position in a
 
 -}
 type alias Segment =
-    { start : Duration
+    { start : Instant
     , time : Duration
     }
+
+
+{-| When the lap began.
+
+Read off the lap's own end and duration, never the previous lap's, which may be
+missing or not adjacent. A lap the source data has no time for has no length, so
+it begins where it ends -- which is what the geometry below wants for a lap it
+cannot place.
+
+-}
+lapStart : Lap -> Instant
+lapStart lap =
+    Instant.subtract (Maybe.withDefault 0 lap.time) lap.elapsed
 
 
 {-| Cut a lap into its three sectors.
 
 The lap stores only how long each sector took, so where one begins has to be
-added up; this is the only place that happens. It adds up from the lap's own
-end and duration, never the previous lap's, which may be missing or not
-adjacent.
+added up; this is the only place that happens. A sector with no recorded time is
+empty rather than absent, so the two after it still start where they should.
 
 -}
 segments : Lap -> BySector Segment
 segments lap =
     let
         start =
-            lap.elapsed - lap.time
+            lapStart lap
+
+        took sector =
+            Maybe.withDefault 0 sector.time
+
+        ( s1, s2, s3 ) =
+            ( took lap.sectors.s1, took lap.sectors.s2, took lap.sectors.s3 )
     in
-    { s1 = { start = start, time = lap.sectors.s1.time }
-    , s2 = { start = start + lap.sectors.s1.time, time = lap.sectors.s2.time }
-    , s3 = { start = start + lap.sectors.s1.time + lap.sectors.s2.time, time = lap.sectors.s3.time }
+    { s1 = { start = start, time = s1 }
+    , s2 = { start = Instant.add s1 start, time = s2 }
+    , s3 = { start = Instant.add (s1 + s2) start, time = s3 }
     }
 
 
 {-| Whether a moment of race time falls inside a segment. Half-open: the
 instant a sector ends belongs to the next one.
 -}
-contains : Duration -> Segment -> Bool
+contains : Instant -> Segment -> Bool
 contains raceElapsed segment =
-    raceElapsed >= segment.start && raceElapsed < (segment.start + segment.time)
+    (Instant.compare raceElapsed segment.start /= LT)
+        && (Instant.compare raceElapsed (Instant.add segment.time segment.start) == LT)
 
 
 {-| The segment the car is driving at the given moment. Moments outside the lap
@@ -283,14 +331,14 @@ progressAt clock lap =
             currentSegment clock lap
     in
     { sector = sector
-    , progress = toFloat (clock.elapsed - segment.start) / toFloat segment.time
+    , progress = toFloat (Instant.since { from = segment.start, to = clock.elapsed }) / toFloat segment.time
     }
 
 
 {-| When a given sector of a given lap began — for asking about a sector the
 car is not in, or a lap it is not on.
 -}
-sectorStart : Sector -> Lap -> Duration
+sectorStart : Sector -> Lap -> Instant
 sectorStart sector lap =
     (Sector.get sector (segments lap)).start
 
@@ -306,13 +354,14 @@ currentMiniSector clock lap =
         |> Maybe.andThen
             (\ms ->
                 let
-                    elapsed_lastLap =
-                        lap.elapsed - lap.time
+                    start_of_lap =
+                        lapStart lap
 
                     inRange start end =
                         case ( start, end ) of
                             ( Just start_, Just end_ ) ->
-                                clock.elapsed >= (start_ + elapsed_lastLap) && clock.elapsed < (end_ + elapsed_lastLap)
+                                contains clock.elapsed
+                                    { start = Instant.add start_ start_of_lap, time = end_ - start_ }
 
                             _ ->
                                 False
@@ -368,7 +417,10 @@ miniSectorProgressAt clock { current, previous } =
                             ( Just start_, Just duration_ ) ->
                                 let
                                     elapsedSinceStart =
-                                        clock.elapsed - (previous.elapsed + start_)
+                                        Instant.since
+                                            { from = Instant.add start_ previous.elapsed
+                                            , to = clock.elapsed
+                                            }
 
                                     progress =
                                         if duration_ <= 0 then
@@ -397,17 +449,15 @@ miniSectorToIndex miniSector =
         |> Maybe.withDefault 0
 
 
-miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Duration
+miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Instant
 miniSectorToElapsed lap miniSector =
     let
-        elapsed_lastLap =
-            lap.elapsed - lap.time
+        intoTheLap =
+            lap.miniSectors
+                |> Maybe.andThen (\miniSectors -> miniSectorStartElapsed miniSectors miniSector)
+                |> Maybe.withDefault 0
     in
-    elapsed_lastLap
-        + (lap.miniSectors
-            |> Maybe.andThen (\miniSectors -> miniSectorStartElapsed miniSectors miniSector)
-            |> Maybe.withDefault 0
-          )
+    Instant.add intoTheLap (lapStart lap)
 
 
 miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration

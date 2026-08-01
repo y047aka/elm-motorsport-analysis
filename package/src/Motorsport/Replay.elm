@@ -19,6 +19,7 @@ worked out where it is needed.
 
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car exposing (Car)
 import Time exposing (Posix)
@@ -86,7 +87,7 @@ update msg m =
         Tick now ->
             case m.playback.state of
                 Clock.Started splitTime { startedAt } ->
-                    if Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed < m.race.timeLimit then
+                    if Instant.compare (Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed) m.race.timeLimit == LT then
                         { m | playback = Clock.update now Clock.Tick m.playback }
 
                     else
@@ -110,8 +111,8 @@ update msg m =
                     Clock.getElapsed m.playback
             in
             -- Skipping is offered forwards, and stops once the race is over.
-            if elapsed < m.race.timeLimit then
-                moveTo (elapsed + duration) m
+            if Instant.compare elapsed m.race.timeLimit == LT then
+                moveTo (Instant.add duration elapsed) m
 
             else
                 m
@@ -146,7 +147,7 @@ update msg m =
                 m
 
 
-moveTo : Duration -> Model -> Model
+moveTo : Instant -> Model -> Model
 moveTo elapsed m =
     { m | playback = Clock.setElapsed elapsed m.playback }
 

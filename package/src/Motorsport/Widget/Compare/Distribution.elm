@@ -57,9 +57,11 @@ seriesOf lapHistory range entry =
 racingTimes : LapHistory -> ( Int, Int ) -> Entry -> List Int
 racingTimes lapHistory ( minLap, maxLap ) entry =
     let
+        -- filterMap, not map: a lap the source data has no time for is not a
+        -- lap run in no time, and has no place in the distribution.
         times =
             LapHistory.get entry.metadata.carNumber lapHistory
                 |> List.filter (\lap -> minLap <= lap.lap && lap.lap <= maxLap && lap.pitTime == Nothing)
-                |> List.map .time
+                |> List.filterMap .time
     in
     times |> List.filter (\t -> t <= upperFence times)

@@ -7,7 +7,7 @@ module Motorsport.Race.StatusChanges exposing
 {-| Every moment a car's status changes, collected once from the race timeline.
 
 A status is not something playback accumulates as the clock runs -- it is
-a function of the race and the elapsed time. This index makes that function cheap:
+a function of the race and the moment it is read at. This index makes that cheap:
 see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 
 @docs StatusChanges
@@ -17,7 +17,7 @@ see [`ChangePoints`](Motorsport-Internal-ChangePoints), one set of them per car.
 -}
 
 import Dict exposing (Dict)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (CarNumber)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -57,8 +57,8 @@ fromTimelineEvents events =
 
 collect :
     TimelineEvent
-    -> Dict CarNumber (List ( Duration, Status ))
-    -> Dict CarNumber (List ( Duration, Status ))
+    -> Dict CarNumber (List ( Instant, Status ))
+    -> Dict CarNumber (List ( Instant, Status ))
 collect { eventTime, eventType } acc =
     case statusChange eventType of
         Just ( carNumber, status ) ->
@@ -103,11 +103,11 @@ Where a pit exit and the chequered flag land on the same instant the flag wins,
 because the timeline lists it later -- see
 [`ChangePoints.fromList`](Motorsport-Internal-ChangePoints#fromList).
 
-    StatusChanges.statusAt { elapsed = 3600000 } "7" index
+    StatusChanges.statusAt { elapsed = Instant.fromDuration 3600000 } "7" index
     -- Racing, InPit, Retired, ...
 
 -}
-statusAt : { elapsed : Duration } -> CarNumber -> StatusChanges -> Status
+statusAt : { elapsed : Instant } -> CarNumber -> StatusChanges -> Status
 statusAt clock carNumber (StatusChanges index) =
     Dict.get carNumber index
         |> Maybe.andThen (ChangePoints.valueAt clock.elapsed)

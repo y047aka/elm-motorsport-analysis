@@ -129,7 +129,9 @@ toStringInHours milliseconds =
     String.join ":" [ h, m, s ++ "." ++ ms ]
 
 
-{-|
+{-| Read a duration back off the wire, spelled the way [`toString`](#toString)
+writes it. Times arrive with three decimal places, so the fractional part is
+already a count of milliseconds.
 
     fromString "0.000"
     --> Just 0
@@ -166,8 +168,21 @@ fromPositiveString str =
         fromMinutes m =
             String.toInt m |> Maybe.map ((*) 60000)
 
+        -- Read as digits rather than through `String.toFloat`, which cannot
+        -- hold a millisecond exactly and had to be rounded back out of.
+        -- A shorter fraction is padded out; a longer one is not read.
         fromSeconds s =
-            String.toFloat s |> Maybe.map ((*) 1000 >> round)
+            case String.split "." s of
+                [ whole, fraction ] ->
+                    Maybe.map2 (\whole_ ms -> (whole_ * 1000) + ms)
+                        (String.toInt whole)
+                        (fraction |> String.padRight 3 '0' |> String.left 3 |> String.toInt)
+
+                [ whole ] ->
+                    String.toInt whole |> Maybe.map ((*) 1000)
+
+                _ ->
+                    Nothing
     in
     case String.split ":" str of
         [ h, m, s ] ->

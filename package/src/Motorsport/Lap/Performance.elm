@@ -37,25 +37,21 @@ type PerformanceLevel
     | Standard
 
 
-{-| A zero is a time the source data did not record, not a very quick one, so it
-takes no colour.
+{-| How a time reads against the two baselines it is rated on.
 
-Without that first branch it would take both. Nothing has beaten a record that
-has not been set, so an unset baseline reads as zero -- and a zero time matches
-it exactly, which would light up every unrecorded time as the fastest of the
-race until the first real one is set. A car that has yet to set a personal best
-carries a zero for the same reason, and would rate its own missing time as one.
+Both baselines are `Nothing` until some lap sets them, and nothing has beaten a
+record that has not been set -- so an unset baseline matches no time, and the
+comparison needs no guard of its own. There is only a time to rate here at all
+because the loader dropped the ones the source data did not record, on the way
+in -- see [`Lap.recorded`](Motorsport-Lap#recorded).
 
 -}
-performanceLevel : { a | time : Duration, personalBest : Duration, fastest : Duration } -> PerformanceLevel
+performanceLevel : { a | time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration } -> PerformanceLevel
 performanceLevel { time, personalBest, fastest } =
-    if time == 0 then
-        Standard
-
-    else if time == fastest then
+    if fastest == Just time then
         Fastest
 
-    else if time == personalBest then
+    else if personalBest == Just time then
         PersonalBest
 
     else

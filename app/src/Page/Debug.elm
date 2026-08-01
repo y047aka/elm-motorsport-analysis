@@ -18,6 +18,7 @@ import Motorsport.BestTimes as BestTimes
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
+import Motorsport.Instant as Instant
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
@@ -108,18 +109,18 @@ view { viewModel, replay } { leaderboardState } =
                     , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
                     , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
                     ]
-                , text (Clock.getElapsed playback |> Duration.toString)
+                , text (Clock.getElapsed playback |> Instant.toString)
                 ]
             , div []
-                ([ div [] [ text "fastestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.fastestLapTime)) ]
-                 , div [] [ text "slowestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.slowestLapTime)) ]
+                ([ div [] [ text "fastestLapTime: ", text (bestTimeText viewModel.bestTimes.fastestLapTime) ]
+                 , div [] [ text "slowestLapTime: ", text (bestTimeText viewModel.bestTimes.slowestLapTime) ]
                  ]
                     ++ (Sector.toList viewModel.bestTimes.fastestSectors
                             |> List.map
                                 (\( sector, fastest ) ->
                                     div []
                                         [ text (Sector.toString sector ++ "_fastest: ")
-                                        , text (Duration.toString (BestTimes.timeOf fastest))
+                                        , text (bestTimeText fastest)
                                         ]
                                 )
                        )
@@ -157,6 +158,13 @@ config bestTimes standings =
     }
 
 
+{-| A record no lap has set has no time to print.
+-}
+bestTimeText : Maybe BestTimes.Holder -> String
+bestTimeText =
+    BestTimes.timeOf >> Maybe.map Duration.toString >> Maybe.withDefault "-"
+
+
 sectorColumns : BestTimes.Snapshot -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
@@ -175,7 +183,7 @@ sectorColumns bestTimes =
                         times sector
                             >> Maybe.map
                                 (\{ time, personalBest } ->
-                                    { time = time
+                                    { time = Maybe.withDefault 0 time
                                     , personalBest = personalBest
                                     , fastest = fastest sector
                                     , progress = 1
@@ -184,8 +192,8 @@ sectorColumns bestTimes =
                     }
                 , customColumn
                     { label = Sector.toString sector ++ " Best"
-                    , getter = times sector >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-                    , sorter = Compare.by (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
+                    , getter = times sector >> Maybe.andThen .personalBest >> Maybe.map Duration.toString >> Maybe.withDefault ""
+                    , sorter = Compare.by (times sector >> Maybe.andThen .personalBest >> Maybe.withDefault 0)
                     }
                 ]
             )

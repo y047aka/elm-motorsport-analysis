@@ -22,11 +22,11 @@ scrubbed backwards lands on the same value as one that played through.
 -}
 
 import Array exposing (Array)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 
 
 type ChangePoints a
-    = ChangePoints (Array ( Duration, a ))
+    = ChangePoints (Array ( Instant, a ))
 
 
 {-| No changes at all. Every reading comes back `Nothing`.
@@ -43,15 +43,15 @@ they were given in -- and `valueAt` takes the last of them. That is what lets an
 index built from an event list agree with folding over the same list.
 
 -}
-fromList : List ( Duration, a ) -> ChangePoints a
+fromList : List ( Instant, a ) -> ChangePoints a
 fromList changes =
-    ChangePoints (Array.fromList (List.sortBy Tuple.first changes))
+    ChangePoints (Array.fromList (List.sortBy (Tuple.first >> Instant.toDuration) changes))
 
 
 {-| The value in force at `elapsed`: the last change at or before it, or
 `Nothing` while the first change is still ahead of the clock.
 -}
-valueAt : Duration -> ChangePoints a -> Maybe a
+valueAt : Instant -> ChangePoints a -> Maybe a
 valueAt elapsed ((ChangePoints points) as index) =
     Array.get (countUpTo elapsed index - 1) points
         |> Maybe.map Tuple.second
@@ -68,18 +68,19 @@ last (ChangePoints points) =
 
 {-| How many changes have happened by `elapsed`.
 -}
-countUpTo : Duration -> ChangePoints a -> Int
+countUpTo : Instant -> ChangePoints a -> Int
 countUpTo elapsed (ChangePoints points) =
     search elapsed points 0 (Array.length points)
 
 
 {-| When the `n`th change happened, counting from zero.
 
-Takes a position in the index, where `valueAt` takes a moment of the race. Both
-are `Int`, so only the name tells them apart.
+Takes a position in the index, where `valueAt` takes a moment of the race --
+which is the whole difference between an `Int` and an
+[`Instant`](Motorsport-Instant).
 
 -}
-timeOfNth : Int -> ChangePoints a -> Maybe Duration
+timeOfNth : Int -> ChangePoints a -> Maybe Instant
 timeOfNth n (ChangePoints points) =
     Array.get n points
         |> Maybe.map Tuple.first
@@ -95,7 +96,7 @@ length (ChangePoints points) =
 {-| Invariant: every change below `low` is at or before `elapsed`, and every
 change from `high` up is after it. The two meet at the count.
 -}
-search : Duration -> Array ( Duration, a ) -> Int -> Int -> Int
+search : Instant -> Array ( Instant, a ) -> Int -> Int -> Int
 search elapsed points low high =
     if low >= high then
         low
@@ -107,7 +108,7 @@ search elapsed points low high =
         in
         case Array.get mid points of
             Just ( at, _ ) ->
-                if at <= elapsed then
+                if Instant.compare at elapsed /= GT then
                     search elapsed points (mid + 1) high
 
                 else

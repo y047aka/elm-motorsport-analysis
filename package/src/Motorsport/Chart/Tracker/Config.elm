@@ -63,21 +63,24 @@ buildConfig layout bestTimes =
         totalTime =
             if isLeMans2025 then
                 LeMans.values bestTimes.fastestMiniSectors
-                    |> List.map BestTimes.timeOf
+                    |> List.filterMap BestTimes.timeOf
                     |> List.sum
                     |> toFloat
 
             else
                 Sector.values bestTimes.fastestSectors
-                    |> List.map BestTimes.timeOf
+                    |> List.filterMap BestTimes.timeOf
                     |> List.sum
                     |> toFloat
 
         miniRatio miniSector =
             let
+                -- A record no lap has set contributes nothing to the track's
+                -- proportions; the default ratio below covers that case.
                 value =
                     LeMans.get miniSector bestTimes.fastestMiniSectors
                         |> BestTimes.timeOf
+                        |> Maybe.withDefault 0
                         |> toFloat
 
                 defaultRatio =
@@ -124,7 +127,7 @@ computeSectorShares layout bestTimes totalTime miniRatio =
                 [] ->
                     let
                         value =
-                            toFloat fastestTime
+                            toFloat (Maybe.withDefault 0 fastestTime)
                     in
                     if totalTime == 0 then
                         Circuit.sectorDefaultRatio

@@ -23,7 +23,7 @@ moment is derived from the two, in
 import Dict
 import List.Extra
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
@@ -45,7 +45,7 @@ counter's ceiling and `lapCountAt` can never disagree about how long the race wa
 type alias Race =
     { cars : List Car
     , lapTotal : Int
-    , timeLimit : Duration
+    , timeLimit : Instant
     , timelineEvents : List TimelineEvent
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
@@ -59,7 +59,7 @@ empty : Race
 empty =
     { cars = []
     , lapTotal = 0
-    , timeLimit = 0
+    , timeLimit = Instant.raceStart
     , timelineEvents = []
     , statusChanges = StatusChanges.empty
     , lapCompletions = ChangePoints.empty
@@ -93,13 +93,21 @@ fromCars cars =
     }
 
 
-calcTimeLimit : List Car -> Duration
-calcTimeLimit =
-    List.map (.laps >> List.Extra.last >> Maybe.map .elapsed)
-        >> List.filterMap identity
-        >> List.maximum
-        >> Maybe.map (\timeLimit -> (timeLimit // (60 * 60 * 1000)) * 60 * 60 * 1000)
-        >> Maybe.withDefault 0
+{-| When the chequered flag falls: the last lap anyone completed, rounded down
+to the whole hour.
+-}
+calcTimeLimit : List Car -> Instant
+calcTimeLimit cars =
+    let
+        hour =
+            60 * 60 * 1000
+
+        lastLap =
+            cars
+                |> List.filterMap (.laps >> List.Extra.last >> Maybe.map .elapsed)
+                |> List.foldl Instant.later Instant.raceStart
+    in
+    Instant.fromDuration ((Instant.toDuration lastLap // hour) * hour)
 
 
 {-| When the lap counter goes up, and to what.
@@ -116,7 +124,7 @@ calcLapCompletions cars =
         |> List.foldl
             (\lap earliest ->
                 Dict.update lap.lap
-                    (Maybe.map (min lap.elapsed)
+                    (Maybe.map (Instant.earlier lap.elapsed)
                         >> Maybe.withDefault lap.elapsed
                         >> Just
                     )
@@ -130,7 +138,7 @@ calcLapCompletions cars =
 
 {-| How many laps the leading car has completed at a moment of the race.
 -}
-lapCountAt : { elapsed : Duration } -> Race -> Int
+lapCountAt : { elapsed : Instant } -> Race -> Int
 lapCountAt clock race =
     ChangePoints.valueAt clock.elapsed race.lapCompletions
         |> Maybe.withDefault 0
@@ -146,23 +154,23 @@ it gives the start.
 Total on its own, so a caller does not have to have checked the range first.
 
 -}
-elapsedAtLapCount : Int -> Race -> Duration
+elapsedAtLapCount : Int -> Race -> Instant
 elapsedAtLapCount lapCount race =
     if lapCount < 0 then
-        0
+        Instant.raceStart
 
     else
         case ChangePoints.timeOfNth lapCount race.lapCompletions of
             Just nextCompletion ->
-                nextCompletion - 1
+                Instant.subtract 1 nextCompletion
 
             Nothing ->
                 ChangePoints.timeOfNth (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
-                    |> Maybe.withDefault 0
+                    |> Maybe.withDefault Instant.raceStart
 
 
 {-| The status a car holds at a moment of the race.
 -}
-statusAt : { elapsed : Duration } -> CarNumber -> Race -> Status
+statusAt : { elapsed : Instant } -> CarNumber -> Race -> Status
 statusAt clock carNumber race =
     StatusChanges.statusAt clock carNumber race.statusChanges

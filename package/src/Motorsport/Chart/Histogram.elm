@@ -49,11 +49,16 @@ view bestTimes coefficient laps =
         fastestLapTime =
             BestTimes.timeOf bestTimes.fastestLapTime
 
-        slowestLapTime =
-            BestTimes.timeOf bestTimes.slowestLapTime
+        -- The axis needs actual numbers; a record no lap has set is worth
+        -- nothing to it, which collapses the scale to a point and draws nothing.
+        fastestMs =
+            Maybe.withDefault 0 fastestLapTime
+
+        slowestMs =
+            Maybe.withDefault 0 (BestTimes.timeOf bestTimes.slowestLapTime)
 
         xScale =
-            xContinuousScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
+            xContinuousScale ( fastestMs, min (toFloat fastestMs * coefficient) (toFloat slowestMs) )
 
         yScale =
             yContinuousScale ( 0, 0 )
@@ -67,7 +72,16 @@ view bestTimes coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                performanceLevel { time = lap.time, personalBest = lap.best, fastest = fastestLapTime }
+                lap.time
+                    |> Maybe.map
+                        (\time ->
+                            performanceLevel
+                                { time = time
+                                , personalBest = lap.best
+                                , fastest = fastestLapTime
+                                }
+                        )
+                    |> Maybe.withDefault Performance.Standard
                     |> Performance.toColorVariable
 
             else
@@ -75,15 +89,19 @@ view bestTimes coefficient laps =
 
         isCurrentLap { lap } =
             List.length laps == lap
+
+        -- A lap the source data has no time for has nowhere to go on the axis.
+        timedLaps =
+            List.filter (\lap -> lap.time /= Nothing) laps
     in
     svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
-            { x = .time >> toFloat >> Scale.convert xScale
+            { x = .time >> Maybe.withDefault 0 >> toFloat >> Scale.convert xScale
             , y = always 0 >> Scale.convert yScale
             , width = width
             , color = color
             }
-            laps
+            timedLaps
         ]
 
 

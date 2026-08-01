@@ -5,10 +5,21 @@ pub type Duration = u32;
 pub fn from_string(s: &str) -> Option<Duration> {
     let parts: Vec<&str> = s.split(':').collect();
 
+    // 桁として読む。`parse::<f64>()` はミリ秒を二進小数で正確に表せないので、
+    // 丸めて戻す必要があった。小数第3位までしか来ないため、小数部はそのまま
+    // ミリ秒。短ければ右をゼロ埋めし、長ければそこまでしか読まない。
     let convert_seconds = |s: &str| -> Option<u32> {
-        s.parse::<f64>()
-            .ok()
-            .map(|sec| (sec * 1000.0).round() as u32)
+        match s.split('.').collect::<Vec<&str>>().as_slice() {
+            [whole, fraction] => {
+                let mut ms: String = fraction.chars().take(3).collect();
+                while ms.len() < 3 {
+                    ms.push('0');
+                }
+                Some(whole.parse::<u32>().ok()? * 1000 + ms.parse::<u32>().ok()?)
+            }
+            [whole] => Some(whole.parse::<u32>().ok()? * 1000),
+            _ => None,
+        }
     };
 
     match parts.as_slice() {
@@ -89,7 +100,10 @@ mod tests {
         assert_eq!(from_string("invalid"), None);
         assert_eq!(from_string("1:2:3:4"), None);
         assert_eq!(from_string("abc:def"), None);
-        assert_eq!(from_string("-1.0"), Some(0));
+        // `Duration` は `u32` なので符号は表現できない。以前は `as u32` の
+        // 飽和変換で無言のうちに 0 になっていた。呼び出し側
+        // (`stages::structure`) は警告を出したうえで 0 にフォールバックする。
+        assert_eq!(from_string("-1.0"), None);
         assert_eq!(from_string("999:59.999"), Some(59999999));
         assert_eq!(to_string(59999999), "16:39:59.999");
     }

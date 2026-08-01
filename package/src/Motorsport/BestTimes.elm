@@ -31,6 +31,7 @@ dependency pointing one way from both.
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
@@ -67,12 +68,12 @@ type alias Holder =
 {-| The records held still at one moment of the race -- the comparison baseline a
 widget rates and scales individual times against, and the laps that set them.
 
-Read mid-race via [`at`](#at) these are only the best times *so far*; only
+Read mid-race via [`at`](#at) these are only the best times _so far_; only
 [`final`](#final)'s answer is the race's actual best times.
 
-`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) turns it into
-the zero the rest of the app reads as "not set"; keep this instead if you need
-to name the holder.
+`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
+to that same `Nothing`, for callers that only want the number; keep this
+instead if you need to name the holder.
 
 -}
 type alias Snapshot =
@@ -124,7 +125,7 @@ fromLaps laps =
         -- In the order the laps were completed, which is the order the records
         -- were set in.
         inOrder =
-            List.sortBy .elapsed laps
+            List.sortBy (.elapsed >> Instant.toDuration) laps
     in
     map (\{ beats, timeFrom } -> improvements beats timeFrom inOrder) rules
 
@@ -132,7 +133,7 @@ fromLaps laps =
 {-| The records as they stood at a moment of the race: what a car crossing the
 line then was rated against.
 -}
-at : { elapsed : Duration } -> Changes -> Snapshot
+at : { elapsed : Instant } -> Changes -> Snapshot
 at clock =
     map (ChangePoints.valueAt clock.elapsed)
 
@@ -146,16 +147,17 @@ final =
 
 
 {-| One record as a plain time, for the rating and the geometry that only ever
-wanted the number.
+wanted the number and not who set it.
 
-A record no lap has taken comes back `0` -- the same zero the source data uses
-for a time it did not record. See
-[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel).
+A record no lap has taken stays `Nothing`, which is what lets
+[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel)
+rate against it without a guard. The geometry that needs an actual number says
+what an unset record is worth to it, at the point where it needs one.
 
 -}
-timeOf : Maybe Holder -> Duration
-timeOf held =
-    Maybe.withDefault 0 (Maybe.map .time held)
+timeOf : Maybe Holder -> Maybe Duration
+timeOf =
+    Maybe.map .time
 
 
 
@@ -173,12 +175,12 @@ type alias Rule =
 
 rules : ByRecord Rule
 rules =
-    { fastestLapTime = { beats = lessThan, timeFrom = recordedLapTime }
-    , slowestLapTime = { beats = greaterThan, timeFrom = lapTimeAsFound }
+    { fastestLapTime = { beats = lessThan, timeFrom = .time }
+    , slowestLapTime = { beats = greaterThan, timeFrom = .time }
     , fastestSectors =
-        Sector.initialize (\sector -> { beats = lessThan, timeFrom = recordedSectorTime sector })
+        Sector.initialize (\sector -> { beats = lessThan, timeFrom = sectorTime sector })
     , fastestMiniSectors =
-        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = recordedMiniSectorTime mini })
+        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = miniSectorTime mini })
     }
 
 
@@ -249,48 +251,25 @@ greaterThan a b =
 
 
 -- WHAT COUNTS AS A TIME
--- A zero is a time the source data did not record, not a very quick one, so it
--- is no candidate for a fastest anything. Every extractor below says `recorded`
--- to mean it drops those -- all but one, and that one says what it does instead.
+-- A time the source data did not record is no candidate for any record, and
+-- says so in the type: the loader drops it at the boundary, so a `Lap` carries
+-- `Nothing` and every extractor below is a plain read.
 
 
-recordedLapTime : Lap -> Maybe Duration
-recordedLapTime lap =
-    recorded lap.time
-
-
-{-| The exception: a zero can only win a maximum when there is nothing to beat,
-so the slowest lap takes every lap as it finds it.
--}
-lapTimeAsFound : Lap -> Maybe Duration
-lapTimeAsFound lap =
-    Just lap.time
-
-
-recordedSectorTime : Sector -> Lap -> Maybe Duration
-recordedSectorTime sector lap =
-    recorded (Sector.get sector lap.sectors).time
+sectorTime : Sector -> Lap -> Maybe Duration
+sectorTime sector lap =
+    (Sector.get sector lap.sectors).time
 
 
 {-| Mini-sector times are only trusted on laps that have a lap time, matching
 what the whole-race calculation has always done.
 -}
-recordedMiniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
-recordedMiniSectorTime mini lap =
-    case recorded lap.time of
+miniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
+miniSectorTime mini lap =
+    case lap.time of
         Just _ ->
             lap.miniSectors
                 |> Maybe.andThen (LeMans.get mini >> .time)
-                |> Maybe.andThen recorded
 
         Nothing ->
             Nothing
-
-
-recorded : Duration -> Maybe Duration
-recorded time =
-    if time == 0 then
-        Nothing
-
-    else
-        Just time

@@ -6,6 +6,7 @@ import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
@@ -23,11 +24,11 @@ suite =
             [ test "UpToElapsed draws it from the laps run so far" <|
                 \_ ->
                     fastestLapTimeAt 6000 UpToElapsed
-                        |> Expect.equal 6000
+                        |> Expect.equal (Just 6000)
             , test "WholeRace draws it from every lap, the ones ahead of the clock included" <|
                 \_ ->
                     fastestLapTimeAt 6000 WholeRace
-                        |> Expect.equal 5000
+                        |> Expect.equal (Just 5000)
             ]
         ]
 
@@ -37,7 +38,7 @@ suite =
 -- One car improving on itself: a 6.000 lap, then a 5.000 one.
 
 
-fastestLapTimeAt : Duration -> Scope -> Duration
+fastestLapTimeAt : Duration -> Scope -> Maybe Duration
 fastestLapTimeAt elapsed scope =
     replayAt elapsed
         |> ViewModel.compute scope
@@ -56,7 +57,7 @@ replayAt elapsed =
         m =
             Replay.fromCars [ improvingCar ]
     in
-    { m | playback = Clock.setElapsed elapsed m.playback }
+    { m | playback = Clock.setElapsed (Instant.fromDuration elapsed) m.playback }
 
 
 improvingCar : Car
@@ -88,6 +89,6 @@ lapOf lapNumber time elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
-        , time = time
-        , elapsed = elapsed
+        , time = Just time
+        , elapsed = Instant.fromDuration elapsed
     }

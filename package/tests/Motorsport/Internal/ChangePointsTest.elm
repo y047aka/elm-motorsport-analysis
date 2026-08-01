@@ -2,6 +2,7 @@ module Motorsport.Internal.ChangePointsTest exposing (suite)
 
 import Expect
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Test exposing (Test, describe, test)
 
@@ -12,39 +13,39 @@ suite =
         [ describe "valueAt"
             [ test "reads nothing back before the first change" <|
                 \_ ->
-                    ChangePoints.valueAt 999 index
+                    ChangePoints.valueAt (instant 999) index
                         |> Expect.equal Nothing
             , test "an empty index has nothing at any time" <|
                 \_ ->
-                    ChangePoints.valueAt 500000 ChangePoints.empty
+                    ChangePoints.valueAt (instant 500000) ChangePoints.empty
                         |> Expect.equal Nothing
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
                         ( Just "a", Just "b" )
-                        ( ChangePoints.valueAt 2999 index
-                        , ChangePoints.valueAt 3000 index
+                        ( ChangePoints.valueAt (instant 2999) index
+                        , ChangePoints.valueAt (instant 3000) index
                         )
             , test "holds the last value once the changes run out" <|
                 \_ ->
-                    ChangePoints.valueAt 9999999 index
+                    ChangePoints.valueAt (instant 9999999) index
                         |> Expect.equal (Just "d")
             , test "the last of two changes sharing an instant wins" <|
                 \_ ->
-                    ChangePoints.fromList [ ( 500, "first" ), ( 500, "second" ) ]
-                        |> ChangePoints.valueAt 500
+                    ChangePoints.fromList [ ( instant 500, "first" ), ( instant 500, "second" ) ]
+                        |> ChangePoints.valueAt (instant 500)
                         |> Expect.equal (Just "second")
             , test "an unsorted list is indexed as if it had been sorted" <|
                 \_ ->
-                    ChangePoints.fromList [ ( 3000, "b" ), ( 1000, "a" ) ]
-                        |> ChangePoints.valueAt 2000
+                    ChangePoints.fromList [ ( instant 3000, "b" ), ( instant 1000, "a" ) ]
+                        |> ChangePoints.valueAt (instant 2000)
                         |> Expect.equal (Just "a")
             ]
         , describe "last"
             [ test "gives the value in force once every change has happened" <|
                 \_ ->
                     ChangePoints.last index
-                        |> Expect.equal (ChangePoints.valueAt 9999999 index)
+                        |> Expect.equal (ChangePoints.valueAt (instant 9999999) index)
             , test "an empty index has no last value" <|
                 \_ ->
                     ChangePoints.last ChangePoints.empty
@@ -54,7 +55,7 @@ suite =
             [ test "counts the changes at or before the clock" <|
                 \_ ->
                     [ -1, 0, 1000, 2999, 3000, 6000, 6001, 9999999 ]
-                        |> List.map (\elapsed -> ChangePoints.countUpTo elapsed index)
+                        |> List.map (\elapsed -> ChangePoints.countUpTo (instant elapsed) index)
                         |> Expect.equal [ 0, 0, 1, 1, 2, 4, 4, 4 ]
             ]
         , describe "timeOfNth"
@@ -64,7 +65,7 @@ suite =
                     , ChangePoints.timeOfNth 3 index
                     , ChangePoints.timeOfNth 4 index
                     ]
-                        |> Expect.equal [ Just 1000, Just 6000, Nothing ]
+                        |> Expect.equal [ Just (instant 1000), Just (instant 6000), Nothing ]
             ]
         , describe "length"
             [ test "counts every change" <|
@@ -78,12 +79,12 @@ suite =
             [ test "reads the same values a linear scan would" <|
                 \_ ->
                     samples
-                        |> List.map (\elapsed -> ChangePoints.valueAt elapsed longIndex)
+                        |> List.map (\elapsed -> ChangePoints.valueAt (instant elapsed) longIndex)
                         |> Expect.equal (List.map scanValue samples)
             , test "counts the same changes a linear scan would" <|
                 \_ ->
                     samples
-                        |> List.map (\elapsed -> ChangePoints.countUpTo elapsed longIndex)
+                        |> List.map (\elapsed -> ChangePoints.countUpTo (instant elapsed) longIndex)
                         |> Expect.equal (List.map scanCount samples)
             ]
         ]
@@ -93,13 +94,21 @@ suite =
 -- FIXTURE
 
 
+{-| The fixtures below are written in plain milliseconds and lifted to
+[`Instant`](Motorsport-Instant) here, so the numbers stay readable.
+-}
+instant : Duration -> Instant
+instant =
+    Instant.fromDuration
+
+
 index : ChangePoints String
 index =
     ChangePoints.fromList
-        [ ( 1000, "a" )
-        , ( 3000, "b" )
-        , ( 5000, "c" )
-        , ( 6000, "d" )
+        [ ( instant 1000, "a" )
+        , ( instant 3000, "b" )
+        , ( instant 5000, "c" )
+        , ( instant 6000, "d" )
         ]
 
 
@@ -110,7 +119,7 @@ longChanges =
 
 longIndex : ChangePoints Int
 longIndex =
-    ChangePoints.fromList longChanges
+    ChangePoints.fromList (List.map (Tuple.mapFirst instant) longChanges)
 
 
 samples : List Duration
@@ -124,7 +133,7 @@ samples =
 
 upTo : Duration -> List ( Duration, Int )
 upTo elapsed =
-    List.filter (\( at, _ ) -> at <= elapsed) longChanges
+    List.filter (\( time, _ ) -> time <= elapsed) longChanges
 
 
 scanValue : Duration -> Maybe Int

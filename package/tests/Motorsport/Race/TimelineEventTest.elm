@@ -3,6 +3,7 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 import Expect
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
@@ -25,7 +26,7 @@ suite =
                         case List.head events of
                             Just event ->
                                 Expect.all
-                                    [ \_ -> Expect.equal 0 event.eventTime
+                                    [ \_ -> Expect.equal Instant.raceStart event.eventTime
                                     , \_ -> Expect.equal RaceStart event.eventType
                                     ]
                                     ()
@@ -100,7 +101,7 @@ suite =
 
                             Nothing ->
                                 Expect.fail "Expected at least one event"
-                    , \() -> Expect.equal True (isSortedAscending (List.map .eventTime events))
+                    , \() -> Expect.equal True (isSortedAscending (List.map (.eventTime >> Instant.toDuration) events))
                     ]
                     ()
         , test "PitIn / PitOut events: timing, lap_number, duration, integrity" <|
@@ -149,11 +150,11 @@ suite =
                         Expect.all
                             [ \_ -> Expect.equal 2 pitIn.lapNumber
                             , \_ -> Expect.equal pitDuration pitIn.duration
-                            , \_ -> Expect.equal (189575 - pitDuration) pitInTime
+                            , \_ -> Expect.equal (Instant.fromDuration (189575 - pitDuration)) pitInTime
                             , \_ -> Expect.equal 2 pitOut.lapNumber
                             , \_ -> Expect.equal pitDuration pitOut.duration
-                            , \_ -> Expect.equal 189575 pitOutTime
-                            , \_ -> Expect.equal pitOutTime (pitInTime + pitDuration)
+                            , \_ -> Expect.equal (Instant.fromDuration 189575) pitOutTime
+                            , \_ -> Expect.equal pitOutTime (Instant.add pitDuration pitInTime)
                             ]
                             ()
 
@@ -251,7 +252,7 @@ lapAt lapNumber elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
-        , elapsed = elapsed
+        , elapsed = Instant.fromDuration elapsed
     }
 
 
@@ -300,7 +301,7 @@ tookLeadEvents cars =
             (\event ->
                 case event.eventType of
                     CarEvent carNumber TookLead ->
-                        Just ( event.eventTime, carNumber )
+                        Just ( Instant.toDuration event.eventTime, carNumber )
 
                     _ ->
                         Nothing

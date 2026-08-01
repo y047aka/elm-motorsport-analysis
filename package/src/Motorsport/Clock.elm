@@ -37,7 +37,7 @@ without reference to the wall clock.
 
 -}
 
-import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Time exposing (Posix, posixToMillis)
 
 
@@ -49,8 +49,8 @@ type PlaybackSpeed
 
 type State
     = Initial
-    | Started Duration { now : Posix, startedAt : Posix }
-    | Paused Duration
+    | Started Instant { now : Posix, startedAt : Posix }
+    | Paused Instant
     | Finished
 
 
@@ -98,7 +98,7 @@ update now msg m =
         Start ->
             case m.state of
                 Initial ->
-                    { m | state = Started 0 { now = now, startedAt = now } }
+                    { m | state = Started Instant.raceStart { now = now, startedAt = now } }
 
                 Paused splitTime ->
                     { m | state = Started splitTime { now = now, startedAt = now } }
@@ -126,26 +126,26 @@ update now msg m =
             { m | state = Finished }
 
 
-{-| Put the playback head at a given point in the race.
+{-| Put the playback head at a given moment of the race.
 -}
-setElapsed : Duration -> Model -> Model
-setElapsed duration m =
+setElapsed : Instant -> Model -> Model
+setElapsed instant m =
     case m.state of
         -- Moving the clock before the race has been started leaves it
         -- stopped, at the moment asked for -- the same state as pausing
         -- there. Ignoring it instead would leave the clock reading zero
         -- while the rest of the replay had moved on.
         Initial ->
-            { m | state = Paused duration }
+            { m | state = Paused instant }
 
         -- Re-anchored like `setPlaybackSpeed`. Keeping the old anchor would put
         -- the head at the moment asked for *plus* however long playback had been
         -- running, times the speed.
         Started _ { now } ->
-            { m | state = Started duration { now = now, startedAt = now } }
+            { m | state = Started instant { now = now, startedAt = now } }
 
         Paused _ ->
-            { m | state = Paused duration }
+            { m | state = Paused instant }
 
         Finished ->
             m
@@ -184,20 +184,20 @@ toString m =
 
         Started splitTime { now, startedAt } ->
             calcElapsed startedAt now splitTime m.playbackSpeed
-                |> (Duration.toString >> String.dropRight 4)
+                |> (Instant.toString >> String.dropRight 4)
 
         Paused splitTime ->
-            (Duration.toString >> String.dropRight 4) splitTime
+            (Instant.toString >> String.dropRight 4) splitTime
 
         Finished ->
             "00:00:00"
 
 
-getElapsed : Model -> Int
+getElapsed : Model -> Instant
 getElapsed m =
     case m.state of
         Initial ->
-            0
+            Instant.raceStart
 
         Started splitTime { now, startedAt } ->
             calcElapsed startedAt now splitTime m.playbackSpeed
@@ -206,7 +206,7 @@ getElapsed m =
             splitTime
 
         Finished ->
-            0
+            Instant.raceStart
 
 
 
@@ -218,10 +218,10 @@ diff a b =
     posixToMillis b - posixToMillis a
 
 
-calcElapsed : Posix -> Posix -> Duration -> PlaybackSpeed -> Int
+calcElapsed : Posix -> Posix -> Instant -> PlaybackSpeed -> Instant
 calcElapsed startedAt now splitTime playbackSpeed =
     let
         speed =
             speedToMultiplier playbackSpeed
     in
-    (diff startedAt now * speed) + splitTime
+    Instant.add (diff startedAt now * speed) splitTime

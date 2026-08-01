@@ -19,7 +19,8 @@ import Json.Decode.Pipeline exposing (required)
 import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap)
+import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
 
@@ -32,7 +33,7 @@ type alias RawLap =
     , s1 : Maybe Duration
     , s2 : Maybe Duration
     , s3 : Maybe Duration
-    , elapsed : Duration
+    , elapsed : Instant
     , pitTime : Maybe Duration
     }
 
@@ -56,7 +57,7 @@ rawLapDecoder =
         |> required "s1" optionalDurationDecoder
         |> required "s2" optionalDurationDecoder
         |> required "s3" optionalDurationDecoder
-        |> required "elapsed" durationDecoder
+        |> required "elapsed" Instant.decoder
         |> required "pitTime" optionalDurationDecoder
 
 
@@ -171,7 +172,7 @@ accumulate raw ( bests, acc ) =
             { s1 = raw.s1, s2 = raw.s2, s3 = raw.s3 }
 
         newBests =
-            { lap = minMaybe bests.lap (Just raw.lapTime)
+            { lap = minMaybe bests.lap (Lap.recorded raw.lapTime)
             , sectors = Sector.map2 minMaybe bests.sectors rawSectors
             }
 
@@ -180,15 +181,15 @@ accumulate raw ( bests, acc ) =
             , driver = Driver.fromName raw.driverName
             , lap = raw.lapNumber
             , position = Nothing
-            , time = raw.lapTime
-            , best = newBests.lap |> Maybe.withDefault 0
+
+            -- The zero stops here: the CLI writes an unrecorded lap time out as
+            -- `0.000` either way, where a blank sector cell stays blank and has
+            -- already arrived as `Nothing`.
+            , time = Lap.recorded raw.lapTime
+            , best = newBests.lap
             , sectors =
                 Sector.map2
-                    (\time personalBest ->
-                        { time = time |> Maybe.withDefault 0
-                        , personalBest = personalBest |> Maybe.withDefault 0
-                        }
-                    )
+                    (\time personalBest -> { time = time, personalBest = personalBest })
                     rawSectors
                     newBests.sectors
             , elapsed = raw.elapsed
@@ -229,7 +230,7 @@ assignPositionsForLap lapNum cars =
                 |> List.indexedMap
                     (\idx car ->
                         List.Extra.find (\l -> l.lap == lapNum) car.laps
-                            |> Maybe.map (\lap -> ( idx, lap.elapsed ))
+                            |> Maybe.map (\lap -> ( idx, Instant.toDuration lap.elapsed ))
                     )
                 |> List.filterMap identity
                 |> List.sortBy Tuple.second

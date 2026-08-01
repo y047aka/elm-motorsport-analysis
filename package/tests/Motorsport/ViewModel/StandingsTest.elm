@@ -5,6 +5,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (PerformanceLevel(..))
 import Motorsport.Manufacturer as Manufacturer
@@ -29,9 +30,9 @@ suite =
                         |> Maybe.map Sector.toList
                         |> Expect.equal
                             (Just
-                                [ ( S1, { time = 1000, personalBest = 900 } )
-                                , ( S2, { time = 2000, personalBest = 1900 } )
-                                , ( S3, { time = 3000, personalBest = 2900 } )
+                                [ ( S1, { time = Just 1000, personalBest = Just 900 } )
+                                , ( S2, { time = Just 2000, personalBest = Just 1900 } )
+                                , ( S3, { time = Just 3000, personalBest = Just 2900 } )
                                 ]
                             )
             ]
@@ -146,12 +147,12 @@ sectorFixtureLap : Lap
 sectorFixtureLap =
     { empty
         | lap = 1
-        , time = 6000
-        , elapsed = 6000
+        , time = Just 6000
+        , elapsed = Instant.fromDuration 6000
         , sectors =
-            { s1 = { time = 1000, personalBest = 900 }
-            , s2 = { time = 2000, personalBest = 1900 }
-            , s3 = { time = 3000, personalBest = 2900 }
+            { s1 = { time = Just 1000, personalBest = Just 900 }
+            , s2 = { time = Just 2000, personalBest = Just 1900 }
+            , s3 = { time = Just 3000, personalBest = Just 2900 }
             }
     }
 
@@ -163,8 +164,8 @@ quickerLap : Lap
 quickerLap =
     { empty
         | lap = 2
-        , time = 5000
-        , elapsed = 11000
+        , time = Just 5000
+        , elapsed = Instant.fromDuration 11000
     }
 
 

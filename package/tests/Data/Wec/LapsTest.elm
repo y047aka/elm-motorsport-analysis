@@ -5,6 +5,7 @@ import Expect
 import Json.Decode as Decode
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
+import Motorsport.Instant as Instant
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
 import Test exposing (Test, describe, test)
@@ -52,7 +53,7 @@ suite =
                                 |> List.concatMap .laps
                                 |> List.map .best
                     in
-                    Expect.equal [ 100000, 95000, 95000 ] bests
+                    Expect.equal [ Just 100000, Just 95000, Just 95000 ] bests
             , test "assigns 0-based position by elapsed within each lap number" <|
                 \_ ->
                     let
@@ -98,7 +99,7 @@ suite =
                               , s1 = Nothing
                               , s2 = Nothing
                               , s3 = Nothing
-                              , elapsed = 200000
+                              , elapsed = Instant.fromDuration 200000
                               , pitTime = Just 50000
                               }
                             ]
@@ -126,7 +127,7 @@ rawLap carNumber lapNumber lapTime elapsed =
     , s1 = Nothing
     , s2 = Nothing
     , s3 = Nothing
-    , elapsed = elapsed
+    , elapsed = Instant.fromDuration elapsed
     , pitTime = Nothing
     }
 

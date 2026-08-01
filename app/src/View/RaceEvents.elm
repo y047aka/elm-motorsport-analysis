@@ -13,7 +13,7 @@ import Compare
 import DataView
 import Html.Styled as Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
-import Motorsport.Duration as Duration
+import Motorsport.Instant as Instant
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Motorsport.Replay as Replay
 
@@ -27,7 +27,7 @@ view toMsg eventsState replay =
         -- The race builds its timeline in time order, and filtering keeps it.
         occurredEvents =
             replay.race.timelineEvents
-                |> List.filter (\event -> currentElapsed >= event.eventTime)
+                |> List.filter (\event -> Instant.compare event.eventTime currentElapsed /= GT)
     in
     div []
         [ Html.h2 [] [ text "Race Events" ]
@@ -37,13 +37,13 @@ view toMsg eventsState replay =
 
 config : (DataView.Msg -> msg) -> DataView.Config TimelineEvent msg
 config toMsg =
-    { toId = .eventTime >> Duration.toString
+    { toId = .eventTime >> Instant.toString
     , toMsg = toMsg
     , columns =
         [ DataView.customColumn
             { label = "Time"
-            , getter = .eventTime >> Duration.toString
-            , sorter = Compare.by .eventTime
+            , getter = .eventTime >> Instant.toString
+            , sorter = Compare.by (.eventTime >> Instant.toDuration)
             }
         , DataView.stringColumn
             { label = "Car"
