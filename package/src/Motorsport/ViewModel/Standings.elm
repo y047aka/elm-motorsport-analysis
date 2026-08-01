@@ -21,7 +21,7 @@ this module is how one gets built and read back.
 
 import Dict exposing (Dict)
 import List.Extra
-import Motorsport.BestTimes as BestTimes exposing (BestTimes)
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
@@ -52,7 +52,7 @@ type Standings
         }
 
 
-compute : BestTimes -> { elapsed : Duration } -> Race -> Standings
+compute : BestTimes.Snapshot -> { elapsed : Duration } -> Race -> Standings
 compute bestTimes clock race =
     let
         fastestLapTime =
@@ -273,7 +273,7 @@ rateTime fastest { time, personalBest } =
 
 
 extractCurrentSectorStates :
-    BestTimes
+    BestTimes.Snapshot
     -> Maybe Lap.SectorProgress
     -> Lap
     -> CurrentSectorStates
@@ -302,13 +302,13 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
         (extractSectorPerformance bestTimes lap)
 
 
-extractSectorPerformance : BestTimes -> Lap -> SectorPerformance
+extractSectorPerformance : BestTimes.Snapshot -> Lap -> SectorPerformance
 extractSectorPerformance bestTimes lap =
     Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
 
 
 extractMiniSectorPerformance :
-    BestTimes
+    BestTimes.Snapshot
     -> Lap
     -> Maybe MiniSectorPerformance
 extractMiniSectorPerformance bestTimes lap =

@@ -9,7 +9,7 @@ computed model the view needs from a race and where playback has got to in it.
 
 -}
 
-import Motorsport.BestTimes as BestTimes exposing (BestTimes)
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
 import Motorsport.Replay as Replay
 import Motorsport.ViewModel.LapHistory as LapHistory exposing (LapHistory)
@@ -19,7 +19,7 @@ import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 type alias ViewModel =
     { standings : Standings
     , lapHistory : LapHistory
-    , bestTimes : BestTimes
+    , bestTimes : BestTimes.Snapshot
     }
 
 

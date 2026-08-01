@@ -1,7 +1,7 @@
 module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
-import Motorsport.BestTimes as BestTimes exposing (BestTimes, Changes, Holder)
+import Motorsport.BestTimes as BestTimes exposing (Changes, Holder, Snapshot)
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -143,14 +143,14 @@ tests =
 
 {-| One record as a plain time, at the end of the race.
 -}
-finalTime : (BestTimes -> Maybe Holder) -> List Car -> Duration
+finalTime : (Snapshot -> Maybe Holder) -> List Car -> Duration
 finalTime pick cars =
     BestTimes.timeOf (pick (BestTimes.final (changesOf cars)))
 
 
 {-| The same, as it stood at `elapsed`.
 -}
-timeAt : Duration -> (BestTimes -> Maybe Holder) -> List Car -> Duration
+timeAt : Duration -> (Snapshot -> Maybe Holder) -> List Car -> Duration
 timeAt elapsed pick cars =
     BestTimes.timeOf (pick (BestTimes.at { elapsed = elapsed } (changesOf cars)))
 
@@ -167,7 +167,7 @@ changesOf cars =
 {-| One record's holder at the end of the race, as the three things that say
 which lap took it.
 -}
-finalHolderOf : (BestTimes -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
+finalHolderOf : (Snapshot -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
 finalHolderOf pick cars =
     changesOf cars
         |> BestTimes.final
