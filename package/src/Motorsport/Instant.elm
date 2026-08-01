@@ -213,8 +213,8 @@ The way out of the type, for the arithmetic the algebra above has no name for --
 rounding a moment to the hour, averaging a field's worth of them. Pair it with
 [`fromDuration`](#fromDuration) to get back.
 
-    toDuration (fromDuration 4321)
-    --> 4321
+    fromDuration 90000 |> toDuration
+    --> 90000
 
 -}
 toDuration : Instant -> Duration
