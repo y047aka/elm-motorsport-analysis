@@ -4,6 +4,7 @@ import Expect
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
@@ -135,14 +136,16 @@ playingAt elapsed =
         |> Replay.update (Replay.Tick (millisToPosix elapsed))
 
 
+{-| As plain milliseconds, which is what the expectations below are written in.
+-}
 elapsedOf : Replay.Model -> Int
 elapsedOf m =
-    Clock.getElapsed m.playback
+    Instant.toDuration (Clock.getElapsed m.playback)
 
 
 skipTo : Int -> Replay.Model -> Replay.Model
 skipTo elapsed m =
-    skipBy (elapsed - Clock.getElapsed m.playback) m
+    skipBy (elapsed - elapsedOf m) m
 
 
 skipBy : Int -> Replay.Model -> Replay.Model
@@ -189,7 +192,7 @@ lapAt carNumber lapNumber elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
-        , elapsed = elapsed
+        , elapsed = Instant.fromDuration elapsed
     }
 
 

@@ -23,7 +23,7 @@ the two cannot be mixed up downstream.
 -}
 
 import Compare
-import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import SortedList exposing (SortedList)
 
@@ -38,17 +38,17 @@ current sector.
 The result is a plain list, not a `SortedList`: the caller's next move is to
 number the cars off, and it is that number `byPosition` guards.
 
-    Ordering.runningOrder { elapsed = 3600000 } cars
+    Ordering.runningOrder { elapsed = Instant.fromDuration 3600000 } cars
     -- The leader first, then the rest in the order they are running
 
 -}
-runningOrder : { elapsed : Duration } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
+runningOrder : { elapsed : Instant } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
 runningOrder clock =
     List.sortWith (compareOnTrack clock)
 
 
 compareOnTrack :
-    { elapsed : Duration }
+    { elapsed : Instant }
     -> { a | currentLap : Maybe Lap }
     -> { a | currentLap : Maybe Lap }
     -> Order

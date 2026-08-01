@@ -18,12 +18,13 @@ import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 
 
 type alias TimelineEvent =
-    { eventTime : Duration, eventType : EventType }
+    { eventTime : Instant, eventType : EventType }
 
 
 type EventType
@@ -77,21 +78,26 @@ fromCars cars =
                 ++ pitEvents cars
                 ++ terminalEvents timeLimit cars
     in
-    List.sortBy .eventTime events
+    List.sortBy (.eventTime >> Instant.toDuration) events
 
 
-calcTimeLimit : List Car -> Duration
+calcTimeLimit : List Car -> Instant
 calcTimeLimit cars =
-    cars
-        |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
-        |> List.maximum
-        |> Maybe.map (\t -> (t // (60 * 60 * 1000)) * 60 * 60 * 1000)
-        |> Maybe.withDefault 0
+    let
+        hour =
+            60 * 60 * 1000
+
+        lastLap =
+            cars
+                |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
+                |> List.foldl Instant.later Instant.raceStart
+    in
+    Instant.fromDuration ((Instant.toDuration lastLap // hour) * hour)
 
 
 raceStartEvent : TimelineEvent
 raceStartEvent =
-    { eventTime = 0, eventType = RaceStart }
+    { eventTime = Instant.raceStart, eventType = RaceStart }
 
 
 startEvents : List Car -> List TimelineEvent
@@ -102,7 +108,7 @@ startEvents cars =
                 List.head car.laps
                     |> Maybe.map
                         (\firstLap ->
-                            { eventTime = 0
+                            { eventTime = Instant.raceStart
                             , eventType =
                                 CarEvent car.metadata.carNumber
                                     (Start { currentLap = stripPitTime firstLap })
@@ -114,7 +120,7 @@ startEvents cars =
 {-| Who is leading at the end of each lap, in lap order.
 -}
 type alias Leader =
-    { lapNumber : Int, eventTime : Duration, carNumber : CarNumber }
+    { lapNumber : Int, eventTime : Instant, carNumber : CarNumber }
 
 
 {-| A `TookLead` each time the car at the front of the field changes hands.
@@ -182,7 +188,7 @@ pitEvents cars =
                                 Just pitDuration ->
                                     let
                                         pitInTime =
-                                            Basics.max 0 (lap.elapsed - pitDuration)
+                                            Instant.subtract pitDuration lap.elapsed
                                     in
                                     [ { eventTime = pitInTime
                                       , eventType =
@@ -202,7 +208,7 @@ pitEvents cars =
             )
 
 
-terminalEvents : Duration -> List Car -> List TimelineEvent
+terminalEvents : Instant -> List Car -> List TimelineEvent
 terminalEvents timeLimit cars =
     cars
         |> List.filterMap
@@ -212,7 +218,7 @@ terminalEvents timeLimit cars =
                         (\finalLap ->
                             let
                                 carEventType =
-                                    if finalLap.elapsed < timeLimit then
+                                    if Instant.compare finalLap.elapsed timeLimit == LT then
                                         Retirement
 
                                     else
@@ -241,18 +247,9 @@ decoder =
         (field "event_type" eventTypeDecoder)
 
 
-eventTimeDecoder : Decoder Duration
+eventTimeDecoder : Decoder Instant
 eventTimeDecoder =
-    string
-        |> Decode.andThen
-            (\str ->
-                case Duration.fromString str of
-                    Just duration ->
-                        Decode.succeed duration
-
-                    Nothing ->
-                        Decode.fail ("Invalid duration format: " ++ str)
-            )
+    Instant.decoder
 
 
 eventTypeDecoder : Decoder EventType
@@ -290,7 +287,7 @@ lapDecoder =
         |> required "time" durationDecoder
         |> required "best" durationDecoder
         |> custom sectorsDecoder
-        |> required "elapsed" durationDecoder
+        |> required "elapsed" Instant.decoder
         |> optional "pit_time" (Decode.maybe durationDecoder) Nothing
         |> optional "miniSectors" (Decode.maybe miniSectorsDecoder) Nothing
 

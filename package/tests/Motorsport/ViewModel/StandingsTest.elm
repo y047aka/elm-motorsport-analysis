@@ -5,6 +5,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (PerformanceLevel(..))
 import Motorsport.Manufacturer as Manufacturer
@@ -147,7 +148,7 @@ sectorFixtureLap =
     { empty
         | lap = 1
         , time = 6000
-        , elapsed = 6000
+        , elapsed = Instant.fromDuration 6000
         , sectors =
             { s1 = { time = 1000, personalBest = 900 }
             , s2 = { time = 2000, personalBest = 1900 }
@@ -164,7 +165,7 @@ quickerLap =
     { empty
         | lap = 2
         , time = 5000
-        , elapsed = 11000
+        , elapsed = Instant.fromDuration 11000
     }
 
 

@@ -18,6 +18,7 @@ import Motorsport.BestTimes as BestTimes
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
+import Motorsport.Instant as Instant
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
@@ -108,7 +109,7 @@ view { viewModel, replay } { leaderboardState } =
                     , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
                     , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
                     ]
-                , text (Clock.getElapsed playback |> Duration.toString)
+                , text (Clock.getElapsed playback |> Instant.toString)
                 ]
             , div []
                 ([ div [] [ text "fastestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.fastestLapTime)) ]

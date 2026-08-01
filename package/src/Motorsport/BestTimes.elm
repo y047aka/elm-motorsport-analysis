@@ -31,6 +31,7 @@ dependency pointing one way from both.
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
@@ -124,7 +125,7 @@ fromLaps laps =
         -- In the order the laps were completed, which is the order the records
         -- were set in.
         inOrder =
-            List.sortBy .elapsed laps
+            List.sortBy (.elapsed >> Instant.toDuration) laps
     in
     map (\{ beats, timeFrom } -> improvements beats timeFrom inOrder) rules
 
@@ -132,7 +133,7 @@ fromLaps laps =
 {-| The records as they stood at a moment of the race: what a car crossing the
 line then was rated against.
 -}
-at : { elapsed : Duration } -> Changes -> Snapshot
+at : { elapsed : Instant } -> Changes -> Snapshot
 at clock =
     map (ChangePoints.valueAt clock.elapsed)
 

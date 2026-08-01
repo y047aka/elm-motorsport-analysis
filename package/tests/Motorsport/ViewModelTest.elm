@@ -6,6 +6,7 @@ import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
@@ -56,7 +57,7 @@ replayAt elapsed =
         m =
             Replay.fromCars [ improvingCar ]
     in
-    { m | playback = Clock.setElapsed elapsed m.playback }
+    { m | playback = Clock.setElapsed (Instant.fromDuration elapsed) m.playback }
 
 
 improvingCar : Car
@@ -89,5 +90,5 @@ lapOf lapNumber time elapsed =
         , lap = lapNumber
         , position = Just 1
         , time = time
-        , elapsed = elapsed
+        , elapsed = Instant.fromDuration elapsed
     }

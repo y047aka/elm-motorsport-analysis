@@ -6,6 +6,7 @@ import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
@@ -123,7 +124,7 @@ tests =
                     [ 0, 6000, 10000 ]
                         |> List.map
                             (\elapsed ->
-                                BestTimes.at { elapsed = elapsed } (changesOf cars)
+                                BestTimes.at { elapsed = Instant.fromDuration elapsed } (changesOf cars)
                                     |> .fastestLapTime
                                     |> Maybe.map .carNumber
                             )
@@ -152,7 +153,7 @@ finalTime pick cars =
 -}
 timeAt : Duration -> (Snapshot -> Maybe Holder) -> List Car -> Duration
 timeAt elapsed pick cars =
-    BestTimes.timeOf (pick (BestTimes.at { elapsed = elapsed } (changesOf cars)))
+    BestTimes.timeOf (pick (BestTimes.at { elapsed = Instant.fromDuration elapsed } (changesOf cars)))
 
 
 {-| Built the way the app builds them -- through `Race.fromCars`, rather than
@@ -189,7 +190,7 @@ finalSectors cars =
 -}
 sectorsAt : Duration -> List Car -> List Duration
 sectorsAt elapsed cars =
-    BestTimes.at { elapsed = elapsed } (changesOf cars)
+    BestTimes.at { elapsed = Instant.fromDuration elapsed } (changesOf cars)
         |> .fastestSectors
         |> Sector.values
         |> List.map BestTimes.timeOf
@@ -213,7 +214,7 @@ lap lapNumber time ( s1, s2, s3 ) =
     { empty
         | lap = lapNumber
         , time = time
-        , elapsed = lapNumber * time
+        , elapsed = Instant.fromDuration (lapNumber * time)
         , sectors =
             { s1 = { time = s1, personalBest = s1 }
             , s2 = { time = s2, personalBest = s2 }

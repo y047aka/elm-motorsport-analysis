@@ -6,6 +6,7 @@ import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Class exposing (Class)
+import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.ViewModel exposing (ViewModel)
@@ -130,11 +131,11 @@ calculateLapThreshold { standings, lapHistory } =
             Standings.elapsed standings
 
         timeThreshold =
-            max 0 (currentRaceTime - positionHistoryWindowMillis)
+            Instant.subtract positionHistoryWindowMillis currentRaceTime
     in
     Standings.leader standings
         |> Maybe.map (\l -> LapHistory.get l.metadata.carNumber lapHistory)
-        |> Maybe.andThen (List.Extra.find (\lap -> lap.elapsed >= timeThreshold))
+        |> Maybe.andThen (List.Extra.find (\lap -> Instant.compare lap.elapsed timeThreshold /= LT))
         |> Maybe.map .lap
         |> Maybe.withDefault 1
 

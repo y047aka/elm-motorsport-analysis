@@ -3,6 +3,7 @@ module Motorsport.RaceTest exposing (suite)
 import Expect
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race as Race exposing (Race)
@@ -17,7 +18,7 @@ suite =
             [ test "reads zero before the race has begun" <|
                 \_ ->
                     [ -1, 0 ]
-                        |> List.map (\elapsed -> Race.lapCountAt { elapsed = elapsed } race)
+                        |> List.map (\elapsed -> Race.lapCountAt { elapsed = instant elapsed } race)
                         |> Expect.equal [ 0, 0 ]
             , test "goes up the moment the first car of the field crosses the line" <|
                 \_ ->
@@ -25,16 +26,16 @@ suite =
                     -- counter reads 1 from 90.000, not 100.000.
                     Expect.equal
                         ( 0, 1 )
-                        ( Race.lapCountAt { elapsed = 89999 } race
-                        , Race.lapCountAt { elapsed = 90000 } race
+                        ( Race.lapCountAt { elapsed = instant 89999 } race
+                        , Race.lapCountAt { elapsed = instant 90000 } race
                         )
             , test "holds the final count once the laps run out" <|
                 \_ ->
-                    Race.lapCountAt { elapsed = 99999999 } race
+                    Race.lapCountAt { elapsed = instant 99999999 } race
                         |> Expect.equal 3
             , test "a race with no cars is always on lap zero" <|
                 \_ ->
-                    Race.lapCountAt { elapsed = 500000 } Race.empty
+                    Race.lapCountAt { elapsed = instant 500000 } Race.empty
                         |> Expect.equal 0
             ]
         , describe "elapsedAtLapCount"
@@ -42,7 +43,7 @@ suite =
                 \_ ->
                     [ 0, 1, 2 ]
                         |> List.map (\lapCount -> Race.elapsedAtLapCount lapCount race)
-                        |> Expect.equal [ 89999, 199999, 299999 ]
+                        |> Expect.equal [ instant 89999, instant 199999, instant 299999 ]
             , test "round-trips through lapCountAt" <|
                 \_ ->
                     [ 0, 1, 2, 3 ]
@@ -52,20 +53,20 @@ suite =
                 \_ ->
                     -- Car 1 completes lap 3 at 300.000, and nobody goes further.
                     Race.elapsedAtLapCount 3 race
-                        |> Expect.equal 300000
+                        |> Expect.equal (instant 300000)
             , test "a count the race never reached lands at the start" <|
                 \_ ->
                     -- Total on its own: no caller has to have range-checked first.
                     [ Race.elapsedAtLapCount (-1) race
                     , Race.elapsedAtLapCount 0 Race.empty
                     ]
-                        |> Expect.equal [ 0, 0 ]
+                        |> Expect.equal [ Instant.raceStart, Instant.raceStart ]
             ]
         , describe "lapTotal"
             [ test "is the ceiling lapCountAt can actually reach" <|
                 \_ ->
                     -- Both come off lapCompletions, so they cannot disagree.
-                    Race.lapCountAt { elapsed = 99999999 } race
+                    Race.lapCountAt { elapsed = instant 99999999 } race
                         |> Expect.equal race.lapTotal
             ]
         ]
@@ -107,6 +108,14 @@ carWith carNumber laps =
     }
 
 
+{-| The fixtures are written in plain milliseconds and lifted to
+[`Instant`](Motorsport-Instant) here, so the numbers stay readable.
+-}
+instant : Int -> Instant
+instant =
+    Instant.fromDuration
+
+
 lapAt : CarNumber -> Int -> Int -> Lap
 lapAt carNumber lapNumber elapsed =
     let
@@ -118,5 +127,5 @@ lapAt carNumber lapNumber elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
-        , elapsed = elapsed
+        , elapsed = instant elapsed
     }

@@ -27,6 +27,7 @@ import Motorsport.Class as Class
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
@@ -40,7 +41,7 @@ import SortedList exposing (SortedList)
 
 type Standings
     = Standings
-        { elapsed : Duration
+        { elapsed : Instant
         , lapCount : Int
         , entries : SortedList ByPosition Entry
 
@@ -52,7 +53,7 @@ type Standings
         }
 
 
-compute : BestTimes.Snapshot -> { elapsed : Duration } -> Race -> Standings
+compute : BestTimes.Snapshot -> { elapsed : Instant } -> Race -> Standings
 compute bestTimes clock race =
     let
         fastestLapTime =
@@ -199,7 +200,7 @@ fromLaps baseMetadata laps =
             Ordering.byPosition entries
     in
     Standings
-        { elapsed = 0
+        { elapsed = Instant.raceStart
         , lapCount = laps |> List.map .lap |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
@@ -215,7 +216,7 @@ fromList entries =
             Ordering.byPosition entries
     in
     Standings
-        { elapsed = 0
+        { elapsed = Instant.raceStart
         , lapCount = entries |> List.map .lapsCompleted |> List.maximum |> Maybe.withDefault 0
         , entries = sortedEntries
         , entriesByClass = groupEntriesByClass sortedEntries
@@ -243,7 +244,7 @@ type alias CarState =
 {-| Read a car at a moment of the race. The status is looked up rather than
 worked out here; see [`Race.statusAt`](Motorsport-Race#statusAt).
 -}
-carStateAt : { elapsed : Duration } -> Race -> Car -> CarState
+carStateAt : { elapsed : Instant } -> Race -> Car -> CarState
 carStateAt clock race car =
     let
         currentLap =
@@ -332,7 +333,7 @@ type alias TimingState =
     }
 
 
-init_timing : Duration -> { leader : Maybe CarState, rival : Maybe CarState } -> CarState -> TimingState
+init_timing : Instant -> { leader : Maybe CarState, rival : Maybe CarState } -> CarState -> TimingState
 init_timing raceElapsed rivals car =
     let
         raceClock =
@@ -354,7 +355,7 @@ init_timing raceElapsed rivals car =
         currentMiniSector =
             Lap.miniSectorProgressAt raceClock { current = currentLap, previous = lastLap }
     in
-    { currentLapElapsed = raceClock.elapsed - lastLap.elapsed
+    { currentLapElapsed = Instant.since { from = lastLap.elapsed, to = raceClock.elapsed }
     , sector = currentSector
     , miniSector = currentMiniSector
     , gapToLeader = gapTo raceClock car rivals.leader
@@ -364,7 +365,7 @@ init_timing raceElapsed rivals car =
 
 {-| The gap from `car` to the car ahead of it, or none where there is no such car.
 -}
-gapTo : { elapsed : Duration } -> CarState -> Maybe CarState -> Gap
+gapTo : { elapsed : Instant } -> CarState -> Maybe CarState -> Gap
 gapTo raceClock car ahead =
     ahead
         |> Maybe.map (\aheadCar -> Gap.at raceClock { ahead = aheadCar, behind = car })
@@ -406,9 +407,9 @@ lapCount (Standings s) =
     s.lapCount
 
 
-{-| The race elapsed time this Standings represents; the elapsed passed to compute is baked in.
+{-| The moment of the race this Standings represents; the clock passed to compute is baked in.
 -}
-elapsed : Standings -> Duration
+elapsed : Standings -> Instant
 elapsed (Standings s) =
     s.elapsed
 

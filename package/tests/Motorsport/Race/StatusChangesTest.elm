@@ -2,6 +2,7 @@ module Motorsport.Race.StatusChangesTest exposing (suite)
 
 import Expect
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
@@ -17,19 +18,19 @@ suite =
                 \_ ->
                     Expect.equal
                         ( Status.PreRace, Status.PreRace )
-                        ( StatusChanges.statusAt { elapsed = 500000 } "99" index
-                        , StatusChanges.statusAt { elapsed = 500000 } "1" StatusChanges.empty
+                        ( StatusChanges.statusAt { elapsed = Instant.fromDuration 500000 } "99" index
+                        , StatusChanges.statusAt { elapsed = Instant.fromDuration 500000 } "1" StatusChanges.empty
                         )
             , test "a change takes effect on the instant it happens, not the one after" <|
                 \_ ->
                     Expect.equal
                         ( Status.Racing, Status.InPit )
-                        ( StatusChanges.statusAt { elapsed = 169999 } "1" index
-                        , StatusChanges.statusAt { elapsed = 170000 } "1" index
+                        ( StatusChanges.statusAt { elapsed = Instant.fromDuration 169999 } "1" index
+                        , StatusChanges.statusAt { elapsed = Instant.fromDuration 170000 } "1" index
                         )
             , test "taking the lead is not a status change" <|
                 \_ ->
-                    StatusChanges.statusAt { elapsed = 210000 } "1" index
+                    StatusChanges.statusAt { elapsed = Instant.fromDuration 210000 } "1" index
                         |> Expect.equal Status.Racing
             , test "the last of two changes sharing an instant wins" <|
                 \_ ->
@@ -40,7 +41,7 @@ suite =
                                 , carEvent 300000 TimelineEvent.Checkered
                                 ]
                     in
-                    StatusChanges.statusAt { elapsed = 300000 } "1" pitOutThenFlag
+                    StatusChanges.statusAt { elapsed = Instant.fromDuration 300000 } "1" pitOutThenFlag
                         |> Expect.equal Status.Checkered
             ]
         , describe "fromTimelineEvents"
@@ -49,15 +50,15 @@ suite =
                     let
                         twoCars =
                             StatusChanges.fromTimelineEvents
-                                [ { eventTime = 0, eventType = TimelineEvent.CarEvent "1" (TimelineEvent.Start { currentLap = Lap.empty }) }
-                                , { eventTime = 0, eventType = TimelineEvent.CarEvent "2" (TimelineEvent.Start { currentLap = Lap.empty }) }
-                                , { eventTime = 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
+                                [ { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "1" (TimelineEvent.Start { currentLap = Lap.empty }) }
+                                , { eventTime = Instant.raceStart, eventType = TimelineEvent.CarEvent "2" (TimelineEvent.Start { currentLap = Lap.empty }) }
+                                , { eventTime = Instant.fromDuration 100000, eventType = TimelineEvent.CarEvent "2" TimelineEvent.Retirement }
                                 ]
                     in
                     Expect.equal
                         ( Status.Racing, Status.Retired )
-                        ( StatusChanges.statusAt { elapsed = 200000 } "1" twoCars
-                        , StatusChanges.statusAt { elapsed = 200000 } "2" twoCars
+                        ( StatusChanges.statusAt { elapsed = Instant.fromDuration 200000 } "1" twoCars
+                        , StatusChanges.statusAt { elapsed = Instant.fromDuration 200000 } "2" twoCars
                         )
             ]
         ]
@@ -89,4 +90,6 @@ index =
 
 carEvent : Duration -> TimelineEvent.CarEventType -> TimelineEvent
 carEvent eventTime carEventType =
-    { eventTime = eventTime, eventType = TimelineEvent.CarEvent "1" carEventType }
+    { eventTime = Instant.fromDuration eventTime
+    , eventType = TimelineEvent.CarEvent "1" carEventType
+    }

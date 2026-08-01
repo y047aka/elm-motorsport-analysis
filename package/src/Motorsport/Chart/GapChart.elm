@@ -29,6 +29,7 @@ import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.ViewModel.Entry exposing (Entry)
@@ -122,13 +123,18 @@ gapChartView ( minLap, maxLap ) lapHistory entries =
 per-lap group baseline `referenceByLap` and each car's lap list. Laps without a
 baseline produce no point and are dropped.
 -}
-gapPoints : Dict Int Int -> List Lap -> List LinePoint
+gapPoints : Dict Int Instant -> List Lap -> List LinePoint
 gapPoints referenceByLap laps =
     laps
         |> List.filterMap
             (\lap ->
                 Dict.get lap.lap referenceByLap
-                    |> Maybe.map (\ref -> { lap = lap.lap, value = lap.elapsed - ref })
+                    |> Maybe.map
+                        (\ref ->
+                            { lap = lap.lap
+                            , value = Instant.since { from = ref, to = lap.elapsed }
+                            }
+                        )
             )
 
 
@@ -320,25 +326,32 @@ zeroReferenceLine { x1, x2, y } =
 number, the mean cumulative time. Excluding pit laps keeps the baseline from
 jumping. Only cars with a non-pit lap on that lap contribute to the average.
 -}
-groupReferenceByLap : List CarLine -> Dict Int Int
+groupReferenceByLap : List CarLine -> Dict Int Instant
 groupReferenceByLap carLines =
     carLines
         |> List.concatMap .laps
         |> List.filter (\lap -> lap.pitTime == Nothing)
         |> List.foldl
             (\lap ->
+                let
+                    -- Summing moments is meaningless on its own; the mean of
+                    -- them is the moment the group crossed the line, which is
+                    -- why this drops out of the type and back in below.
+                    elapsed =
+                        Instant.toDuration lap.elapsed
+                in
                 Dict.update lap.lap
                     (\existing ->
                         case existing of
                             Just ( sum, count ) ->
-                                Just ( sum + lap.elapsed, count + 1 )
+                                Just ( sum + elapsed, count + 1 )
 
                             Nothing ->
-                                Just ( lap.elapsed, 1 )
+                                Just ( elapsed, 1 )
                     )
             )
             Dict.empty
-        |> Dict.map (\_ ( sum, count ) -> sum // count)
+        |> Dict.map (\_ ( sum, count ) -> Instant.fromDuration (sum // count))
 
 
 {-| Dimensions for the full-width consolidated gap chart. A wide aspect keeps the

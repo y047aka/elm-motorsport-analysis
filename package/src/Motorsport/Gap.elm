@@ -26,6 +26,7 @@ module Motorsport.Gap exposing
 
 import List.Extra
 import Motorsport.Duration as Duration exposing (Duration)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 
 
@@ -92,7 +93,7 @@ laps count =
 {-| A moment of the race, as [`Lap`](Motorsport-Lap) measures it.
 -}
 type alias Clock =
-    { elapsed : Duration }
+    { elapsed : Instant }
 
 
 
@@ -144,7 +145,7 @@ lapsBetween clock { ahead, behind } =
         hasComeBackRound =
             Maybe.map3
                 (\sector aheadLap behindLap ->
-                    Lap.sectorStart sector aheadLap < Lap.sectorStart sector behindLap
+                    Instant.compare (Lap.sectorStart sector aheadLap) (Lap.sectorStart sector behindLap) == LT
                 )
                 currentSector
                 ahead.currentLap
@@ -189,7 +190,12 @@ secondsBetween clock { ahead, behind } =
                 |> List.Extra.find (\lap -> lap.lap == behindLap.lap)
                 |> Maybe.map
                     (\aheadLap ->
-                        seconds (Lap.sectorStart currentSector behindLap - Lap.sectorStart currentSector aheadLap)
+                        seconds
+                            (Instant.since
+                                { from = Lap.sectorStart currentSector aheadLap
+                                , to = Lap.sectorStart currentSector behindLap
+                                }
+                            )
                     )
                 |> Maybe.withDefault none
 
