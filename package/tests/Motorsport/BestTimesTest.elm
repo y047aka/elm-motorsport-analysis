@@ -1,7 +1,7 @@
 module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
-import Motorsport.BestTimes as BestTimes exposing (BestTimes, Holder, Holders)
+import Motorsport.BestTimes as BestTimes exposing (BestTimes, Changes, Holder)
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -123,7 +123,7 @@ tests =
                     [ 0, 6000, 10000 ]
                         |> List.map
                             (\elapsed ->
-                                BestTimes.at { elapsed = elapsed } (recordsOf cars)
+                                BestTimes.at { elapsed = elapsed } (changesOf cars)
                                     |> .fastestLapTime
                                     |> Maybe.map .carNumber
                             )
@@ -143,33 +143,33 @@ tests =
 
 {-| One record as a plain time, at the end of the race.
 -}
-finalTime : (Holders -> Maybe Holder) -> List Car -> Duration
+finalTime : (BestTimes -> Maybe Holder) -> List Car -> Duration
 finalTime pick cars =
-    BestTimes.timeOf (pick (BestTimes.final (recordsOf cars)))
+    BestTimes.timeOf (pick (BestTimes.final (changesOf cars)))
 
 
 {-| The same, as it stood at `elapsed`.
 -}
-timeAt : Duration -> (Holders -> Maybe Holder) -> List Car -> Duration
+timeAt : Duration -> (BestTimes -> Maybe Holder) -> List Car -> Duration
 timeAt elapsed pick cars =
-    BestTimes.timeOf (pick (BestTimes.at { elapsed = elapsed } (recordsOf cars)))
+    BestTimes.timeOf (pick (BestTimes.at { elapsed = elapsed } (changesOf cars)))
 
 
 {-| Built the way the app builds them -- through `Race.fromCars`, rather than
 calling `fromLaps` on a lap list assembled here, so that the race handing its
 laps over stays covered too.
 -}
-recordsOf : List Car -> BestTimes
-recordsOf cars =
-    (Race.fromCars cars).bestTimes
+changesOf : List Car -> Changes
+changesOf cars =
+    (Race.fromCars cars).bestTimeChanges
 
 
 {-| One record's holder at the end of the race, as the three things that say
 which lap took it.
 -}
-finalHolderOf : (Holders -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
+finalHolderOf : (BestTimes -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
 finalHolderOf pick cars =
-    recordsOf cars
+    changesOf cars
         |> BestTimes.final
         |> pick
         |> Maybe.map (\held -> ( held.carNumber, held.lap, held.time ))
@@ -179,7 +179,7 @@ finalHolderOf pick cars =
 -}
 finalSectors : List Car -> List Duration
 finalSectors cars =
-    BestTimes.final (recordsOf cars)
+    BestTimes.final (changesOf cars)
         |> .fastestSectors
         |> Sector.values
         |> List.map BestTimes.timeOf
@@ -189,7 +189,7 @@ finalSectors cars =
 -}
 sectorsAt : Duration -> List Car -> List Duration
 sectorsAt elapsed cars =
-    BestTimes.at { elapsed = elapsed } (recordsOf cars)
+    BestTimes.at { elapsed = elapsed } (changesOf cars)
         |> .fastestSectors
         |> Sector.values
         |> List.map BestTimes.timeOf
@@ -199,7 +199,7 @@ sectorsAt elapsed cars =
 -}
 finalMiniSectors : List Car -> List Duration
 finalMiniSectors cars =
-    BestTimes.final (recordsOf cars)
+    BestTimes.final (changesOf cars)
         |> .fastestMiniSectors
         |> LeMans.values
         |> List.map BestTimes.timeOf

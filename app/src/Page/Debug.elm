@@ -14,7 +14,7 @@ import Html.Styled exposing (div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
-import Motorsport.BestTimes as BestTimes
+import Motorsport.BestTimes as BestTimes exposing (BestTimes)
 import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
@@ -137,7 +137,7 @@ view { viewModel, replay } { leaderboardState } =
     }
 
 
-config : BestTimes.Holders -> Standings -> Leaderboard.Config Entry Msg
+config : BestTimes -> Standings -> Leaderboard.Config Entry Msg
 config bestTimes standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -157,7 +157,7 @@ config bestTimes standings =
     }
 
 
-sectorColumns : BestTimes.Holders -> List (DataView.Column Entry Msg)
+sectorColumns : BestTimes -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
         fastest sector =

@@ -1,8 +1,7 @@
 module Motorsport.BestTimes exposing
-    ( BestTimes, Holder, Holders
-    , empty, fromLaps
-    , at, final
-    , timeOf
+    ( Changes, empty, fromLaps
+    , BestTimes, Holder
+    , at, final, timeOf
     )
 
 {-| When each of the race's best times was set, what they stand at, and who set
@@ -23,10 +22,9 @@ records out -- everything it knows about a car it reads off the lap that car
 ran, so it needs no standings, no playback and no `Car`, which is what keeps the
 dependency pointing one way from both.
 
-@docs BestTimes, Holder, Holders
-@docs empty, fromLaps
-@docs at, final
-@docs timeOf
+@docs Changes, empty, fromLaps
+@docs BestTimes, Holder
+@docs at, final, timeOf
 
 -}
 
@@ -38,9 +36,15 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
-{-| The whole race's records, each one as a history of when it changed.
+{-| Every moment one of the race's records changed hands, collected once.
+
+Named for the changes rather than the times, like the
+[`StatusChanges`](Motorsport-Race-StatusChanges) it sits beside in a
+[`Race`](Motorsport-Race): what the times actually are at a moment of the race
+is [`BestTimes`](#BestTimes), read back out of this.
+
 -}
-type alias BestTimes =
+type alias Changes =
     ByRecord (ChangePoints Holder)
 
 
@@ -60,7 +64,7 @@ type alias Holder =
     }
 
 
-{-| The records as they stood at one moment -- the comparison baseline a widget
+{-| The race's best times at one moment of it -- the comparison baseline a widget
 rates and scales individual times against, and the laps that set it.
 
 `Nothing` is a record no lap has ever taken. A caller that only wants the number
@@ -69,12 +73,12 @@ puts [`timeOf`](#timeOf) over it and gets the zero the rest of the app reads as
 go looking for the lap that matches a time.
 
 -}
-type alias Holders =
+type alias BestTimes =
     ByRecord (Maybe Holder)
 
 
-{-| One value per record: the shape the readings above share, differing only in
-what they hold.
+{-| One value per record: the shape `Changes` and `BestTimes` share, differing
+only in what they hold.
 
 Everything this module does to the twenty records -- building them, reading them,
 emptying them -- goes through `map`, so they are enumerated in exactly one place.
@@ -98,10 +102,9 @@ map f records =
     }
 
 
-{-| No laps recorded yet. Every reading comes back `Nothing`, so every snapshot
-of it reads zero.
+{-| No laps recorded yet. Read at any moment, every record comes back `Nothing`.
 -}
-empty : BestTimes
+empty : Changes
 empty =
     fromLaps []
 
@@ -113,7 +116,7 @@ the only thing that settles which lap took it is when that lap was completed.
 The lap that took it is then credited with it -- see [`Holder`](#Holder).
 
 -}
-fromLaps : List Lap -> BestTimes
+fromLaps : List Lap -> Changes
 fromLaps laps =
     let
         -- In the order the laps were completed, which is the order the records
@@ -127,7 +130,7 @@ fromLaps laps =
 {-| The records as they stood at a moment of the race: what a car crossing the
 line then was rated against.
 -}
-at : { elapsed : Duration } -> BestTimes -> Holders
+at : { elapsed : Duration } -> Changes -> BestTimes
 at clock =
     map (ChangePoints.valueAt clock.elapsed)
 
@@ -135,7 +138,7 @@ at clock =
 {-| The records as the race left them, without having to name a time past the
 end of it.
 -}
-final : BestTimes -> Holders
+final : Changes -> BestTimes
 final =
     map ChangePoints.last
 
