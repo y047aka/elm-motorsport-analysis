@@ -19,7 +19,7 @@ import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 type alias ViewModel =
     { standings : Standings
     , lapHistory : LapHistory
-    , bestTimes : BestTimes.Snapshot
+    , bestTimes : BestTimes.Holders
     }
 
 

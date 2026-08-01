@@ -1,8 +1,8 @@
 module Motorsport.BestTimes exposing
-    ( BestTimes, Snapshot, Holder, Holders
+    ( BestTimes, Holder, Holders
     , empty, fromLaps
     , at, final
-    , holdersAt, finalHolders
+    , timeOf
     )
 
 {-| When each of the race's best times was set, what they stand at, and who set
@@ -23,10 +23,10 @@ records out -- everything it knows about a car it reads off the lap that car
 ran, so it needs no standings, no playback and no `Car`, which is what keeps the
 dependency pointing one way from both.
 
-@docs BestTimes, Snapshot, Holder, Holders
+@docs BestTimes, Holder, Holders
 @docs empty, fromLaps
 @docs at, final
-@docs holdersAt, finalHolders
+@docs timeOf
 
 -}
 
@@ -61,22 +61,12 @@ type alias Holder =
 
 
 {-| The records as they stood at one moment -- the comparison baseline a widget
-rates and scales individual times against.
+rates and scales individual times against, and the laps that set it.
 
-A record no lap has set yet reads `0`, so a caller that would have to unwrap a
-`Maybe` on all twenty of them does not have to.
-
--}
-type alias Snapshot =
-    ByRecord Duration
-
-
-{-| Who held each record at one moment, for a caller that has something to say
-about it beyond the number.
-
-`Nothing` where [`Snapshot`](#Snapshot) reads `0`: no lap has set that record
-yet. There is no car number to stand in for one, so this reading does not
-pretend otherwise.
+`Nothing` is a record no lap has ever taken. A caller that only wants the number
+puts [`timeOf`](#timeOf) over it and gets the zero the rest of the app reads as
+"not set"; one that wants to name the holder has it here rather than having to
+go looking for the lap that matches a time.
 
 -}
 type alias Holders =
@@ -137,36 +127,30 @@ fromLaps laps =
 {-| The records as they stood at a moment of the race: what a car crossing the
 line then was rated against.
 -}
-at : { elapsed : Duration } -> BestTimes -> Snapshot
+at : { elapsed : Duration } -> BestTimes -> Holders
 at clock =
-    holdersAt clock >> map timeOf
+    map (ChangePoints.valueAt clock.elapsed)
 
 
 {-| The records as the race left them, without having to name a time past the
 end of it.
 -}
-final : BestTimes -> Snapshot
+final : BestTimes -> Holders
 final =
-    finalHolders >> map timeOf
-
-
-{-| Who held each record at a moment of the race.
--}
-holdersAt : { elapsed : Duration } -> BestTimes -> Holders
-holdersAt clock =
-    map (ChangePoints.valueAt clock.elapsed)
-
-
-{-| Who ended the race holding each record.
--}
-finalHolders : BestTimes -> Holders
-finalHolders =
     map ChangePoints.last
 
 
+{-| One record as a plain time, for the rating and the geometry that only ever
+wanted the number.
+
+A record no lap has taken comes back `0`. That is the same zero the source data
+uses for a time it did not record, and
+[`Performance`](Motorsport-Lap-Performance#performanceLevel) reads it as one --
+an unset record rates nothing as its own.
+
+-}
 timeOf : Maybe Holder -> Duration
 timeOf held =
-    -- No lap has set this record yet, or none ever records it.
     Maybe.withDefault 0 (Maybe.map .time held)
 
 

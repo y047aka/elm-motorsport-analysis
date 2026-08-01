@@ -2,7 +2,7 @@ module Motorsport.Chart.Histogram exposing (view)
 
 import Css exposing (px)
 import Html.Styled exposing (Html)
-import Motorsport.Duration exposing (Duration)
+import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
@@ -43,9 +43,15 @@ Takes the fastest/slowest reference times, a coefficient to clamp the x-axis
 upper bound relative to the fastest lap time, and the laps to render.
 
 -}
-view : { a | fastestLapTime : Duration, slowestLapTime : Duration } -> Float -> List Lap -> Html msg
-view { fastestLapTime, slowestLapTime } coefficient laps =
+view : { a | fastestLapTime : Maybe Holder, slowestLapTime : Maybe Holder } -> Float -> List Lap -> Html msg
+view bestTimes coefficient laps =
     let
+        fastestLapTime =
+            BestTimes.timeOf bestTimes.fastestLapTime
+
+        slowestLapTime =
+            BestTimes.timeOf bestTimes.slowestLapTime
+
         xScale =
             xContinuousScale ( fastestLapTime, min (toFloat fastestLapTime * coefficient) (toFloat slowestLapTime) )
 

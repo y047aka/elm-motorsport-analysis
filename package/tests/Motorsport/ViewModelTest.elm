@@ -1,6 +1,7 @@
 module Motorsport.ViewModelTest exposing (suite)
 
 import Expect
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -42,6 +43,7 @@ fastestLapTimeAt elapsed scope =
         |> ViewModel.compute scope
         |> .bestTimes
         |> .fastestLapTime
+        |> BestTimes.timeOf
 
 
 {-| The head put straight where the test wants it, rather than skipped there:

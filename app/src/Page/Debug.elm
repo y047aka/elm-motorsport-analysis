@@ -111,15 +111,15 @@ view { viewModel, replay } { leaderboardState } =
                 , text (Clock.getElapsed playback |> Duration.toString)
                 ]
             , div []
-                ([ div [] [ text "fastestLapTime: ", text (Duration.toString viewModel.bestTimes.fastestLapTime) ]
-                 , div [] [ text "slowestLapTime: ", text (Duration.toString viewModel.bestTimes.slowestLapTime) ]
+                ([ div [] [ text "fastestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.fastestLapTime)) ]
+                 , div [] [ text "slowestLapTime: ", text (Duration.toString (BestTimes.timeOf viewModel.bestTimes.slowestLapTime)) ]
                  ]
                     ++ (Sector.toList viewModel.bestTimes.fastestSectors
                             |> List.map
                                 (\( sector, fastest ) ->
                                     div []
                                         [ text (Sector.toString sector ++ "_fastest: ")
-                                        , text (Duration.toString fastest)
+                                        , text (Duration.toString (BestTimes.timeOf fastest))
                                         ]
                                 )
                        )
@@ -137,7 +137,7 @@ view { viewModel, replay } { leaderboardState } =
     }
 
 
-config : BestTimes.Snapshot -> Standings -> Leaderboard.Config Entry Msg
+config : BestTimes.Holders -> Standings -> Leaderboard.Config Entry Msg
 config bestTimes standings =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
@@ -157,11 +157,11 @@ config bestTimes standings =
     }
 
 
-sectorColumns : BestTimes.Snapshot -> List (DataView.Column Entry Msg)
+sectorColumns : BestTimes.Holders -> List (DataView.Column Entry Msg)
 sectorColumns bestTimes =
     let
         fastest sector =
-            Sector.get sector bestTimes.fastestSectors
+            BestTimes.timeOf (Sector.get sector bestTimes.fastestSectors)
 
         times sector =
             .currentLapSectors >> Maybe.map (Sector.get sector)

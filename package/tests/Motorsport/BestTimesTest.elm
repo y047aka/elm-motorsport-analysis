@@ -1,7 +1,7 @@
 module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
-import Motorsport.BestTimes as BestTimes exposing (BestTimes, Holder, Holders, Snapshot)
+import Motorsport.BestTimes as BestTimes exposing (BestTimes, Holder, Holders)
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -44,21 +44,19 @@ tests =
                             [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
                     in
                     [ 0, 5999, 6000, 9999, 10000 ]
-                        |> List.map (\elapsed -> (at elapsed cars).fastestLapTime)
+                        |> List.map (\elapsed -> timeAt elapsed .fastestLapTime cars)
                         |> Expect.equal [ 0, 0, 6000, 6000, 5000 ]
             , test "a lap with no recorded time is not the quickest" <|
                 \_ ->
                     [ car "1" [ lap 1 0 anySectors, lap 2 6000 anySectors ] ]
-                        |> final
-                        |> .fastestLapTime
+                        |> finalTime .fastestLapTime
                         |> Expect.equal 6000
             ]
         , describe "slowestLapTime"
             [ test "stands at the slowest lap run so far" <|
                 \_ ->
                     [ car "1" [ lap 1 6000 anySectors, lap 2 5000 anySectors ] ]
-                        |> final
-                        |> .slowestLapTime
+                        |> finalTime .slowestLapTime
                         |> Expect.equal 6000
             ]
         , describe "fastestMiniSectors"
@@ -71,9 +69,7 @@ tests =
                         , lap 2 6000 anySectors |> withMiniSectorsOf 2000
                         ]
                     ]
-                        |> final
-                        |> .fastestMiniSectors
-                        |> LeMans.values
+                        |> finalMiniSectors
                         |> Expect.equal (List.repeat 15 2000)
             ]
         , describe "where the records are read"
@@ -127,7 +123,7 @@ tests =
                     [ 0, 6000, 10000 ]
                         |> List.map
                             (\elapsed ->
-                                BestTimes.holdersAt { elapsed = elapsed } (recordsOf cars)
+                                BestTimes.at { elapsed = elapsed } (recordsOf cars)
                                     |> .fastestLapTime
                                     |> Maybe.map .carNumber
                             )
@@ -145,18 +141,18 @@ tests =
 -- HELPERS
 
 
-{-| The records a race made of these cars ends up with.
+{-| One record as a plain time, at the end of the race.
 -}
-final : List Car -> Snapshot
-final cars =
-    BestTimes.final (recordsOf cars)
+finalTime : (Holders -> Maybe Holder) -> List Car -> Duration
+finalTime pick cars =
+    BestTimes.timeOf (pick (BestTimes.final (recordsOf cars)))
 
 
-{-| The records as they stood at `elapsed`.
+{-| The same, as it stood at `elapsed`.
 -}
-at : Duration -> List Car -> Snapshot
-at elapsed cars =
-    BestTimes.at { elapsed = elapsed } (recordsOf cars)
+timeAt : Duration -> (Holders -> Maybe Holder) -> List Car -> Duration
+timeAt elapsed pick cars =
+    BestTimes.timeOf (pick (BestTimes.at { elapsed = elapsed } (recordsOf cars)))
 
 
 {-| Built the way the app builds them -- through `Race.fromCars`, rather than
@@ -174,7 +170,7 @@ which lap took it.
 finalHolderOf : (Holders -> Maybe Holder) -> List Car -> Maybe ( String, Int, Duration )
 finalHolderOf pick cars =
     recordsOf cars
-        |> BestTimes.finalHolders
+        |> BestTimes.final
         |> pick
         |> Maybe.map (\held -> ( held.carNumber, held.lap, held.time ))
 
@@ -183,18 +179,30 @@ finalHolderOf pick cars =
 -}
 finalSectors : List Car -> List Duration
 finalSectors cars =
-    final cars
+    BestTimes.final (recordsOf cars)
         |> .fastestSectors
         |> Sector.values
+        |> List.map BestTimes.timeOf
 
 
 {-| The same three, as they stood at `elapsed`.
 -}
 sectorsAt : Duration -> List Car -> List Duration
 sectorsAt elapsed cars =
-    at elapsed cars
+    BestTimes.at { elapsed = elapsed } (recordsOf cars)
         |> .fastestSectors
         |> Sector.values
+        |> List.map BestTimes.timeOf
+
+
+{-| Every mini-sector record in track order, over the whole race.
+-}
+finalMiniSectors : List Car -> List Duration
+finalMiniSectors cars =
+    BestTimes.final (recordsOf cars)
+        |> .fastestMiniSectors
+        |> LeMans.values
+        |> List.map BestTimes.timeOf
 
 
 {-| A lap of `time`, split into the three given sector times, running from the
