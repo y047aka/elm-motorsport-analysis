@@ -68,7 +68,7 @@ type alias Holder =
 {-| The records held still at one moment of the race -- the comparison baseline a
 widget rates and scales individual times against, and the laps that set them.
 
-Read mid-race via [`at`](#at) these are only the best times *so far*; only
+Read mid-race via [`at`](#at) these are only the best times _so far_; only
 [`final`](#final)'s answer is the race's actual best times.
 
 `Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
