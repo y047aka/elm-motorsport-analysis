@@ -53,7 +53,7 @@ suite =
                                 |> List.concatMap .laps
                                 |> List.map .best
                     in
-                    Expect.equal [ 100000, 95000, 95000 ] bests
+                    Expect.equal [ Just 100000, Just 95000, Just 95000 ] bests
             , test "assigns 0-based position by elapsed within each lap number" <|
                 \_ ->
                     let

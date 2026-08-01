@@ -41,9 +41,9 @@ type PerformanceLevel
 
 Both baselines are `Nothing` until some lap sets them, and nothing has beaten a
 record that has not been set -- so an unset baseline matches no time, and the
-comparison needs no guard of its own. There is only a time to rate here because
-[`Lap.recorded`](Motorsport-Lap#recorded) has already dropped the ones the
-source data did not record.
+comparison needs no guard of its own. There is only a time to rate here at all
+because the loader dropped the ones the source data did not record, on the way
+in -- see [`Lap.recorded`](Motorsport-Lap#recorded).
 
 -}
 performanceLevel : { a | time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration } -> PerformanceLevel

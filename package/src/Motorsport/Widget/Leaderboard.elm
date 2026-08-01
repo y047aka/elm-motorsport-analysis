@@ -65,7 +65,7 @@ import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
+import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
@@ -498,7 +498,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
                         status_ =
                             performanceLevel
                                 { time = time
-                                , personalBest = Lap.recorded personalBest
+                                , personalBest = personalBest
                                 , fastest = BestTimes.timeOf bestTimes.fastestLapTime
                                 }
                       in
@@ -550,7 +550,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
             |> Maybe.map
                 (\best ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = currentLapElapsed, personalBest = best }
+                        [ lapTime { time = currentLapElapsed, personalBest = Just best }
                         , let
                             progressMap =
                                 LeMans.calculateMiniSectorProgress miniSector
@@ -747,12 +747,12 @@ performanceHistory_ bestTimes laps =
             BestTimes.timeOf bestTimes.fastestLapTime
 
         toCssColor lap =
-            Lap.recorded lap.time
+            lap.time
                 |> Maybe.map
                     (\time ->
                         performanceLevel
                             { time = time
-                            , personalBest = Lap.recorded lap.best
+                            , personalBest = lap.best
                             , fastest = fastestLapTime
                             }
                     )

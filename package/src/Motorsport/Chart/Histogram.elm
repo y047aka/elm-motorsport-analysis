@@ -3,7 +3,7 @@ module Motorsport.Chart.Histogram exposing (view)
 import Css exposing (px)
 import Html.Styled exposing (Html)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, g, rect, svg)
@@ -72,12 +72,12 @@ view bestTimes coefficient laps =
 
         color lap =
             if isCurrentLap lap then
-                Lap.recorded lap.time
+                lap.time
                     |> Maybe.map
                         (\time ->
                             performanceLevel
                                 { time = time
-                                , personalBest = Lap.recorded lap.best
+                                , personalBest = lap.best
                                 , fastest = fastestLapTime
                                 }
                         )
@@ -89,15 +89,19 @@ view bestTimes coefficient laps =
 
         isCurrentLap { lap } =
             List.length laps == lap
+
+        -- A lap the source data has no time for has nowhere to go on the axis.
+        timedLaps =
+            List.filter (\lap -> lap.time /= Nothing) laps
     in
     svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
         [ histogram_
-            { x = .time >> toFloat >> Scale.convert xScale
+            { x = .time >> Maybe.withDefault 0 >> toFloat >> Scale.convert xScale
             , y = always 0 >> Scale.convert yScale
             , width = width
             , color = color
             }
-            laps
+            timedLaps
         ]
 
 

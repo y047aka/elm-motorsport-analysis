@@ -12,12 +12,12 @@ import Test exposing (..)
 lap : Lap
 lap =
     { empty
-        | time = 6000
+        | time = Just 6000
         , elapsed = instant 10000
         , sectors =
-            { s1 = { time = 1000, personalBest = 0 }
-            , s2 = { time = 2000, personalBest = 0 }
-            , s3 = { time = 3000, personalBest = 0 }
+            { s1 = { time = Just 1000, personalBest = Nothing }
+            , s2 = { time = Just 2000, personalBest = Nothing }
+            , s3 = { time = Just 3000, personalBest = Nothing }
             }
     }
 
@@ -48,7 +48,7 @@ tests =
             , test "measures the first sector from the start of the lap, not the previous lap record" <|
                 \_ ->
                     (Lap.segments lap).s1.start
-                        |> Expect.equal (Instant.subtract lap.time lap.elapsed)
+                        |> Expect.equal (Instant.subtract 6000 lap.elapsed)
             , test "ends the last sector where the lap ended" <|
                 \_ ->
                     (Lap.segments lap).s3

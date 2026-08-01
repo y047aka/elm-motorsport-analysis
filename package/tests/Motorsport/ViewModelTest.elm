@@ -89,6 +89,6 @@ lapOf lapNumber time elapsed =
         , driver = Driver.fromName "Test Driver"
         , lap = lapNumber
         , position = Just 1
-        , time = time
+        , time = Just time
         , elapsed = Instant.fromDuration elapsed
     }

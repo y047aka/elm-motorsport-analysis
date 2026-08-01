@@ -110,8 +110,8 @@ compute bestTimes clock race =
                         , metadata = metadata
                         , classColor = (Class.toColor metadata.class).value
                         , lapsCompleted = lastLap.lap
-                        , currentLapTime = currentLap |> Maybe.map .time
-                        , currentLapBest = currentLap |> Maybe.map .best
+                        , currentLapTime = currentLap |> Maybe.andThen .time
+                        , currentLapBest = currentLap |> Maybe.andThen .best
                         , currentLapSectors = currentLap |> Maybe.map .sectors
                         , currentLapSectorStates = currentLap |> Maybe.map (extractCurrentSectorStates bestTimes timing.sector)
                         , currentLapMiniSectors = currentLap |> Maybe.andThen .miniSectors
@@ -122,7 +122,7 @@ compute bestTimes clock race =
                                     (\lap ->
                                         rateTime fastestLapTime
                                             { time = Just timing.currentLapElapsed
-                                            , personalBest = Lap.recorded lap.best
+                                            , personalBest = lap.best
                                             }
                                     )
                         , sector = timing.sector
@@ -131,25 +131,22 @@ compute bestTimes clock race =
                         , intervalToAhead = timing.intervalToAhead
                         , currentLapProgress =
                             currentLap
-                                |> Maybe.map (\lap -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lap.time))
+                                |> Maybe.andThen .time
+                                |> Maybe.map (\lapTime -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lapTime))
                                 |> Maybe.withDefault 0
                         , lastLapRated =
                             car.lastLap
                                 |> Maybe.andThen
                                     (\lap ->
                                         rateTime fastestLapTime
-                                            { time = Lap.recorded lap.time
-                                            , personalBest = Lap.recorded lap.best
-                                            }
+                                            { time = lap.time, personalBest = lap.best }
                                     )
                         , bestLapRated =
                             car.lastLap
                                 |> Maybe.andThen
                                     (\lap ->
                                         rateTime fastestLapTime
-                                            { time = Lap.recorded lap.best
-                                            , personalBest = Lap.recorded lap.best
-                                            }
+                                            { time = lap.best, personalBest = lap.best }
                                     )
                         , lastLapSectors = car.lastLap |> Maybe.map (extractSectorPerformance bestTimes)
                         , lastLapMiniSectors = car.lastLap |> Maybe.andThen (extractMiniSectorPerformance bestTimes)
@@ -192,8 +189,8 @@ fromLaps baseMetadata laps =
                         , metadata = { baseMetadata | carNumber = String.fromInt lap.lap }
                         , classColor = (Class.toColor baseMetadata.class).value
                         , lapsCompleted = lap.lap
-                        , currentLapTime = Just lap.time
-                        , currentLapBest = Just lap.best
+                        , currentLapTime = lap.time
+                        , currentLapBest = lap.best
                         , currentLapSectors = Just lap.sectors
                         , currentLapSectorStates = Just (extractCurrentSectorStates bestTimes Nothing lap)
                         , currentLapMiniSectors = lap.miniSectors
@@ -205,11 +202,9 @@ fromLaps baseMetadata laps =
                         , intervalToAhead = Gap.none
                         , currentLapProgress = 0
                         , lastLapRated =
-                            rateTime fastestLapTime
-                                { time = Lap.recorded lap.time, personalBest = Lap.recorded lap.best }
+                            rateTime fastestLapTime { time = lap.time, personalBest = lap.best }
                         , bestLapRated =
-                            rateTime fastestLapTime
-                                { time = Lap.recorded lap.best, personalBest = Lap.recorded lap.best }
+                            rateTime fastestLapTime { time = lap.best, personalBest = lap.best }
                         , lastLapSectors = Just (extractSectorPerformance bestTimes lap)
                         , lastLapMiniSectors = extractMiniSectorPerformance bestTimes lap
                         , currentDriver = Just lap.driver
@@ -334,17 +329,12 @@ extractCurrentSectorStates bestTimes sectorProgress lap =
         (extractSectorPerformance bestTimes lap)
 
 
+{-| A `SectorTime` is already the shape `rateTime` reads: a time that may not
+have been recorded, and the driver's best to rate it against.
+-}
 extractSectorPerformance : BestTimes.Snapshot -> Lap -> SectorPerformance
 extractSectorPerformance bestTimes lap =
-    Sector.map2
-        (\fastest sectorTime ->
-            rateTime (BestTimes.timeOf fastest)
-                { time = Lap.recorded sectorTime.time
-                , personalBest = Lap.recorded sectorTime.personalBest
-                }
-        )
-        bestTimes.fastestSectors
-        lap.sectors
+    Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
 
 
 extractMiniSectorPerformance :

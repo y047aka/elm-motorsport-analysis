@@ -277,6 +277,14 @@ durationDecoder =
     string |> Decode.andThen (Duration.fromString >> Json.Decode.Extra.fromMaybe "Expected a Duration")
 
 
+{-| A lap or sector time the source data may not have recorded; see
+[`Lap.recorded`](Motorsport-Lap#recorded).
+-}
+recordedDurationDecoder : Decoder (Maybe Duration)
+recordedDurationDecoder =
+    Decode.map Lap.recorded durationDecoder
+
+
 lapDecoder : Decoder Lap
 lapDecoder =
     Decode.succeed Lap
@@ -284,8 +292,8 @@ lapDecoder =
         |> required "driver" (Decode.map Driver.fromName string)
         |> required "lap" int
         |> required "position" (Decode.maybe int)
-        |> required "time" durationDecoder
-        |> required "best" durationDecoder
+        |> required "time" recordedDurationDecoder
+        |> required "best" recordedDurationDecoder
         |> custom sectorsDecoder
         |> required "elapsed" Instant.decoder
         |> optional "pit_time" (Decode.maybe durationDecoder) Nothing
@@ -300,8 +308,8 @@ sectorsDecoder =
     let
         sectorTime timeKey bestKey =
             Decode.map2 (\time personalBest -> { time = time, personalBest = personalBest })
-                (field timeKey durationDecoder)
-                (field bestKey durationDecoder)
+                (field timeKey recordedDurationDecoder)
+                (field bestKey recordedDurationDecoder)
     in
     Decode.map3 (\s1 s2 s3 -> { s1 = s1, s2 = s2, s3 = s3 })
         (sectorTime "sector_1" "s1_best")

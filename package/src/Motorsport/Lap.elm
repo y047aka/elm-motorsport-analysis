@@ -46,8 +46,8 @@ type alias Lap =
     , driver : Driver
     , lap : Int
     , position : Maybe Int
-    , time : Duration
-    , best : Duration
+    , time : Maybe Duration
+    , best : Maybe Duration
     , sectors : SectorTimes
     , elapsed : Instant
     , pitTime : Maybe Duration
@@ -58,12 +58,14 @@ type alias Lap =
 {-| How long one sector of this lap took, next to the driver's best for that
 sector up to and including this lap — the baseline a time is rated against.
 
-The two are kept together because nothing reads one without the other.
+The two are kept together because nothing reads one without the other. Either
+can be missing: a sector the source data left blank has no time, and a driver
+who has yet to complete one has no best for it.
 
 -}
 type alias SectorTime =
-    { time : Duration
-    , personalBest : Duration
+    { time : Maybe Duration
+    , personalBest : Maybe Duration
     }
 
 
@@ -90,9 +92,9 @@ empty =
     , driver = Driver.unknown
     , lap = 0
     , position = Nothing
-    , time = 0
-    , sectors = Sector.initialize (always { time = 0, personalBest = 0 })
-    , best = 0
+    , time = Nothing
+    , sectors = Sector.initialize (always { time = Nothing, personalBest = Nothing })
+    , best = Nothing
     , elapsed = Instant.raceStart
     , pitTime = Nothing
     , miniSectors = Nothing
@@ -102,10 +104,10 @@ empty =
 {-| A time as the source data spells it, where a zero stands for a time that was
 not recorded rather than a very quick one.
 
-`time`, `best` and the sector times all carry that convention, and this is the
-only place that knows it. Everything that rates or ranks one of those times
-comes through here, so nothing downstream has to guard against a zero it did not
-expect. Mini-sector times arrive as `Maybe` already and need no lifting.
+For the loader to call on the way in, so that the zero stops at the boundary and
+a `Lap` never carries one. Sector times arrive spelled as a blank cell and are
+`Nothing` before they get here; a lap time is the one the CLI writes out as
+`0.000` whether it was recorded or not.
 
     recorded 95365
     --> Just 95365
@@ -240,23 +242,41 @@ type alias Segment =
     }
 
 
+{-| When the lap began.
+
+Read off the lap's own end and duration, never the previous lap's, which may be
+missing or not adjacent. A lap the source data has no time for has no length, so
+it begins where it ends -- which is what the geometry below wants for a lap it
+cannot place.
+
+-}
+lapStart : Lap -> Instant
+lapStart lap =
+    Instant.subtract (Maybe.withDefault 0 lap.time) lap.elapsed
+
+
 {-| Cut a lap into its three sectors.
 
 The lap stores only how long each sector took, so where one begins has to be
-added up; this is the only place that happens. It adds up from the lap's own
-end and duration, never the previous lap's, which may be missing or not
-adjacent.
+added up; this is the only place that happens. A sector with no recorded time is
+empty rather than absent, so the two after it still start where they should.
 
 -}
 segments : Lap -> BySector Segment
 segments lap =
     let
         start =
-            Instant.subtract lap.time lap.elapsed
+            lapStart lap
+
+        took sector =
+            Maybe.withDefault 0 sector.time
+
+        ( s1, s2, s3 ) =
+            ( took lap.sectors.s1, took lap.sectors.s2, took lap.sectors.s3 )
     in
-    { s1 = { start = start, time = lap.sectors.s1.time }
-    , s2 = { start = Instant.add lap.sectors.s1.time start, time = lap.sectors.s2.time }
-    , s3 = { start = Instant.add (lap.sectors.s1.time + lap.sectors.s2.time) start, time = lap.sectors.s3.time }
+    { s1 = { start = start, time = s1 }
+    , s2 = { start = Instant.add s1 start, time = s2 }
+    , s3 = { start = Instant.add (s1 + s2) start, time = s3 }
     }
 
 
@@ -334,14 +354,14 @@ currentMiniSector clock lap =
         |> Maybe.andThen
             (\ms ->
                 let
-                    lapStart =
-                        Instant.subtract lap.time lap.elapsed
+                    start_of_lap =
+                        lapStart lap
 
                     inRange start end =
                         case ( start, end ) of
                             ( Just start_, Just end_ ) ->
                                 contains clock.elapsed
-                                    { start = Instant.add start_ lapStart, time = end_ - start_ }
+                                    { start = Instant.add start_ start_of_lap, time = end_ - start_ }
 
                             _ ->
                                 False
@@ -432,15 +452,12 @@ miniSectorToIndex miniSector =
 miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Instant
 miniSectorToElapsed lap miniSector =
     let
-        lapStart =
-            Instant.subtract lap.time lap.elapsed
-
         intoTheLap =
             lap.miniSectors
                 |> Maybe.andThen (\miniSectors -> miniSectorStartElapsed miniSectors miniSector)
                 |> Maybe.withDefault 0
     in
-    Instant.add intoTheLap lapStart
+    Instant.add intoTheLap (lapStart lap)
 
 
 miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration

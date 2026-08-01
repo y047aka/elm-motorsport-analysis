@@ -33,7 +33,7 @@ import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
 
 
@@ -175,12 +175,12 @@ type alias Rule =
 
 rules : ByRecord Rule
 rules =
-    { fastestLapTime = { beats = lessThan, timeFrom = recordedLapTime }
-    , slowestLapTime = { beats = greaterThan, timeFrom = lapTimeAsFound }
+    { fastestLapTime = { beats = lessThan, timeFrom = .time }
+    , slowestLapTime = { beats = greaterThan, timeFrom = .time }
     , fastestSectors =
-        Sector.initialize (\sector -> { beats = lessThan, timeFrom = recordedSectorTime sector })
+        Sector.initialize (\sector -> { beats = lessThan, timeFrom = sectorTime sector })
     , fastestMiniSectors =
-        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = recordedMiniSectorTime mini })
+        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = miniSectorTime mini })
     }
 
 
@@ -251,40 +251,25 @@ greaterThan a b =
 
 
 -- WHAT COUNTS AS A TIME
--- A zero is a time the source data did not record, not a very quick one, so it
--- is no candidate for a fastest anything. Every extractor below goes through
--- [`Lap.recorded`](Motorsport-Lap#recorded) to drop those -- all but one, and
--- that one says what it does instead.
+-- A time the source data did not record is no candidate for any record, and
+-- says so in the type: the loader drops it at the boundary, so a `Lap` carries
+-- `Nothing` and every extractor below is a plain read.
 
 
-recordedLapTime : Lap -> Maybe Duration
-recordedLapTime lap =
-    Lap.recorded lap.time
-
-
-{-| The exception: a zero can only win a maximum when there is nothing to beat,
-so the slowest lap takes every lap as it finds it.
--}
-lapTimeAsFound : Lap -> Maybe Duration
-lapTimeAsFound lap =
-    Just lap.time
-
-
-recordedSectorTime : Sector -> Lap -> Maybe Duration
-recordedSectorTime sector lap =
-    Lap.recorded (Sector.get sector lap.sectors).time
+sectorTime : Sector -> Lap -> Maybe Duration
+sectorTime sector lap =
+    (Sector.get sector lap.sectors).time
 
 
 {-| Mini-sector times are only trusted on laps that have a lap time, matching
 what the whole-race calculation has always done.
 -}
-recordedMiniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
-recordedMiniSectorTime mini lap =
-    case Lap.recorded lap.time of
+miniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
+miniSectorTime mini lap =
+    case lap.time of
         Just _ ->
             lap.miniSectors
                 |> Maybe.andThen (LeMans.get mini >> .time)
-                |> Maybe.andThen Lap.recorded
 
         Nothing ->
             Nothing

@@ -19,7 +19,6 @@ import Motorsport.Class
 import Motorsport.Clock as Clock
 import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant
-import Motorsport.Lap as Lap
 import Motorsport.Manufacturer
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
@@ -184,8 +183,8 @@ sectorColumns bestTimes =
                         times sector
                             >> Maybe.map
                                 (\{ time, personalBest } ->
-                                    { time = time
-                                    , personalBest = Lap.recorded personalBest
+                                    { time = Maybe.withDefault 0 time
+                                    , personalBest = personalBest
                                     , fastest = fastest sector
                                     , progress = 1
                                     }
@@ -193,8 +192,8 @@ sectorColumns bestTimes =
                     }
                 , customColumn
                     { label = Sector.toString sector ++ " Best"
-                    , getter = times sector >> Maybe.map (.personalBest >> Duration.toString) >> Maybe.withDefault ""
-                    , sorter = Compare.by (times sector >> Maybe.map .personalBest >> Maybe.withDefault 0)
+                    , getter = times sector >> Maybe.andThen .personalBest >> Maybe.map Duration.toString >> Maybe.withDefault ""
+                    , sorter = Compare.by (times sector >> Maybe.andThen .personalBest >> Maybe.withDefault 0)
                     }
                 ]
             )

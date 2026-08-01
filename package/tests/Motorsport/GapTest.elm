@@ -54,12 +54,12 @@ lap : Int -> Lap
 lap lapNumber =
     { empty
         | lap = lapNumber
-        , time = 10000
+        , time = Just 10000
         , elapsed = Instant.fromDuration (lapNumber * 10000)
         , sectors =
-            { s1 = { time = 2000, personalBest = 0 }
-            , s2 = { time = 3000, personalBest = 0 }
-            , s3 = { time = 5000, personalBest = 0 }
+            { s1 = { time = Just 2000, personalBest = Nothing }
+            , s2 = { time = Just 3000, personalBest = Nothing }
+            , s3 = { time = Just 5000, personalBest = Nothing }
             }
     }
 

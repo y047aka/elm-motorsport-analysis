@@ -209,17 +209,22 @@ finalMiniSectors cars =
 
 {-| A lap of `time`, split into the three given sector times, running from the
 end of the previous lap of the same length.
+
+Written in plain milliseconds and lifted through
+[`Lap.recorded`](Motorsport-Lap#recorded), the way the loader does it, so that a
+zero here still means the time the source data did not record.
+
 -}
 lap : Int -> Duration -> ( Duration, Duration, Duration ) -> Lap
 lap lapNumber time ( s1, s2, s3 ) =
     { empty
         | lap = lapNumber
-        , time = time
+        , time = Lap.recorded time
         , elapsed = Instant.fromDuration (lapNumber * time)
         , sectors =
-            { s1 = { time = s1, personalBest = s1 }
-            , s2 = { time = s2, personalBest = s2 }
-            , s3 = { time = s3, personalBest = s3 }
+            { s1 = { time = Lap.recorded s1, personalBest = Lap.recorded s1 }
+            , s2 = { time = Lap.recorded s2, personalBest = Lap.recorded s2 }
+            , s3 = { time = Lap.recorded s3, personalBest = Lap.recorded s3 }
             }
     }
 
