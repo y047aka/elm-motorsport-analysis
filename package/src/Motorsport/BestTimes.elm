@@ -71,9 +71,9 @@ widget rates and scales individual times against, and the laps that set them.
 Read mid-race via [`at`](#at) these are only the best times *so far*; only
 [`final`](#final)'s answer is the race's actual best times.
 
-`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) turns it into
-the zero the rest of the app reads as "not set"; keep this instead if you need
-to name the holder.
+`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
+to that same `Nothing`, for callers that only want the number; keep this
+instead if you need to name the holder.
 
 -}
 type alias Snapshot =
