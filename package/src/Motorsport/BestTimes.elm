@@ -67,15 +67,12 @@ type alias Holder =
 {-| The records held still at one moment of the race -- the comparison baseline a
 widget rates and scales individual times against, and the laps that set them.
 
-Named for the instant rather than for the times, because the instant is what
-tells it apart from [`Changes`](#Changes), and because partway through a race
-these are the best times *so far*: what [`at`](#at) answers is not yet the
-race's best times, though what [`final`](#final) answers is.
+Read mid-race via [`at`](#at) these are only the best times *so far*; only
+[`final`](#final)'s answer is the race's actual best times.
 
-`Nothing` is a record no lap has ever taken. A caller that only wants the number
-puts [`timeOf`](#timeOf) over it and gets the zero the rest of the app reads as
-"not set"; one that wants to name the holder has it here rather than having to
-go looking for the lap that matches a time.
+`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) turns it into
+the zero the rest of the app reads as "not set"; keep this instead if you need
+to name the holder.
 
 -}
 type alias Snapshot =
@@ -151,10 +148,9 @@ final =
 {-| One record as a plain time, for the rating and the geometry that only ever
 wanted the number.
 
-A record no lap has taken comes back `0`. That is the same zero the source data
-uses for a time it did not record, and
-[`Performance`](Motorsport-Lap-Performance#performanceLevel) reads it as one --
-an unset record rates nothing as its own.
+A record no lap has taken comes back `0` -- the same zero the source data uses
+for a time it did not record. See
+[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel).
 
 -}
 timeOf : Maybe Holder -> Duration

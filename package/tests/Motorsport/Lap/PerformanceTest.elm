@@ -22,19 +22,15 @@ suite =
                 \_ ->
                     rate { time = 7000, personalBest = 6000, fastest = 5000 }
                         |> Expect.equal Standard
-            , describe "a time the data did not record takes no colour"
+            , test "a time the data did not record takes no colour" <|
                 -- Zero is how an unrecorded time arrives, and how a record no
-                -- lap has set yet reads back. Left to match, it would rate as
-                -- the fastest of the race, or as the car's own best.
-                [ test "against a baseline no lap has set yet" <|
-                    \_ ->
-                        rate { time = 0, personalBest = 0, fastest = 0 }
-                            |> Expect.equal Standard
-                , test "against a car that has yet to set a best" <|
-                    \_ ->
-                        rate { time = 0, personalBest = 0, fastest = 5000 }
-                            |> Expect.equal Standard
-                ]
+                -- lap has set yet reads back (whether that's the race's
+                -- baseline or the car's own personal best). Left to match, it
+                -- would rate as the fastest of the race, or as the car's own
+                -- best.
+                \_ ->
+                    rate { time = 0, personalBest = 0, fastest = 0 }
+                        |> Expect.equal Standard
             ]
         ]
 
