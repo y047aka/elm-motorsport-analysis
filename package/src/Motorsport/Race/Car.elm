@@ -8,7 +8,7 @@ module Motorsport.Race.Car exposing
 Who the car is, where it started, and every lap it turned. None of it moves as
 the clock does. What the car is _doing_ at a moment of the race is worked out
 from one of these and an elapsed time, in
-[`ViewModel.Standings`](Motorsport-ViewModel-Standings).
+[`Race.Snapshot`](Motorsport-Race-Snapshot).
 
 @docs Car, Metadata, CarNumber
 @docs fromStartingGrid

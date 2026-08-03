@@ -15,9 +15,10 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Class.Era as Era
+import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car exposing (Car)
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
-import Motorsport.ViewModel as ViewModel exposing (Scope(..), ViewModel)
 import Shared.Msg exposing (Msg(..))
 
 
@@ -28,7 +29,7 @@ import Shared.Msg exposing (Msg(..))
 type alias Model =
     { eventSummary : EventSummary
     , replay : Replay.Model
-    , viewModel : ViewModel
+    , snapshot : Snapshot
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
@@ -40,12 +41,12 @@ init _ =
         replayInit =
             Replay.empty
 
-        viewModelInit =
-            ViewModel.compute WholeRace replayInit
+        snapshotInit =
+            snapshotOf replayInit
     in
     ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
       , replay = replayInit
-      , viewModel = viewModelInit
+      , snapshot = snapshotInit
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
@@ -122,10 +123,17 @@ update msg m =
             in
             ( { m
                 | replay = replayNew
-                , viewModel = ViewModel.compute UpToElapsed replayNew
+                , snapshot = snapshotOf replayNew
               }
             , Effect.none
             )
+
+
+{-| The race read where playback has got to.
+-}
+snapshotOf : Replay.Model -> Snapshot
+snapshotOf { race, playback } =
+    Snapshot.at { elapsed = Clock.getElapsed playback } race
 
 
 lapsPathFor : String -> String
@@ -150,7 +158,7 @@ finalizeWecIfReady m =
             in
             ( { m
                 | replay = replayNew
-                , viewModel = ViewModel.compute WholeRace replayNew
+                , snapshot = snapshotOf replayNew
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }

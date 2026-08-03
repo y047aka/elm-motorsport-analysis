@@ -12,9 +12,9 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
-import Motorsport.ViewModel.Entry exposing (Entry)
 import Path.Styled as Path
 import Shape
 import Svg.Styled exposing (Svg, g, svg)
@@ -25,7 +25,7 @@ import TypedSvg.Styled.Attributes exposing (viewBox)
 {-| The pie shows sector progress of the current lap, so it shares a column
 with Current; the layout is a balanced 50/50 grid of `pie + Current` | `Last`.
 -}
-view : Entry -> Html msg
+view : CarAt -> Html msg
 view item =
     div
         [ css
@@ -51,12 +51,12 @@ view item =
         ]
 
 
-currentLapBlock : Entry -> Html msg
+currentLapBlock : CarAt -> Html msg
 currentLapBlock item =
     lapBlock "Current" (currentLapTimeCell item)
 
 
-lastLapBlock : Entry -> Html msg
+lastLapBlock : CarAt -> Html msg
 lastLapBlock item =
     lapBlock "Last" (lastLapTimeCell item)
 
@@ -75,7 +75,7 @@ lapBlock label timeCell =
         ]
 
 
-currentLapTimeCell : Entry -> Html msg
+currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     let
         colorStyle =
@@ -104,7 +104,7 @@ currentLapTimeCell item =
         ]
 
 
-lastLapTimeCell : Entry -> Html msg
+lastLapTimeCell : CarAt -> Html msg
 lastLapTimeCell item =
     div
         [ css
@@ -135,7 +135,7 @@ applyPerformanceColor performance =
 The in-progress sector is filled white up to its progress; completed
 sectors are filled with their performance color.
 -}
-currentSectorPie : Entry -> Html msg
+currentSectorPie : CarAt -> Html msg
 currentSectorPie item =
     case ( item.currentLapSectorStates, Status.hasRetired item.status ) of
         ( Just slots, False ) ->

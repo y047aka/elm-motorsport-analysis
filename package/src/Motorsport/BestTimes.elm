@@ -17,7 +17,7 @@ twenty passes over every lap of the race.
 The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
 rather than under either side it serves, because both sides need it and neither
 owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
-[`ViewModel`](Motorsport-ViewModel) reads them back at the clock. Laps in,
+[`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock. Laps in,
 records out -- everything it knows about a car it reads off the lap that car
 ran, so it needs no standings, no playback and no `Car`, which is what keeps the
 dependency pointing one way from both.

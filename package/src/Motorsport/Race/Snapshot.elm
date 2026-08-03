@@ -1,7 +1,8 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt
+    ( Snapshot, CarAt, CurrentSectorStates
     , at
-    , toList, lapCount, elapsed
+    , toList, toClassList, leader, lapCount, elapsed
+    , bestTimes, lapHistory
     )
 
 {-| A [`Race`](Motorsport-Race) read at one moment of it.
@@ -13,29 +14,39 @@ swapping the view layer out would not change a single number here.
 
 Rebuilt on every frame rather than stored, and built once per frame so the
 several views that need the same order and the same gaps do not each work them
-out again.
+out again. That sharing is the whole reason the type exists: without it the
+sort, the gaps and the ratings would run once per view.
 
-What the view layer renders from this is
-[`Standings`](Motorsport-ViewModel-Standings).
+A `CarAt` is what the timing screen draws a line from. It carries no colours and
+no geometry of its own -- a view that wants the class's colour asks
+[`Class.toColor`](Motorsport-Class#toColor) for it.
 
-@docs Snapshot, CarAt
+The records the times are rated against and the laps run so far are read at the
+same clock, so they are taken here too rather than by each caller: see
+[`bestTimes`](#bestTimes) and [`lapHistory`](#lapHistory).
+
+@docs Snapshot, CarAt, CurrentSectorStates
 @docs at
-@docs toList, lapCount, elapsed
+@docs toList, toClassList, leader, lapCount, elapsed
+@docs bestTimes, lapHistory
 
 -}
 
 import Dict exposing (Dict)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car)
+import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
+import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status exposing (Status)
 import SortedList exposing (SortedList)
 
@@ -47,6 +58,14 @@ type Snapshot
         { elapsed : Instant
         , lapCount : Int
         , cars : SortedList ByPosition CarAt
+        , bestTimes : BestTimes.Snapshot
+        , lapHistory : LapHistory
+
+        -- Plain lists here (already position-sorted by construction, see
+        -- groupByClass): consumers of toClassList only ever render these cars,
+        -- never re-sort them, so the phantom-typed SortedList guarantee isn't
+        -- worth the extra unwrapping at each call site.
+        , carsByClass : List ( Class, List CarAt )
         }
 
 
@@ -66,7 +85,16 @@ type alias CarAt =
         , currentDriver : Maybe Driver
         , position : Int
         , positionInClass : Int
+        , lapsCompleted : Int
+        , currentLapTime : Maybe Duration
+        , currentLapBest : Maybe Duration
+        , currentLapMiniSectors : Maybe MiniSectors
         , currentLapElapsed : Duration
+
+        -- How far through the lap and through the sector the car is. Both are
+        -- read off the clock and the lap's own times, so they say where the car
+        -- is, not how anything is drawn.
+        , currentLapProgress : Float
         , sector : Maybe Lap.SectorProgress
         , miniSector : Maybe Lap.MiniSectorProgress
         , gapToLeader : Gap
@@ -75,19 +103,40 @@ type alias CarAt =
         -- Rated against the record the race held at this moment; see
         -- [`Lap.Performance`](Motorsport-Lap-Performance).
         , currentLapRated : Maybe RatedTime
-        , currentLapSectorsRated : Maybe SectorPerformance
+        , currentLapSectorStates : Maybe CurrentSectorStates
         , lastLapRated : Maybe RatedTime
         , bestLapRated : Maybe RatedTime
-        , lastLapSectorsRated : Maybe SectorPerformance
-        , lastLapMiniSectorsRated : Maybe MiniSectorPerformance
+        , lastLapSectors : Maybe SectorPerformance
+        , lastLapMiniSectors : Maybe MiniSectorPerformance
         }
 
 
-{-| Read the whole race at a moment of it, against the record it held then.
+{-| Where the car stands in each sector of the lap it is on: how much of the
+sector is behind it, and how the time reads where there is one.
+
+`rated` is `Nothing` for a sector the source data has no time for, the same way
+a mini-sector's is; there is nothing to colour it by.
+
 -}
-at : BestTimes.Snapshot -> { elapsed : Instant } -> Race -> Snapshot
-at bestTimes clock race =
+type alias CurrentSectorStates =
+    BySector { progress : Float, rated : Maybe RatedTime }
+
+
+{-| Read the whole race at a moment of it.
+
+Every number is read at the same clock, the records included: a time is rated
+against the record as it stood then, not as it ends up. Right after the data
+loads the clock sits at the start, so nothing holds a record yet -- a page that
+wants the race's final records asks
+[`BestTimes.final`](Motorsport-BestTimes#final) for them instead.
+
+-}
+at : { elapsed : Instant } -> Race -> Snapshot
+at clock race =
     let
+        records =
+            BestTimes.at clock race.bestTimeChanges
+
         -- A car carries only its laps, so what it is doing at this moment is
         -- read off the clock here. Who is ahead of whom follows from that, and
         -- every position below is read off the resulting order.
@@ -96,14 +145,14 @@ at bestTimes clock race =
                 |> List.map (sampleCar clock race)
                 |> Ordering.runningOrder clock
 
-        leader =
+        leaderCar =
             List.head sampled
 
         positionsInClass =
             positionsInClassByCarNumber sampled
 
         fastestLapTime =
-            BestTimes.timeOf bestTimes.fastestLapTime
+            BestTimes.timeOf records.fastestLapTime
 
         cars =
             sampled
@@ -118,7 +167,7 @@ at bestTimes clock race =
                                             Nothing
 
                                         else
-                                            leader
+                                            leaderCar
                                     , rival = List.Extra.getAt (index - 1) sampled
                                     }
                                     car
@@ -133,7 +182,16 @@ at bestTimes clock race =
                         , positionInClass =
                             Dict.get car.metadata.carNumber positionsInClass
                                 |> Maybe.withDefault 1
+                        , lapsCompleted = (Maybe.withDefault Lap.empty car.lastLap).lap
+                        , currentLapTime = car.currentLap |> Maybe.andThen .time
+                        , currentLapBest = car.currentLap |> Maybe.andThen .best
+                        , currentLapMiniSectors = car.currentLap |> Maybe.andThen .miniSectors
                         , currentLapElapsed = timing.currentLapElapsed
+                        , currentLapProgress =
+                            car.currentLap
+                                |> Maybe.andThen .time
+                                |> Maybe.map (\lapTime -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lapTime))
+                                |> Maybe.withDefault 0
                         , sector = timing.sector
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
@@ -147,8 +205,12 @@ at bestTimes clock race =
                                             , personalBest = lap.best
                                             }
                                     )
-                        , currentLapSectorsRated =
-                            car.currentLap |> Maybe.map (Performance.ofSectors bestTimes)
+                        , currentLapSectorStates =
+                            car.currentLap
+                                |> Maybe.map
+                                    (Performance.ofSectors records
+                                        >> currentSectorStates timing.sector
+                                    )
                         , lastLapRated =
                             car.lastLap
                                 |> Maybe.andThen
@@ -163,18 +225,60 @@ at bestTimes clock race =
                                         Performance.rateTime fastestLapTime
                                             { time = lap.best, personalBest = lap.best }
                                     )
-                        , lastLapSectorsRated =
-                            car.lastLap |> Maybe.map (Performance.ofSectors bestTimes)
-                        , lastLapMiniSectorsRated =
-                            car.lastLap |> Maybe.andThen (Performance.ofMiniSectors bestTimes)
+                        , lastLapSectors =
+                            car.lastLap |> Maybe.map (Performance.ofSectors records)
+                        , lastLapMiniSectors =
+                            car.lastLap |> Maybe.andThen (Performance.ofMiniSectors records)
                         }
                     )
+
+        sortedCars =
+            Ordering.byPosition cars
     in
     Snapshot
         { elapsed = clock.elapsed
         , lapCount = Race.lapCountAt clock race
-        , cars = Ordering.byPosition cars
+        , cars = sortedCars
+        , carsByClass = groupByClass sortedCars
+        , bestTimes = records
+        , lapHistory = LapHistory.compute clock race.cars
         }
+
+
+{-| Where each sector of the current lap stands: how far through it the car is,
+laid over how the time it has set there reads.
+-}
+currentSectorStates : Maybe Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
+currentSectorStates sectorProgress rated =
+    let
+        -- Sectors already driven through are complete, the ones ahead
+        -- untouched; no sector in progress at all means the lap is over.
+        progressOf sector =
+            case sectorProgress of
+                Just current ->
+                    case Sector.compare sector current.sector of
+                        LT ->
+                            1
+
+                        EQ ->
+                            current.progress
+
+                        GT ->
+                            0
+
+                Nothing ->
+                    1
+    in
+    Sector.map2 (\progress rating -> { progress = progress, rated = rating })
+        (Sector.initialize progressOf)
+        rated
+
+
+groupByClass : SortedList ByPosition CarAt -> List ( Class, List CarAt )
+groupByClass sortedCars =
+    sortedCars
+        |> SortedList.gatherEqualsBy (.metadata >> .class)
+        |> List.map (\( first, rest ) -> ( first.metadata.class, first :: SortedList.toList rest ))
 
 
 {-| The cars in running order, the leader first.
@@ -182,6 +286,20 @@ at bestTimes clock race =
 toList : Snapshot -> List CarAt
 toList (Snapshot s) =
     SortedList.toList s.cars
+
+
+{-| The cars grouped by the class they race in, each group in running order.
+-}
+toClassList : Snapshot -> List ( Class, List CarAt )
+toClassList (Snapshot s) =
+    s.carsByClass
+
+
+{-| The car leading the race, where there is one.
+-}
+leader : Snapshot -> Maybe CarAt
+leader (Snapshot s) =
+    SortedList.head s.cars
 
 
 {-| How many laps the leader has completed at this moment.
@@ -197,6 +315,20 @@ lapCount (Snapshot s) =
 elapsed : Snapshot -> Instant
 elapsed (Snapshot s) =
     s.elapsed
+
+
+{-| The records the race held at this moment.
+-}
+bestTimes : Snapshot -> BestTimes.Snapshot
+bestTimes (Snapshot s) =
+    s.bestTimes
+
+
+{-| Every lap each car had completed by this moment.
+-}
+lapHistory : Snapshot -> LapHistory
+lapHistory (Snapshot s) =
+    s.lapHistory
 
 
 

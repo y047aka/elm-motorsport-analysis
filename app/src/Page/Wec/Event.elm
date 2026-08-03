@@ -18,8 +18,8 @@ import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Clock exposing (State(..))
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
-import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
@@ -162,7 +162,7 @@ subscriptions shared _ =
 
 
 view : Shared.Model -> Model -> View Msg
-view { eventSummary, replay, viewModel } m =
+view { eventSummary, replay, snapshot } m =
     { title = "Wec"
     , body =
         [ main_
@@ -176,7 +176,7 @@ view { eventSummary, replay, viewModel } m =
             [ navigation eventSummary replay m.mode
             , case m.mode of
                 Tracker ->
-                    trackerView eventSummary viewModel m
+                    trackerView eventSummary snapshot m
 
                 Events ->
                     RaceEvents.view EventsMsg m.eventsState replay
@@ -185,8 +185,8 @@ view { eventSummary, replay, viewModel } m =
     }
 
 
-trackerView : EventSummary -> ViewModel -> Model -> Html Msg
-trackerView eventSummary ({ standings } as viewModel) m =
+trackerView : EventSummary -> Snapshot -> Model -> Html Msg
+trackerView eventSummary snapshot m =
     div
         [ css
             [ property "grid-row" "2"
@@ -208,7 +208,7 @@ trackerView eventSummary ({ standings } as viewModel) m =
                 ]
             ]
             [ LiveStandingsWidget.view
-                { standings = standings
+                { snapshot = snapshot
 
                 -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
                 , onSelectCar = ShowCarDetail
@@ -229,8 +229,8 @@ trackerView eventSummary ({ standings } as viewModel) m =
                     ]
                     [ TrackerChart.view
                         { season = eventSummary.season, eventName = eventSummary.name }
-                        viewModel.bestTimes
-                        standings
+                        (Snapshot.bestTimes snapshot)
+                        snapshot
                     ]
                 ]
             ]
@@ -244,14 +244,14 @@ trackerView eventSummary ({ standings } as viewModel) m =
                 { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
                 }
-                viewModel
+                snapshot
             ]
         , CarDetailPopover.view
             { activeChart = m.detailChart
             , onToggleCar = ToggleDetailCar
             , onSelectChart = SelectDetailChart
             }
-            viewModel
+            snapshot
             m.detailCarNumbers
         ]
 

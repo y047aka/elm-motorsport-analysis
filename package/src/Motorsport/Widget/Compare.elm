@@ -16,9 +16,7 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
-import Motorsport.ViewModel exposing (ViewModel)
-import Motorsport.ViewModel.Entry as Entry exposing (Entry)
-import Motorsport.ViewModel.Standings as Standings
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
@@ -52,13 +50,16 @@ viewComparison :
     , activeChart : Chart
     , onSelectChart : Chart -> msg
     }
-    -> ViewModel
+    -> Snapshot
     -> List String
     -> Html msg
-viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHistory } as viewModel) selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarNumbers =
     let
+        lapHistory =
+            Snapshot.lapHistory snapshot
+
         entriesByNumber =
-            Standings.toList standings
+            Snapshot.toList snapshot
 
         selectedEntries =
             entriesByNumber
@@ -74,7 +75,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHist
                     first.metadata.class
 
                 lapRange =
-                    PositionProgression.lapRange viewModel class
+                    PositionProgression.lapRange snapshot class
 
                 distSeries =
                     case lapRange of
@@ -100,8 +101,8 @@ viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHist
                         , property "column-gap" "12px"
                         ]
                     ]
-                    [ CarSelector.classBadge (Entry.classInfoOf first)
-                    , CarSelector.carSelector onToggleCar standings class selectedCarNumbers
+                    [ CarSelector.classBadge first.metadata.class
+                    , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
                     ]
                 , div
                     [ css
@@ -124,7 +125,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHist
                       , \() ->
                             PositionProgression.view
                                 { width = 1000, height = 250 }
-                                viewModel
+                                snapshot
                                 { class = class
                                 , highlighted = selectedCarNumbers
                                 }
@@ -135,7 +136,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } ({ standings, lapHist
 
 {-| Chart combining the relative gaps measured against the selected cars' group average.
 -}
-gapChart : Maybe ( Int, Int ) -> LapHistory -> List Entry -> Html msg
+gapChart : Maybe ( Int, Int ) -> LapHistory -> List CarAt -> Html msg
 gapChart maybeRange lapHistory entries =
     case maybeRange of
         Just range ->

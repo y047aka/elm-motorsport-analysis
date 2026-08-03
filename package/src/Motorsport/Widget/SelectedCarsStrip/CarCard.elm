@@ -10,11 +10,12 @@ status, above the driver name, sector performance, and rival gap sparkline.
 import Css exposing (before, num, opacity, property, qt)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
+import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Race.LapHistory exposing (LapHistory)
+import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
-import Motorsport.ViewModel.Entry exposing (Entry)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
@@ -23,7 +24,7 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
-view : LapHistory -> List Entry -> Entry -> Html msg
+view : LapHistory -> List CarAt -> CarAt -> Html msg
 view lapHistory allCars item =
     div
         [ css
@@ -59,7 +60,7 @@ view lapHistory allCars item =
         ]
 
 
-cardHeader : Entry -> Html msg
+cardHeader : CarAt -> Html msg
 cardHeader item =
     div
         [ css
@@ -69,7 +70,7 @@ cardHeader item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarNumberBadge.view item
+        [ CarNumberBadge.view item.metadata
         , div
             [ css
                 [ property "font-size" "12px"
@@ -118,7 +119,7 @@ statusBadge status =
             text ""
 
 
-positionLabel : Entry -> Html msg
+positionLabel : CarAt -> Html msg
 positionLabel item =
     div
         [ css
@@ -132,14 +133,14 @@ positionLabel item =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , property "background-color" item.classColor
+                , property "background-color" (Class.toColor item.metadata.class).value
                 ]
             ]
         ]
         [ text ("P" ++ String.fromInt item.position) ]
 
 
-gapsRow : Entry -> Html msg
+gapsRow : CarAt -> Html msg
 gapsRow item =
     div
         [ css

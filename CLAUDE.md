@@ -44,15 +44,23 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
-(LapHistory), `ViewModel/` for computed view state (Standings), `Chart/` for
-rendering (GapChart, BoxPlot).
+(`Snapshot`, `LapHistory`), `Widget/` and `Chart/` for rendering (Leaderboard,
+GapChart, BoxPlot).
 
-A module belongs under `Race/` when swapping the view layer out would not change
-what it produces, and under `ViewModel/` when it exists to be rendered.
+There is no view-model layer between the two. `Race.Snapshot` is the whole of
+the per-frame derivation — sampling the cars at the clock, ordering the field,
+measuring the gaps, rating the times against the records as they stood — and
+views read a `CarAt` straight off it. Colours and geometry are the view's own:
+a widget that wants a class's colour calls `Class.toColor` itself.
 
-Modules serving both sides sit directly under `Motorsport/` rather than in either
-subdirectory — `BestTimes` is built by `Race` and read by `ViewModel`, so it
-belongs to neither and depends on neither.
+`Snapshot.at` is called once per frame and every view of that frame shares the
+result. That sharing is the only reason the type exists; measured against
+building a record per car on top of it, the record cost under 2% of the frame
+(`benchmark/PerFrameBenchmark.elm`), which is why there is no layer above.
+
+Modules serving both sides sit directly under `Motorsport/` rather than in a
+subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
+and `Lap.Performance` rates a lap for either side, so neither owns them.
 
 ## Testing
 
