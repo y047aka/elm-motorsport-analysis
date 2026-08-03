@@ -26,11 +26,13 @@ What the view layer renders from this is
 
 import Dict exposing (Dict)
 import List.Extra
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car)
@@ -69,13 +71,22 @@ type alias CarAt =
         , miniSector : Maybe Lap.MiniSectorProgress
         , gapToLeader : Gap
         , intervalToAhead : Gap
+
+        -- Rated against the record the race held at this moment; see
+        -- [`Lap.Performance`](Motorsport-Lap-Performance).
+        , currentLapRated : Maybe RatedTime
+        , currentLapSectorsRated : Maybe SectorPerformance
+        , lastLapRated : Maybe RatedTime
+        , bestLapRated : Maybe RatedTime
+        , lastLapSectorsRated : Maybe SectorPerformance
+        , lastLapMiniSectorsRated : Maybe MiniSectorPerformance
         }
 
 
-{-| Read the whole race at a moment of it.
+{-| Read the whole race at a moment of it, against the record it held then.
 -}
-at : { elapsed : Instant } -> Race -> Snapshot
-at clock race =
+at : BestTimes.Snapshot -> { elapsed : Instant } -> Race -> Snapshot
+at bestTimes clock race =
     let
         -- A car carries only its laps, so what it is doing at this moment is
         -- read off the clock here. Who is ahead of whom follows from that, and
@@ -90,6 +101,9 @@ at clock race =
 
         positionsInClass =
             positionsInClassByCarNumber sampled
+
+        fastestLapTime =
+            BestTimes.timeOf bestTimes.fastestLapTime
 
         cars =
             sampled
@@ -124,6 +138,35 @@ at clock race =
                         , miniSector = timing.miniSector
                         , gapToLeader = timing.gapToLeader
                         , intervalToAhead = timing.intervalToAhead
+                        , currentLapRated =
+                            car.currentLap
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        Performance.rateTime fastestLapTime
+                                            { time = Just timing.currentLapElapsed
+                                            , personalBest = lap.best
+                                            }
+                                    )
+                        , currentLapSectorsRated =
+                            car.currentLap |> Maybe.map (Performance.ofSectors bestTimes)
+                        , lastLapRated =
+                            car.lastLap
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        Performance.rateTime fastestLapTime
+                                            { time = lap.time, personalBest = lap.best }
+                                    )
+                        , bestLapRated =
+                            car.lastLap
+                                |> Maybe.andThen
+                                    (\lap ->
+                                        Performance.rateTime fastestLapTime
+                                            { time = lap.best, personalBest = lap.best }
+                                    )
+                        , lastLapSectorsRated =
+                            car.lastLap |> Maybe.map (Performance.ofSectors bestTimes)
+                        , lastLapMiniSectorsRated =
+                            car.lastLap |> Maybe.andThen (Performance.ofMiniSectors bestTimes)
                         }
                     )
     in

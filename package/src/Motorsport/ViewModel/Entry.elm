@@ -1,6 +1,6 @@
 module Motorsport.ViewModel.Entry exposing
     ( Entry
-    , CurrentSectorStates, SectorPerformance, MiniSectorPerformance
+    , CurrentSectorStates
     , ClassInfo, classInfoOf
     )
 
@@ -14,18 +14,17 @@ rating, the gaps, the sector progress were all settled when the standings were
 computed, so a view can render one without knowing where it came from.
 
 @docs Entry
-@docs CurrentSectorStates, SectorPerformance, MiniSectorPerformance
+@docs CurrentSectorStates
 @docs ClassInfo, classInfoOf
 
 -}
 
-import Motorsport.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap exposing (Gap)
 import Motorsport.Lap as Lap exposing (MiniSectors)
-import Motorsport.Lap.Performance exposing (RatedTime)
+import Motorsport.Lap.Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance)
 import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Status exposing (Status)
@@ -72,14 +71,6 @@ a mini-sector's is; there is nothing to colour it by.
 -}
 type alias CurrentSectorStates =
     BySector { progress : Float, rated : Maybe RatedTime }
-
-
-type alias SectorPerformance =
-    BySector (Maybe RatedTime)
-
-
-type alias MiniSectorPerformance =
-    ByMiniSector (Maybe RatedTime)
 
 
 {-| Display info needed by class headers and badges.

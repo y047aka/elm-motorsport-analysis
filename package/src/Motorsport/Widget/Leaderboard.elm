@@ -66,11 +66,11 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
-import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.ViewModel.Entry exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
+import Motorsport.ViewModel.Entry exposing (CurrentSectorStates, Entry)
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 
 
