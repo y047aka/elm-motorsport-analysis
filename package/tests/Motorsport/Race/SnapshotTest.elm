@@ -79,21 +79,16 @@ suite =
                         |> Expect.equal
                             (Just [ ( S1, Just Fastest ), ( S2, Just Standard ), ( S3, Just Standard ) ])
             ]
-        , describe "the records come from the same clock as the rest"
-            [ test "stand at the quickest of the laps run by then" <|
-                \_ ->
-                    snapshotAt 7000
-                        |> Snapshot.bestTimes
-                        |> (.fastestLapTime >> BestTimes.timeOf)
-                        |> Expect.equal (Just 5000)
-            , test "know nothing of a lap the clock has not reached" <|
-                \_ ->
-                    -- Car 2's second lap, a 4.000, ends at 9.000.
-                    snapshotAt 9000
-                        |> Snapshot.bestTimes
-                        |> (.fastestLapTime >> BestTimes.timeOf)
-                        |> Expect.equal (Just 4000)
-            ]
+        , -- What `at` does with the records is BestTimes' own, and tested there.
+          -- What is this module's is which of the two it asks for: at 7.000 the
+          -- quickest lap run so far is a 5.000, where the race's final answer
+          -- would be car 2's 4.000, still ahead of the clock.
+          test "the records are the ones the race held at that moment, not the ones it ends on" <|
+            \_ ->
+                snapshotAt 7000
+                    |> Snapshot.bestTimes
+                    |> (.fastestLapTime >> BestTimes.timeOf)
+                    |> Expect.equal (Just 5000)
         ]
 
 

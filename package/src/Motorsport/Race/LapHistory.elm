@@ -4,14 +4,13 @@ module Motorsport.Race.LapHistory exposing
     , get, recentLaps
     )
 
-{-| A per-car slice of the laps completed up to the current time.
+{-| Each car's laps, cut off at a moment of the race.
 
-Nothing here is shaped for a view: the laps come out of the race exactly as they
-went in, and the only thing applied to them is the clock. That makes this a
-reading of the race at a moment, not a model of how one is displayed -- which is
-why it sits beside [`Race`](Motorsport-Race) rather than under the view model.
-
-Only chart modules that scan lap history over time consume this.
+The laps come out exactly as they went in; the only thing applied to them is the
+clock. What reads this is whatever scans a car's history rather than its present
+-- the gap and distribution charts, the sparklines -- and
+[`Race.Snapshot`](Motorsport-Race-Snapshot) takes one at its own clock so they
+all read the same laps.
 
 @docs LapHistory
 @docs at

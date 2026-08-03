@@ -17,8 +17,8 @@ several views that need the same order and the same gaps do not each work them
 out again. That sharing is the whole reason the type exists: without it the
 sort, the gaps and the ratings would run once per view.
 
-A `CarAt` is what the timing screen draws a line from. It carries no colours and
-no geometry of its own -- a view that wants the class's colour asks
+A `CarAt` is what the timing screen draws a line from, and it is readings only:
+a view that wants the class's colour asks
 [`Class.toColor`](Motorsport-Class#toColor) for it.
 
 The records the times are rated against and the laps run so far are read at the
@@ -247,9 +247,6 @@ at clock race =
         }
 
 
-{-| Where each sector of the current lap stands: how far through it the car is,
-laid over how the time it has set there reads.
--}
 currentSectorStates : Maybe Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
 currentSectorStates sectorProgress rated =
     let
@@ -311,8 +308,7 @@ lapCount (Snapshot s) =
     s.lapCount
 
 
-{-| The moment of the race this snapshot was taken at; the clock passed to
-[`at`](#at) is baked in.
+{-| The moment of the race this snapshot was taken at.
 -}
 elapsed : Snapshot -> Instant
 elapsed (Snapshot s) =

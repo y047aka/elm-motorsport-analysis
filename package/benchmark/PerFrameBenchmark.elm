@@ -32,15 +32,12 @@ suite =
         race =
             Race.fromCars Fixture.cars
 
-        -- Halfway through, where every car has laps behind it and a lap in
-        -- progress -- the frame that costs the most.
         clock =
             { elapsed =
                 Instant.toDuration race.timeLimit
                     // 2
                     |> Instant.fromDuration
             }
-
     in
     describe "one frame of playback"
         [ Benchmark.benchmark "Snapshot.at" (\_ -> Snapshot.at clock race)
