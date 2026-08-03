@@ -15,9 +15,9 @@ import Css exposing (property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.GapChart as GapChart
+import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.Entry as Entry exposing (Entry)
-import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.ViewModel.Standings as Standings
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary

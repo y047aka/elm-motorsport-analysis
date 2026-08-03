@@ -12,9 +12,9 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (class, css)
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
+import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline

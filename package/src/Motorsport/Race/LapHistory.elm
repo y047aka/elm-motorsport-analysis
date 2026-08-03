@@ -1,4 +1,4 @@
-module Motorsport.ViewModel.LapHistory exposing
+module Motorsport.Race.LapHistory exposing
     ( LapHistory
     , compute
     , get, recentLaps
@@ -6,8 +6,12 @@ module Motorsport.ViewModel.LapHistory exposing
 
 {-| A per-car slice of the laps completed up to the current time.
 
-Holds raw `Lap` values but belongs to the computed-model layer in the sense that
-it is already sliced by time. Only chart modules that scan lap history over time consume this.
+Nothing here is shaped for a view: the laps come out of the race exactly as they
+went in, and the only thing applied to them is the clock. That makes this a
+reading of the race at a moment, not a model of how one is displayed -- which is
+why it sits beside [`Race`](Motorsport-Race) rather than under the view model.
+
+Only chart modules that scan lap history over time consume this.
 
 @docs LapHistory
 @docs compute

@@ -9,9 +9,9 @@ import Motorsport.Class exposing (Class)
 import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.ViewModel exposing (ViewModel)
 import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.LapHistory as LapHistory
 import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)

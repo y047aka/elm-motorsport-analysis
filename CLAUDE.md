@@ -43,8 +43,12 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 - `Css/` (Color, Palette, Typography), `Data/` (series config), `UI/` (Button, Label, Table)
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
-`Race/` for the loaded race and its indices, `ViewModel/` for computed view state
-(Standings, LapHistory), `Chart/` for rendering (GapChart, BoxPlot).
+`Race/` for the loaded race, its indices, and readings of it at a moment
+(LapHistory), `ViewModel/` for computed view state (Standings), `Chart/` for
+rendering (GapChart, BoxPlot).
+
+A module belongs under `Race/` when swapping the view layer out would not change
+what it produces, and under `ViewModel/` when it exists to be rendered.
 
 Modules serving both sides sit directly under `Motorsport/` rather than in either
 subdirectory — `BestTimes` is built by `Race` and read by `ViewModel`, so it
