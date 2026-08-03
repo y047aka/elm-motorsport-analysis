@@ -71,6 +71,10 @@ widget rates and scales individual times against, and the laps that set them.
 Read mid-race via [`at`](#at) these are only the best times _so far_; only
 [`final`](#final)'s answer is the race's actual best times.
 
+A `Snapshot` here is the same idea as
+[`Race.Snapshot`](Motorsport-Race-Snapshot), applied to the records rather than
+to the field: one moment of the race, held still, with the clock baked in.
+
 `Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
 to that same `Nothing`, for callers that only want the number; keep this
 instead if you need to name the holder.

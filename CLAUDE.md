@@ -62,6 +62,27 @@ Modules serving both sides sit directly under `Motorsport/` rather than in a
 subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
 and `Lap.Performance` rates a lap for either side, so neither owns them.
 
+### Reading the race at a moment
+
+Nothing in a `Race` moves; a clock is applied to it to get what is true then.
+Three spellings, used consistently:
+
+- **`at`** — the module's own subject at that moment: `Gap.at`, `BestTimes.at`,
+  `Snapshot.at`, `LapHistory.at`.
+- **`xAt`** — one named aspect of *someone else's* subject: `Race.statusAt`,
+  `Race.lapCountAt`, `Lap.findLastLapAt`.
+- **`Snapshot`** — the type `at` returns when the whole subject is frozen: every
+  value in it read at the same instant, and that instant baked in.
+
+So `BestTimes.Snapshot` and `Race.Snapshot` are the same idea applied twice, not
+a name collision — the records at a moment, and the field at a moment. They are
+always written qualified, which is what keeps them apart at the call site.
+
+A module that hands out only the frozen form may name it for what it holds
+instead (`LapHistory`); one that holds both names them for the difference
+(`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one moment of it).
+Either way it is `at` that applies the clock.
+
 ## Testing
 
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring examples.

@@ -52,6 +52,11 @@ import SortedList exposing (SortedList)
 
 
 {-| Every car of the race as it stands at one moment, in running order.
+
+Named as [`BestTimes.Snapshot`](Motorsport-BestTimes#Snapshot) is, and for the
+same reason: a subject of the race held still, with the clock it was read at
+baked in. That one is the records at a moment; this is the field at a moment.
+
 -}
 type Snapshot
     = Snapshot
@@ -241,7 +246,7 @@ at clock race =
         , cars = sortedCars
         , carsByClass = groupByClass sortedCars
         , bestTimes = records
-        , lapHistory = LapHistory.compute clock race.cars
+        , lapHistory = LapHistory.at clock race.cars
         }
 
 

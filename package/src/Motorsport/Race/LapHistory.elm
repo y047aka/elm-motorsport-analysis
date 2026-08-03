@@ -1,6 +1,6 @@
 module Motorsport.Race.LapHistory exposing
     ( LapHistory
-    , compute
+    , at
     , get, recentLaps
     )
 
@@ -14,7 +14,7 @@ why it sits beside [`Race`](Motorsport-Race) rather than under the view model.
 Only chart modules that scan lap history over time consume this.
 
 @docs LapHistory
-@docs compute
+@docs at
 @docs get, recentLaps
 
 -}
@@ -29,8 +29,10 @@ type LapHistory
     = LapHistory (Dict String (List Lap))
 
 
-compute : { elapsed : Instant } -> List Car -> LapHistory
-compute clock cars =
+{-| Every lap each car had completed at a moment of the race.
+-}
+at : { elapsed : Instant } -> List Car -> LapHistory
+at clock cars =
     cars
         |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt clock car.laps ))
         |> Dict.fromList
