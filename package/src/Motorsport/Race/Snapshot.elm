@@ -76,44 +76,44 @@ type Snapshot
 
 {-| One [`Car`](Motorsport-Race-Car) as it stands at one moment of the race.
 
-Written as a [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added
-on, because that is the shape the ordering depends on: `Gap.at` and
-`Ordering.runningOrder` reach for `laps` and `currentLap` directly, so those two
-have to stay at the top level rather than nesting inside a `Car`.
+Readings only -- no laps of any kind. The whole list runs to the end of the
+race, and handing it out beside values that stop at the clock is how future data
+gets read by accident; the laps up to this moment are
+[`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has
+already turned is here as what was read off it -- `lapsCompleted`,
+`lastLapRated`, `lastLapSectors` -- rather than as the lap itself.
 
 -}
 type alias CarAt =
-    Gap.Competitor
-        { metadata : Car.Metadata
-        , lastLap : Maybe Lap
-        , status : Status
-        , currentDriver : Maybe Driver
-        , position : Int
-        , positionInClass : Int
-        , lapsCompleted : Int
-        , currentLapTime : Maybe Duration
-        , currentLapBest : Maybe Duration
-        , currentLapMiniSectors : Maybe MiniSectors
-        , currentLapElapsed : Duration
+    { metadata : Car.Metadata
+    , status : Status
+    , currentDriver : Maybe Driver
+    , position : Int
+    , positionInClass : Int
+    , lapsCompleted : Int
+    , currentLapTime : Maybe Duration
+    , currentLapBest : Maybe Duration
+    , currentLapMiniSectors : Maybe MiniSectors
+    , currentLapElapsed : Duration
 
-        -- How far through the lap and through the sector the car is. Both are
-        -- read off the clock and the lap's own times, so they say where the car
-        -- is, not how anything is drawn.
-        , currentLapProgress : Float
-        , sector : Maybe Lap.SectorProgress
-        , miniSector : Maybe Lap.MiniSectorProgress
-        , gapToLeader : Gap
-        , intervalToAhead : Gap
+    -- How far through the lap and through the sector the car is. Both are
+    -- read off the clock and the lap's own times, so they say where the car
+    -- is, not how anything is drawn.
+    , currentLapProgress : Float
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
+    , gapToLeader : Gap
+    , intervalToAhead : Gap
 
-        -- Rated against the record the race held at this moment; see
-        -- [`Lap.Performance`](Motorsport-Lap-Performance).
-        , currentLapRated : Maybe RatedTime
-        , currentLapSectorStates : Maybe CurrentSectorStates
-        , lastLapRated : Maybe RatedTime
-        , bestLapRated : Maybe RatedTime
-        , lastLapSectors : Maybe SectorPerformance
-        , lastLapMiniSectors : Maybe MiniSectorPerformance
-        }
+    -- Rated against the record the race held at this moment; see
+    -- [`Lap.Performance`](Motorsport-Lap-Performance).
+    , currentLapRated : Maybe RatedTime
+    , currentLapSectorStates : Maybe CurrentSectorStates
+    , lastLapRated : Maybe RatedTime
+    , bestLapRated : Maybe RatedTime
+    , lastLapSectors : Maybe SectorPerformance
+    , lastLapMiniSectors : Maybe MiniSectorPerformance
+    }
 
 
 {-| Where the car stands in each sector of the lap it is on: how much of the
@@ -178,9 +178,6 @@ at clock race =
                                     car
                         in
                         { metadata = car.metadata
-                        , laps = car.laps
-                        , currentLap = car.currentLap
-                        , lastLap = car.lastLap
                         , status = car.status
                         , currentDriver = car.currentDriver
                         , position = index + 1
@@ -342,6 +339,12 @@ lapHistory (Snapshot s) =
 
 {-| A car before the field has been put in order: everything that can be read
 from the car alone, without knowing who else is out there.
+
+A [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added on, because
+that is the shape the ordering depends on: `Gap.at` and `Ordering.runningOrder`
+reach for `laps` and `currentLap` directly, so those two have to sit at the top
+level here. The constraint stops at this type; what comes out the other side is
+a `CarAt`, which carries neither.
 
 The status is looked up rather than worked out here; see
 [`Race.statusAt`](Motorsport-Race#statusAt).
