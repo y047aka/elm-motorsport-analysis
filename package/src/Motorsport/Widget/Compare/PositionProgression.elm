@@ -41,14 +41,6 @@ lapRange snapshot class =
     Maybe.map2 Tuple.pair (List.minimum lapNumbers) (List.maximum lapNumbers)
 
 
-classEntriesOf : Snapshot -> Class -> List CarAt
-classEntriesOf snapshot class =
-    Snapshot.toClassList snapshot
-        |> List.Extra.find (\( carClass, _ ) -> carClass == class)
-        |> Maybe.map Tuple.second
-        |> Maybe.withDefault []
-
-
 {-| Builds the "position points past the threshold" for each car in the class,
 keeping only cars with two or more points. Centralizes the point-extraction
 condition here so the chart itself and `lapRange` share the same X axis.
@@ -62,7 +54,7 @@ classPositionPoints snapshot class =
         lapHistory =
             Snapshot.lapHistory snapshot
     in
-    classEntriesOf snapshot class
+    Snapshot.inClass class snapshot
         |> List.map (\item -> ( item, buildPositionPoints lapThreshold (LapHistory.get item.metadata.carNumber lapHistory) ))
         |> List.filter (\( _, points ) -> List.length points >= 2)
 

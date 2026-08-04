@@ -79,6 +79,52 @@ suite =
                         |> Expect.equal
                             (Just [ ( S1, Just Fastest ), ( S2, Just Standard ), ( S3, Just Standard ) ])
             ]
+        , describe "a car with no lap in progress is nowhere on the track"
+            [ test "it reports no sector, as it reports no sector states" <|
+                \_ ->
+                    carAt "4" fieldWithTailenders
+                        |> Maybe.map (\car -> ( car.sector, car.currentLapSectorStates ))
+                        |> Expect.equal (Just ( Nothing, Nothing ))
+            , test "it has completed no laps" <|
+                \_ ->
+                    carAt "4" fieldWithTailenders
+                        |> Maybe.map .lapsCompleted
+                        |> Expect.equal (Just 0)
+            , test "and it sorts behind every car that is running" <|
+                \_ ->
+                    fieldWithTailenders
+                        |> Snapshot.toList
+                        |> List.map (.metadata >> .carNumber)
+                        |> Expect.equal [ "2", "1", "3", "4" ]
+            ]
+        , describe "class position is counted off the running order"
+            [ test "a class of two numbers its cars 1 and 2, whatever they stand overall" <|
+                \_ ->
+                    Snapshot.inClass (classOf "HYPERCAR") fieldWithTailenders
+                        |> List.map (\car -> ( car.metadata.carNumber, car.positionInClass ))
+                        |> Expect.equal [ ( "1", 1 ), ( "3", 2 ) ]
+            , test "a car that is not running is still placed in its class, at the back of it" <|
+                \_ ->
+                    Snapshot.inClass (classOf "LMGT3") fieldWithTailenders
+                        |> List.map (\car -> ( car.metadata.carNumber, car.positionInClass ))
+                        |> Expect.equal [ ( "2", 1 ), ( "4", 2 ) ]
+            , test "a class no car races in is empty" <|
+                \_ ->
+                    Snapshot.inClass (classOf "LMP2") fieldWithTailenders
+                        |> List.map (.metadata >> .carNumber)
+                        |> Expect.equal []
+            ]
+        , describe "one car can be read out of the field by number"
+            [ test "the car that carries the number" <|
+                \_ ->
+                    Snapshot.get "3" fieldWithTailenders
+                        |> Maybe.map .position
+                        |> Expect.equal (Just 3)
+            , test "and nothing for a number no car carries" <|
+                \_ ->
+                    Snapshot.get "99" fieldWithTailenders
+                        |> Expect.equal Nothing
+            ]
         , -- What `at` does with the records is BestTimes' own, and tested there.
           -- What is this module's is which of the two it asks for: at 7.000 the
           -- quickest lap run so far is a 5.000, where the race's final answer
@@ -107,16 +153,49 @@ snapshotAt elapsed =
 
 
 carAt : String -> Snapshot -> Maybe CarAt
-carAt carNumber snapshot =
-    Snapshot.toList snapshot
-        |> List.filter (\car -> car.metadata.carNumber == carNumber)
-        |> List.head
+carAt =
+    Snapshot.get
 
 
 sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
         |> Maybe.andThen .currentLapSectorStates
+
+
+{-| A wider field, for what two cars cannot show: two of them sharing a class,
+and one that never took to the track at all.
+
+Read at 7.000, as the two-car fixture is, so the cars it has in common with it
+stand where they stand there.
+
+-}
+fieldWithTailenders : Snapshot
+fieldWithTailenders =
+    Race.fromCars [ carOne, carTwo, carThree, nonStarter ]
+        |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
+
+
+{-| Car 1's classmate, and a long way behind it: still on its opening lap at
+7.000, where cars 1 and 2 are both on their second.
+-}
+carThree : Car
+carThree =
+    { metadata = metadataOf "3" (classOf "HYPERCAR")
+    , startPosition = 3
+    , laps = [ lapOf "3" 1 20000 20000 { s1 = 6000, s2 = 7000, s3 = 7000 } ]
+    }
+
+
+{-| A car that turned no lap at all -- so it is on no lap, in no sector, and
+holds no gap to anyone.
+-}
+nonStarter : Car
+nonStarter =
+    { metadata = metadataOf "4" (classOf "LMGT3")
+    , startPosition = 4
+    , laps = []
+    }
 
 
 carOne : Car
