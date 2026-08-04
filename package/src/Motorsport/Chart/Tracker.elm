@@ -6,9 +6,9 @@ import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
+import Motorsport.Class as Class
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector exposing (BySector)
-import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -100,7 +100,7 @@ view :
             | fastestSectors : BySector (Maybe Holder)
             , fastestMiniSectors : ByMiniSector (Maybe Holder)
         }
-    -> Standings
+    -> Snapshot
     -> Svg msg
 view { season, eventName } bestTimes standings =
     let
@@ -131,7 +131,7 @@ isCounterClockwiseCircuit eventName =
         ]
 
 
-viewWithConfig : Direction -> TrackConfig -> Standings -> Svg msg
+viewWithConfig : Direction -> TrackConfig -> Snapshot -> Svg msg
 viewWithConfig direction config standings =
     let
         { w, h } =
@@ -290,11 +290,11 @@ makeLabel direction { progress, radius, fontSize, color, label } =
         [ text label ]
 
 
-renderCars : Direction -> TrackConfig -> Standings -> Svg msg
+renderCars : Direction -> TrackConfig -> Snapshot -> Svg msg
 renderCars direction config standings =
     Keyed.node "g"
         []
-        (Standings.toList standings
+        (Snapshot.toList standings
             |> List.reverse
             |> List.map
                 (\car ->
@@ -305,7 +305,7 @@ renderCars direction config standings =
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> Entry -> Svg msg
+renderCarOnTrack : Direction -> TrackConfig -> CarAt -> Svg msg
 renderCarOnTrack direction config car =
     let
         coords =
@@ -314,7 +314,7 @@ renderCarOnTrack direction config car =
     renderCar direction car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> Entry -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack : Direction -> TrackConfig -> CarAt -> { angle : Float, x : Float, y : Float }
 coordinatesOnTrack direction config car =
     let
         { cx, cy, r } =
@@ -332,7 +332,7 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> Entry -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar : Direction -> CarAt -> { angle : Float, x : Float, y : Float } -> Svg msg
 renderCar direction car { angle, x, y } =
     let
         { cx, cy } =
@@ -351,7 +351,7 @@ renderCar direction car { angle, x, y } =
         [ g [ Attributes.transform [ Translate x y ] ]
             -- Lazy compares its arguments by reference equality (===). A Css.Color record is
             -- recreated on every compute, so pass a String, which compares by value.
-            [ Lazy.lazy2 carMarker car.positionInClass car.classColor ]
+            [ Lazy.lazy2 carMarker car.positionInClass (Class.toColor car.metadata.class).value ]
         , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]
 

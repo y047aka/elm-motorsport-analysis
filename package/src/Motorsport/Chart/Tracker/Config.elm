@@ -19,8 +19,8 @@ import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
+import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
-import Motorsport.ViewModel.Entry exposing (Entry)
 
 
 type alias TrackConfig =
@@ -167,7 +167,7 @@ buildMiniSectors miniSectors sectorStart miniRatio =
                 |> WithMiniSectors
 
 
-computeProgress : TrackConfig -> Entry -> Float
+computeProgress : TrackConfig -> CarAt -> Float
 computeProgress config car =
     if car.currentLapProgress > 0 then
         car.currentLapProgress

@@ -11,7 +11,7 @@ indices that let any moment of it be read back cheaply.
 Nothing here moves. Where playback has got to is
 [`Clock`](Motorsport-Clock)'s business, and what the cars are doing at that
 moment is derived from the two, in
-[`ViewModel.Standings`](Motorsport-ViewModel-Standings).
+[`Race.Snapshot`](Motorsport-Race-Snapshot).
 
 @docs Race
 @docs empty, fromCars

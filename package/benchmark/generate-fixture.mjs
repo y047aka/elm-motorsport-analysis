@@ -13,18 +13,18 @@ if (json.includes('"""')) {
   throw new Error(`Source JSON contains """, which would break the Elm raw string literal: ${source}`);
 }
 
-const elm = `module Fixture.Generated exposing (entrants)
+const elm = `module Fixture.Generated exposing (cars)
 
 {-| Auto-generated from ${relative(resolve(here, "../.."), source)}.
 Do not edit by hand. Run \`node generate-fixture.mjs\` to regenerate.
 -}
 
 import Fixture.Json as Fixture
-import Motorsport.Entrant exposing (Entrant)
+import Motorsport.Race.Car exposing (Car)
 
 
-entrants : List Entrant
-entrants =
+cars : List Car
+cars =
     Fixture.decode rawJson
 
 

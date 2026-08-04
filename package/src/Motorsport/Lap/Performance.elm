@@ -1,16 +1,25 @@
 module Motorsport.Lap.Performance exposing
-    ( RatedTime
+    ( RatedTime, rateTime
+    , SectorPerformance, ofSectors
+    , MiniSectorPerformance, ofMiniSectors
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
     )
 
-{-| How one time reads against the baseline it is rated on.
+{-| How a lap's times read against the baselines they are rated on.
 
-What that baseline is comes from [`BestTimes`](Motorsport-BestTimes); this module
-only says what a time coloured against it looks like.
+The baselines come from [`BestTimes`](Motorsport-BestTimes); this module says
+what a time rated against them is, and rates the times of a lap one by one.
 
-@docs RatedTime
+Rating belongs to neither the race nor the view. A rated time is settled by the
+lap and the record alone, so [`Race.Snapshot`](Motorsport-Race-Snapshot) reads it
+as part of the race; but nothing in the race changes when it is read, so the view
+is free to rate a lap of its own.
+
+@docs RatedTime, rateTime
+@docs SectorPerformance, ofSectors
+@docs MiniSectorPerformance, ofMiniSectors
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
@@ -18,13 +27,72 @@ only says what a time coloured against it looks like.
 
 -}
 
+import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
+import Motorsport.Lap exposing (Lap)
+import Motorsport.Sector as Sector exposing (BySector)
 
 
 type alias RatedTime =
     { time : Duration
     , performance : PerformanceLevel
     }
+
+
+{-| Rate a time against the race's record and the car's own, where there is a
+time to rate. A time the source data did not record produces no rating rather
+than an uncoloured one, so a caller renders the same "-" it renders for a car
+with no lap at all.
+-}
+rateTime : Maybe Duration -> { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
+rateTime fastest { time, personalBest } =
+    time
+        |> Maybe.map
+            (\recordedTime ->
+                { time = recordedTime
+                , performance =
+                    performanceLevel
+                        { time = recordedTime, personalBest = personalBest, fastest = fastest }
+                }
+            )
+
+
+{-| A lap's sector times, each rated.
+-}
+type alias SectorPerformance =
+    BySector (Maybe RatedTime)
+
+
+{-| Rate each sector of a lap.
+
+A `SectorTime` is already the shape [`rateTime`](#rateTime) reads: a time that
+may not have been recorded, and the driver's best to rate it against.
+
+-}
+ofSectors : BestTimes.Snapshot -> Lap -> SectorPerformance
+ofSectors bestTimes lap =
+    Sector.map2 (BestTimes.timeOf >> rateTime) bestTimes.fastestSectors lap.sectors
+
+
+{-| A lap's mini-sector times, each rated. Only laps from a circuit with
+mini-sectors have them.
+-}
+type alias MiniSectorPerformance =
+    ByMiniSector (Maybe RatedTime)
+
+
+{-| Rate each mini-sector of a lap, where the lap has any.
+-}
+ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
+ofMiniSectors bestTimes lap =
+    let
+        rate miniSector fastest =
+            rateTime (BestTimes.timeOf fastest)
+                { time = miniSector.time, personalBest = miniSector.best }
+    in
+    lap.miniSectors
+        |> Maybe.map (\ms -> LeMans.map2 rate ms bestTimes.fastestMiniSectors)
 
 
 

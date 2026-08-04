@@ -66,12 +66,11 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
-import Motorsport.Lap.Performance as Performance exposing (RatedTime, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.ViewModel.Entry exposing (CurrentSectorStates, Entry, MiniSectorPerformance, SectorPerformance)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 
 
 
@@ -720,9 +719,9 @@ viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
 -- VIEW
 
 
-view : Config Entry msg -> Model -> Standings -> Html msg
+view : Config CarAt msg -> Model -> Snapshot -> Html msg
 view config state standings =
-    DataView.view config state (Standings.toList standings)
+    DataView.view config state (Snapshot.toList standings)
 
 
 

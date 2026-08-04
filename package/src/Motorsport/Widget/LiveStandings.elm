@@ -6,16 +6,16 @@ import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
+import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
-import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
 type alias Props msg =
-    { standings : Standings
+    { snapshot : Snapshot
 
     -- Returns the carNumber of the selected car.
     -- To keep Lazy effective, pass a stable reference such as a Msg constructor,
@@ -36,7 +36,7 @@ view props =
             ]
         ]
         (List.map
-            (\( classInfo, cars ) ->
+            (\( class_, cars ) ->
                 div
                     [ class "card bg-base-200 overflow-hidden"
                     , css
@@ -58,11 +58,11 @@ view props =
                                 , property "width" "0.2em"
                                 , property "height" "1.2em"
                                 , property "border-radius" "2px"
-                                , property "background-color" classInfo.color
+                                , property "background-color" (Class.toColor class_).value
                                 ]
                             ]
                         ]
-                        [ text classInfo.name ]
+                        [ text (Class.toString class_) ]
                     , Keyed.node "ul"
                         [ class "list"
                         , css
@@ -80,11 +80,11 @@ view props =
                         )
                     ]
             )
-            (Standings.toClassList props.standings)
+            (Snapshot.toClassList props.snapshot)
         )
 
 
-carRow : String -> (String -> msg) -> Entry -> Html msg
+carRow : String -> (String -> msg) -> CarAt -> Html msg
 carRow popoverTarget onSelect item =
     li []
         [ button
@@ -110,10 +110,10 @@ carRow popoverTarget onSelect item =
         ]
 
 
-carRowContent : Entry -> List (Html msg)
+carRowContent : CarAt -> List (Html msg)
 carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
-    , CarNumberBadge.viewRow item
+    , CarNumberBadge.viewRow item.metadata
     , div [ class "text-xs opacity-70" ]
         [ text (item.currentDriver |> Maybe.withDefault Driver.unknown |> Driver.toSurname) ]
     , div [ class "text-xs text-right" ]

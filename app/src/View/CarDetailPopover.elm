@@ -17,7 +17,7 @@ as the `popovertarget` of the trigger.
 import Css
 import Html.Styled as Html exposing (Html, button, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
-import Motorsport.ViewModel exposing (ViewModel)
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.Compare as CompareWidget
 
 
@@ -31,10 +31,10 @@ view :
     , onToggleCar : String -> msg
     , onSelectChart : CompareWidget.Chart -> msg
     }
-    -> ViewModel
+    -> Snapshot
     -> List String
     -> Html msg
-view config viewModel detailCarNumbers =
+view config snapshot detailCarNumbers =
     Html.node "div"
         [ Attributes.id popoverId
         , attribute "popover" "auto"
@@ -86,6 +86,6 @@ view config viewModel detailCarNumbers =
                     , activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
                     }
-                    viewModel
+                    snapshot
                     detailCarNumbers
         ]

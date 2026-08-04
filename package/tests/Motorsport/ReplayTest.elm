@@ -10,8 +10,7 @@ import Motorsport.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.ViewModel as ViewModel exposing (Scope(..))
-import Motorsport.ViewModel.Standings as Standings
+import Motorsport.Race.Snapshot as Snapshot
 import Test exposing (Test, describe, test)
 import Time exposing (millisToPosix)
 
@@ -153,15 +152,14 @@ skipBy duration =
     Replay.update (Replay.SkipTime duration)
 
 
-{-| The status as the standings show it, which is the whole point: the model
-holds no status of its own, it is read back out of the race at the clock.
+{-| The status as a snapshot of the race shows it, which is the whole point: the
+model holds no status of its own, it is read back out of the race at the clock.
 -}
 statusOf : CarNumber -> Replay.Model -> Maybe Status
-statusOf carNumber m =
-    ViewModel.compute UpToElapsed m
-        |> .standings
-        |> Standings.toList
-        |> List.filter (\entry -> entry.metadata.carNumber == carNumber)
+statusOf carNumber { race, playback } =
+    Snapshot.at { elapsed = Clock.getElapsed playback } race
+        |> Snapshot.toList
+        |> List.filter (\car -> car.metadata.carNumber == carNumber)
         |> List.head
         |> Maybe.map .status
 

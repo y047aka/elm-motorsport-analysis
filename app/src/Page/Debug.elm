@@ -17,13 +17,15 @@ import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Class
 import Motorsport.Clock as Clock
+import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant
+import Motorsport.Lap as Lap exposing (Lap)
+import Motorsport.Lap.Performance as Performance exposing (RatedTime)
 import Motorsport.Manufacturer
+import Motorsport.Race.Car as Car
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
-import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
@@ -77,7 +79,7 @@ update msg model =
 
 
 view : Shared.Model -> Model -> View Msg
-view { viewModel, replay } { leaderboardState } =
+view { replay } { leaderboardState } =
     { title = "Wec"
     , body =
         let
@@ -86,6 +88,11 @@ view { viewModel, replay } { leaderboardState } =
 
             lapCount =
                 Replay.lapCount replay
+
+            -- The whole race's records, not the clock's: this page reports what
+            -- the data holds, and the slider must not change what a record means.
+            bestTimes =
+                BestTimes.final race.bestTimeChanges
         in
         [ header
             [ css
@@ -112,10 +119,10 @@ view { viewModel, replay } { leaderboardState } =
                 , text (Clock.getElapsed playback |> Instant.toString)
                 ]
             , div []
-                ([ div [] [ text "fastestLapTime: ", text (bestTimeText viewModel.bestTimes.fastestLapTime) ]
-                 , div [] [ text "slowestLapTime: ", text (bestTimeText viewModel.bestTimes.slowestLapTime) ]
+                ([ div [] [ text "fastestLapTime: ", text (bestTimeText bestTimes.fastestLapTime) ]
+                 , div [] [ text "slowestLapTime: ", text (bestTimeText bestTimes.slowestLapTime) ]
                  ]
-                    ++ (Sector.toList viewModel.bestTimes.fastestSectors
+                    ++ (Sector.toList bestTimes.fastestSectors
                             |> List.map
                                 (\( sector, fastest ) ->
                                     div []
@@ -127,19 +134,59 @@ view { viewModel, replay } { leaderboardState } =
                 )
             ]
         , let
-            standings =
+            laps =
                 race.cars
                     |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                    |> Maybe.map (\car -> Standings.fromLaps car.metadata (List.take lapCount car.laps))
-                    |> Maybe.withDefault (Standings.fromLaps { carNumber = "", drivers = [], class = Motorsport.Class.none, group = "", team = "", manufacturer = Motorsport.Manufacturer.Other } [])
+                    |> Maybe.map (\car -> List.take lapCount car.laps)
+                    |> Maybe.withDefault []
           in
-          DataView.view (config viewModel.bestTimes standings) leaderboardState (Standings.toList standings)
+          DataView.view (config bestTimes) leaderboardState (List.indexedMap (lapRow bestTimes) laps)
         ]
     }
 
 
-config : BestTimes.Snapshot -> Standings -> Leaderboard.Config Entry Msg
-config bestTimes standings =
+{-| One row of this page is one lap of one car, not one car of the race. The
+leaderboard columns only ask for the fields they print, so a row is just those.
+-}
+type alias LapRow =
+    { position : Int
+    , metadata : Car.Metadata
+    , currentDriver : Maybe Driver
+    , lapsCompleted : Int
+    , currentLapSectors : Maybe Lap.SectorTimes
+    , lastLapRated : Maybe RatedTime
+    , bestLapRated : Maybe RatedTime
+    }
+
+
+lapRow : BestTimes.Snapshot -> Int -> Lap -> LapRow
+lapRow bestTimes index lap =
+    let
+        fastestLapTime =
+            BestTimes.timeOf bestTimes.fastestLapTime
+    in
+    { position = index + 1
+
+    -- The car number column is the one place a lap number can be printed, so
+    -- the lap's number goes where a car's would.
+    , metadata =
+        { carNumber = String.fromInt lap.lap
+        , drivers = [ lap.driver ]
+        , class = Motorsport.Class.none
+        , group = ""
+        , team = ""
+        , manufacturer = Motorsport.Manufacturer.Other
+        }
+    , currentDriver = Just lap.driver
+    , lapsCompleted = lap.lap
+    , currentLapSectors = Just lap.sectors
+    , lastLapRated = Performance.rateTime fastestLapTime { time = lap.time, personalBest = lap.best }
+    , bestLapRated = Performance.rateTime fastestLapTime { time = lap.best, personalBest = lap.best }
+    }
+
+
+config : BestTimes.Snapshot -> Leaderboard.Config LapRow Msg
+config bestTimes =
     { toId = .metadata >> .carNumber
     , toMsg = LeaderboardMsg
     , columns =
@@ -165,7 +212,7 @@ bestTimeText =
     BestTimes.timeOf >> Maybe.map Duration.toString >> Maybe.withDefault "-"
 
 
-sectorColumns : BestTimes.Snapshot -> List (DataView.Column Entry Msg)
+sectorColumns : BestTimes.Snapshot -> List (DataView.Column LapRow Msg)
 sectorColumns bestTimes =
     let
         fastest sector =

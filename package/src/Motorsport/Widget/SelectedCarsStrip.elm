@@ -12,8 +12,7 @@ import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.ViewModel exposing (ViewModel)
-import Motorsport.ViewModel.Standings as Standings
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
 
@@ -25,12 +24,15 @@ view :
     { offset : Int
     , onScrollTo : Int -> msg
     }
-    -> ViewModel
+    -> Snapshot
     -> Html msg
-view config { standings, lapHistory } =
+view config snapshot =
     let
+        lapHistory =
+            Snapshot.lapHistory snapshot
+
         allCars =
-            Standings.toList standings
+            Snapshot.toList snapshot
 
         maxOffset =
             max 0 (List.length allCars - displayCount)

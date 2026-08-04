@@ -1,16 +1,19 @@
-module Motorsport.ViewModel.LapHistory exposing
+module Motorsport.Race.LapHistory exposing
     ( LapHistory
-    , compute
+    , at
     , get, recentLaps
     )
 
-{-| A per-car slice of the laps completed up to the current time.
+{-| Each car's laps, cut off at a moment of the race.
 
-Holds raw `Lap` values but belongs to the computed-model layer in the sense that
-it is already sliced by time. Only chart modules that scan lap history over time consume this.
+The laps come out exactly as they went in; the only thing applied to them is the
+clock. What reads this is whatever scans a car's history rather than its present
+-- the gap and distribution charts, the sparklines -- and
+[`Race.Snapshot`](Motorsport-Race-Snapshot) takes one at its own clock so they
+all read the same laps.
 
 @docs LapHistory
-@docs compute
+@docs at
 @docs get, recentLaps
 
 -}
@@ -25,8 +28,10 @@ type LapHistory
     = LapHistory (Dict String (List Lap))
 
 
-compute : { elapsed : Instant } -> List Car -> LapHistory
-compute clock cars =
+{-| Every lap each car had completed at a moment of the race.
+-}
+at : { elapsed : Instant } -> List Car -> LapHistory
+at clock cars =
     cars
         |> List.map (\car -> ( car.metadata.carNumber, completedLapsAt clock car.laps ))
         |> Dict.fromList

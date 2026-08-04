@@ -11,21 +11,20 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import List.Extra
-import Motorsport.Class exposing (Class)
+import Motorsport.Class as Class exposing (Class)
 import Motorsport.Manufacturer as Manufacturer
-import Motorsport.ViewModel.Entry exposing (ClassInfo, Entry)
-import Motorsport.ViewModel.Standings as Standings exposing (Standings)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its
 selection.
 -}
-carSelector : (String -> msg) -> Standings -> Class -> List String -> Html msg
+carSelector : (String -> msg) -> Snapshot -> Class -> List String -> Html msg
 carSelector onToggleCar standings class selectedCarNumbers =
     let
         classCars =
-            Standings.toClassList standings
-                |> List.Extra.find (\( classInfo, _ ) -> classInfo.class == class)
+            Snapshot.toClassList standings
+                |> List.Extra.find (\( carClass, _ ) -> carClass == class)
                 |> Maybe.map Tuple.second
                 |> Maybe.withDefault []
     in
@@ -46,7 +45,7 @@ carSelector onToggleCar standings class selectedCarNumbers =
         )
 
 
-carSelectorChip : (String -> msg) -> Bool -> Entry -> Html msg
+carSelectorChip : (String -> msg) -> Bool -> CarAt -> Html msg
 carSelectorChip onToggleCar isSelected item =
     let
         manufacturerColor =
@@ -83,8 +82,8 @@ carSelectorChip onToggleCar isSelected item =
         [ text ("#" ++ item.metadata.carNumber) ]
 
 
-classBadge : ClassInfo -> Html msg
-classBadge classInfo =
+classBadge : Class -> Html msg
+classBadge class =
     div
         [ css
             [ property "display" "flex"
@@ -99,8 +98,8 @@ classBadge classInfo =
                 , property "width" "0.2em"
                 , property "height" "1em"
                 , property "border-radius" "2px"
-                , Css.property "background-color" classInfo.color
+                , Css.property "background-color" (Class.toColor class).value
                 ]
             ]
         ]
-        [ text classInfo.name ]
+        [ text (Class.toString class) ]

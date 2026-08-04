@@ -13,9 +13,9 @@ import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
+import Motorsport.Race.LapHistory exposing (LapHistory)
+import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
-import Motorsport.ViewModel.Entry exposing (Entry)
-import Motorsport.ViewModel.LapHistory exposing (LapHistory)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
@@ -40,7 +40,7 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
 carSummary lapRange distScale lapHistory item =
     div
         [ css
@@ -62,7 +62,7 @@ as a KDE curve, with both axes (lap time / density) aligned to the shared
 `distScale` so the three columns share one scale (height = peak sharpness = pace
 stability, comparable across cars).
 -}
-lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> Entry -> Html msg
+lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
 lapTimePanel maybeRange maybeScale lapHistory item =
     div
         [ css
@@ -93,7 +93,7 @@ lapTimePanel maybeRange maybeScale lapHistory item =
         ]
 
 
-header : Entry -> Html msg
+header : CarAt -> Html msg
 header item =
     div
         [ css
@@ -103,7 +103,7 @@ header item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarNumberBadge.view item
+        [ CarNumberBadge.view item.metadata
         , div
             [ css
                 [ property "display" "grid"
@@ -121,7 +121,7 @@ header item =
 {-| As in the leaderboard, emphasizes the driver currently at the wheel and dims
 the others.
 -}
-driverList : Entry -> Html msg
+driverList : CarAt -> Html msg
 driverList item =
     let
         isCurrentDriver driver =
@@ -189,7 +189,7 @@ statusBadge status =
             text ""
 
 
-summaryStats : Entry -> Html msg
+summaryStats : CarAt -> Html msg
 summaryStats item =
     div
         [ css

@@ -17,7 +17,7 @@ twenty passes over every lap of the race.
 The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
 rather than under either side it serves, because both sides need it and neither
 owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
-[`ViewModel`](Motorsport-ViewModel) reads them back at the clock. Laps in,
+[`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock. Laps in,
 records out -- everything it knows about a car it reads off the lap that car
 ran, so it needs no standings, no playback and no `Car`, which is what keeps the
 dependency pointing one way from both.
@@ -70,6 +70,10 @@ widget rates and scales individual times against, and the laps that set them.
 
 Read mid-race via [`at`](#at) these are only the best times _so far_; only
 [`final`](#final)'s answer is the race's actual best times.
+
+A `Snapshot` here is the same idea as
+[`Race.Snapshot`](Motorsport-Race-Snapshot), applied to the records rather than
+to the field: one moment of the race, held still, with the clock baked in.
 
 `Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
 to that same `Nothing`, for callers that only want the number; keep this

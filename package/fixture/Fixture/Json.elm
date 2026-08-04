@@ -3,21 +3,21 @@ module Fixture.Json exposing (decode, fixtureDecoder)
 import Data.Wec.Laps as Laps
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, list, string)
-import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Class as Class exposing (Class)
+import Motorsport.Class.Era as Era
 import Motorsport.Driver as Driver
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Race.Entrant as Entrant exposing (Entrant)
+import Motorsport.Race.Car as Car exposing (Car)
 
 
-decode : String -> List Entrant
+decode : String -> List Car
 decode raw =
     Decode.decodeString fixtureDecoder raw
         |> Result.withDefault []
 
 
-fixtureDecoder : Decoder (List Entrant)
+fixtureDecoder : Decoder (List Car)
 fixtureDecoder =
     Decode.map2 Laps.attach
         Laps.decoder
@@ -45,12 +45,14 @@ lapCarInfoDecoder =
         |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
 
 
+{-| The fixture is the 2025 Fuji 6 Hours; see `benchmark/generate-fixture.mjs`.
+-}
 classDecoder : Decoder Class
 classDecoder =
-    string |> Decode.andThen (Class.fromString >> Json.Decode.Extra.fromMaybe "Expected a Class")
+    string |> Decode.map (Class.fromString Era.Gt3AsThirdClass)
 
 
-carsFromLapsDecoder : Decoder (List Entrant)
+carsFromLapsDecoder : Decoder (List Car)
 carsFromLapsDecoder =
     list lapCarInfoDecoder |> Decode.map extractCars
 
@@ -64,7 +66,7 @@ type alias CarData =
     }
 
 
-extractCars : List LapCarInfo -> List Entrant
+extractCars : List LapCarInfo -> List Car
 extractCars infos =
     infos
         |> List.foldr collectCarData Dict.empty
@@ -98,9 +100,9 @@ collectCarData info acc =
                 acc
 
 
-toPlaceholderCar : ( String, CarData ) -> Entrant
+toPlaceholderCar : ( String, CarData ) -> Car
 toPlaceholderCar ( carNumber, data ) =
-    Entrant.fromStartingGrid
+    Car.fromStartingGrid
         { position = 0
         , car =
             { carNumber = carNumber
