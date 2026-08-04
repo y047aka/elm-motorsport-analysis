@@ -337,7 +337,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 
 lastLapColumn :
-    { getter : data -> { a | lastLapRated : Maybe RatedTime }
+    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime } }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -345,7 +345,8 @@ lastLapColumn { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
-            >> .lastLapRated
+            >> .lastLap
+            >> .rated
             >> Maybe.map
                 (\{ time, performance } ->
                     span
@@ -372,8 +373,11 @@ currentLapColumn_Wec :
         ->
             { a
                 | status : Status
-                , currentLapRated : Maybe RatedTime
-                , currentLapSectorStates : Maybe CurrentSectorStates
+                , currentLap :
+                    { b
+                        | rated : Maybe RatedTime
+                        , sectorStates : Maybe CurrentSectorStates
+                    }
             }
     , sorter : data -> data -> Order
     }
@@ -389,11 +393,14 @@ currentLapColumn_Wec { getter, sorter } =
 viewCurrentLapColumn_Wec :
     { a
         | status : Status
-        , currentLapRated : Maybe RatedTime
-        , currentLapSectorStates : Maybe CurrentSectorStates
+        , currentLap :
+            { b
+                | rated : Maybe RatedTime
+                , sectorStates : Maybe CurrentSectorStates
+            }
     }
     -> Html msg
-viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
+viewCurrentLapColumn_Wec { status, currentLap } =
     let
         lapTime { time, performance } =
             div
@@ -446,8 +453,8 @@ viewCurrentLapColumn_Wec { status, currentLapRated, currentLapSectorStates } =
                         (List.map sectorCell (Sector.values slots))
                     ]
             )
-            currentLapRated
-            currentLapSectorStates
+            currentLap.rated
+            currentLap.sectorStates
             |> Maybe.withDefault (text "-")
 
 
@@ -457,11 +464,14 @@ currentLapColumn_LeMans24h :
         ->
             { a
                 | status : Status
-                , currentLapElapsed : Duration
-                , currentLapBest : Maybe Duration
-                , currentLapMiniSectors : Maybe MiniSectors
-                , sector : Maybe SectorProgress
-                , miniSector : Maybe MiniSectorProgress
+                , currentLap :
+                    { c
+                        | elapsed : Duration
+                        , best : Maybe Duration
+                        , miniSectors : Maybe MiniSectors
+                        , sector : Maybe SectorProgress
+                        , miniSector : Maybe MiniSectorProgress
+                    }
             }
     , sorter : data -> data -> Order
     , bestTimes : { b | fastestLapTime : Maybe Holder, fastestMiniSectors : ByMiniSector (Maybe Holder) }
@@ -480,14 +490,17 @@ viewCurrentLapColumn_LeMans24h :
     ->
         { a
             | status : Status
-            , currentLapElapsed : Duration
-            , currentLapBest : Maybe Duration
-            , currentLapMiniSectors : Maybe MiniSectors
-            , sector : Maybe SectorProgress
-            , miniSector : Maybe MiniSectorProgress
+            , currentLap :
+                { c
+                    | elapsed : Duration
+                    , best : Maybe Duration
+                    , miniSectors : Maybe MiniSectors
+                    , sector : Maybe SectorProgress
+                    , miniSector : Maybe MiniSectorProgress
+                }
         }
     -> Html msg
-viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLapBest, currentLapMiniSectors, miniSector } =
+viewCurrentLapColumn_LeMans24h bestTimes { status, currentLap } =
     let
         lapTime { time, personalBest } =
             div
@@ -545,33 +558,33 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
-        currentLapBest
+        currentLap.best
             |> Maybe.map
                 (\best ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = currentLapElapsed, personalBest = Just best }
+                        [ lapTime { time = currentLap.elapsed, personalBest = Just best }
                         , let
                             progressMap =
-                                LeMans.calculateMiniSectorProgress miniSector
+                                LeMans.calculateMiniSectorProgress currentLap.miniSector
                           in
                           div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                            [ sectorCell { time = Maybe.andThen (.scl2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl2 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl2, progress = progressMap.scl2 }
-                            , sectorCell { time = Maybe.andThen (.z4 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z4 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z4, progress = progressMap.z4 }
-                            , sectorCell { time = Maybe.andThen (.ip1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip1 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip1, progress = progressMap.ip1 }
+                            [ sectorCell { time = Maybe.andThen (.scl2 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl2, progress = progressMap.scl2 }
+                            , sectorCell { time = Maybe.andThen (.z4 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.z4 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z4, progress = progressMap.z4 }
+                            , sectorCell { time = Maybe.andThen (.ip1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip1, progress = progressMap.ip1 }
                             , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.z12 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.z12 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z12, progress = progressMap.z12 }
-                            , sectorCell { time = Maybe.andThen (.sclc >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclc >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclc, progress = progressMap.sclc }
-                            , sectorCell { time = Maybe.andThen (.a7_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a7_1, progress = progressMap.a7_1 }
-                            , sectorCell { time = Maybe.andThen (.ip2 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.ip2 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip2, progress = progressMap.ip2 }
+                            , sectorCell { time = Maybe.andThen (.z12 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.z12 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z12, progress = progressMap.z12 }
+                            , sectorCell { time = Maybe.andThen (.sclc >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.sclc >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclc, progress = progressMap.sclc }
+                            , sectorCell { time = Maybe.andThen (.a7_1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a7_1, progress = progressMap.a7_1 }
+                            , sectorCell { time = Maybe.andThen (.ip2 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip2, progress = progressMap.ip2 }
                             , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.a8_1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a8_1, progress = progressMap.a8_1 }
-                            , sectorCell { time = Maybe.andThen (.sclb >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.sclb >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclb, progress = progressMap.sclb }
-                            , sectorCell { time = Maybe.andThen (.porin >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porin >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porin, progress = progressMap.porin }
-                            , sectorCell { time = Maybe.andThen (.porout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.porout >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porout, progress = progressMap.porout }
-                            , sectorCell { time = Maybe.andThen (.pitref >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.pitref >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.pitref, progress = progressMap.pitref }
-                            , sectorCell { time = Maybe.andThen (.scl1 >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.scl1 >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl1, progress = progressMap.scl1 }
-                            , sectorCell { time = Maybe.andThen (.fordout >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fordout >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fordout, progress = progressMap.fordout }
-                            , sectorCell { time = Maybe.andThen (.fl >> .time) currentLapMiniSectors, personalBest = Maybe.andThen (.fl >> .best) currentLapMiniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fl, progress = progressMap.fl }
+                            , sectorCell { time = Maybe.andThen (.a8_1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a8_1, progress = progressMap.a8_1 }
+                            , sectorCell { time = Maybe.andThen (.sclb >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.sclb >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclb, progress = progressMap.sclb }
+                            , sectorCell { time = Maybe.andThen (.porin >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.porin >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porin, progress = progressMap.porin }
+                            , sectorCell { time = Maybe.andThen (.porout >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.porout >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porout, progress = progressMap.porout }
+                            , sectorCell { time = Maybe.andThen (.pitref >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.pitref >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.pitref, progress = progressMap.pitref }
+                            , sectorCell { time = Maybe.andThen (.scl1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl1, progress = progressMap.scl1 }
+                            , sectorCell { time = Maybe.andThen (.fordout >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.fordout >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fordout, progress = progressMap.fordout }
+                            , sectorCell { time = Maybe.andThen (.fl >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.fl >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fl, progress = progressMap.fl }
                             ]
                         ]
                 )
@@ -579,7 +592,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLapElapsed, currentLap
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance }
+    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime, sectors : Maybe SectorPerformance } }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -591,8 +604,8 @@ lastLapColumn_Wec { getter, sorter } =
     }
 
 
-viewLastLapColumn_Wec : { a | lastLapRated : Maybe RatedTime, lastLapSectors : Maybe SectorPerformance } -> Html msg
-viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
+viewLastLapColumn_Wec : { a | lastLap : { b | rated : Maybe RatedTime, sectors : Maybe SectorPerformance } } -> Html msg
+viewLastLapColumn_Wec { lastLap } =
     let
         lapTimeView { time, performance } =
             div
@@ -618,11 +631,11 @@ viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
                 ]
                 []
     in
-    case lastLapRated of
+    case lastLap.rated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
-                , case lastLapSectors of
+                , case lastLap.sectors of
                     Just slots ->
                         div
                             [ css
@@ -642,7 +655,7 @@ viewLastLapColumn_Wec { lastLapRated, lastLapSectors } =
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance }
+    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime, miniSectors : Maybe MiniSectorPerformance } }
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -654,8 +667,8 @@ lastLapColumn_LeMans24h { getter, sorter } =
     }
 
 
-viewLastLapColumn_LeMans24h : { a | lastLapRated : Maybe RatedTime, lastLapMiniSectors : Maybe MiniSectorPerformance } -> Html msg
-viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
+viewLastLapColumn_LeMans24h : { a | lastLap : { b | rated : Maybe RatedTime, miniSectors : Maybe MiniSectorPerformance } } -> Html msg
+viewLastLapColumn_LeMans24h { lastLap } =
     let
         lapTimeView { time, performance } =
             div
@@ -681,11 +694,11 @@ viewLastLapColumn_LeMans24h { lastLapRated, lastLapMiniSectors } =
                 ]
                 []
     in
-    case lastLapRated of
+    case lastLap.rated of
         Just lapTime ->
             div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                 [ lapTimeView lapTime
-                , lastLapMiniSectors
+                , lastLap.miniSectors
                     |> Maybe.map
                         (\ms ->
                             div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]

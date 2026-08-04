@@ -83,7 +83,7 @@ suite =
             [ test "it reports no sector, as it reports no sector states" <|
                 \_ ->
                     carAt "4" fieldWithTailenders
-                        |> Maybe.map (\car -> ( car.sector, car.currentLapSectorStates ))
+                        |> Maybe.map (\car -> ( car.currentLap.sector, car.currentLap.sectorStates ))
                         |> Expect.equal (Just ( Nothing, Nothing ))
             , test "it has completed no laps" <|
                 \_ ->
@@ -160,7 +160,7 @@ carAt =
 sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
-        |> Maybe.andThen .currentLapSectorStates
+        |> Maybe.andThen (.currentLap >> .sectorStates)
 
 
 {-| A wider field, for what two cars cannot show: two of them sharing a class,

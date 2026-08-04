@@ -146,7 +146,10 @@ view { replay } { leaderboardState } =
 
 
 {-| One row of this page is one lap of one car, not one car of the race. The
-leaderboard columns only ask for the fields they print, so a row is just those.
+leaderboard columns only ask for the fields they print, so a row is just those
+-- including the shape they ask for them in: `lastLap` here holds only the one
+field `lastLapColumn` reads, not everything a
+[`Snapshot.LastLap`](Motorsport-Race-Snapshot#LastLap) carries.
 -}
 type alias LapRow =
     { position : Int
@@ -154,7 +157,7 @@ type alias LapRow =
     , currentDriver : Maybe Driver
     , lapsCompleted : Int
     , currentLapSectors : Maybe Lap.SectorTimes
-    , lastLapRated : Maybe RatedTime
+    , lastLap : { rated : Maybe RatedTime }
     , bestLapRated : Maybe RatedTime
     }
 
@@ -180,7 +183,7 @@ lapRow bestTimes index lap =
     , currentDriver = Just lap.driver
     , lapsCompleted = lap.lap
     , currentLapSectors = Just lap.sectors
-    , lastLapRated = Performance.rateTime fastestLapTime { time = lap.time, personalBest = lap.best }
+    , lastLap = { rated = Performance.rateTime fastestLapTime { time = lap.time, personalBest = lap.best } }
     , bestLapRated = Performance.rateTime fastestLapTime { time = lap.best, personalBest = lap.best }
     }
 
@@ -198,7 +201,7 @@ config bestTimes =
             ++ sectorColumns bestTimes
             ++ [ lastLapColumn
                     { getter = identity
-                    , sorter = Compare.by (.lastLapRated >> Maybe.map .time >> Maybe.withDefault 0)
+                    , sorter = Compare.by (.lastLap >> .rated >> Maybe.map .time >> Maybe.withDefault 0)
                     }
                , bestTimeColumn { getter = .bestLapRated }
                ]

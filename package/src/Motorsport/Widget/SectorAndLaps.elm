@@ -79,7 +79,7 @@ currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     let
         colorStyle =
-            case item.currentLapRated of
+            case item.currentLap.rated of
                 Just { performance } ->
                     applyPerformanceColor performance
 
@@ -99,7 +99,7 @@ currentLapTimeCell item =
                 "-"
 
              else
-                Duration.toString item.currentLapElapsed
+                Duration.toString item.currentLap.elapsed
             )
         ]
 
@@ -111,7 +111,7 @@ lastLapTimeCell item =
             [ property "font-size" "13px"
             , property "font-variant-numeric" "tabular-nums"
             , property "text-align" "right"
-            , case item.lastLapRated of
+            , case item.lastLap.rated of
                 Just { performance } ->
                     applyPerformanceColor performance
 
@@ -119,7 +119,7 @@ lastLapTimeCell item =
                     batch []
             ]
         ]
-        [ text (item.lastLapRated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+        [ text (item.lastLap.rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
 applyPerformanceColor : Performance.PerformanceLevel -> Css.Style
@@ -137,7 +137,7 @@ sectors are filled with their performance color.
 -}
 currentSectorPie : CarAt -> Html msg
 currentSectorPie item =
-    case ( item.currentLapSectorStates, Status.hasRetired item.status ) of
+    case ( item.currentLap.sectorStates, Status.hasRetired item.status ) of
         ( Just slots, False ) ->
             sectorPie (List.map currentSectorSlot (Sector.values slots))
 

@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, CurrentSectorStates
+    ( Snapshot, CarAt, CurrentLap, LastLap, CurrentSectorStates
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
     , bestTimes, lapHistory
@@ -29,7 +29,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field does not have to
 scan `toList` for it.
 
-@docs Snapshot, CarAt, CurrentSectorStates
+@docs Snapshot, CarAt, CurrentLap, LastLap, CurrentSectorStates
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
 @docs bestTimes, lapHistory
@@ -89,8 +89,13 @@ Readings only -- no laps of any kind. The whole list runs to the end of the
 race, and handing it out beside values that stop at the clock is how future data
 gets read by accident; the laps up to this moment are
 [`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has
-already turned is here as what was read off it -- `lapsCompleted`,
-`lastLapRated`, `lastLapSectors` -- rather than as the lap itself.
+already turned is here as what was read off it -- `lapsCompleted`, and
+[`lastLap`](#LastLap) -- rather than as the lap itself.
+
+What is read off the lap in progress and off the one just finished is grouped
+under [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap), so that the two
+cannot be mistaken for one another at a call site; what stands apart from both
+-- who the car is, where it stands, the gaps it holds -- stays at the top.
 
 -}
 type alias CarAt =
@@ -100,35 +105,64 @@ type alias CarAt =
     , position : Int
     , positionInClass : Int
     , lapsCompleted : Int
-    , currentLapTime : Maybe Duration
-    , currentLapBest : Maybe Duration
-    , currentLapMiniSectors : Maybe MiniSectors
-
-    -- Since the car last crossed the line, or since the race start for a car
-    -- still on its opening lap.
-    , currentLapElapsed : Duration
-
-    -- How far through the lap and through the sector the car is. Both are
-    -- read off the clock and the lap's own times, so they say where the car
-    -- is, not how anything is drawn.
-    --
-    -- `sector` and `miniSector` are `Nothing` for a car with no lap in
-    -- progress, which is the same condition `currentLapSectorStates` is
-    -- absent under: a car that is not on a lap is nowhere on the track.
-    , currentLapProgress : Float
-    , sector : Maybe Lap.SectorProgress
-    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
+    , currentLap : CurrentLap
+    , lastLap : LastLap
 
-    -- Rated against the record the race held at this moment; see
-    -- [`Lap.Performance`](Motorsport-Lap-Performance).
-    , currentLapRated : Maybe RatedTime
-    , currentLapSectorStates : Maybe CurrentSectorStates
-    , lastLapRated : Maybe RatedTime
+    -- The quickest lap the car has turned by this moment, rated. Neither the
+    -- lap it is on nor the one it just finished, so it belongs to neither
+    -- group.
     , bestLapRated : Maybe RatedTime
-    , lastLapSectors : Maybe SectorPerformance
-    , lastLapMiniSectors : Maybe MiniSectorPerformance
+    }
+
+
+{-| The lap the car is on, as it reads at this moment.
+
+`time` and `best` are the lap's own, as the source data has them; `elapsed` is
+how long the car has been on it, counted from the last time it crossed the line
+-- or from the race start, for a car still on its opening lap.
+
+`progress`, `sector` and `miniSector` say how far around the car has got. All
+three come off the clock and the lap's own times, so they say where the car is,
+not how anything is drawn. Singular `miniSector` is one of those three -- which
+mini-sector the car is in, and how far through it; plural `miniSectors` is the
+lap's recorded mini-sector times, which is data rather than a position.
+
+`sector`, `miniSector` and `sectorStates` are `Nothing` together, for a car with
+no lap in progress: a car that is not on a lap is nowhere on the track.
+
+`rated` and `sectorStates` are rated against the record the race held at this
+moment; see [`Lap.Performance`](Motorsport-Lap-Performance).
+
+-}
+type alias CurrentLap =
+    { time : Maybe Duration
+    , best : Maybe Duration
+    , miniSectors : Maybe MiniSectors
+    , elapsed : Duration
+    , progress : Float
+    , sector : Maybe Lap.SectorProgress
+    , miniSector : Maybe Lap.MiniSectorProgress
+    , rated : Maybe RatedTime
+    , sectorStates : Maybe CurrentSectorStates
+    }
+
+
+{-| The lap the car has just finished, as it was read off it.
+
+The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: the
+time it took and how its sectors went, each rated against the record the race
+held at this moment.
+
+`miniSectors` is `Nothing` away from Le Mans, where the source data records no
+mini-sectors to rate.
+
+-}
+type alias LastLap =
+    { rated : Maybe RatedTime
+    , sectors : Maybe SectorPerformance
+    , miniSectors : Maybe MiniSectorPerformance
     }
 
 
@@ -494,41 +528,49 @@ readCarAt frame placed =
     , position = placed.position
     , positionInClass = placed.positionInClass
     , lapsCompleted = car.lastLap |> Maybe.map .lap |> Maybe.withDefault 0
-    , currentLapTime = car.currentLap |> Maybe.andThen .time
-    , currentLapBest = car.currentLap |> Maybe.andThen .best
-    , currentLapMiniSectors = car.currentLap |> Maybe.andThen .miniSectors
-    , currentLapElapsed = timing.currentLapElapsed
-    , currentLapProgress =
-        car.currentLap
-            |> Maybe.andThen .time
-            |> Maybe.map (\lapTime -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lapTime))
-            |> Maybe.withDefault 0
-    , sector = timing.sector
-    , miniSector = timing.miniSector
     , gapToLeader = timing.gapToLeader
     , intervalToAhead = timing.intervalToAhead
-    , currentLapRated =
-        car.currentLap
-            |> Maybe.andThen
-                (\lap ->
-                    Performance.rateTime frame.fastestLapTime
-                        { time = Just timing.currentLapElapsed
-                        , personalBest = lap.best
-                        }
-                )
-    , currentLapSectorStates =
-        car.currentLap
-            |> Maybe.map
-                (Performance.ofSectors frame.records
-                    >> currentSectorStates timing.sector
-                )
-    , lastLapRated =
-        car.lastLap
-            |> Maybe.andThen
-                (\lap ->
-                    Performance.rateTime frame.fastestLapTime
-                        { time = lap.time, personalBest = lap.best }
-                )
+    , currentLap =
+        { time = car.currentLap |> Maybe.andThen .time
+        , best = car.currentLap |> Maybe.andThen .best
+        , miniSectors = car.currentLap |> Maybe.andThen .miniSectors
+        , elapsed = timing.currentLapElapsed
+        , progress =
+            car.currentLap
+                |> Maybe.andThen .time
+                |> Maybe.map (\lapTime -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lapTime))
+                |> Maybe.withDefault 0
+        , sector = timing.sector
+        , miniSector = timing.miniSector
+        , rated =
+            car.currentLap
+                |> Maybe.andThen
+                    (\lap ->
+                        Performance.rateTime frame.fastestLapTime
+                            { time = Just timing.currentLapElapsed
+                            , personalBest = lap.best
+                            }
+                    )
+        , sectorStates =
+            car.currentLap
+                |> Maybe.map
+                    (Performance.ofSectors frame.records
+                        >> currentSectorStates timing.sector
+                    )
+        }
+    , lastLap =
+        { rated =
+            car.lastLap
+                |> Maybe.andThen
+                    (\lap ->
+                        Performance.rateTime frame.fastestLapTime
+                            { time = lap.time, personalBest = lap.best }
+                    )
+        , sectors =
+            car.lastLap |> Maybe.map (Performance.ofSectors frame.records)
+        , miniSectors =
+            car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
+        }
     , bestLapRated =
         car.lastLap
             |> Maybe.andThen
@@ -536,8 +578,4 @@ readCarAt frame placed =
                     Performance.rateTime frame.fastestLapTime
                         { time = lap.best, personalBest = lap.best }
                 )
-    , lastLapSectors =
-        car.lastLap |> Maybe.map (Performance.ofSectors frame.records)
-    , lastLapMiniSectors =
-        car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
     }
