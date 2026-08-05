@@ -27,8 +27,8 @@ same clock, so they are taken here too rather than by each caller: see
 [`bestTimes`](#bestTimes) and [`lapHistory`](#lapHistory).
 
 Reading one car or one class out of the field is the snapshot's own business --
-`get` and `inClass` below -- so that a view narrowing the field does not have to
-scan `toList` for it.
+`get` and `inClass` below -- so that a view narrowing the field says which one
+it wants rather than working it out of `toList`.
 
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates
@@ -38,7 +38,7 @@ scan `toList` for it.
 
 -}
 
-import Dict exposing (Dict)
+import Dict
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
@@ -77,12 +77,6 @@ type Snapshot
         -- never re-sort them, so the phantom-typed SortedList guarantee isn't
         -- worth the extra unwrapping at each call site.
         , carsByClass : List ( Class, List CarAt )
-
-        -- The same cars again, to look one up by number. Built with the rest of
-        -- the frame so that `get` costs a lookup rather than a scan of the
-        -- field; two cars sharing a number leave only the leading one here,
-        -- which is the one a caller asking by number wants.
-        , carsByNumber : Dict CarNumber CarAt
         }
 
 
@@ -248,7 +242,6 @@ at clock race =
         , lapCount = Race.lapCountAt clock race
         , cars = sortedCars
         , carsByClass = groupByClass sortedCars
-        , carsByNumber = indexByCarNumber cars
         , bestTimes = records
         , lapHistory = LapHistory.at clock race.cars
         }
@@ -308,18 +301,6 @@ currentMiniSectorStates miniSectorProgress rated =
         rated
 
 
-{-| Index the field by car number.
-
-Folded from the right so that the leading car wins a number two cars share:
-`Dict.insert` keeps the last write, and folding backwards makes that the car
-earliest in the running order.
-
--}
-indexByCarNumber : List CarAt -> Dict CarNumber CarAt
-indexByCarNumber =
-    List.foldr (\car -> Dict.insert car.metadata.carNumber car) Dict.empty
-
-
 groupByClass : SortedList ByPosition CarAt -> List ( Class, List CarAt )
 groupByClass sortedCars =
     sortedCars
@@ -342,10 +323,18 @@ toClassList (Snapshot s) =
 
 
 {-| One car of the field by its number, where the race has such a car.
+
+A scan of the field, which is what a call that comes now and then wants: an
+index would be built every frame whether anything asked for a car or not. Two
+cars sharing a number -- which the source data occasionally has -- give the one
+running ahead, since the field is in running order.
+
 -}
 get : CarNumber -> Snapshot -> Maybe CarAt
 get carNumber (Snapshot s) =
-    Dict.get carNumber s.carsByNumber
+    SortedList.toList s.cars
+        |> List.filter (\car -> car.metadata.carNumber == carNumber)
+        |> List.head
 
 
 {-| The cars racing in one class, in running order.
