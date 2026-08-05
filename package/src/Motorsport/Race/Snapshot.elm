@@ -148,9 +148,21 @@ type alias Standing =
 
 {-| The lap the car is on, as it reads at this moment.
 
-`time` and `best` are the lap's own, as the source data has them; `elapsed` is
-how long the car has been on it, counted from the last time it crossed the line
--- or from the race start, for a car still on its opening lap.
+`elapsed` is how long the car has been on it, counted from the last time it
+crossed the line -- or from the race start, for a car still on its opening lap.
+It is the only lap time here the clock has actually reached.
+
+`best` is not this lap's anything: it is the car's own record, the least time it
+had turned by this moment, and it is what a time of this car's is rated against.
+It is taken off the last lap the car finished, so a car on its opening lap has
+none.
+
+`time` and `miniSectors` are the source data's, and the source data runs to the
+end of the race: they are this lap's eventual time and its full set of
+mini-sector times, including the parts of the lap the car has not driven yet.
+Read either one against `progress` -- as the views that paint a mini-sector do,
+drawing only what is behind the car -- or it will answer a question about the
+future. Nothing else here runs ahead of the clock.
 
 `progress`, `sector` and `miniSector` say how far around the car has got. All
 three come off the clock and the lap's own times, so they say where the car is,
@@ -549,6 +561,18 @@ readCarAt frame placed =
                 , rival = placed.ahead
                 }
                 car
+
+        -- The car's own record as it stood at this moment, taken off the last
+        -- lap it finished rather than the one it is running.
+        --
+        -- A lap's `best` is the least time the car had turned up to and
+        -- including that lap, so the lap in progress carries a `best` that
+        -- already counts a time the clock has not reached -- its own. Reading
+        -- it off the finished lap is what stops the lap being rated against
+        -- itself. A car on its opening lap has no record yet, which is what
+        -- `Nothing` says here.
+        personalBest =
+            car.lastLap |> Maybe.andThen .best
     in
     { metadata = car.metadata
     , status = car.status
@@ -562,7 +586,7 @@ readCarAt frame placed =
         }
     , currentLap =
         { time = car.currentLap |> Maybe.andThen .time
-        , best = car.currentLap |> Maybe.andThen .best
+        , best = personalBest
         , miniSectors = car.currentLap |> Maybe.andThen .miniSectors
         , elapsed = timing.currentLapElapsed
         , progress =
@@ -575,10 +599,10 @@ readCarAt frame placed =
         , rated =
             car.currentLap
                 |> Maybe.andThen
-                    (\lap ->
+                    (\_ ->
                         Performance.rateTime frame.fastestLapTime
                             { time = Just timing.currentLapElapsed
-                            , personalBest = lap.best
+                            , personalBest = personalBest
                             }
                     )
         , sectorStates =

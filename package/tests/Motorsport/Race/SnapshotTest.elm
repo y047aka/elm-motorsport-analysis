@@ -79,6 +79,22 @@ suite =
                         |> Expect.equal
                             (Just [ ( S1, Just Fastest ), ( S2, Just Standard ), ( S3, Just Standard ) ])
             ]
+        , describe "the record a running lap is rated against is the car's own, at that moment"
+            [ test "it is the best of the laps the car has finished, not of the one it is running" <|
+                \_ ->
+                    -- Car 2's second lap is a 4.000 and at 7.000 it is still on
+                    -- it, so that time is not its record yet: the 5.000 of its
+                    -- first lap is. The lap carries a best that counts itself,
+                    -- which is why this is read off the finished lap instead.
+                    carAt "2" (snapshotAt 7000)
+                        |> Maybe.andThen (.currentLap >> .best)
+                        |> Expect.equal (Just 5000)
+            , test "a car on its opening lap has no record to be rated against" <|
+                \_ ->
+                    carAt "2" (snapshotAt 3000)
+                        |> Maybe.andThen (.currentLap >> .best)
+                        |> Expect.equal Nothing
+            ]
         , describe "a car with no lap in progress is nowhere on the track"
             [ test "it reports no sector, as it reports no sector states" <|
                 \_ ->
