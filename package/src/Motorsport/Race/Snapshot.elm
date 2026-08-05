@@ -93,9 +93,18 @@ already turned is here as what was read off it -- `lapsCompleted`, and
 [`lastLap`](#LastLap) -- rather than as the lap itself.
 
 What is read off the lap in progress and off the one just finished is grouped
-under [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap), so that the two
-cannot be mistaken for one another at a call site; what stands apart from both
--- who the car is, where it stands, the gaps it holds -- stays at the top.
+under [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap); what stands apart
+from both -- who the car is, where it stands, the gaps it holds -- stays at the
+top.
+
+That grouping is by which lap the reading came off, which cuts across the other
+question one can ask of these fields: whether the reading is a position or a
+rating. Every rating here -- `currentLap.rated`, `currentLap.sectorStates`,
+`lastLap.rated`, `lastLap.sectors`, `lastLap.miniSectors` and `bestLapRated` --
+is measured against the record the race held at this moment rather than the one
+it ends on, and the grouping leaves them in three separate places. That is why
+it is said here, once, instead of at each of them; see
+[`Lap.Performance`](Motorsport-Lap-Performance).
 
 -}
 type alias CarAt =
@@ -132,8 +141,8 @@ lap's recorded mini-sector times, which is data rather than a position.
 `sector`, `miniSector` and `sectorStates` are `Nothing` together, for a car with
 no lap in progress: a car that is not on a lap is nowhere on the track.
 
-`rated` and `sectorStates` are rated against the record the race held at this
-moment; see [`Lap.Performance`](Motorsport-Lap-Performance).
+What `rated` and `sectorStates` are rated against is [`CarAt`](#CarAt)'s to say,
+along with every other rating on a car.
 
 -}
 type alias CurrentLap =
@@ -152,8 +161,7 @@ type alias CurrentLap =
 {-| The lap the car has just finished, as it was read off it.
 
 The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: the
-time it took and how its sectors went, each rated against the record the race
-held at this moment.
+time it took and how its sectors went, each rated as every rating on a car is.
 
 `miniSectors` is `Nothing` away from Le Mans, where the source data records no
 mini-sectors to rate.
