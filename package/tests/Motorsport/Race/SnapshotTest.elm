@@ -116,9 +116,6 @@ suite =
                         |> Expect.equal (Just ( 1, 0.5, 0 ))
             , test "and where the data records none there is no mini-sector to be in, though there is still a sector" <|
                 \_ ->
-                    -- Away from Le Mans this is every car of every frame, which
-                    -- is why the mini-sector readings do not go `Nothing` in
-                    -- step with `sector` the way the rest of the lap does.
                     carAt "1" (snapshotAt 7000)
                         |> Maybe.map
                             (.currentLap
@@ -131,10 +128,8 @@ suite =
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|
                 \_ ->
-                    -- Car 2's second lap is a 4.000 and at 7.000 it is still on
-                    -- it, so that time is not its record yet: the 5.000 of its
-                    -- first lap is. The lap carries a best that counts itself,
-                    -- which is why this is read off the finished lap instead.
+                    -- Car 2's second lap is a 4.000 and at 7.000 it is still
+                    -- on it, so its record is the 5.000 of the first.
                     carAt "2" (snapshotAt 7000)
                         |> Maybe.andThen .bestLap
                         |> Maybe.map .time
@@ -149,10 +144,6 @@ suite =
         , describe "the field is the cars that are running"
             [ test "a car that has turned no lap is not in it" <|
                 \_ ->
-                    -- Which is every car the data can hand over: the loader
-                    -- builds the entry list out of the lap records, so a car
-                    -- that completed no lap reaches neither file. The fixture
-                    -- can still make one, and this is what becomes of it.
                     fieldWithTailenders
                         |> Snapshot.toList
                         |> List.map (.metadata >> .carNumber)
@@ -229,11 +220,8 @@ sectorStatesOf carNumber snapshot =
 
 
 {-| A wider field, for what two cars cannot show: two of them sharing a class,
-and one that never took to the track at all and so does not join it.
-
-Read at 7.000, as the two-car fixture is, so the cars it has in common with it
-stand where they stand there.
-
+and one that never took to the track and so does not join it. Read at 7.000, as
+the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
@@ -253,12 +241,9 @@ carThree =
 
 
 {-| A car from a circuit whose source data records mini-sectors, which the two
-above are not from.
-
-Its one lap runs for 15.000 in fifteen even mini-sectors of 1.000 apiece, so the
-mini-sector a clock falls in is the clock divided by a thousand, and how far
-through it is the remainder.
-
+above are not from. Its one lap runs for 15.000 in fifteen even mini-sectors of
+1.000 apiece, so the mini-sector a clock falls in is the clock divided by a
+thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
@@ -304,12 +289,8 @@ withEvenMiniSectors each lap =
 
 {-| Fill each lap's `best` in as the loader does: the least time the car had
 turned up to and including that lap, so the lap in progress carries a record
-that already counts its own time.
-
-Without this every fixture lap would carry none at all, and a test asking what
-record a car held would read `Nothing` whatever the answer ought to be -- which
-is exactly the shape a test of the record reading too far ahead would take.
-
+that already counts its own time. Without it every fixture lap carries none, and
+a test of what record a car held reads `Nothing` whatever the answer should be.
 -}
 withRunningBests : List Lap -> List Lap
 withRunningBests laps =
@@ -335,10 +316,9 @@ withRunningBests laps =
         |> List.reverse
 
 
-{-| A car that turned no lap at all, which is a car the loader cannot produce:
-the entry list is built out of the lap records, so an entry with no laps is in
-neither file. Here to pin what `Snapshot` does with one anyway -- leaves it out
-of the field.
+{-| A car that turned no lap at all -- which the loader cannot produce, since it
+builds the entry list out of the lap records. Here to pin what `Snapshot` does
+with one anyway: leaves it out of the field.
 -}
 nonStarter : Car
 nonStarter =

@@ -104,9 +104,9 @@ type alias Clock =
 car state is the only one in the app; measuring a gap needs nothing else from
 it.
 
-The lap in progress is a lap, not a `Maybe` of one: a car that is not driving
-one is not racing anybody, and [`Race.Snapshot`](Motorsport-Race-Snapshot) keeps
-such a car out of the field it measures.
+The lap in progress is a lap, not a `Maybe` of one: a car not driving one is
+racing nobody, and [`Race.Snapshot`](Motorsport-Race-Snapshot) keeps it out of
+the field.
 
 -}
 type alias Competitor a =

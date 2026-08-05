@@ -276,12 +276,9 @@ miniSectorDefaultRatio miniSector =
         |> Maybe.map .ratio
 
 
-{-| Order two mini-sectors by where they fall on the lap.
-
-The counterpart of [`Sector.compare`](Motorsport-Sector#compare), and there for
-the same reason: it is how a reading of one mini-sector is placed against the
-one the car is in -- behind it, in it, or still ahead of it.
-
+{-| Order two mini-sectors by where they fall on the lap. The counterpart of
+[`Sector.compare`](Motorsport-Sector#compare), and there for the same reason:
+placing a mini-sector against the one the car is in.
 -}
 compare : LeMans2025MiniSector -> LeMans2025MiniSector -> Order
 compare a b =

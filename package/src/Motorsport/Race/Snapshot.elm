@@ -88,33 +88,22 @@ type Snapshot
 
 {-| One [`Car`](Motorsport-Race-Car) as it stands at one moment of the race.
 
-Readings only -- no laps of any kind. The whole list runs to the end of the
-race, and handing it out beside values that stop at the clock is how future data
-gets read by accident; the laps up to this moment are
-[`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has
-already turned is here as what was read off it -- `standing.lapsCompleted`, and
+Readings only, and no laps: the laps up to this moment are
+[`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has turned
+is here as what was read off it -- `standing.lapsCompleted`, and
 [`lastLap`](#LastLap) -- rather than as the lap itself.
 
-Three groups, by what the reading is of. Where the car stands in the field is
-[`standing`](#Standing); what was read off the lap it is on and off the one it
-just finished is [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap). Who the
-car is stays at the top, and so does `bestLap`, for the reason below.
+Grouped by what the reading is of: where the car stands in the field
+([`standing`](#Standing)), and what the lap it is on and the one it just
+finished read as ([`currentLap`](#CurrentLap), [`lastLap`](#LastLap)). Who the
+car is stays at the top.
 
-Grouping the two laps apart is by which lap the reading came off, which cuts
-across the other question one can ask of these fields: whether the reading is a
-position or a rating. Every rating here -- `currentLap.performance`,
-`currentLap.sectorStates`, `currentLap.miniSectorStates`, `lastLap.rated`,
-`lastLap.sectors`, `lastLap.miniSectors` and `bestLap` -- is measured against
-the records held at this moment rather than the ones the race ends on, and the
-grouping leaves them in three separate places. That is why it is said here,
-once, instead of at each of them; see
+Every rating here is measured against the records as they stood at this moment,
+not as the race leaves them. Two records: the race's, which is
+[`bestTimes`](#bestTimes)'s to hold, and the car's own, which is `bestLap` --
+and that is what puts `bestLap` outside the groups, since it belongs to no one
+lap and every other rating of this car is read against it. See
 [`Lap.Performance`](Motorsport-Lap-Performance).
-
-Two records, in fact: the race's, which is [`bestTimes`](#bestTimes)'s to hold,
-and the car's own, which is `bestLap`. That is what puts `bestLap` at the top
-rather than in a group -- it is the least time the car had turned by this
-moment, so it is neither the lap it is on nor the one it just finished, and it
-is the baseline every other rating of this car is read against.
 
 -}
 type alias CarAt =
@@ -128,19 +117,15 @@ type alias CarAt =
     }
 
 
-{-| Where the car stands in the race at this moment.
+{-| Where the car stands in the race at this moment: the five a classification
+line is made of, in the order one prints them.
 
-The five a classification line is made of, in the order one prints them: what
-the car is placed overall and in its class, how many laps it has behind it, and
-how far back it is from the leader and from the car it is actually racing.
+The placings and the gaps are read off the same running order, in one pass; see
+[`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on its
+opening lap has none.
 
-The placings and the gaps are read off the same running order, in the same pass;
-see [`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on
-its opening lap has none.
-
-Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car, and only
-for it: it is both the car the race is measured to and the car nothing runs
-ahead of, so there is nothing for either gap to reach.
+Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car and only for
+it: nothing runs ahead of it, and it is what the race is measured to.
 
 -}
 type alias Standing =
@@ -154,32 +139,22 @@ type alias Standing =
 
 {-| The lap the car is on, as it reads at this moment.
 
-Every car of a [`Snapshot`](#Snapshot) has one, because a car that has turned no
-lap is not in the field at all -- see [`at`](#at). A car that has finished a lap
-keeps it, since a lap stays the car's current one until the next begins, so a
-car that has retired or taken the flag still reads the last lap it ran.
+Every car of a [`Snapshot`](#Snapshot) has one -- a car that has turned no lap
+is not in the field, and a lap stays the car's current one until the next
+begins, so a car that has retired or taken the flag keeps the last it ran.
 
 `elapsed` is how long the car has been on it, counted from the last time it
-crossed the line -- or from the race start, for a car still on its opening lap.
-`performance` is how that reads against the records, and `progress` is how far
-through the lap it puts the car. Nothing here is the lap's eventual time, which
-is the one figure of a lap in progress that the clock has not reached: what a
-caller wants of it is `progress`, so `progress` is what it is kept for.
+crossed the line -- or from the race start, for a car on its opening lap.
+`performance` is how that reads against the records (see [`CarAt`](#CarAt) for
+which), and `progress` how far through the lap it puts the car. `sector` and
+`miniSector` say where on the lap the car is; `sectorStates` and
+`miniSectorStates` say as much of every sector and every mini-sector at once,
+which is what a strip of cells is drawn from.
 
-`sector` and `miniSector` say where on the lap the car has got to.
-`sectorStates` and `miniSectorStates` say as much of every sector and every
-mini-sector at once -- how much of each is behind the car and how it rates --
-which is what a strip of cells is drawn from. All of it is cut at the clock, so
-a view draws it without asking what the car has reached.
-
-The two mini-sector readings are what remains `Maybe` here, and for a reason of
-their own: a lap with no mini-sector times has none to be in or to rate, and
-away from Le Mans no lap has any. `miniSector` is also `Nothing` for a clock
-past the last mini-sector of the lap, which is in none of them -- the same
-lap-is-over reading that fills `miniSectorStates` in.
-
-What `performance`, `sectorStates` and `miniSectorStates` are rated against is
-[`CarAt`](#CarAt)'s to say, along with every other rating on a car.
+The mini-sector readings are the only `Maybe`s, for the reason
+[`CurrentMiniSectorStates`](#CurrentMiniSectorStates) gives. `miniSector` is
+`Nothing` in one case more: a clock past the last mini-sector of the lap is in
+none of them.
 
 -}
 type alias CurrentLap =
@@ -248,8 +223,7 @@ at clock race =
 
         -- A car carries only its laps, so what it is doing at this moment is
         -- read off the clock here. Who is ahead of whom follows from that, and
-        -- every position below is read off the resulting order. A car with no
-        -- lap in progress drops out; see `sampleCar`.
+        -- every position below is read off the resulting order.
         sampled =
             race.cars
                 |> List.filterMap (sampleCar clock race)
@@ -453,20 +427,16 @@ type alias SampledCar =
 
 {-| Read a car at the clock, where it is running.
 
-`Nothing` for a car with no lap in progress, which is a car that has turned no
-lap at all: a lap stays the car's current one until the next begins, so a car
-that has retired or taken the flag still has one. Such a car is not in the
-field -- there is no answer to where it stands, and nothing to report of it but
-its number.
+`Nothing` for a car with no lap in progress, which is one that has turned no lap
+at all -- a lap stays the car's current one until the next begins. Such a car is
+not in the field: there is no answer to where it stands, and nothing to report
+of it but its number. Nor can the data produce one, since the loader builds the
+entry list out of the lap records themselves.
 
-This is the one place that is settled, and everything downstream is written
-knowing it: [`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) and
-[`Gap.Competitor`](Motorsport-Gap#Competitor) both ask for a lap rather than a
+Settled here once, and everything downstream is written knowing it:
+[`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) and
+[`Gap.Competitor`](Motorsport-Gap#Competitor) ask for a lap rather than a
 `Maybe` of one, and a [`CarAt`](#CarAt) carries its lap plainly.
-
-Nor can the data produce such a car. The loader builds the entry list out of the
-lap records themselves, so one that completed no lap is in neither of the files
-the app reads.
 
 -}
 sampleCar : { elapsed : Instant } -> Race -> Car -> Maybe SampledCar
@@ -656,18 +626,11 @@ readCarAt frame placed =
                 }
                 car
 
-        -- The car's own record as it stood at this moment, taken off the last
-        -- lap it finished rather than the one it is running.
-        --
-        -- A lap's `best` is the least time the car had turned up to and
-        -- including that lap, so the lap in progress carries a `best` that
-        -- already counts a time the clock has not reached -- its own. Reading
-        -- it off the finished lap is what stops the lap being rated against
-        -- itself. A car on its opening lap has no record yet, which is what
-        -- `Nothing` says here.
-        --
-        -- Read once: both the baseline `currentLap.performance` is read against
-        -- and `bestLap` come off this, so the two cannot come apart.
+        -- The car's own record at this moment. A lap's `best` counts its own
+        -- time, so the lap in progress carries one the clock has not reached;
+        -- reading it off the finished lap is what stops the lap being rated
+        -- against itself. Read once, so `currentLap.performance`'s baseline and
+        -- `bestLap` cannot come apart.
         personalBest =
             car.lastLap |> Maybe.andThen .best
     in
@@ -705,9 +668,6 @@ readCarAt frame placed =
             car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
         }
     , bestLap =
-        -- The record itself, rated: `rateTime` gives nothing back for a car
-        -- that has not set one, which is the same `Nothing` `personalBest`
-        -- already carries.
         Performance.rateTime frame.fastestLapTime
             { time = personalBest, personalBest = personalBest }
     }

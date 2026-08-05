@@ -33,10 +33,9 @@ import SortedList exposing (SortedList)
 This carries the domain rule, which is `Lap.compareAt`'s: by lap number, then
 sector, then mini-sector, then elapsed time within the current sector.
 
-Every car handed here is driving a lap. A car that is not is not in a running
-order at all -- there is no answer to where it stands -- so it is
-[`Race.Snapshot`](Motorsport-Race-Snapshot)'s to leave out before it gets
-here.
+Every car handed here is driving a lap; a car that is not holds no place in a
+running order, and [`Race.Snapshot`](Motorsport-Race-Snapshot) leaves it out
+before it gets here.
 
 The result is a plain list, not a `SortedList`: the caller's next move is to
 number the cars off, and it is that number `byPosition` guards.
