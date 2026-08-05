@@ -445,7 +445,6 @@ The status is looked up rather than worked out here; see
 type alias SampledCar =
     Gap.Competitor
         { metadata : Car.Metadata
-        , lapInProgress : Lap
         , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
@@ -457,18 +456,17 @@ type alias SampledCar =
 `Nothing` for a car with no lap in progress, which is a car that has turned no
 lap at all: a lap stays the car's current one until the next begins, so a car
 that has retired or taken the flag still has one. Such a car is not in the
-field. It holds no place in a running order --
-[`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) says as much of two
-of them -- and there is nothing to report of it but its number.
+field -- there is no answer to where it stands, and nothing to report of it but
+its number.
 
-Nor can the data produce one. The loader builds the entry list out of the lap
-records themselves, so a car that completed no lap is in neither of the files
-the app reads; keeping it out here is what lets a [`CarAt`](#CarAt) carry its
-lap plainly rather than as a `Maybe` no race could fill.
+This is the one place that is settled, and everything downstream is written
+knowing it: [`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) and
+[`Gap.Competitor`](Motorsport-Gap#Competitor) both ask for a lap rather than a
+`Maybe` of one, and a [`CarAt`](#CarAt) carries its lap plainly.
 
-`lapInProgress` is that lap, and `currentLap` is the same lap in the shape
-[`Gap.Competitor`](Motorsport-Gap#Competitor) and the ordering read it in. The
-`Maybe` is theirs, not this module's.
+Nor can the data produce such a car. The loader builds the entry list out of the
+lap records themselves, so one that completed no lap is in neither of the files
+the app reads.
 
 -}
 sampleCar : { elapsed : Instant } -> Race -> Car -> Maybe SampledCar
@@ -478,8 +476,7 @@ sampleCar clock race car =
             (\lap ->
                 { metadata = car.metadata
                 , laps = car.laps
-                , currentLap = Just lap
-                , lapInProgress = lap
+                , currentLap = lap
                 , lastLap = Lap.findLastLapAt clock car.laps
                 , status = Race.statusAt clock car.metadata.carNumber race
                 , currentDriver = lap.driver
@@ -693,7 +690,7 @@ readCarAt frame placed =
             , elapsed = timing.currentLapElapsed
             , previousLap = Maybe.withDefault Lap.empty car.lastLap
             }
-            car.lapInProgress
+            car.currentLap
     , lastLap =
         { rated =
             car.lastLap
