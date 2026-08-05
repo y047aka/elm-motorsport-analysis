@@ -30,10 +30,12 @@ import SortedList exposing (SortedList)
 
 {-| Sort cars into the order they are running in at a moment of the race.
 
-This carries the domain rule: a car with a lap in progress is ahead of one
-without, and between two cars that are both running, `Lap.compareAt` decides --
-by lap number, then sector, then mini-sector, then elapsed time within the
-current sector.
+This carries the domain rule, which is `Lap.compareAt`'s: by lap number, then
+sector, then mini-sector, then elapsed time within the current sector.
+
+Every car handed here is driving a lap; a car that is not holds no place in a
+running order, and [`Race.Snapshot`](Motorsport-Race-Snapshot) leaves it out
+before it gets here.
 
 The result is a plain list, not a `SortedList`: the caller's next move is to
 number the cars off, and it is that number `byPosition` guards.
@@ -42,31 +44,9 @@ number the cars off, and it is that number `byPosition` guards.
     -- The leader first, then the rest in the order they are running
 
 -}
-runningOrder : { elapsed : Instant } -> List { a | currentLap : Maybe Lap } -> List { a | currentLap : Maybe Lap }
+runningOrder : { elapsed : Instant } -> List { a | currentLap : Lap } -> List { a | currentLap : Lap }
 runningOrder clock =
-    List.sortWith (compareOnTrack clock)
-
-
-compareOnTrack :
-    { elapsed : Instant }
-    -> { a | currentLap : Maybe Lap }
-    -> { a | currentLap : Maybe Lap }
-    -> Order
-compareOnTrack clock a b =
-    case ( a.currentLap, b.currentLap ) of
-        ( Just lapA, Just lapB ) ->
-            Lap.compareAt clock lapA lapB
-
-        ( Just _, Nothing ) ->
-            LT
-
-        ( Nothing, Just _ ) ->
-            GT
-
-        ( Nothing, Nothing ) ->
-            -- Ordering between two cars without lap data is undefined.
-            -- List.sortWith is stable, so their relative order from the input list is preserved.
-            EQ
+    List.sortWith (\a b -> Lap.compareAt clock a.currentLap b.currentLap)
 
 
 {-| Phantom type marking a list as ordered by racing position.
@@ -76,7 +56,11 @@ type ByPosition
 
 
 {-| Sort by the position each item has already been given.
+
+Takes the position rather than reading a field off the item, so that where the
+caller keeps that number is the caller's business.
+
 -}
-byPosition : List { a | position : Int } -> SortedList ByPosition { a | position : Int }
-byPosition items =
-    SortedList.sortBy (Compare.by .position) items
+byPosition : (a -> Int) -> List a -> SortedList ByPosition a
+byPosition toPosition items =
+    SortedList.sortBy (Compare.by toPosition) items

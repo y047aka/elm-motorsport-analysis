@@ -125,9 +125,7 @@ driverList : CarAt -> Html msg
 driverList item =
     let
         isCurrentDriver driver =
-            item.currentDriver
-                |> Maybe.map (Driver.isSame driver)
-                |> Maybe.withDefault False
+            Driver.isSame driver item.currentDriver
     in
     div
         [ css
@@ -198,11 +196,11 @@ summaryStats item =
             , property "grid-template-columns" "repeat(5, minmax(0, 1fr))"
             ]
         ]
-        [ statCell "Pos" (text ("P" ++ String.fromInt item.position))
-        , statCell "Class" (text ("P" ++ String.fromInt item.positionInClass))
-        , statCell "Laps" (text (String.fromInt item.lapsCompleted))
-        , statCell "Gap" (text (Gap.toString item.gapToLeader))
-        , statCell "Int" (text (Gap.toString item.intervalToAhead))
+        [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
+        , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
+        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
+        , statCell "Gap" (text (Gap.toString item.standing.gapToLeader))
+        , statCell "Int" (text (Gap.toString item.standing.intervalToAhead))
         ]
 
 

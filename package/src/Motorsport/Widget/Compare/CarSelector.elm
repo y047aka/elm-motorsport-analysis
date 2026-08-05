@@ -10,7 +10,6 @@ import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
-import List.Extra
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -23,10 +22,7 @@ carSelector : (String -> msg) -> Snapshot -> Class -> List String -> Html msg
 carSelector onToggleCar standings class selectedCarNumbers =
     let
         classCars =
-            Snapshot.toClassList standings
-                |> List.Extra.find (\( carClass, _ ) -> carClass == class)
-                |> Maybe.map Tuple.second
-                |> Maybe.withDefault []
+            Snapshot.inClass class standings
     in
     div
         [ css

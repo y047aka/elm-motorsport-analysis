@@ -100,12 +100,17 @@ type alias Clock =
 -- MEASURING A GAP
 
 
-{-| Whatever carries a lap history and a lap in progress. The standings' own
+{-| Whatever carries a lap history and a lap it is driving. The standings' own
 car state is the only one in the app; measuring a gap needs nothing else from
 it.
+
+The lap in progress is a lap, not a `Maybe` of one: a car not driving one is
+racing nobody, and [`Race.Snapshot`](Motorsport-Race-Snapshot) keeps it out of
+the field.
+
 -}
 type alias Competitor a =
-    { a | currentLap : Maybe Lap, laps : List Lap }
+    { a | currentLap : Lap, laps : List Lap }
 
 
 {-| The gap between two cars at a moment of the race, seen from the car behind.
@@ -140,26 +145,19 @@ lapsBetween : Clock -> { ahead : Competitor a, behind : Competitor b } -> Int
 lapsBetween clock { ahead, behind } =
     let
         currentSector =
-            Maybe.map (Lap.currentSector clock) behind.currentLap
+            Lap.currentSector clock behind.currentLap
 
         hasComeBackRound =
-            Maybe.map3
-                (\sector aheadLap behindLap ->
-                    Instant.compare (Lap.sectorStart sector aheadLap) (Lap.sectorStart sector behindLap) == LT
-                )
-                currentSector
-                ahead.currentLap
-                behind.currentLap
-                |> Maybe.withDefault False
+            Instant.compare
+                (Lap.sectorStart currentSector ahead.currentLap)
+                (Lap.sectorStart currentSector behind.currentLap)
+                == LT
     in
-    case Maybe.map2 (\aheadLap behindLap -> aheadLap.lap - behindLap.lap) ahead.currentLap behind.currentLap of
-        Nothing ->
+    case ahead.currentLap.lap - behind.currentLap.lap of
+        0 ->
             0
 
-        Just 0 ->
-            0
-
-        Just lapDiff ->
+        lapDiff ->
             if hasComeBackRound then
                 lapDiff
 
@@ -180,27 +178,25 @@ between the cars.
 -}
 secondsBetween : Clock -> { ahead : Competitor a, behind : Competitor b } -> Gap
 secondsBetween clock { ahead, behind } =
-    case behind.currentLap of
-        Just behindLap ->
-            let
-                currentSector =
-                    Lap.currentSector clock behindLap
-            in
-            ahead.laps
-                |> List.Extra.find (\lap -> lap.lap == behindLap.lap)
-                |> Maybe.map
-                    (\aheadLap ->
-                        seconds
-                            (Instant.since
-                                { from = Lap.sectorStart currentSector aheadLap
-                                , to = Lap.sectorStart currentSector behindLap
-                                }
-                            )
-                    )
-                |> Maybe.withDefault none
+    let
+        behindLap =
+            behind.currentLap
 
-        Nothing ->
-            none
+        currentSector =
+            Lap.currentSector clock behindLap
+    in
+    ahead.laps
+        |> List.Extra.find (\lap -> lap.lap == behindLap.lap)
+        |> Maybe.map
+            (\aheadLap ->
+                seconds
+                    (Instant.since
+                        { from = Lap.sectorStart currentSector aheadLap
+                        , to = Lap.sectorStart currentSector behindLap
+                        }
+                    )
+            )
+        |> Maybe.withDefault none
 
 
 

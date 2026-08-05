@@ -28,7 +28,7 @@ following lapNumber delay =
         car =
             onLap lapNumber
     in
-    { currentLap = Maybe.map (delayBy delay) car.currentLap
+    { currentLap = delayBy delay car.currentLap
     , laps = List.map (delayBy delay) car.laps
     }
 
@@ -41,13 +41,13 @@ onLap lapNumber =
         laps =
             List.map lap (List.range 1 lapNumber)
     in
-    { currentLap = List.drop (lapNumber - 1) laps |> List.head
+    { currentLap = lap lapNumber
     , laps = laps
     }
 
 
 type alias Competitor =
-    { currentLap : Maybe Lap, laps : List Lap }
+    { currentLap : Lap, laps : List Lap }
 
 
 lap : Int -> Lap
@@ -83,11 +83,6 @@ tests =
                     Gap.at { elapsed = Instant.fromDuration 25000 }
                         { ahead = leader, behind = following 3 1500 }
                         |> Expect.equal (Gap.seconds 1500)
-            , test "reports no gap for a car that has not started a lap" <|
-                \_ ->
-                    Gap.at { elapsed = Instant.fromDuration 25000 }
-                        { ahead = leader, behind = { currentLap = Nothing, laps = [] } }
-                        |> Expect.equal Gap.none
             , test "reports no gap where the car ahead has no record of the lap being compared" <|
                 \_ ->
                     Gap.at { elapsed = Instant.fromDuration 25000 }

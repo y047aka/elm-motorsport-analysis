@@ -44,6 +44,11 @@ type alias RatedTime =
 time to rate. A time the source data did not record produces no rating rather
 than an uncoloured one, so a caller renders the same "-" it renders for a car
 with no lap at all.
+
+A time that is certainly there -- a running lap's, read off the clock -- wants
+[`performanceLevel`](#performanceLevel) instead, and keeps the time under
+whatever name it already has.
+
 -}
 rateTime : Maybe Duration -> { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
 rateTime fastest { time, personalBest } =
@@ -87,12 +92,12 @@ type alias MiniSectorPerformance =
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
-        rate miniSector fastest =
+        rateOne miniSector fastest =
             rateTime (BestTimes.timeOf fastest)
                 { time = miniSector.time, personalBest = miniSector.best }
     in
     lap.miniSectors
-        |> Maybe.map (\ms -> LeMans.map2 rate ms bestTimes.fastestMiniSectors)
+        |> Maybe.map (\ms -> LeMans.map2 rateOne ms bestTimes.fastestMiniSectors)
 
 
 
