@@ -1,7 +1,9 @@
 module Motorsport.Race.SnapshotTest exposing (suite)
 
 import Expect
+import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Class.Era as Era
 import Motorsport.Driver as Driver
@@ -47,6 +49,22 @@ suite =
                         |> carAt "1"
                         |> Maybe.map (.standing >> .gapToLeader >> Gap.toString)
                         |> Expect.notEqual (Just "-")
+            , test "nothing runs ahead of the leader either, so it reports no interval" <|
+                \_ ->
+                    snapshotAt 7000
+                        |> carAt "2"
+                        |> Maybe.map (.standing >> .intervalToAhead >> Gap.toString)
+                        |> Expect.equal (Just "-")
+            , test "and the car in second is racing the leader, so its interval is that same gap" <|
+                \_ ->
+                    snapshotAt 7000
+                        |> carAt "1"
+                        |> Maybe.map
+                            (\car ->
+                                Gap.toString car.standing.intervalToAhead
+                                    == Gap.toString car.standing.gapToLeader
+                            )
+                        |> Expect.equal (Just True)
             ]
         , describe "each car is placed within its class as well as within the field"
             [ test "a class of one puts its car first, whatever it stands overall" <|
@@ -78,6 +96,28 @@ suite =
                         |> Maybe.map (Sector.toList >> List.map (\( sector, state ) -> ( sector, Maybe.map .performance state.rated )))
                         |> Expect.equal
                             (Just [ ( S1, Just Fastest ), ( S2, Just Standard ), ( S3, Just Standard ) ])
+            ]
+        , describe "the mini-sector a car is in, where the source data records mini-sectors"
+            [ test "is the one the clock falls in, and says how far through it the car is" <|
+                \_ ->
+                    -- Fifteen even mini-sectors of 1.000, so 3.500 is half way
+                    -- through the fourth of them in track order.
+                    carAt "7" (leMansFieldAt 3500)
+                        |> Maybe.andThen (.currentLap >> .miniSector)
+                        |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
+            , test "and where the data records none there is no mini-sector to be in, though there is still a sector" <|
+                \_ ->
+                    -- Away from Le Mans this is every car of every frame, which
+                    -- is why `miniSector` does not go `Nothing` in step with
+                    -- `sector` the way the other readings of the lap do.
+                    carAt "1" (snapshotAt 7000)
+                        |> Maybe.map
+                            (\car ->
+                                ( car.currentLap.miniSector
+                                , car.currentLap.sector |> Maybe.map .sector
+                                )
+                            )
+                        |> Expect.equal (Just ( Nothing, Just S2 ))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|
@@ -201,8 +241,91 @@ carThree : Car
 carThree =
     { metadata = metadataOf "3" (classOf "HYPERCAR")
     , startPosition = 3
-    , laps = [ lapOf "3" 1 20000 20000 { s1 = 6000, s2 = 7000, s3 = 7000 } ]
+    , laps = withRunningBests [ lapOf "3" 1 20000 20000 { s1 = 6000, s2 = 7000, s3 = 7000 } ]
     }
+
+
+{-| A car from a circuit whose source data records mini-sectors, which the two
+above are not from.
+
+Its one lap runs for 15.000 in fifteen even mini-sectors of 1.000 apiece, so the
+mini-sector a clock falls in is the clock divided by a thousand, and how far
+through it is the remainder.
+
+-}
+leMansFieldAt : Duration -> Snapshot
+leMansFieldAt elapsed =
+    Race.fromCars [ leMansCar ]
+        |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+
+
+leMansCar : Car
+leMansCar =
+    { metadata = metadataOf "7" (classOf "HYPERCAR")
+    , startPosition = 1
+    , laps =
+        withRunningBests
+            [ lapOf "7" 1 15000 15000 { s1 = 3000, s2 = 4000, s3 = 8000 }
+                |> withEvenMiniSectors 1000
+            ]
+    }
+
+
+{-| Give a lap the fifteen mini-sectors of Le Mans, each taking `each`, so the
+nth of them in track order ends `n * each` into the lap.
+-}
+withEvenMiniSectors : Duration -> Lap -> Lap
+withEvenMiniSectors each lap =
+    { lap
+        | miniSectors =
+            LeMans.initialize
+                (\mini ->
+                    let
+                        position =
+                            LeMans.miniSectorOrder
+                                |> List.Extra.elemIndex mini
+                                |> Maybe.withDefault 0
+                    in
+                    { time = Just each
+                    , elapsed = Just (each * (position + 1))
+                    , best = Nothing
+                    }
+                )
+                |> Just
+    }
+
+
+{-| Fill each lap's `best` in as the loader does: the least time the car had
+turned up to and including that lap, so the lap in progress carries a record
+that already counts its own time.
+
+Without this every fixture lap would carry none at all, and a test asking what
+record a car held would read `Nothing` whatever the answer ought to be -- which
+is exactly the shape a test of the record reading too far ahead would take.
+
+-}
+withRunningBests : List Lap -> List Lap
+withRunningBests laps =
+    laps
+        |> List.foldl
+            (\lap ( standing, acc ) ->
+                let
+                    best =
+                        case ( standing, lap.time ) of
+                            ( Just held, Just time ) ->
+                                Just (min held time)
+
+                            ( Nothing, _ ) ->
+                                lap.time
+
+                            ( _, Nothing ) ->
+                                standing
+                in
+                ( best, { lap | best = best } :: acc )
+            )
+            ( Nothing, [] )
+        |> Tuple.second
+        |> List.reverse
 
 
 {-| A car that turned no lap at all -- so it is on no lap, in no sector, and
@@ -221,9 +344,10 @@ carOne =
     { metadata = metadataOf "1" (classOf "HYPERCAR")
     , startPosition = 1
     , laps =
-        [ lapOf "1" 1 6000 6000 { s1 = 1000, s2 = 2000, s3 = 3000 }
-        , lapOf "1" 2 6000 12000 { s1 = 1000, s2 = 2000, s3 = 3000 }
-        ]
+        withRunningBests
+            [ lapOf "1" 1 6000 6000 { s1 = 1000, s2 = 2000, s3 = 3000 }
+            , lapOf "1" 2 6000 12000 { s1 = 1000, s2 = 2000, s3 = 3000 }
+            ]
     }
 
 
@@ -232,9 +356,10 @@ carTwo =
     { metadata = metadataOf "2" (classOf "LMGT3")
     , startPosition = 2
     , laps =
-        [ lapOf "2" 1 5000 5000 { s1 = 1500, s2 = 1500, s3 = 2000 }
-        , lapOf "2" 2 4000 9000 { s1 = 1500, s2 = 1500, s3 = 1000 }
-        ]
+        withRunningBests
+            [ lapOf "2" 1 5000 5000 { s1 = 1500, s2 = 1500, s3 = 2000 }
+            , lapOf "2" 2 4000 9000 { s1 = 1500, s2 = 1500, s3 = 1000 }
+            ]
     }
 
 

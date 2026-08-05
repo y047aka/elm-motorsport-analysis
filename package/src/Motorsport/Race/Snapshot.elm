@@ -155,11 +155,13 @@ crossed the line -- or from the race start, for a car still on its opening lap.
 It is the only lap time here the clock has actually reached.
 
 `time` and `miniSectors` are the source data's, and the source data runs to the
-end of the race: they are this lap's eventual time and its full set of
-mini-sector times, including the parts of the lap the car has not driven yet.
-Read either one against `progress` -- as the views that paint a mini-sector do,
-drawing only what is behind the car -- or it will answer a question about the
-future. Nothing else here runs ahead of the clock.
+end of the race: `time` is what the lap will have taken once it is over, and
+`miniSectors` carries every mini-sector time of it, the ones the car has not
+reached included. Neither is cut at the clock, and nothing here cuts them --
+`progress` is `elapsed` measured against `time`, which is a use of the future
+figure rather than a guard on it. A view that shows either has to do the cutting
+itself, as the mini-sector strip does by filling each cell only as far as
+`miniSector` says the car has got. Nothing else here runs ahead of the clock.
 
 `progress`, `sector` and `miniSector` say how far around the car has got. All
 three come off the clock and the lap's own times, so they say where the car is,
@@ -602,6 +604,9 @@ readCarAt frame placed =
         , sector = timing.sector
         , miniSector = timing.miniSector
         , rated =
+            -- On the lap for its presence alone, which is why the lap itself
+            -- goes unread: there is a running time to rate only while the car
+            -- is on a lap, and that time is the clock's, not the lap's.
             car.currentLap
                 |> Maybe.andThen
                     (\_ ->
