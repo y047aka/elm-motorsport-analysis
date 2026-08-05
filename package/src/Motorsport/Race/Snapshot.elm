@@ -134,8 +134,9 @@ The placings and the gaps are read off the same running order, in the same pass;
 see [`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on
 its opening lap has none.
 
-Both gaps are [`Gap.none`](Motorsport-Gap#none) where there is no car to measure
-to: the leader holds neither, and the first car of the field has no interval.
+Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car, and only
+for it: it is both the car the race is measured to and the car nothing runs
+ahead of, so there is nothing for either gap to reach.
 
 -}
 type alias Standing =
@@ -166,8 +167,15 @@ not how anything is drawn. Singular `miniSector` is one of those three -- which
 mini-sector the car is in, and how far through it; plural `miniSectors` is the
 lap's recorded mini-sector times, which is data rather than a position.
 
-`sector`, `miniSector` and `sectorStates` are `Nothing` together, for a car with
-no lap in progress: a car that is not on a lap is nowhere on the track.
+`sector` and `sectorStates` are `Nothing` together, for a car with no lap in
+progress: a car that is not on a lap is nowhere on the track. In practice that
+means a car that has turned no lap at all -- a lap the car has finished stays
+its current one until the next begins, so a car that has retired or taken the
+flag keeps the last lap it ran.
+
+`miniSector` is `Nothing` under that same condition and one more: a lap with no
+mini-sector times has no mini-sector to be in. Away from Le Mans no lap has any,
+so there `miniSector` is `Nothing` throughout while the two above are not.
 
 What `rated` and `sectorStates` are rated against is [`CarAt`](#CarAt)'s to say,
 along with every other rating on a car.
@@ -566,6 +574,9 @@ readCarAt frame placed =
         -- it off the finished lap is what stops the lap being rated against
         -- itself. A car on its opening lap has no record yet, which is what
         -- `Nothing` says here.
+        --
+        -- Read once: both the baseline `currentLap.rated` is rated against and
+        -- `bestLapRated` come off this, so the two cannot come apart.
         personalBest =
             car.lastLap |> Maybe.andThen .best
     in
@@ -620,10 +631,9 @@ readCarAt frame placed =
             car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
         }
     , bestLapRated =
-        car.lastLap
-            |> Maybe.andThen
-                (\lap ->
-                    Performance.rateTime frame.fastestLapTime
-                        { time = lap.best, personalBest = lap.best }
-                )
+        -- The record itself, rated: `rateTime` gives nothing back for a car
+        -- that has not set one, which is the same `Nothing` `personalBest`
+        -- already carries.
+        Performance.rateTime frame.fastestLapTime
+            { time = personalBest, personalBest = personalBest }
     }
