@@ -95,22 +95,22 @@ already turned is here as what was read off it -- `standing.lapsCompleted`, and
 Three groups, by what the reading is of. Where the car stands in the field is
 [`standing`](#Standing); what was read off the lap it is on and off the one it
 just finished is [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap). Who the
-car is stays at the top, and so does `bestLapRated`, for the reason below.
+car is stays at the top, and so does `bestLap`, for the reason below.
 
 Grouping the two laps apart is by which lap the reading came off, which cuts
 across the other question one can ask of these fields: whether the reading is a
 position or a rating. Every rating here -- `currentLap.rated`, `currentLap.sectorStates`,
-`lastLap.rated`, `lastLap.sectors`, `lastLap.miniSectors` and `bestLapRated` --
+`lastLap.rated`, `lastLap.sectors`, `lastLap.miniSectors` and `bestLap` --
 is measured against the records held at this moment rather than the ones the
 race ends on, and the grouping leaves them in three separate places. That is why
 it is said here, once, instead of at each of them; see
 [`Lap.Performance`](Motorsport-Lap-Performance).
 
 Two records, in fact: the race's, which is [`bestTimes`](#bestTimes)'s to hold,
-and the car's own, which is `bestLapRated`. That is what puts `bestLapRated` at
-the top rather than in a group -- it is the least time the car had turned by
-this moment, so it is neither the lap it is on nor the one it just finished, and
-it is the baseline every other rating of this car is read against.
+and the car's own, which is `bestLap`. That is what puts `bestLap` at the top
+rather than in a group -- it is the least time the car had turned by this
+moment, so it is neither the lap it is on nor the one it just finished, and it
+is the baseline every other rating of this car is read against.
 
 -}
 type alias CarAt =
@@ -120,7 +120,7 @@ type alias CarAt =
     , standing : Standing
     , currentLap : CurrentLap
     , lastLap : LastLap
-    , bestLapRated : Maybe RatedTime
+    , bestLap : Maybe RatedTime
     }
 
 
@@ -578,7 +578,7 @@ readCarAt frame placed =
         -- `Nothing` says here.
         --
         -- Read once: both the baseline `currentLap.rated` is rated against and
-        -- `bestLapRated` come off this, so the two cannot come apart.
+        -- `bestLap` come off this, so the two cannot come apart.
         personalBest =
             car.lastLap |> Maybe.andThen .best
     in
@@ -635,7 +635,7 @@ readCarAt frame placed =
         , miniSectors =
             car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
         }
-    , bestLapRated =
+    , bestLap =
         -- The record itself, rated: `rateTime` gives nothing back for a car
         -- that has not set one, which is the same `Nothing` `personalBest`
         -- already carries.
