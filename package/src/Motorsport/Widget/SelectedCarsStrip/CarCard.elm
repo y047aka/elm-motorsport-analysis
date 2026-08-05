@@ -137,7 +137,7 @@ positionLabel item =
                 ]
             ]
         ]
-        [ text ("P" ++ String.fromInt item.position) ]
+        [ text ("P" ++ String.fromInt item.standing.position) ]
 
 
 gapsRow : CarAt -> Html msg
@@ -151,7 +151,7 @@ gapsRow item =
             , opacity (num 0.75)
             ]
         ]
-        [ gapCell "Interval" item.intervalToAhead ]
+        [ gapCell "Interval" item.standing.intervalToAhead ]
 
 
 gapCell : String -> Gap -> Html msg

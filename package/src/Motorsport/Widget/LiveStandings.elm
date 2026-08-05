@@ -112,12 +112,12 @@ carRow popoverTarget onSelect item =
 
 carRowContent : CarAt -> List (Html msg)
 carRowContent item =
-    [ div [ class "text-center text-xs" ] [ text (String.fromInt item.position) ]
+    [ div [ class "text-center text-xs" ] [ text (String.fromInt item.standing.position) ]
     , CarNumberBadge.viewRow item.metadata
     , div [ class "text-xs opacity-70" ]
         [ text (item.currentDriver |> Maybe.withDefault Driver.unknown |> Driver.toSurname) ]
     , div [ class "text-xs text-right" ]
-        [ text (Gap.toString item.intervalToAhead) ]
+        [ text (Gap.toString item.standing.intervalToAhead) ]
     , if item.status == Status.InPit then
         div
             [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]

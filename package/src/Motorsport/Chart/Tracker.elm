@@ -351,8 +351,8 @@ renderCar direction car { angle, x, y } =
         [ g [ Attributes.transform [ Translate x y ] ]
             -- Lazy compares its arguments by reference equality (===). A Css.Color record is
             -- recreated on every compute, so pass a String, which compares by value.
-            [ Lazy.lazy2 carMarker car.positionInClass (Class.toColor car.metadata.class).value ]
-        , carLabel car.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
+            [ Lazy.lazy2 carMarker car.standing.positionInClass (Class.toColor car.metadata.class).value ]
+        , carLabel car.standing.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
         ]
 
 

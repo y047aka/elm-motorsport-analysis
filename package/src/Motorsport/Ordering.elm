@@ -76,7 +76,11 @@ type ByPosition
 
 
 {-| Sort by the position each item has already been given.
+
+Takes the position rather than reading a field off the item, so that where the
+caller keeps that number is the caller's business.
+
 -}
-byPosition : List { a | position : Int } -> SortedList ByPosition { a | position : Int }
-byPosition items =
-    SortedList.sortBy (Compare.by .position) items
+byPosition : (a -> Int) -> List a -> SortedList ByPosition a
+byPosition toPosition items =
+    SortedList.sortBy (Compare.by toPosition) items

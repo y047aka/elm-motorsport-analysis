@@ -26,7 +26,7 @@ suite =
                 \_ ->
                     snapshotAt 7000
                         |> Snapshot.toList
-                        |> List.map (\car -> ( car.position, car.metadata.carNumber ))
+                        |> List.map (\car -> ( car.standing.position, car.metadata.carNumber ))
                         |> Expect.equal [ ( 1, "2" ), ( 2, "1" ) ]
             , test "the leader is the car in first" <|
                 \_ ->
@@ -38,14 +38,14 @@ suite =
                 \_ ->
                     snapshotAt 7000
                         |> Snapshot.toList
-                        |> List.map (.gapToLeader >> Gap.toString)
+                        |> List.map (.standing >> .gapToLeader >> Gap.toString)
                         |> List.head
                         |> Expect.equal (Just "-")
             , test "the car behind reports one" <|
                 \_ ->
                     snapshotAt 7000
                         |> carAt "1"
-                        |> Maybe.map (.gapToLeader >> Gap.toString)
+                        |> Maybe.map (.standing >> .gapToLeader >> Gap.toString)
                         |> Expect.notEqual (Just "-")
             ]
         , describe "each car is placed within its class as well as within the field"
@@ -53,7 +53,7 @@ suite =
                 \_ ->
                     snapshotAt 7000
                         |> Snapshot.toList
-                        |> List.map (\car -> ( car.metadata.carNumber, car.positionInClass ))
+                        |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
                         |> Expect.equal [ ( "2", 1 ), ( "1", 1 ) ]
             , test "the classes come out grouped, the leader's first" <|
                 \_ ->
@@ -88,7 +88,7 @@ suite =
             , test "it has completed no laps" <|
                 \_ ->
                     carAt "4" fieldWithTailenders
-                        |> Maybe.map .lapsCompleted
+                        |> Maybe.map (.standing >> .lapsCompleted)
                         |> Expect.equal (Just 0)
             , test "and it sorts behind every car that is running" <|
                 \_ ->
@@ -101,12 +101,12 @@ suite =
             [ test "a class of two numbers its cars 1 and 2, whatever they stand overall" <|
                 \_ ->
                     Snapshot.inClass (classOf "HYPERCAR") fieldWithTailenders
-                        |> List.map (\car -> ( car.metadata.carNumber, car.positionInClass ))
+                        |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
                         |> Expect.equal [ ( "1", 1 ), ( "3", 2 ) ]
             , test "a car that is not running is still placed in its class, at the back of it" <|
                 \_ ->
                     Snapshot.inClass (classOf "LMGT3") fieldWithTailenders
-                        |> List.map (\car -> ( car.metadata.carNumber, car.positionInClass ))
+                        |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
                         |> Expect.equal [ ( "2", 1 ), ( "4", 2 ) ]
             , test "a class no car races in is empty" <|
                 \_ ->
@@ -118,7 +118,7 @@ suite =
             [ test "the car that carries the number" <|
                 \_ ->
                     Snapshot.get "3" fieldWithTailenders
-                        |> Maybe.map .position
+                        |> Maybe.map (.standing >> .position)
                         |> Expect.equal (Just 3)
             , test "and nothing for a number no car carries" <|
                 \_ ->

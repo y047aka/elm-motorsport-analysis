@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, CurrentLap, LastLap, CurrentSectorStates
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap, CurrentSectorStates
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
     , bestTimes, lapHistory
@@ -29,7 +29,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field does not have to
 scan `toList` for it.
 
-@docs Snapshot, CarAt, CurrentLap, LastLap, CurrentSectorStates
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, CurrentSectorStates
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
 @docs bestTimes, lapHistory
@@ -89,15 +89,16 @@ Readings only -- no laps of any kind. The whole list runs to the end of the
 race, and handing it out beside values that stop at the clock is how future data
 gets read by accident; the laps up to this moment are
 [`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has
-already turned is here as what was read off it -- `lapsCompleted`, and
+already turned is here as what was read off it -- `standing.lapsCompleted`, and
 [`lastLap`](#LastLap) -- rather than as the lap itself.
 
-What is read off the lap in progress and off the one just finished is grouped
-under [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap); what stands apart
-from both -- who the car is, where it stands, the gaps it holds -- stays at the
-top.
+Three groups, by what the reading is of. Where the car stands in the field is
+[`standing`](#Standing); what was read off the lap it is on and off the one it
+just finished is [`currentLap`](#CurrentLap) and [`lastLap`](#LastLap). Who the
+car is stays at the top, and so does `bestLapRated`, which belongs to no group.
 
-That grouping is by which lap the reading came off, which cuts across the other
+Grouping the two laps apart is by which lap the reading came off, which cuts
+across the other
 question one can ask of these fields: whether the reading is a position or a
 rating. Every rating here -- `currentLap.rated`, `currentLap.sectorStates`,
 `lastLap.rated`, `lastLap.sectors`, `lastLap.miniSectors` and `bestLapRated` --
@@ -111,11 +112,7 @@ type alias CarAt =
     { metadata : Car.Metadata
     , status : Status
     , currentDriver : Maybe Driver
-    , position : Int
-    , positionInClass : Int
-    , lapsCompleted : Int
-    , gapToLeader : Gap
-    , intervalToAhead : Gap
+    , standing : Standing
     , currentLap : CurrentLap
     , lastLap : LastLap
 
@@ -123,6 +120,29 @@ type alias CarAt =
     -- lap it is on nor the one it just finished, so it belongs to neither
     -- group.
     , bestLapRated : Maybe RatedTime
+    }
+
+
+{-| Where the car stands in the race at this moment.
+
+The five a classification line is made of, in the order one prints them: what
+the car is placed overall and in its class, how many laps it has behind it, and
+how far back it is from the leader and from the car it is actually racing.
+
+The placings and the gaps are read off the same running order, in the same pass;
+see [`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on
+its opening lap has none.
+
+Both gaps are [`Gap.none`](Motorsport-Gap#none) where there is no car to measure
+to: the leader holds neither, and the first car of the field has no interval.
+
+-}
+type alias Standing =
+    { position : Int
+    , positionInClass : Int
+    , lapsCompleted : Int
+    , gapToLeader : Gap
+    , intervalToAhead : Gap
     }
 
 
@@ -220,7 +240,7 @@ at clock race =
                     )
 
         sortedCars =
-            Ordering.byPosition cars
+            Ordering.byPosition (.standing >> .position) cars
     in
     Snapshot
         { elapsed = clock.elapsed
@@ -533,11 +553,13 @@ readCarAt frame placed =
     { metadata = car.metadata
     , status = car.status
     , currentDriver = car.currentDriver
-    , position = placed.position
-    , positionInClass = placed.positionInClass
-    , lapsCompleted = car.lastLap |> Maybe.map .lap |> Maybe.withDefault 0
-    , gapToLeader = timing.gapToLeader
-    , intervalToAhead = timing.intervalToAhead
+    , standing =
+        { position = placed.position
+        , positionInClass = placed.positionInClass
+        , lapsCompleted = car.lastLap |> Maybe.map .lap |> Maybe.withDefault 0
+        , gapToLeader = timing.gapToLeader
+        , intervalToAhead = timing.intervalToAhead
+        }
     , currentLap =
         { time = car.currentLap |> Maybe.andThen .time
         , best = car.currentLap |> Maybe.andThen .best

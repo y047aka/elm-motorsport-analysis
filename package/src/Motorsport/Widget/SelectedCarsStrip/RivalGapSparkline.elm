@@ -57,7 +57,7 @@ view lapHistory allCars item =
             findNeighbors allCars item
 
         currentLap =
-            item.lapsCompleted
+            item.standing.lapsCompleted
 
         aheadLines =
             neighbors.ahead |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
