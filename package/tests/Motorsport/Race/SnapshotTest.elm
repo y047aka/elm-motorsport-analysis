@@ -87,12 +87,14 @@ suite =
                     -- first lap is. The lap carries a best that counts itself,
                     -- which is why this is read off the finished lap instead.
                     carAt "2" (snapshotAt 7000)
-                        |> Maybe.andThen (.currentLap >> .best)
+                        |> Maybe.andThen .bestLapRated
+                        |> Maybe.map .time
                         |> Expect.equal (Just 5000)
             , test "a car on its opening lap has no record to be rated against" <|
                 \_ ->
                     carAt "2" (snapshotAt 3000)
-                        |> Maybe.andThen (.currentLap >> .best)
+                        |> Maybe.andThen .bestLapRated
+                        |> Maybe.map .time
                         |> Expect.equal Nothing
             ]
         , describe "a car with no lap in progress is nowhere on the track"

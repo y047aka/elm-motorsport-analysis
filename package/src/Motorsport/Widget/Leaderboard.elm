@@ -464,10 +464,10 @@ currentLapColumn_LeMans24h :
         ->
             { a
                 | status : Status
+                , bestLapRated : Maybe RatedTime
                 , currentLap :
                     { c
                         | elapsed : Duration
-                        , best : Maybe Duration
                         , miniSectors : Maybe MiniSectors
                         , sector : Maybe SectorProgress
                         , miniSector : Maybe MiniSectorProgress
@@ -490,17 +490,17 @@ viewCurrentLapColumn_LeMans24h :
     ->
         { a
             | status : Status
+            , bestLapRated : Maybe RatedTime
             , currentLap :
                 { c
                     | elapsed : Duration
-                    , best : Maybe Duration
                     , miniSectors : Maybe MiniSectors
                     , sector : Maybe SectorProgress
                     , miniSector : Maybe MiniSectorProgress
                 }
         }
     -> Html msg
-viewCurrentLapColumn_LeMans24h bestTimes { status, currentLap } =
+viewCurrentLapColumn_LeMans24h bestTimes { status, bestLapRated, currentLap } =
     let
         lapTime { time, personalBest } =
             div
@@ -558,11 +558,11 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, currentLap } =
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
-        currentLap.best
+        bestLapRated
             |> Maybe.map
-                (\best ->
+                (\bestLap ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = currentLap.elapsed, personalBest = Just best }
+                        [ lapTime { time = currentLap.elapsed, personalBest = Just bestLap.time }
                         , let
                             progressMap =
                                 LeMans.calculateMiniSectorProgress currentLap.miniSector
