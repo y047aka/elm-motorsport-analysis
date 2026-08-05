@@ -361,7 +361,7 @@ viewCarNumberColumn_Wec { carNumber, manufacturer } =
         )
 
 
-driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } } -> Column data msg
+driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Driver } } -> Column data msg
 driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
@@ -370,13 +370,11 @@ driverAndTeamColumn_Wec { getter } =
     }
 
 
-viewDriverAndTeamColumn_Wec : { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Maybe Driver } -> Html msg
+viewDriverAndTeamColumn_Wec : { a | metadata : { b | drivers : List Driver, team : String }, currentDriver : Driver } -> Html msg
 viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
     let
         isCurrentDriver driver =
-            currentDriver
-                |> Maybe.map (Driver.isSame driver)
-                |> Maybe.withDefault False
+            Driver.isSame driver currentDriver
     in
     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
         [ div [] [ text metadata.team ]

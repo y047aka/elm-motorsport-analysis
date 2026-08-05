@@ -120,7 +120,7 @@ is the baseline every other rating of this car is read against.
 type alias CarAt =
     { metadata : Car.Metadata
     , status : Status
-    , currentDriver : Maybe Driver
+    , currentDriver : Driver
     , standing : Standing
     , currentLap : CurrentLap
     , lastLap : LastLap
@@ -448,7 +448,7 @@ type alias SampledCar =
         , lapInProgress : Lap
         , lastLap : Maybe Lap
         , status : Status
-        , currentDriver : Maybe Driver
+        , currentDriver : Driver
         }
 
 
@@ -482,7 +482,7 @@ sampleCar clock race car =
                 , lapInProgress = lap
                 , lastLap = Lap.findLastLapAt clock car.laps
                 , status = Race.statusAt clock car.metadata.carNumber race
-                , currentDriver = Just lap.driver
+                , currentDriver = lap.driver
                 }
             )
 

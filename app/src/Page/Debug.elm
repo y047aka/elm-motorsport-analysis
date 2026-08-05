@@ -154,7 +154,7 @@ field `lastLapColumn` reads, not everything a
 type alias LapRow =
     { position : Int
     , metadata : Car.Metadata
-    , currentDriver : Maybe Driver
+    , currentDriver : Driver
     , lapsCompleted : Int
     , currentLapSectors : Maybe Lap.SectorTimes
     , lastLap : { rated : Maybe RatedTime }
@@ -180,7 +180,7 @@ lapRow bestTimes index lap =
         , team = ""
         , manufacturer = Motorsport.Manufacturer.Other
         }
-    , currentDriver = Just lap.driver
+    , currentDriver = lap.driver
     , lapsCompleted = lap.lap
     , currentLapSectors = Just lap.sectors
     , lastLap = { rated = Performance.rateTime fastestLapTime { time = lap.time, personalBest = lap.best } }

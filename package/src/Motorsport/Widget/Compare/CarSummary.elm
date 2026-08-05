@@ -125,9 +125,7 @@ driverList : CarAt -> Html msg
 driverList item =
     let
         isCurrentDriver driver =
-            item.currentDriver
-                |> Maybe.map (Driver.isSame driver)
-                |> Maybe.withDefault False
+            Driver.isSame driver item.currentDriver
     in
     div
         [ css
