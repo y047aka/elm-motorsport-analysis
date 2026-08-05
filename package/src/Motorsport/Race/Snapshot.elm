@@ -1,5 +1,6 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, Standing, CurrentLap, LastLap, CurrentSectorStates
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap
+    , CurrentSectorStates, CurrentMiniSectorStates
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
     , bestTimes, lapHistory
@@ -29,7 +30,8 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field does not have to
 scan `toList` for it.
 
-@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, CurrentSectorStates
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap
+@docs CurrentSectorStates, CurrentMiniSectorStates
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
 @docs bestTimes, lapHistory
@@ -38,12 +40,13 @@ scan `toList` for it.
 
 import Dict exposing (Dict)
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
-import Motorsport.Lap as Lap exposing (Lap, MiniSectors)
+import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
@@ -100,9 +103,9 @@ car is stays at the top, and so does `bestLap`, for the reason below.
 Grouping the two laps apart is by which lap the reading came off, which cuts
 across the other question one can ask of these fields: whether the reading is a
 position or a rating. Every rating here -- `currentLap.rated`, `currentLap.sectorStates`,
-`lastLap.rated`, `lastLap.sectors`, `lastLap.miniSectors` and `bestLap` --
-is measured against the records held at this moment rather than the ones the
-race ends on, and the grouping leaves them in three separate places. That is why
+`currentLap.miniSectorStates`, `lastLap.rated`, `lastLap.sectors`,
+`lastLap.miniSectors` and `bestLap` -- is measured against the records held at
+this moment rather than the ones the race ends on, and the grouping leaves them in three separate places. That is why
 it is said here, once, instead of at each of them; see
 [`Lap.Performance`](Motorsport-Lap-Performance).
 
@@ -152,22 +155,21 @@ type alias Standing =
 
 `elapsed` is how long the car has been on it, counted from the last time it
 crossed the line -- or from the race start, for a car still on its opening lap.
-It is the only lap time here the clock has actually reached.
 
-`time` and `miniSectors` are the source data's, and the source data runs to the
-end of the race: `time` is what the lap will have taken once it is over, and
-`miniSectors` carries every mini-sector time of it, the ones the car has not
-reached included. Neither is cut at the clock, and nothing here cuts them --
-`progress` is `elapsed` measured against `time`, which is a use of the future
-figure rather than a guard on it. A view that shows either has to do the cutting
-itself, as the mini-sector strip does by filling each cell only as far as
-`miniSector` says the car has got. Nothing else here runs ahead of the clock.
+`time` is the source data's, and the source data runs to the end of the race: it
+is what the lap will have taken once it is over, not anything the clock has
+reached. Nothing here cuts it -- `progress` is `elapsed` measured against it,
+which is a use of the future figure rather than a guard on it -- so a view that
+shows `time` has to do the cutting itself. It is the only field here that runs
+ahead of the clock.
 
-`progress`, `sector` and `miniSector` say how far around the car has got. All
-three come off the clock and the lap's own times, so they say where the car is,
-not how anything is drawn. Singular `miniSector` is one of those three -- which
-mini-sector the car is in, and how far through it; plural `miniSectors` is the
-lap's recorded mini-sector times, which is data rather than a position.
+`progress`, `sector` and `miniSector` say how far around the car has got, read
+off the clock and the lap's own times, so they say where the car is rather than
+how anything is drawn. `sectorStates` and `miniSectorStates` say as much of
+every sector and every mini-sector at once -- how much of each is behind the car
+and how it rates -- which is what a strip of cells is drawn from. They are cut
+at the clock already, so a view draws them without asking what the car has
+reached.
 
 `sector` and `sectorStates` are `Nothing` together, for a car with no lap in
 progress: a car that is not on a lap is nowhere on the track. In practice that
@@ -175,23 +177,26 @@ means a car that has turned no lap at all -- a lap the car has finished stays
 its current one until the next begins, so a car that has retired or taken the
 flag keeps the last lap it ran.
 
-`miniSector` is `Nothing` under that same condition and one more: a lap with no
-mini-sector times has no mini-sector to be in. Away from Le Mans no lap has any,
-so there `miniSector` is `Nothing` throughout while the two above are not.
+`miniSectorStates` is `Nothing` under that same condition and one more: a lap
+with no mini-sector times has none to rate. Away from Le Mans no lap has any, so
+there it is `Nothing` throughout while the two above are not. `miniSector` is
+`Nothing` in both those cases and in one of its own -- a clock past the last
+mini-sector of the lap is in none of them, which is the same lap-is-over reading
+that fills `miniSectorStates` in.
 
-What `rated` and `sectorStates` are rated against is [`CarAt`](#CarAt)'s to say,
-along with every other rating on a car.
+What `rated`, `sectorStates` and `miniSectorStates` are rated against is
+[`CarAt`](#CarAt)'s to say, along with every other rating on a car.
 
 -}
 type alias CurrentLap =
     { time : Maybe Duration
-    , miniSectors : Maybe MiniSectors
     , elapsed : Duration
     , progress : Float
     , sector : Maybe Lap.SectorProgress
     , miniSector : Maybe Lap.MiniSectorProgress
     , rated : Maybe RatedTime
     , sectorStates : Maybe CurrentSectorStates
+    , miniSectorStates : Maybe CurrentMiniSectorStates
     }
 
 
@@ -220,6 +225,17 @@ a mini-sector's is; there is nothing to colour it by.
 -}
 type alias CurrentSectorStates =
     BySector { progress : Float, rated : Maybe RatedTime }
+
+
+{-| The same reading at the finer grain, where the circuit records mini-sectors:
+where the car stands in each of them, and how the time reads where there is one.
+
+`Nothing` on a [`CurrentLap`](#CurrentLap) rather than empty, because away from
+Le Mans there are no mini-sectors to stand anywhere in.
+
+-}
+type alias CurrentMiniSectorStates =
+    ByMiniSector { progress : Float, rated : Maybe RatedTime }
 
 
 {-| Read the whole race at a moment of it.
@@ -293,6 +309,39 @@ currentSectorStates sectorProgress rated =
     in
     Sector.map2 (\progress rating -> { progress = progress, rated = rating })
         (Sector.initialize progressOf)
+        rated
+
+
+{-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
+reading the same way: behind the car complete, ahead of it untouched, and no
+mini-sector in progress at all meaning the lap is over.
+
+Joined here rather than by the view that draws the strip, as the sectors' is:
+a cell wants to know how much of its mini-sector is behind the car and how that
+mini-sector rates, and neither is a question about drawing.
+
+-}
+currentMiniSectorStates : Maybe Lap.MiniSectorProgress -> MiniSectorPerformance -> CurrentMiniSectorStates
+currentMiniSectorStates miniSectorProgress rated =
+    let
+        progressOf mini =
+            case miniSectorProgress of
+                Just current ->
+                    case LeMans.compare mini current.miniSector of
+                        LT ->
+                            1
+
+                        EQ ->
+                            current.progress
+
+                        GT ->
+                            0
+
+                Nothing ->
+                    1
+    in
+    LeMans.map2 (\progress rating -> { progress = progress, rated = rating })
+        (LeMans.initialize progressOf)
         rated
 
 
@@ -594,7 +643,6 @@ readCarAt frame placed =
         }
     , currentLap =
         { time = car.currentLap |> Maybe.andThen .time
-        , miniSectors = car.currentLap |> Maybe.andThen .miniSectors
         , elapsed = timing.currentLapElapsed
         , progress =
             car.currentLap
@@ -621,6 +669,10 @@ readCarAt frame placed =
                     (Performance.ofSectors frame.records
                         >> currentSectorStates timing.sector
                     )
+        , miniSectorStates =
+            car.currentLap
+                |> Maybe.andThen (Performance.ofMiniSectors frame.records)
+                |> Maybe.map (currentMiniSectorStates timing.miniSector)
         }
     , lastLap =
         { rated =

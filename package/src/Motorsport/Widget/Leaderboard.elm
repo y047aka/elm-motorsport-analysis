@@ -61,14 +61,13 @@ import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Chart.Histogram as Histogram
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
-import Motorsport.Lap exposing (Lap, MiniSectorProgress, MiniSectors, SectorProgress)
+import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentMiniSectorStates, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 
@@ -134,6 +133,68 @@ colorOfRated =
 colorOfPerformance : Maybe Performance.PerformanceLevel -> String
 colorOfPerformance =
     Maybe.withDefault Performance.Standard >> Performance.toColorVariable
+
+
+{-| One cell of a sector or mini-sector strip: white as far as the car has got
+while it is still in that stretch, and its rating's colour once the whole of it
+is behind.
+
+Both strips draw from [`Race.Snapshot`](Motorsport-Race-Snapshot)'s reading of
+where the car stands, so at three sectors and at fifteen mini-sectors the cell
+is the same cell.
+
+-}
+progressCell : { a | progress : Float, rated : Maybe RatedTime } -> Html msg
+progressCell { progress, rated } =
+    div
+        [ css
+            [ height (px 3)
+            , borderRadius (px 1)
+            , batch <|
+                if progress < 1 then
+                    [ width (pct (progress * 100))
+                    , backgroundColor (oklch 1 0 0)
+                    ]
+
+                else
+                    [ width (pct 100)
+                    , property "background-color" (colorOfRated rated)
+                    ]
+            ]
+        ]
+        []
+
+
+{-| The seventeen columns of the Le Mans strip: the fifteen mini-sectors in
+track order, with a spacer where each of the first two sectors ends.
+-}
+miniSectorStrip : Snapshot.CurrentMiniSectorStates -> Html msg
+miniSectorStrip states =
+    div
+        [ css
+            [ property "display" "grid"
+            , property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr"
+            , property "column-gap" "1px"
+            ]
+        ]
+        [ progressCell states.scl2
+        , progressCell states.z4
+        , progressCell states.ip1
+        , div [] []
+        , progressCell states.z12
+        , progressCell states.sclc
+        , progressCell states.a7_1
+        , progressCell states.ip2
+        , div [] []
+        , progressCell states.a8_1
+        , progressCell states.sclb
+        , progressCell states.porin
+        , progressCell states.porout
+        , progressCell states.pitref
+        , progressCell states.scl1
+        , progressCell states.fordout
+        , progressCell states.fl
+        ]
 
 
 
@@ -415,25 +476,6 @@ viewCurrentLapColumn_Wec { status, currentLap } =
                     ]
                 ]
                 [ text (Duration.toString time) ]
-
-        sectorCell { progress, rated } =
-            div
-                [ css
-                    [ height (px 3)
-                    , borderRadius (px 1)
-                    , batch <|
-                        if progress < 1 then
-                            [ width (pct (progress * 100))
-                            , backgroundColor (oklch 1 0 0)
-                            ]
-
-                        else
-                            [ width (pct 100)
-                            , property "background-color" (colorOfRated rated)
-                            ]
-                    ]
-                ]
-                []
     in
     if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
@@ -450,7 +492,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
                             , property "column-gap" "4px"
                             ]
                         ]
-                        (List.map sectorCell (Sector.values slots))
+                        (List.map progressCell (Sector.values slots))
                     ]
             )
             currentLap.rated
@@ -468,13 +510,11 @@ currentLapColumn_LeMans24h :
                 , currentLap :
                     { c
                         | elapsed : Duration
-                        , miniSectors : Maybe MiniSectors
-                        , sector : Maybe SectorProgress
-                        , miniSector : Maybe MiniSectorProgress
+                        , miniSectorStates : Maybe CurrentMiniSectorStates
                     }
             }
     , sorter : data -> data -> Order
-    , bestTimes : { b | fastestLapTime : Maybe Holder, fastestMiniSectors : ByMiniSector (Maybe Holder) }
+    , bestTimes : { b | fastestLapTime : Maybe Holder }
     }
     -> Column data msg
 currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
@@ -486,7 +526,7 @@ currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
 
 
 viewCurrentLapColumn_LeMans24h :
-    { b | fastestLapTime : Maybe Holder, fastestMiniSectors : ByMiniSector (Maybe Holder) }
+    { b | fastestLapTime : Maybe Holder }
     ->
         { a
             | status : Status
@@ -494,9 +534,7 @@ viewCurrentLapColumn_LeMans24h :
             , currentLap :
                 { c
                     | elapsed : Duration
-                    , miniSectors : Maybe MiniSectors
-                    , sector : Maybe SectorProgress
-                    , miniSector : Maybe MiniSectorProgress
+                    , miniSectorStates : Maybe CurrentMiniSectorStates
                 }
         }
     -> Html msg
@@ -523,36 +561,6 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                     ]
                 ]
                 [ text (Duration.toString time) ]
-
-        sectorCell sector_ =
-            div
-                [ css
-                    [ height (px 3)
-                    , borderRadius (px 1)
-                    , batch <|
-                        if sector_.progress < 1 then
-                            [ width (pct (sector_.progress * 100))
-                            , backgroundColor (oklch 1 0 0)
-                            ]
-
-                        else
-                            [ width (pct 100)
-                            , property "background-color"
-                                (sector_.time
-                                    |> Maybe.map
-                                        (\time ->
-                                            performanceLevel
-                                                { time = time
-                                                , personalBest = sector_.personalBest
-                                                , fastest = sector_.fastest
-                                                }
-                                        )
-                                    |> colorOfPerformance
-                                )
-                            ]
-                    ]
-                ]
-                []
     in
     if Status.hasRetired status then
         div [ css [ textAlign center ] ] [ text "Retired" ]
@@ -563,29 +571,9 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                 (\best ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                         [ lapTime { time = currentLap.elapsed, personalBest = Just best.time }
-                        , let
-                            progressMap =
-                                LeMans.calculateMiniSectorProgress currentLap.miniSector
-                          in
-                          div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                            [ sectorCell { time = Maybe.andThen (.scl2 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.scl2 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl2, progress = progressMap.scl2 }
-                            , sectorCell { time = Maybe.andThen (.z4 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.z4 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z4, progress = progressMap.z4 }
-                            , sectorCell { time = Maybe.andThen (.ip1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.ip1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip1, progress = progressMap.ip1 }
-                            , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.z12 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.z12 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.z12, progress = progressMap.z12 }
-                            , sectorCell { time = Maybe.andThen (.sclc >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.sclc >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclc, progress = progressMap.sclc }
-                            , sectorCell { time = Maybe.andThen (.a7_1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.a7_1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a7_1, progress = progressMap.a7_1 }
-                            , sectorCell { time = Maybe.andThen (.ip2 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.ip2 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.ip2, progress = progressMap.ip2 }
-                            , div [] [] -- spacer
-                            , sectorCell { time = Maybe.andThen (.a8_1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.a8_1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.a8_1, progress = progressMap.a8_1 }
-                            , sectorCell { time = Maybe.andThen (.sclb >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.sclb >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.sclb, progress = progressMap.sclb }
-                            , sectorCell { time = Maybe.andThen (.porin >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.porin >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porin, progress = progressMap.porin }
-                            , sectorCell { time = Maybe.andThen (.porout >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.porout >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.porout, progress = progressMap.porout }
-                            , sectorCell { time = Maybe.andThen (.pitref >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.pitref >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.pitref, progress = progressMap.pitref }
-                            , sectorCell { time = Maybe.andThen (.scl1 >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.scl1 >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.scl1, progress = progressMap.scl1 }
-                            , sectorCell { time = Maybe.andThen (.fordout >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.fordout >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fordout, progress = progressMap.fordout }
-                            , sectorCell { time = Maybe.andThen (.fl >> .time) currentLap.miniSectors, personalBest = Maybe.andThen (.fl >> .best) currentLap.miniSectors, fastest = BestTimes.timeOf bestTimes.fastestMiniSectors.fl, progress = progressMap.fl }
-                            ]
+                        , currentLap.miniSectorStates
+                            |> Maybe.map miniSectorStrip
+                            |> Maybe.withDefault (text "")
                         ]
                 )
             |> Maybe.withDefault (text "-")

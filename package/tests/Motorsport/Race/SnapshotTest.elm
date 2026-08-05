@@ -105,19 +105,29 @@ suite =
                     carAt "7" (leMansFieldAt 3500)
                         |> Maybe.andThen (.currentLap >> .miniSector)
                         |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
+            , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
+                \_ ->
+                    carAt "7" (leMansFieldAt 3500)
+                        |> Maybe.andThen (.currentLap >> .miniSectorStates)
+                        |> Maybe.map
+                            (\states ->
+                                ( states.ip1.progress, states.z12.progress, states.sclc.progress )
+                            )
+                        |> Expect.equal (Just ( 1, 0.5, 0 ))
             , test "and where the data records none there is no mini-sector to be in, though there is still a sector" <|
                 \_ ->
                     -- Away from Le Mans this is every car of every frame, which
-                    -- is why `miniSector` does not go `Nothing` in step with
-                    -- `sector` the way the other readings of the lap do.
+                    -- is why the mini-sector readings do not go `Nothing` in
+                    -- step with `sector` the way the rest of the lap does.
                     carAt "1" (snapshotAt 7000)
                         |> Maybe.map
                             (\car ->
                                 ( car.currentLap.miniSector
+                                , car.currentLap.miniSectorStates
                                 , car.currentLap.sector |> Maybe.map .sector
                                 )
                             )
-                        |> Expect.equal (Just ( Nothing, Just S2 ))
+                        |> Expect.equal (Just ( Nothing, Nothing, Just S2 ))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|

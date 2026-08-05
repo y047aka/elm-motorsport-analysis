@@ -1,7 +1,7 @@
 module Motorsport.Circuit.LeMans exposing
     ( LeMans2025MiniSector(..)
     , ByMiniSector, initialize, get, map2, values
-    , calculateMiniSectorProgress
+    , compare
     , layout, miniSectorDefaultRatio, miniSectorOrder, miniSectorToString
     )
 
@@ -14,7 +14,7 @@ module Motorsport.Circuit.LeMans exposing
 
 @docs ByMiniSector, initialize, get, map2, values
 
-@docs calculateMiniSectorProgress
+@docs compare
 
 -}
 
@@ -276,73 +276,20 @@ miniSectorDefaultRatio miniSector =
         |> Maybe.map .ratio
 
 
-calculateMiniSectorProgress :
-    Maybe { miniSector : LeMans2025MiniSector, progress : Float }
-    ->
-        { scl2 : Float
-        , z4 : Float
-        , ip1 : Float
-        , z12 : Float
-        , sclc : Float
-        , a7_1 : Float
-        , ip2 : Float
-        , a8_1 : Float
-        , sclb : Float
-        , porin : Float
-        , porout : Float
-        , pitref : Float
-        , scl1 : Float
-        , fordout : Float
-        , fl : Float
-        }
-calculateMiniSectorProgress maybeCurrentMiniSector =
-    case maybeCurrentMiniSector of
-        Nothing ->
-            { scl2 = 0, z4 = 0, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+{-| Order two mini-sectors by where they fall on the lap.
 
-        Just { miniSector, progress } ->
-            case miniSector of
-                SCL2 ->
-                    { scl2 = progress, z4 = 0, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+The counterpart of [`Sector.compare`](Motorsport-Sector#compare), and there for
+the same reason: it is how a reading of one mini-sector is placed against the
+one the car is in -- behind it, in it, or still ahead of it.
 
-                Z4 ->
-                    { scl2 = 1, z4 = progress, ip1 = 0, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
+-}
+compare : LeMans2025MiniSector -> LeMans2025MiniSector -> Order
+compare a b =
+    Basics.compare (toIndex a) (toIndex b)
 
-                IP1 ->
-                    { scl2 = 1, z4 = 1, ip1 = progress, z12 = 0, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
 
-                Z12 ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = progress, sclc = 0, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                SCLC ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = progress, a7_1 = 0, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                A7_1 ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = progress, ip2 = 0, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                IP2 ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = progress, a8_1 = 0, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                A8_1 ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = progress, sclb = 0, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                SCLB ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = progress, porin = 0, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                PORIN ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = progress, porout = 0, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                POROUT ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = progress, pitref = 0, scl1 = 0, fordout = 0, fl = 0 }
-
-                PITREF ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = progress, scl1 = 0, fordout = 0, fl = 0 }
-
-                SCL1 ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = progress, fordout = 0, fl = 0 }
-
-                FORDOUT ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = progress, fl = 0 }
-
-                FL ->
-                    { scl2 = 1, z4 = 1, ip1 = 1, z12 = 1, sclc = 1, a7_1 = 1, ip2 = 1, a8_1 = 1, sclb = 1, porin = 1, porout = 1, pitref = 1, scl1 = 1, fordout = 1, fl = progress }
+toIndex : LeMans2025MiniSector -> Int
+toIndex mini =
+    miniSectorOrder
+        |> List.Extra.elemIndex mini
+        |> Maybe.withDefault 0
