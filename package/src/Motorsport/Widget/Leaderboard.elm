@@ -437,7 +437,8 @@ currentLapColumn_Wec :
                 , currentLap :
                     Maybe
                         { b
-                            | rated : RatedTime
+                            | elapsed : Duration
+                            , performance : Performance.PerformanceLevel
                             , sectorStates : CurrentSectorStates
                         }
             }
@@ -458,7 +459,8 @@ viewCurrentLapColumn_Wec :
         , currentLap :
             Maybe
                 { b
-                    | rated : RatedTime
+                    | elapsed : Duration
+                    , performance : Performance.PerformanceLevel
                     , sectorStates : CurrentSectorStates
                 }
     }
@@ -487,7 +489,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
             |> Maybe.map
                 (\lap ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime lap.rated
+                        [ lapTime { time = lap.elapsed, performance = lap.performance }
                         , div
                             [ css
                                 [ property "display" "grid"

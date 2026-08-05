@@ -1,5 +1,5 @@
 module Motorsport.Lap.Performance exposing
-    ( RatedTime, rate, rateTime
+    ( RatedTime, rateTime
     , SectorPerformance, ofSectors
     , MiniSectorPerformance, ofMiniSectors
     , PerformanceLevel(..), performanceLevel
@@ -17,7 +17,7 @@ lap and the record alone, so [`Race.Snapshot`](Motorsport-Race-Snapshot) reads i
 as part of the race; but nothing in the race changes when it is read, so the view
 is free to rate a lap of its own.
 
-@docs RatedTime, rate, rateTime
+@docs RatedTime, rateTime
 @docs SectorPerformance, ofSectors
 @docs MiniSectorPerformance, ofMiniSectors
 
@@ -40,30 +40,27 @@ type alias RatedTime =
     }
 
 
-{-| Rate a time against the race's record and the car's own.
+{-| Rate a time against the race's record and the car's own, where there is a
+time to rate. A time the source data did not record produces no rating rather
+than an uncoloured one, so a caller renders the same "-" it renders for a car
+with no lap at all.
 
-For a time that is certainly there -- a running lap's elapsed time is read off
-the clock, so there is always one. A time out of the source data may not have
-been recorded, and takes [`rateTime`](#rateTime) instead.
+A time that is certainly there -- a running lap's, read off the clock -- wants
+[`performanceLevel`](#performanceLevel) instead, and keeps the time under
+whatever name it already has.
 
--}
-rate : Maybe Duration -> { time : Duration, personalBest : Maybe Duration } -> RatedTime
-rate fastest { time, personalBest } =
-    { time = time
-    , performance =
-        performanceLevel { time = time, personalBest = personalBest, fastest = fastest }
-    }
-
-
-{-| Rate a time where there is a time to rate. A time the source data did not
-record produces no rating rather than an uncoloured one, so a caller renders the
-same "-" it renders for a car with no lap at all.
 -}
 rateTime : Maybe Duration -> { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
 rateTime fastest { time, personalBest } =
     time
         |> Maybe.map
-            (\recordedTime -> rate fastest { time = recordedTime, personalBest = personalBest })
+            (\recordedTime ->
+                { time = recordedTime
+                , performance =
+                    performanceLevel
+                        { time = recordedTime, personalBest = personalBest, fastest = fastest }
+                }
+            )
 
 
 {-| A lap's sector times, each rated.

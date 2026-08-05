@@ -47,7 +47,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
@@ -102,7 +102,7 @@ car is stays at the top, and so does `bestLap`, for the reason below.
 
 Grouping the two laps apart is by which lap the reading came off, which cuts
 across the other question one can ask of these fields: whether the reading is a
-position or a rating. Every rating here -- `currentLap.rated`,
+position or a rating. Every rating here -- `currentLap.performance`,
 `currentLap.sectorStates`, `currentLap.miniSectorStates`, `lastLap.rated`,
 `lastLap.sectors`, `lastLap.miniSectors` and `bestLap` -- is measured against
 the records held at this moment rather than the ones the race ends on, and the
@@ -162,21 +162,16 @@ has retired or taken the flag still reads the last lap it ran.
 
 `elapsed` is how long the car has been on it, counted from the last time it
 crossed the line -- or from the race start, for a car still on its opening lap.
+`performance` is how that reads against the records, and `progress` is how far
+through the lap it puts the car. Nothing here is the lap's eventual time, which
+is the one figure of a lap in progress that the clock has not reached: what a
+caller wants of it is `progress`, so `progress` is what it is kept for.
 
-`time` is the source data's, and the source data runs to the end of the race: it
-is what the lap will have taken once it is over, not anything the clock has
-reached. Nothing here cuts it -- `progress` is `elapsed` measured against it,
-which is a use of the future figure rather than a guard on it -- so a view that
-shows `time` has to do the cutting itself. It is the only field here that runs
-ahead of the clock.
-
-`progress`, `sector` and `miniSector` say how far around the car has got, read
-off the clock and the lap's own times, so they say where the car is rather than
-how anything is drawn. `sectorStates` and `miniSectorStates` say as much of
-every sector and every mini-sector at once -- how much of each is behind the car
-and how it rates -- which is what a strip of cells is drawn from. They are cut
-at the clock already, so a view draws them without asking what the car has
-reached.
+`sector` and `miniSector` say where on the lap the car has got to.
+`sectorStates` and `miniSectorStates` say as much of every sector and every
+mini-sector at once -- how much of each is behind the car and how it rates --
+which is what a strip of cells is drawn from. All of it is cut at the clock, so
+a view draws it without asking what the car has reached.
 
 The two mini-sector readings are what remains `Maybe` here, and for a reason of
 their own: a lap with no mini-sector times has none to be in or to rate, and
@@ -184,15 +179,14 @@ away from Le Mans no lap has any. `miniSector` is also `Nothing` for a clock
 past the last mini-sector of the lap, which is in none of them -- the same
 lap-is-over reading that fills `miniSectorStates` in.
 
-What `rated`, `sectorStates` and `miniSectorStates` are rated against is
+What `performance`, `sectorStates` and `miniSectorStates` are rated against is
 [`CarAt`](#CarAt)'s to say, along with every other rating on a car.
 
 -}
 type alias CurrentLap =
-    { time : Maybe Duration
-    , elapsed : Duration
+    { elapsed : Duration
     , progress : Float
-    , rated : RatedTime
+    , performance : PerformanceLevel
     , sector : Lap.SectorProgress
     , sectorStates : CurrentSectorStates
     , miniSector : Maybe Lap.MiniSectorProgress
@@ -527,15 +521,21 @@ readCurrentLap frame lap =
         miniSector =
             Lap.miniSectorProgressAt frame.clock { current = lap, previous = frame.previousLap }
     in
-    { time = lap.time
-    , elapsed = frame.elapsed
+    { elapsed = frame.elapsed
     , progress =
+        -- Against the lap's eventual time, which is the one figure of this lap
+        -- the clock has not reached. It stays inside: what a caller wants of
+        -- it is how far round the car has got, not the answer it is measured
+        -- against.
         lap.time
             |> Maybe.map (\lapTime -> min 1.0 (toFloat frame.elapsed / toFloat lapTime))
             |> Maybe.withDefault 0
-    , rated =
-        Performance.rate frame.fastestLapTime
-            { time = frame.elapsed, personalBest = frame.personalBest }
+    , performance =
+        Performance.performanceLevel
+            { time = frame.elapsed
+            , personalBest = frame.personalBest
+            , fastest = frame.fastestLapTime
+            }
     , sector = sector
     , sectorStates = currentSectorStates sector (Performance.ofSectors frame.records lap)
     , miniSector = miniSector
@@ -648,8 +648,8 @@ readCarAt frame placed =
         -- itself. A car on its opening lap has no record yet, which is what
         -- `Nothing` says here.
         --
-        -- Read once: both the baseline `currentLap.rated` is rated against and
-        -- `bestLap` come off this, so the two cannot come apart.
+        -- Read once: both the baseline `currentLap.performance` is read against
+        -- and `bestLap` come off this, so the two cannot come apart.
         personalBest =
             car.lastLap |> Maybe.andThen .best
     in

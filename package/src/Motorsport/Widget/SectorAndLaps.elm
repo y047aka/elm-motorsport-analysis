@@ -80,8 +80,8 @@ currentLapTimeCell item =
     let
         colorStyle =
             case item.currentLap of
-                Just { rated } ->
-                    applyPerformanceColor rated.performance
+                Just { performance } ->
+                    applyPerformanceColor performance
 
                 Nothing ->
                     batch []
