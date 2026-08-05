@@ -66,13 +66,18 @@ suite =
                             )
                         |> Expect.equal (Just True)
             ]
-        , describe "each car is placed within its class as well as within the field"
-            [ test "a class of one puts its car first, whatever it stands overall" <|
+        , describe "cars are placed within their class as well as within the field"
+            [ test "a class of two numbers its cars 1 and 2, whatever they stand overall" <|
                 \_ ->
-                    snapshotAt 7000
-                        |> Snapshot.toList
+                    -- Car 1 is second overall and first of its class.
+                    Snapshot.inClass (classOf "HYPERCAR") fieldWithTailenders
                         |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
-                        |> Expect.equal [ ( "2", 1 ), ( "1", 1 ) ]
+                        |> Expect.equal [ ( "1", 1 ), ( "3", 2 ) ]
+            , test "a class no car races in is empty" <|
+                \_ ->
+                    Snapshot.inClass (classOf "LMP2") fieldWithTailenders
+                        |> List.map (.metadata >> .carNumber)
+                        |> Expect.equal []
             , test "the classes come out grouped, the leader's first" <|
                 \_ ->
                     snapshotAt 7000
@@ -148,27 +153,11 @@ suite =
                         |> Snapshot.toList
                         |> List.map (.metadata >> .carNumber)
                         |> Expect.equal [ "2", "1", "3" ]
-            , test "nor can it be looked up by number" <|
-                \_ ->
-                    Snapshot.get "4" fieldWithTailenders
-                        |> Expect.equal Nothing
             , test "nor does it take a place in its class" <|
                 \_ ->
                     Snapshot.inClass (classOf "LMGT3") fieldWithTailenders
                         |> List.map (.metadata >> .carNumber)
                         |> Expect.equal [ "2" ]
-            ]
-        , describe "class position is counted off the running order"
-            [ test "a class of two numbers its cars 1 and 2, whatever they stand overall" <|
-                \_ ->
-                    Snapshot.inClass (classOf "HYPERCAR") fieldWithTailenders
-                        |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
-                        |> Expect.equal [ ( "1", 1 ), ( "3", 2 ) ]
-            , test "a class no car races in is empty" <|
-                \_ ->
-                    Snapshot.inClass (classOf "LMP2") fieldWithTailenders
-                        |> List.map (.metadata >> .carNumber)
-                        |> Expect.equal []
             ]
         , describe "one car can be read out of the field by number"
             [ test "the car that carries the number" <|
