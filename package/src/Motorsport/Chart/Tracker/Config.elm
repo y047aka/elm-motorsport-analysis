@@ -169,19 +169,22 @@ buildMiniSectors miniSectors sectorStart miniRatio =
 
 computeProgress : TrackConfig -> CarAt -> Float
 computeProgress config car =
-    if car.currentLap.progress > 0 then
-        car.currentLap.progress
+    case car.currentLap of
+        Nothing ->
+            -- Nowhere on the track, so the start line is as good as anywhere.
+            0
 
-    else
-        case ( car.currentLap.sector, car.currentLap.miniSector ) of
-            ( _, Just miniSectorProgress ) ->
-                progressFromMiniSector config miniSectorProgress
+        Just currentLap ->
+            if currentLap.progress > 0 then
+                currentLap.progress
 
-            ( Just sectorProgress, Nothing ) ->
-                progressFromSector config sectorProgress
+            else
+                case currentLap.miniSector of
+                    Just miniSectorProgress ->
+                        progressFromMiniSector config miniSectorProgress
 
-            ( Nothing, Nothing ) ->
-                0
+                    Nothing ->
+                        progressFromSector config currentLap.sector
 
 
 progressFromSector : List SectorConfig -> SectorProgress -> Float

@@ -102,11 +102,12 @@ car is stays at the top, and so does `bestLap`, for the reason below.
 
 Grouping the two laps apart is by which lap the reading came off, which cuts
 across the other question one can ask of these fields: whether the reading is a
-position or a rating. Every rating here -- `currentLap.rated`, `currentLap.sectorStates`,
-`currentLap.miniSectorStates`, `lastLap.rated`, `lastLap.sectors`,
-`lastLap.miniSectors` and `bestLap` -- is measured against the records held at
-this moment rather than the ones the race ends on, and the grouping leaves them in three separate places. That is why
-it is said here, once, instead of at each of them; see
+position or a rating. Every rating here -- `currentLap.rated`,
+`currentLap.sectorStates`, `currentLap.miniSectorStates`, `lastLap.rated`,
+`lastLap.sectors`, `lastLap.miniSectors` and `bestLap` -- is measured against
+the records held at this moment rather than the ones the race ends on, and the
+grouping leaves them in three separate places. That is why it is said here,
+once, instead of at each of them; see
 [`Lap.Performance`](Motorsport-Lap-Performance).
 
 Two records, in fact: the race's, which is [`bestTimes`](#bestTimes)'s to hold,
@@ -121,7 +122,7 @@ type alias CarAt =
     , status : Status
     , currentDriver : Maybe Driver
     , standing : Standing
-    , currentLap : CurrentLap
+    , currentLap : Maybe CurrentLap
     , lastLap : LastLap
     , bestLap : Maybe RatedTime
     }
@@ -153,6 +154,12 @@ type alias Standing =
 
 {-| The lap the car is on, as it reads at this moment.
 
+Held as a `Maybe` on [`CarAt`](#CarAt) rather than field by field, because
+whether the car is on a lap at all is one question and it is asked there once. A
+car that has turned no lap has none of this; a car that has finished one keeps
+it, since a lap stays the car's current one until the next begins, so a car that
+has retired or taken the flag still reads the last lap it ran.
+
 `elapsed` is how long the car has been on it, counted from the last time it
 crossed the line -- or from the race start, for a car still on its opening lap.
 
@@ -171,18 +178,11 @@ and how it rates -- which is what a strip of cells is drawn from. They are cut
 at the clock already, so a view draws them without asking what the car has
 reached.
 
-`sector` and `sectorStates` are `Nothing` together, for a car with no lap in
-progress: a car that is not on a lap is nowhere on the track. In practice that
-means a car that has turned no lap at all -- a lap the car has finished stays
-its current one until the next begins, so a car that has retired or taken the
-flag keeps the last lap it ran.
-
-`miniSectorStates` is `Nothing` under that same condition and one more: a lap
-with no mini-sector times has none to rate. Away from Le Mans no lap has any, so
-there it is `Nothing` throughout while the two above are not. `miniSector` is
-`Nothing` in both those cases and in one of its own -- a clock past the last
-mini-sector of the lap is in none of them, which is the same lap-is-over reading
-that fills `miniSectorStates` in.
+The two mini-sector readings are what remains `Maybe` here, and for a reason of
+their own: a lap with no mini-sector times has none to be in or to rate, and
+away from Le Mans no lap has any. `miniSector` is also `Nothing` for a clock
+past the last mini-sector of the lap, which is in none of them -- the same
+lap-is-over reading that fills `miniSectorStates` in.
 
 What `rated`, `sectorStates` and `miniSectorStates` are rated against is
 [`CarAt`](#CarAt)'s to say, along with every other rating on a car.
@@ -192,10 +192,10 @@ type alias CurrentLap =
     { time : Maybe Duration
     , elapsed : Duration
     , progress : Float
-    , sector : Maybe Lap.SectorProgress
+    , rated : RatedTime
+    , sector : Lap.SectorProgress
+    , sectorStates : CurrentSectorStates
     , miniSector : Maybe Lap.MiniSectorProgress
-    , rated : Maybe RatedTime
-    , sectorStates : Maybe CurrentSectorStates
     , miniSectorStates : Maybe CurrentMiniSectorStates
     }
 
@@ -286,26 +286,21 @@ at clock race =
         }
 
 
-currentSectorStates : Maybe Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
-currentSectorStates sectorProgress rated =
+currentSectorStates : Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
+currentSectorStates current rated =
     let
         -- Sectors already driven through are complete, the ones ahead
-        -- untouched; no sector in progress at all means the lap is over.
+        -- untouched.
         progressOf sector =
-            case sectorProgress of
-                Just current ->
-                    case Sector.compare sector current.sector of
-                        LT ->
-                            1
-
-                        EQ ->
-                            current.progress
-
-                        GT ->
-                            0
-
-                Nothing ->
+            case Sector.compare sector current.sector of
+                LT ->
                     1
+
+                EQ ->
+                    current.progress
+
+                GT ->
+                    0
     in
     Sector.map2 (\progress rating -> { progress = progress, rated = rating })
         (Sector.initialize progressOf)
@@ -479,8 +474,6 @@ sampleCar clock race car =
 
 type alias Timing =
     { currentLapElapsed : Duration
-    , sector : Maybe Lap.SectorProgress
-    , miniSector : Maybe Lap.MiniSectorProgress
     , gapToLeader : Gap
     , intervalToAhead : Gap
     }
@@ -491,35 +484,64 @@ timingOf raceElapsed rivals car =
     let
         raceClock =
             { elapsed = raceElapsed }
-
-        -- A car on its opening lap has no lap behind it, and that lap began at
-        -- the race start -- which is the instant `Lap.empty` carries. So the
-        -- empty lap stands in for the missing one here rather than papering
-        -- over it: both the elapsed time below and the mini-sector's own start
-        -- come out right for a first lap.
-        lastLap =
-            Maybe.withDefault Lap.empty car.lastLap
     in
-    { currentLapElapsed = Instant.since { from = lastLap.elapsed, to = raceClock.elapsed }
-    , sector =
-        -- Only a car with a lap in progress is anywhere on the lap. Reading a
-        -- sector off `Lap.empty` would place every car without lap data at the
-        -- start of the track, which is a position it does not hold.
-        car.currentLap
-            |> Maybe.map
-                (\lap ->
-                    let
-                        sectorProgress =
-                            Lap.progressAt raceClock lap
-                    in
-                    { sectorProgress | progress = min 1 sectorProgress.progress }
-                )
-    , miniSector =
-        car.currentLap
-            |> Maybe.andThen
-                (\lap -> Lap.miniSectorProgressAt raceClock { current = lap, previous = lastLap })
+    { currentLapElapsed =
+        -- A car on its opening lap has no lap behind it, and that lap began at
+        -- the race start -- which is the instant `Lap.empty` carries, so the
+        -- empty lap stands in for the missing one rather than papering over it.
+        Instant.since
+            { from = (Maybe.withDefault Lap.empty car.lastLap).elapsed
+            , to = raceClock.elapsed
+            }
     , gapToLeader = gapTo raceClock car rivals.leader
     , intervalToAhead = gapTo raceClock car rivals.rival
+    }
+
+
+{-| Read the lap a car is on at this moment.
+
+Only ever called with the lap the car is actually on, which is what lets the
+readings that need one be plain rather than `Maybe`: there is a sector the car
+is in, and a running time to rate, because there is a lap.
+
+-}
+readCurrentLap :
+    { clock : { elapsed : Instant }
+    , records : BestTimes.Snapshot
+    , fastestLapTime : Maybe Duration
+    , personalBest : Maybe Duration
+    , elapsed : Duration
+    , previousLap : Lap
+    }
+    -> Lap
+    -> CurrentLap
+readCurrentLap frame lap =
+    let
+        sector =
+            let
+                sectorProgress =
+                    Lap.progressAt frame.clock lap
+            in
+            { sectorProgress | progress = min 1 sectorProgress.progress }
+
+        miniSector =
+            Lap.miniSectorProgressAt frame.clock { current = lap, previous = frame.previousLap }
+    in
+    { time = lap.time
+    , elapsed = frame.elapsed
+    , progress =
+        lap.time
+            |> Maybe.map (\lapTime -> min 1.0 (toFloat frame.elapsed / toFloat lapTime))
+            |> Maybe.withDefault 0
+    , rated =
+        Performance.rate frame.fastestLapTime
+            { time = frame.elapsed, personalBest = frame.personalBest }
+    , sector = sector
+    , sectorStates = currentSectorStates sector (Performance.ofSectors frame.records lap)
+    , miniSector = miniSector
+    , miniSectorStates =
+        Performance.ofMiniSectors frame.records lap
+            |> Maybe.map (currentMiniSectorStates miniSector)
     }
 
 
@@ -642,38 +664,17 @@ readCarAt frame placed =
         , intervalToAhead = timing.intervalToAhead
         }
     , currentLap =
-        { time = car.currentLap |> Maybe.andThen .time
-        , elapsed = timing.currentLapElapsed
-        , progress =
-            car.currentLap
-                |> Maybe.andThen .time
-                |> Maybe.map (\lapTime -> min 1.0 (toFloat timing.currentLapElapsed / toFloat lapTime))
-                |> Maybe.withDefault 0
-        , sector = timing.sector
-        , miniSector = timing.miniSector
-        , rated =
-            -- On the lap for its presence alone, which is why the lap itself
-            -- goes unread: there is a running time to rate only while the car
-            -- is on a lap, and that time is the clock's, not the lap's.
-            car.currentLap
-                |> Maybe.andThen
-                    (\_ ->
-                        Performance.rateTime frame.fastestLapTime
-                            { time = Just timing.currentLapElapsed
-                            , personalBest = personalBest
-                            }
-                    )
-        , sectorStates =
-            car.currentLap
-                |> Maybe.map
-                    (Performance.ofSectors frame.records
-                        >> currentSectorStates timing.sector
-                    )
-        , miniSectorStates =
-            car.currentLap
-                |> Maybe.andThen (Performance.ofMiniSectors frame.records)
-                |> Maybe.map (currentMiniSectorStates timing.miniSector)
-        }
+        car.currentLap
+            |> Maybe.map
+                (readCurrentLap
+                    { clock = { elapsed = frame.raceElapsed }
+                    , records = frame.records
+                    , fastestLapTime = frame.fastestLapTime
+                    , personalBest = personalBest
+                    , elapsed = timing.currentLapElapsed
+                    , previousLap = Maybe.withDefault Lap.empty car.lastLap
+                    }
+                )
     , lastLap =
         { rated =
             car.lastLap

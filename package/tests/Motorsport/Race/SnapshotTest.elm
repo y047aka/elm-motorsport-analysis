@@ -103,12 +103,14 @@ suite =
                     -- Fifteen even mini-sectors of 1.000, so 3.500 is half way
                     -- through the fourth of them in track order.
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen (.currentLap >> .miniSector)
+                        |> Maybe.andThen .currentLap
+                        |> Maybe.andThen .miniSector
                         |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen (.currentLap >> .miniSectorStates)
+                        |> Maybe.andThen .currentLap
+                        |> Maybe.andThen .miniSectorStates
                         |> Maybe.map
                             (\states ->
                                 ( states.ip1.progress, states.z12.progress, states.sclc.progress )
@@ -120,14 +122,12 @@ suite =
                     -- is why the mini-sector readings do not go `Nothing` in
                     -- step with `sector` the way the rest of the lap does.
                     carAt "1" (snapshotAt 7000)
+                        |> Maybe.andThen .currentLap
                         |> Maybe.map
-                            (\car ->
-                                ( car.currentLap.miniSector
-                                , car.currentLap.miniSectorStates
-                                , car.currentLap.sector |> Maybe.map .sector
-                                )
+                            (\lap ->
+                                ( lap.miniSector, lap.miniSectorStates, lap.sector.sector )
                             )
-                        |> Expect.equal (Just ( Nothing, Nothing, Just S2 ))
+                        |> Expect.equal (Just ( Nothing, Nothing, S2 ))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|
@@ -148,11 +148,12 @@ suite =
                         |> Expect.equal Nothing
             ]
         , describe "a car with no lap in progress is nowhere on the track"
-            [ test "it reports no sector, as it reports no sector states" <|
+            [ test "it is on no lap at all, so there is no reading of one" <|
                 \_ ->
                     carAt "4" fieldWithTailenders
-                        |> Maybe.map (\car -> ( car.currentLap.sector, car.currentLap.sectorStates ))
-                        |> Expect.equal (Just ( Nothing, Nothing ))
+                        |> Maybe.andThen .currentLap
+                        |> Maybe.map (always ())
+                        |> Expect.equal Nothing
             , test "it has completed no laps" <|
                 \_ ->
                     carAt "4" fieldWithTailenders
@@ -228,7 +229,8 @@ carAt =
 sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
-        |> Maybe.andThen (.currentLap >> .sectorStates)
+        |> Maybe.andThen .currentLap
+        |> Maybe.map .sectorStates
 
 
 {-| A wider field, for what two cars cannot show: two of them sharing a class,

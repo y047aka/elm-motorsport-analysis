@@ -79,9 +79,9 @@ currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     let
         colorStyle =
-            case item.currentLap.rated of
-                Just { performance } ->
-                    applyPerformanceColor performance
+            case item.currentLap of
+                Just { rated } ->
+                    applyPerformanceColor rated.performance
 
                 Nothing ->
                     batch []
@@ -95,11 +95,12 @@ currentLapTimeCell item =
             ]
         ]
         [ text
-            (if Status.hasRetired item.status then
-                "-"
+            (case ( item.currentLap, Status.hasRetired item.status ) of
+                ( Just { elapsed }, False ) ->
+                    Duration.toString elapsed
 
-             else
-                Duration.toString item.currentLap.elapsed
+                _ ->
+                    "-"
             )
         ]
 
@@ -137,9 +138,9 @@ sectors are filled with their performance color.
 -}
 currentSectorPie : CarAt -> Html msg
 currentSectorPie item =
-    case ( item.currentLap.sectorStates, Status.hasRetired item.status ) of
-        ( Just slots, False ) ->
-            sectorPie (List.map currentSectorSlot (Sector.values slots))
+    case ( item.currentLap, Status.hasRetired item.status ) of
+        ( Just { sectorStates }, False ) ->
+            sectorPie (List.map currentSectorSlot (Sector.values sectorStates))
 
         _ ->
             emptyPie
