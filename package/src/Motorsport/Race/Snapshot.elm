@@ -122,7 +122,7 @@ type alias CarAt =
     , status : Status
     , currentDriver : Maybe Driver
     , standing : Standing
-    , currentLap : Maybe CurrentLap
+    , currentLap : CurrentLap
     , lastLap : LastLap
     , bestLap : Maybe RatedTime
     }
@@ -154,11 +154,10 @@ type alias Standing =
 
 {-| The lap the car is on, as it reads at this moment.
 
-Held as a `Maybe` on [`CarAt`](#CarAt) rather than field by field, because
-whether the car is on a lap at all is one question and it is asked there once. A
-car that has turned no lap has none of this; a car that has finished one keeps
-it, since a lap stays the car's current one until the next begins, so a car that
-has retired or taken the flag still reads the last lap it ran.
+Every car of a [`Snapshot`](#Snapshot) has one, because a car that has turned no
+lap is not in the field at all -- see [`at`](#at). A car that has finished a lap
+keeps it, since a lap stays the car's current one until the next begins, so a
+car that has retired or taken the flag still reads the last lap it ran.
 
 `elapsed` is how long the car has been on it, counted from the last time it
 crossed the line -- or from the race start, for a car still on its opening lap.
@@ -249,10 +248,11 @@ at clock race =
 
         -- A car carries only its laps, so what it is doing at this moment is
         -- read off the clock here. Who is ahead of whom follows from that, and
-        -- every position below is read off the resulting order.
+        -- every position below is read off the resulting order. A car with no
+        -- lap in progress drops out; see `sampleCar`.
         sampled =
             race.cars
-                |> List.map (sampleCar clock race)
+                |> List.filterMap (sampleCar clock race)
                 |> Ordering.runningOrder clock
 
         cars =
@@ -445,25 +445,46 @@ The status is looked up rather than worked out here; see
 type alias SampledCar =
     Gap.Competitor
         { metadata : Car.Metadata
+        , lapInProgress : Lap
         , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Maybe Driver
         }
 
 
-sampleCar : { elapsed : Instant } -> Race -> Car -> SampledCar
+{-| Read a car at the clock, where it is running.
+
+`Nothing` for a car with no lap in progress, which is a car that has turned no
+lap at all: a lap stays the car's current one until the next begins, so a car
+that has retired or taken the flag still has one. Such a car is not in the
+field. It holds no place in a running order --
+[`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) says as much of two
+of them -- and there is nothing to report of it but its number.
+
+Nor can the data produce one. The loader builds the entry list out of the lap
+records themselves, so a car that completed no lap is in neither of the files
+the app reads; keeping it out here is what lets a [`CarAt`](#CarAt) carry its
+lap plainly rather than as a `Maybe` no race could fill.
+
+`lapInProgress` is that lap, and `currentLap` is the same lap in the shape
+[`Gap.Competitor`](Motorsport-Gap#Competitor) and the ordering read it in. The
+`Maybe` is theirs, not this module's.
+
+-}
+sampleCar : { elapsed : Instant } -> Race -> Car -> Maybe SampledCar
 sampleCar clock race car =
-    let
-        currentLap =
-            Lap.findCurrentLap clock car.laps
-    in
-    { metadata = car.metadata
-    , laps = car.laps
-    , currentLap = currentLap
-    , lastLap = Lap.findLastLapAt clock car.laps
-    , status = Race.statusAt clock car.metadata.carNumber race
-    , currentDriver = Maybe.map .driver currentLap
-    }
+    Lap.findCurrentLap clock car.laps
+        |> Maybe.map
+            (\lap ->
+                { metadata = car.metadata
+                , laps = car.laps
+                , currentLap = Just lap
+                , lapInProgress = lap
+                , lastLap = Lap.findLastLapAt clock car.laps
+                , status = Race.statusAt clock car.metadata.carNumber race
+                , currentDriver = Just lap.driver
+                }
+            )
 
 
 type alias Timing =
@@ -664,17 +685,15 @@ readCarAt frame placed =
         , intervalToAhead = timing.intervalToAhead
         }
     , currentLap =
-        car.currentLap
-            |> Maybe.map
-                (readCurrentLap
-                    { clock = { elapsed = frame.raceElapsed }
-                    , records = frame.records
-                    , fastestLapTime = frame.fastestLapTime
-                    , personalBest = personalBest
-                    , elapsed = timing.currentLapElapsed
-                    , previousLap = Maybe.withDefault Lap.empty car.lastLap
-                    }
-                )
+        readCurrentLap
+            { clock = { elapsed = frame.raceElapsed }
+            , records = frame.records
+            , fastestLapTime = frame.fastestLapTime
+            , personalBest = personalBest
+            , elapsed = timing.currentLapElapsed
+            , previousLap = Maybe.withDefault Lap.empty car.lastLap
+            }
+            car.lapInProgress
     , lastLap =
         { rated =
             car.lastLap

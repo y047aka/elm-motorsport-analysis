@@ -435,12 +435,11 @@ currentLapColumn_Wec :
             { a
                 | status : Status
                 , currentLap :
-                    Maybe
-                        { b
-                            | elapsed : Duration
-                            , performance : Performance.PerformanceLevel
-                            , sectorStates : CurrentSectorStates
-                        }
+                    { b
+                        | elapsed : Duration
+                        , performance : Performance.PerformanceLevel
+                        , sectorStates : CurrentSectorStates
+                    }
             }
     , sorter : data -> data -> Order
     }
@@ -457,12 +456,11 @@ viewCurrentLapColumn_Wec :
     { a
         | status : Status
         , currentLap :
-            Maybe
-                { b
-                    | elapsed : Duration
-                    , performance : Performance.PerformanceLevel
-                    , sectorStates : CurrentSectorStates
-                }
+            { b
+                | elapsed : Duration
+                , performance : Performance.PerformanceLevel
+                , sectorStates : CurrentSectorStates
+            }
     }
     -> Html msg
 viewCurrentLapColumn_Wec { status, currentLap } =
@@ -485,22 +483,17 @@ viewCurrentLapColumn_Wec { status, currentLap } =
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
-        currentLap
-            |> Maybe.map
-                (\lap ->
-                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                        [ lapTime { time = lap.elapsed, performance = lap.performance }
-                        , div
-                            [ css
-                                [ property "display" "grid"
-                                , property "grid-template-columns" "1fr 1fr 1fr"
-                                , property "column-gap" "4px"
-                                ]
-                            ]
-                            (List.map progressCell (Sector.values lap.sectorStates))
-                        ]
-                )
-            |> Maybe.withDefault (text "-")
+        div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+            [ lapTime { time = currentLap.elapsed, performance = currentLap.performance }
+            , div
+                [ css
+                    [ property "display" "grid"
+                    , property "grid-template-columns" "1fr 1fr 1fr"
+                    , property "column-gap" "4px"
+                    ]
+                ]
+                (List.map progressCell (Sector.values currentLap.sectorStates))
+            ]
 
 
 currentLapColumn_LeMans24h :
@@ -511,11 +504,10 @@ currentLapColumn_LeMans24h :
                 | status : Status
                 , bestLap : Maybe RatedTime
                 , currentLap :
-                    Maybe
-                        { c
-                            | elapsed : Duration
-                            , miniSectorStates : Maybe CurrentMiniSectorStates
-                        }
+                    { c
+                        | elapsed : Duration
+                        , miniSectorStates : Maybe CurrentMiniSectorStates
+                    }
             }
     , sorter : data -> data -> Order
     , bestTimes : { b | fastestLapTime : Maybe Holder }
@@ -536,11 +528,10 @@ viewCurrentLapColumn_LeMans24h :
             | status : Status
             , bestLap : Maybe RatedTime
             , currentLap :
-                Maybe
-                    { c
-                        | elapsed : Duration
-                        , miniSectorStates : Maybe CurrentMiniSectorStates
-                    }
+                { c
+                    | elapsed : Duration
+                    , miniSectorStates : Maybe CurrentMiniSectorStates
+                }
         }
     -> Html msg
 viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
@@ -571,17 +562,16 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
         div [ css [ textAlign center ] ] [ text "Retired" ]
 
     else
-        Maybe.map2
-            (\best lap ->
-                div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                    [ lapTime { time = lap.elapsed, personalBest = Just best.time }
-                    , lap.miniSectorStates
-                        |> Maybe.map miniSectorStrip
-                        |> Maybe.withDefault (text "")
-                    ]
-            )
-            bestLap
-            currentLap
+        bestLap
+            |> Maybe.map
+                (\best ->
+                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                        [ lapTime { time = currentLap.elapsed, personalBest = Just best.time }
+                        , currentLap.miniSectorStates
+                            |> Maybe.map miniSectorStrip
+                            |> Maybe.withDefault (text "")
+                        ]
+                )
             |> Maybe.withDefault (text "-")
 
 

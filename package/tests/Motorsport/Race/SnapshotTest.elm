@@ -103,14 +103,12 @@ suite =
                     -- Fifteen even mini-sectors of 1.000, so 3.500 is half way
                     -- through the fourth of them in track order.
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen .currentLap
-                        |> Maybe.andThen .miniSector
+                        |> Maybe.andThen (.currentLap >> .miniSector)
                         |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen .currentLap
-                        |> Maybe.andThen .miniSectorStates
+                        |> Maybe.andThen (.currentLap >> .miniSectorStates)
                         |> Maybe.map
                             (\states ->
                                 ( states.ip1.progress, states.z12.progress, states.sclc.progress )
@@ -122,10 +120,11 @@ suite =
                     -- is why the mini-sector readings do not go `Nothing` in
                     -- step with `sector` the way the rest of the lap does.
                     carAt "1" (snapshotAt 7000)
-                        |> Maybe.andThen .currentLap
                         |> Maybe.map
-                            (\lap ->
-                                ( lap.miniSector, lap.miniSectorStates, lap.sector.sector )
+                            (.currentLap
+                                >> (\lap ->
+                                        ( lap.miniSector, lap.miniSectorStates, lap.sector.sector )
+                                   )
                             )
                         |> Expect.equal (Just ( Nothing, Nothing, S2 ))
             ]
@@ -147,24 +146,26 @@ suite =
                         |> Maybe.map .time
                         |> Expect.equal Nothing
             ]
-        , describe "a car with no lap in progress is nowhere on the track"
-            [ test "it is on no lap at all, so there is no reading of one" <|
+        , describe "the field is the cars that are running"
+            [ test "a car that has turned no lap is not in it" <|
                 \_ ->
-                    carAt "4" fieldWithTailenders
-                        |> Maybe.andThen .currentLap
-                        |> Maybe.map (always ())
-                        |> Expect.equal Nothing
-            , test "it has completed no laps" <|
-                \_ ->
-                    carAt "4" fieldWithTailenders
-                        |> Maybe.map (.standing >> .lapsCompleted)
-                        |> Expect.equal (Just 0)
-            , test "and it sorts behind every car that is running" <|
-                \_ ->
+                    -- Which is every car the data can hand over: the loader
+                    -- builds the entry list out of the lap records, so a car
+                    -- that completed no lap reaches neither file. The fixture
+                    -- can still make one, and this is what becomes of it.
                     fieldWithTailenders
                         |> Snapshot.toList
                         |> List.map (.metadata >> .carNumber)
-                        |> Expect.equal [ "2", "1", "3", "4" ]
+                        |> Expect.equal [ "2", "1", "3" ]
+            , test "nor can it be looked up by number" <|
+                \_ ->
+                    Snapshot.get "4" fieldWithTailenders
+                        |> Expect.equal Nothing
+            , test "nor does it take a place in its class" <|
+                \_ ->
+                    Snapshot.inClass (classOf "LMGT3") fieldWithTailenders
+                        |> List.map (.metadata >> .carNumber)
+                        |> Expect.equal [ "2" ]
             ]
         , describe "class position is counted off the running order"
             [ test "a class of two numbers its cars 1 and 2, whatever they stand overall" <|
@@ -172,11 +173,6 @@ suite =
                     Snapshot.inClass (classOf "HYPERCAR") fieldWithTailenders
                         |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
                         |> Expect.equal [ ( "1", 1 ), ( "3", 2 ) ]
-            , test "a car that is not running is still placed in its class, at the back of it" <|
-                \_ ->
-                    Snapshot.inClass (classOf "LMGT3") fieldWithTailenders
-                        |> List.map (\car -> ( car.metadata.carNumber, car.standing.positionInClass ))
-                        |> Expect.equal [ ( "2", 1 ), ( "4", 2 ) ]
             , test "a class no car races in is empty" <|
                 \_ ->
                     Snapshot.inClass (classOf "LMP2") fieldWithTailenders
@@ -229,12 +225,11 @@ carAt =
 sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
-        |> Maybe.andThen .currentLap
-        |> Maybe.map .sectorStates
+        |> Maybe.map (.currentLap >> .sectorStates)
 
 
 {-| A wider field, for what two cars cannot show: two of them sharing a class,
-and one that never took to the track at all.
+and one that never took to the track at all and so does not join it.
 
 Read at 7.000, as the two-car fixture is, so the cars it has in common with it
 stand where they stand there.
@@ -340,8 +335,10 @@ withRunningBests laps =
         |> List.reverse
 
 
-{-| A car that turned no lap at all -- so it is on no lap, in no sector, and
-holds no gap to anyone.
+{-| A car that turned no lap at all, which is a car the loader cannot produce:
+the entry list is built out of the lap records, so an entry with no laps is in
+neither file. Here to pin what `Snapshot` does with one anyway -- leaves it out
+of the field.
 -}
 nonStarter : Car
 nonStarter =

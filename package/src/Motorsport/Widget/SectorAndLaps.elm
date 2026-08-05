@@ -79,12 +79,7 @@ currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
     let
         colorStyle =
-            case item.currentLap of
-                Just { performance } ->
-                    applyPerformanceColor performance
-
-                Nothing ->
-                    batch []
+            applyPerformanceColor item.currentLap.performance
     in
     div
         [ css
@@ -95,12 +90,11 @@ currentLapTimeCell item =
             ]
         ]
         [ text
-            (case ( item.currentLap, Status.hasRetired item.status ) of
-                ( Just { elapsed }, False ) ->
-                    Duration.toString elapsed
+            (if Status.hasRetired item.status then
+                "-"
 
-                _ ->
-                    "-"
+             else
+                Duration.toString item.currentLap.elapsed
             )
         ]
 
@@ -138,12 +132,11 @@ sectors are filled with their performance color.
 -}
 currentSectorPie : CarAt -> Html msg
 currentSectorPie item =
-    case ( item.currentLap, Status.hasRetired item.status ) of
-        ( Just { sectorStates }, False ) ->
-            sectorPie (List.map currentSectorSlot (Sector.values sectorStates))
+    if Status.hasRetired item.status then
+        emptyPie
 
-        _ ->
-            emptyPie
+    else
+        sectorPie (List.map currentSectorSlot (Sector.values item.currentLap.sectorStates))
 
 
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
