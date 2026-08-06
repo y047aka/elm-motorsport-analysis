@@ -47,7 +47,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
 import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
@@ -178,26 +178,23 @@ type alias LastLap =
     }
 
 
-{-| Where the car stands in each sector of the lap it is on: how much of the
-sector is behind it, and how the time reads where there is one.
-
-`rated` is `Nothing` for a sector the source data has no time for, the same way
-a mini-sector's is; there is nothing to colour it by.
-
+{-| Where the car stands in each sector of the lap it is on: whether it has
+reached the sector, is inside it, or has the whole of it behind -- and, once it
+does, how the time reads. See
+[`SegmentState`](Motorsport-Lap-Performance#SegmentState).
 -}
 type alias CurrentSectorStates =
-    BySector { progress : Float, rated : Maybe RatedTime }
+    BySector SegmentState
 
 
-{-| The same reading at the finer grain, where the circuit records mini-sectors:
-where the car stands in each of them, and how the time reads where there is one.
+{-| The same reading at the finer grain, where the circuit records mini-sectors.
 
 `Nothing` on a [`CurrentLap`](#CurrentLap) rather than empty, because away from
 Le Mans there are no mini-sectors to stand anywhere in.
 
 -}
 type alias CurrentMiniSectorStates =
-    ByMiniSector { progress : Float, rated : Maybe RatedTime }
+    ByMiniSector SegmentState
 
 
 {-| Read the whole race at a moment of it.
@@ -251,21 +248,21 @@ currentSectorStates : Lap.SectorProgress -> SectorPerformance -> CurrentSectorSt
 currentSectorStates current rated =
     let
         -- Sectors already driven through are complete, the ones ahead
-        -- untouched.
-        progressOf sector =
+        -- untouched. Only the one in between reads off the clock, and even that
+        -- lands on complete once the car is through it -- see
+        -- `Performance.fromProgress`.
+        stateOf sector rating =
             case Sector.compare sector current.sector of
                 LT ->
-                    1
+                    Performance.Completed rating
 
                 EQ ->
-                    current.progress
+                    Performance.fromProgress current.progress rating
 
                 GT ->
-                    0
+                    Performance.NotEntered
     in
-    Sector.map2 (\progress rating -> { progress = progress, rated = rating })
-        (Sector.initialize progressOf)
-        rated
+    Sector.map2 stateOf (Sector.initialize identity) rated
 
 
 {-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
@@ -280,25 +277,25 @@ mini-sector rates, and neither is a question about drawing.
 currentMiniSectorStates : Maybe Lap.MiniSectorProgress -> MiniSectorPerformance -> CurrentMiniSectorStates
 currentMiniSectorStates miniSectorProgress rated =
     let
-        progressOf mini =
+        stateOf mini rating =
             case miniSectorProgress of
                 Just current ->
                     case LeMans.compare mini current.miniSector of
                         LT ->
-                            1
+                            Performance.Completed rating
 
                         EQ ->
-                            current.progress
+                            Performance.fromProgress current.progress rating
 
                         GT ->
-                            0
+                            Performance.NotEntered
 
+                -- The clock is past the last mini-sector of the lap, so there
+                -- is none the car is in and every one of them is behind it.
                 Nothing ->
-                    1
+                    Performance.Completed rating
     in
-    LeMans.map2 (\progress rating -> { progress = progress, rated = rating })
-        (LeMans.initialize progressOf)
-        rated
+    LeMans.map2 stateOf (LeMans.initialize identity) rated
 
 
 groupByClass : SortedList ByPosition CarAt -> List ( Class, List CarAt )

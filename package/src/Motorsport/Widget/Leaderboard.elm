@@ -65,7 +65,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, SegmentState, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentMiniSectorStates, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
@@ -143,23 +143,31 @@ Both strips draw from [`Race.Snapshot`](Motorsport-Race-Snapshot)'s reading of
 where the car stands, so at three sectors and at fifteen mini-sectors the cell
 is the same cell.
 
+A stretch the car has not reached draws nothing, which is what a zero-width fill
+came to anyway -- the difference is that the reading now says so, rather than
+leaving the cell to read it back out of a number.
+
 -}
-progressCell : { a | progress : Float, rated : Maybe RatedTime } -> Html msg
-progressCell { progress, rated } =
+progressCell : SegmentState -> Html msg
+progressCell state =
     div
         [ css
             [ height (px 3)
             , borderRadius (px 1)
             , batch <|
-                if progress < 1 then
-                    [ width (pct (progress * 100))
-                    , backgroundColor (oklch 1 0 0)
-                    ]
+                case state of
+                    Performance.NotEntered ->
+                        [ width (pct 0) ]
 
-                else
-                    [ width (pct 100)
-                    , property "background-color" (colorOfRated rated)
-                    ]
+                    Performance.InProgress progress ->
+                        [ width (pct (progress * 100))
+                        , backgroundColor (oklch 1 0 0)
+                        ]
+
+                    Performance.Completed rated ->
+                        [ width (pct 100)
+                        , property "background-color" (colorOfRated rated)
+                        ]
             ]
         ]
         []
@@ -245,9 +253,18 @@ veryCustomColumn =
     DataView.veryCustomColumn
 
 
+{-| A full-height block for one sector of a lap, coloured by how that sector
+went.
+
+`Nothing` is a car with no sector to report at all, and draws nothing. A sector
+the car has not finished is white; one it has is painted by its rating -- which
+is the same reading [`progressCell`](#progressCell) draws the thin strip from,
+told apart the same way.
+
+-}
 sectorTimeColumn :
     { label : String
-    , getter : data -> Maybe { time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration, progress : Float }
+    , getter : data -> Maybe SegmentState
     }
     -> Column data msg
 sectorTimeColumn { label, getter } =
@@ -255,24 +272,33 @@ sectorTimeColumn { label, getter } =
     , view =
         getter
             >> Maybe.map
-                (\sector ->
+                (\state ->
                     div
                         [ css
                             [ height (px 18)
                             , borderRadius (px 1)
                             , property "background-color" <|
-                                if sector.progress < 1 then
-                                    "oklch(1 0 0 / 0.9)"
+                                case state of
+                                    Performance.Completed rated ->
+                                        colorOfRated rated
 
-                                else
-                                    performanceLevel sector
-                                        |> Performance.toColorVariable
+                                    Performance.InProgress _ ->
+                                        "oklch(1 0 0 / 0.9)"
+
+                                    Performance.NotEntered ->
+                                        "oklch(1 0 0 / 0.9)"
                             ]
                         ]
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
+    , sorter =
+        Compare.by
+            (getter
+                >> Maybe.andThen Performance.ratedOf
+                >> Maybe.map .time
+                >> Maybe.withDefault 0
+            )
     , filter = \_ _ -> True
     }
 

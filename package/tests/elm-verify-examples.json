@@ -7,6 +7,7 @@
     "Motorsport.Gap",
     "Motorsport.Instant",
     "Motorsport.Lap",
+    "Motorsport.Lap.Performance",
     "Motorsport.Sector"
   ]
 }

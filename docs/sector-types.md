@@ -182,7 +182,7 @@ Sector / MiniSector に関わる型は、大きく 4 層に分かれている。
 
 独立して入れられる順に並べてある。1 と 3 は局所的で効果が確実、4 は範囲が広い。
 
-### 提案 1：区間の状態をカスタム型にする ★推奨・最優先
+### 提案 1：区間の状態をカスタム型にする ★実施済み
 
 `Motorsport.Lap.Performance` に置く（`RatedTime` を既に持ち、セクターとミニセクターの
 両粒度から読まれる評価の型が集まっている場所であるため）。
@@ -226,8 +226,27 @@ type alias CurrentMiniSectorStates =
 になり、ダミーが消える。
 
 **影響範囲**：`Race/Snapshot.elm`、`Lap/Performance.elm`、`Widget/Leaderboard.elm`、
-`Widget/SectorAndLaps.elm`、`app/src/Page/Debug.elm`。テストは
-`tests/Motorsport/Race/SnapshotTest.elm` を要確認。
+`Widget/SectorAndLaps.elm`、`app/src/Page/Debug.elm`、
+`tests/Motorsport/Race/SnapshotTest.elm`。
+
+#### 実装して分かったこと
+
+**(a) これは整理ではなく、保証の追加だった。** 旧 `Sector.map2` は未通過セクターにも
+`rated` を詰めていた。リプレイデータなのでラップ全体のセクタータイムは最初から
+存在し、まだ出していないタイムがビューから読める状態だった。読み手が誰も使って
+いなかっただけで、型は何も止めていない。`NotEntered` / `InProgress` に payload を
+持たせないことで、これがコンパイラの保証になる。`SnapshotTest` にその回帰テストを
+足した（"carry no rating until the car is through them"）。
+
+**(b) `progress == 1` が実際に起こる。** `Race/Snapshot.elm` の `readCurrentLap` と
+`Lap.miniSectorProgressAt` はどちらも進行度を `min 1` にクランプしており、ラップ
+終端を過ぎた時計は最終セグメントで**ちょうど 1** を返す。旧 `progress < 1` の判定は
+これを「通過済み」側に落としていたので、素直に `EQ -> InProgress` と書くと配色が
+変わる。この境界は `Performance.fromProgress` に閉じ込め、`>= 1` を `Completed` へ
+寄せてある。呼び出し側は 1 が境界だと知らなくてよい。
+
+**(c) 描画は不変。** `NotEntered` は旧実装で「白・幅 0%」を描いており、幅 0 の要素は
+何も塗らない。VRT スナップショットの更新は不要。
 
 ### 提案 2：`toIndex` を `case` 式にする ★推奨・低コスト
 
@@ -319,13 +338,13 @@ type MiniSectorTiming
 
 ## 4. 推奨する順序
 
-| # | 提案 | 効果 | 範囲 |
-| --- | --- | --- | --- |
-| 1 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm` |
-| 2 | 提案 1（`SegmentState`） | 3 か所の `progress < 1` とダミー値が消える | Snapshot＋描画 3 モジュール |
-| 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` |
-| 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む | `Lap.elm` 内で完結 |
-| 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ |
+| # | 提案 | 効果 | 範囲 | 状態 |
+| --- | --- | --- | --- | --- |
+| 1 | 提案 1（`SegmentState`） | 3 か所の `progress < 1` とダミー値が消える／未通過区間の評価が読めなくなる | Snapshot＋描画 3 モジュール | 実施済み |
+| 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm` | 未着手 |
+| 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 未着手 |
+| 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む | `Lap.elm` 内で完結 | 未着手 |
+| 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ | 未着手 |
 
 1〜4 は互いに独立で、それぞれ単独の PR にできる。5 は着手前に方針を決める必要がある。
 
