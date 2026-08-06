@@ -479,7 +479,6 @@ readCurrentLap :
     , fastestLapTime : Maybe Duration
     , personalBest : Maybe Duration
     , elapsed : Duration
-    , previousLap : Lap
     }
     -> Lap
     -> CurrentLap
@@ -493,7 +492,7 @@ readCurrentLap frame lap =
             { sectorProgress | progress = min 1 sectorProgress.progress }
 
         miniSector =
-            Lap.miniSectorProgressAt frame.clock { current = lap, previous = frame.previousLap }
+            Lap.miniSectorProgressAt frame.clock lap
     in
     { elapsed = frame.elapsed
     , progress =
@@ -637,7 +636,6 @@ readCarAt frame placed =
             , fastestLapTime = frame.fastestLapTime
             , personalBest = personalBest
             , elapsed = timing.currentLapElapsed
-            , previousLap = Maybe.withDefault Lap.empty car.lastLap
             }
             car.currentLap
     , lastLap =

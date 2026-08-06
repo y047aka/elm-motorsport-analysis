@@ -290,7 +290,7 @@ type alias CurrentMiniSectorStates =
 `withDefault 0`（＝ゼロ幅のトラックという、起こったら明らかにおかしい既定値）が
 消えた。名前も `miniSector` の前置を落として揃えてある。
 
-### 提案 3：ミニセクターも `Segment` に切り出す
+### 提案 3：ミニセクターも `Segment` に切り出す ★実施済み
 
 セクター側の `segments : Lap -> BySector Segment`（`Lap.elm:265`）に対応する
 
@@ -311,6 +311,50 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 
 `elapsed` を落とすことは**しない**（2.3 の通り、欠測を跨げる利点がある）。落とすのは
 `elapsed` から起点を毎回逆算するコードのほう。
+
+#### 実装して分かったこと
+
+**(a) 戻り値は `ByMiniSector` ではなく `List ( mini, Segment )` が正しかった。**
+当初は `Maybe (ByMiniSector Segment)` を想定していたが、実際には
+「サーキットが記録しない」と「このミニセクターは配置できない」の 2 段の欠落があり、
+`Maybe (ByMiniSector (Maybe Segment))` になってしまう。消費側（現在位置の探索と
+起点の照会）はどちらも一覧を舐めるだけなので、**配置できたものだけをトラック順に
+並べたリスト**にした。欠落は「リストに無い」で表現され、`Maybe` が 1 つも要らない。
+
+**(b) 2 つの関数が別の原点を使っていた（挙動変更あり）。** これは切り出して初めて
+見えた。`currentMiniSector` は `lapStart current`（＝ラップ自身の終端 − 所要時間）を
+原点にミニセクターを選び、`miniSectorProgressAt` は `previous.elapsed`（＝前ラップの
+終端）を原点に進行度を測っていた。両者は隣接する完全なラップでしか一致せず、
+`lapStart` のドキュストリングは「前ラップは欠けていたり隣接していなかったりする
+ので使わない」と明示している。ずれた分は
+`Basics.max 0 |> Basics.min 1` のクランプが吸収していた。
+
+`Segment` に一本化して原点を `lapStart` に揃えた結果、
+
+- `miniSectorProgressAt` の引数から `previous` が消え、シグネチャが
+  `Clock -> Lap -> Maybe MiniSectorProgress` になった（`progressAt` と同形）。
+  `Race/Snapshot.elm` の `readCurrentLap` から `previousLap` フィールドも消えた。
+- 長さの取り方も変わった。以前は選択に使う区間幅が「累積の差」なのに、進行度の
+  分母はソース自身の `.time` で、両者が食い違うと進行度がずれた。今はどちらも
+  区間の `time`（＝累積の差）。
+- **クランプが不要になった。** `contains` が半開区間 `[start, start+time)` を
+  保証するので、進行度は構造的に 0 以上 1 未満。`duration <= 0 -> 1` の分岐も、
+  長さ 0 の区間はどの瞬間も含まないので到達しない。
+
+`currentMiniSector` が返すミニセクター自体は変わらない（同じ区間列・同じ探索）。
+変わるのは、その中での進行度が「選択と同じ原点・同じ長さで測られる」ようになった
+こと。
+
+**(c) `SCL2 -> Just 0` の特別扱いは畳み込みの種になった。** 「最初のミニセクターは
+コントロールラインから始まる」は構築子名の分岐ではなく `List.foldl` の初期値
+`Just 0` として 1 か所に書かれる。`miniSectorPrevious` と
+`miniSectorStartElapsed`、`miniSectorToElapsed`、`miniSectorElapsed`、
+`miniSectorTime` がまとめて消えた。
+
+**(d) 「欠測を跨げる」ことをテストで固定した。** 2.3 で `elapsed` を残す根拠に
+した性質そのもの。`LapTest` に、running total を 1 つ落とすと**そのミニセクターと
+次の 1 つだけ**が配置できなくなり、**その後ろは元と同じ位置に置かれる**ことを
+確かめるテストを置いた。
 
 ### 提案 4：計測値の型名を揃える ★実施済み
 
@@ -393,7 +437,7 @@ type MiniSectorTiming
 | 1 | 提案 1（`SegmentState`） | 3 か所の `progress < 1` とダミー値が消える／未通過区間の評価が読めなくなる | Snapshot＋描画 3 モジュール | 実施済み |
 | 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm`, `Chart/Tracker*` | 実施済み |
 | 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 実施済み |
-| 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む | `Lap.elm` 内で完結 | 未着手 |
+| 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む／進行度の原点が選択と揃う | `Lap.elm`, `Race/Snapshot.elm` | 実施済み |
 | 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ | 未着手 |
 
 1〜4 は互いに独立で、それぞれ単独の PR にできる。5 は着手前に方針を決める必要がある。

@@ -7,7 +7,7 @@ module Motorsport.Lap exposing
     , completedLapsAt, findLastLapAt, findCurrentLap
     , Segment, segments, sectorStart
     , SectorProgress, progressAt, currentSector
-    , MiniSectorProgress, currentMiniSector, miniSectorProgressAt
+    , MiniSectorProgress, miniSegments, currentMiniSector, miniSectorProgressAt, miniSectorStart
     )
 
 {-|
@@ -28,13 +28,13 @@ module Motorsport.Lap exposing
 ## Where the car is on the lap
 
 @docs SectorProgress, progressAt, currentSector
-@docs MiniSectorProgress, currentMiniSector, miniSectorProgressAt
+@docs MiniSectorProgress, miniSegments, currentMiniSector, miniSectorProgressAt, miniSectorStart
 
 -}
 
 import Compare exposing (Comparator)
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector(..))
+import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -184,7 +184,7 @@ compareLapsInSameSector clock a b segment_a segment_b =
                 ( Just ms_a, Just ms_b ) ->
                     case Compare.reverse LeMans.compare ms_a ms_b of
                         EQ ->
-                            Instant.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
+                            Instant.compare (miniSectorStart ms_a a) (miniSectorStart ms_b b)
 
                         order ->
                             order
@@ -347,8 +347,22 @@ progressAt clock lap =
             currentSegment clock lap
     in
     { sector = sector
-    , progress = toFloat (Instant.since { from = segment.start, to = clock.elapsed }) / toFloat segment.time
+    , progress = progressThrough clock segment
     }
+
+
+{-| How far through a segment a moment of race time is, as a fraction of it.
+
+Bounded only by the segment it is given: for one the clock actually falls
+inside it is between 0 and 1, and for any other it is whatever the arithmetic
+says. Which of those a caller gets is the caller's to know -- see
+[`progressAt`](#progressAt) and
+[`miniSectorProgressAt`](#miniSectorProgressAt), which differ in exactly that.
+
+-}
+progressThrough : Clock -> Segment -> Float
+progressThrough clock segment =
+    toFloat (Instant.since { from = segment.start, to = clock.elapsed }) / toFloat segment.time
 
 
 {-| When a given sector of a given lap began — for asking about a sector the
@@ -359,50 +373,81 @@ sectorStart sector lap =
     (Sector.get sector (segments lap)).start
 
 
+{-| Cut a lap into the mini-sectors the source data can place, in track order.
+
+The counterpart of [`segments`](#segments), and read the same way after this --
+but built from the running totals the source records rather than by adding the
+times up. That is the difference the finer grain needs: `segments` treats a
+sector it has no time for as taking none at all, so the ones after it still
+start where they should, and three sectors can afford that where fifteen
+mini-sectors cannot.
+
+The price is that a mini-sector whose running total is missing cannot be
+placed, and neither can the one after it, whose start that total is. Such a
+mini-sector is absent from the list rather than present and unplaceable -- a
+caller looking for where the car is has nothing to do with one either way. A
+lap from a circuit that records no mini-sectors gives the empty list for the
+same reason.
+
+The first mini-sector begins at the line, which is the `Just 0` the fold
+starts from.
+
+-}
+miniSegments : Lap -> List ( LeMans2025MiniSector, Segment )
+miniSegments lap =
+    case lap.miniSectors of
+        Nothing ->
+            []
+
+        Just miniSectors ->
+            let
+                start =
+                    lapStart lap
+
+                step mini ( placed, previousEnd ) =
+                    let
+                        end =
+                            (LeMans.get mini miniSectors).elapsedInLap
+                    in
+                    ( case ( previousEnd, end ) of
+                        ( Just from, Just to ) ->
+                            ( mini, { start = Instant.add from start, time = to - from } ) :: placed
+
+                        _ ->
+                            placed
+                    , end
+                    )
+            in
+            List.foldl step ( [], Just 0 ) LeMans.all
+                |> Tuple.first
+                |> List.reverse
+
+
+{-| The mini-sector the car is driving at the given moment, and the stretch of
+race time it is.
+
+Unlike [`currentSegment`](#currentSegment) there is no falling through to the
+last one: a clock past the end of the lap is in no mini-sector, and so is a
+clock anywhere the source data could not place.
+
+-}
+currentMiniSegment : Clock -> Lap -> Maybe ( LeMans2025MiniSector, Segment )
+currentMiniSegment clock lap =
+    miniSegments lap
+        |> List.Extra.find (\( _, segment ) -> contains clock.elapsed segment)
+
+
 currentMiniSector : Clock -> Lap -> Maybe LeMans2025MiniSector
 currentMiniSector clock lap =
-    lap.miniSectors
-        |> Maybe.andThen
-            (\ms ->
-                let
-                    start_of_lap =
-                        lapStart lap
-
-                    inRange start end =
-                        case ( start, end ) of
-                            ( Just start_, Just end_ ) ->
-                                contains clock.elapsed
-                                    { start = Instant.add start_ start_of_lap, time = end_ - start_ }
-
-                            _ ->
-                                False
-
-                    ( rangesReversed, _ ) =
-                        List.foldl
-                            (\mini ( acc, previousEnd ) ->
-                                let
-                                    end_ =
-                                        miniSectorElapsed ms mini
-
-                                    range =
-                                        ( mini, previousEnd, end_ )
-                                in
-                                ( range :: acc, end_ )
-                            )
-                            ( [], Just 0 )
-                            LeMans.all
-
-                    miniSectorRanges =
-                        List.reverse rangesReversed
-                in
-                miniSectorRanges
-                    |> List.Extra.find (\( _, start, end ) -> inRange start end)
-                    |> Maybe.map (\( miniSector, _, _ ) -> miniSector)
-            )
+    currentMiniSegment clock lap |> Maybe.map Tuple.first
 
 
-{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress), clamped
-to 0..1.
+{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress).
+
+Where a `SectorProgress` can read past the end of its sector, this one cannot:
+there is only a mini-sector here because the clock falls inside it, so the
+progress is between 0 and 1 by construction rather than by clamping.
+
 -}
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector
@@ -410,90 +455,28 @@ type alias MiniSectorProgress =
     }
 
 
-miniSectorProgressAt : Clock -> { current : Lap, previous : Lap } -> Maybe MiniSectorProgress
-miniSectorProgressAt clock { current, previous } =
-    case currentMiniSector clock current of
-        Just miniSector ->
-            current.miniSectors
-                |> Maybe.andThen
-                    (\miniSectors ->
-                        let
-                            maybeStart =
-                                miniSectorStartElapsed miniSectors miniSector
-
-                            maybeDuration =
-                                miniSectorTime miniSectors miniSector
-                        in
-                        case ( maybeStart, maybeDuration ) of
-                            ( Just start_, Just duration_ ) ->
-                                let
-                                    elapsedSinceStart =
-                                        Instant.since
-                                            { from = Instant.add start_ previous.elapsed
-                                            , to = clock.elapsed
-                                            }
-
-                                    progress =
-                                        if duration_ <= 0 then
-                                            1
-
-                                        else
-                                            toFloat elapsedSinceStart / toFloat duration_
-                                in
-                                Just
-                                    { miniSector = miniSector
-                                    , progress = progress |> Basics.max 0 |> Basics.min 1
-                                    }
-
-                            _ ->
-                                Nothing
-                    )
-
-        Nothing ->
-            Nothing
-
-
-miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Instant
-miniSectorToElapsed lap miniSector =
-    let
-        intoTheLap =
-            lap.miniSectors
-                |> Maybe.andThen (\miniSectors -> miniSectorStartElapsed miniSectors miniSector)
-                |> Maybe.withDefault 0
-    in
-    Instant.add intoTheLap (lapStart lap)
-
-
-miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
-miniSectorElapsed miniSectors mini =
-    LeMans.get mini miniSectors |> .elapsedInLap
-
-
-miniSectorTime : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
-miniSectorTime miniSectors mini =
-    LeMans.get mini miniSectors |> .time
-
-
-miniSectorStartElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
-miniSectorStartElapsed miniSectors mini =
-    case mini of
-        SCL2 ->
-            Just 0
-
-        _ ->
-            miniSectorPrevious mini
-                |> Maybe.andThen (miniSectorElapsed miniSectors)
-
-
-miniSectorPrevious : LeMans2025MiniSector -> Maybe LeMans2025MiniSector
-miniSectorPrevious mini =
-    LeMans.all
-        |> List.Extra.elemIndex mini
-        |> Maybe.andThen
-            (\index ->
-                if index <= 0 then
-                    Nothing
-
-                else
-                    List.Extra.getAt (index - 1) LeMans.all
+miniSectorProgressAt : Clock -> Lap -> Maybe MiniSectorProgress
+miniSectorProgressAt clock lap =
+    currentMiniSegment clock lap
+        |> Maybe.map
+            (\( miniSector, segment ) ->
+                { miniSector = miniSector
+                , progress = progressThrough clock segment
+                }
             )
+
+
+{-| When a given mini-sector of a given lap began, the counterpart of
+[`sectorStart`](#sectorStart).
+
+A mini-sector the source data cannot place begins where the lap does, which is
+what the running-order tie-break wants: two cars it cannot tell apart are left
+to whatever the comparison behind it says.
+
+-}
+miniSectorStart : LeMans2025MiniSector -> Lap -> Instant
+miniSectorStart mini lap =
+    miniSegments lap
+        |> List.Extra.find (\( candidate, _ ) -> candidate == mini)
+        |> Maybe.map (Tuple.second >> .start)
+        |> Maybe.withDefault (lapStart lap)

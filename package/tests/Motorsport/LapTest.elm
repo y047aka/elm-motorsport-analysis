@@ -1,6 +1,8 @@
 module Motorsport.LapTest exposing (tests)
 
 import Expect
+import List.Extra
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (Sector(..))
@@ -20,6 +22,57 @@ lap =
             , s3 = { time = Just 3000, personalBest = Nothing }
             }
     }
+
+
+{-| The same lap, with fifteen even mini-sectors of 400 covering its 6.000.
+
+Their running totals are what places them, so the nth in track order ends
+`n * 400` into the lap; `time` is filled in to match, and nothing reads it.
+
+-}
+lapWithMiniSectors : Lap
+lapWithMiniSectors =
+    { lap
+        | miniSectors =
+            Just
+                (LeMans.initialize
+                    (\mini ->
+                        { time = Just 400
+                        , elapsedInLap = Just (400 * (indexOf mini + 1))
+                        , personalBest = Nothing
+                        }
+                    )
+                )
+    }
+
+
+{-| The same lap with one mini-sector's running total missing, as the source
+data occasionally leaves it.
+-}
+withoutRunningTotalFor : LeMans2025MiniSector -> Lap
+withoutRunningTotalFor missing =
+    { lapWithMiniSectors
+        | miniSectors =
+            lapWithMiniSectors.miniSectors
+                |> Maybe.map
+                    (LeMans.map2
+                        (\mini times ->
+                            if mini == missing then
+                                { times | elapsedInLap = Nothing }
+
+                            else
+                                times
+                        )
+                        (LeMans.initialize identity)
+                    )
+    }
+
+
+indexOf : LeMans2025MiniSector -> Int
+indexOf mini =
+    LeMans.all
+        |> List.Extra.elemIndex mini
+        |> Maybe.withDefault 0
 
 
 empty : Lap
@@ -95,6 +148,74 @@ tests =
                             , { sector = S2, progress = 0 }
                             , { sector = S3, progress = 0 }
                             ]
+            ]
+        , describe "miniSegments"
+            [ test "starts the first at the line and each of the rest where the one before ended" <|
+                \_ ->
+                    Lap.miniSegments lapWithMiniSectors
+                        |> List.map (Tuple.second >> .start)
+                        |> List.take 4
+                        |> Expect.equal [ instant 4000, instant 4400, instant 4800, instant 5200 ]
+            , test "takes each one's length from the running totals, not from its own time" <|
+                \_ ->
+                    -- Every mini-sector of the fixture ends 400 after the one
+                    -- before it, so each is 400 long.
+                    Lap.miniSegments lapWithMiniSectors
+                        |> List.map (Tuple.second >> .time)
+                        |> Expect.equal (List.repeat 15 400)
+            , test "ends the last one where the lap ended" <|
+                \_ ->
+                    Lap.miniSegments lapWithMiniSectors
+                        |> List.reverse
+                        |> List.head
+                        |> Maybe.map (\( _, s ) -> Instant.add s.time s.start)
+                        |> Expect.equal (Just lapWithMiniSectors.elapsed)
+            , test "drops the one whose running total is missing, and the one after it" <|
+                \_ ->
+                    -- IP1's total is what places IP1 and starts Z12, so losing
+                    -- it loses both. The rest are placed as before -- which is
+                    -- the whole reason the source records running totals.
+                    Lap.miniSegments (withoutRunningTotalFor IP1)
+                        |> List.map Tuple.first
+                        |> Expect.equal (List.filter (\m -> m /= IP1 && m /= Z12) LeMans.all)
+            , test "places the ones after a gap exactly where they were" <|
+                \_ ->
+                    Lap.miniSegments (withoutRunningTotalFor IP1)
+                        |> List.filter (\( mini, _ ) -> mini == SCLC)
+                        |> Expect.equal
+                            (List.filter (\( mini, _ ) -> mini == SCLC)
+                                (Lap.miniSegments lapWithMiniSectors)
+                            )
+            , test "a lap from a circuit that records none has none" <|
+                \_ ->
+                    Lap.miniSegments lap
+                        |> Expect.equal []
+            ]
+        , describe "miniSectorProgressAt"
+            [ test "measures how far through the current mini-sector the moment is" <|
+                \_ ->
+                    -- Z4 runs 4.400 to 4.800.
+                    Lap.miniSectorProgressAt { elapsed = instant 4600 } lapWithMiniSectors
+                        |> Expect.equal (Just { miniSector = Z4, progress = 0.5 })
+            , test "reports no mini-sector at all once the lap is over, rather than the last one" <|
+                \_ ->
+                    Lap.miniSectorProgressAt { elapsed = instant 10000 } lapWithMiniSectors
+                        |> Expect.equal Nothing
+            , test "reports none inside a stretch the running totals could not place" <|
+                \_ ->
+                    -- 5.000 falls in IP1, which `withoutRunningTotalFor` loses.
+                    Lap.miniSectorProgressAt { elapsed = instant 5000 } (withoutRunningTotalFor IP1)
+                        |> Expect.equal Nothing
+            , test "agrees with miniSectorStart, where progress is zero" <|
+                \_ ->
+                    LeMans.all
+                        |> List.map (\mini -> Lap.miniSectorStart mini lapWithMiniSectors)
+                        |> List.map
+                            (\start ->
+                                Lap.miniSectorProgressAt { elapsed = start } lapWithMiniSectors
+                                    |> Maybe.map .progress
+                            )
+                        |> Expect.equal (List.repeat 15 (Just 0))
             ]
         , describe "compareAt"
             -- LT is "ahead", so that sorting with it puts the leader first.
