@@ -166,7 +166,7 @@ compareLapsInSameSector clock a b segment_a segment_b =
         ( Just _, Just _ ) ->
             case ( currentMiniSector clock a, currentMiniSector clock b ) of
                 ( Just ms_a, Just ms_b ) ->
-                    case Compare.reverse (Compare.by miniSectorToIndex) ms_a ms_b of
+                    case Compare.reverse LeMans.compare ms_a ms_b of
                         EQ ->
                             Instant.compare (miniSectorToElapsed a ms_a) (miniSectorToElapsed b ms_b)
 
@@ -343,11 +343,6 @@ sectorStart sector lap =
     (Sector.get sector (segments lap)).start
 
 
-miniSectorOrder : List LeMans2025MiniSector
-miniSectorOrder =
-    LeMans.miniSectorOrder
-
-
 currentMiniSector : Clock -> Lap -> Maybe LeMans2025MiniSector
 currentMiniSector clock lap =
     lap.miniSectors
@@ -379,7 +374,7 @@ currentMiniSector clock lap =
                                 ( range :: acc, end_ )
                             )
                             ( [], Just 0 )
-                            miniSectorOrder
+                            LeMans.all
 
                     miniSectorRanges =
                         List.reverse rangesReversed
@@ -442,13 +437,6 @@ miniSectorProgressAt clock { current, previous } =
             Nothing
 
 
-miniSectorToIndex : LeMans2025MiniSector -> Int
-miniSectorToIndex miniSector =
-    miniSectorOrder
-        |> List.Extra.elemIndex miniSector
-        |> Maybe.withDefault 0
-
-
 miniSectorToElapsed : Lap -> LeMans2025MiniSector -> Instant
 miniSectorToElapsed lap miniSector =
     let
@@ -483,7 +471,7 @@ miniSectorStartElapsed miniSectors mini =
 
 miniSectorPrevious : LeMans2025MiniSector -> Maybe LeMans2025MiniSector
 miniSectorPrevious mini =
-    miniSectorOrder
+    LeMans.all
         |> List.Extra.elemIndex mini
         |> Maybe.andThen
             (\index ->
@@ -491,5 +479,5 @@ miniSectorPrevious mini =
                     Nothing
 
                 else
-                    List.Extra.getAt (index - 1) miniSectorOrder
+                    List.Extra.getAt (index - 1) LeMans.all
             )

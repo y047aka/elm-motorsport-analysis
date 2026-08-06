@@ -1,29 +1,45 @@
 module Motorsport.Circuit.LeMans exposing
     ( LeMans2025MiniSector(..)
-    , ByMiniSector, initialize, get, map2, values
+    , all
     , compare
-    , layout, miniSectorDefaultRatio, miniSectorOrder, miniSectorToString
+    , toString
+    , ByMiniSector, initialize, get, map2
+    , values, toList
+    , layout, defaultRatio
     )
 
-{-|
+{-| The mini-sectors of Le Mans, the counterpart of
+[`Sector`](Motorsport-Sector) at the finer grain. Everything above is spelled
+the way that module spells it, so a caller that knows one knows the other.
 
 @docs LeMans2025MiniSector
+@docs all
+@docs compare
+@docs toString
 
 
 ## Values held per mini sector
 
-@docs ByMiniSector, initialize, get, map2, values
+@docs ByMiniSector, initialize, get, map2
+@docs values, toList
 
-@docs compare
+
+## The circuit itself
+
+@docs layout, defaultRatio
 
 -}
 
-import List.Extra
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Sector exposing (BySector)
 
 
-{-| Le Mans 2025 specific mini sectors
+{-| Le Mans 2025 specific mini sectors.
+
+Written in the order a car drives them, as
+[`Sector`](Motorsport-Sector#Sector) is, and that order is this module's
+business: see [`all`](#all) and [`compare`](#compare).
+
 -}
 type LeMans2025MiniSector
     = SCL2
@@ -41,6 +57,35 @@ type LeMans2025MiniSector
     | SCL1
     | FORDOUT
     | FL
+
+
+{-| Every mini sector, in the order a car drives them.
+
+Written out here rather than read off [`layout`](#layout). The order is a
+property of the circuit's mini sectors, which is this module's subject; the
+layout is one arrangement of them into sectors, and deriving the order from it
+would make every function that depends on the order depend on that grouping
+being complete. `LeMansTest` holds the two to each other.
+
+-}
+all : List LeMans2025MiniSector
+all =
+    [ SCL2
+    , Z4
+    , IP1
+    , Z12
+    , SCLC
+    , A7_1
+    , IP2
+    , A8_1
+    , SCLB
+    , PORIN
+    , POROUT
+    , PITREF
+    , SCL1
+    , FORDOUT
+    , FL
+    ]
 
 
 {-| Fifteen values, one per mini sector — [`BySector`](Motorsport-Sector#BySector)
@@ -150,10 +195,23 @@ map2 f a b =
 -}
 values : ByMiniSector a -> List a
 values byMiniSector =
-    List.map (\mini -> get mini byMiniSector) miniSectorOrder
+    List.map (\mini -> get mini byMiniSector) all
 
 
-{-| Le Mans 2025 layout (sectors with their mini sectors)
+{-| The values in track order, each paired with its mini sector.
+-}
+toList : ByMiniSector a -> List ( LeMans2025MiniSector, a )
+toList byMiniSector =
+    List.map (\mini -> ( mini, get mini byMiniSector )) all
+
+
+{-| Le Mans 2025 layout: which mini sectors make up each sector, and which way
+round the cars go.
+
+Every mini sector of [`all`](#all) appears exactly once, in the same order --
+which is what makes the two readings of the lap agree, and what `LeMansTest`
+checks.
+
 -}
 layout :
     { direction : Direction
@@ -169,17 +227,15 @@ layout =
     }
 
 
-{-| Ordered list of all mini sectors in track order
--}
-miniSectorOrder : List LeMans2025MiniSector
-miniSectorOrder =
-    Sector.values layout.sectors |> List.concat
+{-| Convert a mini sector to its string representation. For display only --
+ordering goes through [`compare`](#compare).
 
+    toString A7_1
+    --> "A7-1"
 
-{-| Convert a mini sector to its string representation
 -}
-miniSectorToString : LeMans2025MiniSector -> String
-miniSectorToString mini =
+toString : LeMans2025MiniSector -> String
+toString mini =
     case mini of
         SCL2 ->
             "SCL2"
@@ -227,66 +283,143 @@ miniSectorToString mini =
             "FL"
 
 
-{-| Mini sector ratio information
-Represents the default ratio of a mini sector for layout calculations
+{-| What share of the lap a mini sector takes when no lap has set a time to
+measure it by -- the proportions the track is drawn at before the race has run.
+
+Every mini sector has one, so this is a plain `Float`: the caller that used to
+answer for a missing one no longer has to name a number for a case that cannot
+arise.
+
 -}
-type alias MiniSectorRatio =
-    { mini : LeMans2025MiniSector
-    , ratio : Float
-    }
+defaultRatio : LeMans2025MiniSector -> Float
+defaultRatio mini =
+    defaultWeight mini / totalDefaultWeight
 
 
-{-| Le Mans 2025 mini sector ratios
+totalDefaultWeight : Float
+totalDefaultWeight =
+    all |> List.map defaultWeight |> List.sum
+
+
+{-| Roughly how long each mini sector is, in arbitrary units -- only the
+proportions between them mean anything, which is why they are normalised into
+[`defaultRatio`](#defaultRatio) rather than read directly.
 -}
-miniSectorDefaultRatios : List MiniSectorRatio
-miniSectorDefaultRatios =
-    let
-        weights =
-            [ ( SCL2, 7.5 )
-            , ( Z4, 7.5 )
-            , ( IP1, 12 )
-            , ( Z12, 24 )
-            , ( SCLC, 3 )
-            , ( A7_1, 15 )
-            , ( IP2, 13 )
-            , ( A8_1, 5.5 )
-            , ( SCLB, 26 )
-            , ( PORIN, 12.5 )
-            , ( POROUT, 11 )
-            , ( PITREF, 6 )
-            , ( SCL1, 2 )
-            , ( FORDOUT, 3 )
-            , ( FL, 2 )
-            ]
+defaultWeight : LeMans2025MiniSector -> Float
+defaultWeight mini =
+    case mini of
+        SCL2 ->
+            7.5
 
-        total =
-            weights |> List.map Tuple.second |> List.sum
-    in
-    weights
-        |> List.map (\( mini, weight ) -> { mini = mini, ratio = weight / total })
+        Z4 ->
+            7.5
 
+        IP1 ->
+            12
 
-{-| Get the default ratio for a specific mini sector in Le Mans 2025
-Returns Nothing if the mini sector is not found
--}
-miniSectorDefaultRatio : LeMans2025MiniSector -> Maybe Float
-miniSectorDefaultRatio miniSector =
-    miniSectorDefaultRatios
-        |> List.Extra.find (\r -> r.mini == miniSector)
-        |> Maybe.map .ratio
+        Z12 ->
+            24
+
+        SCLC ->
+            3
+
+        A7_1 ->
+            15
+
+        IP2 ->
+            13
+
+        A8_1 ->
+            5.5
+
+        SCLB ->
+            26
+
+        PORIN ->
+            12.5
+
+        POROUT ->
+            11
+
+        PITREF ->
+            6
+
+        SCL1 ->
+            2
+
+        FORDOUT ->
+            3
+
+        FL ->
+            2
 
 
 {-| Order two mini-sectors by where they fall on the lap. The counterpart of
 [`Sector.compare`](Motorsport-Sector#compare), and there for the same reason:
 placing a mini-sector against the one the car is in.
+
+    Motorsport.Circuit.LeMans.compare IP1 Z12
+    --> LT
+
+    Motorsport.Circuit.LeMans.compare FL FL
+    --> EQ
+
 -}
 compare : LeMans2025MiniSector -> LeMans2025MiniSector -> Order
 compare a b =
     Basics.compare (toIndex a) (toIndex b)
 
 
+{-| A `case` rather than a lookup in [`all`](#all), for two reasons. It is
+answered without walking the list, and this runs inside the per-frame comparison
+that puts the field in order. And a mini sector missing from the list would
+otherwise have to be given some index anyway -- silently the first one -- where
+here the compiler will not let one be missing at all.
+-}
 toIndex : LeMans2025MiniSector -> Int
 toIndex mini =
-    miniSectorOrder
-        |> List.Extra.elemIndex mini
-        |> Maybe.withDefault 0
+    case mini of
+        SCL2 ->
+            0
+
+        Z4 ->
+            1
+
+        IP1 ->
+            2
+
+        Z12 ->
+            3
+
+        SCLC ->
+            4
+
+        A7_1 ->
+            5
+
+        IP2 ->
+            6
+
+        A8_1 ->
+            7
+
+        SCLB ->
+            8
+
+        PORIN ->
+            9
+
+        POROUT ->
+            10
+
+        PITREF ->
+            11
+
+        SCL1 ->
+            12
+
+        FORDOUT ->
+            13
+
+        FL ->
+            14

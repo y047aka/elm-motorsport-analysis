@@ -248,7 +248,7 @@ type alias CurrentMiniSectorStates =
 **(c) 描画は不変。** `NotEntered` は旧実装で「白・幅 0%」を描いており、幅 0 の要素は
 何も塗らない。VRT スナップショットの更新は不要。
 
-### 提案 2：`toIndex` を `case` 式にする ★推奨・低コスト
+### 提案 2：`toIndex` を `case` 式にする ★実施済み
 
 `Circuit/LeMans.elm:288-292` を `Sector.toIndex`（`Sector.elm:67-77`）と同じ形に書き換え、
 `Lap.elm:445-449` の重複を `LeMans` 側へ寄せて削除する。網羅性がコンパイラに戻り、
@@ -264,6 +264,31 @@ type alias CurrentMiniSectorStates =
 `miniSectorOrder` を `layout.sectors` の連結から導いている点（`Circuit/LeMans.elm:174-176`）
 は、`all` を構築子の直書きにして `layout` 側をそれに合わせて検証する向きに反転させる
 のが望ましい。順序が「レイアウトの副産物」ではなく「型の定義」になる。
+
+#### 実装して分かったこと
+
+**(a) 「黙って先頭扱い」は 2 か所あった。** `Circuit/LeMans.elm` の `toIndex` に加えて
+`Lap.elm` に `miniSectorToIndex` という同じ実装のコピーがあり、こちらは走行順ソートの
+比較関数から呼ばれていた。`LeMans.compare` に一本化して削除。
+
+**(b) 手書きインデックスが持ち込む新しい失敗はテストで塞いだ。** `case` 式にすると
+構築子の網羅性はコンパイラが守るが、**2 つの構築子に同じ番号を書く**ミスは通って
+しまい、その 2 つは `EQ` になって互いに区別できなくなる。`LeMansTest` に
+「相異なるミニセクターが `EQ` にならない」テストを置いた。順序そのものは
+`List.sortWith compare (List.reverse all) == all` で押さえている。
+
+**(c) `layout` との整合はテストに落とした。** 依存の向きを反転させた結果、`all` と
+`layout.sectors` の連結が一致することは型では保証されない。`LeMansTest` の
+「is `all`, cut into the three sectors and no more」がこれを検査する。落とす・重複
+させる・別セクターへ動かす、のいずれもここで落ちる。
+
+**(d) ついでに `Maybe` が 1 つ減った。** `miniSectorDefaultRatio` は
+`List.Extra.find` の結果をそのまま返す `Maybe Float` で、呼び出し側
+（`Chart/Tracker/Config.elm`）が `Maybe.withDefault 0` を書いていた。全構築子に
+重みがある以上 `Nothing` は起こらないので、重み表を `case` 式にして
+`defaultRatio : LeMans2025MiniSector -> Float` に。呼び出し側の
+`withDefault 0`（＝ゼロ幅のトラックという、起こったら明らかにおかしい既定値）が
+消えた。名前も `miniSector` の前置を落として揃えてある。
 
 ### 提案 3：ミニセクターも `Segment` に切り出す
 
@@ -341,7 +366,7 @@ type MiniSectorTiming
 | # | 提案 | 効果 | 範囲 | 状態 |
 | --- | --- | --- | --- | --- |
 | 1 | 提案 1（`SegmentState`） | 3 か所の `progress < 1` とダミー値が消える／未通過区間の評価が読めなくなる | Snapshot＋描画 3 モジュール | 実施済み |
-| 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm` | 未着手 |
+| 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm`, `Chart/Tracker*` | 実施済み |
 | 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 未着手 |
 | 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む | `Lap.elm` 内で完結 | 未着手 |
 | 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ | 未着手 |

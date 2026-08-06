@@ -290,7 +290,7 @@ withEvenMiniSectors each lap =
                 (\mini ->
                     let
                         position =
-                            LeMans.miniSectorOrder
+                            LeMans.all
                                 |> List.Extra.elemIndex mini
                                 |> Maybe.withDefault 0
                     in

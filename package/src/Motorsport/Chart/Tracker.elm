@@ -242,7 +242,7 @@ renderMiniSectorLabels direction config =
                                             miniShare.start + miniShare.share
 
                                         label =
-                                            LeMans.miniSectorToString miniShare.mini
+                                            LeMans.toString miniShare.mini
                                     in
                                     makeLabel direction
                                         { progress = progress

@@ -76,19 +76,16 @@ buildConfig layout bestTimes =
         miniRatio miniSector =
             let
                 -- A record no lap has set contributes nothing to the track's
-                -- proportions; the default ratio below covers that case.
+                -- proportions; before any of them are set there is nothing to
+                -- draw the track from, and `LeMans.defaultRatio` stands in.
                 value =
                     LeMans.get miniSector bestTimes.fastestMiniSectors
                         |> BestTimes.timeOf
                         |> Maybe.withDefault 0
                         |> toFloat
-
-                defaultRatio =
-                    LeMans.miniSectorDefaultRatio miniSector
-                        |> Maybe.withDefault 0
             in
             if totalTime == 0 then
-                defaultRatio
+                LeMans.defaultRatio miniSector
 
             else
                 value / totalTime
