@@ -16,6 +16,7 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -317,59 +318,44 @@ sectorsDecoder =
         (sectorTime "sector_3" "s3_best")
 
 
-type alias MiniSectors =
-    { scl2 : MiniSector
-    , z4 : MiniSector
-    , ip1 : MiniSector
-    , z12 : MiniSector
-    , sclc : MiniSector
-    , a7_1 : MiniSector
-    , ip2 : MiniSector
-    , a8_1 : MiniSector
-    , sclb : MiniSector
-    , porin : MiniSector
-    , porout : MiniSector
-    , pitref : MiniSector
-    , scl1 : MiniSector
-    , fordout : MiniSector
-    , fl : MiniSector
-    }
+{-| The wire format spells the mini-sectors out flat, as it does the sectors,
+and this is where that stops.
 
+Built against [`ByMiniSector`](Motorsport-Circuit-LeMans#ByMiniSector) itself
+rather than a record shaped like it, so that a field added to a
+[`MiniSectorTime`](Motorsport-Lap#MiniSectorTime) is a decoder that stops
+compiling rather than one that quietly decodes into the wrong type. Fifteen
+lines of it remain, because the wire format really is fifteen keys; what the
+pipeline cannot check is that each key lands in the field named after it, which
+is `TimelineEventTest`'s job.
 
-type alias MiniSector =
-    { time : Maybe RaceClock
-    , elapsed : Maybe RaceClock
-    , best : Maybe RaceClock
-    }
-
-
-type alias RaceClock =
-    Duration
-
-
-miniSectorsDecoder : Decoder MiniSectors
+-}
+miniSectorsDecoder : Decoder Lap.MiniSectors
 miniSectorsDecoder =
-    Decode.succeed MiniSectors
-        |> required "scl2" miniSectorDecoder
-        |> required "z4" miniSectorDecoder
-        |> required "ip1" miniSectorDecoder
-        |> required "z12" miniSectorDecoder
-        |> required "sclc" miniSectorDecoder
-        |> required "a7_1" miniSectorDecoder
-        |> required "ip2" miniSectorDecoder
-        |> required "a8_1" miniSectorDecoder
-        |> required "sclb" miniSectorDecoder
-        |> required "porin" miniSectorDecoder
-        |> required "porout" miniSectorDecoder
-        |> required "pitref" miniSectorDecoder
-        |> required "scl1" miniSectorDecoder
-        |> required "fordout" miniSectorDecoder
-        |> required "fl" miniSectorDecoder
+    Decode.succeed LeMans.ByMiniSector
+        |> required "scl2" miniSectorTimeDecoder
+        |> required "z4" miniSectorTimeDecoder
+        |> required "ip1" miniSectorTimeDecoder
+        |> required "z12" miniSectorTimeDecoder
+        |> required "sclc" miniSectorTimeDecoder
+        |> required "a7_1" miniSectorTimeDecoder
+        |> required "ip2" miniSectorTimeDecoder
+        |> required "a8_1" miniSectorTimeDecoder
+        |> required "sclb" miniSectorTimeDecoder
+        |> required "porin" miniSectorTimeDecoder
+        |> required "porout" miniSectorTimeDecoder
+        |> required "pitref" miniSectorTimeDecoder
+        |> required "scl1" miniSectorTimeDecoder
+        |> required "fordout" miniSectorTimeDecoder
+        |> required "fl" miniSectorTimeDecoder
 
 
-miniSectorDecoder : Decoder MiniSector
-miniSectorDecoder =
-    Decode.succeed MiniSector
+{-| `elapsed` on the wire is what a `Lap` calls `elapsedInLap`: the running
+total from the line, not the race clock a `Lap.elapsed` carries.
+-}
+miniSectorTimeDecoder : Decoder Lap.MiniSectorTime
+miniSectorTimeDecoder =
+    Decode.succeed Lap.MiniSectorTime
         |> required "time" (Decode.maybe raceClockDecoder)
         |> required "elapsed" (Decode.maybe raceClockDecoder)
         |> required "best" (Decode.maybe raceClockDecoder)

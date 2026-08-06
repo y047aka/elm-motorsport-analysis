@@ -242,7 +242,7 @@ withMiniSectorsOf : Duration -> Lap -> Lap
 withMiniSectorsOf time lap_ =
     { lap_
         | miniSectors =
-            Just (LeMans.initialize (\_ -> { time = Just time, elapsed = Nothing, best = Nothing }))
+            Just (LeMans.initialize (\_ -> { time = Just time, elapsedInLap = Nothing, personalBest = Nothing }))
     }
 
 

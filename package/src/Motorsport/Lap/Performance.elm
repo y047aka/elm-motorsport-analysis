@@ -98,9 +98,12 @@ type alias MiniSectorPerformance =
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
+        -- A `MiniSectorTime` carries the two `rateTime` reads under the names it
+        -- reads them by, and one more it does not; naming them again here is
+        -- what leaves that one behind.
         rateOne miniSector fastest =
             rateTime (BestTimes.timeOf fastest)
-                { time = miniSector.time, personalBest = miniSector.best }
+                { time = miniSector.time, personalBest = miniSector.personalBest }
     in
     lap.miniSectors
         |> Maybe.map (\ms -> LeMans.map2 rateOne ms bestTimes.fastestMiniSectors)

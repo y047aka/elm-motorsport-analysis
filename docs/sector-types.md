@@ -312,7 +312,7 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 `elapsed` を落とすことは**しない**（2.3 の通り、欠測を跨げる利点がある）。落とすのは
 `elapsed` から起点を毎回逆算するコードのほう。
 
-### 提案 4：計測値の型名を揃える
+### 提案 4：計測値の型名を揃える ★実施済み
 
 - `Lap.MiniSectorData` → `Lap.MiniSectorTime`（`SectorTime` と対にする）
 - そのフィールド `best` → `personalBest`（`SectorTime` に合わせる。
@@ -321,6 +321,31 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 - `elapsed` → `elapsedInLap` など、ラップ先頭からの累積であることを名前で言う
 - `Race/TimelineEvent.elm:320-343` のワイヤ型を削除し、`LeMans.initialize` を使って
   `Lap.MiniSectors` を直接デコードする（`sectorsDecoder` と同じ形にする）
+
+#### 実装して分かったこと
+
+**(a) `LeMans.initialize` はデコーダには効かない。** `initialize` は
+`(mini -> a) -> ByMiniSector a` なので、`a` が `Decoder x` のときに得られるのは
+`ByMiniSector (Decoder x)` であって `Decoder (ByMiniSector x)` ではない。15 個を
+畳む方法（`Decode.dict` 経由、あるいは関数を畳み込む形）はどれも「起こらないはずの
+既定値」を 1 つ持ち込むので、これまで削ってきたものを増やすことになる。
+
+採った形は、レコード型エイリアスの構築子をそのまま使う：
+`Decode.succeed LeMans.ByMiniSector |> required "scl2" miniSectorTimeDecoder |> ...`。
+15 行は残る（ワイヤ形式が実際に 15 キーなので当然）が、**型が 2 つから 1 つになり**、
+`MiniSectorTime` にフィールドを足したときにデコーダはコンパイルが止まる。以前は
+構造が偶然一致していただけで、片方だけ直しても気づけなかった。
+
+**(b) パイプラインが検査できない 1 点はテストで塞いだ。** 15 段の
+`|> required` は位置で対応するので、行を 1 つ入れ替えると隣のフィールドにキーが
+入り、何も失敗しない。`TimelineEventTest` に「各キーが名前どおりのミニセクターに
+入る」テストを追加した。15 個すべてに異なるタイムを与えて `LeMans.toList` で
+読み戻すので、隣同士の取り違えも検出できる。
+
+**(c) 名前の衝突（2.7）は自然に解消した。** `Lap.MiniSectorData` が
+`MiniSectorTime` になったので、`Chart/Tracker/Config.MiniSectorData` はもう
+紛らわしくない。この型自体は提案 5 で `Circuit` 側から導出できるようになるため、
+今回は触っていない。
 
 ### 提案 5：ミニセクターの有無をサーキットに戻す（範囲が広い・要判断）
 
@@ -367,7 +392,7 @@ type MiniSectorTiming
 | --- | --- | --- | --- | --- |
 | 1 | 提案 1（`SegmentState`） | 3 か所の `progress < 1` とダミー値が消える／未通過区間の評価が読めなくなる | Snapshot＋描画 3 モジュール | 実施済み |
 | 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm`, `Chart/Tracker*` | 実施済み |
-| 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 未着手 |
+| 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 実施済み |
 | 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む | `Lap.elm` 内で完結 | 未着手 |
 | 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ | 未着手 |
 

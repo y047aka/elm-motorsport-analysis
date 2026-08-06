@@ -295,8 +295,8 @@ withEvenMiniSectors each lap =
                                 |> Maybe.withDefault 0
                     in
                     { time = Just each
-                    , elapsed = Just (each * (position + 1))
-                    , best = Nothing
+                    , elapsedInLap = Just (each * (position + 1))
+                    , personalBest = Nothing
                     }
                 )
                 |> Just

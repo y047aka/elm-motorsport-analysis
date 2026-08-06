@@ -1,7 +1,7 @@
 module Motorsport.Lap exposing
     ( Lap, empty
     , SectorTime, SectorTimes
-    , MiniSectors, MiniSectorData
+    , MiniSectors, MiniSectorTime
     , recorded
     , compareAt
     , completedLapsAt, findLastLapAt, findCurrentLap
@@ -14,7 +14,7 @@ module Motorsport.Lap exposing
 
 @docs Lap, empty
 @docs SectorTime, SectorTimes
-@docs MiniSectors, MiniSectorData
+@docs MiniSectors, MiniSectorTime
 @docs recorded
 @docs compareAt
 @docs completedLapsAt, findLastLapAt, findCurrentLap
@@ -75,14 +75,30 @@ type alias SectorTimes =
     BySector SectorTime
 
 
+{-| A lap's fifteen mini-sector times, where the circuit records them.
+-}
 type alias MiniSectors =
-    ByMiniSector MiniSectorData
+    ByMiniSector MiniSectorTime
 
 
-type alias MiniSectorData =
+{-| How long one mini-sector of this lap took, next to the driver's best for it
+-- [`SectorTime`](#SectorTime) at the finer grain, and `Nothing` for the same
+two reasons.
+
+`elapsedInLap` is the extra the finer grain needs: how far into the lap this
+mini-sector ended, counted from the line. The sectors get by without it because
+[`segments`](#segments) adds their times up, but that only works while every
+time is there -- a sector the source data left blank is taken as no time at all
+and the ones after it still start where they should, which is a liberty the
+sectors can afford at three and the mini-sectors cannot at fifteen. The source
+records the running total, so a mini-sector after a blank one is still placed
+exactly.
+
+-}
+type alias MiniSectorTime =
     { time : Maybe Duration
-    , elapsed : Maybe Duration
-    , best : Maybe Duration
+    , elapsedInLap : Maybe Duration
+    , personalBest : Maybe Duration
     }
 
 
@@ -450,7 +466,7 @@ miniSectorToElapsed lap miniSector =
 
 miniSectorElapsed : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
 miniSectorElapsed miniSectors mini =
-    LeMans.get mini miniSectors |> .elapsed
+    LeMans.get mini miniSectors |> .elapsedInLap
 
 
 miniSectorTime : MiniSectors -> LeMans2025MiniSector -> Maybe Duration
