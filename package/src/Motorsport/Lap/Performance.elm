@@ -2,6 +2,7 @@ module Motorsport.Lap.Performance exposing
     ( RatedTime, rateTime
     , SectorPerformance, ofSectors
     , MiniSectorPerformance, ofMiniSectors
+    , SegmentState(..), fromProgress, ratedOf
     , PerformanceLevel(..), performanceLevel
     , isStandard
     , toColorVariable
@@ -20,6 +21,11 @@ is free to rate a lap of its own.
 @docs RatedTime, rateTime
 @docs SectorPerformance, ofSectors
 @docs MiniSectorPerformance, ofMiniSectors
+
+
+## How far the car has got through a segment
+
+@docs SegmentState, fromProgress, ratedOf
 
 @docs PerformanceLevel, performanceLevel
 @docs isStandard
@@ -92,12 +98,85 @@ type alias MiniSectorPerformance =
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
+        -- A `MiniSectorTime` carries the two `rateTime` reads under the names it
+        -- reads them by, and one more it does not; naming them again here is
+        -- what leaves that one behind.
         rateOne miniSector fastest =
             rateTime (BestTimes.timeOf fastest)
-                { time = miniSector.time, personalBest = miniSector.best }
+                { time = miniSector.time, personalBest = miniSector.personalBest }
     in
     lap.miniSectors
         |> Maybe.map (\ms -> LeMans.map2 rateOne ms bestTimes.fastestMiniSectors)
+
+
+
+-- HOW FAR THE CAR HAS GOT THROUGH A SEGMENT
+
+
+{-| One segment of the lap a car is on -- a sector or a mini-sector -- as it
+reads at a moment of the race: the car has not reached it, is somewhere inside
+it, or has the whole of it behind. Both grains read the same way, which is why
+the type is not spelled twice.
+
+Only `Completed` carries a rating, and that is the point of the type rather than
+a detail of it. The race data holds every sector time of a lap from the start,
+the ones the car has not driven yet included, so a shape that paired a rating
+with a progress would hand a view the time a car is _going_ to set.
+
+Its `Maybe` is the other absence: a segment the source data has no time for
+finishes with nothing to rate, and a view paints it the standard colour. It is
+the `Nothing` [`rateTime`](#rateTime) produces, kept in the one state where a
+time was due.
+
+-}
+type SegmentState
+    = NotEntered
+    | InProgress Float
+    | Completed (Maybe RatedTime)
+
+
+{-| The state of the segment the car is currently inside, from how far through
+it the clock puts them.
+
+A progress of 1 is a segment behind the car, not one it is still in: callers
+clamp progress to at most 1, so a clock past the end of the lap reads as exactly
+1 of the final segment. Routing that to `Completed` here saves every caller from
+having to know that 1 is a boundary.
+
+    fromProgress 0.5 Nothing
+    --> InProgress 0.5
+
+    fromProgress 1 Nothing
+    --> Completed Nothing
+
+-}
+fromProgress : Float -> Maybe RatedTime -> SegmentState
+fromProgress progress rated =
+    if progress >= 1 then
+        Completed rated
+
+    else
+        InProgress progress
+
+
+{-| The rating of a segment the car has finished, where it has finished one and
+the source data timed it.
+
+    ratedOf NotEntered
+    --> Nothing
+
+-}
+ratedOf : SegmentState -> Maybe RatedTime
+ratedOf state =
+    case state of
+        Completed rated ->
+            rated
+
+        InProgress _ ->
+            Nothing
+
+        NotEntered ->
+            Nothing
 
 
 

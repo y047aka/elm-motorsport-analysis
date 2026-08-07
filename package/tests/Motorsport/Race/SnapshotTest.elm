@@ -3,6 +3,7 @@ module Motorsport.Race.SnapshotTest exposing (suite)
 import Expect
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Class.Era as Era
@@ -11,7 +12,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Lap.Performance exposing (PerformanceLevel(..))
+import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
@@ -91,16 +92,26 @@ suite =
                     -- Car 1 started its second lap at 6.000 and the clock says
                     -- 7.000: a second in, which is all of S1 and none of S2.
                     sectorStatesOf "1" (snapshotAt 7000)
-                        |> Maybe.map (Sector.toList >> List.map (\( sector, state ) -> ( sector, state.progress )))
-                        |> Expect.equal (Just [ ( S1, 1 ), ( S2, 0 ), ( S3, 0 ) ])
+                        |> Maybe.map (Sector.toList >> List.map (Tuple.mapSecond stateName))
+                        |> Expect.equal
+                            (Just [ ( S1, "Completed" ), ( S2, "InProgress 0" ), ( S3, "NotEntered" ) ])
             , test "are rated against the record as it stood at that moment" <|
                 \_ ->
                     -- Of the laps run by 7.000, car 1's S1 of 1.000 is the
                     -- quickest anyone has gone through S1.
                     sectorStatesOf "1" (snapshotAt 7000)
-                        |> Maybe.map (Sector.toList >> List.map (\( sector, state ) -> ( sector, Maybe.map .performance state.rated )))
-                        |> Expect.equal
-                            (Just [ ( S1, Just Fastest ), ( S2, Just Standard ), ( S3, Just Standard ) ])
+                        |> Maybe.andThen (Sector.get S1 >> Performance.ratedOf)
+                        |> Maybe.map .performance
+                        |> Expect.equal (Just Fastest)
+            , test "carry no rating until the car is through them, though the data holds the times all along" <|
+                \_ ->
+                    -- Car 1's S2 and S3 times are in the race data from the
+                    -- start; what stops them reaching a view early is that
+                    -- neither sector is `Completed` at 7.000.
+                    sectorStatesOf "1" (snapshotAt 7000)
+                        |> Maybe.map
+                            (Sector.values >> List.map (Performance.ratedOf >> Maybe.map .time))
+                        |> Expect.equal (Just [ Just 1000, Nothing, Nothing ])
             ]
         , describe "the mini-sector a car is in, where the source data records mini-sectors"
             [ test "is the one the clock falls in, and says how far through it the car is" <|
@@ -116,9 +127,9 @@ suite =
                         |> Maybe.andThen (.currentLap >> .miniSectorStates)
                         |> Maybe.map
                             (\states ->
-                                ( states.ip1.progress, states.z12.progress, states.sclc.progress )
+                                ( stateName states.ip1, stateName states.z12, stateName states.sclc )
                             )
-                        |> Expect.equal (Just ( 1, 0.5, 0 ))
+                        |> Expect.equal (Just ( "Completed", "InProgress 0.5", "NotEntered" ))
             , test "and where the data records none there is no mini-sector to be in, though there is still a sector" <|
                 \_ ->
                     carAt "1" (snapshotAt 7000)
@@ -193,7 +204,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars [ carOne, carTwo ]
+    Race.fromCars Circuit.clockwise [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -208,13 +219,30 @@ sectorStatesOf carNumber snapshot =
         |> Maybe.map (.currentLap >> .sectorStates)
 
 
+{-| Which state a segment is in, without the rating it carries -- for a test
+about where on the lap the car is, which would otherwise have to restate every
+time the lap holds.
+-}
+stateName : SegmentState -> String
+stateName state =
+    case state of
+        NotEntered ->
+            "NotEntered"
+
+        InProgress progress ->
+            "InProgress " ++ String.fromFloat progress
+
+        Completed _ ->
+            "Completed"
+
+
 {-| A wider field, for what two cars cannot show: two of them sharing a class,
 and one that never took to the track and so does not join it. Read at 7.000, as
 the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars Circuit.clockwise [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -236,7 +264,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars [ leMansCar ]
+    Race.fromCars Circuit.leMans2025 [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -263,13 +291,13 @@ withEvenMiniSectors each lap =
                 (\mini ->
                     let
                         position =
-                            LeMans.miniSectorOrder
+                            LeMans.all
                                 |> List.Extra.elemIndex mini
                                 |> Maybe.withDefault 0
                     in
                     { time = Just each
-                    , elapsed = Just (each * (position + 1))
-                    , best = Nothing
+                    , elapsedInLap = Just (each * (position + 1))
+                    , personalBest = Nothing
                     }
                 )
                 |> Just

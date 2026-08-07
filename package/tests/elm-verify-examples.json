@@ -2,11 +2,13 @@
   "tests": [
     "Motorsport.Class",
     "Motorsport.Class.Era",
+    "Motorsport.Circuit.LeMans",
     "Motorsport.Driver",
     "Motorsport.Duration",
     "Motorsport.Gap",
     "Motorsport.Instant",
     "Motorsport.Lap",
+    "Motorsport.Lap.Performance",
     "Motorsport.Sector"
   ]
 }

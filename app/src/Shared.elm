@@ -14,6 +14,8 @@ import Data.Wec as Wec
 import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
+import Motorsport.Chart.Tracker as Tracker
+import Motorsport.Circuit as Circuit
 import Motorsport.Class.Era as Era
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car exposing (Car)
@@ -26,10 +28,16 @@ import Shared.Msg exposing (Msg(..))
 -- MODEL
 
 
+{-| `track` is the one derived value kept here rather than worked out where it
+is used: everything else about a frame follows from `replay` and the clock,
+where the track never moves once the data has loaded. See
+[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf).
+-}
 type alias Model =
     { eventSummary : EventSummary
     , replay : Replay.Model
     , snapshot : Snapshot
+    , track : Tracker.Track
     , pendingWecCars : Maybe (List Car)
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
@@ -44,9 +52,10 @@ init _ =
         snapshotInit =
             snapshotOf replayInit
     in
-    ( { eventSummary = { id = "", name = "", season = 0, date = "", jsonPath = "" }
+    ( { eventSummary = noEvent
       , replay = replayInit
       , snapshot = snapshotInit
+      , track = Tracker.trackOf replayInit.race
       , pendingWecCars = Nothing
       , pendingWecLaps = Nothing
       }
@@ -66,7 +75,7 @@ update msg m =
                 eventSummary =
                     Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
                         |> Maybe.andThen Series.toEventSummary
-                        |> Maybe.withDefault { id = "", name = "", season = 0, date = "", jsonPath = "" }
+                        |> Maybe.withDefault noEvent
             in
             ( { m
                 | eventSummary = eventSummary
@@ -129,6 +138,21 @@ update msg m =
             )
 
 
+{-| The round the app shows before one has been asked for, and in place of one
+it cannot show. Its circuit is the plain clockwise layout, which is what an
+empty race is drawn on.
+-}
+noEvent : EventSummary
+noEvent =
+    { id = ""
+    , name = ""
+    , season = 0
+    , date = ""
+    , jsonPath = ""
+    , circuit = Circuit.clockwise
+    }
+
+
 {-| The race read where playback has got to.
 -}
 snapshotOf : Replay.Model -> Snapshot
@@ -154,11 +178,15 @@ finalizeWecIfReady m =
                     WecLaps.attach rawLaps cars
 
                 replayNew =
-                    Replay.fromCars carsWithLaps
+                    Replay.fromCars m.eventSummary.circuit carsWithLaps
             in
             ( { m
                 | replay = replayNew
                 , snapshot = snapshotOf replayNew
+
+                -- Settled here, with the race, and not touched again until the
+                -- next one loads.
+                , track = Tracker.trackOf replayNew.race
                 , pendingWecCars = Nothing
                 , pendingWecLaps = Nothing
               }

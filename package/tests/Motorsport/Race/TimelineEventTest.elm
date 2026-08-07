@@ -1,6 +1,9 @@
 module Motorsport.Race.TimelineEventTest exposing (suite)
 
 import Expect
+import Json.Decode as Decode
+import Json.Encode as Encode
+import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
@@ -219,11 +222,78 @@ suite =
                                 )
                 in
                 Expect.equal True (List.all ((==) Nothing) embeddedPitTimes)
+        , describe "decoding a lap's mini-sectors"
+            [ test "puts each key under the mini sector it is named for" <|
+                \_ ->
+                    -- What the fifteen-step pipeline in `miniSectorsDecoder`
+                    -- cannot check for itself: the keys and the fields of
+                    -- `ByMiniSector` are both in track order, so a line out of
+                    -- place pairs a key with its neighbour's field and nothing
+                    -- fails. Giving every mini sector a different time -- one
+                    -- second per place in track order -- makes such a swap show.
+                    decodedMiniSectors
+                        |> Result.map (LeMans.toList >> List.map (Tuple.mapSecond .time))
+                        |> Expect.equal
+                            (Ok (List.indexedMap (\i mini -> ( mini, Just ((i + 1) * 1000) )) LeMans.all))
+            , test "reads each of a mini-sector's three times into the field it belongs in" <|
+                \_ ->
+                    -- The last in track order: 15.000 long, 15:00.000 into the
+                    -- lap by the time it ends -- `elapsedInLap` is the running
+                    -- total from the line, not the race clock a `Lap.elapsed`
+                    -- carries -- and a one-second best like all the others.
+                    decodedMiniSectors
+                        |> Result.map (LeMans.get FL)
+                        |> Expect.equal
+                            (Ok
+                                { time = Just 15000
+                                , elapsedInLap = Just 900000
+                                , personalBest = Just 1000
+                                }
+                            )
+            ]
         ]
 
 
 
 -- HELPERS
+
+
+{-| A lap whose mini-sectors all differ: the nth in track order took n seconds,
+ended n minutes into the lap, and has a one-second best. Decoded through the
+public `Start` event, which is the only way in.
+-}
+decodedMiniSectors : Result Decode.Error Lap.MiniSectors
+decodedMiniSectors =
+    let
+        miniSectorJson index mini =
+            "\""
+                ++ String.toLower (String.replace "-" "_" (LeMans.toString mini))
+                ++ "\":{\"time\":\""
+                ++ String.fromInt (index + 1)
+                ++ ".000\",\"elapsed\":\""
+                ++ String.fromInt (index + 1)
+                ++ ":00.000\",\"best\":\"1.000\"}"
+
+        json =
+            """{"Start":{"current_lap":{"car_number":"7","driver":"A B","lap":1,"position":1,"time":"1:30.000","best":"1:30.000","sector_1":"30.000","s1_best":"30.000","sector_2":"30.000","s2_best":"30.000","sector_3":"30.000","s3_best":"30.000","elapsed":"1:30.000","miniSectors":{"""
+                ++ String.join "," (List.indexedMap miniSectorJson LeMans.all)
+                ++ """}}}}"""
+    in
+    Decode.decodeString TimelineEvent.carEventTypeDecoder json
+        |> Result.andThen
+            (\event ->
+                case event of
+                    Start { currentLap } ->
+                        case currentLap.miniSectors of
+                            Just miniSectors ->
+                                Ok miniSectors
+
+                            Nothing ->
+                                Err (Decode.Failure "the lap decoded without mini-sectors" Encode.null)
+
+                    _ ->
+                        Err (Decode.Failure "expected a Start event" Encode.null)
+            )
 
 
 carWithLaps : List Lap -> Car

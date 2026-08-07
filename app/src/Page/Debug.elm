@@ -230,14 +230,13 @@ sectorColumns bestTimes =
                 [ sectorTimeColumn
                     { label = Sector.toString sector
                     , getter =
+                        -- The table lists laps that are over, so every sector of
+                        -- one is behind the car; there is no progress to report
+                        -- and the column no longer asks for one.
                         times sector
                             >> Maybe.map
-                                (\{ time, personalBest } ->
-                                    { time = Maybe.withDefault 0 time
-                                    , personalBest = personalBest
-                                    , fastest = fastest sector
-                                    , progress = 1
-                                    }
+                                (Performance.rateTime (fastest sector)
+                                    >> Performance.Completed
                                 )
                     }
                 , customColumn

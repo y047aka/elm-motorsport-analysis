@@ -1,14 +1,20 @@
-module Motorsport.Chart.Tracker exposing (view)
+module Motorsport.Chart.Tracker exposing (Track, trackOf, view)
+
+{-| The field drawn going round the circuit.
+
+@docs Track, trackOf, view
+
+-}
 
 import Css
-import Motorsport.BestTimes exposing (Holder)
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
-import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
+import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
+import Motorsport.Race exposing (Race)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
-import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Sector as Sector
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
@@ -93,42 +99,36 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-view :
-    { season : Int, eventName : String }
-    ->
-        { a
-            | fastestSectors : BySector (Maybe Holder)
-            , fastestMiniSectors : ByMiniSector (Maybe Holder)
-        }
-    -> Snapshot
-    -> Svg msg
-view { season, eventName } bestTimes standings =
-    let
-        layout =
-            if season == 2025 && eventName == "24 Hours of Le Mans" then
-                Circuit.leMans2025
-
-            else if isCounterClockwiseCircuit eventName then
-                Circuit.counterClockwise
-
-            else
-                Circuit.clockwise
-
-        config =
-            Config.buildConfig layout bestTimes
-    in
-    viewWithConfig layout.direction config standings
-
-
-{-| Check if a circuit runs counter-clockwise
+{-| The circuit, drawn to the proportions the race ended up with. See
+[`trackOf`](#trackOf).
 -}
-isCounterClockwiseCircuit : String -> Bool
-isCounterClockwiseCircuit eventName =
-    List.member eventName
-        [ "Lone Star Le Mans"
-        , "6 Hours of Imola"
-        , "6 Hours of São Paulo"
-        ]
+type Track
+    = Track
+        { direction : Direction
+        , config : TrackConfig
+        }
+
+
+{-| Work the track out from the race that was run on it. Hold on to the result
+and hand it to [`view`](#view) each frame.
+
+The proportions come from the race's _final_ records, not from the ones standing
+at some moment of it: a sector's share of the lap is how quick it was at its
+quickest, and mid-race that answer is still moving. Reading it at the end is
+what makes the track the same shape from the first frame to the last.
+
+-}
+trackOf : Race -> Track
+trackOf race =
+    Track
+        { direction = race.circuit.direction
+        , config = Config.buildConfig race.circuit (BestTimes.final race.bestTimeChanges)
+        }
+
+
+view : Track -> Snapshot -> Svg msg
+view (Track { direction, config }) standings =
+    viewWithConfig direction config standings
 
 
 viewWithConfig : Direction -> TrackConfig -> Snapshot -> Svg msg
@@ -204,55 +204,42 @@ track direction config =
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
 renderSectorLabels direction config =
-    config
+    config.sectors
+        |> Sector.toList
         |> List.map
-            (\sectorConfig ->
-                let
-                    progress =
-                        sectorConfig.start + (sectorConfig.share / 2)
-
-                    label =
-                        Sector.toString sectorConfig.sector
-                in
+            (\( sector, { start, share } ) ->
                 makeLabel direction
-                    { progress = progress
+                    { progress = start + (share / 2)
                     , radius = constants.track.sectorLabelRadius
                     , fontSize = constants.track.sectorLabelFontSize
                     , color = "oklch(1 0 0 / 0.5)"
-                    , label = label
+                    , label = Sector.toString sector
                     }
             )
 
 
 renderMiniSectorLabels : Direction -> TrackConfig -> List (Svg msg)
 renderMiniSectorLabels direction config =
-    config
-        |> List.concatMap
-            (\sectorConfig ->
-                case sectorConfig.miniSectorData of
-                    Config.NoMiniSectors ->
-                        []
+    case config.miniSectors of
+        Config.NoMiniSectors ->
+            []
 
-                    Config.WithMiniSectors minis ->
-                        minis
-                            |> List.map
-                                (\miniShare ->
-                                    let
-                                        progress =
-                                            miniShare.start + miniShare.share
-
-                                        label =
-                                            LeMans.miniSectorToString miniShare.mini
-                                    in
-                                    makeLabel direction
-                                        { progress = progress
-                                        , radius = constants.track.miniSectorLabelRadius
-                                        , fontSize = constants.track.miniSectorLabelFontSize
-                                        , color = "oklch(0.5 0 0)"
-                                        , label = label
-                                        }
-                                )
-            )
+        Config.MiniSectorShares shares ->
+            shares
+                |> LeMans.toList
+                |> List.map
+                    (\( mini, { start, share } ) ->
+                        makeLabel direction
+                            -- At the end of the mini-sector, not the middle of
+                            -- it as a sector's label is: fifteen of them round
+                            -- one circle leaves no room to centre them in.
+                            { progress = start + share
+                            , radius = constants.track.miniSectorLabelRadius
+                            , fontSize = constants.track.miniSectorLabelFontSize
+                            , color = "oklch(0.5 0 0)"
+                            , label = LeMans.toString mini
+                            }
+                    )
 
 
 makeLabel :

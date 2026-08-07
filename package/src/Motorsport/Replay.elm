@@ -17,6 +17,8 @@ worked out where it is needed.
 
 -}
 
+import Motorsport.Circuit exposing (Layout)
+import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Clock as Clock
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -44,9 +46,9 @@ empty =
     }
 
 
-fromCars : List Car -> Model
-fromCars cars =
-    { race = Race.fromCars cars
+fromCars : Layout LeMans2025MiniSector -> List Car -> Model
+fromCars circuit cars =
+    { race = Race.fromCars circuit cars
     , playback = Clock.init
     }
 

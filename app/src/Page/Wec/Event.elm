@@ -162,7 +162,7 @@ subscriptions shared _ =
 
 
 view : Shared.Model -> Model -> View Msg
-view { eventSummary, replay, snapshot } m =
+view { eventSummary, replay, snapshot, track } m =
     { title = "Wec"
     , body =
         [ main_
@@ -176,7 +176,7 @@ view { eventSummary, replay, snapshot } m =
             [ navigation eventSummary replay m.mode
             , case m.mode of
                 Tracker ->
-                    trackerView eventSummary snapshot m
+                    trackerView eventSummary track snapshot m
 
                 Events ->
                     RaceEvents.view EventsMsg m.eventsState replay
@@ -185,8 +185,8 @@ view { eventSummary, replay, snapshot } m =
     }
 
 
-trackerView : EventSummary -> Snapshot -> Model -> Html Msg
-trackerView eventSummary snapshot m =
+trackerView : EventSummary -> TrackerChart.Track -> Snapshot -> Model -> Html Msg
+trackerView eventSummary track snapshot m =
     div
         [ css
             [ property "grid-row" "2"
@@ -227,11 +227,7 @@ trackerView eventSummary snapshot m =
                         , property "place-items" "center"
                         ]
                     ]
-                    [ TrackerChart.view
-                        { season = eventSummary.season, eventName = eventSummary.name }
-                        (Snapshot.bestTimes snapshot)
-                        snapshot
-                    ]
+                    [ TrackerChart.view track snapshot ]
                 ]
             ]
         , div

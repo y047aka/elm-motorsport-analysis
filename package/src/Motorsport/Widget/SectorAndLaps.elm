@@ -11,7 +11,7 @@ import Css exposing (batch, num, opacity, property)
 import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Duration as Duration
-import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Lap.Performance as Performance exposing (SegmentState)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
@@ -141,20 +141,25 @@ currentSectorPie item =
 
 {-| Convert one sector into `(fill color, fill fraction 0..1)`:
 white partial fill while in progress, full performance color once completed.
+A sector the car has not reached fills nothing, so its colour never shows.
 -}
-currentSectorSlot : { progress : Float, rated : Maybe RatedTime } -> ( String, Float )
-currentSectorSlot { progress, rated } =
-    if progress < 1 then
-        ( "oklch(1 0 0)", progress )
+currentSectorSlot : SegmentState -> ( String, Float )
+currentSectorSlot state =
+    case state of
+        Performance.NotEntered ->
+            ( "oklch(1 0 0)", 0 )
 
-    else
-        -- A sector the source data has no time for has no rating to colour it by.
-        ( rated
-            |> Maybe.map .performance
-            |> Maybe.withDefault Performance.Standard
-            |> Performance.toColorVariable
-        , 1
-        )
+        Performance.InProgress progress ->
+            ( "oklch(1 0 0)", progress )
+
+        Performance.Completed rated ->
+            -- A sector the source data has no time for has no rating to colour it by.
+            ( rated
+                |> Maybe.map .performance
+                |> Maybe.withDefault Performance.Standard
+                |> Performance.toColorVariable
+            , 1
+            )
 
 
 {-| Draw three slots as 120° donut arcs. Each element is
