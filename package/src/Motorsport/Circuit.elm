@@ -1,12 +1,12 @@
 module Motorsport.Circuit exposing
-    ( Circuit, Layout
+    ( Layout
     , Segmentation(..)
     , clockwise, counterClockwise, leMans2025
     )
 
 {-|
 
-@docs Circuit, Layout
+@docs Layout
 @docs Segmentation
 @docs clockwise, counterClockwise, leMans2025
 
@@ -15,14 +15,6 @@ module Motorsport.Circuit exposing
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Sector exposing (BySector)
-
-
-{-| Circuit information
--}
-type alias Circuit miniSector =
-    { name : String
-    , layout : Layout miniSector
-    }
 
 
 {-| How a circuit is laid out for timing. Which way the cars go round is a
