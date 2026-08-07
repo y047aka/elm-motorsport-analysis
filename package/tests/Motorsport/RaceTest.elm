@@ -1,6 +1,7 @@
 module Motorsport.RaceTest exposing (suite)
 
 import Expect
+import Motorsport.Circuit as Circuit
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant exposing (Instant)
@@ -80,7 +81,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars
+    Race.fromCars Circuit.clockwise
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000

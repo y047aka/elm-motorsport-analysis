@@ -391,28 +391,69 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 紛らわしくない。この型自体は提案 5 で `Circuit` 側から導出できるようになるため、
 今回は触っていない。
 
-### 提案 5：ミニセクターの有無をサーキットに戻す（範囲が広い・要判断）
+### 提案 5：サーキット情報を `Race` に載せる ★実施済み（範囲を絞って）
 
-2.2 の本筋。`Race` にサーキット（またはレイアウト）を持たせ、
-`Chart/Tracker.elm:107-115` の文字列一致を廃す。そのうえで
+2.2 の本筋。`Race` にレイアウトを持たせ、`Chart/Tracker.elm:107-115` の文字列一致を
+廃す。
 
-```elm
-type MiniSectorTiming
-    = NotMeasured              -- このサーキットは計測しない
-    | Measured MiniSectors     -- 計測対象で、このラップのデータはこう
-```
+#### 決め手になったのは「比率をリプレイ前に確定したい」という要件
 
-を `Lap` に持たせるか、あるいはミニセクターを `Lap` から外して
-`Race` 側の別テーブルに置くか、の二択になる。
+当初この提案は「`Lap` に `MiniSectorTiming` を持たせるか、ミニセクターを `Race` 側の
+別テーブルに移すか」の二択として書いていたが、後から出た次の要件が配置先を決めた。
 
-`MiniSectorTiming` は `Maybe MiniSectors` と同型なので、単体では名前が付くだけで
-検査は強くならない。**サーキット情報を `Race` に載せる作業とセットで初めて意味を持つ**
-（載せて初めて「ル・マンなのに `NotMeasured`」を不整合として扱える）ので、提案 5 は
-一括で判断すべき塊として扱い、提案 1〜4 とは分けたほうがよい。
+> Tracker の描画用にセクター／ミニセクターの比率を毎フレーム計算しているが、
+> これは最終的にセクター毎の最速タイムに収束する。毎フレームの計算を廃止し、
+> Replay 実行より前に比率を確定したい。
 
-`Chart/Tracker/Config.MiniSectorData(..)`（`Config.elm:38`）は、この形を描画側だけで
-先に実現した例になっている。提案 5 を入れるなら、この型は
-`Circuit` 側の表現から導出できるようになり、名前の衝突（2.7）も解消する。
+この比率が依存するのは 2 つだけで、**どちらも時計に依存しない**。
+
+1. サーキットのレイアウト（どのミニセクターがあるか、どちら回りか）— イベントの性質
+2. レース全体の最終ベストタイム — `BestTimes.final race.bestTimeChanges`
+
+2 が `Race` の中にある以上、1 も `Race` に置けば **比率は `Race` だけから決まる**。
+`Tracker.trackOf : Race -> Track` という引数 1 つの関数になり、ロード時に 1 回呼んで
+持ち回すだけでよい。
+
+`EventSummary` にレイアウトを置いて `Tracker` に別々に渡す案も検討したが、
+**組み合わせを取り違える窓がある**ので採らなかった。`Shared.update` の
+`FetchJson_Wec` は `eventSummary` を即座に差し替える一方、`replay` は fetch 完了まで
+前のレースのままなので、その間「新しいサーキット × 古いレース」の組が作れてしまう
+（今も同じ窓があり、遷移直後に一瞬おかしなトラックが出る）。`Race` に載せれば
+この窓は構造的に消える。
+
+#### 実際に入れたもの
+
+- `Race` に `circuit : Layout LeMans2025MiniSector`。`Race.fromCars` が引数に取る
+  （`Replay.fromCars` も同様、`Race.empty` は `Circuit.clockwise`）
+- `Data.Series.Wec.circuit : { season, event } -> Layout ...` — **開催地の enum に対する
+  `case` 式**。`Wec` は Qatar / Imola / Spa / Le Mans / São Paulo / COTA / Fuji /
+  Bahrain の 8 構築子なので、21 イベントのレコードに 1 行ずつ足すのではなく 8 分岐で
+  済む。ミニセクターを持つのはル・マンだけ、しかも 2025 年のデータだけなので、
+  季節が効くのはそこだけ
+- `EventSummary` に `circuit` を持たせ、`Shared` が `Replay.fromCars` に渡す
+- `Tracker.Track`（不透明型）と `Tracker.trackOf : Race -> Track`。`Tracker.view` は
+  `Track -> Snapshot -> Svg msg` になり、**毎フレームの `buildConfig` が消えた**
+- `Shared.Model.track` に 1 回だけ組んで保持
+- `isCounterClockwiseCircuit`（イベント名 3 つのリスト）を削除
+
+#### 挙動が変わる点
+
+**トラックの形が再生中に動かなくなる。** 以前は「その瞬間までの記録」で比率を出して
+いたので、記録が更新されるたびにトラックの区画がわずかに変形していた。今は
+`BestTimes.final` で最初から最終形。要件どおりだが、**VRT スナップショット
+（`app/tests/wec-event.spec.ts-snapshots/lap-180.png`）は更新が必要**。
+
+#### 見送ったもの
+
+`Lap.miniSectors : Maybe MiniSectors` は**そのまま**にした。`MiniSectorTiming` に
+改名しても `Maybe` と同型で検査は強くならず、「ル・マンなのに `NotMeasured`」を
+不整合として扱う消費者が現時点で 1 つも無い（`compareLapsInSameSector`・
+`Performance.ofMiniSectors`・`Snapshot.miniSectorStates` はいずれも `Nothing` を
+セクター粒度へのフォールバックとして正しく扱う）。サーキットが `Race` に載った今、
+必要になった時点で入れられる。
+
+`Chart/Tracker/Config.MiniSectorData(..)` も、レイアウトから導出できるようには
+なったが、今回は触っていない。
 
 ### 提案 6：ミニセクター型の抽象化（今回は見送り推奨）
 
@@ -438,9 +479,12 @@ type MiniSectorTiming
 | 2 | 提案 2（`toIndex` を `case` に、`ByMiniSector` の API 整備） | 誤答の芽を摘む＋毎フレームの線形探索を消す | `Circuit/LeMans.elm`, `Lap.elm`, `Chart/Tracker*` | 実施済み |
 | 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 実施済み |
 | 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む／進行度の原点が選択と揃う | `Lap.elm`, `Race/Snapshot.elm` | 実施済み |
-| 5 | 提案 5（サーキットを `Race` へ） | 2.2 の根治。要設計判断 | `Race`, `Tracker`, ローダ | 未着手 |
+| 5 | 提案 5（サーキットを `Race` へ） | 文字列一致の廃止＋比率計算をリプレイ前に確定 | `Race`, `Replay`, `Tracker`, `Data.Series`, `Shared` | 実施済み |
 
-1〜4 は互いに独立で、それぞれ単独の PR にできる。5 は着手前に方針を決める必要がある。
+1〜4 は互いに独立で、それぞれ単独の PR にできる。5 は 1〜4 の後に入れた。
+
+残っているのは提案 6（ミニセクター型の抽象化）だけで、これはル・マン以外の
+ミニセクターデータが実際に入る時点で再検討するのが妥当。
 
 ## 5. 今回スコープ外としたもの
 

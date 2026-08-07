@@ -3,6 +3,7 @@ module Motorsport.Race.SnapshotTest exposing (suite)
 import Expect
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Class as Class exposing (Class)
 import Motorsport.Class.Era as Era
@@ -203,7 +204,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars [ carOne, carTwo ]
+    Race.fromCars Circuit.clockwise [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -241,7 +242,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars Circuit.clockwise [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -263,7 +264,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars [ leMansCar ]
+    Race.fromCars Circuit.leMans2025 [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 

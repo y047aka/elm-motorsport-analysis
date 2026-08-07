@@ -21,6 +21,9 @@ toEventSummary_Wec_2024 event =
 
         jsonPath =
             "/static/wec/2024/" ++ id ++ ".json"
+
+        circuit =
+            Data.Series.Wec.circuit { season = 2024, event = event }
     in
     case event of
         Qatar_1812km ->
@@ -29,6 +32,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-03-02"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         Imola_6h ->
@@ -37,6 +41,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-04-21"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         Spa_6h ->
@@ -45,6 +50,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-05-11"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         LeMans_24h ->
@@ -53,6 +59,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-06-15"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         SaoPaulo_6h ->
@@ -61,6 +68,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-07-14"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         Cota_6h ->
@@ -69,6 +77,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-09-01"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         Fuji_6h ->
@@ -77,6 +86,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-09-15"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
         Bahrain_8h ->
@@ -85,6 +95,7 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-11-02"
             , jsonPath = jsonPath
+            , circuit = circuit
             }
 
 

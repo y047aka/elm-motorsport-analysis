@@ -23,6 +23,8 @@ moment is derived from the two, in
 import Dict
 import List.Extra
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Circuit as Circuit exposing (Layout)
+import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -41,9 +43,17 @@ when a record was set. All three are
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race was.
 
+`circuit` is the one thing here the lap data cannot say: which way the cars go
+round, and which mini-sectors the timing splits the lap into. It is a fact about
+the event, so it is given to [`fromCars`](#fromCars) rather than read off the
+cars -- and it lives here, beside them, so that anything drawing the race takes
+the track and the times it is drawn to from the same value and cannot pair a
+circuit with the wrong race.
+
 -}
 type alias Race =
     { cars : List Car
+    , circuit : Layout LeMans2025MiniSector
     , lapTotal : Int
     , timeLimit : Instant
     , timelineEvents : List TimelineEvent
@@ -58,6 +68,7 @@ type alias Race =
 empty : Race
 empty =
     { cars = []
+    , circuit = Circuit.clockwise
     , lapTotal = 0
     , timeLimit = Instant.raceStart
     , timelineEvents = []
@@ -74,8 +85,8 @@ per-lap positions assigned produce a timeline with no lead changes in it -- see
 [`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromCars : List Car -> Race
-fromCars cars =
+fromCars : Layout LeMans2025MiniSector -> List Car -> Race
+fromCars circuit cars =
     let
         timelineEvents =
             TimelineEvent.fromCars cars
@@ -84,6 +95,7 @@ fromCars cars =
             calcLapCompletions cars
     in
     { cars = cars
+    , circuit = circuit
     , lapTotal = ChangePoints.length lapCompletions
     , timeLimit = calcTimeLimit cars
     , timelineEvents = timelineEvents

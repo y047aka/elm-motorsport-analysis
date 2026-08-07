@@ -2,6 +2,7 @@ module Motorsport.BestTimesTest exposing (tests)
 
 import Expect
 import Motorsport.BestTimes as BestTimes exposing (Changes, Holder, Snapshot)
+import Motorsport.Circuit as Circuit
 import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Class as Class
 import Motorsport.Driver as Driver
@@ -163,7 +164,7 @@ laps over stays covered too.
 -}
 changesOf : List Car -> Changes
 changesOf cars =
-    (Race.fromCars cars).bestTimeChanges
+    (Race.fromCars Circuit.clockwise cars).bestTimeChanges
 
 
 {-| One record's holder at the end of the race, as the three things that say
