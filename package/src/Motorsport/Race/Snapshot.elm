@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), lastLapRating
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -30,7 +30,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field says which one
 it wants rather than working it out of `toList`.
 
-@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, lastLapRating
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -204,25 +204,6 @@ type LastLap
         , sectors : SectorPerformance
         , miniSectors : Maybe MiniSectorPerformance
         }
-
-
-{-| The rating of the lap the car has just finished, where it has finished one
-and the source data timed it.
-
-The one place the two absences above are flattened together, for the callers
-that have nothing to say about either: a column that prints a time or a "-", and
-the sort behind it. Anything that draws the sectors reads the `Finished` fields
-instead.
-
--}
-lastLapRating : LastLap -> Maybe RatedTime
-lastLapRating lastLap =
-    case lastLap of
-        Finished { rated } ->
-            rated
-
-        NoLapYet ->
-            Nothing
 
 
 {-| Where the car stands in each sector of the lap it is on: whether it has

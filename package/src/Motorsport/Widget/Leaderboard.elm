@@ -425,10 +425,10 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
 
 Asks for the rating rather than for whatever carries it, as
 [`bestTimeColumn`](#bestTimeColumn) does: a caller reading a
-[`Snapshot.CarAt`](Motorsport-Race-Snapshot#CarAt) reaches it through
-[`Snapshot.lastLapRating`](Motorsport-Race-Snapshot#lastLapRating), and one with
-a row of its own hands over whatever it has. A column that prints one time needs
-no more than the time.
+[`Snapshot.CarAt`](Motorsport-Race-Snapshot#CarAt) takes it out of
+[`LastLap`](Motorsport-Race-Snapshot#LastLap) itself, and one with a row of its
+own hands over whatever it has. A column that prints one time needs no more than
+the time.
 
 -}
 lastLapColumn :

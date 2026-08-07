@@ -102,11 +102,17 @@ currentLapTimeCell item =
 lastLapTimeCell : CarAt -> Html msg
 lastLapTimeCell item =
     let
-        -- A car on its opening lap and one whose lap the source data did not
-        -- time read the same here: no time to print, and nothing to colour it
-        -- by. Only the sector strips tell the two apart.
+        -- This cell has one line to print, so the two reasons there may be
+        -- nothing to print on it come to the same thing: a car on its opening
+        -- lap has no lap behind it, and a lap the source data did not time has
+        -- no time to show. Both take the "-".
         rated =
-            Snapshot.lastLapRating item.lastLap
+            case item.lastLap of
+                Snapshot.Finished finished ->
+                    finished.rated
+
+                Snapshot.NoLapYet ->
+                    Nothing
     in
     div
         [ css

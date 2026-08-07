@@ -50,8 +50,22 @@ seriesOf lapHistory range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
     , times = racingTimes lapHistory range entry
-    , lastLap = Snapshot.lastLapRating entry.lastLap |> Maybe.map .time
+    , lastLap = lastLapTime entry
     }
+
+
+{-| The time of the lap the car has just finished, for the point the chart marks
+it with. A car on its opening lap has no such lap and so no point, as does one
+whose lap the source data did not time.
+-}
+lastLapTime : CarAt -> Maybe Int
+lastLapTime entry =
+    case entry.lastLap of
+        Snapshot.Finished { rated } ->
+            rated |> Maybe.map .time
+
+        Snapshot.NoLapYet ->
+            Nothing
 
 
 racingTimes : LapHistory -> ( Int, Int ) -> CarAt -> List Int
