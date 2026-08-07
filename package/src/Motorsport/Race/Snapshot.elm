@@ -165,10 +165,15 @@ Away from Le Mans the source data has no mini-sectors at all, and that is
 the one the car is in are absent together, since both are read off the same
 mini-sector times.
 
-The `Maybe` that stays is the other absence, and belongs to `Recorded` alone:
-`current` is `Nothing` for a clock past the last mini-sector of the lap, which
-is in none of them though every one is behind the car. `states` says so, and it
-is `states` a strip of cells is drawn from.
+The `Maybe` that stays is the other absence, and belongs to `Recorded` alone.
+`current` is `Nothing` wherever
+[`miniSegments`](Motorsport-Lap#miniSegments) could not place the car: past the
+last mini-sector of the lap, and also inside one the source data left without a
+running total, which takes that mini-sector and the one after it out of the
+list. So it is not only the end of a lap -- it can fall mid-lap, with
+mini-sectors still ahead of the car.
+
+`states` is drawn either way, and is what a strip of cells is drawn from.
 
 -}
 type MiniSectorReading
@@ -292,12 +297,19 @@ currentSectorStates current rated =
 
 
 {-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
-reading the same way: behind the car complete, ahead of it untouched, and no
-mini-sector in progress at all meaning the lap is over.
+reading the same way: behind the car complete, ahead of it untouched.
 
 Joined here rather than by the view that draws the strip, as the sectors' is:
 a cell wants to know how much of its mini-sector is behind the car and how that
 mini-sector rates, and neither is a question about drawing.
+
+Where the car cannot be placed at all every mini-sector reads complete, which
+is right for the clock that is past the end of the lap and wrong for the one
+that is in a mini-sector the source data left unplaceable -- there the strip
+fills in ahead of the car. Reading it the other way would empty the strip of a
+lap that is genuinely over, which is the commoner of the two; telling them
+apart needs [`Lap.miniSegments`](Motorsport-Lap#miniSegments) to say which it
+was, and it does not.
 
 -}
 currentMiniSectorStates : Maybe Lap.MiniSectorProgress -> MiniSectorPerformance -> CurrentMiniSectorStates
@@ -316,8 +328,7 @@ currentMiniSectorStates miniSectorProgress rated =
                         GT ->
                             Performance.NotEntered
 
-                -- The clock is past the last mini-sector of the lap, so there
-                -- is none the car is in and every one of them is behind it.
+                -- Nowhere to place the car; see above.
                 Nothing ->
                     Performance.Completed rating
     in
