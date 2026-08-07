@@ -169,10 +169,6 @@ computeProgress config car =
         car.currentLap.progress
 
     else
-        let
-            bySector =
-                along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
-        in
         case ( config.miniSectors, car.currentLap.miniSectors ) of
             ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
                 case current of
@@ -182,10 +178,23 @@ computeProgress config car =
                     -- Past the last mini-sector of the lap, where the coarser
                     -- grain still places the car.
                     Nothing ->
-                        bySector
+                        bySector config car
 
             _ ->
-                bySector
+                bySector config car
+
+
+{-| Where round the lap the three-sector grain puts the car, which every circuit
+has.
+
+Its own function so that the finer grain, where there is one, does not pay for
+it: this runs once per car per frame, and Elm would work out a `let` of it
+whichever branch was taken.
+
+-}
+bySector : TrackConfig -> CarAt -> Float
+bySector config car =
+    along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
 
 
 along : Share -> Float -> Float

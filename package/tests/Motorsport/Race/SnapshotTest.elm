@@ -156,6 +156,28 @@ suite =
                         |> Maybe.map .time
                         |> Expect.equal Nothing
             ]
+        , describe "the lap the car has just finished"
+            [ test "a car on its opening lap has none, and reads as having none rather than as one with nothing in it" <|
+                \_ ->
+                    -- Car 3 is still on its opening lap at 7.000, where the
+                    -- other two are on their second.
+                    carAt "3" fieldWithTailenders
+                        |> Maybe.map .lastLap
+                        |> Expect.equal (Just Snapshot.NoLapYet)
+            , test "and a car that has finished one has its time and its sectors, both of them there together" <|
+                \_ ->
+                    -- Car 2's opening lap is a 5.000 of 1.500, 1.500 and 2.000,
+                    -- and at 7.000 that is the lap behind it.
+                    carAt "2" (snapshotAt 7000)
+                        |> Maybe.andThen (.lastLap >> finishedLastLap)
+                        |> Maybe.map
+                            (\{ rated, sectors } ->
+                                ( rated |> Maybe.map .time
+                                , Sector.values sectors |> List.map (Maybe.map .time)
+                                )
+                            )
+                        |> Expect.equal (Just ( Just 5000, [ Just 1500, Just 1500, Just 2000 ] ))
+            ]
         , describe "the field is the cars that are running"
             [ test "a car that has turned no lap is not in it" <|
                 \_ ->
@@ -216,6 +238,26 @@ sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
         |> Maybe.map (.currentLap >> .sectorStates)
+
+
+{-| What a `Finished` lap holds, for the test that has already established that
+the car has finished one.
+-}
+finishedLastLap :
+    Snapshot.LastLap
+    ->
+        Maybe
+            { rated : Maybe Performance.RatedTime
+            , sectors : Performance.SectorPerformance
+            , miniSectors : Maybe Performance.MiniSectorPerformance
+            }
+finishedLastLap lastLap =
+    case lastLap of
+        Snapshot.Finished finished ->
+            Just finished
+
+        Snapshot.NoLapYet ->
+            Nothing
 
 
 {-| What a `Recorded` reading holds, for the tests that have already established
