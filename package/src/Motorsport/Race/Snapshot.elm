@@ -1,6 +1,6 @@
 module Motorsport.Race.Snapshot exposing
     ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), lastLapRating
-    , CurrentSectorStates, CurrentMiniSectorStates
+    , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
     , bestTimes, lapHistory
@@ -31,7 +31,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 it wants rather than working it out of `toList`.
 
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap, lastLapRating
-@docs CurrentSectorStates, CurrentMiniSectorStates
+@docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
 @docs bestTimes, lapHistory
@@ -140,15 +140,11 @@ begins, so a car that has retired or taken the flag keeps the last it ran.
 `elapsed` is how long the car has been on it, counted from the last time it
 crossed the line -- or from the race start, for a car on its opening lap.
 `performance` is how that reads against the records (see [`CarAt`](#CarAt) for
-which), and `progress` how far through the lap it puts the car. `sector` and
-`miniSector` say where on the lap the car is; `sectorStates` and
-`miniSectorStates` say as much of every sector and every mini-sector at once,
-which is what a strip of cells is drawn from.
-
-The mini-sector readings are the only `Maybe`s, for the reason
-[`CurrentMiniSectorStates`](#CurrentMiniSectorStates) gives. `miniSector` is
-`Nothing` in one case more: a clock past the last mini-sector of the lap is in
-none of them.
+which), and `progress` how far through the lap it puts the car. `sector` says
+where on the lap the car is and `sectorStates` says as much of every sector at
+once, which is what a strip of cells is drawn from.
+[`miniSectors`](#MiniSectorReading) is both of those again at the finer grain,
+where the circuit has one.
 
 -}
 type alias CurrentLap =
@@ -157,9 +153,30 @@ type alias CurrentLap =
     , performance : PerformanceLevel
     , sector : Lap.SectorProgress
     , sectorStates : CurrentSectorStates
-    , miniSector : Maybe Lap.MiniSectorProgress
-    , miniSectorStates : Maybe CurrentMiniSectorStates
+    , miniSectors : MiniSectorReading
     }
+
+
+{-| Where the car is on its lap at the mini-sector grain, where the circuit
+records one.
+
+Away from Le Mans the source data has no mini-sectors at all, and that is
+`NotRecorded` rather than a reading with everything missing -- the states and
+the one the car is in are absent together, since both are read off the same
+mini-sector times.
+
+The `Maybe` that stays is the other absence, and belongs to `Recorded` alone:
+`current` is `Nothing` for a clock past the last mini-sector of the lap, which
+is in none of them though every one is behind the car. `states` says so, and it
+is `states` a strip of cells is drawn from.
+
+-}
+type MiniSectorReading
+    = NotRecorded
+    | Recorded
+        { states : CurrentMiniSectorStates
+        , current : Maybe Lap.MiniSectorProgress
+        }
 
 
 {-| The lap the car has just finished, as it was read off it -- where it has
@@ -199,8 +216,8 @@ instead.
 
 -}
 lastLapRating : LastLap -> Maybe RatedTime
-lastLapRating lastLap_ =
-    case lastLap_ of
+lastLapRating lastLap =
+    case lastLap of
         Finished { rated } ->
             rated
 
@@ -217,11 +234,9 @@ type alias CurrentSectorStates =
     BySector SegmentState
 
 
-{-| The same reading at the finer grain, where the circuit records mini-sectors.
-
-`Nothing` on a [`CurrentLap`](#CurrentLap) rather than empty, because away from
-Le Mans there are no mini-sectors to stand anywhere in.
-
+{-| The same reading at the finer grain. Carried by
+[`Recorded`](#MiniSectorReading) rather than by the lap itself, because away
+from Le Mans there are no mini-sectors to stand anywhere in.
 -}
 type alias CurrentMiniSectorStates =
     ByMiniSector SegmentState
@@ -529,8 +544,24 @@ readCurrentLap frame lap =
             in
             { sectorProgress | progress = min 1 sectorProgress.progress }
 
-        miniSector =
-            Lap.miniSectorProgressAt frame.clock lap
+        -- Both readings come off the lap's mini-sector times, so a lap without
+        -- them has neither: `ofMiniSectors` returning nothing is exactly the
+        -- circuit that records none, which is what ties the two together here
+        -- rather than leaving each to be absent on its own.
+        miniSectors =
+            Performance.ofMiniSectors frame.records lap
+                |> Maybe.map
+                    (\rated ->
+                        let
+                            current =
+                                Lap.miniSectorProgressAt frame.clock lap
+                        in
+                        Recorded
+                            { states = currentMiniSectorStates current rated
+                            , current = current
+                            }
+                    )
+                |> Maybe.withDefault NotRecorded
     in
     { elapsed = frame.elapsed
     , progress =
@@ -549,10 +580,7 @@ readCurrentLap frame lap =
             }
     , sector = sector
     , sectorStates = currentSectorStates sector (Performance.ofSectors frame.records lap)
-    , miniSector = miniSector
-    , miniSectorStates =
-        Performance.ofMiniSectors frame.records lap
-            |> Maybe.map (currentMiniSectorStates miniSector)
+    , miniSectors = miniSectors
     }
 
 

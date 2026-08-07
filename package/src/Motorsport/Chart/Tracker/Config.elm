@@ -25,7 +25,7 @@ import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Circuit exposing (Layout, Segmentation(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -169,12 +169,23 @@ computeProgress config car =
         car.currentLap.progress
 
     else
-        case ( config.miniSectors, car.currentLap.miniSector ) of
-            ( MiniSectorShares shares, Just current ) ->
-                along (LeMans.get current.miniSector shares) current.progress
+        let
+            bySector =
+                along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
+        in
+        case ( config.miniSectors, car.currentLap.miniSectors ) of
+            ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
+                case current of
+                    Just miniSector ->
+                        along (LeMans.get miniSector.miniSector shares) miniSector.progress
+
+                    -- Past the last mini-sector of the lap, where the coarser
+                    -- grain still places the car.
+                    Nothing ->
+                        bySector
 
             _ ->
-                along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
+                bySector
 
 
 along : Share -> Float -> Float

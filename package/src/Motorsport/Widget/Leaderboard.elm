@@ -67,7 +67,7 @@ import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentMiniSectorStates, CurrentSectorStates, Snapshot)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 
@@ -538,7 +538,7 @@ currentLapColumn_LeMans24h :
                 , currentLap :
                     { c
                         | elapsed : Duration
-                        , miniSectorStates : Maybe CurrentMiniSectorStates
+                        , miniSectors : Snapshot.MiniSectorReading
                     }
             }
     , sorter : data -> data -> Order
@@ -562,7 +562,7 @@ viewCurrentLapColumn_LeMans24h :
             , currentLap :
                 { c
                     | elapsed : Duration
-                    , miniSectorStates : Maybe CurrentMiniSectorStates
+                    , miniSectors : Snapshot.MiniSectorReading
                 }
         }
     -> Html msg
@@ -599,9 +599,12 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
                 (\best ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
                         [ lapTime { time = currentLap.elapsed, personalBest = Just best.time }
-                        , currentLap.miniSectorStates
-                            |> Maybe.map miniSectorStrip
-                            |> Maybe.withDefault (text "")
+                        , case currentLap.miniSectors of
+                            Snapshot.Recorded { states } ->
+                                miniSectorStrip states
+
+                            Snapshot.NotRecorded ->
+                                text ""
                         ]
                 )
             |> Maybe.withDefault (text "-")
@@ -718,27 +721,27 @@ viewLastLapColumn_LeMans24h lastLap =
                         [ lapTimeView lapTime
                         , miniSectors
                             |> Maybe.map
-                        (\ms ->
-                            div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
-                                [ sectorCell ms.scl2
-                                , sectorCell ms.z4
-                                , sectorCell ms.ip1
-                                , div [] [] -- spacer
-                                , sectorCell ms.z12
-                                , sectorCell ms.sclc
-                                , sectorCell ms.a7_1
-                                , sectorCell ms.ip2
-                                , div [] [] -- spacer
-                                , sectorCell ms.a8_1
-                                , sectorCell ms.sclb
-                                , sectorCell ms.porin
-                                , sectorCell ms.porout
-                                , sectorCell ms.pitref
-                                , sectorCell ms.scl1
-                                , sectorCell ms.fordout
-                                , sectorCell ms.fl
-                                ]
-                        )
+                                (\ms ->
+                                    div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
+                                        [ sectorCell ms.scl2
+                                        , sectorCell ms.z4
+                                        , sectorCell ms.ip1
+                                        , div [] [] -- spacer
+                                        , sectorCell ms.z12
+                                        , sectorCell ms.sclc
+                                        , sectorCell ms.a7_1
+                                        , sectorCell ms.ip2
+                                        , div [] [] -- spacer
+                                        , sectorCell ms.a8_1
+                                        , sectorCell ms.sclb
+                                        , sectorCell ms.porin
+                                        , sectorCell ms.porout
+                                        , sectorCell ms.pitref
+                                        , sectorCell ms.scl1
+                                        , sectorCell ms.fordout
+                                        , sectorCell ms.fl
+                                        ]
+                                )
                             |> Maybe.withDefault (text "-")
                         ]
 

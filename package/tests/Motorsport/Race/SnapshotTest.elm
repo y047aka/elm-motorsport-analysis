@@ -119,27 +119,26 @@ suite =
                     -- Fifteen even mini-sectors of 1.000, so 3.500 is half way
                     -- through the fourth of them in track order.
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen (.currentLap >> .miniSector)
+                        |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
+                        |> Maybe.andThen .current
                         |> Expect.equal (Just { miniSector = Z12, progress = 0.5 })
             , test "each of them reads complete behind the car, part way at it, and untouched ahead" <|
                 \_ ->
                     carAt "7" (leMansFieldAt 3500)
-                        |> Maybe.andThen (.currentLap >> .miniSectorStates)
+                        |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
                         |> Maybe.map
-                            (\states ->
+                            (\{ states } ->
                                 ( stateName states.ip1, stateName states.z12, stateName states.sclc )
                             )
                         |> Expect.equal (Just ( "Completed", "InProgress 0.5", "NotEntered" ))
-            , test "and where the data records none there is no mini-sector to be in, though there is still a sector" <|
+            , test "and where the data records none there is nothing to read at that grain, though there is still a sector" <|
                 \_ ->
                     carAt "1" (snapshotAt 7000)
                         |> Maybe.map
                             (.currentLap
-                                >> (\lap ->
-                                        ( lap.miniSector, lap.miniSectorStates, lap.sector.sector )
-                                   )
+                                >> (\lap -> ( lap.miniSectors, lap.sector.sector ))
                             )
-                        |> Expect.equal (Just ( Nothing, Nothing, S2 ))
+                        |> Expect.equal (Just ( Snapshot.NotRecorded, S2 ))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|
@@ -217,6 +216,21 @@ sectorStatesOf : String -> Snapshot -> Maybe Snapshot.CurrentSectorStates
 sectorStatesOf carNumber snapshot =
     carAt carNumber snapshot
         |> Maybe.map (.currentLap >> .sectorStates)
+
+
+{-| What a `Recorded` reading holds, for the tests that have already established
+that the circuit records mini-sectors at all.
+-}
+recordedMiniSectors :
+    Snapshot.MiniSectorReading
+    -> Maybe { states : Snapshot.CurrentMiniSectorStates, current : Maybe Lap.MiniSectorProgress }
+recordedMiniSectors reading =
+    case reading of
+        Snapshot.Recorded recorded ->
+            Just recorded
+
+        Snapshot.NotRecorded ->
+            Nothing
 
 
 {-| Which state a segment is in, without the rating it carries -- for a test
