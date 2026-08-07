@@ -8,10 +8,9 @@ module Motorsport.Chart.Tracker.Config exposing
 {-| The track's proportions: how much of the lap each stretch of it takes, and
 where round the lap that stretch begins.
 
-Worked out once when the race loads -- see
-[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf) -- and read back for every
-car of every frame after, which is what decides the shape here: the shares are
-held per sector and per mini-sector, so reading one is
+Built once by [`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf) and read for
+every car of every frame after, which is what decides the shape here: the shares
+are held per sector and per mini-sector, so reading one is
 [`Sector.get`](Motorsport-Sector#get) rather than a scan.
 
 @docs TrackConfig, Share
@@ -117,11 +116,10 @@ buildConfig layout bestTimes =
 
 {-| What share of the lap each stretch's record is of every record put together.
 
-A stretch no lap has set a time for counts as nothing. Until some lap has set
-one there is no total to divide by at all, and the stretches are given an even
-share each -- which is the only thing that can be said about a circuit nobody
-has been round yet, and says it for both grains without either having to carry
-a table of how long its parts are.
+A stretch no lap has set a time for counts as nothing, and with no records at
+all the stretches divide the lap evenly between them. The even split is by
+count, so it serves both grains and neither has to carry a table of how long
+its parts are.
 
 -}
 ratiosOver : List id -> (id -> Maybe Duration) -> id -> Float
@@ -141,11 +139,10 @@ ratiosOver order timeOf =
 {-| Lay the stretches out end to end from the line, each taking the share its
 ratio gives it.
 
-Quadratic in the number of stretches, which is fifteen at most and paid once
-when the race loads. What it buys is that a stretch's share is written as a
-function of the stretch rather than threaded through a fold, so it can be built
-straight into a `BySector` or a `ByMiniSector` -- and read back in constant time
-on every frame after, which is where the cost that matters is.
+Quadratic in the number of stretches, which is fifteen at most and paid once.
+What it buys is a share written as a function of the stretch rather than
+threaded through a fold, so it goes straight into a `BySector` or a
+`ByMiniSector`.
 
 -}
 shareOf : (id -> Float) -> List id -> id -> Share
@@ -180,8 +177,6 @@ computeProgress config car =
                 along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
 
 
-{-| How far round the lap a car part way through one stretch of it is.
--}
 along : Share -> Float -> Float
 along { start, share } progress =
     start + progress * share

@@ -43,12 +43,10 @@ when a record was set. All three are
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race was.
 
-`circuit` is the one thing here the lap data cannot say: which way the cars go
-round, and which mini-sectors the timing splits the lap into. It is a fact about
-the event, so it is given to [`fromCars`](#fromCars) rather than read off the
-cars -- and it lives here, beside them, so that anything drawing the race takes
-the track and the times it is drawn to from the same value and cannot pair a
-circuit with the wrong race.
+`circuit` is the one thing here the lap data cannot say, so
+[`fromCars`](#fromCars) is given it. It lives beside the cars so that anything
+drawing the race takes the track and the times it is drawn to from one value,
+and cannot pair a circuit with the wrong race.
 
 -}
 type alias Race =

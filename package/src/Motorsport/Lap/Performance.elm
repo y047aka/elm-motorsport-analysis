@@ -114,25 +114,19 @@ ofMiniSectors bestTimes lap =
 
 
 {-| One segment of the lap a car is on -- a sector or a mini-sector -- as it
-reads at a moment of the race.
+reads at a moment of the race: the car has not reached it, is somewhere inside
+it, or has the whole of it behind. Both grains read the same way, which is why
+the type is not spelled twice.
 
-The three are what a car can be doing to a stretch of track it has to drive:
-it has not reached it, it is somewhere inside it, or the whole of it is behind.
-Both grains read the same way, which is why the type is not spelled twice.
+Only `Completed` carries a rating, and that is the point of the type rather than
+a detail of it. The race data holds every sector time of a lap from the start,
+the ones the car has not driven yet included, so a shape that paired a rating
+with a progress would hand a view the time a car is _going_ to set.
 
-Only `Completed` carries a rating, and that is the point of the type rather
-than a detail of it. The race data holds every sector time of a lap from the
-start, the one the car has not driven yet included, so a shape that paired a
-rating with a progress would hand a view the time a car is _going_ to set. A
-rating that only exists once the segment is behind the car cannot be rendered
-early.
-
-Its `Maybe` is the other absence, the one that outlives the moment: a segment
-the source data has no time for is driven through like any other and finishes
-with nothing to rate, and a view paints it the standard colour. It is the same
-`Nothing` [`rateTime`](#rateTime) produces and
-[`Lap.recorded`](Motorsport-Lap#recorded) puts there, kept in the one state
-where a time was due.
+Its `Maybe` is the other absence: a segment the source data has no time for
+finishes with nothing to rate, and a view paints it the standard colour. It is
+the `Nothing` [`rateTime`](#rateTime) produces, kept in the one state where a
+time was due.
 
 -}
 type SegmentState
@@ -146,9 +140,8 @@ it the clock puts them.
 
 A progress of 1 is a segment behind the car, not one it is still in: callers
 clamp progress to at most 1, so a clock past the end of the lap reads as exactly
-1 of the final segment rather than as anything beyond it. Routing that to
-`Completed` here is what keeps the last segment of a finished lap painted by its
-rating -- and keeps every caller from having to know that 1 is a boundary.
+1 of the final segment. Routing that to `Completed` here saves every caller from
+having to know that 1 is a boundary.
 
     fromProgress 0.5 Nothing
     --> InProgress 0.5

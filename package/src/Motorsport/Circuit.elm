@@ -25,13 +25,9 @@ type alias Circuit miniSector =
     }
 
 
-{-| Circuit sector layout
-Generic layout type that can represent any circuit configuration
-The miniSector type parameter allows different circuits to use their specific mini sector types
-
-Which way the cars go round is a property of the circuit, not of any one sector,
-so it sits beside the sectors rather than among them.
-
+{-| How a circuit is laid out for timing. Which way the cars go round is a
+property of the circuit, not of any one sector, so it sits beside the divisions
+rather than among them.
 -}
 type alias Layout miniSector =
     { direction : Direction
@@ -39,18 +35,12 @@ type alias Layout miniSector =
     }
 
 
-{-| How finely the timing splits a lap of this circuit.
+{-| How finely the timing splits a lap of this circuit: every circuit is timed
+to three sectors, and Le Mans to fifteen mini-sectors within them as well.
 
-Every circuit is timed to three sectors; Le Mans is timed to fifteen
-mini-sectors within them as well. The two used to be told apart by whether the
-per-sector lists of mini-sectors were empty, which left "all three empty" and
-"all three full" as the only meaningful arrangements of a type that admitted
-eight, and a caller asking which it had counting empty lists to find out.
-
-`MiniSectors` carries the grouping because that is the only thing the grouping
-is for: which sector a mini-sector falls in. What order they come in is
-[`LeMans.all`](Motorsport-Circuit-LeMans#all)'s to say, and the two agree --
-see `LeMansTest`.
+`MiniSectors` carries which sector each mini-sector falls in, and only that.
+What order they come in is [`LeMans.all`](Motorsport-Circuit-LeMans#all)'s to
+say.
 
 -}
 type Segmentation miniSector

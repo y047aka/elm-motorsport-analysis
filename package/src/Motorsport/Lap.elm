@@ -375,22 +375,18 @@ sectorStart sector lap =
 
 {-| Cut a lap into the mini-sectors the source data can place, in track order.
 
-The counterpart of [`segments`](#segments), and read the same way after this --
-but built from the running totals the source records rather than by adding the
-times up. That is the difference the finer grain needs: `segments` treats a
-sector it has no time for as taking none at all, so the ones after it still
-start where they should, and three sectors can afford that where fifteen
-mini-sectors cannot.
+The counterpart of [`segments`](#segments), read the same way after this, but
+built from the running totals rather than by adding the times up -- see
+[`MiniSectorTime`](#MiniSectorTime) for why.
 
-The price is that a mini-sector whose running total is missing cannot be
-placed, and neither can the one after it, whose start that total is. Such a
-mini-sector is absent from the list rather than present and unplaceable -- a
-caller looking for where the car is has nothing to do with one either way. A
-lap from a circuit that records no mini-sectors gives the empty list for the
-same reason.
+The price is that a mini-sector whose running total is missing cannot be placed,
+and neither can the one after it, whose start that total is. Such a mini-sector
+is absent from the list rather than present and unplaceable, as is every
+mini-sector of a lap from a circuit that records none: a caller looking for
+where the car is has nothing to do with one either way.
 
-The first mini-sector begins at the line, which is the `Just 0` the fold
-starts from.
+The first mini-sector begins at the line, which is the `Just 0` the fold starts
+from.
 
 -}
 miniSegments : Lap -> List ( LeMans2025MiniSector, Segment )

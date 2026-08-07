@@ -61,11 +61,10 @@ type LeMans2025MiniSector
 
 {-| Every mini sector, in the order a car drives them.
 
-Written out here rather than read off [`layout`](#layout). The order is a
-property of the circuit's mini sectors, which is this module's subject; the
-layout is one arrangement of them into sectors, and deriving the order from it
-would make every function that depends on the order depend on that grouping
-being complete. `LeMansTest` holds the two to each other.
+Written out here rather than read off [`layout`](#layout), which is one
+arrangement of them into sectors: deriving the order from the grouping would
+make everything that depends on the order depend on that grouping being
+complete. `LeMansTest` holds the two to each other.
 
 -}
 all : List LeMans2025MiniSector
@@ -206,12 +205,8 @@ toList byMiniSector =
 
 
 {-| Le Mans 2025 layout: which mini sectors make up each sector, and which way
-round the cars go.
-
-Every mini sector of [`all`](#all) appears exactly once, in the same order --
-which is what makes the two readings of the lap agree, and what `LeMansTest`
-checks.
-
+round the cars go. Every mini sector of [`all`](#all) appears exactly once, in
+the same order.
 -}
 layout :
     { direction : Direction
@@ -299,11 +294,10 @@ compare a b =
     Basics.compare (toIndex a) (toIndex b)
 
 
-{-| A `case` rather than a lookup in [`all`](#all), for two reasons. It is
-answered without walking the list, and this runs inside the per-frame comparison
-that puts the field in order. And a mini sector missing from the list would
-otherwise have to be given some index anyway -- silently the first one -- where
-here the compiler will not let one be missing at all.
+{-| A `case` rather than a lookup in [`all`](#all): it runs inside the per-frame
+comparison that puts the field in order, and a mini sector missing from a list
+would have to be given some index anyway -- silently the first -- where here the
+compiler will not let one be missing.
 -}
 toIndex : LeMans2025MiniSector -> Int
 toIndex mini =

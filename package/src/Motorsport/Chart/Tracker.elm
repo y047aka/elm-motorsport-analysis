@@ -99,13 +99,8 @@ progressToAngleScale direction =
             Scale.linear ( -quarterTurn, -quarterTurn - 2 * pi ) ( 0, 1 )
 
 
-{-| The circuit, drawn to the proportions the race ended up with.
-
-Built from a [`Race`](Motorsport-Race) alone, so it is settled the moment the
-data loads and nothing about it moves afterwards. Hold on to it and hand it to
-[`view`](#view) each frame; building it per frame would redraw the track a
-little differently every time, which is what it used to do.
-
+{-| The circuit, drawn to the proportions the race ended up with. See
+[`trackOf`](#trackOf).
 -}
 type Track
     = Track
@@ -114,12 +109,13 @@ type Track
         }
 
 
-{-| Work the track out, once, from the race that was run on it.
+{-| Work the track out from the race that was run on it. Hold on to the result
+and hand it to [`view`](#view) each frame.
 
-The proportions come from the race's _final_ records, not from the ones
-standing at some moment of it: a sector's share of the lap is how quick it was
-at its quickest, and mid-race that answer is still moving. Reading it at the end
-is what makes the track the same shape from the first frame to the last.
+The proportions come from the race's _final_ records, not from the ones standing
+at some moment of it: a sector's share of the lap is how quick it was at its
+quickest, and mid-race that answer is still moving. Reading it at the end is
+what makes the track the same shape from the first frame to the last.
 
 -}
 trackOf : Race -> Track

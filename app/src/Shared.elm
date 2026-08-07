@@ -29,12 +29,9 @@ import Shared.Msg exposing (Msg(..))
 
 
 {-| `track` is the one derived value kept here rather than worked out where it
-is used. Everything else about a frame follows from `replay` and the clock, but
-the track's proportions come from the race's final records and so never move
-once the data has loaded -- see
-[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf). Rebuilding it per frame
-would be sixteen record lookups and a sort's worth of arithmetic to arrive at
-the same answer every time.
+is used: everything else about a frame follows from `replay` and the clock,
+where the track never moves once the data has loaded. See
+[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf).
 -}
 type alias Model =
     { eventSummary : EventSummary
