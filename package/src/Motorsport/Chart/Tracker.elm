@@ -208,55 +208,42 @@ track direction config =
 
 renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
 renderSectorLabels direction config =
-    config
+    config.sectors
+        |> Sector.toList
         |> List.map
-            (\sectorConfig ->
-                let
-                    progress =
-                        sectorConfig.start + (sectorConfig.share / 2)
-
-                    label =
-                        Sector.toString sectorConfig.sector
-                in
+            (\( sector, { start, share } ) ->
                 makeLabel direction
-                    { progress = progress
+                    { progress = start + (share / 2)
                     , radius = constants.track.sectorLabelRadius
                     , fontSize = constants.track.sectorLabelFontSize
                     , color = "oklch(1 0 0 / 0.5)"
-                    , label = label
+                    , label = Sector.toString sector
                     }
             )
 
 
 renderMiniSectorLabels : Direction -> TrackConfig -> List (Svg msg)
 renderMiniSectorLabels direction config =
-    config
-        |> List.concatMap
-            (\sectorConfig ->
-                case sectorConfig.miniSectorData of
-                    Config.NoMiniSectors ->
-                        []
+    case config.miniSectors of
+        Config.NoMiniSectors ->
+            []
 
-                    Config.WithMiniSectors minis ->
-                        minis
-                            |> List.map
-                                (\miniShare ->
-                                    let
-                                        progress =
-                                            miniShare.start + miniShare.share
-
-                                        label =
-                                            LeMans.toString miniShare.mini
-                                    in
-                                    makeLabel direction
-                                        { progress = progress
-                                        , radius = constants.track.miniSectorLabelRadius
-                                        , fontSize = constants.track.miniSectorLabelFontSize
-                                        , color = "oklch(0.5 0 0)"
-                                        , label = label
-                                        }
-                                )
-            )
+        Config.MiniSectorShares shares ->
+            shares
+                |> LeMans.toList
+                |> List.map
+                    (\( mini, { start, share } ) ->
+                        makeLabel direction
+                            -- At the end of the mini-sector, not the middle of
+                            -- it as a sector's label is: fifteen of them round
+                            -- one circle leaves no room to centre them in.
+                            { progress = start + share
+                            , radius = constants.track.miniSectorLabelRadius
+                            , fontSize = constants.track.miniSectorLabelFontSize
+                            , color = "oklch(0.5 0 0)"
+                            , label = LeMans.toString mini
+                            }
+                    )
 
 
 makeLabel :

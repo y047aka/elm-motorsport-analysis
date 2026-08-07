@@ -455,6 +455,81 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 `Chart/Tracker/Config.MiniSectorData(..)` も、レイアウトから導出できるようには
 なったが、今回は触っていない。
 
+### 提案 7：`Layout` の「ミニセクターの有無」と Tracker の比率保持 ★実施済み
+
+提案 5 で `TrackConfig` がロード時に 1 回だけ組まれるようになったことで可能になった
+後続。2.1 と 2.4 でやったことを、描画側の 2 つの型に同じ形で適用する。
+
+#### 7.1 空リストで符号化されていた「ミニセクターの有無」（2.1 と同じ構図）
+
+`Layout.sectors : BySector (List miniSector)` は、3 つとも空なら「セクターのみ」、
+3 つとも埋まっていれば「ミニセクターあり」を意味していた。型としては 8 通りを許して
+おきながら意味があるのは 2 通りだけで、どちらかを知るには
+`Circuit.hasMiniSectors` が空リストを数えていた（`progress < 1` で 3 状態を復元して
+いたのと同じ）。
+
+```elm
+type Segmentation miniSector
+    = SectorsOnly
+    | MiniSectors (BySector (List miniSector))
+```
+
+`hasMiniSectors` は削除。`buildConfig` は先頭で 1 回 `case` するだけになり、
+**セクターごとに `[] ->` を見ていた分岐（`computeSectorShares` の `sectorShare`）が
+消えた**。「一部のセクターだけミニセクターを持つ」という、以前は型が許していて
+`calcSectorBoundaries` の畳み込みが素直に扱えていなかった状態が、表現できなくなった。
+
+#### 7.2 毎フレームの線形探索（2.4 と同じ構図）
+
+`TrackConfig = List SectorConfig` で、各 `SectorConfig` が
+`WithMiniSectors (List MiniSectorShare)` を持っていた。車 1 台の位置を出すたびに
+`findMiniSectorShare` が **3 セクター分を `concatMap` してから 15 要素を線形探索**
+していた（`computeProgress` は 1 台 1 フレームごとに呼ばれる）。`LeMans.toIndex` から
+消したのと同じパターン。
+
+```elm
+type alias TrackConfig =
+    { sectors : BySector Share
+    , miniSectors : MiniSectorShares
+    }
+
+type alias Share =
+    { start : Float, share : Float }
+
+type MiniSectorShares
+    = NoMiniSectors
+    | MiniSectorShares (ByMiniSector Share)
+```
+
+`Sector.get` / `LeMans.get` で O(1)。`MiniSectorShare.mini` と `SectorConfig.sector` は
+**位置が持つ**ようになったので消え、`Share` 1 つを両粒度で共有できるようになった
+（`Lap.Segment` が「どのセクターかは `BySector` の位置が持つ」と書いているのと同じ
+方針）。
+
+副産物として `Maybe.withDefault 0` が 2 つ消えた。`progressFromSector` と
+`progressFromMiniSector` は探索の失敗を 0（＝コントロールライン上）に丸めていたが、
+`get` は失敗しない。
+
+#### 実装して分かったこと
+
+**(a) 累積の取り方をミニセクター全体に一本化できた。** 以前は各セクターの開始位置を
+`computeSectorShares` で出し、そこを起点にセクター内のミニセクターを積んでいた。
+今は `LeMans.all` を通しで積むだけでよい —— 提案 2 で「`layout` の連結が `all` と
+一致する」ことを `LeMansTest` で保証したため。セクターの取り分は
+**自分のミニセクターの合計**として定義し直したので、2 つの分割がセクター境界の
+位置で食い違うことがなくなった（`ConfigTest` がこれを 3/15・4/15・8/15 で固定する）。
+
+**(b) 累積を畳み込みではなく「その区間より前の合計」で書いた。**
+`shareOf ratio order id` は `takeWhile (/= id)` して合計する。区間数について
+二次だが、15 個・ロード時 1 回。得られるのは、開始位置が **区間の関数として書ける**
+ことで、そのまま `Sector.initialize` / `LeMans.initialize` に渡せる。畳み込みだと
+リストしか作れず、`ByMiniSector` に詰め直す手間が要る。
+
+**(c) 既存の癖を 1 つ残した。** `calcSectorBoundaries` は最後の区間の終端
+（≒1.0）を `< 1` で落とす作りだが、浮動小数の積算で 0.9999… になると落ちずに
+コントロールライン上に境界線が 1 本描かれる。旧実装も同じ挙動だったので、今回は
+変えていない。
+
 ### 提案 6：ミニセクター型の抽象化（今回は見送り推奨）
 
 2.5 の `LeMans2025MiniSector` 焼き付けを解くには、`Lap` / `BestTimes` /
@@ -480,6 +555,7 @@ miniSegments : Lap -> Maybe (ByMiniSector Segment)
 | 3 | 提案 4（命名とワイヤ型の統合） | 機械的、レビューが軽い | `Lap.elm`, `TimelineEvent.elm`, `Performance.elm` | 実施済み |
 | 4 | 提案 3（`miniSegments`） | `Lap.elm` の後半が縮む／進行度の原点が選択と揃う | `Lap.elm`, `Race/Snapshot.elm` | 実施済み |
 | 5 | 提案 5（サーキットを `Race` へ） | 文字列一致の廃止＋比率計算をリプレイ前に確定 | `Race`, `Replay`, `Tracker`, `Data.Series`, `Shared` | 実施済み |
+| 6 | 提案 7（`Segmentation` と `TrackConfig`） | 空リスト符号化の解消＋毎フレームの線形探索を消す | `Circuit`, `Chart/Tracker*` | 実施済み |
 
 1〜4 は互いに独立で、それぞれ単独の PR にできる。5 は 1〜4 の後に入れた。
 

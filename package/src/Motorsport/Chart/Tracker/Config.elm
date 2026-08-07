@@ -1,14 +1,21 @@
 module Motorsport.Chart.Tracker.Config exposing
-    ( TrackConfig
-    , MiniSectorData(..)
+    ( TrackConfig, Share
+    , MiniSectorShares(..)
     , buildConfig
     , computeProgress, calcSectorBoundaries
     )
 
-{-|
+{-| The track's proportions: how much of the lap each stretch of it takes, and
+where round the lap that stretch begins.
 
-@docs TrackConfig
-@docs MiniSectorData
+Worked out once when the race loads -- see
+[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf) -- and read back for every
+car of every frame after, which is what decides the shape here: the shares are
+held per sector and per mini-sector, so reading one is
+[`Sector.get`](Motorsport-Sector#get) rather than a scan.
+
+@docs TrackConfig, Share
+@docs MiniSectorShares
 @docs buildConfig
 @docs computeProgress, calcSectorBoundaries
 
@@ -16,37 +23,60 @@ module Motorsport.Chart.Tracker.Config exposing
 
 import List.Extra
 import Motorsport.BestTimes as BestTimes exposing (Holder)
-import Motorsport.Circuit as Circuit exposing (Layout)
+import Motorsport.Circuit as Circuit exposing (Layout, Segmentation(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
-import Motorsport.Lap exposing (MiniSectorProgress, SectorProgress)
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot exposing (CarAt)
-import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.Sector as Sector exposing (BySector)
 
 
+{-| The whole lap, divided.
+
+`sectors` is always the three; `miniSectors` is the finer division as well,
+where the circuit is timed to one. Both cover the same lap, so a car can be
+placed by either.
+
+-}
 type alias TrackConfig =
-    List SectorConfig
-
-
-type alias SectorConfig =
-    { sector : Sector
-    , start : Float
-    , share : Float
-    , miniSectorData : MiniSectorData
+    { sectors : BySector Share
+    , miniSectors : MiniSectorShares
     }
 
 
-type MiniSectorData
-    = WithMiniSectors (List MiniSectorShare)
-    | NoMiniSectors
+{-| One stretch of the lap: where it begins and how much of the lap it takes,
+both as fractions of the whole.
 
+Which stretch it is belongs to the position in a
+[`BySector`](Motorsport-Sector#BySector) or a
+[`ByMiniSector`](Motorsport-Circuit-LeMans#ByMiniSector), not to the value --
+which is what lets the two grains share one type.
 
-type alias MiniSectorShare =
-    { mini : LeMans2025MiniSector
-    , start : Float
+-}
+type alias Share =
+    { start : Float
     , share : Float
     }
 
 
+{-| The mini-sectors' shares, where the circuit has mini-sectors.
+
+Reads as [`Circuit.Segmentation`](Motorsport-Circuit#Segmentation) does, one
+step further on: that says how the lap is divided, this says what the divisions
+came to.
+
+-}
+type MiniSectorShares
+    = NoMiniSectors
+    | MiniSectorShares (ByMiniSector Share)
+
+
+{-| Work out the proportions from the circuit and the times set on it.
+
+A stretch takes the share of the lap that its record does of the lap record --
+so the track is drawn to how quick each part of it is. Before any record has
+been set there is nothing to draw it from, and the default ratios stand in.
+
+-}
 buildConfig :
     Layout LeMans2025MiniSector
     ->
@@ -56,205 +86,144 @@ buildConfig :
         }
     -> TrackConfig
 buildConfig layout bestTimes =
-    let
-        isLeMans2025 =
-            Circuit.hasMiniSectors layout
-
-        totalTime =
-            if isLeMans2025 then
-                LeMans.values bestTimes.fastestMiniSectors
-                    |> List.filterMap BestTimes.timeOf
-                    |> List.sum
-                    |> toFloat
-
-            else
-                Sector.values bestTimes.fastestSectors
-                    |> List.filterMap BestTimes.timeOf
-                    |> List.sum
-                    |> toFloat
-
-        miniRatio miniSector =
+    case layout.segmentation of
+        SectorsOnly ->
             let
-                -- A record no lap has set contributes nothing to the track's
-                -- proportions; before any of them are set there is nothing to
-                -- draw the track from, and `LeMans.defaultRatio` stands in.
-                value =
-                    LeMans.get miniSector bestTimes.fastestMiniSectors
-                        |> BestTimes.timeOf
-                        |> Maybe.withDefault 0
-                        |> toFloat
+                ratio =
+                    ratioAgainst
+                        { total = totalOf (Sector.values bestTimes.fastestSectors)
+                        , timeOf = \sector -> BestTimes.timeOf (Sector.get sector bestTimes.fastestSectors)
+                        , default = \_ -> Circuit.sectorDefaultRatio
+                        }
             in
-            if totalTime == 0 then
-                LeMans.defaultRatio miniSector
+            { sectors = Sector.initialize (shareOf ratio Sector.all)
+            , miniSectors = NoMiniSectors
+            }
 
-            else
-                value / totalTime
+        MiniSectors grouping ->
+            let
+                miniRatio =
+                    ratioAgainst
+                        { total = totalOf (LeMans.values bestTimes.fastestMiniSectors)
+                        , timeOf = \mini -> BestTimes.timeOf (LeMans.get mini bestTimes.fastestMiniSectors)
+                        , default = LeMans.defaultRatio
+                        }
 
-        shares =
-            computeSectorShares layout bestTimes totalTime miniRatio
-    in
-    [ { sector = S1
-      , start = 0
-      , share = shares.s1
-      , miniSectorData = buildMiniSectors layout.sectors.s1 0 miniRatio
-      }
-    , { sector = S2
-      , start = shares.s1
-      , share = shares.s2
-      , miniSectorData = buildMiniSectors layout.sectors.s2 shares.s1 miniRatio
-      }
-    , { sector = S3
-      , start = shares.s1 + shares.s2
-      , share = shares.s3
-      , miniSectorData = buildMiniSectors layout.sectors.s3 (shares.s1 + shares.s2) miniRatio
-      }
-    ]
+                -- A sector is its mini-sectors, so it takes what they take
+                -- between them. Reading it off the sector's own record instead
+                -- would let the two divisions of the lap disagree about where
+                -- the sector ends.
+                sectorRatio sector =
+                    Sector.get sector grouping |> List.map miniRatio |> List.sum
+            in
+            { sectors = Sector.initialize (shareOf sectorRatio Sector.all)
+            , miniSectors = MiniSectorShares (LeMans.initialize (shareOf miniRatio LeMans.all))
+            }
 
 
-computeSectorShares :
-    Layout LeMans2025MiniSector
-    -> { a | fastestSectors : BySector (Maybe Holder) }
+{-| What share of the lap one stretch's record is of every record put together.
+
+A stretch no lap has set a time for counts as nothing, and until some lap has
+set one there is no total to divide by -- so before the race has run, every
+stretch falls back on the proportions it is known to have.
+
+-}
+ratioAgainst :
+    { total : Float
+    , timeOf : id -> Maybe Duration
+    , default : id -> Float
+    }
+    -> id
     -> Float
-    -> (LeMans2025MiniSector -> Float)
-    -> BySector Float
-computeSectorShares layout bestTimes totalTime miniRatio =
-    let
-        sectorShare fastestTime miniSectors =
-            case miniSectors of
-                [] ->
-                    let
-                        value =
-                            toFloat (Maybe.withDefault 0 fastestTime)
-                    in
-                    if totalTime == 0 then
-                        Circuit.sectorDefaultRatio
+ratioAgainst { total, timeOf, default } id =
+    if total == 0 then
+        default id
 
-                    else
-                        value / totalTime
-
-                _ ->
-                    miniSectors
-                        |> List.map miniRatio
-                        |> List.sum
-    in
-    Sector.map2 (BestTimes.timeOf >> sectorShare) bestTimes.fastestSectors layout.sectors
+    else
+        toFloat (Maybe.withDefault 0 (timeOf id)) / total
 
 
-buildMiniSectors : List LeMans2025MiniSector -> Float -> (LeMans2025MiniSector -> Float) -> MiniSectorData
-buildMiniSectors miniSectors sectorStart miniRatio =
-    case miniSectors of
-        [] ->
-            NoMiniSectors
-
-        _ ->
-            miniSectors
-                |> List.foldl
-                    (\mini ( acc, current ) ->
-                        let
-                            ratio =
-                                miniRatio mini
-                        in
-                        ( { mini = mini, share = ratio, start = current } :: acc
-                        , current + ratio
-                        )
-                    )
-                    ( [], sectorStart )
-                |> Tuple.first
-                |> List.reverse
-                |> WithMiniSectors
+totalOf : List (Maybe Holder) -> Float
+totalOf records =
+    records |> List.filterMap BestTimes.timeOf |> List.sum |> toFloat
 
 
+{-| Lay the stretches out end to end from the line, each taking the share its
+ratio gives it.
+
+Quadratic in the number of stretches, which is fifteen at most and paid once
+when the race loads. What it buys is that a stretch's share is written as a
+function of the stretch rather than threaded through a fold, so it can be built
+straight into a `BySector` or a `ByMiniSector` -- and read back in constant time
+on every frame after, which is where the cost that matters is.
+
+-}
+shareOf : (id -> Float) -> List id -> id -> Share
+shareOf ratio order id =
+    { start =
+        order
+            |> List.Extra.takeWhile (\other -> other /= id)
+            |> List.map ratio
+            |> List.sum
+    , share = ratio id
+    }
+
+
+{-| How far round the lap a car is, as a fraction of it.
+
+Read at the finest grain the circuit and the car's own lap both have. A car's
+lap progress is preferred to either where there is one, since it is measured
+against the lap's actual time rather than against the records.
+
+-}
 computeProgress : TrackConfig -> CarAt -> Float
 computeProgress config car =
     if car.currentLap.progress > 0 then
         car.currentLap.progress
 
     else
-        case car.currentLap.miniSector of
-            Just miniSectorProgress ->
-                progressFromMiniSector config miniSectorProgress
+        case ( config.miniSectors, car.currentLap.miniSector ) of
+            ( MiniSectorShares shares, Just current ) ->
+                along (LeMans.get current.miniSector shares) current.progress
 
-            Nothing ->
-                progressFromSector config car.currentLap.sector
-
-
-progressFromSector : List SectorConfig -> SectorProgress -> Float
-progressFromSector sectors { sector, progress } =
-    sectors
-        |> List.Extra.find (\sectorConfig -> sectorConfig.sector == sector)
-        |> Maybe.map (\{ start, share } -> start + progress * share)
-        |> Maybe.withDefault 0
+            _ ->
+                along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
 
 
-progressFromMiniSector : TrackConfig -> MiniSectorProgress -> Float
-progressFromMiniSector config { miniSector, progress } =
-    case findMiniSectorShare config miniSector of
-        Just { start, share } ->
-            start + progress * share
-
-        Nothing ->
-            0
+{-| How far round the lap a car part way through one stretch of it is.
+-}
+along : Share -> Float -> Float
+along { start, share } progress =
+    start + progress * share
 
 
-findMiniSectorShare : List SectorConfig -> LeMans2025MiniSector -> Maybe MiniSectorShare
-findMiniSectorShare sectors targetMini =
-    sectors
-        |> List.concatMap
-            (\sector ->
-                case sector.miniSectorData of
-                    NoMiniSectors ->
-                        []
+{-| Where round the lap one stretch ends and the next begins, for the lines
+drawn across the track.
 
-                    WithMiniSectors minis ->
-                        minis
-            )
-        |> List.Extra.find (\{ mini } -> mini == targetMini)
+At the finest grain the circuit has, since a sector boundary is also a
+mini-sector boundary. A stretch no lap has set a time for takes no share and
+so marks nothing; the line and the flag are not boundaries between stretches
+and are dropped.
 
-
-calcSectorBoundaries : List SectorConfig -> List Float
-calcSectorBoundaries sectors =
+-}
+calcSectorBoundaries : TrackConfig -> List Float
+calcSectorBoundaries config =
     let
-        ( _, boundariesRev ) =
-            sectors
-                |> List.foldl accumulateBoundaries ( 0, [] )
+        stretches =
+            case config.miniSectors of
+                MiniSectorShares shares ->
+                    LeMans.values shares
+
+                NoMiniSectors ->
+                    Sector.values config.sectors
     in
-    boundariesRev
+    stretches
+        |> List.filterMap
+            (\{ start, share } ->
+                if share <= 0 then
+                    Nothing
+
+                else
+                    Just (start + share)
+            )
         |> List.filter (\boundary -> boundary > 0 && boundary < 1)
-        |> List.reverse
-
-
-accumulateBoundaries : SectorConfig -> ( Float, List Float ) -> ( Float, List Float )
-accumulateBoundaries sectorConfig ( currentStart, acc ) =
-    case sectorConfig.miniSectorData of
-        NoMiniSectors ->
-            let
-                end =
-                    currentStart + sectorConfig.share
-
-                updatedAcc =
-                    if sectorConfig.share <= 0 then
-                        acc
-
-                    else
-                        end :: acc
-            in
-            ( end, updatedAcc )
-
-        WithMiniSectors minis ->
-            minis
-                |> List.foldl
-                    (\miniShare ( runningTotal, accInner ) ->
-                        let
-                            nextTotal =
-                                runningTotal + miniShare.share
-
-                            updatedAcc =
-                                if miniShare.share <= 0 then
-                                    accInner
-
-                                else
-                                    nextTotal :: accInner
-                        in
-                        ( nextTotal, updatedAcc )
-                    )
-                    ( currentStart, acc )

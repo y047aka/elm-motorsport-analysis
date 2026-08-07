@@ -1,22 +1,22 @@
 module Motorsport.Circuit exposing
     ( Circuit, Layout
+    , Segmentation(..)
     , clockwise, counterClockwise, leMans2025
-    , hasMiniSectors
     , sectorDefaultRatio
     )
 
 {-|
 
 @docs Circuit, Layout
+@docs Segmentation
 @docs clockwise, counterClockwise, leMans2025
-@docs hasMiniSectors
 @docs sectorDefaultRatio
 
 -}
 
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
-import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Sector exposing (BySector)
 
 
 {-| Circuit information
@@ -37,8 +37,27 @@ so it sits beside the sectors rather than among them.
 -}
 type alias Layout miniSector =
     { direction : Direction
-    , sectors : BySector (List miniSector)
+    , segmentation : Segmentation miniSector
     }
+
+
+{-| How finely the timing splits a lap of this circuit.
+
+Every circuit is timed to three sectors; Le Mans is timed to fifteen
+mini-sectors within them as well. The two used to be told apart by whether the
+per-sector lists of mini-sectors were empty, which left "all three empty" and
+"all three full" as the only meaningful arrangements of a type that admitted
+eight, and a caller asking which it had counting empty lists to find out.
+
+`MiniSectors` carries the grouping because that is the only thing the grouping
+is for: which sector a mini-sector falls in. What order they come in is
+[`LeMans.all`](Motorsport-Circuit-LeMans#all)'s to say, and the two agree --
+see `LeMansTest`.
+
+-}
+type Segmentation miniSector
+    = SectorsOnly
+    | MiniSectors (BySector (List miniSector))
 
 
 {-| Clockwise 3-sector layout (no mini sectors)
@@ -46,7 +65,7 @@ type alias Layout miniSector =
 clockwise : Layout miniSector
 clockwise =
     { direction = Clockwise
-    , sectors = Sector.initialize (always [])
+    , segmentation = SectorsOnly
     }
 
 
@@ -55,7 +74,7 @@ clockwise =
 counterClockwise : Layout miniSector
 counterClockwise =
     { direction = CounterClockwise
-    , sectors = Sector.initialize (always [])
+    , segmentation = SectorsOnly
     }
 
 
@@ -63,17 +82,16 @@ counterClockwise =
 -}
 leMans2025 : Layout LeMans2025MiniSector
 leMans2025 =
-    LeMans.layout
+    { direction = LeMans.layout.direction
+    , segmentation = MiniSectors LeMans.layout.sectors
+    }
 
 
-{-| Check if a layout contains mini sectors
--}
-hasMiniSectors : Layout miniSector -> Bool
-hasMiniSectors { sectors } =
-    Sector.values sectors |> List.all (List.isEmpty >> not)
-
-
-{-| Get the default ratio for a specific sector
+{-| What share of the lap a sector takes when no lap has set a time to measure
+it by -- the counterpart of
+[`LeMans.defaultRatio`](Motorsport-Circuit-LeMans#defaultRatio), and an even
+third because three sectors is all the timing says about a circuit that records
+no mini-sectors.
 -}
 sectorDefaultRatio : Float
 sectorDefaultRatio =
