@@ -26,7 +26,7 @@ tests =
                     sectorSharesOf unevenSectors
                         |> List.map .start
                         |> expectShares [ 0, 1 / 6, 3 / 6 ]
-            , test "falls back on even thirds before any record has been set" <|
+            , test "divides the lap evenly before any record has been set" <|
                 \_ ->
                     sectorSharesOf (Config.buildConfig Circuit.clockwise noRecords)
                         |> List.map .share
@@ -64,11 +64,14 @@ tests =
                         |> List.map .share
                         |> List.sum
                         |> Expect.within (Expect.Absolute 1.0e-9) 1
-            , test "falls back on the known proportions before any record has been set" <|
+            , test "divides the lap evenly before any record has been set" <|
                 \_ ->
+                    -- Nothing is known about how long each stretch is until a
+                    -- lap has been round, and an even fifteenth each is the
+                    -- only thing that can be said then.
                     miniSharesOf (Config.buildConfig Circuit.leMans2025 noRecords)
                         |> List.map .share
-                        |> expectShares (List.map LeMans.defaultRatio LeMans.all)
+                        |> expectShares (List.repeat 15 (1 / 15))
             ]
         ]
 

@@ -59,19 +59,6 @@ tests =
                         |> List.map Tuple.first
                         |> Expect.equal LeMans.all
             ]
-        , describe "defaultRatio"
-            [ test "shares the whole lap out between the mini sectors" <|
-                \_ ->
-                    LeMans.all
-                        |> List.map LeMans.defaultRatio
-                        |> List.sum
-                        |> Expect.within (Expect.Absolute 1.0e-9) 1
-            , test "gives every mini sector a share of it" <|
-                \_ ->
-                    LeMans.all
-                        |> List.filter (\mini -> LeMans.defaultRatio mini <= 0)
-                        |> Expect.equalLists []
-            ]
         ]
 
 

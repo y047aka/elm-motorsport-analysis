@@ -2,7 +2,6 @@ module Motorsport.Circuit exposing
     ( Circuit, Layout
     , Segmentation(..)
     , clockwise, counterClockwise, leMans2025
-    , sectorDefaultRatio
     )
 
 {-|
@@ -10,7 +9,6 @@ module Motorsport.Circuit exposing
 @docs Circuit, Layout
 @docs Segmentation
 @docs clockwise, counterClockwise, leMans2025
-@docs sectorDefaultRatio
 
 -}
 
@@ -85,14 +83,3 @@ leMans2025 =
     { direction = LeMans.layout.direction
     , segmentation = MiniSectors LeMans.layout.sectors
     }
-
-
-{-| What share of the lap a sector takes when no lap has set a time to measure
-it by -- the counterpart of
-[`LeMans.defaultRatio`](Motorsport-Circuit-LeMans#defaultRatio), and an even
-third because three sectors is all the timing says about a circuit that records
-no mini-sectors.
--}
-sectorDefaultRatio : Float
-sectorDefaultRatio =
-    1 / 3

@@ -23,7 +23,7 @@ held per sector and per mini-sector, so reading one is
 
 import List.Extra
 import Motorsport.BestTimes as BestTimes exposing (Holder)
-import Motorsport.Circuit as Circuit exposing (Layout, Segmentation(..))
+import Motorsport.Circuit exposing (Layout, Segmentation(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot exposing (CarAt)
@@ -74,7 +74,7 @@ type MiniSectorShares
 
 A stretch takes the share of the lap that its record does of the lap record --
 so the track is drawn to how quick each part of it is. Before any record has
-been set there is nothing to draw it from, and the default ratios stand in.
+been set there is nothing to draw it from, and the lap is divided evenly.
 
 -}
 buildConfig :
@@ -89,25 +89,19 @@ buildConfig layout bestTimes =
     case layout.segmentation of
         SectorsOnly ->
             let
-                ratio =
-                    ratioAgainst
-                        { total = totalOf (Sector.values bestTimes.fastestSectors)
-                        , timeOf = \sector -> BestTimes.timeOf (Sector.get sector bestTimes.fastestSectors)
-                        , default = \_ -> Circuit.sectorDefaultRatio
-                        }
+                sectorRatio =
+                    ratiosOver Sector.all
+                        (\sector -> BestTimes.timeOf (Sector.get sector bestTimes.fastestSectors))
             in
-            { sectors = Sector.initialize (shareOf ratio Sector.all)
+            { sectors = Sector.initialize (shareOf sectorRatio Sector.all)
             , miniSectors = NoMiniSectors
             }
 
         MiniSectors grouping ->
             let
                 miniRatio =
-                    ratioAgainst
-                        { total = totalOf (LeMans.values bestTimes.fastestMiniSectors)
-                        , timeOf = \mini -> BestTimes.timeOf (LeMans.get mini bestTimes.fastestMiniSectors)
-                        , default = LeMans.defaultRatio
-                        }
+                    ratiosOver LeMans.all
+                        (\mini -> BestTimes.timeOf (LeMans.get mini bestTimes.fastestMiniSectors))
 
                 -- A sector is its mini-sectors, so it takes what they take
                 -- between them. Reading it off the sector's own record instead
@@ -121,31 +115,27 @@ buildConfig layout bestTimes =
             }
 
 
-{-| What share of the lap one stretch's record is of every record put together.
+{-| What share of the lap each stretch's record is of every record put together.
 
-A stretch no lap has set a time for counts as nothing, and until some lap has
-set one there is no total to divide by -- so before the race has run, every
-stretch falls back on the proportions it is known to have.
+A stretch no lap has set a time for counts as nothing. Until some lap has set
+one there is no total to divide by at all, and the stretches are given an even
+share each -- which is the only thing that can be said about a circuit nobody
+has been round yet, and says it for both grains without either having to carry
+a table of how long its parts are.
 
 -}
-ratioAgainst :
-    { total : Float
-    , timeOf : id -> Maybe Duration
-    , default : id -> Float
-    }
-    -> id
-    -> Float
-ratioAgainst { total, timeOf, default } id =
-    if total == 0 then
-        default id
+ratiosOver : List id -> (id -> Maybe Duration) -> id -> Float
+ratiosOver order timeOf =
+    let
+        total =
+            order |> List.filterMap timeOf |> List.sum |> toFloat
+    in
+    \id ->
+        if total == 0 then
+            1 / toFloat (List.length order)
 
-    else
-        toFloat (Maybe.withDefault 0 (timeOf id)) / total
-
-
-totalOf : List (Maybe Holder) -> Float
-totalOf records =
-    records |> List.filterMap BestTimes.timeOf |> List.sum |> toFloat
+        else
+            toFloat (Maybe.withDefault 0 (timeOf id)) / total
 
 
 {-| Lay the stretches out end to end from the line, each taking the share its

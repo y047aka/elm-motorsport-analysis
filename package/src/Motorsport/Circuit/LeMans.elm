@@ -5,7 +5,7 @@ module Motorsport.Circuit.LeMans exposing
     , toString
     , ByMiniSector, initialize, get, map2
     , values, toList
-    , layout, defaultRatio
+    , layout
     )
 
 {-| The mini-sectors of Le Mans, the counterpart of
@@ -26,7 +26,7 @@ the way that module spells it, so a caller that knows one knows the other.
 
 ## The circuit itself
 
-@docs layout, defaultRatio
+@docs layout
 
 -}
 
@@ -281,77 +281,6 @@ toString mini =
 
         FL ->
             "FL"
-
-
-{-| What share of the lap a mini sector takes when no lap has set a time to
-measure it by -- the proportions the track is drawn at before the race has run.
-
-Every mini sector has one, so this is a plain `Float`: the caller that used to
-answer for a missing one no longer has to name a number for a case that cannot
-arise.
-
--}
-defaultRatio : LeMans2025MiniSector -> Float
-defaultRatio mini =
-    defaultWeight mini / totalDefaultWeight
-
-
-totalDefaultWeight : Float
-totalDefaultWeight =
-    all |> List.map defaultWeight |> List.sum
-
-
-{-| Roughly how long each mini sector is, in arbitrary units -- only the
-proportions between them mean anything, which is why they are normalised into
-[`defaultRatio`](#defaultRatio) rather than read directly.
--}
-defaultWeight : LeMans2025MiniSector -> Float
-defaultWeight mini =
-    case mini of
-        SCL2 ->
-            7.5
-
-        Z4 ->
-            7.5
-
-        IP1 ->
-            12
-
-        Z12 ->
-            24
-
-        SCLC ->
-            3
-
-        A7_1 ->
-            15
-
-        IP2 ->
-            13
-
-        A8_1 ->
-            5.5
-
-        SCLB ->
-            26
-
-        PORIN ->
-            12.5
-
-        POROUT ->
-            11
-
-        PITREF ->
-            6
-
-        SCL1 ->
-            2
-
-        FORDOUT ->
-            3
-
-        FL ->
-            2
 
 
 {-| Order two mini-sectors by where they fall on the lap. The counterpart of
