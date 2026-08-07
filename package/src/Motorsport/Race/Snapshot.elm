@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, Standing, CurrentLap, LastLap
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), lastLapRating
     , CurrentSectorStates, CurrentMiniSectorStates
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -30,7 +30,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field says which one
 it wants rather than working it out of `toList`.
 
-@docs Snapshot, CarAt, Standing, CurrentLap, LastLap
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, lastLapRating
 @docs CurrentSectorStates, CurrentMiniSectorStates
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -162,20 +162,50 @@ type alias CurrentLap =
     }
 
 
-{-| The lap the car has just finished, as it was read off it.
+{-| The lap the car has just finished, as it was read off it -- where it has
+finished one.
+
+A car on its opening lap has nothing behind it, and that is `NoLapYet` rather
+than a reading with everything missing: the time, the sectors and the
+mini-sectors are absent together or not at all, since they are all read off the
+one lap. A view that has nothing to print prints the same "-" for all three.
 
 The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: the
 time it took and how its sectors went, each rated as every rating on a car is.
 
-`miniSectors` is `Nothing` away from Le Mans, where the source data records no
-mini-sectors to rate.
+The two remaining absences are the other kinds, and stay where they are.
+`rated` is `Nothing` for a lap the source data has no time for, as
+[`rateTime`](Motorsport-Lap-Performance#rateTime) gives it. `miniSectors` is
+`Nothing` away from Le Mans, where the source data records no mini-sectors to
+rate.
 
 -}
-type alias LastLap =
-    { rated : Maybe RatedTime
-    , sectors : Maybe SectorPerformance
-    , miniSectors : Maybe MiniSectorPerformance
-    }
+type LastLap
+    = NoLapYet
+    | Finished
+        { rated : Maybe RatedTime
+        , sectors : SectorPerformance
+        , miniSectors : Maybe MiniSectorPerformance
+        }
+
+
+{-| The rating of the lap the car has just finished, where it has finished one
+and the source data timed it.
+
+The one place the two absences above are flattened together, for the callers
+that have nothing to say about either: a column that prints a time or a "-", and
+the sort behind it. Anything that draws the sectors reads the `Finished` fields
+instead.
+
+-}
+lastLapRating : LastLap -> Maybe RatedTime
+lastLapRating lastLap_ =
+    case lastLap_ of
+        Finished { rated } ->
+            rated
+
+        NoLapYet ->
+            Nothing
 
 
 {-| Where the car stands in each sector of the lap it is on: whether it has
@@ -405,7 +435,10 @@ The status is looked up rather than worked out here; see
 type alias SampledCar =
     Gap.Competitor
         { metadata : Car.Metadata
-        , lastLap : Maybe Lap
+
+        -- Named apart from `CarAt.lastLap` deliberately: this is the lap
+        -- itself, that one is what was read off it.
+        , previousLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
         }
@@ -433,7 +466,7 @@ sampleCar clock race car =
                 { metadata = car.metadata
                 , laps = car.laps
                 , currentLap = lap
-                , lastLap = Lap.findLastLapAt clock car.laps
+                , previousLap = Lap.findLastLapAt clock car.laps
                 , status = Race.statusAt clock car.metadata.carNumber race
                 , currentDriver = lap.driver
                 }
@@ -454,11 +487,16 @@ timingOf raceElapsed rivals car =
             { elapsed = raceElapsed }
     in
     { currentLapElapsed =
-        -- A car on its opening lap has no lap behind it, and that lap began at
-        -- the race start -- which is the instant `Lap.empty` carries, so the
-        -- empty lap stands in for the missing one rather than papering over it.
         Instant.since
-            { from = (Maybe.withDefault Lap.empty car.lastLap).elapsed
+            { from =
+                -- A car on its opening lap has no lap behind it, and that lap
+                -- began where the race did.
+                case car.previousLap of
+                    Just lap ->
+                        lap.elapsed
+
+                    Nothing ->
+                        Instant.raceStart
             , to = raceClock.elapsed
             }
     , gapToLeader = gapTo raceClock car rivals.leader
@@ -617,7 +655,7 @@ readCarAt frame placed =
         -- against itself. Read once, so `currentLap.performance`'s baseline and
         -- `bestLap` cannot come apart.
         personalBest =
-            car.lastLap |> Maybe.andThen .best
+            car.previousLap |> Maybe.andThen .best
     in
     { metadata = car.metadata
     , status = car.status
@@ -625,7 +663,7 @@ readCarAt frame placed =
     , standing =
         { position = placed.position
         , positionInClass = placed.positionInClass
-        , lapsCompleted = car.lastLap |> Maybe.map .lap |> Maybe.withDefault 0
+        , lapsCompleted = car.previousLap |> Maybe.map .lap |> Maybe.withDefault 0
         , gapToLeader = timing.gapToLeader
         , intervalToAhead = timing.intervalToAhead
         }
@@ -639,18 +677,18 @@ readCarAt frame placed =
             }
             car.currentLap
     , lastLap =
-        { rated =
-            car.lastLap
-                |> Maybe.andThen
-                    (\lap ->
+        case car.previousLap of
+            Just lap ->
+                Finished
+                    { rated =
                         Performance.rateTime frame.fastestLapTime
                             { time = lap.time, personalBest = lap.best }
-                    )
-        , sectors =
-            car.lastLap |> Maybe.map (Performance.ofSectors frame.records)
-        , miniSectors =
-            car.lastLap |> Maybe.andThen (Performance.ofMiniSectors frame.records)
-        }
+                    , sectors = Performance.ofSectors frame.records lap
+                    , miniSectors = Performance.ofMiniSectors frame.records lap
+                    }
+
+            Nothing ->
+                NoLapYet
     , bestLap =
         Performance.rateTime frame.fastestLapTime
             { time = personalBest, personalBest = personalBest }

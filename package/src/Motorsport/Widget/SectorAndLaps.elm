@@ -12,7 +12,7 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
 import Path.Styled as Path
@@ -101,12 +101,19 @@ currentLapTimeCell item =
 
 lastLapTimeCell : CarAt -> Html msg
 lastLapTimeCell item =
+    let
+        -- A car on its opening lap and one whose lap the source data did not
+        -- time read the same here: no time to print, and nothing to colour it
+        -- by. Only the sector strips tell the two apart.
+        rated =
+            Snapshot.lastLapRating item.lastLap
+    in
     div
         [ css
             [ property "font-size" "13px"
             , property "font-variant-numeric" "tabular-nums"
             , property "text-align" "right"
-            , case item.lastLap.rated of
+            , case rated of
                 Just { performance } ->
                     applyPerformanceColor performance
 
@@ -114,7 +121,7 @@ lastLapTimeCell item =
                     batch []
             ]
         ]
-        [ text (item.lastLap.rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+        [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
 applyPerformanceColor : Performance.PerformanceLevel -> Css.Style

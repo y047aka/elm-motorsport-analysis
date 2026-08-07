@@ -65,7 +65,7 @@ import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, RatedTime, SectorPerformance, SegmentState, performanceLevel)
+import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
 import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentMiniSectorStates, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
@@ -421,8 +421,18 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
+{-| The lap time a car last set, printed and coloured by its rating.
+
+Asks for the rating rather than for whatever carries it, as
+[`bestTimeColumn`](#bestTimeColumn) does: a caller reading a
+[`Snapshot.CarAt`](Motorsport-Race-Snapshot#CarAt) reaches it through
+[`Snapshot.lastLapRating`](Motorsport-Race-Snapshot#lastLapRating), and one with
+a row of its own hands over whatever it has. A column that prints one time needs
+no more than the time.
+
+-}
 lastLapColumn :
-    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime } }
+    { getter : data -> Maybe RatedTime
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -430,8 +440,6 @@ lastLapColumn { getter, sorter } =
     { name = "Last Lap"
     , view =
         getter
-            >> .lastLap
-            >> .rated
             >> Maybe.map
                 (\{ time, performance } ->
                     span
@@ -600,7 +608,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
 
 
 lastLapColumn_Wec :
-    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime, sectors : Maybe SectorPerformance } }
+    { getter : data -> Snapshot.LastLap
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -612,8 +620,8 @@ lastLapColumn_Wec { getter, sorter } =
     }
 
 
-viewLastLapColumn_Wec : { a | lastLap : { b | rated : Maybe RatedTime, sectors : Maybe SectorPerformance } } -> Html msg
-viewLastLapColumn_Wec { lastLap } =
+viewLastLapColumn_Wec : Snapshot.LastLap -> Html msg
+viewLastLapColumn_Wec lastLap =
     let
         lapTimeView { time, performance } =
             div
@@ -639,31 +647,31 @@ viewLastLapColumn_Wec { lastLap } =
                 ]
                 []
     in
-    case lastLap.rated of
-        Just lapTime ->
-            div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ lapTimeView lapTime
-                , case lastLap.sectors of
-                    Just slots ->
-                        div
+    case lastLap of
+        Snapshot.Finished { rated, sectors } ->
+            case rated of
+                Just lapTime ->
+                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                        [ lapTimeView lapTime
+                        , div
                             [ css
                                 [ property "display" "grid"
                                 , property "grid-template-columns" "1fr 1fr 1fr"
                                 , property "column-gap" "4px"
                                 ]
                             ]
-                            (List.map sectorCell (Sector.values slots))
+                            (List.map sectorCell (Sector.values sectors))
+                        ]
 
-                    Nothing ->
-                        text ""
-                ]
+                Nothing ->
+                    text "-"
 
-        Nothing ->
+        Snapshot.NoLapYet ->
             text "-"
 
 
 lastLapColumn_LeMans24h :
-    { getter : data -> { a | lastLap : { b | rated : Maybe RatedTime, miniSectors : Maybe MiniSectorPerformance } }
+    { getter : data -> Snapshot.LastLap
     , sorter : data -> data -> Order
     }
     -> Column data msg
@@ -675,8 +683,8 @@ lastLapColumn_LeMans24h { getter, sorter } =
     }
 
 
-viewLastLapColumn_LeMans24h : { a | lastLap : { b | rated : Maybe RatedTime, miniSectors : Maybe MiniSectorPerformance } } -> Html msg
-viewLastLapColumn_LeMans24h { lastLap } =
+viewLastLapColumn_LeMans24h : Snapshot.LastLap -> Html msg
+viewLastLapColumn_LeMans24h lastLap =
     let
         lapTimeView { time, performance } =
             div
@@ -702,12 +710,14 @@ viewLastLapColumn_LeMans24h { lastLap } =
                 ]
                 []
     in
-    case lastLap.rated of
-        Just lapTime ->
-            div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
-                [ lapTimeView lapTime
-                , lastLap.miniSectors
-                    |> Maybe.map
+    case lastLap of
+        Snapshot.Finished { rated, miniSectors } ->
+            case rated of
+                Just lapTime ->
+                    div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
+                        [ lapTimeView lapTime
+                        , miniSectors
+                            |> Maybe.map
                         (\ms ->
                             div [ css [ property "display" "grid", property "grid-template-columns" "2fr 2fr 3fr 0.5fr 5fr 1fr 3fr 3fr 0.5fr 1fr 5fr 3fr 2fr 1fr 1fr 1fr 1fr", property "column-gap" "1px" ] ]
                                 [ sectorCell ms.scl2
@@ -729,10 +739,13 @@ viewLastLapColumn_LeMans24h { lastLap } =
                                 , sectorCell ms.fl
                                 ]
                         )
-                    |> Maybe.withDefault (text "-")
-                ]
+                            |> Maybe.withDefault (text "-")
+                        ]
 
-        Nothing ->
+                Nothing ->
+                    text "-"
+
+        Snapshot.NoLapYet ->
             text "-"
 
 
