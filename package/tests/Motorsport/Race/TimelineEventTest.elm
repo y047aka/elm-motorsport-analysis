@@ -235,16 +235,21 @@ suite =
                         |> Result.map (LeMans.toList >> List.map (Tuple.mapSecond .time))
                         |> Expect.equal
                             (Ok (List.indexedMap (\i mini -> ( mini, Just ((i + 1) * 1000) )) LeMans.all))
-            , test "reads `elapsed` off the wire as the running total into the lap" <|
+            , test "reads each of a mini-sector's three times into the field it belongs in" <|
                 \_ ->
+                    -- The last in track order: 15.000 long, 15:00.000 into the
+                    -- lap by the time it ends -- `elapsedInLap` is the running
+                    -- total from the line, not the race clock a `Lap.elapsed`
+                    -- carries -- and a one-second best like all the others.
                     decodedMiniSectors
-                        |> Result.map (LeMans.get FL >> .elapsedInLap)
-                        |> Expect.equal (Ok (Just 900000))
-            , test "reads `best` off the wire as the driver's own record" <|
-                \_ ->
-                    decodedMiniSectors
-                        |> Result.map (LeMans.get SCL2 >> .personalBest)
-                        |> Expect.equal (Ok (Just 1000))
+                        |> Result.map (LeMans.get FL)
+                        |> Expect.equal
+                            (Ok
+                                { time = Just 15000
+                                , elapsedInLap = Just 900000
+                                , personalBest = Just 1000
+                                }
+                            )
             ]
         ]
 

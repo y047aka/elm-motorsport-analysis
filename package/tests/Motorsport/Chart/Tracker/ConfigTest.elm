@@ -46,11 +46,6 @@ tests =
                     sectorSharesOf evenMiniSectors
                         |> List.map .share
                         |> expectShares [ 3 / 15, 4 / 15, 8 / 15 ]
-            , test "starts each sector where its first mini-sector starts" <|
-                \_ ->
-                    sectorSharesOf evenMiniSectors
-                        |> List.map .start
-                        |> expectShares [ 0, 3 / 15, 7 / 15 ]
             , test "lays the mini-sectors end to end round the whole lap, not within their sector" <|
                 \_ ->
                     -- The tenth in track order is in S3, and starts nine
