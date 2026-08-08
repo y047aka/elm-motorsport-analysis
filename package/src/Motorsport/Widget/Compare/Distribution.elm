@@ -14,7 +14,7 @@ import Motorsport.Chart.Common exposing (Emphasis(..), upperFence)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 
 
 {-| Shared scale for the lap-time distribution chart. Aligns the X axis (domain)
@@ -50,8 +50,18 @@ seriesOf lapHistory range entry =
     { color = Manufacturer.toColorWithFallback entry.metadata
     , emphasis = Focused
     , times = racingTimes lapHistory range entry
-    , lastLap = entry.lastLap.rated |> Maybe.map .time
+    , lastLap = lastLapTime entry
     }
+
+
+lastLapTime : CarAt -> Maybe Int
+lastLapTime entry =
+    case entry.lastLap of
+        Snapshot.Completed { rated } ->
+            rated |> Maybe.map .time
+
+        Snapshot.NoLapYet ->
+            Nothing
 
 
 racingTimes : LapHistory -> ( Int, Int ) -> CarAt -> List Int

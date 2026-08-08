@@ -12,7 +12,7 @@ import Html.Styled exposing (Html, div, text)
 import Html.Styled.Attributes exposing (css)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
 import Path.Styled as Path
@@ -101,12 +101,21 @@ currentLapTimeCell item =
 
 lastLapTimeCell : CarAt -> Html msg
 lastLapTimeCell item =
+    let
+        rated =
+            case item.lastLap of
+                Snapshot.Completed completed ->
+                    completed.rated
+
+                Snapshot.NoLapYet ->
+                    Nothing
+    in
     div
         [ css
             [ property "font-size" "13px"
             , property "font-variant-numeric" "tabular-nums"
             , property "text-align" "right"
-            , case item.lastLap.rated of
+            , case rated of
                 Just { performance } ->
                     applyPerformanceColor performance
 
@@ -114,7 +123,7 @@ lastLapTimeCell item =
                     batch []
             ]
         ]
-        [ text (item.lastLap.rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
+        [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
 applyPerformanceColor : Performance.PerformanceLevel -> Css.Style

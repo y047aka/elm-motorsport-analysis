@@ -25,7 +25,7 @@ import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Circuit exposing (Layout, Segmentation(..))
 import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
-import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
@@ -169,12 +169,27 @@ computeProgress config car =
         car.currentLap.progress
 
     else
-        case ( config.miniSectors, car.currentLap.miniSector ) of
-            ( MiniSectorShares shares, Just current ) ->
-                along (LeMans.get current.miniSector shares) current.progress
+        case ( config.miniSectors, car.currentLap.miniSectors ) of
+            ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
+                case current of
+                    Just miniSector ->
+                        along (LeMans.get miniSector.miniSector shares) miniSector.progress
+
+                    -- Nowhere to place the car at the finer grain.
+                    Nothing ->
+                        bySector config car
 
             _ ->
-                along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
+                bySector config car
+
+
+{-| Where round the lap the three-sector grain puts the car. Not a `let` in
+[`computeProgress`](#computeProgress): Elm would work it out even when the finer
+grain answers, once per car per frame.
+-}
+bySector : TrackConfig -> CarAt -> Float
+bySector config car =
+    along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
 
 
 along : Share -> Float -> Float
