@@ -8,7 +8,8 @@ mod Motorsport.TestMetadata {
     use Util.HourClock.Hour
     use Util.Json.Encode
 
-    /// 検査用ヘルパー: 22 列のうちテストに必要なものだけ埋めた RawLap を作る。
+    /// Builds a RawLap with only the columns a test needs filled in; of the 22,
+    /// the rest are placeholders.
     def mkLap(carNumber: String, lapNumber: Int32, elapsed: String, driverName: String, class: String, group: String, team: String, manufacturer: String): RawLap =
         {
             car = {
@@ -56,8 +57,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testGridOrderedByLap1S1NotElapsed(): Unit \ Assert =
-        // 12 は S1 で先行するが、1周目を終えたのは 7 のほうが早い。CSV 出現順
-        // (7, 12) も結果に残らない。
+        // 12 leads on S1, but 7 was first to finish the lap. The CSV order
+        // (7, 12) does not survive either.
         let laps =
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -75,7 +76,7 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testGridFallsBackToLap1Elapsed(): Unit \ Assert =
-        // S1 の無いフィードでは1周目 elapsed が鍵になり、basis がそう名乗る。
+        // A feed with no S1 is read by lap-1 elapsed, and basis says so.
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
@@ -93,8 +94,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testMixedFeedOrdersEveryoneByElapsed(): Unit \ Assert =
-        // 1台でも S1 を欠くと、読める車は全員 elapsed で並ぶ。#7 の S1 (1:10) は
-        // #12 の elapsed (1:35) より小さいが、次元が違うので比較には使わない。
+        // One car short of an S1 puts every readable car on elapsed. #7's S1
+        // (1:10) is under #12's elapsed (1:35), but the two are not compared.
         let laps =
             withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
@@ -112,8 +113,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ Assert =
-        // 1周目を持たない #99 は基準の選択に加わらないので、読める2台の S1 を
-        // 巻き添えにしない。
+        // #99 turned no first lap, so it has no say in the choice and does not
+        // take the other two cars' S1 down with it.
         let laps =
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -126,8 +127,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ Assert =
-        // 3台とも S1 が同値。7 は elapsed で先頭に出る。9 と 10 は elapsed も
-        // 並ぶのでカーナンバーで決まり、文字列比較なので "10" が "9" より前。
+        // All three share an S1. 7 comes out on top on elapsed; 9 and 10 tie
+        // there too, so the car number settles it, as strings: "10" before "9".
         let laps =
             withS1("29.100", mkLap("9",  1, "1:35.365", "X", "LMGT3", "G", "T", "M")) ::
             withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -181,8 +182,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testCarWithoutLap1GoesToTheBack(): Unit \ Assert =
-        // 落とさず最後尾に置く。カーナンバーが 7 より小さい 1 でも、順位の付いた
-        // 車を追い越さない。
+        // Placed at the back rather than dropped. Car number 1 sorts under 7 and
+        // still does not pass a car that could be read.
         let laps =
             mkLap("1", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
@@ -199,7 +200,7 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ Assert =
-        // 誰も読めなくても順位は 1..n を埋める。
+        // Positions still fill 1..n when no car can be read.
         let laps =
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::
@@ -220,7 +221,7 @@ mod Motorsport.TestMetadata {
         let laps = withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) :: Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         let json = Encode.render(Metadata.toJson(meta));
-        // 主要キーが出現することを確認 (構造アサーション)。
+        // Asserts the shape: that the keys are present.
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
