@@ -6,7 +6,7 @@ import Data.Series.Wec_2024 exposing (carImageFileName_2024, wec_2024)
 import Data.Series.Wec_2025 exposing (carImageFileName_2025, wec_2025)
 import Data.Series.Wec_2026 exposing (carImageFileName_2026, wec_2026)
 import List.Extra
-import Motorsport.Class.Era as Era
+import Motorsport.Wec.Era as Era
 
 
 {-| The event, if the app can show it: it has to be one the season actually ran,

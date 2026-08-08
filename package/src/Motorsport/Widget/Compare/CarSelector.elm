@@ -10,9 +10,9 @@ import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
-import Motorsport.Class as Class exposing (Class)
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Manufacturer as Manufacturer
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its

@@ -12,11 +12,11 @@ module Data.Wec exposing
 
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Class as Class
-import Motorsport.Class.Era exposing (Era)
 import Motorsport.Driver as Driver exposing (Driver)
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car as Car
+import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Era exposing (Era)
+import Motorsport.Wec.Manufacturer as Manufacturer
 
 
 type alias Event =

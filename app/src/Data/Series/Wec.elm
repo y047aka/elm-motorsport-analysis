@@ -11,7 +11,7 @@ module Data.Series.Wec exposing
 -}
 
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Wec.Circuit.LeMans exposing (LeMans2025MiniSector)
 
 
 type Wec

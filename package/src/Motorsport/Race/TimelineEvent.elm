@@ -16,12 +16,12 @@ import Json.Decode as Decode exposing (Decoder, field, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (custom, optional, required)
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
+import Motorsport.Wec.Circuit.LeMans as LeMans
 
 
 type alias TimelineEvent =
@@ -303,7 +303,7 @@ sectorsDecoder =
 
 {-| The mini-sector counterpart of [`sectorsDecoder`](#sectorsDecoder).
 
-Built against [`ByMiniSector`](Motorsport-Circuit-LeMans#ByMiniSector) itself
+Built against [`ByMiniSector`](Motorsport-Wec-Circuit-LeMans#ByMiniSector) itself
 rather than a record shaped like it, so that a field added to a
 [`MiniSectorTime`](Motorsport-Lap#MiniSectorTime) is a decoder that stops
 compiling rather than one that quietly decodes into the wrong type. That each

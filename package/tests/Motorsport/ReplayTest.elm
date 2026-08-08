@@ -2,12 +2,12 @@ module Motorsport.ReplayTest exposing (suite)
 
 import Expect
 import Motorsport.Circuit as Circuit
-import Motorsport.Class as Class
+import Motorsport.Wec.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)

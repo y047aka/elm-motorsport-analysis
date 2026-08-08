@@ -1,4 +1,4 @@
-module Motorsport.Class exposing
+module Motorsport.Wec.Class exposing
     ( Class
     , classesOf
     , compare
@@ -21,7 +21,7 @@ module Motorsport.Class exposing
 import Css
 import Css.Color exposing (oklch)
 import List.Extra
-import Motorsport.Class.Era as Era exposing (Era)
+import Motorsport.Wec.Era as Era exposing (Era)
 
 
 {-| The category a car races in, as it stood in the era it was read for.

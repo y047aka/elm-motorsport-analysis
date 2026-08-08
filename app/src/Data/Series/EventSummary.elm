@@ -7,7 +7,7 @@ module Data.Series.EventSummary exposing (EventSummary)
 -}
 
 import Motorsport.Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Wec.Circuit.LeMans exposing (LeMans2025MiniSector)
 
 
 {-| One round of a season, as the app knows it before any of its data has

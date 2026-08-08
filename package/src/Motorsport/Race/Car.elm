@@ -15,10 +15,10 @@ from one of these and an elapsed time, in
 
 -}
 
-import Motorsport.Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Manufacturer exposing (Manufacturer)
+import Motorsport.Wec.Class exposing (Class)
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 
 
 type alias Car =

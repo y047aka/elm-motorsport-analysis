@@ -24,9 +24,9 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
+import Motorsport.Wec.Manufacturer as Manufacturer
 import Scale
 import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr

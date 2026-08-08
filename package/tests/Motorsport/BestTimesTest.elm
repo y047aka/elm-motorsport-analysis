@@ -3,13 +3,13 @@ module Motorsport.BestTimesTest exposing (tests)
 import Expect
 import Motorsport.BestTimes as BestTimes exposing (Changes, Holder, Snapshot)
 import Motorsport.Circuit as Circuit
-import Motorsport.Circuit.LeMans as LeMans
-import Motorsport.Class as Class
+import Motorsport.Wec.Circuit.LeMans as LeMans
+import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Wec.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (Sector(..))

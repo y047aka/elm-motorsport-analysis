@@ -33,10 +33,10 @@ it as part of the race and a view is free to rate a lap of its own.
 -}
 
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 type alias RatedTime =

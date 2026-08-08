@@ -2,7 +2,7 @@ module Motorsport.LapTest exposing (tests)
 
 import Expect
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (Sector(..))

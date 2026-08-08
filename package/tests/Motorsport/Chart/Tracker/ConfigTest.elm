@@ -4,7 +4,7 @@ import Expect
 import Motorsport.BestTimes exposing (Holder)
 import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Circuit as Circuit
-import Motorsport.Circuit.LeMans as LeMans
+import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Sector as Sector

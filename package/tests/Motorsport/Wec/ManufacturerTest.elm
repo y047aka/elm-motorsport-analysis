@@ -1,7 +1,7 @@
-module Motorsport.ManufacturerTest exposing (suite)
+module Motorsport.Wec.ManufacturerTest exposing (suite)
 
 import Expect
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer(..))
+import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer(..))
 import Test exposing (Test, describe, test)
 
 

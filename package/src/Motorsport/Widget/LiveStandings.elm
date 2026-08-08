@@ -6,11 +6,11 @@ import Html.Styled.Attributes exposing (attribute, class, css)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
-import Motorsport.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
+import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 

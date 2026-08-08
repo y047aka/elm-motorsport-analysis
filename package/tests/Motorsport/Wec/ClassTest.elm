@@ -1,15 +1,15 @@
-module Motorsport.ClassTest exposing (tests)
+module Motorsport.Wec.ClassTest exposing (tests)
 
 import Expect
 import List.Extra
-import Motorsport.Class as Class exposing (Class)
-import Motorsport.Class.Era as Era exposing (Era)
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Era as Era exposing (Era)
 import Test exposing (..)
 
 
 tests : Test
 tests =
-    describe "Motorsport.Class"
+    describe "Motorsport.Wec.Class"
         [ describe "compare"
             [ test "orders each era's grid fastest category first" <|
                 \_ ->

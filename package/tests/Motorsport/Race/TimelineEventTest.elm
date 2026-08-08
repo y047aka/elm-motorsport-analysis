@@ -3,12 +3,12 @@ module Motorsport.Race.TimelineEventTest exposing (suite)
 import Expect
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Class as Class
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Test exposing (Test, describe, test)

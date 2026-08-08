@@ -4,10 +4,10 @@ import Data.Wec.Laps as Laps
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, list, string)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Class as Class exposing (Class)
-import Motorsport.Class.Era as Era
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Era as Era
 import Motorsport.Driver as Driver
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
+import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car exposing (Car)
 
 

@@ -1,4 +1,4 @@
-module Motorsport.Manufacturer exposing
+module Motorsport.Wec.Manufacturer exposing
     ( Manufacturer(..)
     , fromString, toString
     , toColor

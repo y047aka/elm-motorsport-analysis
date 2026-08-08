@@ -3,10 +3,10 @@ module Data.Wec.LapsTest exposing (suite)
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
 import Json.Decode as Decode
-import Motorsport.Class as Class
+import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
-import Motorsport.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
 import Test exposing (Test, describe, test)
 

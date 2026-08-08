@@ -1,4 +1,4 @@
-module Motorsport.Class.Era exposing
+module Motorsport.Wec.Era exposing
     ( Era(..)
     , fromSeason
     )
@@ -14,7 +14,7 @@ module Motorsport.Class.Era exposing
 {-| A stretch of seasons over which the grid keeps the same shape.
 
 Seasons arrive every year; the grid does not change with them. Keying on the
-season number would mean revisiting it each January, so `Motorsport.Class` keys
+season number would mean revisiting it each January, so `Motorsport.Wec.Class` keys
 the classes, their order and their colors on the era instead.
 
 An era ends when a category is added, dropped, or moves in the order:

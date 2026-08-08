@@ -1,14 +1,14 @@
-module Motorsport.Circuit.LeMansTest exposing (tests)
+module Motorsport.Wec.Circuit.LeMansTest exposing (tests)
 
 import Expect
-import Motorsport.Circuit.LeMans as LeMans
+import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Sector as Sector
 import Test exposing (..)
 
 
 tests : Test
 tests =
-    describe "Motorsport.Circuit.LeMans"
+    describe "Motorsport.Wec.Circuit.LeMans"
         [ describe "compare"
             [ test "orders `all` the way a car drives it" <|
                 \_ ->

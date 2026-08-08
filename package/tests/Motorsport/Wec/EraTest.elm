@@ -1,13 +1,13 @@
-module Motorsport.Class.EraTest exposing (tests)
+module Motorsport.Wec.EraTest exposing (tests)
 
 import Expect
-import Motorsport.Class.Era as Era
+import Motorsport.Wec.Era as Era
 import Test exposing (..)
 
 
 tests : Test
 tests =
-    describe "Motorsport.Class.Era"
+    describe "Motorsport.Wec.Era"
         [ describe "fromSeason"
             [ test "resolves each season whose grid the app knows" <|
                 \_ ->

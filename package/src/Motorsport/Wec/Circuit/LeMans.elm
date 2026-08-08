@@ -1,4 +1,4 @@
-module Motorsport.Circuit.LeMans exposing
+module Motorsport.Wec.Circuit.LeMans exposing
     ( LeMans2025MiniSector(..)
     , all
     , compare
@@ -282,10 +282,10 @@ toString mini =
 [`Sector.compare`](Motorsport-Sector#compare), and there for the same reason:
 placing a mini-sector against the one the car is in.
 
-    Motorsport.Circuit.LeMans.compare IP1 Z12
+    Motorsport.Wec.Circuit.LeMans.compare IP1 Z12
     --> LT
 
-    Motorsport.Circuit.LeMans.compare FL FL
+    Motorsport.Wec.Circuit.LeMans.compare FL FL
     --> EQ
 
 -}

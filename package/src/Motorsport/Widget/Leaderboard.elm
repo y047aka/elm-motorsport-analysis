@@ -61,15 +61,15 @@ import Html.Styled.Attributes exposing (alt, css, src)
 import Html.Styled.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Chart.Histogram as Histogram
-import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 

@@ -3,7 +3,7 @@
 ///
 /// The 15 named segments live alongside the standard S1/S2/S3 split and only
 /// appear in the Le Mans CSV; other WEC rounds omit these columns entirely.
-/// This mirrors `Motorsport.Circuit.LeMans.miniSectorOrder` on the Elm side.
+/// This mirrors `Motorsport.Wec.Circuit.LeMans.miniSectorOrder` on the Elm side.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MiniSectorId {
     Scl2,
@@ -24,7 +24,7 @@ pub enum MiniSectorId {
 }
 
 impl MiniSectorId {
-    /// Track-order list — must match `Motorsport.Circuit.LeMans.miniSectorOrder`.
+    /// Track-order list — must match `Motorsport.Wec.Circuit.LeMans.miniSectorOrder`.
     /// Groups correspond to S1 / S2 / S3.
     pub fn all() -> &'static [Self] {
         use MiniSectorId::*;

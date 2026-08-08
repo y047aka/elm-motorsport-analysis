@@ -24,13 +24,13 @@ import Dict
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Circuit.LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Race.StatusChanges as StatusChanges exposing (StatusChanges)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status exposing (Status)
+import Motorsport.Wec.Circuit.LeMans exposing (LeMans2025MiniSector)
 
 
 {-| `timelineEvents` reads the race as a list of things that happened; the three

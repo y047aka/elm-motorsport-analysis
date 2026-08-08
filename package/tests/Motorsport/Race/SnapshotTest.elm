@@ -4,16 +4,16 @@ import Expect
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Circuit as Circuit
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
-import Motorsport.Class as Class exposing (Class)
-import Motorsport.Class.Era as Era
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector(..))
+import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Era as Era
 import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
-import Motorsport.Manufacturer as Manufacturer
+import Motorsport.Wec.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)

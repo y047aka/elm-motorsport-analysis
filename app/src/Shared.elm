@@ -16,11 +16,11 @@ import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Circuit as Circuit
-import Motorsport.Class.Era as Era
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
+import Motorsport.Wec.Era as Era
 import Shared.Msg exposing (Msg(..))
 
 

@@ -23,10 +23,10 @@ are held per sector and per mini-sector, so reading one is
 import List.Extra
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Circuit exposing (Layout, Segmentation(..))
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 
 
 {-| The whole lap, divided. Both grains cover the same lap, so a car can be

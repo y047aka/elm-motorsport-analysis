@@ -47,16 +47,27 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 (`Snapshot`, `LapHistory`), `Widget/` and `Chart/` for rendering (Leaderboard,
 GapChart, BoxPlot).
 
-There is no view-model layer between the two. `Race.Snapshot` is the whole of
-the per-frame derivation — sampling the cars at the clock, ordering the field,
-measuring the gaps, rating the times against the records as they stood — and
-views read a `CarAt` straight off it. Colours and geometry are the view's own:
-a widget that wants a class's colour calls `Class.toColor` itself.
+`Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
+passed through (`Class`, `Era`), the manufacturers entering it (`Manufacturer`),
+and Le Mans's mini-sectors (`Circuit/LeMans`). Decoding the timing feed stays
+app-side in `Data.Wec` / `Data.Wec.Laps` — the shape of one publisher's files,
+not of the domain.
 
-`Snapshot.at` is called once per frame and every view of that frame shares the
-result. That sharing is the only reason the type exists; measured against
-building a record per car on top of it, the record cost under 2% of the frame
-(`benchmark/PerFrameBenchmark.elm`), which is why there is no layer above.
+The names are sorted; the dependencies are not. The core imports out of `Wec/`:
+`Car.Metadata` holds a `Class` and a `Manufacturer`, `Lap.miniSectors` is fixed
+to `Circuit/LeMans`'s type, and `Widget.Leaderboard` carries `*_Wec` and
+`*_LeMans24h` columns beside the generic ones. Aggregating the modules made that
+coupling visible rather than removing it; reversing the arrow is its own change.
+
+There is no view-model layer between the two. `Race.Snapshot` is the whole
+per-frame derivation — sampling the cars at the clock, ordering the field,
+measuring the gaps, rating the times against the records as they stood — and
+views read a `CarAt` straight off it. Colours and geometry are the view's own: a
+widget that wants a class's colour calls `Class.toColor` itself.
+
+`Snapshot.at` runs once per frame and every view shares the result; that sharing
+is the only reason the type exists. A record per car on top of it cost under 2%
+of the frame (`benchmark/PerFrameBenchmark.elm`), so there is no layer above.
 
 Modules serving both sides sit directly under `Motorsport/` rather than in a
 subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
@@ -74,14 +85,12 @@ Three spellings, used consistently:
 - **`Snapshot`** — the type `at` returns when the whole subject is frozen: every
   value in it read at the same instant, and that instant baked in.
 
-So `BestTimes.Snapshot` and `Race.Snapshot` are the same idea applied twice, not
-a name collision — the records at a moment, and the field at a moment. They are
-always written qualified, which is what keeps them apart at the call site.
-
-A module that hands out only the frozen form may name it for what it holds
-instead (`LapHistory`); one that holds both names them for the difference
-(`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one moment of it).
-Either way it is `at` that applies the clock.
+`BestTimes.Snapshot` and `Race.Snapshot` are the same idea applied twice, not a
+collision — the records at a moment, and the field at a moment; always written
+qualified, which keeps them apart at the call site. A module handing out only
+the frozen form may name it for what it holds instead (`LapHistory`); one
+holding both names them for the difference (`BestTimes.Changes` spans the race,
+`BestTimes.Snapshot` is one moment of it).
 
 ## Testing
 
@@ -100,10 +109,10 @@ Use `direnv allow` or `nix develop`.
 
 `.claude/settings.json` follows one rule: **allow broadly, then carve out the
 destructive flags with `ask`** — `ask` wins over `allow`, so `Bash(git branch:*)`
-can stay open while `-D` still prompts. Before adding a narrow `allow` entry, check
-whether a broader one plus an `ask` carve-out covers it; that keeps read-only flags
-(`--show-current`, `-r`, ...) from silently falling through to a prompt. `deny` is
-reserved for the genuinely irreversible: force push, publish, `sudo`, secret files.
+can stay open while `-D` still prompts. Prefer a broad `allow` plus an `ask`
+carve-out over a narrow `allow`, which leaves read-only flags (`--show-current`,
+`-r`, ...) falling through to a prompt. `deny` is reserved for the irreversible:
+force push, publish, `sudo`, secret files.
 
 Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
 rules can enforce the secret-file `deny` entries, which Bash bypasses.

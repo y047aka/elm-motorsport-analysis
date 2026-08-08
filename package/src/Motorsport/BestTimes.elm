@@ -25,13 +25,13 @@ owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
 
 -}
 
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Sector as Sector exposing (BySector, Sector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 
 
 {-| Every moment one of the race's records changed hands, collected once.

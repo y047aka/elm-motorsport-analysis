@@ -13,8 +13,8 @@ module Motorsport.Circuit exposing
 -}
 
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 import Motorsport.Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (LeMans2025MiniSector)
 
 
 {-| How a circuit is laid out for timing. Which way the cars go round is a
@@ -31,7 +31,7 @@ type alias Layout miniSector =
 to three sectors, and Le Mans to fifteen mini-sectors within them as well.
 
 `MiniSectors` carries which sector each mini-sector falls in, and only that.
-What order they come in is [`LeMans.all`](Motorsport-Circuit-LeMans#all)'s to
+What order they come in is [`LeMans.all`](Motorsport-Wec-Circuit-LeMans#all)'s to
 say.
 
 -}

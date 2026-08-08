@@ -5,12 +5,12 @@ import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
-import Motorsport.Class exposing (Class)
 import Motorsport.Instant as Instant
 import Motorsport.Lap exposing (Lap)
-import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Wec.Class exposing (Class)
+import Motorsport.Wec.Manufacturer as Manufacturer
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)

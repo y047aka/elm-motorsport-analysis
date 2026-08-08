@@ -10,11 +10,11 @@ import Css
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Circuit.LeMans as LeMans
-import Motorsport.Class as Class
 import Motorsport.Race exposing (Race)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
+import Motorsport.Wec.Circuit.LeMans as LeMans
+import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
 import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)

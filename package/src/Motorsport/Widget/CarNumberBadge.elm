@@ -13,8 +13,8 @@ needs, and none of it moves as the race does.
 import Css exposing (property)
 import Html.Styled exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (alt, class, css, src)
-import Motorsport.Manufacturer as Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
+import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 {-| Small stacked badge: logo on top, car number below.

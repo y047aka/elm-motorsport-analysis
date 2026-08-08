@@ -34,11 +34,11 @@ module Motorsport.Lap exposing
 
 import Compare exposing (Comparator)
 import List.Extra
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Sector as Sector exposing (BySector, Sector(..))
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
 
 
 type alias Lap =

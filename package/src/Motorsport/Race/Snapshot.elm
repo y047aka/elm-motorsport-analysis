@@ -23,8 +23,6 @@ each work them out again -- that sharing is the whole reason the type exists.
 
 import Dict
 import Motorsport.BestTimes as BestTimes
-import Motorsport.Circuit.LeMans as LeMans exposing (ByMiniSector)
-import Motorsport.Class as Class exposing (Class)
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap exposing (Gap)
@@ -37,6 +35,8 @@ import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status exposing (Status)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
+import Motorsport.Wec.Class as Class exposing (Class)
 import SortedList exposing (SortedList)
 
 
