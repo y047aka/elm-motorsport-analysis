@@ -143,29 +143,32 @@ mod Motorsport.Metadata {
         }
 
     /// Ties break on lap-1 elapsed -- which separates cars that share an S1,
-    /// and is the reading itself under `Lap1Elapsed` -- and then on car number,
+    /// and is the reading itself under `Lap1Elapsed` -- and last on car number,
     /// so the order is decided by the data alone and never by the order the CSV
     /// happened to list the cars in.
     ///
+    /// The car number is compared as the string it is. Nothing else in the
+    /// codebase orders car numbers -- they are matched and displayed, never
+    /// ranked -- and this position is not a ranking either: it is there so that
+    /// the same input always yields the same output, and any total order does
+    /// that. Reading them as numbers would dress the tie-break up as a
+    /// judgement it is not making, and would not even be one-to-one, since Le
+    /// Mans runs #7 alongside #007. If car-number order ever becomes something
+    /// a person reads, that is the point to give it a type of its own carrying
+    /// both the text and its number, not to decode it here.
+    ///
     /// A car with no first lap cannot be read, so nothing about where it
     /// started is known. It is still placed rather than dropped -- it did start
-    /// the race -- and goes to the back in car-number order, where being wrong
-    /// costs the least. `basis` is what says how much of the order to trust;
-    /// the entry itself does not claim to be measured.
-    def orderingKey(basis: Basis, b: CarBuild): (Int32, Duration, Duration, Int32, String) =
+    /// the race -- and goes to the back, where being wrong costs the least.
+    /// `basis` is what says how much of the order to trust; the entry itself
+    /// does not claim to be measured.
+    def orderingKey(basis: Basis, b: CarBuild): (Int32, Duration, Duration, String) =
         let cn = b#car#carNumber;
-        let num = numericCarNumber(cn);
         let elapsed = b#lap1Elapsed |> Option.getWithDefault(Util.Duration.zero());
         match readingFor(basis, b) {
-            case Some(reading) => (0, reading, elapsed, num, cn)
-            case None          => (1, Util.Duration.zero(), Util.Duration.zero(), num, cn)
+            case Some(reading) => (0, reading, elapsed, cn)
+            case None          => (1, Util.Duration.zero(), Util.Duration.zero(), cn)
         }
-
-    /// "7" sorts before "12". Anything that is not a number sorts after both,
-    /// and a leading zero is not one: "007" and "7" both read as 7, which the
-    /// raw car number in the last position of the key then separates.
-    def numericCarNumber(cn: String): Int32 =
-        Int32.fromString(cn) |> Option.getWithDefault(Int32.maxValue())
 
     pub def toJson(meta: Metadata): Encode.JsonValue =
         JsonObject(

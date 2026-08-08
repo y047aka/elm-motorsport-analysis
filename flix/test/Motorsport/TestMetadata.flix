@@ -128,16 +128,18 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ Assert =
-        // 3台とも S1 が同値。7 と 12 は elapsed で決まり、99 は 12 と elapsed も
-        // 並ぶのでカーナンバーで決まる (12 < 99)。
+        // 3台とも S1 が同値。7 は elapsed で先頭に出る。9 と 10 は elapsed も
+        // 並ぶので最後の手段のカーナンバーで決まり、文字列比較なので "10" が
+        // "9" より前に来る。ここは順位の判断ではなく決定性のためだけの位置な
+        // ので、数値順でないことは意味を持たない。
         let laps =
-            withS1("29.100", mkLap("99", 1, "1:35.365", "X", "LMGT3", "G", "T", "M")) ::
-            withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
+            withS1("29.100", mkLap("9",  1, "1:35.365", "X", "LMGT3", "G", "T", "M")) ::
+            withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             withS1("29.100", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
         let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
         let order = grid#entries |> List.map(e -> e#car#carNumber);
-        Assert.assertTrue(order == "7" :: "12" :: "99" :: Nil)
+        Assert.assertTrue(order == "7" :: "10" :: "9" :: Nil)
 
     @Test
     def testDriversAccumulatedInCsvOrder(): Unit \ Assert =
