@@ -103,7 +103,7 @@ collectCarData info acc =
 toPlaceholderCar : ( String, CarData ) -> Car
 toPlaceholderCar ( carNumber, data ) =
     Car.fromStartingGrid
-        { position = 0
+        { position = Nothing
         , car =
             { carNumber = carNumber
             , drivers = List.map Driver.fromName data.drivers

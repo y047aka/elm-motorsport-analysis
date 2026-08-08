@@ -267,6 +267,6 @@ car carNumber laps =
         , drivers = [ Driver.fromName "Test Driver" ]
         , manufacturer = Manufacturer.Other
         }
-    , startPosition = 0
+    , startPosition = Nothing
     , laps = List.map (\lap_ -> { lap_ | carNumber = carNumber }) laps
     }

@@ -105,7 +105,7 @@ update msg m =
         JsonLoaded_Wec (Ok decoded) ->
             let
                 cars =
-                    decoded.startingGrid |> List.map Car.fromStartingGrid
+                    decoded.startingGrid.entries |> List.map Car.fromStartingGrid
 
                 modelEventSummary =
                     m.eventSummary

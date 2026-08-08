@@ -306,7 +306,7 @@ carWithLaps laps =
         , team = "Test Team"
         , manufacturer = Other
         }
-    , startPosition = 1
+    , startPosition = Just 1
     , laps = laps
     }
 

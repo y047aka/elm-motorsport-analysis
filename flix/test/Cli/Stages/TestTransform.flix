@@ -54,7 +54,8 @@ mod Cli.Stages.TestTransform {
     def testTransformEmptyInputProducesEmptyArrays(): Unit \ Assert =
         let out = Transform.transform("le_mans_24h", Nil);
         Assert.assertTrue(out#lapCount == 0);
-        Assert.assertTrue(String.contains({substr = "\"startingGrid\": []"}, out#metadataJson));
+        Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
+        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));
         Assert.assertTrue(out#lapsJson == "[]")
 
 }
