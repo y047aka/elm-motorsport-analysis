@@ -421,16 +421,6 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
         ]
 
 
-{-| The lap time a car last set, printed and coloured by its rating.
-
-Asks for the rating rather than for whatever carries it, as
-[`bestTimeColumn`](#bestTimeColumn) does: a caller reading a
-[`Snapshot.CarAt`](Motorsport-Race-Snapshot#CarAt) takes it out of
-[`LastLap`](Motorsport-Race-Snapshot#LastLap) itself, and one with a row of its
-own hands over whatever it has. A column that prints one time needs no more than
-the time.
-
--}
 lastLapColumn :
     { getter : data -> Maybe RatedTime
     , sorter : data -> data -> Order

@@ -175,8 +175,7 @@ computeProgress config car =
                     Just miniSector ->
                         along (LeMans.get miniSector.miniSector shares) miniSector.progress
 
-                    -- Past the last mini-sector of the lap, where the coarser
-                    -- grain still places the car.
+                    -- Nowhere to place the car at the finer grain.
                     Nothing ->
                         bySector config car
 
@@ -184,13 +183,9 @@ computeProgress config car =
                 bySector config car
 
 
-{-| Where round the lap the three-sector grain puts the car, which every circuit
-has.
-
-Its own function so that the finer grain, where there is one, does not pay for
-it: this runs once per car per frame, and Elm would work out a `let` of it
-whichever branch was taken.
-
+{-| Where round the lap the three-sector grain puts the car. Not a `let` in
+[`computeProgress`](#computeProgress): Elm would work it out even when the finer
+grain answers, once per car per frame.
 -}
 bySector : TrackConfig -> CarAt -> Float
 bySector config car =

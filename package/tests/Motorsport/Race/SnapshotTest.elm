@@ -157,14 +157,14 @@ suite =
                         |> Expect.equal Nothing
             ]
         , describe "the lap the car has just finished"
-            [ test "a car on its opening lap has none, and reads as having none rather than as one with nothing in it" <|
+            [ test "a car on its opening lap has none" <|
                 \_ ->
                     -- Car 3 is still on its opening lap at 7.000, where the
                     -- other two are on their second.
                     carAt "3" fieldWithTailenders
                         |> Maybe.map .lastLap
                         |> Expect.equal (Just Snapshot.NoLapYet)
-            , test "and a car that has finished one has its time and its sectors, both of them there together" <|
+            , test "and a car that has finished one has its time and its sectors" <|
                 \_ ->
                     -- Car 2's opening lap is a 5.000 of 1.500, 1.500 and 2.000,
                     -- and at 7.000 that is the lap behind it.
@@ -240,9 +240,6 @@ sectorStatesOf carNumber snapshot =
         |> Maybe.map (.currentLap >> .sectorStates)
 
 
-{-| What a `Finished` lap holds, for the test that has already established that
-the car has finished one.
--}
 finishedLastLap :
     Snapshot.LastLap
     ->
@@ -260,9 +257,6 @@ finishedLastLap lastLap =
             Nothing
 
 
-{-| What a `Recorded` reading holds, for the tests that have already established
-that the circuit records mini-sectors at all.
--}
 recordedMiniSectors :
     Snapshot.MiniSectorReading
     -> Maybe { states : Snapshot.CurrentMiniSectorStates, current : Maybe Lap.MiniSectorProgress }

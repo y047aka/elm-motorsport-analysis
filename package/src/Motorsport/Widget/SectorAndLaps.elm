@@ -102,10 +102,6 @@ currentLapTimeCell item =
 lastLapTimeCell : CarAt -> Html msg
 lastLapTimeCell item =
     let
-        -- This cell has one line to print, so the two reasons there may be
-        -- nothing to print on it come to the same thing: a car on its opening
-        -- lap has no lap behind it, and a lap the source data did not time has
-        -- no time to show. Both take the "-".
         rated =
             case item.lastLap of
                 Snapshot.Finished finished ->

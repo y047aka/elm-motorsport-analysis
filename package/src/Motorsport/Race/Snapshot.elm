@@ -157,23 +157,13 @@ type alias CurrentLap =
     }
 
 
-{-| Where the car is on its lap at the mini-sector grain, where the circuit
-records one.
+{-| Where the car is on its lap at the mini-sector grain, on a circuit timed to
+one. `NotRecorded` away from Le Mans.
 
-Away from Le Mans the source data has no mini-sectors at all, and that is
-`NotRecorded` rather than a reading with everything missing -- the states and
-the one the car is in are absent together, since both are read off the same
-mini-sector times.
-
-The `Maybe` that stays is the other absence, and belongs to `Recorded` alone.
-`current` is `Nothing` wherever
-[`miniSegments`](Motorsport-Lap#miniSegments) could not place the car: past the
-last mini-sector of the lap, and also inside one the source data left without a
-running total, which takes that mini-sector and the one after it out of the
-list. So it is not only the end of a lap -- it can fall mid-lap, with
-mini-sectors still ahead of the car.
-
-`states` is drawn either way, and is what a strip of cells is drawn from.
+`current` is `Nothing` wherever [`Lap.miniSegments`](Motorsport-Lap#miniSegments)
+could not place the car: past the last mini-sector, and inside one the source
+data left without a running total. So it can fall mid-lap, with mini-sectors
+still ahead of the car.
 
 -}
 type MiniSectorReading
@@ -184,22 +174,12 @@ type MiniSectorReading
         }
 
 
-{-| The lap the car has just finished, as it was read off it -- where it has
-finished one.
+{-| The lap the car has just finished, as it was read off it. The lap itself is
+not here -- see [`CarAt`](#CarAt) -- only the time it took and how its sectors
+went, each rated as every rating on a car is.
 
-A car on its opening lap has nothing behind it, and that is `NoLapYet` rather
-than a reading with everything missing: the time, the sectors and the
-mini-sectors are absent together or not at all, since they are all read off the
-one lap. A view that has nothing to print prints the same "-" for all three.
-
-The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: the
-time it took and how its sectors went, each rated as every rating on a car is.
-
-The two remaining absences are the other kinds, and stay where they are.
-`rated` is `Nothing` for a lap the source data has no time for, as
-[`rateTime`](Motorsport-Lap-Performance#rateTime) gives it. `miniSectors` is
-`Nothing` away from Le Mans, where the source data records no mini-sectors to
-rate.
+`rated` is `Nothing` for a lap the source data has no time for. `miniSectors` is
+`Nothing` away from Le Mans, which records none.
 
 -}
 type LastLap
@@ -303,13 +283,9 @@ Joined here rather than by the view that draws the strip, as the sectors' is:
 a cell wants to know how much of its mini-sector is behind the car and how that
 mini-sector rates, and neither is a question about drawing.
 
-Where the car cannot be placed at all every mini-sector reads complete, which
-is right for the clock that is past the end of the lap and wrong for the one
-that is in a mini-sector the source data left unplaceable -- there the strip
-fills in ahead of the car. Reading it the other way would empty the strip of a
-lap that is genuinely over, which is the commoner of the two; telling them
-apart needs [`Lap.miniSegments`](Motorsport-Lap#miniSegments) to say which it
-was, and it does not.
+A car that cannot be placed reads as past every mini-sector: right for a lap
+that is over, wrong for the mid-lap gap [`MiniSectorReading`](#MiniSectorReading)
+describes, where the strip fills in ahead of the car.
 
 -}
 currentMiniSectorStates : Maybe Lap.MiniSectorProgress -> MiniSectorPerformance -> CurrentMiniSectorStates
@@ -328,7 +304,6 @@ currentMiniSectorStates miniSectorProgress rated =
                         GT ->
                             Performance.NotEntered
 
-                -- Nowhere to place the car; see above.
                 Nothing ->
                     Performance.Completed rating
     in
@@ -442,9 +417,6 @@ The status is looked up rather than worked out here; see
 type alias SampledCar =
     Gap.Competitor
         { metadata : Car.Metadata
-
-        -- Named apart from `CarAt.lastLap` deliberately: this is the lap
-        -- itself, that one is what was read off it.
         , previousLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
@@ -496,8 +468,7 @@ timingOf raceElapsed rivals car =
     { currentLapElapsed =
         Instant.since
             { from =
-                -- A car on its opening lap has no lap behind it, and that lap
-                -- began where the race did.
+                -- A car on its opening lap began where the race did.
                 case car.previousLap of
                     Just lap ->
                         lap.elapsed
@@ -536,10 +507,8 @@ readCurrentLap frame lap =
             in
             { sectorProgress | progress = min 1 sectorProgress.progress }
 
-        -- Both readings come off the lap's mini-sector times, so a lap without
-        -- them has neither: `ofMiniSectors` returning nothing is exactly the
-        -- circuit that records none, which is what ties the two together here
-        -- rather than leaving each to be absent on its own.
+        -- `ofMiniSectors` comes back empty for exactly the circuits that record
+        -- none, which is what keeps the states and the car's place together.
         miniSectors =
             Performance.ofMiniSectors frame.records lap
                 |> Maybe.map
