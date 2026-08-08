@@ -641,7 +641,7 @@ viewLastLapColumn_Wec lastLap =
                 []
     in
     case lastLap of
-        Snapshot.Finished { rated, sectors } ->
+        Snapshot.Completed { rated, sectors } ->
             case rated of
                 Just lapTime ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]
@@ -704,7 +704,7 @@ viewLastLapColumn_LeMans24h lastLap =
                 []
     in
     case lastLap of
-        Snapshot.Finished { rated, miniSectors } ->
+        Snapshot.Completed { rated, miniSectors } ->
             case rated of
                 Just lapTime ->
                     div [ css [ displayFlex, flexDirection column, property "row-gap" "5px" ] ]

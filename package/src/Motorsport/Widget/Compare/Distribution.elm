@@ -57,7 +57,7 @@ seriesOf lapHistory range entry =
 lastLapTime : CarAt -> Maybe Int
 lastLapTime entry =
     case entry.lastLap of
-        Snapshot.Finished { rated } ->
+        Snapshot.Completed { rated } ->
             rated |> Maybe.map .time
 
         Snapshot.NoLapYet ->

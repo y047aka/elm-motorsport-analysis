@@ -169,7 +169,7 @@ suite =
                     -- Car 2's opening lap is a 5.000 of 1.500, 1.500 and 2.000,
                     -- and at 7.000 that is the lap behind it.
                     carAt "2" (snapshotAt 7000)
-                        |> Maybe.andThen (.lastLap >> finishedLastLap)
+                        |> Maybe.andThen (.lastLap >> completedLastLap)
                         |> Maybe.map
                             (\{ rated, sectors } ->
                                 ( rated |> Maybe.map .time
@@ -240,7 +240,7 @@ sectorStatesOf carNumber snapshot =
         |> Maybe.map (.currentLap >> .sectorStates)
 
 
-finishedLastLap :
+completedLastLap :
     Snapshot.LastLap
     ->
         Maybe
@@ -248,10 +248,10 @@ finishedLastLap :
             , sectors : Performance.SectorPerformance
             , miniSectors : Maybe Performance.MiniSectorPerformance
             }
-finishedLastLap lastLap =
+completedLastLap lastLap =
     case lastLap of
-        Snapshot.Finished finished ->
-            Just finished
+        Snapshot.Completed completed ->
+            Just completed
 
         Snapshot.NoLapYet ->
             Nothing

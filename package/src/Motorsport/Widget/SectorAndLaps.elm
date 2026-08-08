@@ -104,8 +104,8 @@ lastLapTimeCell item =
     let
         rated =
             case item.lastLap of
-                Snapshot.Finished finished ->
-                    finished.rated
+                Snapshot.Completed completed ->
+                    completed.rated
 
                 Snapshot.NoLapYet ->
                     Nothing

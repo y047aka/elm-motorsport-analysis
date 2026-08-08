@@ -184,7 +184,7 @@ went, each rated as every rating on a car is.
 -}
 type LastLap
     = NoLapYet
-    | Finished
+    | Completed
         { rated : Maybe RatedTime
         , sectors : SectorPerformance
         , miniSectors : Maybe MiniSectorPerformance
@@ -417,7 +417,7 @@ The status is looked up rather than worked out here; see
 type alias SampledCar =
     Gap.Competitor
         { metadata : Car.Metadata
-        , previousLap : Maybe Lap
+        , lastLap : Maybe Lap
         , status : Status
         , currentDriver : Driver
         }
@@ -445,7 +445,7 @@ sampleCar clock race car =
                 { metadata = car.metadata
                 , laps = car.laps
                 , currentLap = lap
-                , previousLap = Lap.findLastLapAt clock car.laps
+                , lastLap = Lap.findLastLapAt clock car.laps
                 , status = Race.statusAt clock car.metadata.carNumber race
                 , currentDriver = lap.driver
                 }
@@ -469,7 +469,7 @@ timingOf raceElapsed rivals car =
         Instant.since
             { from =
                 -- A car on its opening lap began where the race did.
-                case car.previousLap of
+                case car.lastLap of
                     Just lap ->
                         lap.elapsed
 
@@ -644,7 +644,7 @@ readCarAt frame placed =
         -- against itself. Read once, so `currentLap.performance`'s baseline and
         -- `bestLap` cannot come apart.
         personalBest =
-            car.previousLap |> Maybe.andThen .best
+            car.lastLap |> Maybe.andThen .best
     in
     { metadata = car.metadata
     , status = car.status
@@ -652,7 +652,7 @@ readCarAt frame placed =
     , standing =
         { position = placed.position
         , positionInClass = placed.positionInClass
-        , lapsCompleted = car.previousLap |> Maybe.map .lap |> Maybe.withDefault 0
+        , lapsCompleted = car.lastLap |> Maybe.map .lap |> Maybe.withDefault 0
         , gapToLeader = timing.gapToLeader
         , intervalToAhead = timing.intervalToAhead
         }
@@ -666,9 +666,9 @@ readCarAt frame placed =
             }
             car.currentLap
     , lastLap =
-        case car.previousLap of
+        case car.lastLap of
             Just lap ->
-                Finished
+                Completed
                     { rated =
                         Performance.rateTime frame.fastestLapTime
                             { time = lap.time, personalBest = lap.best }
