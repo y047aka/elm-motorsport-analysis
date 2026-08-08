@@ -10,7 +10,7 @@ module Data.Wec exposing
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, int, list, nullable, string)
+import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Race.Car as Car
@@ -37,8 +37,10 @@ type alias StartingGrid =
 
 The timing feed carries no qualifying result, so both readings the CLI can make
 are estimates: `Lap1S1` orders the field by each car's first split, `Lap1Elapsed`
-by the whole of its first lap. `Unknown` means the file could place nobody. A
-basis naming a published grid would be the one exact answer, and none exists yet.
+by the whole of its first lap. `Unknown` means it could read no car at all and
+the order is car numbers. Every car is placed under all three — this is what
+says how much of the placing to believe. A basis naming a published grid would
+be the one exact answer, and none exists yet.
 
 -}
 type Basis
@@ -47,10 +49,10 @@ type Basis
     | Unknown
 
 
-{-| Ordered by `position`, the cars with no position last.
+{-| Ordered by `position`, which runs 1..n over the entries.
 -}
 type alias StartingGridEntry =
-    { position : Maybe Int
+    { position : Int
     , car : Car.Metadata
     }
 
@@ -93,7 +95,7 @@ basisDecoder =
 startingGridEntryDecoder : Era -> Decoder StartingGridEntry
 startingGridEntryDecoder era =
     Decode.map2 StartingGridEntry
-        (field "position" (nullable int))
+        (field "position" int)
         (field "car" (carMetadataDecoder era))
 
 

@@ -175,7 +175,7 @@ carWith carNumber laps =
         , team = "Test Team"
         , manufacturer = Other
         }
-    , startPosition = Just 1
+    , startPosition = 1
     , laps = laps
     }
 

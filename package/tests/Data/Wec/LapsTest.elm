@@ -147,6 +147,6 @@ placeholderCar carNumber =
         , team = ""
         , manufacturer = Other
         }
-    , startPosition = Nothing
+    , startPosition = 0
     , laps = []
     }

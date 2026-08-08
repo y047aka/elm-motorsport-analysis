@@ -302,7 +302,7 @@ fieldWithTailenders =
 carThree : Car
 carThree =
     { metadata = metadataOf "3" (classOf "HYPERCAR")
-    , startPosition = Just 3
+    , startPosition = 3
     , laps = withRunningBests [ lapOf "3" 1 20000 20000 { s1 = 6000, s2 = 7000, s3 = 7000 } ]
     }
 
@@ -321,7 +321,7 @@ leMansFieldAt elapsed =
 leMansCar : Car
 leMansCar =
     { metadata = metadataOf "7" (classOf "HYPERCAR")
-    , startPosition = Just 1
+    , startPosition = 1
     , laps =
         withRunningBests
             [ lapOf "7" 1 15000 15000 { s1 = 3000, s2 = 4000, s3 = 8000 }
@@ -390,7 +390,7 @@ with one anyway: leaves it out of the field.
 nonStarter : Car
 nonStarter =
     { metadata = metadataOf "4" (classOf "LMGT3")
-    , startPosition = Just 4
+    , startPosition = 4
     , laps = []
     }
 
@@ -398,7 +398,7 @@ nonStarter =
 carOne : Car
 carOne =
     { metadata = metadataOf "1" (classOf "HYPERCAR")
-    , startPosition = Just 1
+    , startPosition = 1
     , laps =
         withRunningBests
             [ lapOf "1" 1 6000 6000 { s1 = 1000, s2 = 2000, s3 = 3000 }
@@ -410,7 +410,7 @@ carOne =
 carTwo : Car
 carTwo =
     { metadata = metadataOf "2" (classOf "LMGT3")
-    , startPosition = Just 2
+    , startPosition = 2
     , laps =
         withRunningBests
             [ lapOf "2" 1 5000 5000 { s1 = 1500, s2 = 1500, s3 = 2000 }

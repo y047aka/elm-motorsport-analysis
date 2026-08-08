@@ -68,9 +68,9 @@ mod Motorsport.TestMetadata {
         match grid#entries {
             case e12 :: e7 :: Nil =>
                 Assert.assertTrue(e12#car#carNumber == "12");
-                Assert.assertTrue(e12#position == Some(1));
+                Assert.assertTrue(e12#position == 1);
                 Assert.assertTrue(e7#car#carNumber == "7");
-                Assert.assertTrue(e7#position == Some(2))
+                Assert.assertTrue(e7#position == 2)
             case _ => Assert.assertTrue(false)
         }
 
@@ -86,9 +86,9 @@ mod Motorsport.TestMetadata {
         match grid#entries {
             case e7 :: e12 :: Nil =>
                 Assert.assertTrue(e7#car#carNumber == "7");
-                Assert.assertTrue(e7#position == Some(1));
+                Assert.assertTrue(e7#position == 1);
                 Assert.assertTrue(e12#car#carNumber == "12");
-                Assert.assertTrue(e12#position == Some(2))
+                Assert.assertTrue(e12#position == 2)
             case _ => Assert.assertTrue(false)
         }
 
@@ -148,33 +148,41 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testCarWithoutLap1HasNoPosition(): Unit \ Assert =
-        // ラップ 1 が無い車 (lap 2 のみ) は推定不能。position は None で、
-        // 順位の付いた車の後ろに置かれる。
+    def testCarWithoutLap1GoesToTheBack(): Unit \ Assert =
+        // ラップ 1 が無い車 (lap 2 のみ) は読めないが、レースはしているので
+        // 落とさず最後尾に置く。カーナンバーは 7 より小さい 1 だが、順位の
+        // 付いた車を追い越さない。
         let laps =
+            mkLap("1", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
-            mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         match meta#startingGrid#entries {
-            case e7 :: e99 :: Nil =>
+            case e7 :: e1 :: Nil =>
                 Assert.assertTrue(e7#car#carNumber == "7");
-                Assert.assertTrue(e7#position == Some(1));
-                Assert.assertTrue(e99#car#carNumber == "99");
-                Assert.assertTrue(e99#position == None)
+                Assert.assertTrue(e7#position == 1);
+                Assert.assertTrue(e1#car#carNumber == "1");
+                Assert.assertTrue(e1#position == 2)
             case _ => Assert.assertTrue(false)
         }
 
     @Test
-    def testGridWithoutAnyLap1IsUnknown(): Unit \ Assert =
+    def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ Assert =
+        // 誰も読めなくても順位は 1..n を埋める。basis がそれを推定ですらないと
+        // 名乗る。並びはカーナンバー順。
         let laps =
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
+            mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::
             Nil;
         let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Unknown);
         match grid#entries {
-            case entry :: Nil => Assert.assertTrue(entry#position == None)
-            case _            => Assert.assertTrue(false)
+            case e8 :: e99 :: Nil =>
+                Assert.assertTrue(e8#car#carNumber == "8");
+                Assert.assertTrue(e8#position == 1);
+                Assert.assertTrue(e99#car#carNumber == "99");
+                Assert.assertTrue(e99#position == 2)
+            case _ => Assert.assertTrue(false)
         }
 
     @Test

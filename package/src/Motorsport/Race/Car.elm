@@ -23,7 +23,7 @@ import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 
 type alias Car =
     { metadata : Metadata
-    , startPosition : Maybe Int
+    , startPosition : Int
     , laps : List Lap
     }
 
@@ -44,11 +44,11 @@ type alias CarNumber =
 
 {-| A car that has yet to turn a lap, from its place on the grid.
 
-The place is a `Maybe` because the grid is estimated from the race itself, and a
-car the estimate cannot reach — one with no first lap to read — has no place.
+Every car has a place, 1 upward. The grid is estimated from the race itself, so
+how much the place is worth is the file's `basis` to say, not this type's.
 
 -}
-fromStartingGrid : { position : Maybe Int, car : Metadata } -> Car
+fromStartingGrid : { position : Int, car : Metadata } -> Car
 fromStartingGrid item =
     { metadata = item.car
     , startPosition = item.position
