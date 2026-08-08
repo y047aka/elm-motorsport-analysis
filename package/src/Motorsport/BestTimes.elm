@@ -17,10 +17,7 @@ twenty passes over every lap of the race.
 The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
 rather than under either side it serves, because both sides need it and neither
 owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
-[`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock. Laps in,
-records out -- everything it knows about a car it reads off the lap that car
-ran, so it needs no standings, no playback and no `Car`, which is what keeps the
-dependency pointing one way from both.
+[`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock.
 
 @docs Changes, empty, fromLaps
 @docs Snapshot, Holder
@@ -49,13 +46,9 @@ type alias Changes =
     ByRecord (ChangePoints Holder)
 
 
-{-| A record and the lap that set it.
-
-The lap is what a record is: something a particular car ran at a particular
-point in the race. `time` is the record itself -- the lap time, the sector time,
-the mini-sector time -- not the time of the lap it was set on, which for a
-sector record is a different number entirely.
-
+{-| A record and the lap that set it. `time` is the record itself -- the lap
+time, the sector time, the mini-sector time -- not the time of the lap it was
+set on, which for a sector record is a different number entirely.
 -}
 type alias Holder =
     { time : Duration
@@ -65,31 +58,23 @@ type alias Holder =
     }
 
 
-{-| The records held still at one moment of the race -- the comparison baseline a
-widget rates and scales individual times against, and the laps that set them.
+{-| The records held still at one moment of the race -- the baseline a widget
+rates times against, and the laps that set them.
 
 Read mid-race via [`at`](#at) these are only the best times _so far_; only
-[`final`](#final)'s answer is the race's actual best times.
-
-A `Snapshot` here is the same idea as
-[`Race.Snapshot`](Motorsport-Race-Snapshot), applied to the records rather than
-to the field: one moment of the race, held still, with the clock baked in.
-
-`Nothing` is a record no lap has taken yet. [`timeOf`](#timeOf) reads it down
-to that same `Nothing`, for callers that only want the number; keep this
-instead if you need to name the holder.
+[`final`](#final)'s answer is the race's actual best times. `Nothing` is a
+record no lap has taken yet.
 
 -}
 type alias Snapshot =
     ByRecord (Maybe Holder)
 
 
-{-| One value per record: the shape `Changes` and `Snapshot` share, differing
-only in what they hold.
+{-| One value per record: the shape `Changes` and `Snapshot` share.
 
-Everything this module does to the twenty records -- building them, reading them,
-emptying them -- goes through `map`, so they are enumerated in exactly one place.
-Adding a record is two lines: what it holds, here, and how it is won, in `rules`.
+Everything this module does to the twenty records goes through `map`, so they
+are enumerated in exactly one place. Adding a record is two lines: what it
+holds, here, and how it is won, in `rules`.
 
 -}
 type alias ByRecord a =
@@ -150,14 +135,8 @@ final =
     map ChangePoints.last
 
 
-{-| One record as a plain time, for the rating and the geometry that only ever
-wanted the number and not who set it.
-
-A record no lap has taken stays `Nothing`, which is what lets
-[`Performance.performanceLevel`](Motorsport-Lap-Performance#performanceLevel)
-rate against it without a guard. The geometry that needs an actual number says
-what an unset record is worth to it, at the point where it needs one.
-
+{-| One record as a plain time, for callers that want the number and not who set
+it.
 -}
 timeOf : Maybe Holder -> Maybe Duration
 timeOf =
@@ -230,10 +209,6 @@ improvements beats timeFrom laps =
         |> ChangePoints.fromList
 
 
-{-| The record `time` is credited to the lap that ran it. `time` comes from the
-extractor rather than the lap, because for a sector record it is one of the
-lap's sector times, not `lap.time`.
--}
 holderOf : Duration -> Lap -> Holder
 holderOf time lap =
     { time = time
@@ -255,9 +230,6 @@ greaterThan a b =
 
 
 -- WHAT COUNTS AS A TIME
--- A time the source data did not record is no candidate for any record, and
--- says so in the type: the loader drops it at the boundary, so a `Lap` carries
--- `Nothing` and every extractor below is a plain read.
 
 
 sectorTime : Sector -> Lap -> Maybe Duration

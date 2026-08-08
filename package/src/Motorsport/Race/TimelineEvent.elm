@@ -48,22 +48,9 @@ type CarEventType
 
 {-| Build a sorted list of timeline events from a race's entry list.
 
-Emits, in this order:
-
-1.  RaceStart at time 0
-2.  Per-car Start events at time 0 (with `pitTime` stripped from the embedded lap)
-3.  A TookLead event each time the car at the front of the field changes
-4.  PitIn / PitOut events for laps whose `pitTime` is `Just`
-5.  Retirement / Checkered for the final lap, depending on the rounded time limit
-
-The result is sorted by `eventTime` (stable).
-
-Only the lead changes need anything beyond the lap times; what they need, and
-what happens without it, is on `leadChangeEvents` below.
-
-There is deliberately no per-lap completion event. One per car per lap was five
-in six of the list and said nothing a reader could follow, and the laps are on
-the car already for everything that reads them.
+There is deliberately no per-lap completion event: one per car per lap was five
+in six of the list, and the laps are on the car already for everything that
+reads them.
 
 -}
 fromCars : List Car -> List TimelineEvent
@@ -127,13 +114,9 @@ type alias Leader =
 {-| A `TookLead` each time the car at the front of the field changes hands.
 
 The lead is read off `Lap.position`, which the loader -- not the source data --
-assigns per lap by order of crossing the line. A change is therefore only ever
-seen at a lap boundary, which is the granularity a timing feed reports it at
-anyway: a car that leads briefly between two lap lines was never shown as
-leading. Laps with no position assigned yield no leader, and so no changes.
-
-Whoever leads the opening lap has taken it from nobody, so the first leader is not
-an event. Only the changes are.
+assigns per lap by order of crossing the line, so a change is only ever seen at
+a lap boundary. Whoever leads the opening lap has taken it from nobody, so the
+first leader is not an event.
 
 -}
 leadChangeEvents : List Car -> List TimelineEvent
@@ -318,16 +301,13 @@ sectorsDecoder =
         (sectorTime "sector_3" "s3_best")
 
 
-{-| The wire format spells the mini-sectors out flat, as it does the sectors,
-and this is where that stops.
+{-| The mini-sector counterpart of [`sectorsDecoder`](#sectorsDecoder).
 
 Built against [`ByMiniSector`](Motorsport-Circuit-LeMans#ByMiniSector) itself
 rather than a record shaped like it, so that a field added to a
 [`MiniSectorTime`](Motorsport-Lap#MiniSectorTime) is a decoder that stops
-compiling rather than one that quietly decodes into the wrong type. Fifteen
-lines of it remain, because the wire format really is fifteen keys; what the
-pipeline cannot check is that each key lands in the field named after it, which
-is `TimelineEventTest`'s job.
+compiling rather than one that quietly decodes into the wrong type. That each
+key lands in the field named after it is `TimelineEventTest`'s job.
 
 -}
 miniSectorsDecoder : Decoder Lap.MiniSectors

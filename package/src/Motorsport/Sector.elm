@@ -104,17 +104,10 @@ toString sector =
 {-| Three values, one per sector — a sector time, a progress percentage, a
 fastest time to compare against.
 
-The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`), which
-would leave callers writing the same three-way `case` to pick one out. Converting
-once at the boundary — `Data.Wec.Laps.accumulate` and
-`Motorsport.Race.TimelineEvent.lapDecoder`, the two places a `Lap` is built — makes
-the picking [`get`](#get) everywhere after.
-
-A transparent record, not an opaque type: there is no invariant to protect, and
-an opaque type would be built from three positional arguments of the same type
-— easier to get wrong than the named fields it would replace. The cost is that
-`s1` / `s2` / `s3` are public, so prefer [`get`](#get) and [`values`](#values),
-which say which sector is meant.
+The wire formats spell this out flat (`sector_1`, `sector_2`, `sector_3`);
+converting once at the boundary makes the picking [`get`](#get) everywhere
+after. `s1` / `s2` / `s3` are public, but prefer [`get`](#get) and
+[`values`](#values), which say which sector is meant.
 
 -}
 type alias BySector a =
@@ -159,8 +152,6 @@ get sector bySector =
 
 {-| Combine two sets of per-sector values sector by sector — a time with the
 fastest time to rate it against, a progress with its rating.
-
-Pairing is by sector, never by position, so the two sets cannot be misaligned.
 
     map2 (++) (initialize toString) (initialize toString)
     --> { s1 = "S1S1", s2 = "S2S2", s3 = "S3S3" }

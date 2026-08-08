@@ -7,10 +7,8 @@ module Motorsport.Race.LapHistory exposing
 {-| Each car's laps, cut off at a moment of the race.
 
 The laps come out exactly as they went in; the only thing applied to them is the
-clock. What reads this is whatever scans a car's history rather than its present
--- the gap and distribution charts, the sparklines -- and
-[`Race.Snapshot`](Motorsport-Race-Snapshot) takes one at its own clock so they
-all read the same laps.
+clock. [`Race.Snapshot`](Motorsport-Race-Snapshot) takes one at its own clock so
+that the charts scanning a car's history all read the same laps.
 
 @docs LapHistory
 @docs at
@@ -38,8 +36,6 @@ at clock cars =
         |> LapHistory
 
 
-{-| Get the lap history for a carNumber.
--}
 get : String -> LapHistory -> List Lap
 get carNumber (LapHistory histories) =
     Dict.get carNumber histories

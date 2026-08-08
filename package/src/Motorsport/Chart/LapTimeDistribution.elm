@@ -1,14 +1,8 @@
 module Motorsport.Chart.LapTimeDistribution exposing (Series, domainOf, maxDensityOf, view)
 
-{-| A chart visualizing a car's lap-time distribution as a smooth kernel density
-estimate (KDE) curve. It shows "pace consistency, typical lap, and spread" — hard
-to read from a time-series sparkline (progression) — as a distribution, making
-multi-car comparison easy. Following elm-visualization's Peaks example, the density
-is drawn as a translucent fill (area) plus a solid line (line), and a single marker
-shows where the latest lap (`lastLap`) falls on the distribution.
-
-One car or many is drawn by the same `view`. Passing multiple Series overlays them
-on a shared X axis (lap time).
+{-| A car's lap-time distribution as a kernel density estimate: pace
+consistency, typical lap and spread, which a time-series sparkline does not
+show. Passing several `Series` to `view` overlays them on a shared lap-time axis.
 
 @docs Series, domainOf, maxDensityOf, view
 
@@ -30,9 +24,8 @@ import TypedSvg.Styled.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
-{-| Data for one distribution chart. `times` is the outlier-removed racing lap
-times (ms); `lastLap` is the latest lap time (ms) shown as a single point on the
-distribution.
+{-| One car's distribution. `times` is expected to have its outliers already
+removed; `lastLap` is marked as a single point on the curve.
 -}
 type alias Series =
     { color : Css.Color
@@ -42,9 +35,8 @@ type alias Series =
     }
 
 
-{-| The shared domain that aligns multiple Series on the X axis (lap time). Returns
-the extent of all `times` with a margin added on both sides. When every `times` is
-empty, returns `Nothing`.
+{-| The shared lap-time domain aligning several `Series`: their whole extent
+plus a margin, or `Nothing` when there are no times at all.
 -}
 domainOf : List Series -> Maybe ( Float, Float )
 domainOf seriesList =
@@ -63,11 +55,9 @@ domainOf seriesList =
             )
 
 
-{-| Returns the maximum density across all Series within the shared domain. Used to
-align the Y-axis (density) scale across multiple charts. Since a KDE is a
-probability density with area 1, normalizing by this maximum makes the curve height
-a direct comparison of "distribution sharpness = pace consistency". Returns a floor
-value when there is no data.
+{-| The greatest density across every `Series`, for aligning the density scale
+of charts drawn separately. A KDE has area 1, so scaling to this makes curve
+height read as pace consistency.
 -}
 maxDensityOf : ( Float, Float ) -> List Series -> Float
 maxDensityOf domain seriesList =
@@ -79,11 +69,8 @@ maxDensityOf domain seriesList =
         |> (\m -> max m 1.0e-9)
 
 
-{-| Overlays each Series' KDE density curve using the given shared domain and shared
-`maxDensity`. On top of the fill (area) plus solid line (line), it places a small
-marker and a lap-time label at the latest lap. Spanning the Y axis by the
-caller-supplied `maxDensity` aligns the height of separately drawn charts. Series
-with all-empty `times` are ignored, and if there is nothing to draw it returns empty.
+{-| Overlay each `Series` on the given domain, at the given density scale.
+A `Series` with no times is ignored.
 -}
 view : { width : Float, height : Float, domain : ( Float, Float ), maxDensity : Float } -> List Series -> Html msg
 view { width, height, domain, maxDensity } seriesList =
@@ -114,8 +101,7 @@ view { width, height, domain, maxDensity } seriesList =
 -- KDE
 
 
-{-| Number of points to sample the KDE at (the number of equal divisions of the
-domain).
+{-| How many points the KDE is sampled at.
 -}
 sampleCount : Int
 sampleCount =
@@ -133,8 +119,8 @@ epanechnikov u =
         0
 
 
-{-| Bandwidth by Silverman's rule of thumb `1.06 * σ * n^(-1/5)`. A floor (1 ms) is
-applied to avoid division by zero.
+{-| Bandwidth by Silverman's rule of thumb, floored at 1 ms so that a sample
+with no deviation cannot divide by zero.
 -}
 bandwidth : List Float -> Float
 bandwidth xs =
@@ -228,8 +214,7 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
         ]
 
 
-{-| Shows where the latest lap (`lastLap`) falls on the distribution curve with a
-small dot plus a lap-time label. Draws nothing when there is no `lastLap`.
+{-| Where the latest lap falls on the curve: a dot and its lap time.
 -}
 lastLapMarker : ContinuousScale Float -> ContinuousScale Float -> Series -> Maybe ( Float, Float ) -> Svg msg
 lastLapMarker xScale yScale series lastLapPoint =
@@ -283,8 +268,7 @@ xAxis height xScale =
 -- DIMENSIONS
 
 
-{-| Padding reserving room for the X-axis labels (bottom) while keeping the density
-curve nearly full-bleed left/right.
+{-| Room for the X-axis labels, leaving the curve nearly full-bleed sideways.
 -}
 padding : { top : Float, right : Float, bottom : Float, left : Float }
 padding =

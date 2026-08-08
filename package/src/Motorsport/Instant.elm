@@ -10,15 +10,12 @@ module Motorsport.Instant exposing
 {-| A moment of the race, measured from the instant it started.
 
 [`Duration`](Motorsport-Duration) is how long something took; an `Instant` is
-when it happened. The two are both milliseconds underneath and were both plain
-`Int` until this module existed, which left nothing to stop a lap time being
-compared against a lap's completion time, or two moments being added together.
+when it happened. Both are milliseconds underneath, and keeping this one opaque
+is what stops a lap time being compared against a lap's completion time.
 
-The algebra is the one the names imply, and it is the whole reason the type is
-opaque. A moment shifted by a length is another moment ([`add`](#add),
-[`subtract`](#subtract)); the distance between two moments is a length
-([`since`](#since)). Nothing else is offered: two moments do not add up to
-anything, and a moment scaled by two is not a moment.
+The algebra is the one the names imply: a moment shifted by a length is another
+moment ([`add`](#add), [`subtract`](#subtract)), and the distance between two
+moments is a length ([`since`](#since)). Nothing else is offered.
 
 @docs Instant
 
@@ -207,11 +204,8 @@ later a b =
 -- READING A MOMENT
 
 
-{-| How long into the race this moment is.
-
-The way out of the type, for the arithmetic the algebra above has no name for --
-rounding a moment to the hour, averaging a field's worth of them. Pair it with
-[`fromDuration`](#fromDuration) to get back.
+{-| How long into the race this moment is -- the way out of the type, for the
+arithmetic the algebra above has no name for.
 
     fromDuration 90000 |> toDuration
     --> 90000

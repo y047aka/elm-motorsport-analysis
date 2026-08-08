@@ -26,10 +26,9 @@ import Motorsport.Class.Era as Era exposing (Era)
 
 {-| The category a car races in, as it stood in the era it was read for.
 
-Opaque, and only built by [`fromString`](#fromString) or [`none`](#none). A
-`Class` carries the order and the color that era gave it, settled once at the
-boundary, so [`compare`](#compare) and [`toColor`](#toColor) are plain
-functions of the value and nothing downstream needs to know what an era is.
+A `Class` carries the order and the color that era gave it, settled once at the
+boundary, so [`compare`](#compare) and [`toColor`](#toColor) are plain functions
+of the value and nothing downstream needs to know what an era is.
 
 The `index` is a position in the era's grid counted from zero, not the class's
 number in a classification: LMGTE Am, the fourth class of 2023, has index 2 on
@@ -67,8 +66,7 @@ none =
 them, each with the color it was drawn in.
 
 The single source of era-dependent knowledge: a new era is a case here, a new
-season is nothing at all. Order and color are kept apart -- the order is the
-order the rows are written in -- so either can change without the other.
+season is nothing at all.
 
 -}
 grid : Era -> List ( Category, Css.Color )
@@ -118,9 +116,8 @@ classesOf era =
 {-| Read a class name as it appears in the source data, as of an era. The only
 place an era is spent.
 
-A name that era's grid does not list -- `"None"`, a category from another era,
-anything the series has not run before -- reads as [`none`](#none): a car this
-grid cannot place, rather than one given an order and a color it never held.
+A name that era's grid does not list reads as [`none`](#none), rather than a car
+given an order and a color it never held.
 
 -}
 fromString : Era -> String -> Class

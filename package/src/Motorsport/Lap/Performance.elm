@@ -13,10 +13,9 @@ module Motorsport.Lap.Performance exposing
 The baselines come from [`BestTimes`](Motorsport-BestTimes); this module says
 what a time rated against them is, and rates the times of a lap one by one.
 
-Rating belongs to neither the race nor the view. A rated time is settled by the
-lap and the record alone, so [`Race.Snapshot`](Motorsport-Race-Snapshot) reads it
-as part of the race; but nothing in the race changes when it is read, so the view
-is free to rate a lap of its own.
+Rating belongs to neither the race nor the view: a rated time is settled by the
+lap and the record alone, so [`Race.Snapshot`](Motorsport-Race-Snapshot) reads
+it as part of the race and a view is free to rate a lap of its own.
 
 @docs RatedTime, rateTime
 @docs SectorPerformance, ofSectors
@@ -48,12 +47,10 @@ type alias RatedTime =
 
 {-| Rate a time against the race's record and the car's own, where there is a
 time to rate. A time the source data did not record produces no rating rather
-than an uncoloured one, so a caller renders the same "-" it renders for a car
-with no lap at all.
+than an uncoloured one.
 
 A time that is certainly there -- a running lap's, read off the clock -- wants
-[`performanceLevel`](#performanceLevel) instead, and keeps the time under
-whatever name it already has.
+[`performanceLevel`](#performanceLevel) instead.
 
 -}
 rateTime : Maybe Duration -> { time : Maybe Duration, personalBest : Maybe Duration } -> Maybe RatedTime
@@ -76,10 +73,6 @@ type alias SectorPerformance =
 
 
 {-| Rate each sector of a lap.
-
-A `SectorTime` is already the shape [`rateTime`](#rateTime) reads: a time that
-may not have been recorded, and the driver's best to rate it against.
-
 -}
 ofSectors : BestTimes.Snapshot -> Lap -> SectorPerformance
 ofSectors bestTimes lap =
@@ -98,9 +91,6 @@ type alias MiniSectorPerformance =
 ofMiniSectors : BestTimes.Snapshot -> Lap -> Maybe MiniSectorPerformance
 ofMiniSectors bestTimes lap =
     let
-        -- A `MiniSectorTime` carries the two `rateTime` reads under the names it
-        -- reads them by, and one more it does not; naming them again here is
-        -- what leaves that one behind.
         rateOne miniSector fastest =
             rateTime (BestTimes.timeOf fastest)
                 { time = miniSector.time, personalBest = miniSector.personalBest }
@@ -114,19 +104,13 @@ ofMiniSectors bestTimes lap =
 
 
 {-| One segment of the lap a car is on -- a sector or a mini-sector -- as it
-reads at a moment of the race: the car has not reached it, is somewhere inside
-it, or has the whole of it behind. Both grains read the same way, which is why
-the type is not spelled twice.
+reads at a moment of the race.
 
-Only `Completed` carries a rating, and that is the point of the type rather than
-a detail of it. The race data holds every sector time of a lap from the start,
-the ones the car has not driven yet included, so a shape that paired a rating
-with a progress would hand a view the time a car is _going_ to set.
-
-Its `Maybe` is the other absence: a segment the source data has no time for
-finishes with nothing to rate, and a view paints it the standard colour. It is
-the `Nothing` [`rateTime`](#rateTime) produces, kept in the one state where a
-time was due.
+Only `Completed` carries a rating, and that is the point of the type: the race
+data holds every sector time of a lap from the start, the ones the car has not
+driven yet included, so a shape that paired a rating with a progress would hand
+a view the time a car is _going_ to set. Its `Maybe` is a segment the source
+data has no time for.
 
 -}
 type SegmentState
@@ -193,9 +177,7 @@ type PerformanceLevel
 
 Both baselines are `Nothing` until some lap sets them, and nothing has beaten a
 record that has not been set -- so an unset baseline matches no time, and the
-comparison needs no guard of its own. There is only a time to rate here at all
-because the loader dropped the ones the source data did not record, on the way
-in -- see [`Lap.recorded`](Motorsport-Lap#recorded).
+comparison needs no guard of its own.
 
 -}
 performanceLevel : { a | time : Duration, personalBest : Maybe Duration, fastest : Maybe Duration } -> PerformanceLevel

@@ -8,27 +8,10 @@ module Motorsport.Race.Snapshot exposing
 
 {-| A [`Race`](Motorsport-Race) read at one moment of it.
 
-The race itself never moves; a snapshot is what the cars are actually doing once
-a clock is applied to it -- which lap each is on, who is ahead of whom, and how
-far apart they are. All of it is settled by the race data and the clock alone, so
-swapping the view layer out would not change a single number here.
-
-Rebuilt on every frame rather than stored, and built once per frame so the
-several views that need the same order and the same gaps do not each work them
-out again. That sharing is the whole reason the type exists: without it the
-sort, the gaps and the ratings would run once per view.
-
-A `CarAt` is what the timing screen draws a line from, and it is readings only:
-a view that wants the class's colour asks
-[`Class.toColor`](Motorsport-Class#toColor) for it.
-
-The records the times are rated against and the laps run so far are read at the
-same clock, so they are taken here too rather than by each caller: see
-[`bestTimes`](#bestTimes) and [`lapHistory`](#lapHistory).
-
-Reading one car or one class out of the field is the snapshot's own business --
-`get` and `inClass` below -- so that a view narrowing the field says which one
-it wants rather than working it out of `toList`.
+The race itself never moves; a snapshot is what the cars are doing once a clock
+is applied to it. Rebuilt on every frame rather than stored, and built once per
+frame so that the several views needing the same order and the same gaps do not
+each work them out again -- that sharing is the whole reason the type exists.
 
 @docs Snapshot, CarAt, Standing, CurrentLap, LastLap
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
@@ -58,11 +41,6 @@ import SortedList exposing (SortedList)
 
 
 {-| Every car of the race as it stands at one moment, in running order.
-
-Named as [`BestTimes.Snapshot`](Motorsport-BestTimes#Snapshot) is, and for the
-same reason: a subject of the race held still, with the clock it was read at
-baked in. That one is the records at a moment; this is the field at a moment.
-
 -}
 type Snapshot
     = Snapshot
@@ -83,20 +61,11 @@ type Snapshot
 {-| One [`Car`](Motorsport-Race-Car) as it stands at one moment of the race.
 
 Readings only, and no laps: the laps up to this moment are
-[`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has turned
-is here as what was read off it -- `standing.lapsCompleted`, and
-[`lastLap`](#LastLap) -- rather than as the lap itself.
-
-Grouped by what the reading is of: where the car stands in the field
-([`standing`](#Standing)), and what the lap it is on and the one it just
-finished read as ([`currentLap`](#CurrentLap), [`lastLap`](#LastLap)). Who the
-car is stays at the top.
+[`lapHistory`](#lapHistory)'s to give out, already cut.
 
 Every rating here is measured against the records as they stood at this moment,
-not as the race leaves them. Two records: the race's, which is
-[`bestTimes`](#bestTimes)'s to hold, and the car's own, which is `bestLap` --
-and that is what puts `bestLap` outside the groups, since it belongs to no one
-lap and every other rating of this car is read against it. See
+not as the race leaves them -- the race's, held by [`bestTimes`](#bestTimes),
+and the car's own, which is `bestLap`. See
 [`Lap.Performance`](Motorsport-Lap-Performance).
 
 -}
@@ -114,12 +83,9 @@ type alias CarAt =
 {-| Where the car stands in the race at this moment: the five a classification
 line is made of, in the order one prints them.
 
-The placings and the gaps are read off the same running order, in one pass; see
-[`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on its
-opening lap has none.
-
-Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car and only for
-it: nothing runs ahead of it, and it is what the race is measured to.
+`lapsCompleted` counts laps the car has finished, so a car on its opening lap
+has none. Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car
+and only for it.
 
 -}
 type alias Standing =
@@ -137,14 +103,8 @@ Every car of a [`Snapshot`](#Snapshot) has one -- a car that has turned no lap
 is not in the field, and a lap stays the car's current one until the next
 begins, so a car that has retired or taken the flag keeps the last it ran.
 
-`elapsed` is how long the car has been on it, counted from the last time it
-crossed the line -- or from the race start, for a car on its opening lap.
-`performance` is how that reads against the records (see [`CarAt`](#CarAt) for
-which), and `progress` how far through the lap it puts the car. `sector` says
-where on the lap the car is and `sectorStates` says as much of every sector at
-once, which is what a strip of cells is drawn from.
-[`miniSectors`](#MiniSectorReading) is both of those again at the finer grain,
-where the circuit has one.
+`elapsed` counts from the last time the car crossed the line, or from the race
+start for a car on its opening lap.
 
 -}
 type alias CurrentLap =
@@ -174,9 +134,7 @@ type MiniSectorReading
         }
 
 
-{-| The lap the car has just finished, as it was read off it. The lap itself is
-not here -- see [`CarAt`](#CarAt) -- only the time it took and how its sectors
-went, each rated as every rating on a car is.
+{-| The lap the car has just finished, as it was read off it.
 
 `rated` is `Nothing` for a lap the source data has no time for. `miniSectors` is
 `Nothing` away from Le Mans, which records none.
@@ -191,18 +149,14 @@ type LastLap
         }
 
 
-{-| Where the car stands in each sector of the lap it is on: whether it has
-reached the sector, is inside it, or has the whole of it behind -- and, once it
-does, how the time reads. See
+{-| Where the car stands in each sector of the lap it is on. See
 [`SegmentState`](Motorsport-Lap-Performance#SegmentState).
 -}
 type alias CurrentSectorStates =
     BySector SegmentState
 
 
-{-| The same reading at the finer grain. Carried by
-[`Recorded`](#MiniSectorReading) rather than by the lap itself, because away
-from Le Mans there are no mini-sectors to stand anywhere in.
+{-| The same reading at the finer grain.
 -}
 type alias CurrentMiniSectorStates =
     ByMiniSector SegmentState
@@ -214,7 +168,7 @@ Every number is read at the same clock, the records included: a time is rated
 against the record as it stood then, not as it ends up. Right after the data
 loads the clock sits at the start, so nothing holds a record yet -- a page that
 wants the race's final records asks
-[`BestTimes.final`](Motorsport-BestTimes#final) for them instead.
+[`BestTimes.final`](Motorsport-BestTimes#final) instead.
 
 -}
 at : { elapsed : Instant } -> Race -> Snapshot
@@ -223,9 +177,6 @@ at clock race =
         records =
             BestTimes.at clock race.bestTimeChanges
 
-        -- A car carries only its laps, so what it is doing at this moment is
-        -- read off the clock here. Who is ahead of whom follows from that, and
-        -- every position below is read off the resulting order.
         sampled =
             race.cars
                 |> List.filterMap (sampleCar clock race)
@@ -258,10 +209,6 @@ at clock race =
 currentSectorStates : Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
 currentSectorStates current rated =
     let
-        -- Sectors already driven through are complete, the ones ahead
-        -- untouched. Only the one in between reads off the clock, and even that
-        -- lands on complete once the car is through it -- see
-        -- `Performance.fromProgress`.
         stateOf sector rating =
             case Sector.compare sector current.sector of
                 LT ->
@@ -276,12 +223,7 @@ currentSectorStates current rated =
     Sector.map2 stateOf (Sector.initialize identity) rated
 
 
-{-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
-reading the same way: behind the car complete, ahead of it untouched.
-
-Joined here rather than by the view that draws the strip, as the sectors' is:
-a cell wants to know how much of its mini-sector is behind the car and how that
-mini-sector rates, and neither is a question about drawing.
+{-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates).
 
 A car that cannot be placed reads as past every mini-sector: right for a lap
 that is over, wrong for the mid-lap gap [`MiniSectorReading`](#MiniSectorReading)
@@ -333,10 +275,9 @@ toClassList (Snapshot s) =
 
 {-| One car of the field by its number, where the race has such a car.
 
-A scan of the field, which is what a call that comes now and then wants: an
-index would be built every frame whether anything asked for a car or not. Two
-cars sharing a number -- which the source data occasionally has -- give the one
-running ahead, since the field is in running order.
+A scan rather than an index: an index would be built every frame whether
+anything asked for a car or not. Two cars sharing a number -- which the source
+data occasionally has -- give the one running ahead.
 
 -}
 get : CarNumber -> Snapshot -> Maybe CarAt
@@ -346,12 +287,8 @@ get carNumber (Snapshot s) =
         |> List.head
 
 
-{-| The cars racing in one class, in running order.
-
-The same list [`toClassList`](#toClassList) holds that class under, for a caller
-that already knows which class it wants. A class no car races in is empty rather
-than absent: there is nothing to draw either way.
-
+{-| The cars racing in one class, in running order. A class no car races in is
+empty rather than absent.
 -}
 inClass : Class -> Snapshot -> List CarAt
 inClass class (Snapshot s) =
@@ -406,12 +343,8 @@ from the car alone, without knowing who else is out there.
 
 A [`Gap.Competitor`](Motorsport-Gap#Competitor) with the rest added on, because
 that is the shape the ordering depends on: `Gap.at` and `Ordering.runningOrder`
-reach for `laps` and `currentLap` directly, so those two have to sit at the top
-level here. The constraint stops at this type; what comes out the other side is
-a `CarAt`, which carries neither.
-
-The status is looked up rather than worked out here; see
-[`Race.statusAt`](Motorsport-Race#statusAt).
+reach for `laps` and `currentLap` directly. The constraint stops at this type;
+what comes out the other side is a `CarAt`, which carries neither.
 
 -}
 type alias SampledCar =
@@ -426,15 +359,9 @@ type alias SampledCar =
 {-| Read a car at the clock, where it is running.
 
 `Nothing` for a car with no lap in progress, which is one that has turned no lap
-at all -- a lap stays the car's current one until the next begins. Such a car is
-not in the field: there is no answer to where it stands, and nothing to report
-of it but its number. Nor can the data produce one, since the loader builds the
-entry list out of the lap records themselves.
-
-Settled here once, and everything downstream is written knowing it:
-[`Ordering.runningOrder`](Motorsport-Ordering#runningOrder) and
-[`Gap.Competitor`](Motorsport-Gap#Competitor) ask for a lap rather than a
-`Maybe` of one, and a [`CarAt`](#CarAt) carries its lap plainly.
+at all. Such a car is not in the field, and settling that here is what lets
+everything downstream -- `Ordering.runningOrder`, `Gap.Competitor`, `CarAt` --
+ask for a lap rather than a `Maybe` of one.
 
 -}
 sampleCar : { elapsed : Instant } -> Race -> Car -> Maybe SampledCar
@@ -482,13 +409,6 @@ timingOf raceElapsed rivals car =
     }
 
 
-{-| Read the lap a car is on at this moment.
-
-Only ever called with the lap the car is actually on, which is what lets the
-readings that need one be plain rather than `Maybe`: there is a sector the car
-is in, and a running time to rate, because there is a lap.
-
--}
 readCurrentLap :
     { clock : { elapsed : Instant }
     , records : BestTimes.Snapshot
@@ -507,8 +427,6 @@ readCurrentLap frame lap =
             in
             { sectorProgress | progress = min 1 sectorProgress.progress }
 
-        -- `ofMiniSectors` comes back empty for exactly the circuits that record
-        -- none, which is what keeps the states and the car's place together.
         miniSectors =
             Performance.ofMiniSectors frame.records lap
                 |> Maybe.map
@@ -526,10 +444,8 @@ readCurrentLap frame lap =
     in
     { elapsed = frame.elapsed
     , progress =
-        -- Against the lap's eventual time, which is the one figure of this lap
-        -- the clock has not reached. It stays inside: what a caller wants of
-        -- it is how far round the car has got, not the answer it is measured
-        -- against.
+        -- Against the lap's eventual time, the one figure of this lap the clock
+        -- has not reached.
         lap.time
             |> Maybe.map (\lapTime -> min 1.0 (toFloat frame.elapsed / toFloat lapTime))
             |> Maybe.withDefault 0
@@ -545,8 +461,6 @@ readCurrentLap frame lap =
     }
 
 
-{-| The gap from `car` to the car ahead of it, or none where there is no such car.
--}
 gapTo : { elapsed : Instant } -> SampledCar -> Maybe SampledCar -> Gap
 gapTo raceClock car ahead =
     ahead
@@ -554,9 +468,6 @@ gapTo raceClock car ahead =
         |> Maybe.withDefault Gap.none
 
 
-{-| A sampled car with its place in the field: what it stands overall, what it
-stands in its class, and which car it is running directly behind.
--}
 type alias Placed =
     { car : SampledCar
     , position : Int
@@ -570,11 +481,7 @@ type alias Placed =
 Class position is counted as the cars go past rather than looked up afterwards.
 A lookup has to be keyed by car number, and two cars sharing one -- which the
 source data occasionally has -- would collapse into a single entry, leaving the
-other car to fall back on a position it does not hold. Counting cannot miss a
-car that is in the list, so there is no fallback to get wrong.
-
-The car ahead comes off the same pass, which is also the car each interval is
-measured to; the first car has none, and reports no interval.
+other car to fall back on a position it does not hold.
 
 -}
 placeInField : List SampledCar -> List Placed
@@ -638,11 +545,8 @@ readCarAt frame placed =
                 }
                 car
 
-        -- The car's own record at this moment. A lap's `best` counts its own
-        -- time, so the lap in progress carries one the clock has not reached;
-        -- reading it off the finished lap is what stops the lap being rated
-        -- against itself. Read once, so `currentLap.performance`'s baseline and
-        -- `bestLap` cannot come apart.
+        -- A lap's `best` counts its own time, so reading it off the finished
+        -- lap is what stops the lap in progress being rated against itself.
         personalBest =
             car.lastLap |> Maybe.andThen .best
     in

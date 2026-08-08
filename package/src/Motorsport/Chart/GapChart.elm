@@ -5,16 +5,9 @@ module Motorsport.Chart.GapChart exposing
     , gapChartView, gapSparkline
     )
 
-{-| Shared primitives for the relative-gap chart. Provides lap-series slicing
-(`carLine`), the per-lap group baseline (`groupReferenceByLap`), and the
-relative-gap point series (`gapPoints`). Gap charts go through the shared
-renderer `gapChartView`, which bundles the vertical-axis computation, zero
-baseline, and polyline drawing. Each chart's dimensions are collected as
-`Dimensions` presets (`consolidated` / `rivalStrip`). The lap window
-([`LapWindow`](Motorsport-Chart-Common)), emphasis
-([`Emphasis`](Motorsport-Chart-Common)), and outlier handling
-([`iqrFences`](Motorsport-Chart-Common) etc.) come from the shared
-`Motorsport.Chart.Common`.
+{-| The relative-gap chart: each car's cumulative time against the group
+average, drawn full-width with axes ([`gapChartView`](#gapChartView)) or as an
+axis-less sparkline ([`gapSparkline`](#gapSparkline)).
 
 @docs CarLine, LinePoint, PlottedCar
 @docs carLine, groupReferenceByLap, gapPoints, plotGaps
@@ -39,8 +32,6 @@ import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
 
 
-{-| One series' data: color, emphasis, car number, and lap list.
--}
 type alias CarLine =
     { color : Css.Color
     , emphasis : Emphasis
@@ -49,18 +40,13 @@ type alias CarLine =
     }
 
 
-{-| A single point. `value` is the integer vertical quantity (lap time, relative
-gap, etc.).
--}
 type alias LinePoint =
     { lap : Int
     , value : Int
     }
 
 
-{-| One drawing unit: a series (`car`) paired with its points projected onto the
-vertical axis (`points`). `gapChartView` / `gapSparkline` overlay these on a
-single chart.
+{-| One drawing unit: a series paired with its points on the vertical axis.
 -}
 type alias PlottedCar =
     { car : CarLine
@@ -68,9 +54,6 @@ type alias PlottedCar =
     }
 
 
-{-| Builds one series (color, emphasis, lap list). The lap window is given by
-`LapWindow` and the emphasis by `Emphasis`.
--}
 carLine : LapHistory -> LapWindow -> Emphasis -> CarAt -> CarLine
 carLine lapHistory window emphasis entry =
     let
@@ -90,18 +73,11 @@ carLine lapHistory window emphasis entry =
     }
 
 
-{-| Full chart overlaying multiple cars' relative-gap progression with an X axis
-(lap number) and Y axis (difference from baseline, seconds). The group average of
-the given cars (mean cumulative time over non-pit laps) is the baseline = 0 line
-(dotted), and each car's `cumulative time − group average` is the vertical
-quantity. Faster than baseline (smaller cumulative = ahead) goes up, slower
-(larger = behind) goes down, so a line's vertical motion reads directly as
-relative pace.
+{-| The full chart, with a lap axis and a gap axis.
 
-Unlike absolute lap time, subtracting the group average magnifies pace
-differences between nearby cars for readability. The vertical axis spans a band
-with outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside
-the frame.
+Subtracting the group average — rather than plotting absolute lap time —
+magnifies the pace differences between nearby cars. Ahead of the baseline goes
+up and behind it goes down, so a line's vertical motion reads as relative pace.
 
 -}
 gapChartView : ( Int, Int ) -> LapHistory -> List CarAt -> Html msg
@@ -119,9 +95,8 @@ gapChartView ( minLap, maxLap ) lapHistory entries =
             (plotGaps { reference = carLines, display = carLines })
 
 
-{-| Builds the relative-gap point series (`cumulative time − baseline`) from the
-per-lap group baseline `referenceByLap` and each car's lap list. Laps without a
-baseline produce no point and are dropped.
+{-| The relative-gap point series, `cumulative time − baseline`. A lap with no
+baseline produces no point.
 -}
 gapPoints : Dict Int Instant -> List Lap -> List LinePoint
 gapPoints referenceByLap laps =
@@ -138,12 +113,9 @@ gapPoints referenceByLap laps =
             )
 
 
-{-| Computes the per-lap group baseline once from the reference population
-(`reference`), then projects each displayed car (`display`) onto its relative-gap
-point series to build the `PlottedCar` list. The two sets are taken separately so
-the reference and displayed populations can differ (the rival comparison uses up
-to 5 cars as the baseline and shows 3). Passing the same set yields a chart
-referenced to the cars' own group average.
+{-| Compute the baseline once from `reference`, then project each car of
+`display` onto it. The two sets are taken separately so that the populations can
+differ — the rival comparison baselines on up to 5 cars and shows 3.
 -}
 plotGaps : { reference : List CarLine, display : List CarLine } -> List PlottedCar
 plotGaps { reference, display } =
@@ -154,24 +126,15 @@ plotGaps { reference, display } =
     display |> List.map (\car -> { car = car, points = gapPoints referenceByLap car.laps })
 
 
-{-| Minimal axis-less sparkline drawing the relative-gap point series: only the
-polyline and zero baseline. Takes pre-built `PlottedCar`s (the caller supplies
-dimensions and X range). For the full chart with axes, use
-[`gapChartView`](#gapChartView).
+{-| The same series without axes: only the polyline and the zero baseline.
 -}
 gapSparkline : Dimensions -> ( Float, Float ) -> List PlottedCar -> Html msg
 gapSparkline dimensions range carsWithGaps =
     gapChartViewWith { dimensions = dimensions, showAxes = False } range carsWithGaps
 
 
-{-| Shared renderer overlaying multiple cars' relative-gap point series. The
-vertical axis always includes 0 (group-average pace) and spans a band with
-outliers (two-sided IQR, e.g. pit laps) removed, clipping outliers outside the
-frame. Faster (smaller cumulative = ahead) goes up, slower (larger = behind) down,
-with the 0 line shown dashed. The caller supplies dimensions and X range via a
-`Dimensions` preset and `( minX, maxX )` (the consolidated chart and the card
-differ only in dimensions). The axes are toggled by the public functions
-(`gapChartView` / `gapSparkline`) via `showAxes`.
+{-| What [`gapChartView`](#gapChartView) and [`gapSparkline`](#gapSparkline)
+share; they differ only in their dimensions and in `showAxes`.
 -}
 gapChartViewWith :
     { dimensions : Dimensions, showAxes : Bool }
@@ -188,7 +151,6 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
             , yScale = gapYScale dimensions carsWithGaps
             }
 
-        -- Stack back-to-front: Muted (back) → Related → Focused (front).
         orderedCars =
             sortForDrawing
                 (.car >> .emphasis)
@@ -202,10 +164,8 @@ gapChartViewWith { dimensions, showAxes } ( minX, maxX ) carsWithGaps =
         )
 
 
-{-| Builds the vertical scale from the points. Always includes 0 (group-average
-pace) and bounds the range by a band with outliers (two-sided IQR, e.g. pit laps)
-removed. Maps to screen coordinates as `( padding.top, height - padding.bottom )`
-so faster (smaller cumulative = ahead) is up and slower (larger = behind) is down.
+{-| The vertical scale. Always includes 0, and bounds the range on the IQR band
+so that the outliers — pit laps, mostly — are clipped rather than drawn to.
 -}
 gapYScale : Dimensions -> List PlottedCar -> Scale.ContinuousScale Float
 gapYScale { height, padding } carsWithGaps =
@@ -239,8 +199,7 @@ gapYScale { height, padding } carsWithGaps =
     Scale.linear ( padding.top, height - padding.bottom ) ( minGap - yPad, maxGap + yPad )
 
 
-{-| Builds the axis decorations (back to front: grid lines → X axis → Y axis).
-When `showAxes` is False (sparkline) returns empty, leaving only the polylines.
+{-| The axis decorations, back to front. Empty for the sparkline.
 -}
 gapDecorations : { showAxes : Bool } -> Dimensions -> Scales -> ( Float, Float ) -> List (Svg msg)
 gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
@@ -258,9 +217,6 @@ gapDecorations { showAxes } dimensions scales ( minX, maxX ) =
         []
 
 
-{-| Y axis (difference from the baseline = group average). Four ticks, formatting
-millisecond values as signed seconds. Draws via the shared `yAxis` wrapper.
--}
 gapAxis : Dimensions -> Scale.ContinuousScale Float -> Svg msg
 gapAxis dimensions yScale =
     yAxis dimensions
@@ -273,9 +229,6 @@ gapAxis dimensions yScale =
         yScale
 
 
-{-| Formats a Y-axis label: milliseconds to signed seconds at 0.1 s precision
-(0 is unsigned).
--}
 formatGapTick : Float -> String
 formatGapTick ms =
     let
@@ -292,10 +245,6 @@ formatGapTick ms =
         String.fromFloat seconds
 
 
-{-| Converts a `PlottedCar` into the shared renderer `renderLine`'s input and
-draws one line. The vertical quantity is the relative gap
-(`cumulative time − group average`).
--}
 gapLine : Scales -> PlottedCar -> Svg msg
 gapLine scales { car, points } =
     renderLine scales
@@ -306,7 +255,7 @@ gapLine scales { car, points } =
         }
 
 
-{-| Horizontal dashed line marking group average = 0.
+{-| The dashed line marking the group average.
 -}
 zeroReferenceLine : { x1 : Float, x2 : Float, y : Float } -> Svg msg
 zeroReferenceLine { x1, x2, y } =
@@ -322,9 +271,8 @@ zeroReferenceLine { x1, x2, y } =
         []
 
 
-{-| Collects only the non-pit laps (no `pitTime`) of the cars and returns, per lap
-number, the mean cumulative time. Excluding pit laps keeps the baseline from
-jumping. Only cars with a non-pit lap on that lap contribute to the average.
+{-| The mean cumulative time per lap number, over the non-pit laps only —
+including the pit laps would make the baseline jump.
 -}
 groupReferenceByLap : List CarLine -> Dict Int Instant
 groupReferenceByLap carLines =
@@ -335,8 +283,7 @@ groupReferenceByLap carLines =
             (\lap ->
                 let
                     -- Summing moments is meaningless on its own; the mean of
-                    -- them is the moment the group crossed the line, which is
-                    -- why this drops out of the type and back in below.
+                    -- them is the moment the group crossed the line.
                     elapsed =
                         Instant.toDuration lap.elapsed
                 in
@@ -354,17 +301,15 @@ groupReferenceByLap carLines =
         |> Dict.map (\_ ( sum, count ) -> Instant.fromDuration (sum // count))
 
 
-{-| Dimensions for the full-width consolidated gap chart. A wide aspect keeps the
-rendered height (width × height/width) low when stretched to 100% width. Uses the
-shared `axisPadding` to reserve room for the X/Y axis labels.
+{-| The full-width chart. A wide aspect keeps the rendered height low once the
+svg is stretched to 100% width.
 -}
 consolidated : Dimensions
 consolidated =
     { width = 1000, height = 250, padding = axisPadding }
 
 
-{-| Dimensions for the in-card ahead/behind rival comparison (gap). Narrow and
-short.
+{-| The in-card rival comparison.
 -}
 rivalStrip : Dimensions
 rivalStrip =

@@ -58,9 +58,8 @@ type alias Lap =
 {-| How long one sector of this lap took, next to the driver's best for that
 sector up to and including this lap — the baseline a time is rated against.
 
-The two are kept together because nothing reads one without the other. Either
-can be missing: a sector the source data left blank has no time, and a driver
-who has yet to complete one has no best for it.
+Either can be missing: a sector the source data left blank has no time, and a
+driver who has yet to complete one has no best for it.
 
 -}
 type alias SectorTime =
@@ -81,18 +80,14 @@ type alias MiniSectors =
     ByMiniSector MiniSectorTime
 
 
-{-| How long one mini-sector of this lap took, next to the driver's best for it
--- [`SectorTime`](#SectorTime) at the finer grain, and `Nothing` for the same
-two reasons.
+{-| [`SectorTime`](#SectorTime) at the finer grain, with one addition:
+`elapsedInLap` is how far into the lap this mini-sector ended, counted from the
+line.
 
-`elapsedInLap` is the extra the finer grain needs: how far into the lap this
-mini-sector ended, counted from the line. The sectors get by without it because
-[`segments`](#segments) adds their times up, but that only works while every
-time is there -- a sector the source data left blank is taken as no time at all
-and the ones after it still start where they should, which is a liberty the
-sectors can afford at three and the mini-sectors cannot at fifteen. The source
-records the running total, so a mini-sector after a blank one is still placed
-exactly.
+The sectors get by without it because [`segments`](#segments) adds their times
+up, treating a blank as no time at all -- a liberty that is affordable across
+three sectors and not across fifteen mini-sectors. Taking the running total from
+the source instead places a mini-sector after a blank one exactly.
 
 -}
 type alias MiniSectorTime =
@@ -147,8 +142,8 @@ type alias Clock =
 
 {-| Which of two laps is ahead on track, read at a moment of the race.
 
-Every step of it runs backwards from the plain comparison: the car on the higher
-lap, in the later sector, in the later mini sector is the one in front.
+Every step runs backwards from the plain comparison: the car on the higher lap,
+in the later sector, in the later mini-sector is the one in front.
 
 -}
 compareAt : Clock -> Comparator Lap
@@ -202,8 +197,7 @@ compareLapsInSameSector clock a b segment_a segment_b =
             compareBySegmentStart segment_a segment_b
 
 
-{-| Both cars are in the same sector of the same lap, so whichever entered it
-first is ahead.
+{-| Same sector of the same lap, so whichever entered it first is ahead.
 -}
 compareBySegmentStart : Segment -> Segment -> Order
 compareBySegmentStart segment_a segment_b =
@@ -245,9 +239,6 @@ findCurrentLap clock =
 
 {-| One sector of one lap, as the stretch of race time the car spends in it.
 
-`start` is on the same scale as `Lap.elapsed` and the race clock, so it can be
-compared against either without conversion.
-
 Which sector it is belongs to the position in a
 [`BySector`](Motorsport-Sector#BySector), not to the value.
 
@@ -261,9 +252,7 @@ type alias Segment =
 {-| When the lap began.
 
 Read off the lap's own end and duration, never the previous lap's, which may be
-missing or not adjacent. A lap the source data has no time for has no length, so
-it begins where it ends -- which is what the geometry below wants for a lap it
-cannot place.
+missing or not adjacent. A lap with no recorded time begins where it ends.
 
 -}
 lapStart : Lap -> Instant
@@ -275,7 +264,7 @@ lapStart lap =
 
 The lap stores only how long each sector took, so where one begins has to be
 added up; this is the only place that happens. A sector with no recorded time is
-empty rather than absent, so the two after it still start where they should.
+empty rather than absent, so the ones after it still start where they should.
 
 -}
 segments : Lap -> BySector Segment
@@ -326,8 +315,7 @@ currentSector clock lap =
     Tuple.first (currentSegment clock lap)
 
 
-{-| How far around the lap the car is: which sector, and how far through it as
-a fraction of that sector.
+{-| How far around the lap the car is: which sector, and how far through it.
 
 Not clamped: past the end of the lap gives more than 1, before its start gives
 a negative, and a sector with no recorded time gives infinity or NaN. Capping
@@ -353,11 +341,8 @@ progressAt clock lap =
 
 {-| How far through a segment a moment of race time is, as a fraction of it.
 
-Bounded only by the segment it is given: for one the clock actually falls
-inside it is between 0 and 1, and for any other it is whatever the arithmetic
-says. Which of those a caller gets is the caller's to know -- see
-[`progressAt`](#progressAt) and
-[`miniSectorProgressAt`](#miniSectorProgressAt), which differ in exactly that.
+Bounded only by the segment it is given: between 0 and 1 for one the clock falls
+inside, and whatever the arithmetic says for any other.
 
 -}
 progressThrough : Clock -> Segment -> Float
@@ -375,18 +360,13 @@ sectorStart sector lap =
 
 {-| Cut a lap into the mini-sectors the source data can place, in track order.
 
-The counterpart of [`segments`](#segments), read the same way after this, but
-built from the running totals rather than by adding the times up -- see
+The counterpart of [`segments`](#segments), but built from the running totals
+rather than by adding the times up -- see
 [`MiniSectorTime`](#MiniSectorTime) for why.
 
 The price is that a mini-sector whose running total is missing cannot be placed,
 and neither can the one after it, whose start that total is. Such a mini-sector
-is absent from the list rather than present and unplaceable, as is every
-mini-sector of a lap from a circuit that records none: a caller looking for
-where the car is has nothing to do with one either way.
-
-The first mini-sector begins at the line, which is the `Just 0` the fold starts
-from.
+is absent from the list rather than present and unplaceable.
 
 -}
 miniSegments : Lap -> List ( LeMans2025MiniSector, Segment )
@@ -419,8 +399,7 @@ miniSegments lap =
                 |> List.reverse
 
 
-{-| The mini-sector the car is driving at the given moment, and the stretch of
-race time it is.
+{-| The mini-sector the car is driving at the given moment.
 
 Unlike [`currentSegment`](#currentSegment) there is no falling through to the
 last one: a clock past the end of the lap is in no mini-sector, and so is a
@@ -438,12 +417,9 @@ currentMiniSector clock lap =
     currentMiniSegment clock lap |> Maybe.map Tuple.first
 
 
-{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress).
-
-Where a `SectorProgress` can read past the end of its sector, this one cannot:
-there is only a mini-sector here because the clock falls inside it, so the
-progress is between 0 and 1 by construction rather than by clamping.
-
+{-| The mini-sector counterpart of [`SectorProgress`](#SectorProgress), except
+that the progress is between 0 and 1 by construction: there is only a
+mini-sector here because the clock falls inside it.
 -}
 type alias MiniSectorProgress =
     { miniSector : LeMans2025MiniSector
@@ -462,8 +438,7 @@ miniSectorProgressAt clock lap =
             )
 
 
-{-| When a given mini-sector of a given lap began, the counterpart of
-[`sectorStart`](#sectorStart).
+{-| The counterpart of [`sectorStart`](#sectorStart).
 
 A mini-sector the source data cannot place begins where the lap does, which is
 what the running-order tie-break wants: two cars it cannot tell apart are left

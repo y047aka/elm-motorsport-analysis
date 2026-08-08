@@ -33,20 +33,14 @@ import Motorsport.Race.TimelineEvent as TimelineEvent exposing (TimelineEvent)
 import Motorsport.Status exposing (Status)
 
 
-{-| `timelineEvents` is kept for the Events tab, which reads the race as a list of
-things that happened. The three beside it read the same race at an instant, and
-are named for what each records the moments of: `statusChanges` when a car's
-status moved, `lapCompletions` when the lap counter went up, `bestTimeChanges`
-when a record was set. All three are
+{-| `timelineEvents` reads the race as a list of things that happened; the three
+beside it read the same race at an instant, and are
 [`ChangePoints`](Motorsport-Internal-ChangePoints) underneath.
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
-counter's ceiling and `lapCountAt` can never disagree about how long the race was.
-
-`circuit` is the one thing here the lap data cannot say, so
-[`fromCars`](#fromCars) is given it. It lives beside the cars so that anything
-drawing the race takes the track and the times it is drawn to from one value,
-and cannot pair a circuit with the wrong race.
+counter's ceiling and `lapCountAt` can never disagree about how long the race
+was. `circuit` is the one thing here the lap data cannot say, so
+[`fromCars`](#fromCars) is given it.
 
 -}
 type alias Race =
@@ -154,14 +148,11 @@ lapCountAt clock race =
         |> Maybe.withDefault 0
 
 
-{-| Where to put the clock so the lap counter reads `lapCount`.
+{-| Where to put the clock so the lap counter reads `lapCount`: the last instant
+it still reads that.
 
-The last instant it still reads that -- the moment before the next lap is
-completed. Asked for the final lap, where there is no next one, it gives the
-moment that lap was completed instead. Asked for a count the race never reached,
-it gives the start.
-
-Total on its own, so a caller does not have to have checked the range first.
+Asked for the final lap, where there is no next one, it gives the moment that
+lap was completed instead; asked for a count the race never reached, the start.
 
 -}
 elapsedAtLapCount : Int -> Race -> Instant

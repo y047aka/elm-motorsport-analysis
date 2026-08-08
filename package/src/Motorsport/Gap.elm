@@ -90,8 +90,6 @@ laps count =
         Laps count
 
 
-{-| A moment of the race, as [`Lap`](Motorsport-Lap) measures it.
--}
 type alias Clock =
     { elapsed : Instant }
 
@@ -100,9 +98,8 @@ type alias Clock =
 -- MEASURING A GAP
 
 
-{-| Whatever carries a lap history and a lap it is driving. The standings' own
-car state is the only one in the app; measuring a gap needs nothing else from
-it.
+{-| Whatever carries a lap history and a lap it is driving -- all that measuring
+a gap needs of a car.
 
 The lap in progress is a lap, not a `Maybe` of one: a car not driving one is
 racing nobody, and [`Race.Snapshot`](Motorsport-Race-Snapshot) keeps it out of
@@ -118,8 +115,6 @@ type alias Competitor a =
 `ahead` is the car being chased — the leader, or whoever is next up the road.
 The result is what belongs against `behind` on a timing screen: a time while the
 two are on the same lap, and a number of laps once they are not.
-
-Both cars are read at `clock`, so the answer follows the race as it plays back.
 
 -}
 at : Clock -> { ahead : Competitor a, behind : Competitor b } -> Gap
@@ -171,9 +166,6 @@ the sector `behind` is driving.
 Both cars are read on the lap `behind` is on, which is why the lap in front
 comes out of `ahead.laps` rather than off its `currentLap`: with no lap between
 the two, the car in front may still have just crossed the line onto the next one.
-
-This only means anything once [`lapsBetween`](#lapsBetween) has found no lap
-between the cars.
 
 -}
 secondsBetween : Clock -> { ahead : Competitor a, behind : Competitor b } -> Gap

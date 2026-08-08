@@ -29,12 +29,8 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector exposing (BySector)
 
 
-{-| The whole lap, divided.
-
-`sectors` is always the three; `miniSectors` is the finer division as well,
-where the circuit is timed to one. Both cover the same lap, so a car can be
+{-| The whole lap, divided. Both grains cover the same lap, so a car can be
 placed by either.
-
 -}
 type alias TrackConfig =
     { sectors : BySector Share
@@ -43,13 +39,8 @@ type alias TrackConfig =
 
 
 {-| One stretch of the lap: where it begins and how much of the lap it takes,
-both as fractions of the whole.
-
-Which stretch it is belongs to the position in a
-[`BySector`](Motorsport-Sector#BySector) or a
-[`ByMiniSector`](Motorsport-Circuit-LeMans#ByMiniSector), not to the value --
-which is what lets the two grains share one type.
-
+both as fractions of the whole. Which stretch it is belongs to the position in
+a `BySector` or a `ByMiniSector`, which is what lets both grains share the type.
 -}
 type alias Share =
     { start : Float
@@ -57,12 +48,8 @@ type alias Share =
     }
 
 
-{-| The mini-sectors' shares, where the circuit has mini-sectors.
-
-Reads as [`Circuit.Segmentation`](Motorsport-Circuit#Segmentation) does, one
-step further on: that says how the lap is divided, this says what the divisions
-came to.
-
+{-| The mini-sectors' shares, where the circuit has mini-sectors --
+[`Circuit.Segmentation`](Motorsport-Circuit#Segmentation) one step further on.
 -}
 type MiniSectorShares
     = NoMiniSectors
@@ -117,9 +104,7 @@ buildConfig layout bestTimes =
 {-| What share of the lap each stretch's record is of every record put together.
 
 A stretch no lap has set a time for counts as nothing, and with no records at
-all the stretches divide the lap evenly between them. The even split is by
-count, so it serves both grains and neither has to carry a table of how long
-its parts are.
+all the stretches divide the lap evenly between them.
 
 -}
 ratiosOver : List id -> (id -> Maybe Duration) -> id -> Float
@@ -139,10 +124,9 @@ ratiosOver order timeOf =
 {-| Lay the stretches out end to end from the line, each taking the share its
 ratio gives it.
 
-Quadratic in the number of stretches, which is fifteen at most and paid once.
-What it buys is a share written as a function of the stretch rather than
-threaded through a fold, so it goes straight into a `BySector` or a
-`ByMiniSector`.
+Quadratic in the number of stretches -- fifteen at most, and paid once -- which
+buys a share written as a function of the stretch rather than threaded through a
+fold, so it goes straight into a `BySector` or a `ByMiniSector`.
 
 -}
 shareOf : (id -> Float) -> List id -> id -> Share
