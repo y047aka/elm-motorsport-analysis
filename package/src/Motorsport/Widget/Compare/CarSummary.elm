@@ -14,7 +14,7 @@ import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
@@ -198,7 +198,7 @@ summaryStats item =
         ]
         [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
         , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
-        , statCell "Laps" (text (String.fromInt (Snapshot.lapsCompleted item.lastLap)))
+        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
         , statCell "Gap" (text (Gap.toString item.standing.gapToLeader))
         , statCell "Int" (text (Gap.toString item.standing.intervalToAhead))
         ]

@@ -13,7 +13,7 @@ import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
-import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
+import Motorsport.Race.Snapshot exposing (CarAt)
 
 
 {-| Shows the car's relationship to its rivals ahead and behind as the history of
@@ -57,7 +57,7 @@ view lapHistory allCars item =
             findNeighbors allCars item
 
         currentLap =
-            Snapshot.lapsCompleted item.lastLap
+            item.standing.lapsCompleted
 
         aheadLines =
             neighbors.ahead |> List.map (GapChart.carLine lapHistory (Recent currentLap) Related)
