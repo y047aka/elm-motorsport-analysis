@@ -1,5 +1,5 @@
 module Motorsport.Race.Snapshot exposing
-    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..)
+    ( Snapshot, CarAt, Standing, CurrentLap, LastLap(..), lapsCompleted
     , CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading(..)
     , at
     , toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -30,7 +30,7 @@ Reading one car or one class out of the field is the snapshot's own business --
 `get` and `inClass` below -- so that a view narrowing the field says which one
 it wants rather than working it out of `toList`.
 
-@docs Snapshot, CarAt, Standing, CurrentLap, LastLap
+@docs Snapshot, CarAt, Standing, CurrentLap, LastLap, lapsCompleted
 @docs CurrentSectorStates, CurrentMiniSectorStates, MiniSectorReading
 @docs at
 @docs toList, toClassList, get, inClass, leader, lapCount, elapsed
@@ -84,8 +84,8 @@ type Snapshot
 
 Readings only, and no laps: the laps up to this moment are
 [`lapHistory`](#lapHistory)'s to give out, already cut. A lap the car has turned
-is here as what was read off it -- `standing.lapsCompleted`, and
-[`lastLap`](#LastLap) -- rather than as the lap itself.
+is here as what was read off it -- [`lastLap`](#LastLap) -- rather than as the
+lap itself.
 
 Grouped by what the reading is of: where the car stands in the field
 ([`standing`](#Standing)), and what the lap it is on and the one it just
@@ -111,12 +111,13 @@ type alias CarAt =
     }
 
 
-{-| Where the car stands in the race at this moment: the five a classification
-line is made of, in the order one prints them.
+{-| Where the car stands in the race at this moment: where it is placed, and
+what it is placed by.
 
 The placings and the gaps are read off the same running order, in one pass; see
-[`at`](#at). `lapsCompleted` counts laps the car has finished, so a car on its
-opening lap has none.
+[`at`](#at). How many laps the car has finished is not here -- that is the
+number of the last one it finished, which [`LastLap`](#LastLap) holds; see
+[`lapsCompleted`](#lapsCompleted).
 
 Both gaps are [`Gap.none`](Motorsport-Gap#none) for the leading car and only for
 it: nothing runs ahead of it, and it is what the race is measured to.
@@ -125,7 +126,6 @@ it: nothing runs ahead of it, and it is what the race is measured to.
 type alias Standing =
     { position : Int
     , positionInClass : Int
-    , lapsCompleted : Int
     , gapToLeader : Gap
     , intervalToAhead : Gap
     }
@@ -192,8 +192,14 @@ than a reading with everything missing: the time, the sectors and the
 mini-sectors are absent together or not at all, since they are all read off the
 one lap. A view that has nothing to print prints the same "-" for all three.
 
-The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: the
-time it took and how its sectors went, each rated as every rating on a car is.
+The lap itself is not here -- see [`CarAt`](#CarAt) -- only what was read: which
+lap it was, the time it took, and how its sectors went, each rated as every
+rating on a car is.
+
+`lapNumber` is what a car's completed laps are counted by, which is why it sits
+here rather than in [`Standing`](#Standing): the count and the lap it counts to
+are one fact, and a car with no lap behind it has no number to give. See
+[`lapsCompleted`](#lapsCompleted).
 
 The two remaining absences are the other kinds, and stay where they are.
 `rated` is `Nothing` for a lap the source data has no time for, as
@@ -205,10 +211,30 @@ rate.
 type LastLap
     = NoLapYet
     | Finished
-        { rated : Maybe RatedTime
+        { lapNumber : Int
+        , rated : Maybe RatedTime
         , sectors : SectorPerformance
         , miniSectors : Maybe MiniSectorPerformance
         }
+
+
+{-| How many laps the car has finished, which is the number of the last one it
+finished.
+
+Zero for a car on its opening lap, and that is the true count rather than a
+stand-in for one that is missing -- which is what separates this from the
+flattening [`LastLap`](#LastLap) exists to stop. Nothing is hidden by asking:
+the reader gets the number, and there is only one place it can come from.
+
+-}
+lapsCompleted : LastLap -> Int
+lapsCompleted lastLap =
+    case lastLap of
+        Finished { lapNumber } ->
+            lapNumber
+
+        NoLapYet ->
+            0
 
 
 {-| Where the car stands in each sector of the lap it is on: whether it has
@@ -683,7 +709,6 @@ readCarAt frame placed =
     , standing =
         { position = placed.position
         , positionInClass = placed.positionInClass
-        , lapsCompleted = car.previousLap |> Maybe.map .lap |> Maybe.withDefault 0
         , gapToLeader = timing.gapToLeader
         , intervalToAhead = timing.intervalToAhead
         }
@@ -700,7 +725,8 @@ readCarAt frame placed =
         case car.previousLap of
             Just lap ->
                 Finished
-                    { rated =
+                    { lapNumber = lap.lap
+                    , rated =
                         Performance.rateTime frame.fastestLapTime
                             { time = lap.time, personalBest = lap.best }
                     , sectors = Performance.ofSectors frame.records lap

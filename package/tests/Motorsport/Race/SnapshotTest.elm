@@ -177,6 +177,17 @@ suite =
                                 )
                             )
                         |> Expect.equal (Just ( Just 5000, [ Just 1500, Just 1500, Just 2000 ] ))
+            , test "and it is the one lap the car's completed count is read from, so the two cannot disagree" <|
+                \_ ->
+                    -- Car 3 is on its opening lap and car 2 has one behind it,
+                    -- at the same moment of the same race.
+                    fieldWithTailenders
+                        |> Snapshot.toList
+                        |> List.map
+                            (\car ->
+                                ( car.metadata.carNumber, Snapshot.lapsCompleted car.lastLap )
+                            )
+                        |> Expect.equal [ ( "2", 1 ), ( "1", 1 ), ( "3", 0 ) ]
             ]
         , describe "the field is the cars that are running"
             [ test "a car that has turned no lap is not in it" <|
