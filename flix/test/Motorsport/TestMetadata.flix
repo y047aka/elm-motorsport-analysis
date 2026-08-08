@@ -93,6 +93,40 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
+    def testMixedFeedOrdersEveryoneByElapsed(): Unit \ Assert =
+        // 1台でも S1 を欠くと、読める車は全員 elapsed で並ぶ。#7 の S1 (1:10) は
+        // #12 の elapsed (1:35) より小さいが、次元が違うので比較には使わない。
+        // elapsed で見れば 12 が先。basis もそう名乗る。
+        let laps =
+            withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
+            mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
+            Nil;
+        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
+        match grid#entries {
+            case e12 :: e7 :: Nil =>
+                Assert.assertTrue(e12#car#carNumber == "12");
+                Assert.assertTrue(e12#position == 1);
+                Assert.assertTrue(e7#car#carNumber == "7");
+                Assert.assertTrue(e7#position == 2)
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ Assert =
+        // 1周目を持たない車は S1 でも elapsed でも読めないので、基準の選択には
+        // 加わらない。読める2台が S1 を持つ限り basis は Lap1S1 のまま。
+        let laps =
+            withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
+            withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
+            mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
+            Nil;
+        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        Assert.assertTrue(grid#basis == Basis.Lap1S1);
+        let order = grid#entries |> List.map(e -> e#car#carNumber);
+        Assert.assertTrue(order == "12" :: "7" :: "99" :: Nil)
+
+    @Test
     def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ Assert =
         // 3台とも S1 が同値。7 と 12 は elapsed で決まり、99 は 12 と elapsed も
         // 並ぶのでカーナンバーで決まる (12 < 99)。

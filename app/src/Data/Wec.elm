@@ -39,14 +39,19 @@ The timing feed carries no qualifying result, so both readings the CLI can make
 are estimates: `Lap1S1` orders the field by each car's first split, `Lap1Elapsed`
 by the whole of its first lap. `Unknown` means it could read no car at all and
 the order is car numbers. Every car is placed under all three — this is what
-says how much of the placing to believe. A basis naming a published grid would
-be the one exact answer, and none exists yet.
+says how much of the placing to believe.
+
+`Unrecognized` is not one of those: it is a basis written by a CLI newer than
+this app, carried through as it was read. Collapsing it into `Unknown` would be
+a lie in the one direction that matters, since the basis most likely to arrive
+next is a published grid — the exact answer, read as the least trustworthy one.
 
 -}
 type Basis
     = Lap1S1
     | Lap1Elapsed
     | Unknown
+    | Unrecognized String
 
 
 {-| Ordered by `position`, which runs 1..n over the entries.
@@ -87,8 +92,11 @@ basisDecoder =
                     "lap1_elapsed" ->
                         Lap1Elapsed
 
-                    _ ->
+                    "unknown" ->
                         Unknown
+
+                    other ->
+                        Unrecognized other
             )
 
 
