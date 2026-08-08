@@ -56,9 +56,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testGridOrderedByLap1S1NotElapsed(): Unit \ Assert =
-        // 12 は S1 で先行するが、1周目を終えたのは 7 のほうが早い。S1 を鍵に
-        // 取るので 12 が position 1、7 が position 2。CSV 出現順 (7, 12) は
-        // 結果に残らない。
+        // 12 は S1 で先行するが、1周目を終えたのは 7 のほうが早い。CSV 出現順
+        // (7, 12) も結果に残らない。
         let laps =
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -96,7 +95,6 @@ mod Motorsport.TestMetadata {
     def testMixedFeedOrdersEveryoneByElapsed(): Unit \ Assert =
         // 1台でも S1 を欠くと、読める車は全員 elapsed で並ぶ。#7 の S1 (1:10) は
         // #12 の elapsed (1:35) より小さいが、次元が違うので比較には使わない。
-        // elapsed で見れば 12 が先。basis もそう名乗る。
         let laps =
             withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
@@ -114,8 +112,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ Assert =
-        // 1周目を持たない車は S1 でも elapsed でも読めないので、基準の選択には
-        // 加わらない。読める2台が S1 を持つ限り basis は Lap1S1 のまま。
+        // 1周目を持たない #99 は基準の選択に加わらないので、読める2台の S1 を
+        // 巻き添えにしない。
         let laps =
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -129,9 +127,7 @@ mod Motorsport.TestMetadata {
     @Test
     def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ Assert =
         // 3台とも S1 が同値。7 は elapsed で先頭に出る。9 と 10 は elapsed も
-        // 並ぶので最後の手段のカーナンバーで決まり、文字列比較なので "10" が
-        // "9" より前に来る。ここは順位の判断ではなく決定性のためだけの位置な
-        // ので、数値順でないことは意味を持たない。
+        // 並ぶのでカーナンバーで決まり、文字列比較なので "10" が "9" より前。
         let laps =
             withS1("29.100", mkLap("9",  1, "1:35.365", "X", "LMGT3", "G", "T", "M")) ::
             withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
@@ -185,9 +181,8 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testCarWithoutLap1GoesToTheBack(): Unit \ Assert =
-        // ラップ 1 が無い車 (lap 2 のみ) は読めないが、レースはしているので
-        // 落とさず最後尾に置く。カーナンバーは 7 より小さい 1 だが、順位の
-        // 付いた車を追い越さない。
+        // 落とさず最後尾に置く。カーナンバーが 7 より小さい 1 でも、順位の付いた
+        // 車を追い越さない。
         let laps =
             mkLap("1", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
@@ -204,8 +199,7 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ Assert =
-        // 誰も読めなくても順位は 1..n を埋める。basis がそれを推定ですらないと
-        // 名乗る。並びはカーナンバー順。
+        // 誰も読めなくても順位は 1..n を埋める。
         let laps =
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::

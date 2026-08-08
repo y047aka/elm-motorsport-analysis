@@ -25,26 +25,19 @@ type alias Event =
     }
 
 
-{-| The grid the file offers, and what it was worked out from.
--}
 type alias StartingGrid =
     { basis : Basis
     , entries : List StartingGridEntry
     }
 
 
-{-| What the order in `entries` came from.
+{-| What the order in `entries` came from, and so how much of it to believe. The
+timing feed carries no qualifying result, so the CLI's readings are estimates.
 
-The timing feed carries no qualifying result, so both readings the CLI can make
-are estimates: `Lap1S1` orders the field by each car's first split, `Lap1Elapsed`
-by the whole of its first lap. `Unknown` means it could read no car at all and
-the order is car numbers. Every car is placed under all three — this is what
-says how much of the placing to believe.
-
-`Unrecognized` is not one of those: it is a basis written by a CLI newer than
-this app, carried through as it was read. Collapsing it into `Unknown` would be
-a lie in the one direction that matters, since the basis most likely to arrive
-next is a published grid — the exact answer, read as the least trustworthy one.
+`Unrecognized` is a basis written by a CLI newer than this app, carried through
+as it was read. Collapsing it into `Unknown` would be a lie in the one direction
+that matters, since the basis most likely to arrive next is a published grid —
+the exact answer, read as the least trustworthy one.
 
 -}
 type Basis
@@ -54,7 +47,7 @@ type Basis
     | Unrecognized String
 
 
-{-| Ordered by `position`, which runs 1..n over the entries.
+{-| `position` runs 1..n over the entries, which are in that order.
 -}
 type alias StartingGridEntry =
     { position : Int

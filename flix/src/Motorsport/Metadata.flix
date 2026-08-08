@@ -8,15 +8,12 @@ mod Motorsport.Metadata {
     use Motorsport.Wec.RawLap
 
     /// What the grid order was derived from. The timing feed carries no
-    /// qualifying result, so every basis below is an *estimate* read back off
-    /// the race itself; `position` is exact only once a basis appears that
-    /// names a published grid. Every car is placed either way -- this is what
-    /// says how much of the placing to believe.
+    /// qualifying result, so all three are estimates read back off the race.
     ///
     /// `Lap1S1` is the best of them: `HOUR - ELAPSED` is constant across every
-    /// car and every lap, so all cars share one timing origin and a back-row
-    /// car's delay reaching the line is already inside its S1. Little can
-    /// change hands before the first split.
+    /// car, so all cars share one timing origin and a back-row car's delay
+    /// reaching the line is already inside its S1. Little can change hands
+    /// before the first split.
     pub enum Basis with Eq {
         case Lap1S1
         case Lap1Elapsed
@@ -82,8 +79,6 @@ mod Motorsport.Metadata {
             lap1Elapsed = keepFirst(build#lap1Elapsed, lap1Elapsed(lap))
         }
 
-    /// The lap-1 reading is taken from the first lap-1 record seen and never
-    /// overwritten by a later one.
     def keepFirst(seen: Option[Duration], candidate: Option[Duration]): Option[Duration] =
         match seen {
             case Some(_) => seen
@@ -102,8 +97,6 @@ mod Motorsport.Metadata {
         if (List.memberOf(x, xs)) xs
         else List.append(xs, x :: Nil)
 
-    /// Every car gets a place, so the list is a permutation of the entry list:
-    /// 1..n, each exactly once, in position order.
     def estimateGrid(builds: List[CarBuild]): StartingGrid =
         let basis = basisOf(builds);
         let entries = builds
@@ -115,15 +108,11 @@ mod Motorsport.Metadata {
             entries = entries
         }
 
-    /// Which reading the field is ordered by. Chosen once for the whole grid,
-    /// so what gets compared is always the same measurement -- one car's first
-    /// split is never weighed against another car's whole first lap, which are
-    /// different quantities and would order the two by their units rather than
-    /// by their pace.
-    ///
-    /// A car that turned no first lap can be read by neither, so it does not
-    /// bear on the choice; S1 is kept as long as every car that *can* be read
-    /// carries one.
+    /// Chosen once for the whole grid, so what gets compared is always the same
+    /// measurement: a first split weighed against another car's whole first lap
+    /// would order the two by their units rather than by their pace. A car that
+    /// turned no first lap can be read by neither, so it does not cost the rest
+    /// of the field its S1.
     def basisOf(builds: List[CarBuild]): Basis =
         let readable = builds |> List.filter(b -> b#lap1Elapsed != None);
         if (List.isEmpty(readable))
@@ -133,8 +122,6 @@ mod Motorsport.Metadata {
         else
             Basis.Lap1Elapsed
 
-    /// The single reading `basis` names, for this car. `None` means the car
-    /// turned no first lap and no reading can place it.
     def readingFor(basis: Basis, b: CarBuild): Option[Duration] =
         match basis {
             case Basis.Lap1S1      => b#lap1S1
@@ -142,26 +129,15 @@ mod Motorsport.Metadata {
             case Basis.Unknown     => None
         }
 
-    /// Ties break on lap-1 elapsed -- which separates cars that share an S1,
-    /// and is the reading itself under `Lap1Elapsed` -- and last on car number,
-    /// so the order is decided by the data alone and never by the order the CSV
-    /// happened to list the cars in.
+    /// The tie-breaks are here so that the same input always yields the same
+    /// output and the CSV's row order never leaks in. The last of them compares
+    /// car numbers as the strings they are: any total order settles a tie, and
+    /// reading them as numbers would dress the position up as a ranking it is
+    /// not making -- nor would it be one-to-one, since Le Mans runs #7 alongside
+    /// #007.
     ///
-    /// The car number is compared as the string it is. Nothing else in the
-    /// codebase orders car numbers -- they are matched and displayed, never
-    /// ranked -- and this position is not a ranking either: it is there so that
-    /// the same input always yields the same output, and any total order does
-    /// that. Reading them as numbers would dress the tie-break up as a
-    /// judgement it is not making, and would not even be one-to-one, since Le
-    /// Mans runs #7 alongside #007. If car-number order ever becomes something
-    /// a person reads, that is the point to give it a type of its own carrying
-    /// both the text and its number, not to decode it here.
-    ///
-    /// A car with no first lap cannot be read, so nothing about where it
-    /// started is known. It is still placed rather than dropped -- it did start
-    /// the race -- and goes to the back, where being wrong costs the least.
-    /// `basis` is what says how much of the order to trust; the entry itself
-    /// does not claim to be measured.
+    /// A car with no first lap is placed rather than dropped: it did start the
+    /// race, and the back is where being wrong costs the least.
     def orderingKey(basis: Basis, b: CarBuild): (Int32, Duration, Duration, String) =
         let cn = b#car#carNumber;
         let elapsed = b#lap1Elapsed |> Option.getWithDefault(Util.Duration.zero());

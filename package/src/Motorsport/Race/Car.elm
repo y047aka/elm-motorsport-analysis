@@ -44,8 +44,8 @@ type alias CarNumber =
 
 {-| A car that has yet to turn a lap, from its place on the grid.
 
-Every car has a place, 1 upward. The grid is estimated from the race itself, so
-how much the place is worth is the file's `basis` to say, not this type's.
+The grid is estimated from the race itself, so how much the place is worth is
+the file's `basis` to say, not this type's.
 
 -}
 fromStartingGrid : { position : Int, car : Metadata } -> Car

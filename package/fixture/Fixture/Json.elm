@@ -102,8 +102,7 @@ collectCarData info acc =
 
 toPlaceholderCar : ( String, CarData ) -> Car
 toPlaceholderCar ( carNumber, data ) =
-    -- Built from laps alone, with no grid to read: 0 sits outside the 1..n a
-    -- real grid hands out, so it cannot pass for a place.
+    -- No grid to read here, and 0 is outside the 1..n one hands out.
     Car.fromStartingGrid
         { position = 0
         , car =
