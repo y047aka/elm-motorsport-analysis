@@ -1,9 +1,15 @@
-module Shared exposing (Model, init, update, subscriptions)
+module Shared exposing
+    ( Model, Race, RoundId
+    , init, update, subscriptions
+    , race, roundId
+    )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
 loaded at runtime via `Http`, so no `BackendTask` is involved.
 
-@docs Model, init, update, subscriptions
+@docs Model, Race, RoundId
+@docs init, update, subscriptions
+@docs race, roundId
 
 -}
 
@@ -14,7 +20,7 @@ import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
-import Motorsport.Race.Car as Car exposing (Car)
+import Motorsport.Race.Car as Car
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
@@ -25,29 +31,68 @@ import Shared.Msg exposing (Msg(..))
 -- MODEL
 
 
-{-| `track` is the one derived value kept here rather than worked out where it
-is used: everything else about a frame follows from `replay` and the clock,
-where the track never moves once the data has loaded. See
-[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
-
-`season` and `eventName` both come off the calendar entry the round was found
-in, so the app never holds a second opinion about what a race is called.
-
-`requestedRound` is a URL that arrived before the calendar did. The calendar is
-what says where a round's files are, so the request waits rather than being
-guessed at, and is cleared once issued so a later calendar cannot ask twice.
-
+{-| The calendar, and the one round the app is showing. Everything else about a
+round hangs off `Round` rather than sitting beside it, so a half-loaded one
+cannot be read as a loaded one.
 -}
 type alias Model =
     { calendar : Calendar
-    , season : Int
-    , eventName : String
-    , requestedRound : Maybe { season : String, event : String }
-    , replay : Replay.Model
+    , round : Round
+    }
+
+
+{-| How far the round in the URL has got.
+
+`Waiting` is a URL that arrived before the calendar did. The calendar is what
+says where a round's files are, so the request waits rather than being guessed
+at.
+
+`Loading` carries no `Race`, which is what stops the previous round's cars being
+shown under this one's name.
+
+-}
+type Round
+    = NoRound
+    | Waiting { season : String, event : String }
+    | Loading RoundId Partial
+    | Loaded RoundId Race
+
+
+{-| Which round, and what to call it. Known as soon as the calendar resolves the
+URL, so the name can be shown while the files are still on their way.
+-}
+type alias RoundId =
+    { season : Int
+    , id : String
+    , name : String
+    }
+
+
+{-| The two files arrive in either order, and a round needs both. Three cases
+rather than a pair of `Maybe`s: having both is not a state, it is the move to
+`Loaded`.
+-}
+type Partial
+    = NothingYet
+    | GotSummary Wec.Event
+    | GotLaps (List WecLaps.RawLap)
+
+
+{-| A loaded round, as the pages read it.
+
+`track` is the one derived value kept here rather than worked out where it is
+used: everything else about a frame follows from `replay` and the clock, where
+the track never moves once the data has loaded. See
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
+
+`snapshot` is `replay` read at the clock, cached because every view of a frame
+shares it. The two are only ever written together.
+
+-}
+type alias Race =
+    { replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
-    , pendingWecEvent : Maybe Wec.Event
-    , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
 
 
@@ -57,29 +102,45 @@ still needs it.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    let
-        replayInit =
-            Replay.empty
-
-        snapshotInit =
-            snapshotOf replayInit
-    in
-    ( { calendar = Calendar.empty
-      , season = 0
-      , eventName = ""
-      , requestedRound = Nothing
-      , replay = replayInit
-      , snapshot = snapshotInit
-      , track = Tracker.empty
-      , pendingWecEvent = Nothing
-      , pendingWecLaps = Nothing
-      }
+    ( { calendar = Calendar.empty, round = NoRound }
     , Effect.sendCmd <|
         Http.get
             { url = "/static/wec/index.json"
             , expect = Http.expectJson CalendarLoaded Calendar.decoder
             }
     )
+
+
+
+-- QUERIES
+
+
+{-| What to call the round being shown, once there is one. Answers while it is
+still loading, which is why it is separate from [`race`](#race).
+-}
+roundId : Model -> Maybe RoundId
+roundId model =
+    case model.round of
+        Loading id _ ->
+            Just id
+
+        Loaded id _ ->
+            Just id
+
+        _ ->
+            Nothing
+
+
+{-| The round's data, once all of it has arrived.
+-}
+race : Model -> Maybe Race
+race model =
+    case model.round of
+        Loaded _ loaded ->
+            Just loaded
+
+        _ ->
+            Nothing
 
 
 
@@ -90,44 +151,28 @@ update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
         CalendarLoaded (Ok calendar) ->
-            requestRequestedRound { m | calendar = calendar }
+            requestWaitingRound { m | calendar = calendar }
 
         CalendarLoaded (Err _) ->
             ( m, Effect.none )
 
-        FetchJson_Wec options ->
-            requestRequestedRound
-                { m
-                    | requestedRound = Just options
-                    , season = 0
-                    , eventName = ""
-                    , pendingWecEvent = Nothing
-                    , pendingWecLaps = Nothing
-                }
+        FetchJson_Wec params ->
+            requestWaitingRound { m | round = Waiting params }
 
-        JsonLoaded_Wec (Ok decoded) ->
-            finalizeWecIfReady { m | pendingWecEvent = Just decoded }
+        JsonLoaded_Wec key (Ok summary) ->
+            ( { m | round = arrived key (withSummary summary) m.round }, Effect.none )
 
-        JsonLoaded_Wec (Err _) ->
+        JsonLoaded_Wec _ (Err _) ->
             ( m, Effect.none )
 
-        LapsLoaded_Wec (Ok rawLaps) ->
-            finalizeWecIfReady { m | pendingWecLaps = Just rawLaps }
+        LapsLoaded_Wec key (Ok rawLaps) ->
+            ( { m | round = arrived key (withLaps rawLaps) m.round }, Effect.none )
 
-        LapsLoaded_Wec (Err _) ->
+        LapsLoaded_Wec _ (Err _) ->
             ( m, Effect.none )
 
         ReplayMsg replayMsg ->
-            let
-                replayNew =
-                    Replay.update replayMsg m.replay
-            in
-            ( { m
-                | replay = replayNew
-                , snapshot = snapshotOf replayNew
-              }
-            , Effect.none
-            )
+            ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
 
 
 {-| Asks for the round the URL named, once the calendar can say where its files
@@ -137,76 +182,127 @@ Called from both sides of the race between the two, so whichever of the URL and
 the calendar arrives second is the one that finds everything it needs here.
 
 -}
-requestRequestedRound : Model -> ( Model, Effect Msg )
-requestRequestedRound m =
-    case Maybe.andThen (\params -> Calendar.findRound params m.calendar) m.requestedRound of
-        Nothing ->
+requestWaitingRound : Model -> ( Model, Effect Msg )
+requestWaitingRound m =
+    case m.round of
+        Waiting params ->
+            case Calendar.findRound params m.calendar of
+                Nothing ->
+                    ( m, Effect.none )
+
+                Just ( season, round ) ->
+                    let
+                        id =
+                            { season = season.season, id = round.id, name = round.name }
+                    in
+                    ( { m | round = Loading id NothingYet }
+                    , case Era.fromSeason id.season of
+                        Just era ->
+                            Effect.sendCmd <|
+                                Cmd.batch
+                                    [ Http.get
+                                        { url = round.summary
+                                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era)
+                                        }
+                                    , Http.get
+                                        { url = round.laps
+                                        , expect = Http.expectJson (LapsLoaded_Wec (keyOf id)) WecLaps.decoder
+                                        }
+                                    ]
+
+                        Nothing ->
+                            -- No grid for this season, so no way to read its
+                            -- classes. The name is shown and nothing is asked
+                            -- for.
+                            Effect.none
+                    )
+
+        _ ->
             ( m, Effect.none )
 
-        Just ( season, round ) ->
-            ( { m
-                | requestedRound = Nothing
-                , season = season.season
-                , eventName = round.name
-              }
-            , case Era.fromSeason season.season of
-                Just era ->
-                    Effect.sendCmd <|
-                        Cmd.batch
-                            [ Http.get
-                                { url = round.summary
-                                , expect = Http.expectJson JsonLoaded_Wec (Wec.eventDecoder era)
-                                }
-                            , Http.get
-                                { url = round.laps
-                                , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
-                                }
-                            ]
 
-                Nothing ->
-                    -- No grid for this season, so no way to read its classes.
-                    -- Nothing is asked for.
-                    Effect.none
-            )
+{-| Applies a file to the round that asked for it, and to no other. A response
+naming a round this one is not is one left over from a round the reader has
+already navigated away from.
+-}
+arrived : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
+arrived key step round =
+    case round of
+        Loading id partial ->
+            if keyOf id == key then
+                step id partial
+
+            else
+                round
+
+        _ ->
+            round
+
+
+withSummary : Wec.Event -> RoundId -> Partial -> Round
+withSummary summary id partial =
+    case partial of
+        GotLaps rawLaps ->
+            Loaded id (raceFrom summary rawLaps)
+
+        _ ->
+            Loading id (GotSummary summary)
+
+
+withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round
+withLaps rawLaps id partial =
+    case partial of
+        GotSummary summary ->
+            Loaded id (raceFrom summary rawLaps)
+
+        _ ->
+            Loading id (GotLaps rawLaps)
+
+
+raceFrom : Wec.Event -> List WecLaps.RawLap -> Race
+raceFrom summary rawLaps =
+    let
+        replay =
+            summary.startingGrid.entries
+                |> List.map Car.fromStartingGrid
+                |> WecLaps.attach rawLaps
+                |> Replay.fromCars { timeLimit = summary.timeLimit }
+    in
+    { replay = replay
+    , snapshot = snapshotOf replay
+    , track = Tracker.fromConfig summary.track
+    }
+
+
+mapRace : (Race -> Race) -> Round -> Round
+mapRace f round =
+    case round of
+        Loaded id loaded ->
+            Loaded id (f loaded)
+
+        _ ->
+            round
+
+
+stepReplay : Replay.Msg -> Race -> Race
+stepReplay replayMsg loaded =
+    let
+        replayNew =
+            Replay.update replayMsg loaded.replay
+    in
+    { loaded | replay = replayNew, snapshot = snapshotOf replayNew }
+
+
+keyOf : RoundId -> { season : Int, id : String }
+keyOf id =
+    { season = id.season, id = id.id }
 
 
 {-| The race read where playback has got to.
 -}
 snapshotOf : Replay.Model -> Snapshot
-snapshotOf { race, playback } =
-    Snapshot.at { elapsed = Clock.getElapsed playback } race
-
-
-finalizeWecIfReady : Model -> ( Model, Effect Msg )
-finalizeWecIfReady m =
-    case ( m.pendingWecEvent, m.pendingWecLaps ) of
-        ( Just event, Just rawLaps ) ->
-            let
-                carsWithLaps =
-                    event.startingGrid.entries
-                        |> List.map Car.fromStartingGrid
-                        |> WecLaps.attach rawLaps
-
-                replayNew =
-                    Replay.fromCars
-                        { timeLimit = event.timeLimit }
-                        carsWithLaps
-            in
-            ( { m
-                | replay = replayNew
-                , snapshot = snapshotOf replayNew
-
-                -- Settled here, with the race, and not touched again until the
-                -- next one loads.
-                , track = Tracker.fromConfig event.track
-                , pendingWecEvent = Nothing
-                , pendingWecLaps = Nothing
-              }
-            , Effect.none
-            )
-
-        _ ->
-            ( m, Effect.none )
+snapshotOf replay =
+    Snapshot.at { elapsed = Clock.getElapsed replay.playback } replay.race
 
 
 

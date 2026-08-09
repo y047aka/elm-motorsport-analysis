@@ -56,7 +56,8 @@
     },
     "test-dependencies": {
         "direct": {
-            "elm-explorations/test": "2.2.1"
+            "elm-explorations/test": "2.2.1",
+            "elm/http": "2.0.0"
         },
         "indirect": {
             "elm/bytes": "1.0.8"

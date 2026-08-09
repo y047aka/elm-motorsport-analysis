@@ -10,7 +10,7 @@ import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
-import Html.Styled exposing (div, header, input, nav, text)
+import Html.Styled exposing (Html, div, header, input, nav, text)
 import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import List.Extra
@@ -79,70 +79,80 @@ update msg model =
 
 
 view : Shared.Model -> Model -> View Msg
-view { replay } { leaderboardState } =
+view shared { leaderboardState } =
     { title = "Wec"
     , body =
-        let
-            { playback, race } =
-                replay
+        case Shared.race shared of
+            Nothing ->
+                []
 
-            lapCount =
-                Replay.lapCount replay
-
-            -- The whole race's records, not the clock's: this page reports what
-            -- the data holds, and the slider must not change what a record means.
-            bestTimes =
-                BestTimes.final race.bestTimeChanges
-        in
-        [ header
-            [ css
-                [ position sticky
-                , top zero
-                , displayFlex
-                , justifyContent spaceBetween
-                , backgroundColor (hsl 0 0 0.4)
-                ]
-            ]
-            [ nav []
-                [ input
-                    [ type_ "range"
-                    , Attributes.max <| String.fromInt race.lapTotal
-                    , value (String.fromInt lapCount)
-                    , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
-                    ]
-                    []
-                , labeledButton []
-                    [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
-                    , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                    , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
-                    ]
-                , text (Clock.getElapsed playback |> Instant.toString)
-                ]
-            , div []
-                ([ div [] [ text "fastestLapTime: ", text (bestTimeText bestTimes.fastestLapTime) ]
-                 , div [] [ text "slowestLapTime: ", text (bestTimeText bestTimes.slowestLapTime) ]
-                 ]
-                    ++ (Sector.toList bestTimes.fastestSectors
-                            |> List.map
-                                (\( sector, fastest ) ->
-                                    div []
-                                        [ text (Sector.toString sector ++ "_fastest: ")
-                                        , text (bestTimeText fastest)
-                                        ]
-                                )
-                       )
-                )
-            ]
-        , let
-            laps =
-                race.cars
-                    |> List.Extra.find (\car -> car.metadata.carNumber == "2")
-                    |> Maybe.map (\car -> List.take lapCount car.laps)
-                    |> Maybe.withDefault []
-          in
-          DataView.view (config bestTimes) leaderboardState (List.indexedMap (lapRow bestTimes) laps)
-        ]
+            Just { replay } ->
+                debugView replay leaderboardState
     }
+
+
+debugView : Replay.Model -> Leaderboard.Model -> List (Html Msg)
+debugView replay leaderboardState =
+    let
+        { playback, race } =
+            replay
+
+        lapCount =
+            Replay.lapCount replay
+
+        -- The whole race's records, not the clock's: this page reports what
+        -- the data holds, and the slider must not change what a record means.
+        bestTimes =
+            BestTimes.final race.bestTimeChanges
+    in
+    [ header
+        [ css
+            [ position sticky
+            , top zero
+            , displayFlex
+            , justifyContent spaceBetween
+            , backgroundColor (hsl 0 0 0.4)
+            ]
+        ]
+        [ nav []
+            [ input
+                [ type_ "range"
+                , Attributes.max <| String.fromInt race.lapTotal
+                , value (String.fromInt lapCount)
+                , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
+                ]
+                []
+            , labeledButton []
+                [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
+                , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
+                , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
+                ]
+            , text (Clock.getElapsed playback |> Instant.toString)
+            ]
+        , div []
+            ([ div [] [ text "fastestLapTime: ", text (bestTimeText bestTimes.fastestLapTime) ]
+             , div [] [ text "slowestLapTime: ", text (bestTimeText bestTimes.slowestLapTime) ]
+             ]
+                ++ (Sector.toList bestTimes.fastestSectors
+                        |> List.map
+                            (\( sector, fastest ) ->
+                                div []
+                                    [ text (Sector.toString sector ++ "_fastest: ")
+                                    , text (bestTimeText fastest)
+                                    ]
+                            )
+                   )
+            )
+        ]
+    , let
+        laps =
+            race.cars
+                |> List.Extra.find (\car -> car.metadata.carNumber == "2")
+                |> Maybe.map (\car -> List.take lapCount car.laps)
+                |> Maybe.withDefault []
+      in
+      DataView.view (config bestTimes) leaderboardState (List.indexedMap (lapRow bestTimes) laps)
+    ]
 
 
 {-| One row of this page is one lap of one car, not one car of the race. The
