@@ -145,13 +145,13 @@ update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
         CalendarLoaded (Ok calendar) ->
-            requestWaitingRound { m | calendar = calendar }
+            resumeWaitingRound { m | calendar = calendar }
 
         CalendarLoaded (Err _) ->
             ( m, Effect.none )
 
         FetchJson_Wec params ->
-            requestWaitingRound { m | round = Waiting params }
+            resumeWaitingRound { m | round = Waiting params }
 
         JsonLoaded_Wec key (Ok summary) ->
             ( { m | round = arrived key (withSummary summary) m.round }, Effect.none )
@@ -172,8 +172,8 @@ update msg m =
 {-| Called from both sides of the race between the URL and the calendar, so
 whichever arrives second is the one that finds everything it needs here.
 -}
-requestWaitingRound : Model -> ( Model, Effect Msg )
-requestWaitingRound m =
+resumeWaitingRound : Model -> ( Model, Effect Msg )
+resumeWaitingRound m =
     case m.round of
         Waiting params ->
             case Calendar.findRound params m.calendar of
