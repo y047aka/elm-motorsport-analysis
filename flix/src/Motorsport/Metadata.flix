@@ -5,6 +5,7 @@ mod Motorsport.Metadata {
     use Util.HourClock.Hour
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Motorsport.Calendar
     use Motorsport.Car.Car
     use Motorsport.Events
     use Motorsport.Track
@@ -54,23 +55,27 @@ mod Motorsport.Metadata {
         lapTotal  = Int32
     }
 
-    /// `season` is read off the path the CSV came in on -- see
-    /// `Cli.FileTask.season` -- because the laps say nothing about the year.
+    /// The laps say nothing about which round they are -- no column carries the
+    /// year, and the same race is run again the next one -- so that arrives from
+    /// outside, as the calendar entry the run was working through. Which is why
+    /// `season` and `date` are certain: without them the file was never opened.
     pub type alias Metadata = {
         name         = String,
-        season       = Option[Int32],
+        season       = Int32,
+        date         = String,
         race         = Particulars,
         track        = Track.Track,
         startingGrid = StartingGrid
     }
 
-    pub def fromRawLaps(eventId: String, season: Option[Int32], rawLaps: List[RawLap]): Metadata =
+    pub def fromRawLaps(entry: Calendar.Entry, rawLaps: List[RawLap]): Metadata =
         let builds = buildCars(rawLaps);
         {
-            name         = Events.displayName(eventId),
-            season       = season,
+            name         = Events.displayName(entry#id),
+            season       = entry#season,
+            date         = entry#date,
             race         = particularsOf(rawLaps),
-            track        = Track.fromRawLaps(Events.direction(eventId), rawLaps),
+            track        = Track.fromRawLaps(Events.direction(entry#id), rawLaps),
             startingGrid = estimateGrid(builds)
         }
 
@@ -198,18 +203,14 @@ mod Motorsport.Metadata {
         }
 
     pub def toJson(meta: Metadata): Encode.JsonValue =
-        let season = match meta#season {
-            case None    => Nil
-            case Some(y) => ("season", JsonInt(y)) :: Nil
-        };
         JsonObject(
-            ("name", JsonString(meta#name)) ::
-            List.append(season,
-                ("race",         particularsToJson(meta#race)) ::
-                ("track",        Track.toJson(meta#track)) ::
-                ("startingGrid", gridToJson(meta#startingGrid)) ::
-                Nil
-            )
+            ("name",         JsonString(meta#name)) ::
+            ("season",       JsonInt(meta#season)) ::
+            ("date",         JsonString(meta#date)) ::
+            ("race",         particularsToJson(meta#race)) ::
+            ("track",        Track.toJson(meta#track)) ::
+            ("startingGrid", gridToJson(meta#startingGrid)) ::
+            Nil
         )
 
     def particularsToJson(p: Particulars): Encode.JsonValue =

@@ -7,10 +7,8 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 
 -}
 
-import Data.Series as Series
-import Data.Series.EventSummary exposing (EventSummary)
-import Data.Series.Wec
 import Data.Wec as Wec
+import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
@@ -31,9 +29,20 @@ import Shared.Msg exposing (Msg(..))
 is used: everything else about a frame follows from `replay` and the clock,
 where the track never moves once the data has loaded. See
 [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
+
+`season` and `eventName` both come off the calendar entry the round was found
+in, so the app never holds a second opinion about what a race is called.
+
+`requestedRound` is a URL that arrived before the calendar did. The calendar is
+what says where a round's files are, so the request waits rather than being
+guessed at, and is cleared once issued so a later calendar cannot ask twice.
+
 -}
 type alias Model =
-    { eventSummary : EventSummary
+    { calendar : Calendar
+    , season : Int
+    , eventName : String
+    , requestedRound : Maybe { season : String, event : String }
     , replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
@@ -42,6 +51,10 @@ type alias Model =
     }
 
 
+{-| The calendar is asked for here rather than by the page that lists it: it is
+the same file whichever route the app opened on, and a round reached by its URL
+still needs it.
+-}
 init : flags -> ( Model, Effect Msg )
 init _ =
     let
@@ -51,14 +64,21 @@ init _ =
         snapshotInit =
             snapshotOf replayInit
     in
-    ( { eventSummary = noEvent
+    ( { calendar = Calendar.empty
+      , season = 0
+      , eventName = ""
+      , requestedRound = Nothing
       , replay = replayInit
       , snapshot = snapshotInit
       , track = Tracker.empty
       , pendingWecEvent = Nothing
       , pendingWecLaps = Nothing
       }
-    , Effect.none
+    , Effect.sendCmd <|
+        Http.get
+            { url = "/static/wec/index.json"
+            , expect = Http.expectJson CalendarLoaded Calendar.decoder
+            }
     )
 
 
@@ -69,48 +89,24 @@ init _ =
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
-        FetchJson_Wec options ->
-            let
-                eventSummary =
-                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
-                        |> Maybe.andThen Series.toEventSummary
-                        |> Maybe.withDefault noEvent
-            in
-            ( { m
-                | eventSummary = eventSummary
-                , pendingWecEvent = Nothing
-                , pendingWecLaps = Nothing
-              }
-            , case Era.fromSeason eventSummary.season of
-                Just era ->
-                    Effect.sendCmd <|
-                        Cmd.batch
-                            [ Http.get
-                                { url = eventSummary.jsonPath
-                                , expect = Http.expectJson JsonLoaded_Wec (Wec.eventDecoder era)
-                                }
-                            , Http.get
-                                { url = lapsPathFor eventSummary.jsonPath
-                                , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
-                                }
-                            ]
+        CalendarLoaded (Ok calendar) ->
+            requestRequestedRound { m | calendar = calendar }
 
-                Nothing ->
-                    -- No grid for this season, so no way to read its classes.
-                    -- Nothing is asked for.
-                    Effect.none
-            )
+        CalendarLoaded (Err _) ->
+            ( m, Effect.none )
+
+        FetchJson_Wec options ->
+            requestRequestedRound
+                { m
+                    | requestedRound = Just options
+                    , season = 0
+                    , eventName = ""
+                    , pendingWecEvent = Nothing
+                    , pendingWecLaps = Nothing
+                }
 
         JsonLoaded_Wec (Ok decoded) ->
-            let
-                modelEventSummary =
-                    m.eventSummary
-            in
-            finalizeWecIfReady
-                { m
-                    | eventSummary = { modelEventSummary | name = decoded.name }
-                    , pendingWecEvent = Just decoded
-                }
+            finalizeWecIfReady { m | pendingWecEvent = Just decoded }
 
         JsonLoaded_Wec (Err _) ->
             ( m, Effect.none )
@@ -134,17 +130,44 @@ update msg m =
             )
 
 
-{-| The round the app shows before one has been asked for, and in place of one
-it cannot show.
+{-| Asks for the round the URL named, once the calendar can say where its files
+are.
+
+Called from both sides of the race between the two, so whichever of the URL and
+the calendar arrives second is the one that finds everything it needs here.
+
 -}
-noEvent : EventSummary
-noEvent =
-    { id = ""
-    , name = ""
-    , season = 0
-    , date = ""
-    , jsonPath = ""
-    }
+requestRequestedRound : Model -> ( Model, Effect Msg )
+requestRequestedRound m =
+    case Maybe.andThen (\params -> Calendar.findRound params m.calendar) m.requestedRound of
+        Nothing ->
+            ( m, Effect.none )
+
+        Just ( season, round ) ->
+            ( { m
+                | requestedRound = Nothing
+                , season = season.season
+                , eventName = round.name
+              }
+            , case Era.fromSeason season.season of
+                Just era ->
+                    Effect.sendCmd <|
+                        Cmd.batch
+                            [ Http.get
+                                { url = round.summary
+                                , expect = Http.expectJson JsonLoaded_Wec (Wec.eventDecoder era)
+                                }
+                            , Http.get
+                                { url = round.laps
+                                , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
+                                }
+                            ]
+
+                Nothing ->
+                    -- No grid for this season, so no way to read its classes.
+                    -- Nothing is asked for.
+                    Effect.none
+            )
 
 
 {-| The race read where playback has got to.
@@ -152,15 +175,6 @@ noEvent =
 snapshotOf : Replay.Model -> Snapshot
 snapshotOf { race, playback } =
     Snapshot.at { elapsed = Clock.getElapsed playback } race
-
-
-lapsPathFor : String -> String
-lapsPathFor jsonPath =
-    if String.endsWith ".json" jsonPath then
-        String.dropRight 5 jsonPath ++ "_laps.json"
-
-    else
-        jsonPath ++ "_laps.json"
 
 
 finalizeWecIfReady : Model -> ( Model, Effect Msg )

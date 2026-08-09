@@ -1,13 +1,16 @@
 mod Cli.Stages {
 
     use Sys.Console
+    use Util.Files
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.CsvDecode
     use Cli.Stages.CsvInput
+    use Cli.Stages.Manifest
     use Cli.Stages.Output
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
+    use Cli.Stages.Unlisted
     use Cli.Stages.Validation
     use Motorsport.Wec.RawLap
 
@@ -22,23 +25,56 @@ mod Cli.Stages {
         errors    = Int32
     }
 
-    pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
+    /// The calendar is the worklist, so a run converts the rounds it holds and
+    /// nothing else. Two ways that can be wrong, and both are said out loud: a
+    /// round with no CSV fails the run, and a CSV no round names is reported and
+    /// left alone.
+    pub def runAll(root: String): Int32 \ {IO, Console} =
+        let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
                 case Ok(report) =>
-                    Console.println("${task#eventName}: Wrote ${report#lapCount} laps");
-                    Console.println("${task#eventName}: Metadata -> ${report#outputPath}");
-                    Console.println("${task#eventName}: Laps     -> ${report#lapsPath}");
+                    Console.println("${FileTask.label(task)}: Wrote ${report#lapCount} laps");
+                    Console.println("${FileTask.label(task)}: Metadata -> ${report#outputPath}");
+                    Console.println("${FileTask.label(task)}: Laps     -> ${report#lapsPath}");
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
-                    Console.eprintln("${task#eventName}: ${e}");
+                    Console.eprintln("${FileTask.label(task)}: ${e}");
                     { errors = acc#errors + 1 | acc }
             },
             { processed = 0, errors = 0 },
             tasks
         );
-        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
-        if (summary#errors == 0) 0 else 1
+        reportUnlistedCsvFiles(root, tasks);
+        let calendarErrors = writeCalendar(root);
+        let errors = summary#errors + calendarErrors;
+        Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
+        if (errors == 0) 0 else 1
+
+    /// Not an error: the run converted everything it was asked for, and this is
+    /// about what it was not asked for. Saying it is what keeps a forgotten line
+    /// in `Motorsport.Calendar` from passing for a clean run.
+    def reportUnlistedCsvFiles(root: String, tasks: List[FileTask.FileTask]): Unit \ {IO, Console} =
+        match Files.walkCsvFiles(root) {
+            case Err(e) => Console.eprintln("Calendar: could not check for unlisted CSV files (${e})")
+            case Ok(found) =>
+                Unlisted.detect(tasks, found)
+                    |> List.forEach(path ->
+                        Console.eprintln("Calendar: ${path} is not on the calendar, skipped")
+                    )
+        }
+
+    /// Written once for the run, not once per file, and written even by a run
+    /// that decoded nothing: the calendar is not made from the laps.
+    def writeCalendar(root: String): Int32 \ {IO, Console} =
+        match Manifest.write(root) {
+            case Ok(path) =>
+                Console.println("Calendar -> ${path}");
+                0
+            case Err(e) =>
+                Console.eprintln("Calendar: ${e}");
+                1
+        }
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         CsvInput.read(task#inputPath)
@@ -53,12 +89,12 @@ mod Cli.Stages {
 
     def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
         rawLaps -> {
-            Validation.validate(task#eventName, rawLaps) |> List.forEach(Console.eprintln);
+            Validation.validate(task#entry#id, rawLaps) |> List.forEach(Console.eprintln);
             rawLaps
         }
 
     def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
-        rawLaps -> Transform.transform(task#eventName, task#season, rawLaps)
+        rawLaps -> Transform.transform(task#entry, rawLaps)
 
     def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
         rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)

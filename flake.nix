@@ -57,16 +57,6 @@
             '';
           };
 
-        mkCargoApp = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ pkgs.cargo pkgs.rustc pkgs.rustfmt ];
-            text = ''
-              cd cli
-              ${cmd}
-            '';
-          };
-
         # Runner for the Tauri v2 native app. Runs cargo-tauri with app/ as the cwd
         # (cargo-tauri finds ./src-tauri/tauri.conf.json and runs
         # beforeDevCommand=`pnpm run start` from app/).
@@ -101,6 +91,11 @@
               ${cmd}
             '';
           };
+
+        # The CLI's one argument is the directory holding the season directories.
+        # It takes nothing else, and converts the rounds `Motorsport.Calendar`
+        # lists.
+        cliRunCmd = "flix run -- ../app/static/wec";
 
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
@@ -138,12 +133,9 @@
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
-          cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
-          cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
-          cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2026"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
-          flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
-          flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
-          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec/2026"}/bin/flix-run";                             meta.description = "Run Flix project (CSV -> JSON)"; };
+          cli-build            = { type = "app"; program = "${mkFlixApp "cli-build" "flix build"}/bin/cli-build";                                                    meta.description = "Build the CLI"; };
+          cli-test             = { type = "app"; program = "${mkFlixApp "cli-test"  "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
+          cli-run              = { type = "app"; program = "${mkFlixApp "cli-run"   cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });

@@ -4,55 +4,23 @@ mod Cli.TestArgs {
 
     @Test
     def testParseNoArgs(): Unit \ Assert =
-        let result = Args.parse(Nil);
-        Assert.assertTrue(Result.isErr(result))
+        Assert.assertTrue(Result.isErr(Args.parse(Nil)))
 
     @Test
-    def testParseInputOnly(): Unit \ Assert =
-        let result = Args.parse("input.csv" :: Nil);
-        match result {
-            case Ok(parsed) =>
-                Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(Option.isEmpty(parsed#outputFile))
-            case Err(_) =>
-                Assert.assertTrue(false)
-        }
-
-    @Test
-    def testParseWithOutput(): Unit \ Assert =
-        let result = Args.parse("input.csv" :: "--output" :: "out.json" :: Nil);
-        match result {
-            case Ok(parsed) =>
-                Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(parsed#outputFile == Some("out.json"))
-            case Err(_) =>
-                Assert.assertTrue(false)
-        }
-
-    @Test
-    def testParseOutputBeforeInput(): Unit \ Assert =
-        let result = Args.parse("--output" :: "out.json" :: "input.csv" :: Nil);
-        match result {
-            case Ok(parsed) =>
-                Assert.assertTrue(parsed#inputPath == "input.csv");
-                Assert.assertTrue(parsed#outputFile == Some("out.json"))
-            case Err(_) =>
-                Assert.assertTrue(false)
+    def testParseRoot(): Unit \ Assert =
+        match Args.parse("../app/static/wec" :: Nil) {
+            case Ok(parsed) => Assert.assertTrue(parsed#root == "../app/static/wec")
+            case Err(_)     => Assert.assertTrue(false)
         }
 
     @Test
     def testParseUnexpectedArgument(): Unit \ Assert =
-        let result = Args.parse("input.csv" :: "extra" :: Nil);
-        Assert.assertTrue(Result.isErr(result))
+        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "extra" :: Nil)))
 
+    /// The calendar decides what is converted, so there is no single file to
+    /// redirect.
     @Test
-    def testParseOutputWithoutValue(): Unit \ Assert =
-        let result = Args.parse("input.csv" :: "--output" :: Nil);
-        Assert.assertTrue(Result.isErr(result))
-
-    @Test
-    def testParseDuplicateOutput(): Unit \ Assert =
-        let result = Args.parse("--output" :: "a.json" :: "--output" :: "b.json" :: "input.csv" :: Nil);
-        Assert.assertTrue(Result.isErr(result))
+    def testOutputIsNoLongerAnOption(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--output" :: "out.json" :: Nil)))
 
 }

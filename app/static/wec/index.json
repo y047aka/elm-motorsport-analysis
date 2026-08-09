@@ -1,0 +1,117 @@
+{
+  "seasons": [
+    {
+      "season": 2026,
+      "rounds": [
+        {
+          "id": "imola_6h",
+          "name": "6 Hours of Imola",
+          "date": "2026-04-19",
+          "summary": "/static/wec/2026/imola_6h.json",
+          "laps": "/static/wec/2026/imola_6h_laps.json"
+        },
+        {
+          "id": "spa_6h",
+          "name": "6 Hours of Spa",
+          "date": "2026-05-09",
+          "summary": "/static/wec/2026/spa_6h.json",
+          "laps": "/static/wec/2026/spa_6h_laps.json"
+        },
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2026-06-13",
+          "summary": "/static/wec/2026/le_mans_24h.json",
+          "laps": "/static/wec/2026/le_mans_24h_laps.json"
+        },
+        {
+          "id": "sao_paulo_6h",
+          "name": "6 Hours of São Paulo",
+          "date": "2026-07-12",
+          "summary": "/static/wec/2026/sao_paulo_6h.json",
+          "laps": "/static/wec/2026/sao_paulo_6h_laps.json"
+        }
+      ]
+    },
+    {
+      "season": 2025,
+      "rounds": [
+        {
+          "id": "qatar_1812km",
+          "name": "Qatar 1812km",
+          "date": "2025-03-01",
+          "summary": "/static/wec/2025/qatar_1812km.json",
+          "laps": "/static/wec/2025/qatar_1812km_laps.json"
+        },
+        {
+          "id": "imola_6h",
+          "name": "6 Hours of Imola",
+          "date": "2025-04-20",
+          "summary": "/static/wec/2025/imola_6h.json",
+          "laps": "/static/wec/2025/imola_6h_laps.json"
+        },
+        {
+          "id": "spa_6h",
+          "name": "6 Hours of Spa",
+          "date": "2025-05-10",
+          "summary": "/static/wec/2025/spa_6h.json",
+          "laps": "/static/wec/2025/spa_6h_laps.json"
+        },
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2025-06-14",
+          "summary": "/static/wec/2025/le_mans_24h.json",
+          "laps": "/static/wec/2025/le_mans_24h_laps.json"
+        },
+        {
+          "id": "sao_paulo_6h",
+          "name": "6 Hours of São Paulo",
+          "date": "2025-07-13",
+          "summary": "/static/wec/2025/sao_paulo_6h.json",
+          "laps": "/static/wec/2025/sao_paulo_6h_laps.json"
+        },
+        {
+          "id": "cota_6h",
+          "name": "Lone Star Le Mans",
+          "date": "2025-09-07",
+          "summary": "/static/wec/2025/cota_6h.json",
+          "laps": "/static/wec/2025/cota_6h_laps.json"
+        },
+        {
+          "id": "fuji_6h",
+          "name": "6 Hours of Fuji",
+          "date": "2025-09-28",
+          "summary": "/static/wec/2025/fuji_6h.json",
+          "laps": "/static/wec/2025/fuji_6h_laps.json"
+        }
+      ]
+    },
+    {
+      "season": 2024,
+      "rounds": [
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2024-06-15",
+          "summary": "/static/wec/2024/le_mans_24h.json",
+          "laps": "/static/wec/2024/le_mans_24h_laps.json"
+        },
+        {
+          "id": "fuji_6h",
+          "name": "6 Hours of Fuji",
+          "date": "2024-09-15",
+          "summary": "/static/wec/2024/fuji_6h.json",
+          "laps": "/static/wec/2024/fuji_6h_laps.json"
+        },
+        {
+          "id": "bahrain_8h",
+          "name": "8 Hours of Bahrain",
+          "date": "2024-11-02",
+          "summary": "/static/wec/2024/bahrain_8h.json",
+          "laps": "/static/wec/2024/bahrain_8h_laps.json"
+        }
+      ]
+    }
+  ]
+}
