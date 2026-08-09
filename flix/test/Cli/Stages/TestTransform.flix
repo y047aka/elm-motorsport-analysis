@@ -9,8 +9,8 @@ mod Cli.Stages.TestTransform {
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
 
-    /// Rust 側 integration.rs L500-505 の create_test_csv_data と同等の 3 行データ。
-    /// セミコロン区切り、22 列以上のフィールド。
+    /// The three rows Rust's create_test_csv_data uses (integration.rs L500-505):
+    /// semicolon-separated, 22 columns or more.
     def sampleRawLaps(): List[RawLap] =
         let csv =
             header() + "\n" +
@@ -29,12 +29,12 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformCountsLaps(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         Assert.assertTrue(out#lapCount == 3)
 
     @Test
     def testTransformRendersMetadataJson(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         let json = out#metadataJson;
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
@@ -43,7 +43,7 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformRendersLapsJson(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         let json = out#lapsJson;
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, json));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, json));
@@ -52,9 +52,10 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformEmptyInputProducesEmptyArrays(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", Nil);
+        let out = Transform.transform("le_mans_24h", Some(2025), Nil);
         Assert.assertTrue(out#lapCount == 0);
-        Assert.assertTrue(String.contains({substr = "\"startingGrid\": []"}, out#metadataJson));
+        Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
+        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));
         Assert.assertTrue(out#lapsJson == "[]")
 
 }

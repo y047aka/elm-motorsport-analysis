@@ -8,7 +8,8 @@ mod Cli.FileTask {
         inputPath = String,
         outputPath = String,
         lapsPath = String,
-        eventName = String
+        eventName = String,
+        season = Option[Int32]
     }
 
     pub def make(inputPath: String, outputOverride: Option[String]): FileTask =
@@ -17,7 +18,8 @@ mod Cli.FileTask {
             inputPath   = inputPath,
             outputPath  = outputPath,
             lapsPath    = derivedLapsPath(outputPath),
-            eventName   = eventName(inputPath)
+            eventName   = eventName(inputPath),
+            season      = season(inputPath)
         }
 
     pub def fromArgs(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
@@ -74,5 +76,16 @@ mod Cli.FileTask {
         let parts = String.split({regex = "/"}, inputPath);
         let fileName = parts |> List.last |> Option.getWithDefault(inputPath);
         stripLastExtension(fileName)
+
+    /// The directory the CSV is filed under -- `wec/2025/fuji_6h.csv` -- which
+    /// is the only place the season is written down: no column of the feed
+    /// carries the year, and neither does the event name. Nothing is guessed
+    /// from the dates inside, which are a calendar year and not a season.
+    def season(inputPath: String): Option[Int32] =
+        String.split({regex = "/"}, inputPath)
+            |> List.reverse
+            |> List.drop(1)
+            |> List.head
+            |> Option.flatMap(Int32.fromString)
 
 }

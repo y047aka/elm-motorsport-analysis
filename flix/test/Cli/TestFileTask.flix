@@ -46,6 +46,28 @@ mod Cli.TestFileTask {
         Assert.assertTrue(task#eventName == "race")
 
     @Test
+    def testSeasonFromTheDirectoryTheCsvIsFiledUnder(): Unit \ Assert =
+        // Only the directory immediately above the file counts, so neither the
+        // series below the root nor the depth of the path comes into it.
+        let task = FileTask.make("../app/static/wec/2025/fuji_6h.csv", None);
+        Assert.assertTrue(task#season == Some(2025))
+
+    @Test
+    def testCsvOutsideASeasonDirectoryHasNoSeason(): Unit \ Assert =
+        let task = FileTask.make("data/race.csv", None);
+        Assert.assertTrue(task#season == None)
+
+    @Test
+    def testCsvWithNoDirectoryHasNoSeason(): Unit \ Assert =
+        let task = FileTask.make("race.csv", None);
+        Assert.assertTrue(task#season == None)
+
+    @Test
+    def testSeasonComesFromTheInputNotTheOutput(): Unit \ Assert =
+        let task = FileTask.make("wec/2025/fuji_6h.csv", Some("/tmp/2026/out.json"));
+        Assert.assertTrue(task#season == Some(2025))
+
+    @Test
     def testLapsPathFromOverrideWithExtension(): Unit \ Assert =
         let task = FileTask.make("input.csv", Some("data/out.bin"));
         Assert.assertTrue(task#outputPath == "data/out.bin");

@@ -12,8 +12,8 @@ mod Cli.Stages.Transform {
         lapsJson     = String
     }
 
-    pub def transform(eventId: String, rawLaps: List[RawLap]): Rendered =
-        let metadata     = Metadata.fromRawLaps(eventId, rawLaps);
+    pub def transform(eventId: String, season: Option[Int32], rawLaps: List[RawLap]): Rendered =
+        let metadata     = Metadata.fromRawLaps(eventId, season, rawLaps);
         let metadataJson = Encode.render(Metadata.toJson(metadata));
         let lapsJson     = Encode.render(JsonArray(List.map(Wec.toJson, rawLaps)));
         {

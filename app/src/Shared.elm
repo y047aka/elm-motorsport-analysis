@@ -15,7 +15,6 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
-import Motorsport.Circuit as Circuit
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -31,14 +30,14 @@ import Shared.Msg exposing (Msg(..))
 {-| `track` is the one derived value kept here rather than worked out where it
 is used: everything else about a frame follows from `replay` and the clock,
 where the track never moves once the data has loaded. See
-[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf).
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
 -}
 type alias Model =
     { eventSummary : EventSummary
     , replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
-    , pendingWecCars : Maybe (List Car)
+    , pendingWecEvent : Maybe Wec.Event
     , pendingWecLaps : Maybe (List WecLaps.RawLap)
     }
 
@@ -55,8 +54,8 @@ init _ =
     ( { eventSummary = noEvent
       , replay = replayInit
       , snapshot = snapshotInit
-      , track = Tracker.trackOf replayInit.race
-      , pendingWecCars = Nothing
+      , track = Tracker.empty
+      , pendingWecEvent = Nothing
       , pendingWecLaps = Nothing
       }
     , Effect.none
@@ -79,7 +78,7 @@ update msg m =
             in
             ( { m
                 | eventSummary = eventSummary
-                , pendingWecCars = Nothing
+                , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }
             , case Era.fromSeason eventSummary.season of
@@ -104,16 +103,13 @@ update msg m =
 
         JsonLoaded_Wec (Ok decoded) ->
             let
-                cars =
-                    decoded.startingGrid |> List.map Car.fromStartingGrid
-
                 modelEventSummary =
                     m.eventSummary
             in
             finalizeWecIfReady
                 { m
                     | eventSummary = { modelEventSummary | name = decoded.name }
-                    , pendingWecCars = Just cars
+                    , pendingWecEvent = Just decoded
                 }
 
         JsonLoaded_Wec (Err _) ->
@@ -139,8 +135,7 @@ update msg m =
 
 
 {-| The round the app shows before one has been asked for, and in place of one
-it cannot show. Its circuit is the plain clockwise layout, which is what an
-empty race is drawn on.
+it cannot show.
 -}
 noEvent : EventSummary
 noEvent =
@@ -149,7 +144,6 @@ noEvent =
     , season = 0
     , date = ""
     , jsonPath = ""
-    , circuit = Circuit.clockwise
     }
 
 
@@ -171,14 +165,18 @@ lapsPathFor jsonPath =
 
 finalizeWecIfReady : Model -> ( Model, Effect Msg )
 finalizeWecIfReady m =
-    case ( m.pendingWecCars, m.pendingWecLaps ) of
-        ( Just cars, Just rawLaps ) ->
+    case ( m.pendingWecEvent, m.pendingWecLaps ) of
+        ( Just event, Just rawLaps ) ->
             let
                 carsWithLaps =
-                    WecLaps.attach rawLaps cars
+                    event.startingGrid.entries
+                        |> List.map Car.fromStartingGrid
+                        |> WecLaps.attach rawLaps
 
                 replayNew =
-                    Replay.fromCars m.eventSummary.circuit carsWithLaps
+                    Replay.fromCars
+                        { timeLimit = event.timeLimit }
+                        carsWithLaps
             in
             ( { m
                 | replay = replayNew
@@ -186,8 +184,8 @@ finalizeWecIfReady m =
 
                 -- Settled here, with the race, and not touched again until the
                 -- next one loads.
-                , track = Tracker.trackOf replayNew.race
-                , pendingWecCars = Nothing
+                , track = Tracker.fromConfig event.track
+                , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }
             , Effect.none

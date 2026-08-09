@@ -1,16 +1,14 @@
-module Motorsport.Chart.Tracker exposing (Track, trackOf, view)
+module Motorsport.Chart.Tracker exposing (Track, empty, fromConfig, view)
 
 {-| The field drawn going round the circuit.
 
-@docs Track, trackOf, view
+@docs Track, empty, fromConfig, view
 
 -}
 
 import Css
-import Motorsport.BestTimes as BestTimes
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Race exposing (Race)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans
@@ -100,7 +98,7 @@ progressToAngleScale direction =
 
 
 {-| The circuit, drawn to the proportions the race ended up with. See
-[`trackOf`](#trackOf).
+[`fromConfig`](#fromConfig).
 -}
 type Track
     = Track
@@ -109,20 +107,30 @@ type Track
         }
 
 
-{-| Work the track out from the race that was run on it. Hold on to the result
-and hand it to [`view`](#view) each frame.
-
-The proportions come from the race's _final_ records, not from the ones standing
-at some moment of it: a sector's share of the lap is how quick it was at its
-quickest, and mid-race that answer is still moving. Reading it at the end is
-what makes the track the same shape from the first frame to the last.
-
+{-| The track as the summary describes it. Hold on to the result and hand it to
+[`view`](#view) each frame.
 -}
-trackOf : Race -> Track
-trackOf race =
+fromConfig : { direction : Direction, config : TrackConfig } -> Track
+fromConfig =
     Track
-        { direction = race.circuit.direction
-        , config = Config.buildConfig race.circuit (BestTimes.final race.bestTimeChanges)
+
+
+{-| The track to stand in for one whose summary has not loaded yet. Written out
+rather than worked out: the rule that divides a lap lives in the CLI now, and
+three thirds do not need it.
+-}
+empty : Track
+empty =
+    Track
+        { direction = Clockwise
+        , config =
+            { sectors =
+                { s1 = { start = 0, share = 1 / 3 }
+                , s2 = { start = 1 / 3, share = 1 / 3 }
+                , s3 = { start = 2 / 3, share = 1 / 3 }
+                }
+            , miniSectors = Config.NoMiniSectors
+            }
         }
 
 

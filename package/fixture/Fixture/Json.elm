@@ -102,6 +102,7 @@ collectCarData info acc =
 
 toPlaceholderCar : ( String, CarData ) -> Car
 toPlaceholderCar ( carNumber, data ) =
+    -- No grid to read here, and 0 is outside the 1..n one hands out.
     Car.fromStartingGrid
         { position = 0
         , car =

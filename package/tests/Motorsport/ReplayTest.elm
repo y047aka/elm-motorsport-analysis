@@ -1,7 +1,6 @@
 module Motorsport.ReplayTest exposing (suite)
 
 import Expect
-import Motorsport.Circuit as Circuit
 import Motorsport.Wec.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -96,14 +95,14 @@ suite =
 
 
 -- FIXTURE
--- Car "1" retires after three laps, pitting on lap 2. Car "2" runs past the two
--- hour mark, so the rounded time limit is 2h -- which is what makes car "1"'s
--- final lap a retirement rather than a chequered flag.
+-- A two-hour race. Car "1" retires after three laps, pitting on lap 2; car "2"
+-- runs past the flag -- which is what makes car "1"'s final lap a retirement
+-- rather than a chequered flag.
 
 
 initialModel : Replay.Model
 initialModel =
-    Replay.fromCars Circuit.clockwise [ retiringCar, survivingCar ]
+    Replay.fromCars { timeLimit = Instant.fromDuration 7200000 } [ retiringCar, survivingCar ]
 
 
 retiringCar : Car

@@ -21,7 +21,7 @@ suite =
             \_ ->
                 let
                     events =
-                        TimelineEvent.fromCars []
+                        timelineOf 0 []
                 in
                 Expect.all
                     [ \() -> Expect.equal 1 (List.length events)
@@ -38,54 +38,24 @@ suite =
                                 Expect.fail "Expected RaceStart event"
                     ]
                     ()
-        , test "calcTimeLimit rounds down to whole hours (short race -> 0)" <|
+        , test "a car still out there when the flag falls takes it" <|
             \_ ->
                 let
                     car =
-                        carWithLaps [ lapAt 1 95365, lapAt 2 189575 ]
-
-                    events =
-                        TimelineEvent.fromCars [ car ]
-
-                    -- timeLimit = (189575 // 3600000) * 3600000 = 0
-                    -- final_lap.elapsed = 189575 >= 0, so terminal event is Checkered
-                    checkered =
-                        events
-                            |> List.filter
-                                (\e ->
-                                    case e.eventType of
-                                        CarEvent _ Checkered ->
-                                            True
-
-                                        _ ->
-                                            False
-                                )
+                        carWithLaps [ lapAt 1 3500000, lapAt 2 7300000 ]
                 in
-                Expect.equal 1 (List.length checkered)
-        , test "calcTimeLimit rounds 2.5h to 2h (Checkered branch)" <|
+                timelineOf 7200000 [ car ]
+                    |> terminalEventTypes
+                    |> Expect.equal [ Checkered ]
+        , test "a car whose last lap is short of the flag retired" <|
             \_ ->
                 let
-                    -- 2.5h = 9_000_000 ms. Rounded down to 7_200_000 (2h) = timeLimit.
-                    -- final lap elapsed = 9_000_000 >= 7_200_000 => Checkered.
                     car =
-                        carWithLaps [ lapAt 1 9000000 ]
-
-                    events =
-                        TimelineEvent.fromCars [ car ]
-
-                    checkered =
-                        events
-                            |> List.filter
-                                (\e ->
-                                    case e.eventType of
-                                        CarEvent _ Checkered ->
-                                            True
-
-                                        _ ->
-                                            False
-                                )
+                        carWithLaps [ lapAt 1 3500000, lapAt 2 7100000 ]
                 in
-                Expect.equal 1 (List.length checkered)
+                timelineOf 7200000 [ car ]
+                    |> terminalEventTypes
+                    |> Expect.equal [ Retirement ]
         , test "single car with two laps produces correctly sorted events" <|
             \_ ->
                 let
@@ -93,7 +63,7 @@ suite =
                         carWithLaps [ lapAt 1 95365, lapAt 2 189575 ]
 
                     events =
-                        TimelineEvent.fromCars [ car ]
+                        timelineOf 0 [ car ]
                 in
                 Expect.all
                     [ \() -> Expect.atLeast 3 (List.length events)
@@ -122,7 +92,7 @@ suite =
                         carWithLaps laps
 
                     events =
-                        TimelineEvent.fromCars [ car ]
+                        timelineOf 0 [ car ]
 
                     pitInEvents =
                         events
@@ -207,7 +177,7 @@ suite =
                         carWithLaps laps
 
                     events =
-                        TimelineEvent.fromCars [ car ]
+                        timelineOf 0 [ car ]
 
                     embeddedPitTimes =
                         events
@@ -362,11 +332,38 @@ carNumbered carNumber laps =
     { base | metadata = { metadata | carNumber = carNumber } }
 
 
+{-| The timeline of a race that ran to `timeLimit`. Fixtures that do not care
+where the flag fell pass nought, which puts every car past it, so no retirement
+gets in the way of what they are actually about.
+-}
+timelineOf : Int -> List Car -> List TimelineEvent
+timelineOf timeLimit cars =
+    TimelineEvent.fromCars { timeLimit = Instant.fromDuration timeLimit } cars
+
+
+{-| How each car's race ended.
+-}
+terminalEventTypes : List TimelineEvent -> List CarEventType
+terminalEventTypes =
+    List.filterMap
+        (\event ->
+            case event.eventType of
+                CarEvent _ Checkered ->
+                    Just Checkered
+
+                CarEvent _ Retirement ->
+                    Just Retirement
+
+                _ ->
+                    Nothing
+        )
+
+
 {-| Every TookLead in the timeline, as (when, who).
 -}
 tookLeadEvents : List Car -> List ( Int, String )
 tookLeadEvents cars =
-    TimelineEvent.fromCars cars
+    timelineOf 0 cars
         |> List.filterMap
             (\event ->
                 case event.eventType of

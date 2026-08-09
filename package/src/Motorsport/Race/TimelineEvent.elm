@@ -48,17 +48,18 @@ type CarEventType
 
 {-| Build a sorted list of timeline events from a race's entry list.
 
+`timeLimit` decides whether a car's last lap was the flag or a retirement, and
+is passed in rather than read off the laps -- see
+[`Race.fromCars`](Motorsport-Race#fromCars).
+
 There is deliberately no per-lap completion event: one per car per lap was five
 in six of the list, and the laps are on the car already for everything that
 reads them.
 
 -}
-fromCars : List Car -> List TimelineEvent
-fromCars cars =
+fromCars : { timeLimit : Instant } -> List Car -> List TimelineEvent
+fromCars { timeLimit } cars =
     let
-        timeLimit =
-            calcTimeLimit cars
-
         events =
             [ raceStartEvent ]
                 ++ startEvents cars
@@ -67,20 +68,6 @@ fromCars cars =
                 ++ terminalEvents timeLimit cars
     in
     List.sortBy (.eventTime >> Instant.toDuration) events
-
-
-calcTimeLimit : List Car -> Instant
-calcTimeLimit cars =
-    let
-        hour =
-            60 * 60 * 1000
-
-        lastLap =
-            cars
-                |> List.filterMap (\car -> List.Extra.last car.laps |> Maybe.map .elapsed)
-                |> List.foldl Instant.later Instant.raceStart
-    in
-    Instant.fromDuration ((Instant.toDuration lastLap // hour) * hour)
 
 
 raceStartEvent : TimelineEvent
