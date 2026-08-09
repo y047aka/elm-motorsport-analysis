@@ -35,6 +35,6 @@ mod Cli.Args {
         }
 
     pub def usage(): String =
-        Util.GetOpt.usageInfo("Usage: flix-run <dir holding the season directories>", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>", optionDescrs())
 
 }

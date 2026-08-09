@@ -4,16 +4,14 @@ Motorsport race analysis and visualization app. pnpm workspaces monorepo:
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css)
 - **`/package`** — reusable Elm library (motorsport domain models)
-- **`/flix`** — Flix CLI for CSV→JSON data processing. **This is the one that
-  writes what the app reads.**
+- **`/flix`** — the CLI for CSV→JSON data processing, written in Flix
 - **`/cli`** — the Rust CLI it was ported from, on its way out
 
-Data flow: CSV telemetry → Flix CLI → JSON → Elm visualization.
+Data flow: CSV telemetry → CLI → JSON → Elm visualization.
 
 The Rust CLI stopped keeping up some time ago — it writes no `track` object and
-no `index.json`, both of which the app needs — so `.#cli-run` runs the Flix one.
-`/cli` is reference for the port until it is removed; nothing regenerates data
-through it.
+no `index.json`, both of which the app needs — so nothing runs it any more. It
+has no flake commands; `/cli` is reference for the port until it is removed.
 
 ## Commands
 
@@ -28,20 +26,20 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-run` | Regenerate every JSON under `app/static/wec` (CSV→JSON) |
-| `nix run .#flix-build` / `.#flix-test` / `.#flix-run` | Flix CLI build / test / run |
-| `nix run .#cli-build` / `.#cli-test` | Rust CLI build / test (superseded — see above) |
+| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
-`.#cli-run` and `.#flix-run` are the same run under two names.
+The `cli-*` commands drive `/flix`. There are no `flix-*` commands and no
+commands for `/cli` — the CLI is one thing with one set of names, and which
+language it is written in is not something a caller should have to know.
 
-It takes the directory holding the season directories and converts every round
-`Motorsport.Calendar` lists, writing each round's two JSON files plus
-`index.json` beside them. It converts nothing the calendar does not list, so **a
-new round is added by adding it to `Motorsport.Calendar` first** — the run
-reports any CSV it finds that no round names, and fails any round whose CSV is
-missing.
+`.#cli-run` takes the directory holding the season directories and converts
+every round `Motorsport.Calendar` lists, writing each round's two JSON files
+plus `index.json` beside them. It converts nothing the calendar does not list,
+so **a new round is added by adding it to `Motorsport.Calendar` first** — the
+run reports any CSV it finds that no round names, and fails any round whose CSV
+is missing.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
