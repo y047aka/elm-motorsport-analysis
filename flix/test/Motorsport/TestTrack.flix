@@ -102,15 +102,14 @@ mod Motorsport.TestTrack {
 
     @Test
     def testNoRecordsAtAllDividesTheLapEvenly(): Unit \ Assert =
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), mkLap(0, None, None, None) :: Nil);
-        Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
-        Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)))
-
-    @Test
-    def testEmptyFileDividesTheLapEvenly(): Unit \ Assert =
-        let track = Track.fromRawLaps(None, Nil);
-        Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
-        Assert.assertTrue(Option.isEmpty(track#miniSectors))
+        // Nothing is known about how long each stretch is until a lap has been
+        // round, whether the file holds a blank lap or no laps at all.
+        List#{mkLap(0, None, None, None) :: Nil, Nil} |> List.forEach(laps -> {
+            let track = Track.fromRawLaps(None, laps);
+            Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
+            Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)));
+            Assert.assertTrue(Option.isEmpty(track#miniSectors))
+        })
 
     @Test
     def testSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ Assert =

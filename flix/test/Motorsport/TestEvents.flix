@@ -45,7 +45,7 @@ mod Motorsport.TestEvents {
         Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids))
 
     @Test
-    def testTheThreeCounterClockwiseRounds(): Unit \ Assert =
+    def testWhichRoundsRunCounterClockwise(): Unit \ Assert =
         use Motorsport.Circuit.Direction.Direction;
         Assert.assertTrue(Events.direction("imola_6h") == Some(Direction.CounterClockwise));
         Assert.assertTrue(Events.direction("cota_6h") == Some(Direction.CounterClockwise));

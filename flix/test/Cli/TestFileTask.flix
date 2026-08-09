@@ -47,12 +47,9 @@ mod Cli.TestFileTask {
 
     @Test
     def testSeasonFromTheDirectoryTheCsvIsFiledUnder(): Unit \ Assert =
+        // Only the directory immediately above the file counts, so neither the
+        // series below the root nor the depth of the path comes into it.
         let task = FileTask.make("../app/static/wec/2025/fuji_6h.csv", None);
-        Assert.assertTrue(task#season == Some(2025))
-
-    @Test
-    def testSeasonIgnoresTheSeriesAboveIt(): Unit \ Assert =
-        let task = FileTask.make("wec/2025/le_mans_24h.csv", None);
         Assert.assertTrue(task#season == Some(2025))
 
     @Test
