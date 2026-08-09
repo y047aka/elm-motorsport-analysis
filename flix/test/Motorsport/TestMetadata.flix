@@ -282,7 +282,19 @@ mod Motorsport.TestMetadata {
     def testUnfiledEventHasNoSeasonKey(): Unit \ Assert =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
         let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("custom_event", None, laps)));
-        Assert.assertTrue(not String.contains({substr = "\"season\""}, json))
+        Assert.assertTrue(not String.contains({substr = "\"season\""}, json));
+        Assert.assertTrue(not String.contains({substr = "\"date\""}, json))
+
+    /// The season is what the date is looked up by, so a round the calendar does
+    /// hold still goes undated when the path it came in on does not say which
+    /// year it was.
+    @Test
+    def testAnEventOffTheCalendarHasNoDateKey(): Unit \ Assert =
+        let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
+        let unfiled = Encode.render(Metadata.toJson(Metadata.fromRawLaps("le_mans_24h", None, laps)));
+        Assert.assertTrue(not String.contains({substr = "\"date\""}, unfiled));
+        let unrun = Encode.render(Metadata.toJson(Metadata.fromRawLaps("imola_6h", Some(2024), laps)));
+        Assert.assertTrue(not String.contains({substr = "\"date\""}, unrun))
 
     @Test
     def testToJsonRendersExpectedKeys(): Unit \ Assert =
@@ -293,6 +305,7 @@ mod Motorsport.TestMetadata {
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
+        Assert.assertTrue(String.contains({substr = "\"date\": \"2025-06-14\""}, json));
         Assert.assertTrue(String.contains({substr = "\"race\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startedAt\": \"16:00:00.000\""}, json));
         Assert.assertTrue(String.contains({substr = "\"duration\": \"1:33.291\""}, json));

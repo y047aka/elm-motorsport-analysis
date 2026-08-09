@@ -1,5 +1,6 @@
 mod Motorsport.TestEvents {
 
+    use Motorsport.Calendar
     use Motorsport.Events
 
     @Test
@@ -38,11 +39,17 @@ mod Motorsport.TestEvents {
     def testUnknownPassThrough(): Unit \ Assert =
         Assert.assertTrue(Events.displayName("unknown_event") == "unknown_event")
 
+    /// Reads the ids off `Motorsport.Calendar` rather than listing them again,
+    /// so a round added to the calendar and to nothing else fails here.
     @Test
     def testEveryRoundOnTheCalendarHasADirection(): Unit \ Assert =
-        let ids = "qatar_1812km" :: "imola_6h" :: "spa_6h" :: "le_mans_24h" ::
-                  "cota_6h" :: "fuji_6h" :: "bahrain_8h" :: "sao_paulo_6h" :: Nil;
-        Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids))
+        let seasons = 2024 :: 2025 :: 2026 :: Nil;
+        let ids = seasons
+            |> List.flatMap(season -> Calendar.rounds(season) |> Option.getWithDefault(Nil))
+            |> List.map(r -> r#id);
+        Assert.assertTrue(not List.isEmpty(ids));
+        Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids));
+        Assert.assertTrue(List.forAll(id -> Events.displayName(id) != id, ids))
 
     @Test
     def testWhichRoundsRunCounterClockwise(): Unit \ Assert =

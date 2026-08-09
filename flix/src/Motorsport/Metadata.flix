@@ -5,6 +5,7 @@ mod Motorsport.Metadata {
     use Util.HourClock.Hour
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
+    use Motorsport.Calendar
     use Motorsport.Car.Car
     use Motorsport.Events
     use Motorsport.Track
@@ -56,9 +57,13 @@ mod Motorsport.Metadata {
 
     /// `season` is read off the path the CSV came in on -- see
     /// `Cli.FileTask.season` -- because the laps say nothing about the year.
+    ///
+    /// `date` needs that season before it can be looked up, so a CSV filed
+    /// somewhere the season cannot be read has no date either.
     pub type alias Metadata = {
         name         = String,
         season       = Option[Int32],
+        date         = Option[String],
         race         = Particulars,
         track        = Track.Track,
         startingGrid = StartingGrid
@@ -69,6 +74,7 @@ mod Motorsport.Metadata {
         {
             name         = Events.displayName(eventId),
             season       = season,
+            date         = season |> Option.flatMap(y -> Calendar.dateOf(y, eventId)),
             race         = particularsOf(rawLaps),
             track        = Track.fromRawLaps(Events.direction(eventId), rawLaps),
             startingGrid = estimateGrid(builds)
@@ -202,14 +208,18 @@ mod Motorsport.Metadata {
             case None    => Nil
             case Some(y) => ("season", JsonInt(y)) :: Nil
         };
+        let date = match meta#date {
+            case None    => Nil
+            case Some(d) => ("date", JsonString(d)) :: Nil
+        };
         JsonObject(
             ("name", JsonString(meta#name)) ::
-            List.append(season,
+            List.append(season, List.append(date,
                 ("race",         particularsToJson(meta#race)) ::
                 ("track",        Track.toJson(meta#track)) ::
                 ("startingGrid", gridToJson(meta#startingGrid)) ::
                 Nil
-            )
+            ))
         )
 
     def particularsToJson(p: Particulars): Encode.JsonValue =
