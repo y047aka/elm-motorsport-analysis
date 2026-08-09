@@ -1,9 +1,5 @@
 mod Motorsport.Calendar {
 
-    use Util.Json.Encode
-    use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
-    use Motorsport.Events
-
     /// One round of a season: the id its files are filed under, and the day it
     /// was run.
     pub type alias Round = {
@@ -102,41 +98,5 @@ mod Motorsport.Calendar {
     /// moves.
     pub def find(season: Int32, eventId: String): Option[Entry] =
         entries() |> List.find(e -> e#season == season and e#id == eventId)
-
-    /// The calendar as the app reads it: the names, and where each round's files
-    /// are served from.
-    ///
-    /// The paths are stated rather than left to a rule the reader reproduces.
-    /// A convention both sides know is two copies of it, and the app has no way
-    /// to notice when its copy stops matching where the files actually went.
-    ///
-    /// `urlRoot` is where the season directories are served from, which is not
-    /// where they are written -- the CLI writes `../app/static/wec/2025/...` and
-    /// the app fetches `/static/wec/2025/...`. Only the caller knows both.
-    pub def toJson(urlRoot: String): Encode.JsonValue =
-        JsonObject(
-            ("seasons", JsonArray(seasons() |> List.map(seasonToJson(urlRoot)))) ::
-            Nil
-        )
-
-    def seasonToJson(urlRoot: String): Season -> Encode.JsonValue =
-        s -> JsonObject(
-            ("season", JsonInt(s#season)) ::
-            ("rounds", JsonArray(s#rounds |> List.map(roundToJson(urlRoot, s#season)))) ::
-            Nil
-        )
-
-    def roundToJson(urlRoot: String, season: Int32): Round -> Encode.JsonValue =
-        r -> {
-            let stem = "${urlRoot}/${season}/${r#id}";
-            JsonObject(
-                ("id",      JsonString(r#id)) ::
-                ("name",    JsonString(Events.displayName(r#id))) ::
-                ("date",    JsonString(r#date)) ::
-                ("summary", JsonString("${stem}.json")) ::
-                ("laps",    JsonString("${stem}_laps.json")) ::
-                Nil
-            )
-        }
 
 }

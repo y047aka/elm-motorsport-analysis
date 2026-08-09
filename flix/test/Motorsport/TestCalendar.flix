@@ -1,6 +1,5 @@
 mod Motorsport.TestCalendar {
 
-    use Util.Json.Encode
     use Motorsport.Calendar
 
     def ids(season: Int32): List[String] =
@@ -60,32 +59,5 @@ mod Motorsport.TestCalendar {
     def testTheSeasonsRunNewestFirst(): Unit \ Assert =
         let years = Calendar.seasons() |> List.map(s -> s#season);
         Assert.assertTrue(years == List.sort(years) |> List.reverse)
-
-    @Test
-    def testTheCalendarJsonCarriesEverySeasonWithItsRoundsNamed(): Unit \ Assert =
-        let json = Encode.render(Calendar.toJson("/static/wec"));
-        Assert.assertTrue(String.contains({substr = "\"seasons\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2026"}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2024"}, json));
-        Assert.assertTrue(String.contains({substr = "\"id\": \"le_mans_24h\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"name\": \"24 Hours of Le Mans\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"date\": \"2024-06-15\""}, json))
-
-    /// The app fetches these rather than building them, so they are the only
-    /// statement of where a round's files are.
-    @Test
-    def testEveryRoundStatesWhereItsFilesAre(): Unit \ Assert =
-        let json = Encode.render(Calendar.toJson("/static/wec"));
-        Assert.assertTrue(String.contains({substr = "\"summary\": \"/static/wec/2025/spa_6h.json\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"laps\": \"/static/wec/2025/spa_6h_laps.json\""}, json))
-
-    /// Nothing under the root is baked in, so moving where the app serves from
-    /// is one argument and not an edit on both sides.
-    @Test
-    def testTheUrlRootIsTheCallersToGive(): Unit \ Assert =
-        let json = Encode.render(Calendar.toJson("/elsewhere"));
-        Assert.assertTrue(String.contains({substr = "\"summary\": \"/elsewhere/2026/imola_6h.json\""}, json));
-        Assert.assertTrue(not String.contains({substr = "/static/wec"}, json))
 
 }
