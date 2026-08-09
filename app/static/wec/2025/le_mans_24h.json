@@ -1,5 +1,6 @@
 {
   "name": "24 Hours of Le Mans",
+  "season": 2025,
   "race": {
     "startedAt": "16:00:00.000",
     "duration": "24:06:46.484",

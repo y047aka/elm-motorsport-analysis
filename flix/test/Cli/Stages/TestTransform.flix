@@ -29,12 +29,12 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformCountsLaps(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         Assert.assertTrue(out#lapCount == 3)
 
     @Test
     def testTransformRendersMetadataJson(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         let json = out#metadataJson;
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
@@ -43,7 +43,7 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformRendersLapsJson(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", sampleRawLaps());
+        let out = Transform.transform("le_mans_24h", Some(2025), sampleRawLaps());
         let json = out#lapsJson;
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, json));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, json));
@@ -52,7 +52,7 @@ mod Cli.Stages.TestTransform {
 
     @Test
     def testTransformEmptyInputProducesEmptyArrays(): Unit \ Assert =
-        let out = Transform.transform("le_mans_24h", Nil);
+        let out = Transform.transform("le_mans_24h", Some(2025), Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));

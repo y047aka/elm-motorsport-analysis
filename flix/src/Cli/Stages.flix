@@ -58,7 +58,7 @@ mod Cli.Stages {
         }
 
     def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
-        rawLaps -> Transform.transform(task#eventName, rawLaps)
+        rawLaps -> Transform.transform(task#eventName, task#season, rawLaps)
 
     def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
         rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)

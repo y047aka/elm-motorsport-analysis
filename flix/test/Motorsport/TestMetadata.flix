@@ -60,13 +60,13 @@ mod Motorsport.TestMetadata {
     @Test
     def testEventDisplayNameApplied(): Unit \ Assert =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         Assert.assertTrue(meta#name == "24 Hours of Le Mans")
 
     @Test
     def testUnknownEventPassThrough(): Unit \ Assert =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let meta = Metadata.fromRawLaps("custom_event", laps);
+        let meta = Metadata.fromRawLaps("custom_event", None, laps);
         Assert.assertTrue(meta#name == "custom_event")
 
     @Test
@@ -77,7 +77,7 @@ mod Motorsport.TestMetadata {
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1S1);
         match grid#entries {
             case e12 :: e7 :: Nil =>
@@ -95,7 +95,7 @@ mod Motorsport.TestMetadata {
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
         match grid#entries {
             case e7 :: e12 :: Nil =>
@@ -114,7 +114,7 @@ mod Motorsport.TestMetadata {
             withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
         match grid#entries {
             case e12 :: e7 :: Nil =>
@@ -134,7 +134,7 @@ mod Motorsport.TestMetadata {
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1S1);
         let order = grid#entries |> List.map(e -> e#car#carNumber);
         Assert.assertTrue(order == "12" :: "7" :: "99" :: Nil)
@@ -148,7 +148,7 @@ mod Motorsport.TestMetadata {
             withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             withS1("29.100", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         let order = grid#entries |> List.map(e -> e#car#carNumber);
         Assert.assertTrue(order == "7" :: "10" :: "9" :: Nil)
 
@@ -158,7 +158,7 @@ mod Motorsport.TestMetadata {
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 2, "3:07.610", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
@@ -172,7 +172,7 @@ mod Motorsport.TestMetadata {
             mkLap("12", 2, "3:07.610", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 3, "4:50.000", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
@@ -184,7 +184,7 @@ mod Motorsport.TestMetadata {
         let laps =
             mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota Gazoo Racing", "Toyota") ::
             Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#class == "HYPERCAR");
@@ -202,7 +202,7 @@ mod Motorsport.TestMetadata {
             mkLap("1", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         match meta#startingGrid#entries {
             case e7 :: e1 :: Nil =>
                 Assert.assertTrue(e7#car#carNumber == "7");
@@ -219,7 +219,7 @@ mod Motorsport.TestMetadata {
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::
             Nil;
-        let grid = Metadata.fromRawLaps("le_mans_24h", laps)#startingGrid;
+        let grid = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Unknown);
         match grid#entries {
             case e8 :: e99 :: Nil =>
@@ -240,7 +240,7 @@ mod Motorsport.TestMetadata {
             mkLap("12", 3, "2:30:00.000", "STEVENS",   "HYPERCAR", "H", "Hertz",  "Porsche") ::
             mkLap("7",  2, "2:29:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
             Nil;
-        let race = Metadata.fromRawLaps("fuji_6h", laps)#race;
+        let race = Metadata.fromRawLaps("fuji_6h", Some(2025), laps)#race;
         Assert.assertTrue(race#duration == mkDuration("2:30:00.000"));
         Assert.assertTrue(race#timeLimit == mkDuration("2:00:00.000"));
         Assert.assertTrue(race#lapTotal == 3)
@@ -252,7 +252,7 @@ mod Motorsport.TestMetadata {
         let laps =
             withHour("11:02:32.086", mkLap("7", 1, "1:35.343", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let race = Metadata.fromRawLaps("fuji_6h", laps)#race;
+        let race = Metadata.fromRawLaps("fuji_6h", Some(2025), laps)#race;
         Assert.assertTrue(race#startedAt == Some(mkHour("11:00:56.743")))
 
     @Test
@@ -262,12 +262,12 @@ mod Motorsport.TestMetadata {
         let laps =
             withHour("02:00:00.000", mkLap("7", 300, "10:00:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let race = Metadata.fromRawLaps("le_mans_24h", laps)#race;
+        let race = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps)#race;
         Assert.assertTrue(race#startedAt == Some(mkHour("16:00:00.000")))
 
     @Test
     def testNoLapsLeavesTheRaceUnread(): Unit \ Assert =
-        let race = Metadata.fromRawLaps("fuji_6h", Nil)#race;
+        let race = Metadata.fromRawLaps("fuji_6h", Some(2025), Nil)#race;
         Assert.assertTrue(race#startedAt == None);
         Assert.assertTrue(race#duration == Duration.zero());
         Assert.assertTrue(race#timeLimit == Duration.zero());
@@ -275,17 +275,32 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testUnreadStartIsOmittedRatherThanMidnight(): Unit \ Assert =
-        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("fuji_6h", Nil)));
+        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("fuji_6h", Some(2025), Nil)));
         Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
+
+    @Test
+    def testSeasonIsCarriedThroughAsGiven(): Unit \ Assert =
+        // The laps say nothing about the year, so whatever the caller read off
+        // the path is what comes out.
+        let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
+        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("le_mans_24h", Some(2024), laps)));
+        Assert.assertTrue(String.contains({substr = "\"season\": 2024"}, json))
+
+    @Test
+    def testUnfiledEventHasNoSeasonKey(): Unit \ Assert =
+        let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
+        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("custom_event", None, laps)));
+        Assert.assertTrue(not String.contains({substr = "\"season\""}, json))
 
     @Test
     def testToJsonRendersExpectedKeys(): Unit \ Assert =
         let laps = withHour("16:01:33.291", withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota"))) :: Nil;
-        let meta = Metadata.fromRawLaps("le_mans_24h", laps);
+        let meta = Metadata.fromRawLaps("le_mans_24h", Some(2025), laps);
         let json = Encode.render(Metadata.toJson(meta));
         // Asserts the shape: that the keys are present.
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
         Assert.assertTrue(String.contains({substr = "\"race\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startedAt\": \"16:00:00.000\""}, json));
         Assert.assertTrue(String.contains({substr = "\"duration\": \"1:33.291\""}, json));

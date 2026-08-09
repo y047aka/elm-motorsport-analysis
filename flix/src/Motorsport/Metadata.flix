@@ -57,16 +57,22 @@ mod Motorsport.Metadata {
         lapTotal  = Int32
     }
 
+    /// `season` is read off the path the CSV came in on rather than out of the
+    /// laps, which say nothing about the year -- see
+    /// [`Cli.FileTask`](Cli.FileTask)'s `season`. A file filed outside a season
+    /// directory has none, and the key is left out.
     pub type alias Metadata = {
         name         = String,
+        season       = Option[Int32],
         race         = Particulars,
         startingGrid = StartingGrid
     }
 
-    pub def fromRawLaps(eventId: String, rawLaps: List[RawLap]): Metadata =
+    pub def fromRawLaps(eventId: String, season: Option[Int32], rawLaps: List[RawLap]): Metadata =
         let builds = buildCars(rawLaps);
         {
             name         = Events.displayName(eventId),
+            season       = season,
             race         = particularsOf(rawLaps),
             startingGrid = estimateGrid(builds)
         }
@@ -197,11 +203,17 @@ mod Motorsport.Metadata {
         }
 
     pub def toJson(meta: Metadata): Encode.JsonValue =
+        let season = match meta#season {
+            case None    => Nil
+            case Some(y) => ("season", JsonInt(y)) :: Nil
+        };
         JsonObject(
-            ("name",         JsonString(meta#name)) ::
-            ("race",         particularsToJson(meta#race)) ::
-            ("startingGrid", gridToJson(meta#startingGrid)) ::
-            Nil
+            ("name", JsonString(meta#name)) ::
+            List.append(season,
+                ("race",         particularsToJson(meta#race)) ::
+                ("startingGrid", gridToJson(meta#startingGrid)) ::
+                Nil
+            )
         )
 
     /// A race with no laps in it has no time of day to report, so the key is
