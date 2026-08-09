@@ -43,6 +43,20 @@ mod Motorsport.TestMetadata {
     def withS1(s1: String, lap: RawLap): RawLap =
         { s1 = { value = Duration.fromString(s1), improvement = Wec.Improvement.None } | lap }
 
+    /// Gives a lap the time of day it crossed the line at; `mkLap` leaves every
+    /// lap at midnight, which would put every race's start at minus its elapsed.
+    def withHour(hour: String, lap: RawLap): RawLap =
+        { hour = mkHour(hour) | lap }
+
+    def mkHour(raw: String): Hour =
+        match Util.HourClock.parse(raw) {
+            case Ok(h)  => h
+            case Err(_) => Hour.Hour(0)
+        }
+
+    def mkDuration(raw: String): Duration.Duration =
+        Duration.fromString(raw) |> Option.getWithDefault(Duration.zero())
+
     @Test
     def testEventDisplayNameApplied(): Unit \ Assert =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
@@ -217,13 +231,66 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
+    def testRaceRanAsFarAsTheLastLapTaken(): Unit \ Assert =
+        // The last car home did 2:30:00, so a two-hour race ran half an hour
+        // over -- which is the ordinary way a timed race ends, on the lap in
+        // progress when the flag falls.
+        let laps =
+            mkLap("7",  1, "1:33.291",    "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
+            mkLap("12", 3, "2:30:00.000", "STEVENS",   "HYPERCAR", "H", "Hertz",  "Porsche") ::
+            mkLap("7",  2, "2:29:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
+            Nil;
+        let race = Metadata.fromRawLaps("fuji_6h", laps)#race;
+        Assert.assertTrue(race#duration == mkDuration("2:30:00.000"));
+        Assert.assertTrue(race#timeLimit == mkDuration("2:00:00.000"));
+        Assert.assertTrue(race#lapTotal == 3)
+
+    @Test
+    def testStartedAtIsHourLessElapsed(): Unit \ Assert =
+        // Fuji 2025's opening lap: crossed the line at 11:02:32.086 having
+        // taken 1:35.343 to get there.
+        let laps =
+            withHour("11:02:32.086", mkLap("7", 1, "1:35.343", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
+            Nil;
+        let race = Metadata.fromRawLaps("fuji_6h", laps)#race;
+        Assert.assertTrue(race#startedAt == Some(mkHour("11:00:56.743")))
+
+    @Test
+    def testStartedAtSurvivesMidnight(): Unit \ Assert =
+        // Le Mans starts at 16:00 and runs past midnight, so hour wraps while
+        // elapsed keeps growing: a lap done at 02:00 is ten hours in.
+        let laps =
+            withHour("02:00:00.000", mkLap("7", 300, "10:00:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
+            Nil;
+        let race = Metadata.fromRawLaps("le_mans_24h", laps)#race;
+        Assert.assertTrue(race#startedAt == Some(mkHour("16:00:00.000")))
+
+    @Test
+    def testNoLapsLeavesTheRaceUnread(): Unit \ Assert =
+        let race = Metadata.fromRawLaps("fuji_6h", Nil)#race;
+        Assert.assertTrue(race#startedAt == None);
+        Assert.assertTrue(race#duration == Duration.zero());
+        Assert.assertTrue(race#timeLimit == Duration.zero());
+        Assert.assertTrue(race#lapTotal == 0)
+
+    @Test
+    def testUnreadStartIsOmittedRatherThanMidnight(): Unit \ Assert =
+        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("fuji_6h", Nil)));
+        Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
+
+    @Test
     def testToJsonRendersExpectedKeys(): Unit \ Assert =
-        let laps = withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) :: Nil;
+        let laps = withHour("16:01:33.291", withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota"))) :: Nil;
         let meta = Metadata.fromRawLaps("le_mans_24h", laps);
         let json = Encode.render(Metadata.toJson(meta));
         // Asserts the shape: that the keys are present.
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"race\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"startedAt\": \"16:00:00.000\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"duration\": \"1:33.291\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"timeLimit\": \"0.000\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"lapTotal\": 1"}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
         Assert.assertTrue(String.contains({substr = "\"basis\": \"lap1_s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"entries\""}, json));

@@ -81,7 +81,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars Circuit.clockwise
+    Race.fromCars { circuit = Circuit.clockwise, timeLimit = Instant.fromDuration 7200000 }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000

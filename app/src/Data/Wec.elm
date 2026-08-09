@@ -13,14 +13,28 @@ module Data.Wec exposing
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 import Json.Decode.Pipeline exposing (required)
 import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car as Car
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era exposing (Era)
 import Motorsport.Wec.Manufacturer as Manufacturer
 
 
+{-| `timeLimit` is when the chequered flag falls, taken out of the file's `race`
+object. The CLI reads it off the last lap anyone completed, rounded down to the
+hour, because a WEC round is scheduled in whole hours and the timing feed never
+says which.
+
+That object states three things beside it -- when the race started, how long it
+actually ran, and the lap the leader finished on -- which are not decoded here.
+The last two the app works out for itself from the laps it goes on to load, and
+having them arrive twice would only give the two answers a chance to disagree;
+the first has nothing showing a time of day to read it yet.
+
+-}
 type alias Event =
     { name : String
+    , timeLimit : Instant
     , startingGrid : StartingGrid
     }
 
@@ -61,8 +75,9 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Decoder Event
 eventDecoder era =
-    Decode.map2 Event
+    Decode.map3 Event
         (field "name" string)
+        (field "race" (field "timeLimit" Instant.decoder))
         (field "startingGrid" (startingGridDecoder era))
 
 

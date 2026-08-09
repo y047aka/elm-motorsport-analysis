@@ -1,5 +1,11 @@
 {
   "name": "6 Hours of Spa",
+  "race": {
+    "startedAt": "14:00:52.157",
+    "duration": "6:03:17.717",
+    "timeLimit": "6:00:00.000",
+    "lapTotal": 150
+  },
   "startingGrid": {
     "basis": "lap1_s1",
     "entries": [

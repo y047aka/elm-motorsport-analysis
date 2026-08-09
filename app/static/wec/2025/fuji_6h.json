@@ -1,5 +1,11 @@
 {
   "name": "6 Hours of Fuji",
+  "race": {
+    "startedAt": "11:00:56.743",
+    "duration": "6:02:16.489",
+    "timeLimit": "6:00:00.000",
+    "lapTotal": 202
+  },
   "startingGrid": {
     "basis": "lap1_s1",
     "entries": [

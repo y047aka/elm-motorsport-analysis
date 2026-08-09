@@ -46,9 +46,9 @@ empty =
     }
 
 
-fromCars : Layout LeMans2025MiniSector -> List Car -> Model
-fromCars circuit cars =
-    { race = Race.fromCars circuit cars
+fromCars : { circuit : Layout LeMans2025MiniSector, timeLimit : Instant } -> List Car -> Model
+fromCars race cars =
+    { race = Race.fromCars race cars
     , playback = Clock.init
     }
 

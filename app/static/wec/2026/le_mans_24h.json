@@ -1,5 +1,11 @@
 {
   "name": "24 Hours of Le Mans",
+  "race": {
+    "startedAt": "16:00:00.000",
+    "duration": "24:06:52.461",
+    "timeLimit": "24:00:00.000",
+    "lapTotal": 381
+  },
   "startingGrid": {
     "basis": "lap1_s1",
     "entries": [

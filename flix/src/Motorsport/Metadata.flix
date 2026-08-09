@@ -1,6 +1,8 @@
 mod Motorsport.Metadata {
 
     use Util.Duration.Duration
+    use Util.HourClock
+    use Util.HourClock.Hour
     use Util.Json.Encode
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
@@ -30,8 +32,34 @@ mod Motorsport.Metadata {
         entries = List[StartingGridEntry]
     }
 
+    /// How far the race ran, and when. Every one of these is read back off the
+    /// laps, because the feed states none of them directly.
+    ///
+    /// `duration` is the observation -- the last moment any car crossed the
+    /// line -- and `timeLimit` is what that is taken to mean: the scheduled
+    /// distance, which for every WEC round is a whole number of hours, so the
+    /// observation rounded down to the hour. The two are kept apart rather than
+    /// collapsed so a reader can see the estimate and what it was made from, in
+    /// the way `Basis` says where the grid order came from.
+    ///
+    /// `startedAt` is the time of day the race got under way, which the feed
+    /// carries only as `HOUR - ELAPSED`. That difference is constant across the
+    /// whole file -- `Cli.Stages.Validation`'s HourElapsedOffset rule is there
+    /// to say so -- which is why one lap is enough to read it.
+    ///
+    /// `lapTotal` is the highest lap number anyone completed, which is the lap
+    /// the leader finished on and so what the lap counter counts up to. It is
+    /// not the number of laps in the file: every car ran its own.
+    pub type alias Particulars = {
+        startedAt = Option[Hour],
+        duration  = Duration,
+        timeLimit = Duration,
+        lapTotal  = Int32
+    }
+
     pub type alias Metadata = {
         name         = String,
+        race         = Particulars,
         startingGrid = StartingGrid
     }
 
@@ -39,8 +67,30 @@ mod Motorsport.Metadata {
         let builds = buildCars(rawLaps);
         {
             name         = Events.displayName(eventId),
+            race         = particularsOf(rawLaps),
             startingGrid = estimateGrid(builds)
         }
+
+    def particularsOf(rawLaps: List[RawLap]): Particulars =
+        let duration = rawLaps |> List.foldLeft((acc, lap) -> laterOf(acc, lap#elapsed), Util.Duration.zero());
+        {
+            startedAt = rawLaps |> List.head |> Option.map(startedAtOf),
+            duration  = duration,
+            timeLimit = floorToHour(duration),
+            lapTotal  = rawLaps |> List.foldLeft((acc, lap) -> Int32.max(acc, lap#lapNumber), 0)
+        }
+
+    def laterOf(a: Duration, b: Duration): Duration =
+        if (Util.Duration.millis(b) > Util.Duration.millis(a)) b else a
+
+    /// `offsetFrom` folds the day-rollover in, so a lap turned after midnight
+    /// reads back the same start as the first one.
+    def startedAtOf(lap: RawLap): Hour =
+        Hour.Hour(HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed)))
+
+    def floorToHour(d: Duration): Duration =
+        let hourMs = 3600000;
+        Util.Duration.fromMillis((Util.Duration.millis(d) / hourMs) * hourMs)
 
     type alias CarBuild = {
         car         = Car,
@@ -149,9 +199,25 @@ mod Motorsport.Metadata {
     pub def toJson(meta: Metadata): Encode.JsonValue =
         JsonObject(
             ("name",         JsonString(meta#name)) ::
+            ("race",         particularsToJson(meta#race)) ::
             ("startingGrid", gridToJson(meta#startingGrid)) ::
             Nil
         )
+
+    /// A race with no laps in it has no time of day to report, so the key is
+    /// left out rather than filled with midnight -- the same choice
+    /// `Motorsport.Wec` makes for a lap with no mini-sectors.
+    def particularsToJson(p: Particulars): Encode.JsonValue =
+        let startedAt = match p#startedAt {
+            case None    => Nil
+            case Some(h) => ("startedAt", JsonString(HourClock.format(h))) :: Nil
+        };
+        JsonObject(List.append(startedAt,
+            ("duration",  JsonString(Util.Duration.format(p#duration))) ::
+            ("timeLimit", JsonString(Util.Duration.format(p#timeLimit))) ::
+            ("lapTotal",  JsonInt(p#lapTotal)) ::
+            Nil
+        ))
 
     def gridToJson(grid: StartingGrid): Encode.JsonValue =
         JsonObject(

@@ -21,7 +21,6 @@ moment is derived from the two, in
 -}
 
 import Dict
-import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Circuit as Circuit exposing (Layout)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -39,8 +38,9 @@ beside it read the same race at an instant, and are
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race
-was. `circuit` is the one thing here the lap data cannot say, so
-[`fromCars`](#fromCars) is given it.
+was. `circuit` and `timeLimit` are the two the lap data does not say -- the
+second only looks as though it does, being an estimate off the last lap
+completed -- so [`fromCars`](#fromCars) is given both.
 
 -}
 type alias Race =
@@ -77,11 +77,11 @@ per-lap positions assigned produce a timeline with no lead changes in it -- see
 [`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromCars : Layout LeMans2025MiniSector -> List Car -> Race
-fromCars circuit cars =
+fromCars : { circuit : Layout LeMans2025MiniSector, timeLimit : Instant } -> List Car -> Race
+fromCars { circuit, timeLimit } cars =
     let
         timelineEvents =
-            TimelineEvent.fromCars cars
+            TimelineEvent.fromCars { timeLimit = timeLimit } cars
 
         lapCompletions =
             calcLapCompletions cars
@@ -89,29 +89,12 @@ fromCars circuit cars =
     { cars = cars
     , circuit = circuit
     , lapTotal = ChangePoints.length lapCompletions
-    , timeLimit = calcTimeLimit cars
+    , timeLimit = timeLimit
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
     , bestTimeChanges = BestTimes.fromLaps (List.concatMap .laps cars)
     }
-
-
-{-| When the chequered flag falls: the last lap anyone completed, rounded down
-to the whole hour.
--}
-calcTimeLimit : List Car -> Instant
-calcTimeLimit cars =
-    let
-        hour =
-            60 * 60 * 1000
-
-        lastLap =
-            cars
-                |> List.filterMap (.laps >> List.Extra.last >> Maybe.map .elapsed)
-                |> List.foldl Instant.later Instant.raceStart
-    in
-    Instant.fromDuration ((Instant.toDuration lastLap // hour) * hour)
 
 
 {-| When the lap counter goes up, and to what.

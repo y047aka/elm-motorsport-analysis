@@ -225,7 +225,7 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars Circuit.clockwise [ carOne, carTwo ]
+    Race.fromCars { circuit = Circuit.clockwise, timeLimit = Instant.raceStart } [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -292,7 +292,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars Circuit.clockwise [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars { circuit = Circuit.clockwise, timeLimit = Instant.raceStart } [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -314,7 +314,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars Circuit.leMans2025 [ leMansCar ]
+    Race.fromCars { circuit = Circuit.leMans2025, timeLimit = Instant.raceStart } [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 

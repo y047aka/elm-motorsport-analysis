@@ -1,5 +1,11 @@
 {
   "name": "Qatar 1812km",
+  "race": {
+    "startedAt": "14:00:24.934",
+    "duration": "10:03:35.658",
+    "timeLimit": "10:00:00.000",
+    "lapTotal": 318
+  },
   "startingGrid": {
     "basis": "lap1_s1",
     "entries": [

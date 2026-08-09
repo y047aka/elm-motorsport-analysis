@@ -1,5 +1,11 @@
 {
   "name": "Lone Star Le Mans",
+  "race": {
+    "startedAt": "13:00:00.317",
+    "duration": "6:03:08.498",
+    "timeLimit": "6:00:00.000",
+    "lapTotal": 120
+  },
   "startingGrid": {
     "basis": "lap1_s1",
     "entries": [
