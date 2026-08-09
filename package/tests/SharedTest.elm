@@ -128,20 +128,36 @@ fuji =
     { season = 2025, id = "fuji_6h" }
 
 
-{-| A model that has the calendar and has been asked for Spa, so it is waiting
-on Spa's two files.
+calendar : Calendar.Calendar
+calendar =
+    Decode.decodeString Calendar.decoder calendarJson
+        |> Result.withDefault Calendar.empty
+
+
+fresh : Shared.Model
+fresh =
+    Shared.init () |> Tuple.first
+
+
+{-| Waiting on Spa's two files, reached the way a link from the index page
+reaches it: the calendar was already in when the URL arrived.
 -}
 loadingSpa : Shared.Model
 loadingSpa =
-    let
-        calendar =
-            Decode.decodeString Calendar.decoder calendarJson
-                |> Result.withDefault Calendar.empty
-    in
-    Shared.init ()
-        |> Tuple.first
+    fresh
         |> step (CalendarLoaded (Ok calendar))
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
+
+
+{-| The same round reached the other way round, which is what a deep link does:
+the URL is known before the calendar that says where its files are. Nothing can
+be asked for until the second of the two lands.
+-}
+loadingSpaByDeepLink : Shared.Model
+loadingSpaByDeepLink =
+    fresh
+        |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
+        |> step (CalendarLoaded (Ok calendar))
 
 
 step : Msg -> Shared.Model -> Shared.Model
@@ -157,12 +173,27 @@ suite =
                 ( summary /= Nothing, List.length laps )
                     |> Expect.equal ( True, 1 )
         , describe "update"
-            [ test "names the round as soon as the calendar resolves it" <|
+            [ test "resolves the round whichever of the URL and the calendar is second" <|
                 \_ ->
-                    loadingSpa
-                        |> Shared.roundId
-                        |> Maybe.map .name
-                        |> Expect.equal (Just "6 Hours of Spa")
+                    [ loadingSpa, loadingSpaByDeepLink ]
+                        |> List.map (Shared.roundId >> Maybe.map .name)
+                        |> Expect.equalLists
+                            [ Just "6 Hours of Spa", Just "6 Hours of Spa" ]
+            , test "loads a round reached by a deep link" <|
+                \_ ->
+                    loadingSpaByDeepLink
+                        |> deliverSummary spa
+                        |> deliverLaps spa
+                        |> Shared.race
+                        |> Expect.notEqual Nothing
+            , test "leaves a round the calendar does not list unresolved" <|
+                \_ ->
+                    -- Nothing is asked for, and there is nothing to name.
+                    fresh
+                        |> step (CalendarLoaded (Ok calendar))
+                        |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
+                        |> (\m -> ( Shared.roundId m, Shared.race m ))
+                        |> Expect.equal ( Nothing, Nothing )
             , test "shows no race until both of the round's files are in" <|
                 \_ ->
                     loadingSpa
