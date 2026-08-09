@@ -9,9 +9,9 @@ Motorsport race analysis and visualization app. pnpm workspaces monorepo:
 
 Data flow: CSV telemetry → CLI → JSON → Elm visualization.
 
-The Rust CLI stopped keeping up some time ago — it writes no `track` object and
-no `index.json`, both of which the app needs — so nothing runs it any more. It
-has no flake commands; `/cli` is reference for the port until it is removed.
+The Rust CLI writes no `track` object and no `index.json`, both of which the app
+needs, so nothing runs it any more: it has no flake commands, and `/cli` is
+reference for the port until it is removed.
 
 ## Commands
 
@@ -30,16 +30,15 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
-The `cli-*` commands drive `/flix`. There are no `flix-*` commands and no
-commands for `/cli` — the CLI is one thing with one set of names, and which
-language it is written in is not something a caller should have to know.
+The `cli-*` commands drive `/flix`; there are no `flix-*` ones. The CLI is one
+thing with one set of names, and which language it is written in is not
+something a caller should have to know.
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, writing each round's two JSON files
-plus `index.json` beside them. It converts nothing the calendar does not list,
-so **a new round is added by adding it to `Motorsport.Calendar` first** — the
-run reports any CSV it finds that no round names, and fails any round whose CSV
-is missing.
+plus `index.json` beside them. **A new round is added to `Motorsport.Calendar`
+first** — the run converts nothing the calendar does not list, reports any CSV
+no round names, and fails any round whose CSV is missing.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
@@ -58,11 +57,11 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 - `Page/` — one module per page, plain TEA
 - `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Button, Label, Table)
 
-`Data/Wec/Calendar.elm` decodes `index.json`, which is fetched once by `Shared`
-and is the app's only source for which rounds exist, what they are called, and
-where each round's files are. Nothing app-side builds those paths, and a round
-it does not list cannot be opened. `Data/Series.elm` is what is left of the
-compile-time calendar it replaced: car images, which nothing imports yet.
+`Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared`. It is
+the app's only source for which rounds exist, what they are called and where
+their files are — nothing app-side builds those paths, and a round it does not
+list cannot be opened. `Data/Series.elm` is what is left of the compile-time
+calendar it replaced: car images, which nothing imports yet.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

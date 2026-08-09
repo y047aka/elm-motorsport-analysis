@@ -6,9 +6,9 @@ mod Cli.Args {
         case ParseErrors(List[String])
     }
 
-    /// The only thing a run decides is where the season directories are. What to
-    /// convert comes from `Motorsport.Calendar`, so there is no per-file input
-    /// and nothing to redirect a single file's output to.
+    /// Where the season directories are, and nothing else. What to convert comes
+    /// from `Motorsport.Calendar`, so there is no per-file input and nothing to
+    /// redirect a single file's output to.
     pub type alias ParsedArgs = {
         root = String
     }

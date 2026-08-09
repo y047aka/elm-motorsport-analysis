@@ -1,26 +1,19 @@
 mod Motorsport.Calendar {
 
-    /// One round of a season: the id its files are filed under, and the day it
-    /// was run.
     pub type alias Round = {
         id   = String,
         date = String
     }
 
-    /// A season and the rounds it ran, in the order it ran them.
+    /// The rounds are in the order the season ran them.
     pub type alias Season = {
         season = Int32,
         rounds = List[Round]
     }
 
-    /// One round with its season carried alongside, which is what it takes to
-    /// name a round: `spa_6h` ran in 2025 and in 2026, and nothing inside either
-    /// file says which year it is.
-    ///
-    /// This is what the CLI works from. It walks the calendar and builds the
-    /// paths, rather than walking the paths and asking the calendar about what
-    /// it found -- which is why nothing here has to be parsed back out of a
-    /// directory name.
+    /// A round with its season carried alongside, which is what it takes to name
+    /// one: `spa_6h` ran in 2025 and in 2026, and nothing inside either file
+    /// says which year it is.
     pub type alias Entry = {
         season = Int32,
         id     = String,
@@ -29,20 +22,16 @@ mod Motorsport.Calendar {
 
     /// The seasons the app has, newest first.
     ///
-    /// None of this is in the timing feed. The feed's `HOUR` column is a time of
-    /// day with no date behind it, and no column carries the year -- which is why
-    /// `Cli.FileTask.season` has to read the season off the directory the CSV came
-    /// in on. A calendar is knowledge about the championship, so it is written
-    /// down here rather than derived.
+    /// Written down rather than derived, because none of it is in the feed: the
+    /// `HOUR` column is a time of day with no date behind it, and no column
+    /// carries the year. A calendar is knowledge about the championship.
     ///
-    /// The order is the order the index page lists them in, newest at the top,
-    /// and it is the whole of what makes one season the latest. A file that
-    /// carried the seasons in some other order and a flag saying which was
-    /// current could disagree with itself; this cannot.
+    /// Newest first is the whole of what makes a season the latest. An order
+    /// plus a flag saying which season was current could disagree with itself;
+    /// this cannot.
     ///
-    /// A season is listed once it has data, so 2024 opens at Le Mans -- the
-    /// rounds it ran before that are not here, because a card linking to a file
-    /// nobody has is worse than no card.
+    /// A season is listed once it has data, so 2024 opens at Le Mans: a card
+    /// linking to a file nobody has is worse than no card.
     pub def seasons(): List[Season] =
         {
             season = 2026,
@@ -75,27 +64,19 @@ mod Motorsport.Calendar {
         } ::
         Nil
 
-    /// The rounds one season ran.
-    ///
-    /// A season with no entry resolves to `None` rather than to an empty list:
-    /// a year nobody has filed is not a year that ran no races.
+    /// `None`, not an empty list: a year nobody has filed is not a year that ran
+    /// no races.
     pub def rounds(season: Int32): Option[List[Round]] =
         seasons()
             |> List.find(s -> s#season == season)
             |> Option.map(s -> s#rounds)
 
-    /// Every round there is, seasons flattened away, in the order they are
-    /// listed. This is the CLI's whole worklist.
+    /// Every round there is. This is the CLI's whole worklist.
     pub def entries(): List[Entry] =
         seasons() |> List.flatMap(s ->
             s#rounds |> List.map(r -> { season = s#season, id = r#id, date = r#date })
         )
 
-    /// The one round with this season and id, if the calendar holds it.
-    ///
-    /// Keyed by season as well as by id, unlike `Motorsport.Events`: a round
-    /// keeps its name and its direction from year to year, and only its date
-    /// moves.
     pub def find(season: Int32, eventId: String): Option[Entry] =
         entries() |> List.find(e -> e#season == season and e#id == eventId)
 

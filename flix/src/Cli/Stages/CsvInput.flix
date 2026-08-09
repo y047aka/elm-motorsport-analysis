@@ -3,9 +3,9 @@ mod Cli.Stages.CsvInput {
     use Util.Files
     use Cli.Errors.CliError
 
-    /// Missing is checked for separately from unreadable, because with the
-    /// calendar driving the run it is the likelier of the two and means
-    /// something specific: a round was listed and its CSV was never filed.
+    /// Missing is separated from unreadable because it means something specific
+    /// now that the calendar drives the run: a round was listed and its CSV was
+    /// never filed.
     pub def read(inputPath: String): Result[CliError, String] \ IO =
         forM(
             exists <- Files.exists(inputPath) |> Result.mapErr(CliError.File);

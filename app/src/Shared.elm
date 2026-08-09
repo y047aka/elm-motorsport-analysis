@@ -30,15 +30,12 @@ is used: everything else about a frame follows from `replay` and the clock,
 where the track never moves once the data has loaded. See
 [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
 
-`season` and `eventName` are the round being shown, and both are read off the
-calendar entry it was found in, so the app never has a second opinion about what
-a race is called or which year it belongs to.
+`season` and `eventName` both come off the calendar entry the round was found
+in, so the app never holds a second opinion about what a race is called.
 
-`requestedRound` is a URL that arrived before the calendar did. Nothing can be
-asked for until then -- the calendar is what says where a round's files are --
-so the request is held rather than guessed at, and issued when the calendar
-lands. It is cleared as soon as it has been issued, which is what stops a later
-calendar from asking twice.
+`requestedRound` is a URL that arrived before the calendar did. The calendar is
+what says where a round's files are, so the request waits rather than being
+guessed at, and is cleared once issued so a later calendar cannot ask twice.
 
 -}
 type alias Model =
@@ -54,10 +51,9 @@ type alias Model =
     }
 
 
-{-| The calendar is asked for once, here, rather than by the page that lists it:
-it is the same file whichever route the app opened on, and asking for it at the
-start means a round reached by its URL can still be listed alongside the others
-when the reader goes back.
+{-| The calendar is asked for here rather than by the page that lists it: it is
+the same file whichever route the app opened on, and a round reached by its URL
+still needs it.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
@@ -134,14 +130,11 @@ update msg m =
             )
 
 
-{-| Asks for the round the URL named, once the calendar can say which one that
-is and where its files are.
+{-| Asks for the round the URL named, once the calendar can say where its files
+are.
 
-Called from both sides of the race between the two: whichever of the URL and the
-calendar arrives second is the one that gets here with everything it needs. With
-nothing outstanding, or with a round the calendar does not list, it does nothing
--- a round nobody has heard of and one that has not been heard of yet are the
-same silence.
+Called from both sides of the race between the two, so whichever of the URL and
+the calendar arrives second is the one that finds everything it needs here.
 
 -}
 requestRequestedRound : Model -> ( Model, Effect Msg )

@@ -3,11 +3,10 @@ module Data.Wec.Calendar exposing
     , empty, decoder, findRound
     )
 
-{-| The rounds there are, read before any one of them has been asked for.
+{-| The rounds there are.
 
-Every other file the CLI writes is one race. This one is the list of them, and
-it is the only thing the app can consult before it knows which race it wants --
-which is why the index page is built from it and nothing else.
+Every other file the CLI writes is one race. This is the list of them, and the
+only thing the app can consult before it knows which race it wants.
 
 @docs Calendar, Season, Round
 @docs empty, decoder, findRound
@@ -17,17 +16,14 @@ which is why the index page is built from it and nothing else.
 import Json.Decode as Decode exposing (Decoder, field, int, list, string)
 
 
-{-| The seasons, newest first.
-
-The order is the file's, not this app's to sort: being the latest season is
-what being first here means. See `Motorsport.Calendar` on the CLI side.
-
+{-| The seasons, newest first. The order is the file's, not this app's to sort:
+being the latest season is what being first here means.
 -}
 type alias Calendar =
     List Season
 
 
-{-| A season and the rounds it ran, in the order it ran them.
+{-| The rounds are in the order the season ran them.
 -}
 type alias Season =
     { season : Int
@@ -35,15 +31,9 @@ type alias Season =
     }
 
 
-{-| One round, as much of it as there is before its own files are loaded: what
-it is filed under, what to call it, when it was run, and where its two files
-are.
-
-The paths are read, not built. The app could work them out from the season and
-the id -- it is the same rule for every round -- but that rule would then be
-written down twice, here and in the CLI that writes the files, with nothing to
-notice when the two stop agreeing.
-
+{-| The paths are read, not built. The app could work them out from the season
+and the id, but that rule would then be written down twice -- here and in the
+CLI that writes the files -- with nothing to notice when the two stop agreeing.
 -}
 type alias Round =
     { id : String
@@ -54,8 +44,8 @@ type alias Round =
     }
 
 
-{-| What there is before the calendar has arrived, and in place of one that
-could not be read: no seasons, rather than a guess at which.
+{-| No seasons, rather than a guess at which: what there is before the calendar
+arrives, and in place of one that could not be read.
 -}
 empty : Calendar
 empty =
@@ -64,10 +54,9 @@ empty =
 
 {-| The round a URL is asking for, if there is one.
 
-A round the calendar does not list resolves to `Nothing`, and nothing is asked
-for -- which is the same answer as before the calendar arrives. The app cannot
-tell a round that does not exist from one it has not heard of yet, and it does
-not have to: both mean there is nothing to show.
+`Nothing` covers both a round that does not exist and one the calendar has not
+arrived to list yet. The app cannot tell them apart and does not have to: both
+mean there is nothing to show.
 
 The season is matched as the string the URL carried, so `/wec/02025/spa_6h` is
 not this round.

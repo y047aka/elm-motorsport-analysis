@@ -3,10 +3,8 @@ mod Cli.Stages.TestCsvInput {
     use Cli.Errors.CliError
     use Cli.Stages.CsvInput
 
-    /// The other half of the calendar's two-way check. A round is listed, its
-    /// CSV was never filed, and the run has to fail rather than carry on -- with
-    /// the calendar driving the worklist this is the likely mistake, so it gets
-    /// its own error rather than arriving as an unreadable file.
+    /// The other half of the calendar's two-way check: a round is listed and
+    /// its CSV was never filed.
     @Test
     def testAListedRoundWithNoCsvFailsAsMissing(): Unit \ {Assert, IO} =
         match CsvInput.read("../app/static/wec/2025/monza_6h.csv") {

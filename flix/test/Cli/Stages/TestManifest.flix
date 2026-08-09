@@ -18,8 +18,7 @@ mod Cli.Stages.TestManifest {
         Assert.assertTrue(String.contains({substr = "\"name\": \"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"date\": \"2024-06-15\""}, json))
 
-    /// The app fetches these rather than building them, so they are the only
-    /// statement of where a round's files are.
+    /// The app fetches these rather than building them.
     @Test
     def testEveryRoundStatesWhereItsFilesAre(): Unit \ Assert =
         let json = rendered("/static/wec");

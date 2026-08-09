@@ -51,13 +51,9 @@ mod Cli.Stages {
         Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
         if (errors == 0) 0 else 1
 
-    /// A CSV nothing on the calendar names is skipped, and saying so is the only
-    /// way adding a round can fail loudly rather than quietly: the file is
-    /// there, the round is not, and the fix is one line in
-    /// `Motorsport.Calendar`.
-    ///
-    /// Not an error. The run converted everything it was asked for; this is
-    /// about what it was not asked for.
+    /// Not an error: the run converted everything it was asked for, and this is
+    /// about what it was not asked for. Saying it is what keeps a forgotten line
+    /// in `Motorsport.Calendar` from passing for a clean run.
     def reportUnlistedCsvFiles(root: String, tasks: List[FileTask.FileTask]): Unit \ {IO, Console} =
         match Files.walkCsvFiles(root) {
             case Err(e) => Console.eprintln("Calendar: could not check for unlisted CSV files (${e})")
@@ -68,8 +64,8 @@ mod Cli.Stages {
                     )
         }
 
-    /// The calendar is not made from the laps, so it is written once for the run
-    /// rather than once per file, and a run that decoded nothing still writes it.
+    /// Written once for the run, not once per file, and written even by a run
+    /// that decoded nothing: the calendar is not made from the laps.
     def writeCalendar(root: String): Int32 \ {IO, Console} =
         match Manifest.write(root) {
             case Ok(path) =>

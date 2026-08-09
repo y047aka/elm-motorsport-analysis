@@ -23,7 +23,6 @@ def main(): Unit \ {Env, IO, Exit, Console} =
     };
     Exit.exit(code)
 
-/// The run's one argument is a directory, and every path it uses hangs off it.
 /// Checked once here rather than once per round, so a mistyped root reads as one
 /// mistake instead of as every race being missing.
 def checkRoot(root: String): Result[CliError, Unit] \ IO =

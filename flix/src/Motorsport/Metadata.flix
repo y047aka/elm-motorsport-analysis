@@ -55,11 +55,10 @@ mod Motorsport.Metadata {
         lapTotal  = Int32
     }
 
-    /// The laps say nothing about which round they are: no column carries the
-    /// year, and the same race is run again the next one. So which round this is
-    /// arrives from the outside, as the calendar entry the run was working
-    /// through, and `season` and `date` are known for certain or the file was
-    /// never opened.
+    /// The laps say nothing about which round they are -- no column carries the
+    /// year, and the same race is run again the next one -- so that arrives from
+    /// outside, as the calendar entry the run was working through. Which is why
+    /// `season` and `date` are certain: without them the file was never opened.
     pub type alias Metadata = {
         name         = String,
         season       = Int32,

@@ -26,9 +26,8 @@ mod Cli.Stages.TestUnlisted {
         let found = "../app/static/wec/2024/imola_6h.csv" :: Nil;
         Assert.assertTrue(List.length(Unlisted.detect(tasks("../app/static/wec"), found)) == 1)
 
-    /// The half that used to be wrong. Both sides name the same file; only the
-    /// spelling of the root differs, and a run that reported all fourteen would
-    /// make the warning worthless.
+    /// The half that used to be wrong: both sides name the same file and only
+    /// the root is spelled differently.
     @Test
     def testTheSpellingOfTheRootDoesNotMatter(): Unit \ Assert =
         let found = listedCsv() :: Nil;
@@ -36,8 +35,6 @@ mod Cli.Stages.TestUnlisted {
         Assert.assertTrue(Unlisted.detect(tasks("../app/static/./wec"), found) == Nil);
         Assert.assertTrue(Unlisted.detect(tasks("/srv/app/static/wec"), found) == Nil)
 
-    /// Nothing is filed directly under the root or below a season directory, so
-    /// neither can match a round.
     @Test
     def testAFileOutsideASeasonDirectoryIsReported(): Unit \ Assert =
         let found = "../app/static/wec/spa_6h.csv" :: "../app/static/wec/2025/old/spa_6h.csv" :: Nil;

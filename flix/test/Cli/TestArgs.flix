@@ -18,7 +18,7 @@ mod Cli.TestArgs {
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "extra" :: Nil)))
 
     /// The calendar decides what is converted, so there is no single file to
-    /// redirect and `--output` is not a flag any more.
+    /// redirect.
     @Test
     def testOutputIsNoLongerAnOption(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--output" :: "out.json" :: Nil)))
