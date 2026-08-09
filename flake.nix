@@ -102,6 +102,14 @@
             '';
           };
 
+        # Shared by `cli-run` and `flix-run`, which are the same run under two
+        # names: `cli-run` is what the command has always been called, and
+        # `flix-run` names the implementation that now answers to it. The
+        # argument is the directory holding the season directories — the CLI
+        # takes nothing else, and converts the rounds `Motorsport.Calendar`
+        # lists.
+        flixRunCmd = "flix run -- ../app/static/wec";
+
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
@@ -140,10 +148,10 @@
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           cli-build            = { type = "app"; program = "${mkCargoApp "cli-build" "cargo build"}/bin/cli-build";                                                  meta.description = "Build Rust CLI"; };
           cli-test             = { type = "app"; program = "${mkCargoApp "cli-test"  "cargo test"}/bin/cli-test";                                                    meta.description = "Run Rust CLI tests"; };
-          cli-run              = { type = "app"; program = "${mkCargoApp "cli-run"   "cargo run -p cli -- ../app/static/wec/2026"}/bin/cli-run";                     meta.description = "Run Rust CLI (CSV -> JSON)"; };
+          cli-run              = { type = "app"; program = "${mkFlixApp  "cli-run"   flixRunCmd}/bin/cli-run";                                                       meta.description = "Run the CLI (CSV -> JSON); same run as .#flix-run"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                   meta.description = "Build Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test"  "flix test"}/bin/flix-test";                                                     meta.description = "Run Flix tests"; };
-          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   "flix run -- ../app/static/wec"}/bin/flix-run";                                  meta.description = "Run Flix project (CSV -> JSON)"; };
+          flix-run             = { type = "app"; program = "${mkFlixApp "flix-run"   flixRunCmd}/bin/flix-run";                                                       meta.description = "Run Flix project (CSV -> JSON)"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });
