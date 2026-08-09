@@ -5,7 +5,6 @@ module Motorsport.Wec.Circuit.LeMans exposing
     , toString
     , ByMiniSector, initialize, get, map2
     , values, toList
-    , layout
     )
 
 {-| The mini-sectors of Le Mans, the counterpart of
@@ -23,15 +22,7 @@ the way that module spells it, so a caller that knows one knows the other.
 @docs ByMiniSector, initialize, get, map2
 @docs values, toList
 
-
-## The circuit itself
-
-@docs layout
-
 -}
-
-import Motorsport.Circuit.Direction exposing (Direction(..))
-import Motorsport.Sector exposing (BySector)
 
 
 {-| Le Mans 2025 specific mini sectors.
@@ -61,10 +52,9 @@ type LeMans2025MiniSector
 
 {-| Every mini sector, in the order a car drives them.
 
-Written out here rather than read off [`layout`](#layout), which is one
-arrangement of them into sectors: deriving the order from the grouping would
-make everything that depends on the order depend on that grouping being
-complete. `LeMansTest` holds the two to each other.
+Which sector each of them falls in is not here, and is not anywhere on this
+side: the lap is divided by the CLI, which owns that grouping in
+`Motorsport.MiniSector.sectorOf`.
 
 -}
 all : List LeMans2025MiniSector
@@ -202,24 +192,6 @@ values byMiniSector =
 toList : ByMiniSector a -> List ( LeMans2025MiniSector, a )
 toList byMiniSector =
     List.map (\mini -> ( mini, get mini byMiniSector )) all
-
-
-{-| Le Mans 2025 layout: which mini sectors make up each sector, and which way
-round the cars go. Every mini sector of [`all`](#all) appears exactly once, in
-the same order.
--}
-layout :
-    { direction : Direction
-    , sectors : BySector (List LeMans2025MiniSector)
-    }
-layout =
-    { direction = Clockwise
-    , sectors =
-        { s1 = [ SCL2, Z4, IP1 ]
-        , s2 = [ Z12, SCLC, A7_1, IP2 ]
-        , s3 = [ A8_1, SCLB, PORIN, POROUT, PITREF, SCL1, FORDOUT, FL ]
-        }
-    }
 
 
 {-| Convert a mini sector to its string representation. For display only --

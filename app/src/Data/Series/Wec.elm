@@ -1,17 +1,16 @@
 module Data.Series.Wec exposing
     ( Wec(..), fromString, toString
-    , circuit
+    , direction
     )
 
 {-|
 
 @docs Wec, fromString, toString
-@docs circuit
+@docs direction
 
 -}
 
-import Motorsport.Circuit as Circuit exposing (Layout)
-import Motorsport.Wec.Circuit.LeMans exposing (LeMans2025MiniSector)
+import Motorsport.Circuit.Direction exposing (Direction(..))
 
 
 type Wec
@@ -84,46 +83,43 @@ toString event =
             "bahrain_8h"
 
 
-{-| The circuit a round is run on.
+{-| Which way round a round's circuit goes -- the only thing about a circuit
+this side still has to know, now that how the lap divides and how long each
+division is both arrive in the summary.
 
 Keyed by the round rather than by its name, which is what
 `Chart.Tracker` used to match on -- a list of three event names that had to be
 kept in step with the calendar by hand, and that said nothing at all for a name
 not on it. Here the compiler will not let a round go unanswered.
 
-The season comes into it for Le Mans alone: `leMans2025` is the mini-sector
-layout of that year's race, and that is the only running of it the source data
-splits into mini-sectors. Every other round is timed to sectors only, and
-differs just in which way the cars go round.
+The season does not come into it. It used to, for Le Mans alone, because 2025 is
+the one running of it the source data splits into mini-sectors -- but that is a
+fact about the file, which the CLI reads off the file itself.
 
 -}
-circuit : { season : Int, event : Wec } -> Layout LeMans2025MiniSector
-circuit { season, event } =
+direction : Wec -> Direction
+direction event =
     case event of
         Qatar_1812km ->
-            Circuit.clockwise
+            Clockwise
 
         Imola_6h ->
-            Circuit.counterClockwise
+            CounterClockwise
 
         Spa_6h ->
-            Circuit.clockwise
+            Clockwise
 
         LeMans_24h ->
-            if season == 2025 then
-                Circuit.leMans2025
-
-            else
-                Circuit.clockwise
+            Clockwise
 
         SaoPaulo_6h ->
-            Circuit.counterClockwise
+            CounterClockwise
 
         Cota_6h ->
-            Circuit.counterClockwise
+            CounterClockwise
 
         Fuji_6h ->
-            Circuit.clockwise
+            Clockwise
 
         Bahrain_8h ->
-            Circuit.clockwise
+            Clockwise

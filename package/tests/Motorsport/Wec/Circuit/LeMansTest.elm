@@ -2,7 +2,6 @@ module Motorsport.Wec.Circuit.LeMansTest exposing (tests)
 
 import Expect
 import Motorsport.Wec.Circuit.LeMans as LeMans
-import Motorsport.Sector as Sector
 import Test exposing (..)
 
 
@@ -22,17 +21,6 @@ tests =
                     pairs LeMans.all
                         |> List.filter (\( a, b ) -> a /= b && LeMans.compare a b == EQ)
                         |> Expect.equalLists []
-            ]
-        , describe "layout"
-            [ test "is `all`, cut into the three sectors and no more" <|
-                \_ ->
-                    -- The order is `all`'s to state and the layout's to group.
-                    -- A mini sector dropped from the layout, listed twice, or
-                    -- moved into a different sector shows up here rather than
-                    -- as a track drawn wrong.
-                    Sector.values LeMans.layout.sectors
-                        |> List.concat
-                        |> Expect.equal LeMans.all
             ]
         , describe "toList"
             [ test "reads every value out in track order, under the mini sector it was stored against" <|

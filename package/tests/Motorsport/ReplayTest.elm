@@ -1,7 +1,6 @@
 module Motorsport.ReplayTest exposing (suite)
 
 import Expect
-import Motorsport.Circuit as Circuit
 import Motorsport.Wec.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -103,11 +102,7 @@ suite =
 
 initialModel : Replay.Model
 initialModel =
-    Replay.fromCars
-        { circuit = Circuit.clockwise
-        , timeLimit = Instant.fromDuration 7200000
-        }
-        [ retiringCar, survivingCar ]
+    Replay.fromCars { timeLimit = Instant.fromDuration 7200000 } [ retiringCar, survivingCar ]
 
 
 retiringCar : Car
