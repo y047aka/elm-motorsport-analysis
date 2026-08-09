@@ -31,9 +31,8 @@ import Shared.Msg exposing (Msg(..))
 -- MODEL
 
 
-{-| The calendar, and the one round the app is showing. Everything else about a
-round hangs off `Round` rather than sitting beside it, so a half-loaded one
-cannot be read as a loaded one.
+{-| Everything about a round hangs off `Round` rather than sitting beside it,
+so a half-loaded one cannot be read as a loaded one.
 -}
 type alias Model =
     { calendar : Calendar
@@ -41,11 +40,9 @@ type alias Model =
     }
 
 
-{-| How far the round in the URL has got.
-
-`Waiting` is a URL that arrived before the calendar did. The calendar is what
-says where a round's files are, so the request waits rather than being guessed
-at.
+{-| `Waiting` is a URL that arrived before the calendar did. The calendar is
+what says where a round's files are, so the request waits rather than being
+guessed at.
 
 `Loading` carries no `Race`, which is what stops the previous round's cars being
 shown under this one's name.
@@ -58,8 +55,8 @@ type Round
     | Loaded RoundId Race
 
 
-{-| Which round, and what to call it. Known as soon as the calendar resolves the
-URL, so the name can be shown while the files are still on their way.
+{-| Known as soon as the calendar resolves the URL, so the name can be shown
+while the files are still on their way.
 -}
 type alias RoundId =
     { season : Int
@@ -80,13 +77,10 @@ type Partial
 
 {-| A loaded round, as the pages read it.
 
-`track` is the one derived value kept here rather than worked out where it is
-used: everything else about a frame follows from `replay` and the clock, where
-the track never moves once the data has loaded. See
-[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
-
-`snapshot` is `replay` read at the clock, cached because every view of a frame
-shares it. The two are only ever written together.
+`track` is the one derived value kept rather than worked out where it is used:
+everything else about a frame follows from `replay` and the clock, where the
+track never moves once the data has loaded. `snapshot` is `replay` read at the
+clock, cached because every view of a frame shares it.
 
 -}
 type alias Race =
@@ -115,8 +109,8 @@ init _ =
 -- QUERIES
 
 
-{-| What to call the round being shown, once there is one. Answers while it is
-still loading, which is why it is separate from [`race`](#race).
+{-| Answers while the round is still loading, which is why it is separate from
+[`race`](#race).
 -}
 roundId : Model -> Maybe RoundId
 roundId model =
@@ -175,12 +169,8 @@ update msg m =
             ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
 
 
-{-| Asks for the round the URL named, once the calendar can say where its files
-are.
-
-Called from both sides of the race between the two, so whichever of the URL and
-the calendar arrives second is the one that finds everything it needs here.
-
+{-| Called from both sides of the race between the URL and the calendar, so
+whichever arrives second is the one that finds everything it needs here.
 -}
 requestWaitingRound : Model -> ( Model, Effect Msg )
 requestWaitingRound m =
@@ -222,8 +212,8 @@ requestWaitingRound m =
 
 
 {-| Applies a file to the round that asked for it, and to no other. A response
-naming a round this one is not is one left over from a round the reader has
-already navigated away from.
+naming any other round is one left over from a round already navigated away
+from.
 -}
 arrived : { season : Int, id : String } -> (RoundId -> Partial -> Round) -> Round -> Round
 arrived key step round =

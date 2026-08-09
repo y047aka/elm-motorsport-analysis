@@ -16,9 +16,9 @@ import Motorsport.Replay as Replay
 
 {-| The two file responses carry the round they were asked for.
 
-Nothing cancels an `Http.get`, so navigating away from a round that is still
-loading leaves its responses in flight. Untagged, one of them lands beside the
-next round's other file and the two are assembled into a race that never ran.
+Nothing cancels an `Http.get`, so leaving a round mid-load leaves its responses
+in flight. Untagged, one of them lands beside the next round's other file and
+the two are assembled into a race that never ran.
 
 -}
 type Msg

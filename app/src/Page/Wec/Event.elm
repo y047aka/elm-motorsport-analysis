@@ -179,8 +179,8 @@ view shared m =
             [ navigation (headerTitle shared) maybeRace m.mode
             , case maybeRace of
                 Nothing ->
-                    -- The round is named by now but its files are not in yet.
-                    -- Nothing is drawn rather than the round before it.
+                    -- Named but not loaded. Nothing is drawn rather than the
+                    -- round before it.
                     div [ css [ property "grid-row" "2" ] ] []
 
                 Just race ->

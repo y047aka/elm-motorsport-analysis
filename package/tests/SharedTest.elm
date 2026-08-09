@@ -1,9 +1,8 @@
 module SharedTest exposing (suite)
 
-{-| Drives `Shared.update` from the outside. The states a round passes through
-are not exposed, so what a round has got to is read back through
-[`Shared.race`](Shared#race) and [`Shared.roundId`](Shared#roundId), which is
-all a page can see of it either.
+{-| Drives `Shared.update` from the outside. A round's states are not exposed,
+so how far one has got is read back through `Shared.race` and `Shared.roundId`
+-- all a page can see of it either.
 -}
 
 import Data.Wec as Wec
@@ -17,8 +16,7 @@ import Shared.Msg exposing (Msg(..))
 import Test exposing (Test, describe, test)
 
 
-{-| Two seasons apart, and one of them runs two rounds -- the pairs a stale
-response can be mistaken for.
+{-| One season of two rounds: the pair a stale response can be mistaken for.
 -}
 calendarJson : String
 calendarJson =
@@ -99,9 +97,8 @@ laps =
         |> Result.withDefault []
 
 
-{-| Delivers a fixture that may have failed to decode. A broken one leaves the
-round unchanged rather than passing an assertion by accident, and the fixture
-test below is what says so.
+{-| A fixture that failed to decode leaves the round unchanged rather than
+passing an assertion by accident. The fixture test below is what says so.
 -}
 deliverSummary : { season : Int, id : String } -> Shared.Model -> Shared.Model
 deliverSummary key model =
@@ -139,8 +136,8 @@ fresh =
     Shared.init () |> Tuple.first
 
 
-{-| Waiting on Spa's two files, reached the way a link from the index page
-reaches it: the calendar was already in when the URL arrived.
+{-| Reached the way a link from the index page reaches it: the calendar was
+already in when the URL arrived.
 -}
 loadingSpa : Shared.Model
 loadingSpa =
@@ -149,9 +146,8 @@ loadingSpa =
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
 
 
-{-| The same round reached the other way round, which is what a deep link does:
-the URL is known before the calendar that says where its files are. Nothing can
-be asked for until the second of the two lands.
+{-| The same round the other way round, which is what a deep link does: the URL
+is known before the calendar that says where its files are.
 -}
 loadingSpaByDeepLink : Shared.Model
 loadingSpaByDeepLink =
@@ -188,7 +184,6 @@ suite =
                         |> Expect.notEqual Nothing
             , test "leaves a round the calendar does not list unresolved" <|
                 \_ ->
-                    -- Nothing is asked for, and there is nothing to name.
                     fresh
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
@@ -209,9 +204,8 @@ suite =
                         |> Expect.equalLists [ True, True ]
             , test "drops a file left over from a round already navigated away from" <|
                 \_ ->
-                    -- Nothing cancels an Http.get. Untagged, Fuji's laps would
-                    -- land beside Spa's summary and the two would be assembled
-                    -- into a race that never ran.
+                    -- Untagged, Fuji's laps would land beside Spa's summary
+                    -- and be assembled into a race that never ran.
                     loadingSpa
                         |> deliverSummary spa
                         |> deliverLaps fuji
@@ -220,7 +214,6 @@ suite =
             , test "a stale pair does not complete the round that is waiting" <|
                 \_ ->
                     -- Both files of the round left behind, arriving together.
-                    -- Neither the round being waited on nor its emptiness moves.
                     loadingSpa
                         |> deliverLaps fuji
                         |> deliverSummary fuji
