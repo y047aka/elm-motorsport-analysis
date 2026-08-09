@@ -4,9 +4,16 @@ Motorsport race analysis and visualization app. pnpm workspaces monorepo:
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css)
 - **`/package`** — reusable Elm library (motorsport domain models)
-- **`/cli`** — Rust CLI for CSV→JSON data processing
+- **`/flix`** — Flix CLI for CSV→JSON data processing. **This is the one that
+  writes what the app reads.**
+- **`/cli`** — the Rust CLI it was ported from, now behind it
 
-Data flow: CSV telemetry → Rust CLI → JSON → Elm visualization.
+Data flow: CSV telemetry → Flix CLI → JSON → Elm visualization.
+
+The Rust CLI no longer writes what the app needs: it emits no `track` object and
+no `index.json`, both of which the app requires. Running it over
+`app/static/wec` overwrites good data with data the app cannot use. Treat `/cli`
+as reference for the port, not as a way to regenerate anything.
 
 ## Commands
 
@@ -21,9 +28,20 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | Rust CLI build / test / CSV→JSON |
+| `nix run .#flix-build` / `.#flix-test` | Flix CLI build / test |
+| `nix run .#flix-run` | Flix CLI: regenerate every JSON under `app/static/wec` |
+| `nix run .#cli-build` / `.#cli-test` | Rust CLI build / test (superseded — see above) |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
-| `nix run .#flix-build` / `.#flix-test` / `.#deps-audit` | Flix helpers for `/update-deps` |
+| `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
+
+`nix run .#cli-run` runs the superseded Rust CLI over `app/static/wec/2026` and
+will damage that data. Use `.#flix-run` instead.
+
+`.#flix-run` takes the directory holding the season directories and converts
+every round `Motorsport.Calendar` lists, writing each round's two JSON files
+plus `index.json` beside them. It converts nothing the calendar does not list,
+so **a new round is added by adding it to `Motorsport.Calendar` first** — the
+run reports any CSV it finds that no round names.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
@@ -40,7 +58,13 @@ no elm-pages). `index.ts` boots `Elm.Main.init`; data is fetched at runtime via 
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Css/` (Color, Palette, Typography), `Data/` (series config), `UI/` (Button, Label, Table)
+- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Button, Label, Table)
+
+`Data/Wec/Calendar.elm` decodes `index.json`, which is fetched once by `Shared`
+and is the app's only source for which rounds exist, what they are called, and
+where each round's files are. Nothing app-side builds those paths, and a round
+it does not list cannot be opened. `Data/Series.elm` is what is left of the
+compile-time calendar it replaced: car images, which nothing imports yet.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

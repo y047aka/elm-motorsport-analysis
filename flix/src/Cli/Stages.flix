@@ -10,6 +10,7 @@ mod Cli.Stages {
     use Cli.Stages.Output
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
+    use Cli.Stages.Unlisted
     use Cli.Stages.Validation
     use Motorsport.Wec.RawLap
 
@@ -61,9 +62,7 @@ mod Cli.Stages {
         match Files.walkCsvFiles(root) {
             case Err(e) => Console.eprintln("Calendar: could not check for unlisted CSV files (${e})")
             case Ok(found) =>
-                let listed = tasks |> List.map(task -> task#inputPath);
-                found
-                    |> List.filter(path -> not List.memberOf(path, listed))
+                Unlisted.detect(tasks, found)
                     |> List.forEach(path ->
                         Console.eprintln("Calendar: ${path} is not on the calendar, skipped")
                     )
