@@ -55,28 +55,28 @@ mod Motorsport.Metadata {
         lapTotal  = Int32
     }
 
-    /// `season` is read off the path the CSV came in on -- see
-    /// `Cli.FileTask.season` -- because the laps say nothing about the year.
-    ///
-    /// `date` needs that season before it can be looked up, so a CSV filed
-    /// somewhere the season cannot be read has no date either.
+    /// The laps say nothing about which round they are: no column carries the
+    /// year, and the same race is run again the next one. So which round this is
+    /// arrives from the outside, as the calendar entry the run was working
+    /// through, and `season` and `date` are known for certain or the file was
+    /// never opened.
     pub type alias Metadata = {
         name         = String,
-        season       = Option[Int32],
-        date         = Option[String],
+        season       = Int32,
+        date         = String,
         race         = Particulars,
         track        = Track.Track,
         startingGrid = StartingGrid
     }
 
-    pub def fromRawLaps(eventId: String, season: Option[Int32], rawLaps: List[RawLap]): Metadata =
+    pub def fromRawLaps(entry: Calendar.Entry, rawLaps: List[RawLap]): Metadata =
         let builds = buildCars(rawLaps);
         {
-            name         = Events.displayName(eventId),
-            season       = season,
-            date         = season |> Option.flatMap(y -> Calendar.dateOf(y, eventId)),
+            name         = Events.displayName(entry#id),
+            season       = entry#season,
+            date         = entry#date,
             race         = particularsOf(rawLaps),
-            track        = Track.fromRawLaps(Events.direction(eventId), rawLaps),
+            track        = Track.fromRawLaps(Events.direction(entry#id), rawLaps),
             startingGrid = estimateGrid(builds)
         }
 
@@ -204,22 +204,14 @@ mod Motorsport.Metadata {
         }
 
     pub def toJson(meta: Metadata): Encode.JsonValue =
-        let season = match meta#season {
-            case None    => Nil
-            case Some(y) => ("season", JsonInt(y)) :: Nil
-        };
-        let date = match meta#date {
-            case None    => Nil
-            case Some(d) => ("date", JsonString(d)) :: Nil
-        };
         JsonObject(
-            ("name", JsonString(meta#name)) ::
-            List.append(season, List.append(date,
-                ("race",         particularsToJson(meta#race)) ::
-                ("track",        Track.toJson(meta#track)) ::
-                ("startingGrid", gridToJson(meta#startingGrid)) ::
-                Nil
-            ))
+            ("name",         JsonString(meta#name)) ::
+            ("season",       JsonInt(meta#season)) ::
+            ("date",         JsonString(meta#date)) ::
+            ("race",         particularsToJson(meta#race)) ::
+            ("track",        Track.toJson(meta#track)) ::
+            ("startingGrid", gridToJson(meta#startingGrid)) ::
+            Nil
         )
 
     def particularsToJson(p: Particulars): Encode.JsonValue =

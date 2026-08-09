@@ -1,6 +1,7 @@
 mod Cli.Stages {
 
     use Sys.Console
+    use Util.Files
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.CsvDecode
@@ -23,43 +24,61 @@ mod Cli.Stages {
         errors    = Int32
     }
 
-    pub def runAll(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
+    /// The calendar is the worklist, so a run converts the rounds it holds and
+    /// nothing else. Two ways that can be wrong, and both are said out loud: a
+    /// round with no CSV fails the run, and a CSV no round names is reported and
+    /// left alone.
+    pub def runAll(root: String): Int32 \ {IO, Console} =
+        let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
                 case Ok(report) =>
-                    Console.println("${task#eventName}: Wrote ${report#lapCount} laps");
-                    Console.println("${task#eventName}: Metadata -> ${report#outputPath}");
-                    Console.println("${task#eventName}: Laps     -> ${report#lapsPath}");
+                    Console.println("${FileTask.label(task)}: Wrote ${report#lapCount} laps");
+                    Console.println("${FileTask.label(task)}: Metadata -> ${report#outputPath}");
+                    Console.println("${FileTask.label(task)}: Laps     -> ${report#lapsPath}");
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
-                    Console.eprintln("${task#eventName}: ${e}");
+                    Console.eprintln("${FileTask.label(task)}: ${e}");
                     { errors = acc#errors + 1 | acc }
             },
             { processed = 0, errors = 0 },
             tasks
         );
-        let calendarErrors = writeCalendar(tasks);
-        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors + calendarErrors} errors");
-        if (summary#errors + calendarErrors == 0) 0 else 1
+        reportUnlistedCsvFiles(root, tasks);
+        let calendarErrors = writeCalendar(root);
+        let errors = summary#errors + calendarErrors;
+        Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
+        if (errors == 0) 0 else 1
+
+    /// A CSV nothing on the calendar names is skipped, and saying so is the only
+    /// way adding a round can fail loudly rather than quietly: the file is
+    /// there, the round is not, and the fix is one line in
+    /// `Motorsport.Calendar`.
+    ///
+    /// Not an error. The run converted everything it was asked for; this is
+    /// about what it was not asked for.
+    def reportUnlistedCsvFiles(root: String, tasks: List[FileTask.FileTask]): Unit \ {IO, Console} =
+        match Files.walkCsvFiles(root) {
+            case Err(e) => Console.eprintln("Calendar: could not check for unlisted CSV files (${e})")
+            case Ok(found) =>
+                let listed = tasks |> List.map(task -> task#inputPath);
+                found
+                    |> List.filter(path -> not List.memberOf(path, listed))
+                    |> List.forEach(path ->
+                        Console.eprintln("Calendar: ${path} is not on the calendar, skipped")
+                    )
+        }
 
     /// The calendar is not made from the laps, so it is written once for the run
     /// rather than once per file, and a run that decoded nothing still writes it.
-    /// Where it goes is the only thing the run decides -- see
-    /// `Cli.FileTask.calendarRoot` -- so a run with nowhere to put it says so and
-    /// leaves the app's copy alone.
-    def writeCalendar(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
-        match tasks |> List.filterMap(task -> task#calendarRoot) |> List.head {
-            case None =>
-                Console.eprintln("Calendar: no season directory in the input path, skipped");
+    def writeCalendar(root: String): Int32 \ {IO, Console} =
+        match Manifest.write(root) {
+            case Ok(path) =>
+                Console.println("Calendar -> ${path}");
                 0
-            case Some(root) => match Manifest.write(root) {
-                case Ok(path) =>
-                    Console.println("Calendar -> ${path}");
-                    0
-                case Err(e) =>
-                    Console.eprintln("Calendar: ${e}");
-                    1
-            }
+            case Err(e) =>
+                Console.eprintln("Calendar: ${e}");
+                1
         }
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
@@ -75,12 +94,12 @@ mod Cli.Stages {
 
     def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
         rawLaps -> {
-            Validation.validate(task#eventName, rawLaps) |> List.forEach(Console.eprintln);
+            Validation.validate(task#entry#id, rawLaps) |> List.forEach(Console.eprintln);
             rawLaps
         }
 
     def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
-        rawLaps -> Transform.transform(task#eventName, task#season, rawLaps)
+        rawLaps -> Transform.transform(task#entry, rawLaps)
 
     def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
         rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)

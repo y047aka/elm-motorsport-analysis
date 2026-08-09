@@ -17,6 +17,20 @@ mod Motorsport.Calendar {
         rounds = List[Round]
     }
 
+    /// One round with its season carried alongside, which is what it takes to
+    /// name a round: `spa_6h` ran in 2025 and in 2026, and nothing inside either
+    /// file says which year it is.
+    ///
+    /// This is what the CLI works from. It walks the calendar and builds the
+    /// paths, rather than walking the paths and asking the calendar about what
+    /// it found -- which is why nothing here has to be parsed back out of a
+    /// directory name.
+    pub type alias Entry = {
+        season = Int32,
+        id     = String,
+        date   = String
+    }
+
     /// The seasons the app has, newest first.
     ///
     /// None of this is in the timing feed. The feed's `HOUR` column is a time of
@@ -74,41 +88,55 @@ mod Motorsport.Calendar {
             |> List.find(s -> s#season == season)
             |> Option.map(s -> s#rounds)
 
-    /// The day one round was run, if the calendar holds it.
+    /// Every round there is, seasons flattened away, in the order they are
+    /// listed. This is the CLI's whole worklist.
+    pub def entries(): List[Entry] =
+        seasons() |> List.flatMap(s ->
+            s#rounds |> List.map(r -> { season = s#season, id = r#id, date = r#date })
+        )
+
+    /// The one round with this season and id, if the calendar holds it.
     ///
     /// Keyed by season as well as by id, unlike `Motorsport.Events`: a round
     /// keeps its name and its direction from year to year, and only its date
     /// moves.
-    pub def dateOf(season: Int32, eventId: String): Option[String] =
-        forM(
-            rs <- rounds(season);
-            r  <- List.find(round -> round#id == eventId, rs)
-        ) yield r#date
+    pub def find(season: Int32, eventId: String): Option[Entry] =
+        entries() |> List.find(e -> e#season == season and e#id == eventId)
 
-    /// The calendar as the app reads it, names included.
+    /// The calendar as the app reads it: the names, and where each round's files
+    /// are served from.
     ///
-    /// The name is resolved here rather than left to the reader, so the index
-    /// page and the summary of the round it links to cannot end up calling the
-    /// same race two different things.
-    pub def toJson(): Encode.JsonValue =
+    /// The paths are stated rather than left to a rule the reader reproduces.
+    /// A convention both sides know is two copies of it, and the app has no way
+    /// to notice when its copy stops matching where the files actually went.
+    ///
+    /// `urlRoot` is where the season directories are served from, which is not
+    /// where they are written -- the CLI writes `../app/static/wec/2025/...` and
+    /// the app fetches `/static/wec/2025/...`. Only the caller knows both.
+    pub def toJson(urlRoot: String): Encode.JsonValue =
         JsonObject(
-            ("seasons", JsonArray(seasons() |> List.map(seasonToJson))) ::
+            ("seasons", JsonArray(seasons() |> List.map(seasonToJson(urlRoot)))) ::
             Nil
         )
 
-    def seasonToJson(s: Season): Encode.JsonValue =
-        JsonObject(
+    def seasonToJson(urlRoot: String): Season -> Encode.JsonValue =
+        s -> JsonObject(
             ("season", JsonInt(s#season)) ::
-            ("rounds", JsonArray(s#rounds |> List.map(roundToJson))) ::
+            ("rounds", JsonArray(s#rounds |> List.map(roundToJson(urlRoot, s#season)))) ::
             Nil
         )
 
-    def roundToJson(r: Round): Encode.JsonValue =
-        JsonObject(
-            ("id",   JsonString(r#id)) ::
-            ("name", JsonString(Events.displayName(r#id))) ::
-            ("date", JsonString(r#date)) ::
-            Nil
-        )
+    def roundToJson(urlRoot: String, season: Int32): Round -> Encode.JsonValue =
+        r -> {
+            let stem = "${urlRoot}/${season}/${r#id}";
+            JsonObject(
+                ("id",      JsonString(r#id)) ::
+                ("name",    JsonString(Events.displayName(r#id))) ::
+                ("date",    JsonString(r#date)) ::
+                ("summary", JsonString("${stem}.json")) ::
+                ("laps",    JsonString("${stem}_laps.json")) ::
+                Nil
+            )
+        }
 
 }

@@ -33,12 +33,16 @@ answers a chance to disagree. `startedAt` has nothing showing a time of day to
 read it yet. `season` is what picks the `Era` this decoder is built with, so it
 has to be known before the request goes out.
 
+`name` and `date` say which round this is, and the app knew that before it asked
+for the file: the calendar is what told it which file to fetch. Reading them
+back would be taking a second answer to a question already settled. The file
+still states them, for a reader who has only the file.
+
 What is left is `track`, the whole of what this app knows about the circuit.
 
 -}
 type alias Event =
-    { name : String
-    , timeLimit : Instant
+    { timeLimit : Instant
     , track : Track
     , startingGrid : StartingGrid
     }
@@ -92,8 +96,7 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Decoder Event
 eventDecoder era =
-    Decode.map4 Event
-        (field "name" string)
+    Decode.map3 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "track" trackDecoder)
         (field "startingGrid" (startingGridDecoder era))
