@@ -18,7 +18,7 @@ mod Cli.Stages.Unlisted {
     /// above these two segments is dropped rather than trusted to match. That is
     /// what survives a trailing slash on the root, a `./` in the middle, and an
     /// absolute path meeting a relative one.
-    pub def roundKey(path: String): (String, String) =
+    def roundKey(path: String): (String, String) =
         match String.split({regex = "/"}, path) |> List.filter(seg -> seg != "" and seg != ".") |> List.reverse {
             case name :: dir :: _ => (dir, name)
             case name :: Nil      => ("", name)

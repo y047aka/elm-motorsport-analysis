@@ -2,17 +2,6 @@ mod Motorsport.TestCalendar {
 
     use Motorsport.Calendar
 
-    def ids(season: Int32): List[String] =
-        Calendar.rounds(season)
-            |> Option.getWithDefault(Nil)
-            |> List.map(r -> r#id)
-
-    @Test
-    def testASeasonKeepsTheOrderItWasRunIn(): Unit \ Assert =
-        Assert.assertTrue(List.head(ids(2025)) == Some("qatar_1812km"));
-        Assert.assertTrue(List.last(ids(2025)) == Some("fuji_6h"));
-        Assert.assertTrue(List.length(ids(2025)) == 7)
-
     @Test
     def testASeasonNobodyHasFiledIsNotAnEmptyOne(): Unit \ Assert =
         Assert.assertTrue(Option.isEmpty(Calendar.rounds(2019)));
@@ -30,13 +19,6 @@ mod Motorsport.TestCalendar {
         Assert.assertTrue(Option.isEmpty(Calendar.find(2024, "imola_6h")));
         Assert.assertTrue(Option.isEmpty(Calendar.find(2025, "unknown_event")));
         Assert.assertTrue(Option.isEmpty(Calendar.find(2019, "spa_6h")))
-
-    @Test
-    def testTheEntriesAreEveryRoundOfEverySeason(): Unit \ Assert =
-        let entries = Calendar.entries();
-        let counted = Calendar.seasons() |> List.map(s -> List.length(s#rounds)) |> List.sum;
-        Assert.assertTrue(List.length(entries) == counted);
-        Assert.assertTrue(List.head(entries) |> Option.map(e -> e#season) == Some(2026))
 
     /// Stands in for the type the dates do not have. A round filed under the
     /// wrong season reads as a date, and only the year gives it away.

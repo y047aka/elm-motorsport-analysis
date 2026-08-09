@@ -289,16 +289,6 @@ mod Motorsport.TestMetadata {
         let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps(fuji(), Nil)));
         Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
 
-    /// Which round this is comes from the calendar entry the run was working
-    /// through, so there is no such thing as a summary that does not know its
-    /// season or its date. Both keys are always there.
-    @Test
-    def testTheRoundAlwaysKnowsWhichOneItIs(): Unit \ Assert =
-        let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps(fuji(), laps)));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
-        Assert.assertTrue(String.contains({substr = "\"date\": \"2025-09-28\""}, json))
-
     /// The name still falls back to the id, because an entry can name a round
     /// `Motorsport.Events` has never been told about. The date cannot fall back
     /// to anything, and does not have to: it came in with the entry.

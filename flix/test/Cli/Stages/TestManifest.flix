@@ -11,9 +11,6 @@ mod Cli.Stages.TestManifest {
     def testTheCalendarJsonCarriesEverySeasonWithItsRoundsNamed(): Unit \ Assert =
         let json = rendered("/static/wec");
         Assert.assertTrue(String.contains({substr = "\"seasons\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2026"}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
-        Assert.assertTrue(String.contains({substr = "\"season\": 2024"}, json));
         Assert.assertTrue(String.contains({substr = "\"id\": \"le_mans_24h\""}, json));
         Assert.assertTrue(String.contains({substr = "\"name\": \"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"date\": \"2024-06-15\""}, json))

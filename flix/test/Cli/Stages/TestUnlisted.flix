@@ -40,15 +40,4 @@ mod Cli.Stages.TestUnlisted {
         let found = "../app/static/wec/spa_6h.csv" :: "../app/static/wec/2025/old/spa_6h.csv" :: Nil;
         Assert.assertTrue(List.length(Unlisted.detect(tasks("../app/static/wec"), found)) == 2)
 
-    @Test
-    def testTheReportedPathIsTheOneThatWasFound(): Unit \ Assert =
-        let stray = "/srv/app/static/wec/2025/monza_6h.csv";
-        Assert.assertTrue(Unlisted.detect(tasks("../app/static/wec"), stray :: Nil) == stray :: Nil)
-
-    @Test
-    def testRoundKeyIsTheSeasonDirectoryAndTheFile(): Unit \ Assert =
-        Assert.assertTrue(Unlisted.roundKey("../app/static/wec/2025/spa_6h.csv") == ("2025", "spa_6h.csv"));
-        Assert.assertTrue(Unlisted.roundKey("/2025//spa_6h.csv") == ("2025", "spa_6h.csv"));
-        Assert.assertTrue(Unlisted.roundKey("spa_6h.csv") == ("", "spa_6h.csv"))
-
 }

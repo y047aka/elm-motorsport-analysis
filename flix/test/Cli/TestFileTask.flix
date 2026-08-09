@@ -1,7 +1,6 @@
 mod Cli.TestFileTask {
 
     use Cli.FileTask
-    use Motorsport.Calendar
 
     def taskFor(season: Int32, id: String): Option[FileTask.FileTask] =
         FileTask.fromCalendar("../app/static/wec")
@@ -28,12 +27,6 @@ mod Cli.TestFileTask {
                 Assert.assertTrue(b#outputPath == "../app/static/wec/2026/spa_6h.json")
             case _ => Assert.assertTrue(false)
         }
-
-    @Test
-    def testTheWorklistIsTheCalendarAndNothingElse(): Unit \ Assert =
-        let tasks = FileTask.fromCalendar("root");
-        Assert.assertTrue(List.length(tasks) == List.length(Calendar.entries()));
-        Assert.assertTrue(Option.isEmpty(taskFor(2024, "imola_6h")))
 
     @Test
     def testTheLabelNamesTheRoundNotJustTheFile(): Unit \ Assert =

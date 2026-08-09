@@ -86,16 +86,15 @@ suite =
                         |> Calendar.findRound { season = "2025", event = "spa_6h" }
                         |> Maybe.map (\( season, round ) -> ( season.season, round.date ))
                         |> Expect.equal (Just ( 2025, "2025-05-10" ))
-            , test "turns down a round the season did not run" <|
+            , test "turns down anything the calendar does not list" <|
                 \_ ->
-                    decoded
-                        |> Calendar.findRound { season = "2026", event = "fuji_6h" }
-                        |> Expect.equal Nothing
-            , test "turns down a season the calendar does not list" <|
-                \_ ->
-                    decoded
-                        |> Calendar.findRound { season = "2024", event = "spa_6h" }
-                        |> Expect.equal Nothing
+                    -- A season that ran no such round, and a season with no
+                    -- rounds at all.
+                    [ { season = "2026", event = "fuji_6h" }
+                    , { season = "2024", event = "spa_6h" }
+                    ]
+                        |> List.map (\params -> Calendar.findRound params decoded)
+                        |> Expect.equalLists [ Nothing, Nothing ]
             , test "matches the season as the string the URL carried" <|
                 \_ ->
                     decoded

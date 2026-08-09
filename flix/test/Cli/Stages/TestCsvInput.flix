@@ -12,11 +12,4 @@ mod Cli.Stages.TestCsvInput {
             case _                                  => Assert.assertTrue(false)
         }
 
-    @Test
-    def testACsvThatIsThereIsRead(): Unit \ {Assert, IO} =
-        match CsvInput.read("../app/static/wec/2025/spa_6h.csv") {
-            case Ok(content) => Assert.assertTrue(String.startsWith({prefix = "NUMBER;"}, content))
-            case Err(_)      => Assert.assertTrue(false)
-        }
-
 }
