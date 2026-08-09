@@ -8,6 +8,7 @@
     "lapTotal": 235
   },
   "track": {
+    "direction": "clockwise",
     "sectors": {
       "s1": {
         "start": 0.0,

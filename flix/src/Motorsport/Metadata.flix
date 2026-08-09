@@ -76,7 +76,7 @@ mod Motorsport.Metadata {
             name         = Events.displayName(eventId),
             season       = season,
             race         = particularsOf(rawLaps),
-            track        = Track.fromRawLaps(rawLaps),
+            track        = Track.fromRawLaps(Events.direction(eventId), rawLaps),
             startingGrid = estimateGrid(builds)
         }
 

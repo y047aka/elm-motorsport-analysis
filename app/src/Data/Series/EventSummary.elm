@@ -6,17 +6,13 @@ module Data.Series.EventSummary exposing (EventSummary)
 
 -}
 
-import Motorsport.Circuit.Direction exposing (Direction)
-
 
 {-| One round of a season, as the app knows it before any of its data has
 loaded.
 
-`direction` is here rather than worked out later because it is a fact about the
-round, like its date -- see
-[`Data.Series.Wec.direction`](Data-Series-Wec#direction). It is the last thing
-about the circuit this side still holds: how the lap is divided the summary
-states, and how long each division is the summary states too.
+Nothing about the circuit is here: which way round it goes, how the lap divides
+and how long each division is all arrive together in the summary -- see
+[`Data.Wec.Event`](Data-Wec#Event).
 
 -}
 type alias EventSummary =
@@ -25,5 +21,4 @@ type alias EventSummary =
     , season : Int
     , date : String
     , jsonPath : String
-    , direction : Direction
     }

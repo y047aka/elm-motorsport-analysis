@@ -12,7 +12,9 @@ module Data.Wec exposing
 
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (required)
-import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
+import Motorsport.Chart.Tracker as Tracker
+import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
+import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car as Car
@@ -34,17 +36,16 @@ The last two the app works out for itself from the laps it goes on to load, and
 having them arrive twice would only give the two answers a chance to disagree;
 the first has nothing showing a time of day to read it yet.
 
-`track` is the circuit's proportions, worked out by the CLI off the whole file
-and read here rather than derived again -- see
-[`Tracker.Config`](Motorsport-Chart-Tracker-Config). The `season` the file also
-states is not decoded: it is what picks the `Era` this decoder is built with, so
-the app has to know it before the request goes out.
+`track` is the whole of what this app knows about the circuit: its proportions,
+worked out by the CLI off the whole file, and which way round it is driven. The
+`season` the file also states is not decoded: it is what picks the `Era` this
+decoder is built with, so the app has to know it before the request goes out.
 
 -}
 type alias Event =
     { name : String
     , timeLimit : Instant
-    , track : TrackConfig
+    , track : Tracker.Track
     , startingGrid : StartingGrid
     }
 
@@ -92,18 +93,43 @@ eventDecoder era =
         (field "startingGrid" (startingGridDecoder era))
 
 
-{-| A round whose feed does not split the lap into mini-sectors leaves the key
-out, rather than writing fifteen shares nothing can be placed against.
+{-| Two keys the file is allowed to leave out, and they are left out for
+different reasons. A round whose feed does not split the lap into mini-sectors
+has no fifteen shares to write, and nothing to place a car against at that grain
+either. A round the CLI has not been told the direction of has one -- every
+circuit goes round one way or the other -- and clockwise stands in for it here,
+which is the more common of the two and, being a guess, is exactly why the CLI
+does not make it.
 -}
-trackDecoder : Decoder TrackConfig
+trackDecoder : Decoder Tracker.Track
 trackDecoder =
-    Decode.map2 TrackConfig
-        (field "sectors" bySectorDecoder)
+    Decode.map2 (\direction config -> Tracker.fromConfig { direction = direction, config = config })
         (Decode.oneOf
-            [ field "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder)
-            , Decode.succeed NoMiniSectors
+            [ field "direction" directionDecoder
+            , Decode.succeed Clockwise
             ]
         )
+        (Decode.map2 TrackConfig
+            (field "sectors" bySectorDecoder)
+            (Decode.oneOf
+                [ field "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder)
+                , Decode.succeed NoMiniSectors
+                ]
+            )
+        )
+
+
+directionDecoder : Decoder Direction
+directionDecoder =
+    string
+        |> Decode.map
+            (\raw ->
+                if raw == "counter_clockwise" then
+                    CounterClockwise
+
+                else
+                    Clockwise
+            )
 
 
 shareDecoder : Decoder Share

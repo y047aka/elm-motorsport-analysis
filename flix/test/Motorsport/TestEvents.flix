@@ -38,4 +38,24 @@ mod Motorsport.TestEvents {
     def testUnknownPassThrough(): Unit \ Assert =
         Assert.assertTrue(Events.displayName("unknown_event") == "unknown_event")
 
+    @Test
+    def testEveryRoundOnTheCalendarHasADirection(): Unit \ Assert =
+        // Keyed by a string, so nothing makes a round answer -- this is what
+        // stands in for the exhaustive `case` the Elm side used to get.
+        let ids = "qatar_1812km" :: "imola_6h" :: "spa_6h" :: "le_mans_24h" ::
+                  "cota_6h" :: "fuji_6h" :: "bahrain_8h" :: "sao_paulo_6h" :: Nil;
+        Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids))
+
+    @Test
+    def testTheThreeCounterClockwiseRounds(): Unit \ Assert =
+        use Motorsport.Circuit.Direction.Direction;
+        Assert.assertTrue(Events.direction("imola_6h") == Some(Direction.CounterClockwise));
+        Assert.assertTrue(Events.direction("cota_6h") == Some(Direction.CounterClockwise));
+        Assert.assertTrue(Events.direction("sao_paulo_6h") == Some(Direction.CounterClockwise));
+        Assert.assertTrue(Events.direction("fuji_6h") == Some(Direction.Clockwise))
+
+    @Test
+    def testUnknownRoundHasNoDirection(): Unit \ Assert =
+        Assert.assertTrue(Option.isEmpty(Events.direction("unknown_event")))
+
 }

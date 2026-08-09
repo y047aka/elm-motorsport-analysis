@@ -15,7 +15,6 @@ import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
-import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -136,7 +135,7 @@ update msg m =
 
 
 {-| The round the app shows before one has been asked for, and in place of one
-it cannot show. Clockwise is what an empty track is drawn as.
+it cannot show.
 -}
 noEvent : EventSummary
 noEvent =
@@ -145,7 +144,6 @@ noEvent =
     , season = 0
     , date = ""
     , jsonPath = ""
-    , direction = Clockwise
     }
 
 
@@ -186,11 +184,7 @@ finalizeWecIfReady m =
 
                 -- Settled here, with the race, and not touched again until the
                 -- next one loads.
-                , track =
-                    Tracker.fromConfig
-                        { direction = m.eventSummary.direction
-                        , config = event.track
-                        }
+                , track = event.track
                 , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }

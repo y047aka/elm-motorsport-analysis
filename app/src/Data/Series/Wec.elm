@@ -1,16 +1,10 @@
-module Data.Series.Wec exposing
-    ( Wec(..), fromString, toString
-    , direction
-    )
+module Data.Series.Wec exposing (Wec(..), fromString, toString)
 
 {-|
 
 @docs Wec, fromString, toString
-@docs direction
 
 -}
-
-import Motorsport.Circuit.Direction exposing (Direction(..))
 
 
 type Wec
@@ -81,45 +75,3 @@ toString event =
 
         Bahrain_8h ->
             "bahrain_8h"
-
-
-{-| Which way round a round's circuit goes -- the only thing about a circuit
-this side still has to know, now that how the lap divides and how long each
-division is both arrive in the summary.
-
-Keyed by the round rather than by its name, which is what
-`Chart.Tracker` used to match on -- a list of three event names that had to be
-kept in step with the calendar by hand, and that said nothing at all for a name
-not on it. Here the compiler will not let a round go unanswered.
-
-The season does not come into it. It used to, for Le Mans alone, because 2025 is
-the one running of it the source data splits into mini-sectors -- but that is a
-fact about the file, which the CLI reads off the file itself.
-
--}
-direction : Wec -> Direction
-direction event =
-    case event of
-        Qatar_1812km ->
-            Clockwise
-
-        Imola_6h ->
-            CounterClockwise
-
-        Spa_6h ->
-            Clockwise
-
-        LeMans_24h ->
-            Clockwise
-
-        SaoPaulo_6h ->
-            CounterClockwise
-
-        Cota_6h ->
-            CounterClockwise
-
-        Fuji_6h ->
-            Clockwise
-
-        Bahrain_8h ->
-            Clockwise

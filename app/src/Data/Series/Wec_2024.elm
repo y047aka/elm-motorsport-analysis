@@ -21,9 +21,6 @@ toEventSummary_Wec_2024 event =
 
         jsonPath =
             "/static/wec/2024/" ++ id ++ ".json"
-
-        direction =
-            Data.Series.Wec.direction event
     in
     case event of
         Qatar_1812km ->
@@ -32,7 +29,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-03-02"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Imola_6h ->
@@ -41,7 +37,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-04-21"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Spa_6h ->
@@ -50,7 +45,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-05-11"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         LeMans_24h ->
@@ -59,7 +53,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-06-15"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         SaoPaulo_6h ->
@@ -68,7 +61,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-07-14"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Cota_6h ->
@@ -77,7 +69,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-09-01"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Fuji_6h ->
@@ -86,7 +77,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-09-15"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Bahrain_8h ->
@@ -95,7 +85,6 @@ toEventSummary_Wec_2024 event =
             , season = 2024
             , date = "2024-11-02"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
 

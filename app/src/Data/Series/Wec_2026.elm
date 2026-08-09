@@ -22,9 +22,6 @@ toEventSummary_Wec_2026 event =
 
         jsonPath =
             "/static/wec/2026/" ++ id ++ ".json"
-
-        direction =
-            Data.Series.Wec.direction event
     in
     case event of
         Imola_6h ->
@@ -33,7 +30,6 @@ toEventSummary_Wec_2026 event =
             , season = 2026
             , date = "2026-04-19"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         Spa_6h ->
@@ -42,7 +38,6 @@ toEventSummary_Wec_2026 event =
             , season = 2026
             , date = "2026-05-09"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         LeMans_24h ->
@@ -51,7 +46,6 @@ toEventSummary_Wec_2026 event =
             , season = 2026
             , date = "2026-06-13"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         SaoPaulo_6h ->
@@ -60,7 +54,6 @@ toEventSummary_Wec_2026 event =
             , season = 2026
             , date = "2026-07-12"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
         _ ->
@@ -69,7 +62,6 @@ toEventSummary_Wec_2026 event =
             , season = 2026
             , date = "2026-04-19"
             , jsonPath = jsonPath
-            , direction = direction
             }
 
 
