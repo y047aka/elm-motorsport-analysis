@@ -184,7 +184,7 @@ finalizeWecIfReady m =
 
                 -- Settled here, with the race, and not touched again until the
                 -- next one loads.
-                , track = event.track
+                , track = Tracker.fromConfig event.track
                 , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }

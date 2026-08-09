@@ -1,18 +1,17 @@
 module Data.Wec exposing
-    ( Event, StartingGrid, Basis(..), StartingGridEntry
+    ( Event, Track, StartingGrid, Basis(..), StartingGridEntry
     , eventDecoder
     )
 
 {-|
 
-@docs Event, StartingGrid, Basis, StartingGridEntry
+@docs Event, Track, StartingGrid, Basis, StartingGridEntry
 @docs eventDecoder
 
 -}
 
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
-import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Driver as Driver exposing (Driver)
@@ -40,8 +39,20 @@ What is left is `track`, the whole of what this app knows about the circuit.
 type alias Event =
     { name : String
     , timeLimit : Instant
-    , track : Tracker.Track
+    , track : Track
     , startingGrid : StartingGrid
+    }
+
+
+{-| The circuit as the summary describes it: which way round it goes, and how
+the lap divides. Handed to
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig) by whoever holds
+both -- drawing it is not this module's business, and the field names are the
+ones that function asks for.
+-}
+type alias Track =
+    { direction : Direction
+    , config : TrackConfig
     }
 
 
@@ -104,14 +115,13 @@ file disagree about the shape of it, which is not a thing to carry on from --
 `sectors` beside them has always failed the event for it.
 
 -}
-trackDecoder : Decoder Tracker.Track
+trackDecoder : Decoder Track
 trackDecoder =
     Decode.succeed
         (\direction sectors miniSectors ->
-            Tracker.fromConfig
-                { direction = direction
-                , config = { sectors = sectors, miniSectors = miniSectors }
-                }
+            { direction = direction
+            , config = { sectors = sectors, miniSectors = miniSectors }
+            }
         )
         |> optional "direction" directionDecoder Clockwise
         |> required "sectors" bySectorDecoder
