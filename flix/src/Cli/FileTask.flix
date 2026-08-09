@@ -9,17 +9,19 @@ mod Cli.FileTask {
         outputPath = String,
         lapsPath = String,
         eventName = String,
-        season = Option[Int32]
+        season = Option[Int32],
+        calendarRoot = Option[String]
     }
 
     pub def make(inputPath: String, outputOverride: Option[String]): FileTask =
         let outputPath = outputOverride |> Option.getWithDefault(defaultOutputPath(inputPath));
         {
-            inputPath   = inputPath,
-            outputPath  = outputPath,
-            lapsPath    = derivedLapsPath(outputPath),
-            eventName   = eventName(inputPath),
-            season      = season(inputPath)
+            inputPath    = inputPath,
+            outputPath   = outputPath,
+            lapsPath     = derivedLapsPath(outputPath),
+            eventName    = eventName(inputPath),
+            season       = season(inputPath),
+            calendarRoot = calendarRoot(inputPath)
         }
 
     pub def fromArgs(parsed: Args.ParsedArgs): Result[CliError, List[FileTask]] \ IO =
@@ -87,5 +89,26 @@ mod Cli.FileTask {
             |> List.drop(1)
             |> List.head
             |> Option.flatMap(Int32.fromString)
+
+    /// The directory the season directories sit in -- `wec` for
+    /// `wec/2025/fuji_6h.csv` -- which is where the calendar the app reads
+    /// belongs, since it spans every season under it.
+    ///
+    /// Read off the same path `season` is, and answers only where that one does:
+    /// a CSV not filed under a year says nothing about where its championship's
+    /// calendar goes, and inventing a place to put it would leave the file
+    /// somewhere nothing looks.
+    def calendarRoot(inputPath: String): Option[String] =
+        let upward = String.split({regex = "/"}, inputPath) |> List.reverse |> List.drop(1);
+        match upward {
+            case seasonDir :: rest =>
+                if (Option.isEmpty(Int32.fromString(seasonDir)))
+                    None
+                else if (List.isEmpty(rest))
+                    Some(".")
+                else
+                    Some(rest |> List.reverse |> List.join("/"))
+            case Nil => None
+        }
 
 }

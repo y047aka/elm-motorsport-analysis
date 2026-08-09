@@ -1,0 +1,89 @@
+{
+  "seasons": [
+    {
+      "season": 2026,
+      "rounds": [
+        {
+          "id": "imola_6h",
+          "name": "6 Hours of Imola",
+          "date": "2026-04-19"
+        },
+        {
+          "id": "spa_6h",
+          "name": "6 Hours of Spa",
+          "date": "2026-05-09"
+        },
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2026-06-13"
+        },
+        {
+          "id": "sao_paulo_6h",
+          "name": "6 Hours of São Paulo",
+          "date": "2026-07-12"
+        }
+      ]
+    },
+    {
+      "season": 2025,
+      "rounds": [
+        {
+          "id": "qatar_1812km",
+          "name": "Qatar 1812km",
+          "date": "2025-03-01"
+        },
+        {
+          "id": "imola_6h",
+          "name": "6 Hours of Imola",
+          "date": "2025-04-20"
+        },
+        {
+          "id": "spa_6h",
+          "name": "6 Hours of Spa",
+          "date": "2025-05-10"
+        },
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2025-06-14"
+        },
+        {
+          "id": "sao_paulo_6h",
+          "name": "6 Hours of São Paulo",
+          "date": "2025-07-13"
+        },
+        {
+          "id": "cota_6h",
+          "name": "Lone Star Le Mans",
+          "date": "2025-09-07"
+        },
+        {
+          "id": "fuji_6h",
+          "name": "6 Hours of Fuji",
+          "date": "2025-09-28"
+        }
+      ]
+    },
+    {
+      "season": 2024,
+      "rounds": [
+        {
+          "id": "le_mans_24h",
+          "name": "24 Hours of Le Mans",
+          "date": "2024-06-15"
+        },
+        {
+          "id": "fuji_6h",
+          "name": "6 Hours of Fuji",
+          "date": "2024-09-15"
+        },
+        {
+          "id": "bahrain_8h",
+          "name": "8 Hours of Bahrain",
+          "date": "2024-11-02"
+        }
+      ]
+    }
+  ]
+}

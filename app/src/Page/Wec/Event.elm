@@ -9,7 +9,6 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 
 import Browser.Events
 import Css exposing (..)
-import Data.Series.EventSummary exposing (EventSummary)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -162,7 +161,7 @@ subscriptions shared _ =
 
 
 view : Shared.Model -> Model -> View Msg
-view { eventSummary, replay, snapshot, track } m =
+view { season, eventName, replay, snapshot, track } m =
     { title = "Wec"
     , body =
         [ main_
@@ -173,10 +172,10 @@ view { eventSummary, replay, snapshot, track } m =
                 , property "grid-template-rows" "auto 1fr"
                 ]
             ]
-            [ navigation eventSummary replay m.mode
+            [ navigation { name = eventName, season = season } replay m.mode
             , case m.mode of
                 Tracker ->
-                    trackerView eventSummary track snapshot m
+                    trackerView track snapshot m
 
                 Events ->
                     RaceEvents.view EventsMsg m.eventsState replay
@@ -185,8 +184,8 @@ view { eventSummary, replay, snapshot, track } m =
     }
 
 
-trackerView : EventSummary -> TrackerChart.Track -> Snapshot -> Model -> Html Msg
-trackerView eventSummary track snapshot m =
+trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
+trackerView track snapshot m =
     div
         [ css
             [ property "grid-row" "2"
@@ -252,11 +251,11 @@ trackerView eventSummary track snapshot m =
         ]
 
 
-navigation : EventSummary -> Replay.Model -> Mode -> Html Msg
-navigation eventSummary replay currentMode =
+navigation : { name : String, season : Int } -> Replay.Model -> Mode -> Html Msg
+navigation event replay currentMode =
     let
         headerTitle =
-            eventSummary.name ++ " (" ++ String.fromInt eventSummary.season ++ ")"
+            event.name ++ " (" ++ String.fromInt event.season ++ ")"
     in
     nav
         [ Attributes.class "p-3"

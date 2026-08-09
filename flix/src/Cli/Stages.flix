@@ -5,6 +5,7 @@ mod Cli.Stages {
     use Cli.FileTask
     use Cli.Stages.CsvDecode
     use Cli.Stages.CsvInput
+    use Cli.Stages.Manifest
     use Cli.Stages.Output
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
@@ -37,8 +38,29 @@ mod Cli.Stages {
             { processed = 0, errors = 0 },
             tasks
         );
-        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
-        if (summary#errors == 0) 0 else 1
+        let calendarErrors = writeCalendar(tasks);
+        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors + calendarErrors} errors");
+        if (summary#errors + calendarErrors == 0) 0 else 1
+
+    /// The calendar is not made from the laps, so it is written once for the run
+    /// rather than once per file, and a run that decoded nothing still writes it.
+    /// Where it goes is the only thing the run decides -- see
+    /// `Cli.FileTask.calendarRoot` -- so a run with nowhere to put it says so and
+    /// leaves the app's copy alone.
+    def writeCalendar(tasks: List[FileTask.FileTask]): Int32 \ {IO, Console} =
+        match tasks |> List.filterMap(task -> task#calendarRoot) |> List.head {
+            case None =>
+                Console.eprintln("Calendar: no season directory in the input path, skipped");
+                0
+            case Some(root) => match Manifest.write(root) {
+                case Ok(path) =>
+                    Console.println("Calendar -> ${path}");
+                    0
+                case Err(e) =>
+                    Console.eprintln("Calendar: ${e}");
+                    1
+            }
+        }
 
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
         CsvInput.read(task#inputPath)

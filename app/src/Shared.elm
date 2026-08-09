@@ -7,10 +7,8 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 
 -}
 
-import Data.Series as Series
-import Data.Series.EventSummary exposing (EventSummary)
-import Data.Series.Wec
 import Data.Wec as Wec
+import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.Laps as WecLaps
 import Effect exposing (Effect)
 import Http
@@ -31,9 +29,17 @@ import Shared.Msg exposing (Msg(..))
 is used: everything else about a frame follows from `replay` and the clock,
 where the track never moves once the data has loaded. See
 [`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
+
+`season` and `eventName` are the round being shown, and they arrive by different
+routes on purpose: the season is in the URL that asked for the round, while the
+name is read out of the round's own file, so the app never has a second opinion
+about what a race is called.
+
 -}
 type alias Model =
-    { eventSummary : EventSummary
+    { calendar : Calendar
+    , season : Int
+    , eventName : String
     , replay : Replay.Model
     , snapshot : Snapshot
     , track : Tracker.Track
@@ -42,6 +48,11 @@ type alias Model =
     }
 
 
+{-| The calendar is asked for once, here, rather than by the page that lists it:
+it is the same file whichever route the app opened on, and asking for it at the
+start means a round reached by its URL can still be listed alongside the others
+when the reader goes back.
+-}
 init : flags -> ( Model, Effect Msg )
 init _ =
     let
@@ -51,14 +62,20 @@ init _ =
         snapshotInit =
             snapshotOf replayInit
     in
-    ( { eventSummary = noEvent
+    ( { calendar = Calendar.empty
+      , season = 0
+      , eventName = ""
       , replay = replayInit
       , snapshot = snapshotInit
       , track = Tracker.empty
       , pendingWecEvent = Nothing
       , pendingWecLaps = Nothing
       }
-    , Effect.none
+    , Effect.sendCmd <|
+        Http.get
+            { url = "/static/wec/index.json"
+            , expect = Http.expectJson CalendarLoaded Calendar.decoder
+            }
     )
 
 
@@ -69,28 +86,36 @@ init _ =
 update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
+        CalendarLoaded (Ok calendar) ->
+            ( { m | calendar = calendar }, Effect.none )
+
+        CalendarLoaded (Err _) ->
+            ( m, Effect.none )
+
         FetchJson_Wec options ->
             let
-                eventSummary =
-                    Maybe.map2 Tuple.pair (String.toInt options.season) (Data.Series.Wec.fromString options.event)
-                        |> Maybe.andThen Series.toEventSummary
-                        |> Maybe.withDefault noEvent
+                season =
+                    String.toInt options.season |> Maybe.withDefault 0
+
+                stem =
+                    "/static/wec/" ++ options.season ++ "/" ++ options.event
             in
             ( { m
-                | eventSummary = eventSummary
+                | season = season
+                , eventName = ""
                 , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }
-            , case Era.fromSeason eventSummary.season of
+            , case Era.fromSeason season of
                 Just era ->
                     Effect.sendCmd <|
                         Cmd.batch
                             [ Http.get
-                                { url = eventSummary.jsonPath
+                                { url = stem ++ ".json"
                                 , expect = Http.expectJson JsonLoaded_Wec (Wec.eventDecoder era)
                                 }
                             , Http.get
-                                { url = lapsPathFor eventSummary.jsonPath
+                                { url = stem ++ "_laps.json"
                                 , expect = Http.expectJson LapsLoaded_Wec WecLaps.decoder
                                 }
                             ]
@@ -102,13 +127,9 @@ update msg m =
             )
 
         JsonLoaded_Wec (Ok decoded) ->
-            let
-                modelEventSummary =
-                    m.eventSummary
-            in
             finalizeWecIfReady
                 { m
-                    | eventSummary = { modelEventSummary | name = decoded.name }
+                    | eventName = decoded.name
                     , pendingWecEvent = Just decoded
                 }
 
@@ -134,33 +155,11 @@ update msg m =
             )
 
 
-{-| The round the app shows before one has been asked for, and in place of one
-it cannot show.
--}
-noEvent : EventSummary
-noEvent =
-    { id = ""
-    , name = ""
-    , season = 0
-    , date = ""
-    , jsonPath = ""
-    }
-
-
 {-| The race read where playback has got to.
 -}
 snapshotOf : Replay.Model -> Snapshot
 snapshotOf { race, playback } =
     Snapshot.at { elapsed = Clock.getElapsed playback } race
-
-
-lapsPathFor : String -> String
-lapsPathFor jsonPath =
-    if String.endsWith ".json" jsonPath then
-        String.dropRight 5 jsonPath ++ "_laps.json"
-
-    else
-        jsonPath ++ "_laps.json"
 
 
 finalizeWecIfReady : Model -> ( Model, Effect Msg )

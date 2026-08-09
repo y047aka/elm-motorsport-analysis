@@ -1,23 +1,27 @@
 module Page.Index exposing (view)
 
-{-| The top page. It is stateless, so it exposes only a `view`.
+{-| The top page. It holds no state of its own, so it exposes only a `view`; the
+calendar it lists is loaded once by `Shared`.
 
 @docs view
 
 -}
 
-import Data.Series.EventSummary exposing (EventSummary)
-import Data.Series.Wec_2024 exposing (wec_2024)
-import Data.Series.Wec_2025 exposing (wec_2025)
-import Data.Series.Wec_2026 exposing (wec_2026)
+import Data.Wec.Calendar exposing (Round, Season)
 import Html.Styled exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
 import Html.Styled.Attributes exposing (attribute, class)
 import Route
+import Shared
 import View exposing (View)
 
 
-view : View msg
-view =
+{-| The seasons come out in the order the calendar file lists them, and the
+first of them is the latest. Sorting them here, or deciding for itself which
+season is current, would be this page holding an opinion the file already
+carries.
+-}
+view : Shared.Model -> View msg
+view { calendar } =
     { title = "Race Analysis"
     , body =
         [ div
@@ -26,10 +30,7 @@ view =
             ]
             [ pageHeader
             , main_ [ class "mx-auto flex max-w-5xl flex-col gap-12 px-6 pb-20" ]
-                [ seasonSection { season = "2026", isLatest = True } wec_2026
-                , seasonSection { season = "2025", isLatest = False } wec_2025
-                , seasonSection { season = "2024", isLatest = False } wec_2024
-                ]
+                (List.indexedMap (\i season -> seasonSection { isLatest = i == 0 } season) calendar)
             ]
         ]
     }
@@ -45,35 +46,39 @@ pageHeader =
         ]
 
 
-seasonSection : { season : String, isLatest : Bool } -> List EventSummary -> Html msg
-seasonSection { season, isLatest } events =
+seasonSection : { isLatest : Bool } -> Season -> Html msg
+seasonSection { isLatest } { season, rounds } =
+    let
+        seasonLabel =
+            String.fromInt season
+    in
     section []
         [ div [ class "mb-4 flex items-center gap-3" ]
-            [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ season) ]
+            [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ seasonLabel) ]
             , if isLatest then
                 span [ class "badge badge-sm badge-primary" ] [ text "Latest" ]
 
               else
                 text ""
             , span [ class "ml-auto text-xs tabular-nums opacity-50" ]
-                [ text (String.fromInt (List.length events) ++ " races") ]
+                [ text (String.fromInt (List.length rounds) ++ " races") ]
             ]
         , div [ class "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" ]
-            (List.map (eventCard season) events)
+            (List.map (eventCard seasonLabel) rounds)
         ]
 
 
-eventCard : String -> EventSummary -> Html msg
-eventCard season eventSummary =
+eventCard : String -> Round -> Html msg
+eventCard season round =
     a
-        [ Route.href (Route.WecEvent { season = season, event = eventSummary.id })
+        [ Route.href (Route.WecEvent { season = season, event = round.id })
         , class "group card card-border border-base-300 bg-base-200 transition duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:brightness-125"
         ]
         [ div [ class "card-body gap-3 p-5" ]
             [ span [ class "text-xs tabular-nums opacity-60" ]
-                [ text (formatDate eventSummary.date) ]
+                [ text (formatDate round.date) ]
             , div [ class "flex items-end justify-between gap-2" ]
-                [ h3 [ class "card-title text-base leading-snug" ] [ text eventSummary.name ]
+                [ h3 [ class "card-title text-base leading-snug" ] [ text round.name ]
                 , span [ class "text-lg opacity-20 transition-opacity group-hover:opacity-70" ]
                     [ text "→" ]
                 ]

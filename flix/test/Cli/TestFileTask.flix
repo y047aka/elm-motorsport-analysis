@@ -68,6 +68,27 @@ mod Cli.TestFileTask {
         Assert.assertTrue(task#season == Some(2025))
 
     @Test
+    def testCalendarGoesAboveTheSeasonDirectories(): Unit \ Assert =
+        let task = FileTask.make("../app/static/wec/2025/fuji_6h.csv", None);
+        Assert.assertTrue(task#calendarRoot == Some("../app/static/wec"));
+        let shallow = FileTask.make("2025/fuji_6h.csv", None);
+        Assert.assertTrue(shallow#calendarRoot == Some("."))
+
+    /// Answers exactly where `season` does, and for the same reason: both read
+    /// the year off the directory above the file.
+    @Test
+    def testCsvOutsideASeasonDirectoryHasNowhereToPutTheCalendar(): Unit \ Assert =
+        Assert.assertTrue(FileTask.make("data/race.csv", None)#calendarRoot == None);
+        Assert.assertTrue(FileTask.make("race.csv", None)#calendarRoot == None)
+
+    /// The output override moves the round's own files; it does not move the
+    /// calendar, which was never made from this CSV.
+    @Test
+    def testCalendarRootComesFromTheInputNotTheOutput(): Unit \ Assert =
+        let task = FileTask.make("wec/2025/fuji_6h.csv", Some("/tmp/2026/out.json"));
+        Assert.assertTrue(task#calendarRoot == Some("wec"))
+
+    @Test
     def testLapsPathFromOverrideWithExtension(): Unit \ Assert =
         let task = FileTask.make("input.csv", Some("data/out.bin"));
         Assert.assertTrue(task#outputPath == "data/out.bin");

@@ -1,5 +1,6 @@
 mod Motorsport.TestCalendar {
 
+    use Util.Json.Encode
     use Motorsport.Calendar
 
     def ids(season: Int32): List[String] =
@@ -46,5 +47,23 @@ mod Motorsport.TestCalendar {
                 ),
             seasons
         ))
+
+    /// The latest season is the first one listed and nothing else, so this is
+    /// the whole of what the index page reads to put its badge.
+    @Test
+    def testTheSeasonsRunNewestFirst(): Unit \ Assert =
+        let years = Calendar.seasons() |> List.map(s -> s#season);
+        Assert.assertTrue(years == List.sort(years) |> List.reverse)
+
+    @Test
+    def testTheCalendarJsonCarriesEverySeasonWithItsRoundsNamed(): Unit \ Assert =
+        let json = Encode.render(Calendar.toJson());
+        Assert.assertTrue(String.contains({substr = "\"seasons\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"season\": 2026"}, json));
+        Assert.assertTrue(String.contains({substr = "\"season\": 2025"}, json));
+        Assert.assertTrue(String.contains({substr = "\"season\": 2024"}, json));
+        Assert.assertTrue(String.contains({substr = "\"id\": \"le_mans_24h\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"name\": \"24 Hours of Le Mans\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"date\": \"2024-06-15\""}, json))
 
 }

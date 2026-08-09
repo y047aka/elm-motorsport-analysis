@@ -202,7 +202,7 @@ viewPage : Model -> View Msg
 viewPage model =
     case model.page of
         IndexPage ->
-            Page.Index.view
+            Page.Index.view model.shared
 
         DebugPage pageModel ->
             Page.Debug.view model.shared pageModel
