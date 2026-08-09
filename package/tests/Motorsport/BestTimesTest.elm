@@ -163,8 +163,7 @@ laps over stays covered too.
 -}
 changesOf : List Car -> Changes
 changesOf cars =
-    -- Where the flag fell has no bearing on the records, so the race is given
-    -- the start as its limit and every car reads back as having finished.
+    -- Where the flag fell has no bearing on the records.
     (Race.fromCars { timeLimit = Instant.raceStart } cars).bestTimeChanges
 
 

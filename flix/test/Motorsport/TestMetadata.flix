@@ -280,8 +280,6 @@ mod Motorsport.TestMetadata {
 
     @Test
     def testSeasonIsCarriedThroughAsGiven(): Unit \ Assert =
-        // The laps say nothing about the year, so whatever the caller read off
-        // the path is what comes out.
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
         let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps("le_mans_24h", Some(2024), laps)));
         Assert.assertTrue(String.contains({substr = "\"season\": 2024"}, json))

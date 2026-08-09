@@ -107,24 +107,17 @@ type Track
         }
 
 
-{-| The track as the summary describes it, plus which way the cars go round.
-Hold on to the result and hand it to [`view`](#view) each frame.
-
-The proportions are the race's _final_ records, not the ones standing at some
-moment of it: a sector's share of the lap is how quick it was at its quickest,
-and mid-race that answer is still moving. That the CLI reads them off the whole
-file is what makes the track the same shape from the first frame to the last.
-
+{-| The track as the summary describes it. Hold on to the result and hand it to
+[`view`](#view) each frame.
 -}
 fromConfig : { direction : Direction, config : TrackConfig } -> Track
 fromConfig =
     Track
 
 
-{-| The track to stand in for one whose race has not loaded yet: the lap divided
-in three even stretches, which is what a summary that has said nothing about the
-circuit leaves to draw. Written out rather than worked out -- the rule that
-divides a lap lives in the CLI now, and three thirds do not need it.
+{-| The track to stand in for one whose summary has not loaded yet. Written out
+rather than worked out: the rule that divides a lap lives in the CLI now, and
+three thirds do not need it.
 -}
 empty : Track
 empty =

@@ -48,9 +48,9 @@ type CarEventType
 
 {-| Build a sorted list of timeline events from a race's entry list.
 
-`timeLimit` is what separates a car's last lap being the chequered flag from it
-being a retirement, so it is passed in rather than guessed at here -- see
-[`Race.fromCars`](Motorsport-Race#fromCars), which is given it.
+`timeLimit` decides whether a car's last lap was the flag or a retirement, and
+is passed in rather than read off the laps -- see
+[`Race.fromCars`](Motorsport-Race#fromCars).
 
 There is deliberately no per-lap completion event: one per car per lap was five
 in six of the list, and the laps are on the car already for everything that

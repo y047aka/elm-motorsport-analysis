@@ -33,24 +33,20 @@ mod Motorsport.Metadata {
         entries = List[StartingGridEntry]
     }
 
-    /// How far the race ran, and when. Every one of these is read back off the
-    /// laps, because the feed states none of them directly.
+    /// How far the race ran, and when. The feed states none of it directly.
     ///
-    /// `duration` is the observation -- the last moment any car crossed the
-    /// line -- and `timeLimit` is what that is taken to mean: the scheduled
-    /// distance, which for every WEC round is a whole number of hours, so the
-    /// observation rounded down to the hour. The two are kept apart rather than
-    /// collapsed so a reader can see the estimate and what it was made from, in
-    /// the way `Basis` says where the grid order came from.
+    /// `duration` is the observation and `timeLimit` what it is taken to mean:
+    /// a WEC round is scheduled in whole hours and the feed never says which.
+    /// The two are kept apart so a reader can see the estimate beside what it
+    /// was made from, as `Basis` does for the grid order.
     ///
-    /// `startedAt` is the time of day the race got under way, which the feed
-    /// carries only as `HOUR - ELAPSED`. That difference is constant across the
-    /// whole file -- `Cli.Stages.Validation`'s HourElapsedOffset rule is there
-    /// to say so -- which is why one lap is enough to read it.
+    /// `startedAt` is carried by the feed only as `HOUR - ELAPSED`, a
+    /// difference constant across the whole file -- `Cli.Stages.Validation`'s
+    /// HourElapsedOffset rule is there to say so -- which is why one lap is
+    /// enough to read it.
     ///
-    /// `lapTotal` is the highest lap number anyone completed, which is the lap
-    /// the leader finished on and so what the lap counter counts up to. It is
-    /// not the number of laps in the file: every car ran its own.
+    /// `lapTotal` counts the laps the leader finished, not the laps in the
+    /// file: every car ran its own.
     pub type alias Particulars = {
         startedAt = Option[Hour],
         duration  = Duration,
@@ -58,10 +54,8 @@ mod Motorsport.Metadata {
         lapTotal  = Int32
     }
 
-    /// `season` is read off the path the CSV came in on rather than out of the
-    /// laps, which say nothing about the year -- see
-    /// [`Cli.FileTask`](Cli.FileTask)'s `season`. A file filed outside a season
-    /// directory has none, and the key is left out.
+    /// `season` is read off the path the CSV came in on -- see
+    /// `Cli.FileTask.season` -- because the laps say nothing about the year.
     pub type alias Metadata = {
         name         = String,
         season       = Option[Int32],
@@ -92,8 +86,6 @@ mod Motorsport.Metadata {
     def laterOf(a: Duration, b: Duration): Duration =
         if (Util.Duration.millis(b) > Util.Duration.millis(a)) b else a
 
-    /// `offsetFrom` folds the day-rollover in, so a lap turned after midnight
-    /// reads back the same start as the first one.
     def startedAtOf(lap: RawLap): Hour =
         Hour.Hour(HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed)))
 
@@ -220,9 +212,6 @@ mod Motorsport.Metadata {
             )
         )
 
-    /// A race with no laps in it has no time of day to report, so the key is
-    /// left out rather than filled with midnight -- the same choice
-    /// `Motorsport.Wec` makes for a lap with no mini-sectors.
     def particularsToJson(p: Particulars): Encode.JsonValue =
         let startedAt = match p#startedAt {
             case None    => Nil

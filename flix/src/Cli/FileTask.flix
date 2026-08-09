@@ -77,14 +77,10 @@ mod Cli.FileTask {
         let fileName = parts |> List.last |> Option.getWithDefault(inputPath);
         stripLastExtension(fileName)
 
-    /// The season is the directory the CSV is filed under -- `wec/2025/fuji_6h.csv`
-    /// -- which is the only place it is written down: no column of the timing
-    /// feed carries the year, and the event name does not either.
-    ///
-    /// A CSV filed anywhere else, or handed over with no directory above it at
-    /// all, has no season to read. Nothing is guessed from the dates inside:
-    /// a season and the calendar year it runs in are not the same thing, and
-    /// the point of reading the directory is that somebody filed it there.
+    /// The directory the CSV is filed under -- `wec/2025/fuji_6h.csv` -- which
+    /// is the only place the season is written down: no column of the feed
+    /// carries the year, and neither does the event name. Nothing is guessed
+    /// from the dates inside, which are a calendar year and not a season.
     def season(inputPath: String): Option[Int32] =
         String.split({regex = "/"}, inputPath)
             |> List.reverse

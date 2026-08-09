@@ -40,8 +40,6 @@ mod Motorsport.TestEvents {
 
     @Test
     def testEveryRoundOnTheCalendarHasADirection(): Unit \ Assert =
-        // Keyed by a string, so nothing makes a round answer -- this is what
-        // stands in for the exhaustive `case` the Elm side used to get.
         let ids = "qatar_1812km" :: "imola_6h" :: "spa_6h" :: "le_mans_24h" ::
                   "cota_6h" :: "fuji_6h" :: "bahrain_8h" :: "sao_paulo_6h" :: Nil;
         Assert.assertTrue(List.forAll(id -> not Option.isEmpty(Events.direction(id)), ids))

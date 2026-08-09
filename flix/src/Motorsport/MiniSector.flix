@@ -2,7 +2,7 @@
 /// standard S1/S2/S3 split and only appear in the Le Mans CSV; other WEC
 /// rounds omit these columns entirely. This module is the single source of
 /// truth for the IDs, their CSV column prefixes, and their JSON object
-/// keys, mirroring `Motorsport.Circuit.LeMans.miniSectorOrder` on the Elm
+/// keys, mirroring `Motorsport.Wec.Circuit.LeMans.all` on the Elm
 /// side.
 mod Motorsport.MiniSector {
 
@@ -26,7 +26,7 @@ mod Motorsport.MiniSector {
         case FL
     }
 
-    /// Track-order list — must match Motorsport.Circuit.LeMans.miniSectorOrder.
+    /// Track-order list — must match Motorsport.Wec.Circuit.LeMans.all.
     /// Line groups correspond to S1 / S2 / S3.
     pub def all(): List[MiniSectorId] =
         List#{
@@ -36,12 +36,8 @@ mod Motorsport.MiniSector {
             MiniSectorId.PITREF, MiniSectorId.SCL1, MiniSectorId.FORDOUT, MiniSectorId.FL
         }
 
-    /// Which sector a mini-sector falls in -- the line groups of `all` written
-    /// out, and the mirror of `Motorsport.Wec.Circuit.LeMans.layout` on the Elm
-    /// side. A sector is its mini-sectors, so `Motorsport.Track` reads a
-    /// sector's share of the lap off this rather than off the sector's own
-    /// record, which would let the two divisions of the lap disagree about
-    /// where the sector ends.
+    /// The line groups of `all` written out. Total by construction, so a
+    /// mini-sector cannot go missing from the grouping or land in two sectors.
     pub def sectorOf(id: MiniSectorId): Sector =
         match id {
             case MiniSectorId.SCL2    => Sector.S1

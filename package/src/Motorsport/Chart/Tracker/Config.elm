@@ -7,10 +7,8 @@ module Motorsport.Chart.Tracker.Config exposing
 {-| The track's proportions: how much of the lap each stretch of it takes, and
 where round the lap that stretch begins.
 
-A stretch takes the share of the lap that its record does of the lap record, so
-the track is drawn to how quick each part of it is. That division is the CLI's
-to make -- it reads the whole file, where this side would have to wait for every
-lap of it to arrive first -- and arrives decoded in `Data.Wec`.
+Divided by the CLI, which reads the whole file where this side would have to
+wait for every lap of it to arrive first, and decoded in `Data.Wec`.
 
 Read for every car of every frame, which is what decides the shape here: the
 shares are held per sector and per mini-sector, so reading one is
@@ -46,8 +44,7 @@ type alias Share =
     }
 
 
-{-| The mini-sectors' shares, where the circuit has mini-sectors --
-[`Circuit.Segmentation`](Motorsport-Circuit#Segmentation) one step further on.
+{-| The mini-sectors' shares, on the rounds whose feed splits the lap that far.
 -}
 type MiniSectorShares
     = NoMiniSectors

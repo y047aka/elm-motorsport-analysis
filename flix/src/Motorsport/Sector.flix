@@ -2,9 +2,8 @@
 /// `Motorsport.MiniSector` at the coarser grain, and the mirror of
 /// `Motorsport.Sector` on the Elm side.
 ///
-/// The RawLap spells its three sector columns out flat as `s1`/`s2`/`s3`.
-/// This type is what lets the same fold run over all three, which is what
-/// `Motorsport.Track` needs to lay them out end to end.
+/// The RawLap spells its sector columns out flat as `s1`/`s2`/`s3`; this type
+/// is what lets one fold run over all three.
 mod Motorsport.Sector {
 
     pub enum Sector with Eq {

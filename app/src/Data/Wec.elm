@@ -25,21 +25,16 @@ import Motorsport.Wec.Era exposing (Era)
 import Motorsport.Wec.Manufacturer as Manufacturer
 
 
-{-| `timeLimit` is when the chequered flag falls, taken out of the file's `race`
-object. The CLI reads it off the last lap anyone completed, rounded down to the
-hour, because a WEC round is scheduled in whole hours and the timing feed never
-says which.
+{-| Less than the file states, and the omissions are the point.
 
-That object states three things beside it -- when the race started, how long it
-actually ran, and the lap the leader finished on -- which are not decoded here.
-The last two the app works out for itself from the laps it goes on to load, and
-having them arrive twice would only give the two answers a chance to disagree;
-the first has nothing showing a time of day to read it yet.
+The `race` object states how long the race actually ran and the lap the leader
+finished on beside its `timeLimit`; the app works both out for itself from the
+laps it goes on to load, and having them arrive twice would only give the two
+answers a chance to disagree. `startedAt` has nothing showing a time of day to
+read it yet. `season` is what picks the `Era` this decoder is built with, so it
+has to be known before the request goes out.
 
-`track` is the whole of what this app knows about the circuit: its proportions,
-worked out by the CLI off the whole file, and which way round it is driven. The
-`season` the file also states is not decoded: it is what picks the `Era` this
-decoder is built with, so the app has to know it before the request goes out.
+What is left is `track`, the whole of what this app knows about the circuit.
 
 -}
 type alias Event =
@@ -93,13 +88,10 @@ eventDecoder era =
         (field "startingGrid" (startingGridDecoder era))
 
 
-{-| Two keys the file is allowed to leave out, and they are left out for
-different reasons. A round whose feed does not split the lap into mini-sectors
-has no fifteen shares to write, and nothing to place a car against at that grain
-either. A round the CLI has not been told the direction of has one -- every
-circuit goes round one way or the other -- and clockwise stands in for it here,
-which is the more common of the two and, being a guess, is exactly why the CLI
-does not make it.
+{-| A round the CLI has not been told the direction of has one all the same --
+every circuit goes round one way or the other -- so clockwise stands in for it.
+That it is a guess is exactly why the CLI does not make it, and why the app has
+to.
 -}
 trackDecoder : Decoder Tracker.Track
 trackDecoder =

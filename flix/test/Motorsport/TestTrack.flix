@@ -83,7 +83,6 @@ mod Motorsport.TestTrack {
 
     @Test
     def testRecordIsTheQuickestOfEveryLapNotTheFirst(): Unit \ Assert =
-        // The opening lap is slower everywhere; the second sets all three.
         let laps =
             mkLap(200000, Some(80000), Some(60000), Some(60000)) ::
             mkLap(100000, Some(20000), Some(30000), Some(50000)) ::
@@ -138,8 +137,6 @@ mod Motorsport.TestTrack {
 
     @Test
     def testOneRoundWithMiniSectorsPutsEveryLapAtThatGrain(): Unit \ Assert =
-        // A round is drawn at the finest grain its file reaches, so a lap that
-        // missed its markers does not drop the round back to three sectors.
         let laps =
             mkLap(15000, Some(1000), Some(1000), Some(1000)) ::
             withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) ::
@@ -167,8 +164,6 @@ mod Motorsport.TestTrack {
 
     @Test
     def testCircuitOfUnknownDirectionSaysNothing(): Unit \ Assert =
-        // Rather than "clockwise", which would read as a fact rather than as
-        // the gap it is.
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
         let json = Encode.render(Track.toJson(Track.fromRawLaps(None, laps)));
         Assert.assertTrue(not String.contains({substr = "\"direction\""}, json))

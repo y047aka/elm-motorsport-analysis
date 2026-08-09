@@ -16,19 +16,15 @@ mod Motorsport.Events {
             case other           => other
         }
 
-    /// Which way round the circuit a round is run on goes.
+    /// `displayName` passes an unrecognized id through, because a name never
+    /// seen before is still the best name there is. A direction has no such
+    /// answer -- guessing clockwise would draw the whole field going the wrong
+    /// way round, which reads as data rather than as a gap -- so an id not
+    /// listed here gets none, and the summary leaves the key out.
     ///
-    /// `displayName` can pass an unrecognized id through, because a name it has
-    /// never seen is still the best name there is. A direction has no such
-    /// answer: guessing clockwise for a circuit that is not would draw the
-    /// whole field going the wrong way round, which reads as data rather than
-    /// as a gap. So this says nothing instead, and the summary leaves the key
-    /// out.
-    ///
-    /// The Elm side used to hold this keyed by a `Wec` constructor, where the
-    /// compiler would not let a round go unanswered. Keyed by the id off a
-    /// filename there is no such check, and a round added to the calendar
-    /// without a line here is what the `None` is for.
+    /// Keyed by a string, nothing makes a new round answer. `TestEvents` names
+    /// the calendar and asserts each round has a direction, which is what
+    /// stands in for the compiler.
     pub def direction(eventId: String): Option[Direction] =
         match eventId {
             case "qatar_1812km"  => Some(Direction.Clockwise)

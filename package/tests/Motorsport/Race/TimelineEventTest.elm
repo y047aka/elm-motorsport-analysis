@@ -332,19 +332,16 @@ carNumbered carNumber laps =
     { base | metadata = { metadata | carNumber = carNumber } }
 
 
-{-| The timeline of a race that ran to `timeLimit`.
-
-Most of these fixtures do not care where the flag fell and pass nought, which
-puts every car's last lap at or past it -- so they all take the flag, and no
-retirement gets in the way of what the fixture is actually about.
-
+{-| The timeline of a race that ran to `timeLimit`. Fixtures that do not care
+where the flag fell pass nought, which puts every car past it, so no retirement
+gets in the way of what they are actually about.
 -}
 timelineOf : Int -> List Car -> List TimelineEvent
 timelineOf timeLimit cars =
     TimelineEvent.fromCars { timeLimit = Instant.fromDuration timeLimit } cars
 
 
-{-| How each car's race ended, in the order the cars finished.
+{-| How each car's race ended.
 -}
 terminalEventTypes : List TimelineEvent -> List CarEventType
 terminalEventTypes =
