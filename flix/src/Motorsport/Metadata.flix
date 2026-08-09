@@ -7,6 +7,7 @@ mod Motorsport.Metadata {
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Motorsport.Car.Car
     use Motorsport.Events
+    use Motorsport.Track
     use Motorsport.Wec.RawLap
 
     /// What the grid order was derived from. The timing feed carries no
@@ -65,6 +66,7 @@ mod Motorsport.Metadata {
         name         = String,
         season       = Option[Int32],
         race         = Particulars,
+        track        = Track.Track,
         startingGrid = StartingGrid
     }
 
@@ -74,6 +76,7 @@ mod Motorsport.Metadata {
             name         = Events.displayName(eventId),
             season       = season,
             race         = particularsOf(rawLaps),
+            track        = Track.fromRawLaps(rawLaps),
             startingGrid = estimateGrid(builds)
         }
 
@@ -211,6 +214,7 @@ mod Motorsport.Metadata {
             ("name", JsonString(meta#name)) ::
             List.append(season,
                 ("race",         particularsToJson(meta#race)) ::
+                ("track",        Track.toJson(meta#track)) ::
                 ("startingGrid", gridToJson(meta#startingGrid)) ::
                 Nil
             )

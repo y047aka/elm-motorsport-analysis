@@ -10,11 +10,14 @@ module Data.Wec exposing
 
 -}
 
-import Json.Decode as Decode exposing (Decoder, field, int, list, string)
+import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (required)
+import Motorsport.Chart.Tracker.Config as Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race.Car as Car
+import Motorsport.Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era exposing (Era)
 import Motorsport.Wec.Manufacturer as Manufacturer
@@ -31,10 +34,17 @@ The last two the app works out for itself from the laps it goes on to load, and
 having them arrive twice would only give the two answers a chance to disagree;
 the first has nothing showing a time of day to read it yet.
 
+`track` is the circuit's proportions, worked out by the CLI off the whole file
+and read here rather than derived again -- see
+[`Tracker.Config`](Motorsport-Chart-Tracker-Config). The `season` the file also
+states is not decoded: it is what picks the `Era` this decoder is built with, so
+the app has to know it before the request goes out.
+
 -}
 type alias Event =
     { name : String
     , timeLimit : Instant
+    , track : TrackConfig
     , startingGrid : StartingGrid
     }
 
@@ -75,10 +85,60 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Decoder Event
 eventDecoder era =
-    Decode.map3 Event
+    Decode.map4 Event
         (field "name" string)
         (field "race" (field "timeLimit" Instant.decoder))
+        (field "track" trackDecoder)
         (field "startingGrid" (startingGridDecoder era))
+
+
+{-| A round whose feed does not split the lap into mini-sectors leaves the key
+out, rather than writing fifteen shares nothing can be placed against.
+-}
+trackDecoder : Decoder TrackConfig
+trackDecoder =
+    Decode.map2 TrackConfig
+        (field "sectors" bySectorDecoder)
+        (Decode.oneOf
+            [ field "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder)
+            , Decode.succeed NoMiniSectors
+            ]
+        )
+
+
+shareDecoder : Decoder Share
+shareDecoder =
+    Decode.map2 Share
+        (field "start" float)
+        (field "share" float)
+
+
+bySectorDecoder : Decoder (BySector Share)
+bySectorDecoder =
+    Decode.succeed BySector
+        |> required "s1" shareDecoder
+        |> required "s2" shareDecoder
+        |> required "s3" shareDecoder
+
+
+byMiniSectorDecoder : Decoder (ByMiniSector Share)
+byMiniSectorDecoder =
+    Decode.succeed ByMiniSector
+        |> required "scl2" shareDecoder
+        |> required "z4" shareDecoder
+        |> required "ip1" shareDecoder
+        |> required "z12" shareDecoder
+        |> required "sclc" shareDecoder
+        |> required "a7_1" shareDecoder
+        |> required "ip2" shareDecoder
+        |> required "a8_1" shareDecoder
+        |> required "sclb" shareDecoder
+        |> required "porin" shareDecoder
+        |> required "porout" shareDecoder
+        |> required "pitref" shareDecoder
+        |> required "scl1" shareDecoder
+        |> required "fordout" shareDecoder
+        |> required "fl" shareDecoder
 
 
 startingGridDecoder : Era -> Decoder StartingGrid

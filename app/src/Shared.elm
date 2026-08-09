@@ -31,7 +31,7 @@ import Shared.Msg exposing (Msg(..))
 {-| `track` is the one derived value kept here rather than worked out where it
 is used: everything else about a frame follows from `replay` and the clock,
 where the track never moves once the data has loaded. See
-[`Tracker.trackOf`](Motorsport-Chart-Tracker#trackOf).
+[`Tracker.fromConfig`](Motorsport-Chart-Tracker#fromConfig).
 -}
 type alias Model =
     { eventSummary : EventSummary
@@ -55,7 +55,7 @@ init _ =
     ( { eventSummary = noEvent
       , replay = replayInit
       , snapshot = snapshotInit
-      , track = Tracker.trackOf replayInit.race
+      , track = Tracker.empty
       , pendingWecEvent = Nothing
       , pendingWecLaps = Nothing
       }
@@ -189,7 +189,11 @@ finalizeWecIfReady m =
 
                 -- Settled here, with the race, and not touched again until the
                 -- next one loads.
-                , track = Tracker.trackOf replayNew.race
+                , track =
+                    Tracker.fromConfig
+                        { direction = m.eventSummary.circuit.direction
+                        , config = event.track
+                        }
                 , pendingWecEvent = Nothing
                 , pendingWecLaps = Nothing
               }
