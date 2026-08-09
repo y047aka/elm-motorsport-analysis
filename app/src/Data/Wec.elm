@@ -11,7 +11,7 @@ module Data.Wec exposing
 -}
 
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
@@ -88,39 +88,55 @@ eventDecoder era =
         (field "startingGrid" (startingGridDecoder era))
 
 
-{-| A round the CLI has not been told the direction of has one all the same --
-every circuit goes round one way or the other -- so clockwise stands in for it.
-That it is a guess is exactly why the CLI does not make it, and why the app has
-to.
+{-| Two keys the CLI leaves out when it has nothing to say, and `optional`
+rather than `oneOf` is what tells that apart from a key it wrote wrong. `oneOf`
+cannot: a `miniSectors` object one key short of fifteen would fall through to
+the same branch a missing one does, and Le Mans would quietly draw as a circuit
+that is not split that far.
+
+Left out, the two mean different things. A round the CLI has not been told the
+direction of has one all the same -- every circuit goes round one way or the
+other -- so clockwise stands in, and that it is a guess is why the CLI does not
+make it. A round with no `miniSectors` genuinely has none to draw.
+
+Written wrong, both mean the same thing: this app and the CLI that wrote the
+file disagree about the shape of it, which is not a thing to carry on from --
+`sectors` beside them has always failed the event for it.
+
 -}
 trackDecoder : Decoder Tracker.Track
 trackDecoder =
-    Decode.map2 (\direction config -> Tracker.fromConfig { direction = direction, config = config })
-        (Decode.oneOf
-            [ field "direction" directionDecoder
-            , Decode.succeed Clockwise
-            ]
+    Decode.succeed
+        (\direction sectors miniSectors ->
+            Tracker.fromConfig
+                { direction = direction
+                , config = { sectors = sectors, miniSectors = miniSectors }
+                }
         )
-        (Decode.map2 TrackConfig
-            (field "sectors" bySectorDecoder)
-            (Decode.oneOf
-                [ field "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder)
-                , Decode.succeed NoMiniSectors
-                ]
-            )
-        )
+        |> optional "direction" directionDecoder Clockwise
+        |> required "sectors" bySectorDecoder
+        |> optional "miniSectors" (Decode.map MiniSectorShares byMiniSectorDecoder) NoMiniSectors
 
 
+{-| Both spellings are matched, so a third one is a disagreement rather than a
+silent half-turn. Unlike [`Basis`](#Basis), which carries what it did not
+recognize, there is nowhere to put it: a track has to be drawn one way round or
+the other.
+-}
 directionDecoder : Decoder Direction
 directionDecoder =
     string
-        |> Decode.map
+        |> Decode.andThen
             (\raw ->
-                if raw == "counter_clockwise" then
-                    CounterClockwise
+                case raw of
+                    "clockwise" ->
+                        Decode.succeed Clockwise
 
-                else
-                    Clockwise
+                    "counter_clockwise" ->
+                        Decode.succeed CounterClockwise
+
+                    other ->
+                        Decode.fail ("Unknown circuit direction: " ++ other)
             )
 
 
