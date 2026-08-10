@@ -1,5 +1,5 @@
 module Motorsport.Replay exposing
-    ( Model, empty, fromCars
+    ( Model, fromCars
     , Msg(..), update
     , lapCount
     )
@@ -11,7 +11,7 @@ Two fields, and only one of them moves. `race` is settled when the data loads;
 cars are doing at the current moment is a function of `race` and the elapsed time,
 worked out where it is needed.
 
-@docs Model, empty, fromCars
+@docs Model, fromCars
 @docs Msg, update
 @docs lapCount
 
@@ -32,15 +32,6 @@ import Time exposing (Posix)
 type alias Model =
     { race : Race
     , playback : Clock.Model
-    }
-
-
-{-| A replay of no race at all, for before one has loaded.
--}
-empty : Model
-empty =
-    { race = Race.empty
-    , playback = Clock.init
     }
 
 

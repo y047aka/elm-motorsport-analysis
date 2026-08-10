@@ -16,7 +16,6 @@ import Html.Styled exposing (Html, a, button, div, main_, nav, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Clock exposing (State(..))
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.Compare as CompareWidget
@@ -148,12 +147,11 @@ update msg m =
 
 subscriptions : Shared.Model -> Model -> Sub Msg
 subscriptions shared _ =
-    case shared.replay.playback.state of
-        Started _ _ ->
-            Browser.Events.onAnimationFrame (Replay.Tick >> ReplayMsg)
+    if Shared.isPlaying shared then
+        Browser.Events.onAnimationFrame (Replay.Tick >> ReplayMsg)
 
-        _ ->
-            Sub.none
+    else
+        Sub.none
 
 
 
@@ -161,7 +159,11 @@ subscriptions shared _ =
 
 
 view : Shared.Model -> Model -> View Msg
-view { season, eventName, replay, snapshot, track } m =
+view shared m =
+    let
+        maybeRace =
+            Shared.race shared
+    in
     { title = "Wec"
     , body =
         [ main_
@@ -172,16 +174,30 @@ view { season, eventName, replay, snapshot, track } m =
                 , property "grid-template-rows" "auto 1fr"
                 ]
             ]
-            [ navigation { name = eventName, season = season } replay m.mode
-            , case m.mode of
-                Tracker ->
-                    trackerView track snapshot m
+            [ navigation (headerTitle shared) maybeRace m.mode
+            , case maybeRace of
+                Nothing ->
+                    -- Named but not loaded. Nothing is drawn rather than the
+                    -- round before it.
+                    div [ css [ property "grid-row" "2" ] ] []
 
-                Events ->
-                    RaceEvents.view EventsMsg m.eventsState replay
+                Just race ->
+                    case m.mode of
+                        Tracker ->
+                            trackerView race.track race.snapshot m
+
+                        Events ->
+                            RaceEvents.view EventsMsg m.eventsState race.replay
             ]
         ]
     }
+
+
+headerTitle : Shared.Model -> String
+headerTitle shared =
+    Shared.roundId shared
+        |> Maybe.map (\round -> round.name ++ " (" ++ String.fromInt round.season ++ ")")
+        |> Maybe.withDefault ""
 
 
 trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
@@ -251,12 +267,8 @@ trackerView track snapshot m =
         ]
 
 
-navigation : { name : String, season : Int } -> Replay.Model -> Mode -> Html Msg
-navigation event replay currentMode =
-    let
-        headerTitle =
-            event.name ++ " (" ++ String.fromInt event.season ++ ")"
-    in
+navigation : String -> Maybe Shared.Race -> Mode -> Html Msg
+navigation title maybeRace currentMode =
     nav
         [ Attributes.class "p-3"
         , css
@@ -268,14 +280,19 @@ navigation event replay currentMode =
         ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
-            , div [ Attributes.class "text-sm" ] [ text headerTitle ]
+            , div [ Attributes.class "text-sm" ] [ text title ]
             ]
-        , PlaybackControls.view
-            { replay = replay
-            , onStart = StartRace
-            , onPause = PauseRace
-            , toReplayMsg = ReplayMsg
-            }
+        , case maybeRace of
+            Nothing ->
+                text ""
+
+            Just race ->
+                PlaybackControls.view
+                    { replay = race.replay
+                    , onStart = StartRace
+                    , onPause = PauseRace
+                    , toReplayMsg = ReplayMsg
+                    }
         , viewModeSelector currentMode
         ]
 

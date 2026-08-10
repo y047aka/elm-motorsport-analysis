@@ -1,8 +1,8 @@
-module Motorsport.Chart.Tracker exposing (Track, empty, fromConfig, view)
+module Motorsport.Chart.Tracker exposing (Track, fromConfig, view)
 
 {-| The field drawn going round the circuit.
 
-@docs Track, empty, fromConfig, view
+@docs Track, fromConfig, view
 
 -}
 
@@ -113,25 +113,6 @@ type Track
 fromConfig : { direction : Direction, config : TrackConfig } -> Track
 fromConfig =
     Track
-
-
-{-| The track to stand in for one whose summary has not loaded yet. Written out
-rather than worked out: the rule that divides a lap lives in the CLI now, and
-three thirds do not need it.
--}
-empty : Track
-empty =
-    Track
-        { direction = Clockwise
-        , config =
-            { sectors =
-                { s1 = { start = 0, share = 1 / 3 }
-                , s2 = { start = 1 / 3, share = 1 / 3 }
-                , s3 = { start = 2 / 3, share = 1 / 3 }
-                }
-            , miniSectors = Config.NoMiniSectors
-            }
-        }
 
 
 view : Track -> Snapshot -> Svg msg
