@@ -22,6 +22,10 @@ For each confirmed major bump, install explicitly with an exact pin:
 pnpm -C app add --save-exact <pkg>@latest
 ```
 
+`app/.npmrc` sets `save-exact=true`, so the exact form holds even when the flag
+is forgotten, and `pnpm update --latest` preserves it too. There is no pinning
+step after the fact — `package.json` never acquires a `^` range to undo.
+
 ### Special handling
 
 - **Playwright version change**: If the script reports `playwright-changed: true`, remind the user to run `pnpm -C app exec playwright install` and warn that VRT snapshots may need updating via `nix run .#test-vrt`.

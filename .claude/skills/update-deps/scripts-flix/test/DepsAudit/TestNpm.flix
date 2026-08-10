@@ -3,79 +3,8 @@ mod DepsAudit.TestNpm {
     use DepsAudit.Npm
     use Util.Json.Json
 
-    def lock(): Json =
-        Util.Json.parse("{\"packages\":{\"node_modules/vite\":{\"version\":\"7.3.2\"},\"app/node_modules/daisyui\":{\"version\":\"5.6.18\"}}}")
-            |> Result.getWithDefault(Util.Json.Json.JNull)
-
     def jsonOf(s: String): Json =
         Util.Json.parse(s) |> Result.getWithDefault(Util.Json.Json.JNull)
-
-    def pin(raw: String): Result[String, String] =
-        Npm.pinFile("package.json", raw, jsonOf(raw), lock(), "")
-
-    // --- npm-pin-versions: only dependencies/devDependencies ---
-
-    @Test
-    def testPinRewritesDevDependencies(): Unit \ Assert =
-        let raw = "{\n  \"devDependencies\": {\n    \"vite\": \"^7.3.0\"\n  }\n}";
-        match pin(raw) {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "\"vite\": \"7.3.2\""}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    /// Regression: a global text replace also rewrote sibling sections,
-    /// pinning peer ranges to exact versions.
-    @Test
-    def testPinLeavesPeerDependenciesAlone(): Unit \ Assert =
-        let raw = "{\n  \"devDependencies\": {\n    \"vite\": \"^7.3.0\"\n  },\n  \"peerDependencies\": {\n    \"vite\": \"^7.3.0\"\n  }\n}";
-        match pin(raw) {
-            case Ok(out) =>
-                // devDependencies pinned, peerDependencies untouched.
-                Assert.assertTrue(String.contains({substr = "\"vite\": \"7.3.2\""}, out));
-                Assert.assertTrue(String.contains({substr = "\"vite\": \"^7.3.0\""}, out))
-            case Err(_) => Assert.assertTrue(false)
-        }
-
-    /// Regression: compact JSON silently produced no rewrite and exit 0.
-    @Test
-    def testPinHandlesCompactJson(): Unit \ Assert =
-        match pin("{\"devDependencies\":{\"vite\":\"^7.3.0\"}}") {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "\"vite\":\"7.3.2\""}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testPinHandlesExtraWhitespace(): Unit \ Assert =
-        match pin("{\"devDependencies\":{\"vite\"   :   \"^7.3.0\"}}") {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "\"7.3.2\""}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    /// A package absent from the lock falls back to the stripped constraint.
-    @Test
-    def testPinFallsBackToStrippedConstraint(): Unit \ Assert =
-        match pin("{\"dependencies\":{\"leftpad\":\"^1.2.3\"}}") {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "\"leftpad\":\"1.2.3\""}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    /// A file without the section is returned untouched — no `null` key
-    /// is injected (the Rust version did that).
-    @Test
-    def testPinLeavesMissingSectionAlone(): Unit \ Assert =
-        let raw = "{\"name\":\"root\"}";
-        match pin(raw) {
-            case Ok(out) => Assert.assertTrue(out == raw)
-            case Err(_)  => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testPinWorkspacePrefixWins(): Unit \ Assert =
-        let raw = "{\"devDependencies\":{\"daisyui\":\"~5.6.0\"}}";
-        match Npm.pinFile("app/package.json", raw, jsonOf(raw), lock(), "app") {
-            case Ok(out) => Assert.assertTrue(String.contains({substr = "\"5.6.18\""}, out))
-            case Err(_)  => Assert.assertTrue(false)
-        }
 
     // --- npm-outdated-audit ---
 

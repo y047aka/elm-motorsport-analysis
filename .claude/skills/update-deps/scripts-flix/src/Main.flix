@@ -28,7 +28,7 @@ use DepsAudit.RustMajor
 ///
 /// This file owns the input paths and only wires modules together; paths
 /// whose structure is itself domain knowledge (candidate orders,
-/// pin targets) stay in their modules. Syntactic parsing
+/// the Cargo manifests to scan) stay in their modules. Syntactic parsing
 /// (`JsonUtil.parseDoc`) also happens here — each read names its path
 /// once, for both the `FileIO.read` and the parse-error label — so a
 /// subcommand reads as read -> parse -> render, and most module renderers
@@ -57,7 +57,6 @@ def dispatch(cmd: String): Cli.Output \ {FileIO, CrateRegistry, Console, Clock} 
         case "npm-outdated-audit"     => cmdNpmOutdatedAudit()
         case "npm-security-audit"     => cmdNpmSecurityAudit()
         case "rust-major-audit"       => cmdRustMajorAudit()
-        case "npm-pin-versions"       => cmdNpmPinVersions()
         case _                        => usage()
     }
 
@@ -108,24 +107,6 @@ def cmdNpmSecurityAudit(): Cli.Output \ Console =
             data <- JsonUtil.parseDoc("unexpected npm audit format", input)
         ) yield Npm.renderSecurityAudit(data))
 
-def cmdNpmPinVersions(): Cli.Output \ FileIO =
-    let lockPath = "package-lock.json";
-    Cli.fromResultWith(lock -> Cli.traverseUntilFailure(pinOneTarget(lock), Npm.pinTargets()), forM (
-        lockRaw <- FileIO.read(lockPath);
-        lock    <- JsonUtil.parseDoc(lockPath, lockRaw)
-    ) yield lock)
-
-/// Read, pin, and write back one package.json. Prints nothing on success —
-/// the rewritten file is the result.
-def pinOneTarget(lock: Util.Json.Json, target: (String, String)): Cli.Output \ FileIO =
-    let (file, wsPrefix) = target;
-    Cli.fromResultWith(_ -> Cli.empty(), forM (
-        raw     <- FileIO.read(file);
-        pkg     <- JsonUtil.parseDoc(file, raw);
-        updated <- Npm.pinFile(file, raw, pkg, lock, wsPrefix);
-        _       <- FileIO.write({str = updated}, file)
-    ) yield ())
-
 // --- rust ---
 
 def cmdRustMinorAudit(): Cli.Output \ Console =
@@ -147,7 +128,6 @@ def usage(): Cli.Output =
         "subcommands:" ::
         "  npm-security-audit" ::
         "  npm-outdated-audit" ::
-        "  npm-pin-versions" ::
         "  elm-versions-report" ::
         "  rust-major-audit" ::
         "  rust-minor-audit" ::

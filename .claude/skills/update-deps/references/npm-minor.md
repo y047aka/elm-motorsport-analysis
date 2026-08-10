@@ -21,18 +21,13 @@ The second script classifies security vulnerabilities by severity and fix availa
 
 Run `pnpm -C app update` for semver-compatible updates.
 
-After updating, pin all dependency versions using the resolved versions from `pnpm-lock.yaml`
-(not the semver constraint, which may differ from the installed version for pre-release packages):
+This moves transitive dependencies within their ranges and leaves the direct
+ones alone: every entry in `app/package.json` is an exact version, which is a
+range with nothing to move within. Taking a direct dependency to a newer version
+is therefore always the major flow — from pnpm's point of view any change to an
+exact pin exceeds its range, whether the number that moves is major or not.
 
-```bash
-nix run .#deps-audit -- npm-pin-versions
-```
-
-Then run `pnpm install` to sync `app/pnpm-lock.yaml` with the pinned versions:
-
-```bash
-pnpm -C app install
-```
+Only `app/pnpm-lock.yaml` changes. Nothing rewrites `package.json` afterwards.
 
 ### Special handling
 
