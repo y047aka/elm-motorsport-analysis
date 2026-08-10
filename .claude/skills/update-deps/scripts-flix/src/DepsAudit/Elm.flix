@@ -1,6 +1,5 @@
 ///
 /// elm-versions-report: report pinned versions from the elm.json files.
-/// Port of scripts/src/elm.rs.
 ///
 mod DepsAudit.Elm {
 

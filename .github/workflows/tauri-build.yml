@@ -18,7 +18,7 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
       - name: Install dependencies
-        run: nix develop --command pnpm install --frozen-lockfile
+        run: nix develop --command pnpm -C app install --frozen-lockfile
       - name: Build Tauri app (macOS bundle)
         # beforeBuildCommand (pnpm run build) produces the Vite dist,
         # which is bundled as frontendDist into the .app / .dmg output.

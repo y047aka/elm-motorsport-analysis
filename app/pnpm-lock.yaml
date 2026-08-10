@@ -6,9 +6,7 @@ settings:
 
 importers:
 
-  .: {}
-
-  app:
+  .:
     devDependencies:
       '@tailwindcss/cli':
         specifier: 4.3.3
@@ -28,8 +26,6 @@ importers:
       vite-plugin-elm:
         specifier: 3.0.1
         version: 3.0.1(vite@7.3.2(@types/node@26.1.1)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.46.1))
-
-  package: {}
 
 packages:
 

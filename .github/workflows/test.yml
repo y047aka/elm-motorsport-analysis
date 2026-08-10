@@ -1,0 +1,31 @@
+name: Tests
+
+# The unit tests: Elm (elm-verify-examples + elm-test) and the Flix CLI.
+# Kept apart from the VRT workflow because they fail for different reasons —
+# these say the code is wrong, a VRT failure usually says the snapshots are
+# stale — and a red check should tell you which without being opened.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      # No `pnpm install`: neither command touches node_modules. The Elm tests
+      # need only the elm toolchain the flake supplies, and the CLI resolves
+      # its own dependencies through flix.
+      - name: Elm tests
+        run: nix run .#test
+      - name: CLI tests
+        run: nix run .#cli-test

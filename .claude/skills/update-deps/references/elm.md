@@ -2,7 +2,8 @@
 
 ## Audit
 
-Check `which elm-json` first. If unavailable, tell the user to run `direnv reload` or `nix develop`, then skip.
+Check `which elm-json` first. If unavailable, run the audit through
+`nix develop --command`, or tell the user to enter `nix develop`, then skip.
 
 `elm-json upgrade` has no `--dry-run`. Report current pinned versions:
 

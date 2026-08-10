@@ -1,5 +1,5 @@
 ///
-/// nix-channel-audit and nix-flakelock-audit. Port of scripts/src/nix.rs.
+/// nix-channel-audit and nix-flakelock-audit.
 ///
 mod DepsAudit.Nix {
 
@@ -18,9 +18,10 @@ mod DepsAudit.Nix {
     /// epoch time in seconds.
     ///
     /// Both channel spellings are recognised: the plain `nixos-YY.MM` this
-    /// repository uses, and the `nixpkgs-YY.MM-darwin` form the Rust version
-    /// assumed (it only matched the latter, so the audit reported
-    /// `channel: unknown` on every run here).
+    /// repository uses, and the `nixpkgs-YY.MM-darwin` form. Matching only
+    /// the latter is the mistake to avoid — it reports `channel: unknown`
+    /// here on every run, which reads as "nothing to report" rather than as
+    /// a failure to parse.
     pub def renderChannelAudit(flakeContent: String, nowSecs: Int64): String =
         match parseChannel(flakeContent) {
             case Some((style, yy, mm)) =>

@@ -74,8 +74,9 @@ mod DepsAudit.TestRust {
     def testParseSearchOutputRejectsPrefixMatch(): Unit \ Assert =
         Assert.assertTrue(RustMajor.parseSearchOutput("serde", "serde_json = \"1.0.150\"    # desc") == None)
 
-    /// Deviation from Rust (whose greedy regex took the last quoted run):
-    /// a quoted word in the description must not be mistaken for the version.
+    /// A quoted word in the description must not be mistaken for the
+    /// version — which is what a greedy regex taking the last quoted run
+    /// on the line would do.
     @Test
     def testParseSearchOutputIgnoresQuotesInDescription(): Unit \ Assert =
         let out = "serde = \"1.0.228\"    # A \"generic\" framework";
