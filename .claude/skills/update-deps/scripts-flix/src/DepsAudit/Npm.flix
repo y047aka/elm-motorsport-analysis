@@ -170,11 +170,12 @@ mod DepsAudit.Npm {
 
     // --- npm-pin-versions ---
 
-    /// The workspace package.json files rewritten by npm-pin-versions.
-    pub def pinWorkspaces(): List[(String, String)] =
-        ("package.json", "") ::
-        ("app/package.json", "app") ::
-        ("package/package.json", "package") :: Nil
+    /// The package.json files rewritten by npm-pin-versions, each paired with
+    /// its prefix in the lockfile. `app/` is the repository's only npm project,
+    /// so it is also the lockfile's root and the prefix is empty; the pairing
+    /// survives because the mechanism is not specific to this repository.
+    pub def pinTargets(): List[(String, String)] =
+        ("app/package.json", "") :: Nil
 
     /// Rewrite one package.json's dependency constraints to the versions
     /// resolved in package-lock.json (or, as a fallback, the constraint

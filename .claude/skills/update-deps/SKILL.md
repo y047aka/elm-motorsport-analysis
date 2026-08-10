@@ -4,11 +4,11 @@ description: Audit and update all project dependencies (npm, Elm, Rust/Cargo, Ni
 argument-hint: "[npm|elm|rust|nix] [minor|major]"
 disable-model-invocation: true
 allowed-tools:
-  - Bash(pnpm audit *)
-  - Bash(pnpm outdated *)
-  - Bash(pnpm update *)
-  - Bash(pnpm install *)
-  - Bash(pnpm add *)
+  - Bash(pnpm -C app audit *)
+  - Bash(pnpm -C app outdated *)
+  - Bash(pnpm -C app update *)
+  - Bash(pnpm -C app install *)
+  - Bash(pnpm -C app add *)
   - Bash(elm-json *)
   - Bash(cargo update *)
   - Bash(cargo search *)
@@ -19,7 +19,7 @@ allowed-tools:
   - Bash(git add *)
   - Bash(git commit *)
   - Bash(which *)
-  - Bash(cat node_modules/*)
+  - Bash(cat app/node_modules/*)
   - Bash(pnpm view *)
   - Bash(*| nix run .#deps-audit -- **)
   - Read

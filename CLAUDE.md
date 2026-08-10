@@ -1,12 +1,21 @@
 # CLAUDE.md
 
-Motorsport race analysis and visualization app. pnpm workspaces monorepo:
+Motorsport race analysis and visualization app. Three subprojects, each with the
+manifest its own toolchain reads:
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css)
 - **`/package`** — reusable Elm library (motorsport domain models)
 - **`/flix`** — the CLI for CSV→JSON data processing, written in Flix
 
 Data flow: CSV telemetry → CLI → JSON → Elm visualization.
+
+There is no manifest at the repository root: no `package.json`, no pnpm
+workspace. `/app` is the only npm project and owns `package.json` and
+`pnpm-lock.yaml`; `/package` is Elm-only and is reached through `elm.json`
+alone; `/flix` has `flix.toml`. What ties them together is the flake, which is
+also the only place that names a subproject's working directory — so a root
+manifest would only be a second, weaker copy of that. Run pnpm with `-C app`
+when the flake has no app for what you need.
 
 ## Commands
 
@@ -19,6 +28,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#test` | elm-verify-examples + elm-test |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots |
+| `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON |

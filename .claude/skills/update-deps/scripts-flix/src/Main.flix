@@ -28,7 +28,7 @@ use DepsAudit.RustMajor
 ///
 /// This file owns the input paths and only wires modules together; paths
 /// whose structure is itself domain knowledge (candidate orders,
-/// workspace pairs) stay in their modules. Syntactic parsing
+/// pin targets) stay in their modules. Syntactic parsing
 /// (`JsonUtil.parseDoc`) also happens here — each read names its path
 /// once, for both the `FileIO.read` and the parse-error label — so a
 /// subcommand reads as read -> parse -> render, and most module renderers
@@ -110,15 +110,15 @@ def cmdNpmSecurityAudit(): Cli.Output \ Console =
 
 def cmdNpmPinVersions(): Cli.Output \ FileIO =
     let lockPath = "package-lock.json";
-    Cli.fromResultWith(lock -> Cli.traverseUntilFailure(pinOneWorkspace(lock), Npm.pinWorkspaces()), forM (
+    Cli.fromResultWith(lock -> Cli.traverseUntilFailure(pinOneTarget(lock), Npm.pinTargets()), forM (
         lockRaw <- FileIO.read(lockPath);
         lock    <- JsonUtil.parseDoc(lockPath, lockRaw)
     ) yield lock)
 
-/// Read, pin, and write back one workspace's package.json. Prints nothing
-/// on success — the rewritten file is the result.
-def pinOneWorkspace(lock: Util.Json.Json, workspace: (String, String)): Cli.Output \ FileIO =
-    let (file, wsPrefix) = workspace;
+/// Read, pin, and write back one package.json. Prints nothing on success —
+/// the rewritten file is the result.
+def pinOneTarget(lock: Util.Json.Json, target: (String, String)): Cli.Output \ FileIO =
+    let (file, wsPrefix) = target;
     Cli.fromResultWith(_ -> Cli.empty(), forM (
         raw     <- FileIO.read(file);
         pkg     <- JsonUtil.parseDoc(file, raw);

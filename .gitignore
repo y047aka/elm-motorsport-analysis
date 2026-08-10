@@ -23,5 +23,5 @@ VerifyExamples
 # Generated CSS
 app/public/style.css
 
-# Generated benchmark fixture (run `pnpm --filter package benchmark`)
+# Generated benchmark fixture (run `nix run .#benchmark`)
 package/benchmark/Fixture/Generated.elm

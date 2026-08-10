@@ -20,7 +20,7 @@ jobs:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
       - name: Install dependencies
-        run: nix develop --command pnpm install --frozen-lockfile
+        run: nix develop --command pnpm -C app install --frozen-lockfile
       - name: Run Playwright tests
         run: nix run .#test-vrt
         env:

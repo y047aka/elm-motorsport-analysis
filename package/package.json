@@ -1,7 +1,0 @@
-{
-  "name": "package",
-  "scripts": {
-    "test": "elm-verify-examples && elm-test",
-    "benchmark": "cd benchmark && node generate-fixture.mjs && elm reactor"
-  }
-}
