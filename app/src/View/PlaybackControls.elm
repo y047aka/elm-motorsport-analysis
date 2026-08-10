@@ -97,8 +97,10 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
         lapCount =
             Replay.lapCount replay
 
+        -- Playback runs to the finish, which is past the flag, so the countdown
+        -- has a stretch of race left to sit through at zero.
         remaining =
-            Instant.since { from = elapsed, to = race.timeLimit }
+            max 0 (Instant.since { from = elapsed, to = race.timeLimit })
     in
     div [ Attributes.class "flex flex-col gap-2 flex-1 min-w-0 text-xs font-medium tabular-nums opacity-70" ]
         [ div [ Attributes.class "flex justify-between" ]

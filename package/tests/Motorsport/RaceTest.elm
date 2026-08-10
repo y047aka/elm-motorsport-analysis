@@ -80,7 +80,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000 }
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000, finishedAt = Instant.fromDuration 7200000 }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000

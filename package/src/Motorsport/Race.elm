@@ -36,15 +36,21 @@ beside it read the same race at an instant, and are
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race
-was. `timeLimit` is the one thing the lap data does not say -- it only looks as
-though it does, being an estimate off the last lap completed -- so
-[`fromCars`](#fromCars) is given it.
+was.
+
+`timeLimit` and `finishedAt` are the two ends the race can be measured to, and
+neither is the other: the flag falls at the time limit, on a lap already under
+way, so the last car crosses the line after it. Both are given to
+[`fromCars`](#fromCars) -- the time limit because the laps do not say it, and
+the finish because scanning them a second time to find it would only be reading
+back what the file already states.
 
 -}
 type alias Race =
     { cars : List Car
     , lapTotal : Int
     , timeLimit : Instant
+    , finishedAt : Instant
     , timelineEvents : List TimelineEvent
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
@@ -59,6 +65,7 @@ empty =
     { cars = []
     , lapTotal = 0
     , timeLimit = Instant.raceStart
+    , finishedAt = Instant.raceStart
     , timelineEvents = []
     , statusChanges = StatusChanges.empty
     , lapCompletions = ChangePoints.empty
@@ -73,8 +80,8 @@ per-lap positions assigned produce a timeline with no lead changes in it -- see
 [`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromCars : { timeLimit : Instant } -> List Car -> Race
-fromCars { timeLimit } cars =
+fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Race
+fromCars { timeLimit, finishedAt } cars =
     let
         timelineEvents =
             TimelineEvent.fromCars { timeLimit = timeLimit } cars
@@ -85,6 +92,7 @@ fromCars { timeLimit } cars =
     { cars = cars
     , lapTotal = ChangePoints.length lapCompletions
     , timeLimit = timeLimit
+    , finishedAt = finishedAt
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions

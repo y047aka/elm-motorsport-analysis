@@ -35,7 +35,7 @@ type alias Model =
     }
 
 
-fromCars : { timeLimit : Instant } -> List Car -> Model
+fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Model
 fromCars race cars =
     { race = Race.fromCars race cars
     , playback = Clock.init
@@ -78,7 +78,7 @@ update msg m =
         Tick now ->
             case m.playback.state of
                 Clock.Started splitTime { startedAt } ->
-                    if Instant.compare (Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed) m.race.timeLimit == LT then
+                    if Instant.compare (Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed) m.race.finishedAt == LT then
                         { m | playback = Clock.update now Clock.Tick m.playback }
 
                     else
@@ -101,8 +101,10 @@ update msg m =
                 elapsed =
                     Clock.getElapsed m.playback
             in
-            -- Skipping is offered forwards, and stops once the race is over.
-            if Instant.compare elapsed m.race.timeLimit == LT then
+            -- Skipping is offered forwards, and stops once the race is over --
+            -- at the last car's final crossing, not at the flag, so the closing
+            -- laps can be reached the way the lap counter already reaches them.
+            if Instant.compare elapsed m.race.finishedAt == LT then
                 moveTo (Instant.add duration elapsed) m
 
             else

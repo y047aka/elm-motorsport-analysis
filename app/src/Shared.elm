@@ -271,7 +271,7 @@ raceFrom summary rawLaps =
             summary.startingGrid.entries
                 |> List.map Car.fromStartingGrid
                 |> WecLaps.attach rawLaps
-                |> Replay.fromCars { timeLimit = summary.timeLimit }
+                |> Replay.fromCars { timeLimit = summary.timeLimit, finishedAt = summary.finishedAt }
     in
     { replay = replay
     , snapshot = snapshotOf replay

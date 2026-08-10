@@ -80,6 +80,29 @@ suite =
                         |> statusOf "1"
                         |> Expect.equal (Just Status.InPit)
             ]
+        , describe "playback runs to the finish, not to the flag"
+            -- The flag falls on a lap already under way, so the closing laps sit
+            -- between the two. The lap counter has always reached them.
+            [ test "skipping carries on past the time limit" <|
+                \_ ->
+                    initialModel
+                        |> skipTo 7200000
+                        |> skipBy 100000
+                        |> elapsedOf
+                        |> Expect.equal 7300000
+            , test "and stops once the last car has crossed the line" <|
+                \_ ->
+                    initialModel
+                        |> skipTo 7300000
+                        |> skipBy 1000
+                        |> elapsedOf
+                        |> Expect.equal 7300000
+            , test "a running clock ticks through the closing laps too" <|
+                \_ ->
+                    playingAt 7250000
+                        |> elapsedOf
+                        |> Expect.equal 7250000
+            ]
         , describe "SetCount"
             [ test "moving the lap counter forward carries the status with it" <|
                 \_ ->
@@ -97,12 +120,16 @@ suite =
 -- FIXTURE
 -- A two-hour race. Car "1" retires after three laps, pitting on lap 2; car "2"
 -- runs past the flag -- which is what makes car "1"'s final lap a retirement
--- rather than a chequered flag.
+-- rather than a chequered flag, and puts the finish 100.000 after the limit.
 
 
 initialModel : Replay.Model
 initialModel =
-    Replay.fromCars { timeLimit = Instant.fromDuration 7200000 } [ retiringCar, survivingCar ]
+    Replay.fromCars
+        { timeLimit = Instant.fromDuration 7200000
+        , finishedAt = Instant.fromDuration 7300000
+        }
+        [ retiringCar, survivingCar ]
 
 
 retiringCar : Car
