@@ -136,6 +136,23 @@ Enter it with `nix develop`, or run a single command in it with
 the shell is entered when it is wanted rather than on every `cd`, and the
 `nix run .#*` commands carry their own toolchain and need no shell at all.
 
+### GitHub CLI
+
+`gh` is in the dev shell, so it is always reached through the shell:
+
+```bash
+nix develop --command gh pr list
+```
+
+It is deliberately not a `nix run .#*` app. `Bash(nix run .#:*)` is allowed as a
+whole, so an app would make every `gh` subcommand allowed with it — including
+merging and releasing. Behind `nix develop --command`, nothing is granted up
+front and each subcommand is allowed on its own merits.
+
+**Authentication is the user's own step**: run `gh auth login` yourself. The
+flake supplies the binary, never the credentials, and no agent should perform
+the login.
+
 ## Permissions
 
 `.claude/settings.json` follows one rule: **allow broadly, then carve out the
@@ -144,6 +161,15 @@ can stay open while `-D` still prompts. Prefer a broad `allow` plus an `ask`
 carve-out over a narrow `allow`, which leaves read-only flags (`--show-current`,
 `-r`, ...) falling through to a prompt. `deny` is reserved for the irreversible:
 force push, publish, `sudo`, secret files.
+
+`gh` is the exception to "allow broadly", because its subcommands reach outside
+the repository. The read-only ones — `pr view|list|diff|checks|status`,
+`issue view|list`, `run view|list|watch`, `repo view`, `search`, `auth status` —
+are allowed with any flags, so an agent can read PRs, issues and CI runs on its
+own. Everything that writes falls through to a prompt by never being listed,
+and `release create|delete`, `repo delete` and `secret` are denied outright.
+Opening a PR or leaving a comment publishes to a public repository, so it stays
+a decision the user makes.
 
 Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
 rules can enforce the secret-file `deny` entries, which Bash bypasses.

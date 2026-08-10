@@ -121,8 +121,14 @@
         };
 
       in {
+        # `gh` is here rather than in an app: it is not a project command but a
+        # tool with a surface of its own, and reaching it through
+        # `nix develop --command gh ...` keeps it outside the blanket
+        # `nix run .#*` permission, so each subcommand is allowed on its own
+        # merits. It reads the credentials `gh auth login` wrote; nix supplies
+        # the binary, not the login.
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test ]
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
             ++ [ flix ] ++ elmTools;
         });
 
