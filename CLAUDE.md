@@ -163,13 +163,20 @@ carve-out over a narrow `allow`, which leaves read-only flags (`--show-current`,
 force push, publish, `sudo`, secret files.
 
 `gh` is the exception to "allow broadly", because its subcommands reach outside
-the repository. The read-only ones — `pr view|list|diff|checks|status`,
-`issue view|list`, `run view|list|watch`, `repo view`, `search`, `auth status` —
-are allowed with any flags, so an agent can read PRs, issues and CI runs on its
-own. Everything that writes falls through to a prompt by never being listed,
-and `release create|delete`, `repo delete` and `secret` are denied outright.
-Opening a PR or leaving a comment publishes to a public repository, so it stays
-a decision the user makes.
+the repository. What an agent may do unattended is listed rather than inherited:
+
+- **read** — `pr view|list|diff|checks|status`, `issue view|list`,
+  `run view|list|watch`, `repo view`, `search`, `auth status`, with any flags.
+- **propose** — `pr create` and `pr edit`. Pushing a branch and opening the PR
+  for it is one motion, and a PR is reviewed before it lands, so the prompt in
+  the middle bought nothing.
+- **everything else prompts**, by never being listed — including `pr merge`,
+  which is the point at which the change becomes `main`, and `pr comment` /
+  `issue comment`, which speak to people in the user's name.
+- **denied outright** — `release create|delete`, `repo delete`, `secret`.
+
+`gh api` stays `ask`: it reaches any endpoint with any method, so no prefix can
+tell a read from a write.
 
 Read/Grep/Glob are preferred over `cat`/`grep`/`find` in Bash — only the tool-level
 rules can enforce the secret-file `deny` entries, which Bash bypasses.

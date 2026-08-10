@@ -67,6 +67,8 @@
       "Bash(nix develop --command gh pr diff:*)",
       "Bash(nix develop --command gh pr checks:*)",
       "Bash(nix develop --command gh pr status:*)",
+      "Bash(nix develop --command gh pr create:*)",
+      "Bash(nix develop --command gh pr edit:*)",
       "Bash(nix develop --command gh issue view:*)",
       "Bash(nix develop --command gh issue list:*)",
       "Bash(nix develop --command gh run view:*)",
