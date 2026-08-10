@@ -89,9 +89,6 @@ Per car: groups raws by `carNumber`, sorts by `lapNumber`, and accumulates
 best lap / sector times. Then assigns 0-based per-lap positions across all
 cars by sorting `elapsed` ascending for each lap number.
 
-Mirrors the Rust CLI's `process_laps` + `position_for_lap`
-(`cli/cli/src/stages/transform.rs`).
-
 -}
 attach : List RawLap -> List Car -> List Car
 attach rawLaps cars =

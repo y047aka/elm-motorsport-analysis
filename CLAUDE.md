@@ -5,13 +5,8 @@ Motorsport race analysis and visualization app. pnpm workspaces monorepo:
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css)
 - **`/package`** — reusable Elm library (motorsport domain models)
 - **`/flix`** — the CLI for CSV→JSON data processing, written in Flix
-- **`/cli`** — the Rust CLI it was ported from, on its way out
 
 Data flow: CSV telemetry → CLI → JSON → Elm visualization.
-
-The Rust CLI writes no `track` object and no `index.json`, both of which the app
-needs, so nothing runs it any more: it has no flake commands, and `/cli` is
-reference for the port until it is removed.
 
 ## Commands
 
@@ -123,7 +118,8 @@ holding both names them for the difference (`BestTimes.Changes` spans the race,
 
 ## Environment
 
-Nix flake provides the reproducible dev environment (Node.js 26, Rust toolchain).
+Nix flake provides the reproducible dev environment (Node.js 26, and a Rust
+toolchain for `app/src-tauri` — the repository's only Rust package).
 Use `direnv allow` or `nix develop`.
 
 ## Permissions

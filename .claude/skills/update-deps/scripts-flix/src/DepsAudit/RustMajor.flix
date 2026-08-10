@@ -9,9 +9,7 @@ mod DepsAudit.RustMajor {
 
     /// The Cargo.toml files scanned, in order.
     pub def cargoTomlFiles(): List[String] =
-        "cli/Cargo.toml" ::
-        "cli/cli/Cargo.toml" ::
-        "cli/motorsport/Cargo.toml" :: Nil
+        "app/src-tauri/Cargo.toml" :: Nil
 
     /// Parse (name, constraint) pairs from Cargo.toml contents,
     /// first occurrence wins, sorted by name.

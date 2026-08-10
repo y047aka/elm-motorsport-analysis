@@ -2,7 +2,8 @@
 
 Major version updates for Rust crates (leftmost non-zero version component increases).
 
-The workspace root is `cli/Cargo.toml` with members `cli/` and `motorsport/`.
+`app/src-tauri/Cargo.toml` is the repository's only Rust package — a standalone
+Tauri v2 app, with no Cargo workspace above it.
 
 ## Audit
 
@@ -14,19 +15,19 @@ The script parses all Cargo.toml files, runs `cargo search` for each crate, and 
 
 ## Update
 
-For each crate with a confirmed major version bump, update its version constraint in the relevant file:
-- `cli/Cargo.toml` — workspace-level dependencies (`[workspace.dependencies]`)
-- `cli/cli/Cargo.toml` — CLI-specific dependencies
-- `cli/motorsport/Cargo.toml` — motorsport library dependencies
+For each crate with a confirmed major version bump, update its version
+constraint in `app/src-tauri/Cargo.toml` (`[dependencies]` and
+`[build-dependencies]`). `tauri` and `tauri-build` are released together and
+must move as a pair.
 
 Then re-resolve:
 
 ```bash
-cargo update --manifest-path cli/Cargo.toml
+cargo update --manifest-path app/src-tauri/Cargo.toml
 ```
 
 ## Verify
 
 ```bash
-nix run .#cli-test
+cargo check --manifest-path app/src-tauri/Cargo.toml
 ```

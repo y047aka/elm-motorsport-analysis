@@ -15,8 +15,8 @@ const mimeTypes: Record<string, string> = {
 };
 
 // Serve (dev) and copy (build) the `static/` directory at `/static`, mirroring
-// how elm-pages exposed it. It is kept outside `public/` so the Rust CLI paths
-// under `static/` stay stable.
+// how elm-pages exposed it. It is kept outside `public/` so the paths the CLI
+// writes under `static/` stay stable.
 function staticAssets(): Plugin {
   return {
     name: "serve-static-dir",
