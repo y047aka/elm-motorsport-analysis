@@ -26,14 +26,18 @@ mod DepsAudit.TestNpm {
             case Err(e) => Assert.assertTrue(String.contains({substr = "vite"}, e))
         }
 
-    /// Regression: modern pnpm reports `dependentPackages`, so the
-    /// dependent column used to always render as `()`.
+    /// Regression: the report used to name the workspace project that
+    /// pulled a package in. `app/` is the only npm project, so the column
+    /// said the same thing on every line and was dropped — a
+    /// `dependentPackages` entry must not bring it back.
     @Test
-    def testOutdatedReadsDependentPackages(): Unit \ Assert =
+    def testOutdatedOmitsDependentColumn(): Unit \ Assert =
         let json = "{\"vite\":{\"current\":\"7.3.2\",\"wanted\":\"7.3.2\",\"latest\":\"8.1.5\",\"dependentPackages\":[{\"name\":\"app\"}]}}";
         match Npm.renderOutdatedAudit(jsonOf(json)) {
-            case Ok(report) => Assert.assertTrue(String.contains({substr = "(app)"}, report))
-            case Err(_)      => Assert.assertTrue(false)
+            case Ok(report) =>
+                Assert.assertTrue(String.contains({substr = "vite: 7.3.2 -> 8.1.5"}, report));
+                Assert.assertTrue(not String.contains({substr = "("}, report))
+            case Err(_) => Assert.assertTrue(false)
         }
 
     // --- npm-security-audit ---

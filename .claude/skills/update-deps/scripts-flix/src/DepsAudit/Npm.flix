@@ -27,7 +27,7 @@ mod DepsAudit.Npm {
         ) yield {
             let minor = infos |> List.filterMap(match (name, i) ->
                 if (i#current != i#wanted)
-                    Some("${name}: ${i#current} -> ${i#wanted} (${i#dependent})")
+                    Some("${name}: ${i#current} -> ${i#wanted}")
                 else None);
             // `latest != wanted`, not a numeric comparison: an earlier
             // TypeScript predecessor used `parseInt(latest) > parseInt(current)`,
@@ -35,7 +35,7 @@ mod DepsAudit.Npm {
             // from this section. Keep this as `!=`.
             let major = infos |> List.filterMap(match (name, i) ->
                 if (i#latest != i#wanted)
-                    Some("${name}: ${i#current} -> ${i#latest} (${i#dependent})")
+                    Some("${name}: ${i#current} -> ${i#latest}")
                 else None);
             let playwrightChanged = match List.findMap(match (name, i) ->
                 if (name == "@playwright/test") Some(i) else None, infos) {
@@ -49,7 +49,7 @@ mod DepsAudit.Npm {
                 ("flags", "playwright-changed: ${playwrightChanged}") :: Nil)
         }
 
-    type alias OutdatedInfo = {current = String, wanted = String, latest = String, dependent = String}
+    type alias OutdatedInfo = {current = String, wanted = String, latest = String}
 
     /// The (name, info) entries of the outdated document, failing when any
     /// entry lacks current/wanted/latest. All malformed entries are named
@@ -76,25 +76,7 @@ mod DepsAudit.Npm {
         ) yield {
             current = current,
             wanted = wanted,
-            latest = latest,
-            dependent = dependentOf(v)
-        }
-
-    /// The dependent workspace project(s).
-    ///
-    /// Deviation from the Rust version, which only read the `dependent`
-    /// string and therefore always printed an empty `()` with modern pnpm:
-    /// pnpm now reports `dependentPackages` (an array of {name, location}).
-    def dependentOf(v: Json): String =
-        match JsonUtil.getString("dependent", v) {
-            case Some(d) => d
-            case None    => match JsonUtil.getKey("dependentPackages", v) {
-                case Some(JArray(xs)) =>
-                    Vector.toList(xs)
-                        |> List.filterMap(p -> JsonUtil.getString("name", p))
-                        |> List.join(", ")
-                case _ => ""
-            }
+            latest = latest
         }
 
     def majorOf(version: String): Int64 =
