@@ -130,7 +130,11 @@ holding both names them for the difference (`BestTimes.Changes` spans the race,
 
 Nix flake provides the reproducible dev environment (Node.js 26, and a Rust
 toolchain for `app/src-tauri` — the repository's only Rust package).
-Use `direnv allow` or `nix develop`.
+
+Enter it with `nix develop`, or run a single command in it with
+`nix develop --command <cmd>` — which is what CI does. There is no direnv hook:
+the shell is entered when it is wanted rather than on every `cd`, and the
+`nix run .#*` commands carry their own toolchain and need no shell at all.
 
 ## Permissions
 
