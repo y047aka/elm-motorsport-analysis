@@ -1,10 +1,10 @@
 ///
 /// Version-string helpers shared by the audit subcommands.
 ///
-/// Faithful port of the semver logic in the Rust implementation
-/// (scripts/src/rust_audit.rs and scripts/src/elm_pages.rs):
-/// components are split on '.', unparsable components are dropped,
-/// and missing components compare as 0.
+/// Deliberately lenient rather than strict semver: components are split
+/// on '.', unparsable components are dropped, and missing components
+/// compare as 0. The input is whatever cargo, npm and elm print, which is
+/// not always three numeric components.
 ///
 /// `Semver` is a parsed version as a value with `Eq`/`Order`, so
 /// version ordering travels with the type: sorting version strings is

@@ -1,6 +1,6 @@
 ///
 /// rust-minor-audit: classify `cargo update --dry-run` output into minor
-/// and patch updates. Port of scripts/src/rust_audit.rs (minor_audit).
+/// and patch updates.
 ///
 mod DepsAudit.RustAudit {
 
@@ -27,8 +27,8 @@ mod DepsAudit.RustAudit {
     ///
     /// The leading indentation is optional (`\s*`, not `\s+`): the input is
     /// trimmed as a whole before splitting, which strips the first line's
-    /// indentation. Requiring it — as the Rust version did — silently
-    /// dropped that line whenever it carried an update.
+    /// indentation. Requiring it silently drops that first line whenever it
+    /// carries an update.
     def parseUpdateLine(line: String): Option[(String, String, String)] =
         let rgx = regex"^\\s*(?:Updating|Locking)\\s+(\\S+)\\s+v(\\S+)\\s+->\\s+v(\\S+)";
         match Regex.capture(rgx, line) {

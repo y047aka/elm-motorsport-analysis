@@ -39,6 +39,12 @@ use DepsAudit.RustMajor
 /// run, with failure handled once at the boundary rather than at each
 /// step.
 ///
+/// This began as a port of a Rust implementation under
+/// `.claude/skills/update-deps/scripts/`, deleted in dc1df28. It is recorded
+/// here once and nowhere else: the port is finished, so the code below is the
+/// specification, and where it deliberately differs from what it replaced the
+/// comment states the rule rather than the comparison.
+///
 def main(): Unit \ {Env, IO, Exit, Console, Clock} =
     Exit.exit(Cli.emit(Io.runWithIO(() -> Crates.runWithIO(() -> route(Env.getArgs())))))
 

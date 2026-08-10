@@ -9,7 +9,8 @@
 /// The effect offers no way to write: every subcommand audits and reports,
 /// so deps-audit cannot alter what it is reading.
 ///
-/// Error messages match the Rust implementation's "<path>: <error>" style.
+/// Errors are reported as "<path>: <error>", so the path a subcommand was
+/// given appears in the message whichever operation failed.
 ///
 mod DepsAudit.Io {
 

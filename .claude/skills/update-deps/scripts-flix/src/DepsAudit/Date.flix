@@ -1,7 +1,7 @@
 ///
-/// Civil-date conversion, ported verbatim from the Rust implementation
-/// (scripts/src/nix.rs), which in turn follows
-/// http://howardhinnant.github.io/date_algorithms.html
+/// Civil-date conversion, following
+/// http://howardhinnant.github.io/date_algorithms.html verbatim — the magic
+/// constants are that algorithm's and are meaningless on their own.
 ///
 mod DepsAudit.Date {
 

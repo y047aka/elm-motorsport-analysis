@@ -1,6 +1,6 @@
 ///
 /// rust-major-audit: compare Cargo.toml version constraints against the
-/// latest crates.io releases. Port of scripts/src/rust_audit.rs (major_audit).
+/// latest crates.io releases.
 ///
 mod DepsAudit.RustMajor {
 
@@ -51,9 +51,9 @@ mod DepsAudit.RustMajor {
     /// as equivalent), and the version is the first double-quoted string
     /// on that line.
     ///
-    /// Deviation from the Rust version, whose greedy `.*"([^"]+)"` picked
-    /// the *last* quoted run and so returned a word from the description
-    /// whenever that description contained quotes.
+    /// *First*, not last: a greedy `.*"([^"]+)"` picks the last quoted run
+    /// on the line, which is a word from the description whenever the
+    /// description contains quotes.
     pub def parseSearchOutput(name: String, output: String): Option[String] =
         String.splitOn({substr = "\n"}, output)
             |> List.findMap(line -> {

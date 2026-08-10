@@ -1,10 +1,9 @@
 ///
 /// npm-outdated-audit and npm-security-audit.
-/// Port of scripts/src/npm.rs.
 ///
-/// Known deviation: the Rust version iterates `vulnerabilities` in
-/// document order (serde preserve_order); this port lists them in
-/// sorted key order.
+/// `vulnerabilities` are listed in sorted key order, not the order they
+/// appear in the document: the report is diffed between runs more often
+/// than it is read top to bottom.
 ///
 mod DepsAudit.Npm {
 

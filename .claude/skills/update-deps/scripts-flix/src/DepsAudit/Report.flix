@@ -1,6 +1,7 @@
 ///
-/// Shared report-body formatting, matching the section style of the Rust
-/// implementation byte for byte. Delivery to the terminal is `DepsAudit.Cli`.
+/// Shared report-body formatting: `--- title ---` sections separated by
+/// blank lines, with an empty section rendered as `none` rather than left
+/// blank. Delivery to the terminal is `DepsAudit.Cli`.
 ///
 mod DepsAudit.Report {
 
