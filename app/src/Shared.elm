@@ -137,9 +137,10 @@ race model =
             Nothing
 
 
-{-| Whether playback is running, which is the whole of what a page needs in
-order to decide about animation frames. Asked here so no page has to reach
-through a race to its clock.
+{-| Whether playback is running, which is the whole of what deciding about
+animation frames takes. Asked here so that page does not reach through a race to
+its clock for one constructor. `Page.Debug` still reaches for the elapsed time,
+which is a value and not a question.
 -}
 isPlaying : Model -> Bool
 isPlaying model =

@@ -10,10 +10,12 @@ import Data.Wec.Calendar as Calendar
 import Data.Wec.Laps as WecLaps
 import Expect
 import Json.Decode as Decode
+import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
 import Shared
 import Shared.Msg exposing (Msg(..))
 import Test exposing (Test, describe, test)
+import Time
 
 
 {-| One season of two rounds: the pair a stale response can be mistaken for.
@@ -211,6 +213,17 @@ suite =
                         |> deliverLaps fuji
                         |> Shared.race
                         |> Expect.equal Nothing
+            , test "reports playback running only once a race is loaded and started" <|
+                \_ ->
+                    let
+                        loaded =
+                            loadingSpa |> deliverSummary spa |> deliverLaps spa
+                    in
+                    [ Shared.isPlaying loadingSpa
+                    , Shared.isPlaying loaded
+                    , Shared.isPlaying (loaded |> step (ReplayMsg (Replay.Start (Time.millisToPosix 0))))
+                    ]
+                        |> Expect.equalLists [ False, False, True ]
             , test "a stale pair does not complete the round that is waiting" <|
                 \_ ->
                     -- Both files of the round left behind, arriving together.

@@ -161,27 +161,8 @@ subscriptions shared _ =
 view : Shared.Model -> Model -> View Msg
 view shared m =
     let
-        -- Both halves turn on the same question, so it is asked once. Named but
-        -- not loaded draws nothing rather than the round before it.
-        ( playbackControls, body ) =
-            case Shared.race shared of
-                Nothing ->
-                    ( text "", div [ css [ property "grid-row" "2" ] ] [] )
-
-                Just race ->
-                    ( PlaybackControls.view
-                        { replay = race.replay
-                        , onStart = StartRace
-                        , onPause = PauseRace
-                        , toReplayMsg = ReplayMsg
-                        }
-                    , case m.mode of
-                        Tracker ->
-                            trackerView race.track race.snapshot m
-
-                        Events ->
-                            RaceEvents.view EventsMsg m.eventsState race.replay
-                    )
+        maybeRace =
+            Shared.race shared
     in
     { title = "Wec"
     , body =
@@ -193,8 +174,20 @@ view shared m =
                 , property "grid-template-rows" "auto 1fr"
                 ]
             ]
-            [ navigation (headerTitle shared) playbackControls m.mode
-            , body
+            [ navigation (headerTitle shared) maybeRace m.mode
+            , case maybeRace of
+                Nothing ->
+                    -- Named but not loaded. Nothing is drawn rather than the
+                    -- round before it.
+                    div [ css [ property "grid-row" "2" ] ] []
+
+                Just race ->
+                    case m.mode of
+                        Tracker ->
+                            trackerView race.track race.snapshot m
+
+                        Events ->
+                            RaceEvents.view EventsMsg m.eventsState race.replay
             ]
         ]
     }
@@ -274,8 +267,8 @@ trackerView track snapshot m =
         ]
 
 
-navigation : String -> Html Msg -> Mode -> Html Msg
-navigation title playbackControls currentMode =
+navigation : String -> Maybe Shared.Race -> Mode -> Html Msg
+navigation title maybeRace currentMode =
     nav
         [ Attributes.class "p-3"
         , css
@@ -289,7 +282,17 @@ navigation title playbackControls currentMode =
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
             ]
-        , playbackControls
+        , case maybeRace of
+            Nothing ->
+                text ""
+
+            Just race ->
+                PlaybackControls.view
+                    { replay = race.replay
+                    , onStart = StartRace
+                    , onPause = PauseRace
+                    , toReplayMsg = ReplayMsg
+                    }
         , viewModeSelector currentMode
         ]
 
