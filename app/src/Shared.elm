@@ -1,7 +1,7 @@
 module Shared exposing
     ( Model, Race, RoundId
     , init, update, subscriptions
-    , race, roundId
+    , race, roundId, isPlaying
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
@@ -9,7 +9,7 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 
 @docs Model, Race, RoundId
 @docs init, update, subscriptions
-@docs race, roundId
+@docs race, roundId, isPlaying
 
 -}
 
@@ -135,6 +135,20 @@ race model =
 
         _ ->
             Nothing
+
+
+{-| Whether playback is running, which is the whole of what a page needs in
+order to decide about animation frames. Asked here so no page has to reach
+through a race to its clock.
+-}
+isPlaying : Model -> Bool
+isPlaying model =
+    case race model |> Maybe.map (.replay >> .playback >> .state) of
+        Just (Clock.Started _ _) ->
+            True
+
+        _ ->
+            False
 
 
 
