@@ -38,12 +38,15 @@ beside it read the same race at an instant, and are
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
 
-`timeLimit` and `finishedAt` are the two ends the race can be measured to, and
-neither is the other: the flag falls at the time limit, on a lap already under
-way, so the last car crosses the line after it. Both are given to
-[`fromCars`](#fromCars) -- the time limit because the laps do not say it, and
-the finish because scanning them a second time to find it would only be reading
-back what the file already states.
+`timeLimit` and `finishedAt` are the two moments the race can be measured to,
+and neither stands in for the other. Anything that has to weigh them against
+each other asks [`Phase`](Motorsport-Race-Phase) rather than reading both; a
+question that only ever concerned one of them is better off being handed that
+one, the way `TimelineEvent.fromCars` is handed the limit and no more.
+
+Both are given to [`fromCars`](#fromCars): the time limit because the laps do
+not say it, and the finish because scanning them a second time to find it would
+only be reading back what the file already states.
 
 -}
 type alias Race =

@@ -22,6 +22,7 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car exposing (Car)
+import Motorsport.Race.Phase as Phase
 import Time exposing (Posix)
 
 
@@ -78,11 +79,19 @@ update msg m =
         Tick now ->
             case m.playback.state of
                 Clock.Started splitTime { startedAt } ->
-                    if Instant.compare (Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed) m.race.finishedAt == LT then
-                        { m | playback = Clock.update now Clock.Tick m.playback }
+                    let
+                        ticked =
+                            { m | playback = Clock.update now Clock.Tick m.playback }
+                    in
+                    case Phase.at { elapsed = Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed } m.race of
+                        Phase.Running ->
+                            ticked
 
-                    else
-                        m
+                        Phase.Finishing ->
+                            ticked
+
+                        Phase.Over ->
+                            m
 
                 _ ->
                     m
@@ -101,14 +110,18 @@ update msg m =
                 elapsed =
                     Clock.getElapsed m.playback
             in
-            -- Skipping is offered forwards, and stops once the race is over --
-            -- at the last car's final crossing, not at the flag, so the closing
-            -- laps can be reached the way the lap counter already reaches them.
-            if Instant.compare elapsed m.race.finishedAt == LT then
-                moveTo (Instant.add duration elapsed) m
+            -- Skipping is offered forwards, and the closing laps are still race
+            -- to be skipped through: it stops at the last crossing, not at the
+            -- flag, the way the lap counter always has.
+            case Phase.at { elapsed = elapsed } m.race of
+                Phase.Running ->
+                    moveTo (Instant.add duration elapsed) m
 
-            else
-                m
+                Phase.Finishing ->
+                    moveTo (Instant.add duration elapsed) m
+
+                Phase.Over ->
+                    m
 
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then
