@@ -75,8 +75,13 @@ summaryJson =
 lapsJson : String
 lapsJson =
     """
-    [ { "carNumber": "7", "driverName": "KOBAYASHI", "lapNumber": 1
-      , "lapTime": "1:53.000", "s1": "30.000", "s2": "45.000", "s3": "38.000"
+    [ { "car": { "carNumber": "7" }, "driverName": "KOBAYASHI"
+      , "lapNumber": 1, "lap": { "time": "1:53.000", "improvement": 0 }
+      , "sectors":
+            { "s1": { "time": "30.000", "improvement": 0 }
+            , "s2": { "time": "45.000", "improvement": 0 }
+            , "s3": { "time": "38.000", "improvement": 0 }
+            }
       , "elapsed": "1:53.000", "pitTime": ""
       }
     ]

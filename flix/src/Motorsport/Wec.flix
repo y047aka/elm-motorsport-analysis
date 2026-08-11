@@ -130,36 +130,59 @@ mod Motorsport.Wec {
             |> Decode.pipeline(miniSectorsDecoder())
 
     pub def toJson(rawLap: RawLap): Encode.JsonValue =
-        let baseFields =
-            ("carNumber",               JsonString(rawLap#car#carNumber)) ::
-            ("driverNumber",            JsonInt(rawLap#driver#number)) ::
-            ("lapNumber",               JsonInt(rawLap#lapNumber)) ::
-            ("lapTime",                 JsonString(Util.Duration.format(rawLap#lapTime))) ::
-            ("lapImprovement",          JsonInt(improvementToInt(rawLap#lapImprovement))) ::
-            ("crossingFinishLineInPit", JsonString(boxToString(rawLap#crossingFinishLineInPit))) ::
-            ("s1",                      optionalDurationJson(rawLap#s1#value)) ::
-            ("s1Improvement",           JsonInt(improvementToInt(rawLap#s1#improvement))) ::
-            ("s2",                      optionalDurationJson(rawLap#s2#value)) ::
-            ("s2Improvement",           JsonInt(improvementToInt(rawLap#s2#improvement))) ::
-            ("s3",                      optionalDurationJson(rawLap#s3#value)) ::
-            ("s3Improvement",           JsonInt(improvementToInt(rawLap#s3#improvement))) ::
-            ("kph",                     JsonString(rawLap#kph)) ::
-            ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
-            ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
-            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
-            ("driverName",              JsonString(rawLap#driver#name)) ::
-            ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
-            ("class",                   JsonString(rawLap#car#class)) ::
-            ("group",                   JsonString(rawLap#car#group)) ::
-            ("team",                    JsonString(rawLap#car#team)) ::
-            ("manufacturer",            JsonString(rawLap#car#manufacturer)) ::
-            ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
+        let leadingFields =
+            ("car",        carToJson(rawLap#car)) ::
+            ("driverName", JsonString(rawLap#driver#name)) ::
+            ("lapNumber",  JsonInt(rawLap#lapNumber)) ::
+            ("lap",        lapToJson(rawLap)) ::
+            ("sectors",    sectorsToJson(rawLap)) ::
             Nil;
         let miniFields = match rawLap#miniSectors {
             case None       => Nil
             case Some(list) => ("miniSectors", miniSectorsToJson(list)) :: Nil
         };
-        JsonObject(List.append(baseFields, miniFields))
+        let trailingFields =
+            ("elapsed",                 JsonString(Util.Duration.format(rawLap#elapsed))) ::
+            ("hour",                    JsonString(HourClock.format(rawLap#hour))) ::
+            ("kph",                     JsonString(rawLap#kph)) ::
+            ("topSpeed",                JsonString(rawLap#topSpeed)) ::
+            ("crossingFinishLineInPit", JsonString(boxToString(rawLap#crossingFinishLineInPit))) ::
+            ("pitTime",                 optionalDurationJson(rawLap#pitTime)) ::
+            ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
+            Nil;
+        JsonObject(List.append(leadingFields, List.append(miniFields, trailingFields)))
+
+    def carToJson(car: RawCar): Encode.JsonValue =
+        JsonObject(
+            ("carNumber",    JsonString(car#carNumber)) ::
+            ("class",        JsonString(car#class)) ::
+            ("group",        JsonString(car#group)) ::
+            ("team",         JsonString(car#team)) ::
+            ("manufacturer", JsonString(car#manufacturer)) ::
+            Nil
+        )
+
+    def lapToJson(rawLap: RawLap): Encode.JsonValue =
+        JsonObject(
+            ("time",        JsonString(Util.Duration.format(rawLap#lapTime))) ::
+            ("improvement", JsonInt(improvementToInt(rawLap#lapImprovement))) ::
+            Nil
+        )
+
+    def sectorsToJson(rawLap: RawLap): Encode.JsonValue =
+        JsonObject(
+            ("s1", sectorToJson(rawLap#s1)) ::
+            ("s2", sectorToJson(rawLap#s2)) ::
+            ("s3", sectorToJson(rawLap#s3)) ::
+            Nil
+        )
+
+    def sectorToJson(sector: RawSector): Encode.JsonValue =
+        JsonObject(
+            ("time",        optionalDurationJson(sector#value)) ::
+            ("improvement", JsonInt(improvementToInt(sector#improvement))) ::
+            Nil
+        )
 
     def carDecoder(): Decoder[RawCar] =
         Decode.intoRecord(

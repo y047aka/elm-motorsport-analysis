@@ -8,6 +8,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
 import Motorsport.Race.Car exposing (Car)
+import Motorsport.Sector as Sector
 import Test exposing (Test, describe, test)
 
 
@@ -20,8 +21,8 @@ suite =
                     let
                         json =
                             """[
-                                {"carNumber":"1","driverName":"D","lapNumber":1,"lapTime":"1:35.365","s1":"23.155","s2":"29.928","s3":"42.282","elapsed":"1:35.365","pitTime":""},
-                                {"carNumber":"1","driverName":"D","lapNumber":2,"lapTime":"3:09.953","s1":"23.000","s2":"29.000","s3":"42.000","elapsed":"4:45.318","pitTime":"1:09.953"}
+                                {"car":{"carNumber":"1"},"driverName":"D","lapNumber":1,"lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""},
+                                {"car":{"carNumber":"1"},"driverName":"D","lapNumber":2,"lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
                             ]"""
                     in
                     case Decode.decodeString Laps.decoder json of
@@ -96,9 +97,7 @@ suite =
                               , driverName = "D"
                               , lapNumber = 2
                               , lapTime = 100000
-                              , s1 = Nothing
-                              , s2 = Nothing
-                              , s3 = Nothing
+                              , sectors = Sector.initialize (always Nothing)
                               , elapsed = Instant.fromDuration 200000
                               , pitTime = Just 50000
                               }
@@ -124,9 +123,7 @@ rawLap carNumber lapNumber lapTime elapsed =
     , driverName = "D"
     , lapNumber = lapNumber
     , lapTime = lapTime
-    , s1 = Nothing
-    , s2 = Nothing
-    , s3 = Nothing
+    , sectors = Sector.initialize (always Nothing)
     , elapsed = Instant.fromDuration elapsed
     , pitTime = Nothing
     }

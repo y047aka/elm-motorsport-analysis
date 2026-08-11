@@ -30,9 +30,7 @@ type alias RawLap =
     , driverName : String
     , lapNumber : Int
     , lapTime : Duration
-    , s1 : Maybe Duration
-    , s2 : Maybe Duration
-    , s3 : Maybe Duration
+    , sectors : BySector (Maybe Duration)
     , elapsed : Instant
     , pitTime : Maybe Duration
     }
@@ -50,15 +48,26 @@ decoder =
 rawLapDecoder : Decoder RawLap
 rawLapDecoder =
     Decode.succeed RawLap
-        |> required "carNumber" string
+        |> required "car" (Decode.field "carNumber" string)
         |> required "driverName" string
         |> required "lapNumber" int
-        |> required "lapTime" durationDecoder
-        |> required "s1" optionalDurationDecoder
-        |> required "s2" optionalDurationDecoder
-        |> required "s3" optionalDurationDecoder
+        |> required "lap" (Decode.field "time" durationDecoder)
+        |> required "sectors" sectorsDecoder
         |> required "elapsed" Instant.decoder
         |> required "pitTime" optionalDurationDecoder
+
+
+sectorsDecoder : Decoder (BySector (Maybe Duration))
+sectorsDecoder =
+    Decode.succeed BySector
+        |> required "s1" sectorTimeDecoder
+        |> required "s2" sectorTimeDecoder
+        |> required "s3" sectorTimeDecoder
+
+
+sectorTimeDecoder : Decoder (Maybe Duration)
+sectorTimeDecoder =
+    Decode.field "time" optionalDurationDecoder
 
 
 durationDecoder : Decoder Duration
@@ -164,13 +173,9 @@ minMaybe current new =
 accumulate : RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
 accumulate raw ( bests, acc ) =
     let
-        -- The raw record spells the sectors out flat; this is where that stops.
-        rawSectors =
-            { s1 = raw.s1, s2 = raw.s2, s3 = raw.s3 }
-
         newBests =
             { lap = minMaybe bests.lap (Lap.recorded raw.lapTime)
-            , sectors = Sector.map2 minMaybe bests.sectors rawSectors
+            , sectors = Sector.map2 minMaybe bests.sectors raw.sectors
             }
 
         lap =
@@ -187,7 +192,7 @@ accumulate raw ( bests, acc ) =
             , sectors =
                 Sector.map2
                     (\time personalBest -> { time = time, personalBest = personalBest })
-                    rawSectors
+                    raw.sectors
                     newBests.sectors
             , elapsed = raw.elapsed
             , pitTime = raw.pitTime
