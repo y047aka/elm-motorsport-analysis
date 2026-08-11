@@ -22,7 +22,6 @@ import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car exposing (Car)
-import Motorsport.Race.Phase as Phase
 import Time exposing (Posix)
 
 
@@ -39,7 +38,7 @@ type alias Model =
 fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Model
 fromCars race cars =
     { race = Race.fromCars race cars
-    , playback = Clock.init
+    , playback = Clock.init { finishedAt = race.finishedAt }
     }
 
 
@@ -61,7 +60,6 @@ lapCount m =
 type Msg
     = Start Posix
     | Pause Posix
-    | Finish Posix
     | Tick Posix
     | SkipTime Duration
     | SetCount Int
@@ -77,51 +75,18 @@ update msg m =
             { m | playback = Clock.update now Clock.Start m.playback }
 
         Tick now ->
-            case m.playback.state of
-                Clock.Started splitTime { startedAt } ->
-                    let
-                        ticked =
-                            { m | playback = Clock.update now Clock.Tick m.playback }
-                    in
-                    case Phase.at { elapsed = Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed } m.race of
-                        Phase.Running ->
-                            ticked
-
-                        Phase.Finishing ->
-                            ticked
-
-                        Phase.Over ->
-                            m
-
-                _ ->
-                    m
+            { m | playback = Clock.update now Clock.Tick m.playback }
 
         Pause now ->
             { m | playback = Clock.update now Clock.Pause m.playback }
-
-        Finish now ->
-            { m | playback = Clock.update now Clock.Finish m.playback }
 
         SetPlaybackSpeed speed ->
             { m | playback = Clock.setPlaybackSpeed speed m.playback }
 
         SkipTime duration ->
-            let
-                elapsed =
-                    Clock.getElapsed m.playback
-            in
-            -- Skipping is offered forwards, and the closing laps are still race
-            -- to be skipped through: it stops at the last crossing, not at the
-            -- flag, the way the lap counter always has.
-            case Phase.at { elapsed = elapsed } m.race of
-                Phase.Running ->
-                    moveTo (Instant.add duration elapsed) m
-
-                Phase.Finishing ->
-                    moveTo (Instant.add duration elapsed) m
-
-                Phase.Over ->
-                    m
+            -- Offered forwards, and lands on the end of the race when it is
+            -- asked for more than there is left; the clock is what says so.
+            moveTo (Instant.add duration (Clock.getElapsed m.playback)) m
 
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then

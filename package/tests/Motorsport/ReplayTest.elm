@@ -102,6 +102,17 @@ suite =
                     playingAt 7250000
                         |> elapsedOf
                         |> Expect.equal 7250000
+            , test "and runs out at the last crossing" <|
+                \_ ->
+                    playingAt 7400000
+                        |> elapsedOf
+                        |> Expect.equal 7300000
+            , test "skipping further than there is race left lands on the end of it" <|
+                \_ ->
+                    initialModel
+                        |> skipBy 99999999
+                        |> elapsedOf
+                        |> Expect.equal 7300000
             ]
         , describe "SetCount"
             [ test "moving the lap counter forward carries the status with it" <|

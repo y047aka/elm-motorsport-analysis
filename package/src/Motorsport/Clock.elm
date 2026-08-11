@@ -47,6 +47,11 @@ type PlaybackSpeed
     | Speed60x
 
 
+{-| `Finished` is the head parked at the end of what there is to play, and it
+carries no moment because there is only one it can be at -- `finishedAt`. It is
+reached by playback running out, never by being moved there: a head put on the
+last moment by hand is a stopped head like any other.
+-}
 type State
     = Initial
     | Started Instant { now : Posix, startedAt : Posix }
@@ -54,16 +59,29 @@ type State
     | Finished
 
 
+{-| `finishedAt` is as far as the head goes, settled when the data loads and
+fixed for as long as the clock lasts.
+
+It is held here rather than checked by the caller because `Started` is defined
+against the wall clock: a running clock that is not being ticked has not
+stopped, it is only unobserved, and it reports the wall time that passed the
+moment it is asked again. Refusing to tick it is therefore no way to end
+playback -- so nothing outside this module is in a position to end it, and
+nothing outside needs to try.
+
+-}
 type alias Model =
     { state : State
     , playbackSpeed : PlaybackSpeed
+    , finishedAt : Instant
     }
 
 
-init : Model
-init =
+init : { finishedAt : Instant } -> Model
+init { finishedAt } =
     { state = Initial
     , playbackSpeed = defaultSpeed
+    , finishedAt = finishedAt
     }
 
 
@@ -89,7 +107,6 @@ type Msg
     = Start
     | Tick
     | Pause
-    | Finish
 
 
 update : Posix -> Msg -> Model -> Model
@@ -109,7 +126,11 @@ update now msg m =
         Tick ->
             case m.state of
                 Started splitTime posix ->
-                    { m | state = Started splitTime { posix | now = now } }
+                    if Instant.compare (calcElapsed posix.startedAt now splitTime m.playbackSpeed) m.finishedAt /= LT then
+                        { m | state = Finished }
+
+                    else
+                        { m | state = Started splitTime { posix | now = now } }
 
                 _ ->
                     m
@@ -122,14 +143,16 @@ update now msg m =
                 _ ->
                     m
 
-        Finish ->
-            { m | state = Finished }
 
-
-{-| Put the playback head at a given moment of the race.
+{-| Put the playback head at a given moment of the race, or at the end of it if
+that is further than there is to play.
 -}
 setElapsed : Instant -> Model -> Model
-setElapsed instant m =
+setElapsed asked m =
+    let
+        instant =
+            Instant.earlier asked m.finishedAt
+    in
     case m.state of
         -- Moving the clock before the race has been started leaves it
         -- stopped, at the moment asked for -- the same state as pausing
@@ -147,8 +170,10 @@ setElapsed instant m =
         Paused _ ->
             { m | state = Paused instant }
 
+        -- Stopped, not finished: playback ran out once, and the head has since
+        -- been moved off the end.
         Finished ->
-            m
+            { m | state = Paused instant }
 
 
 {-| Change how fast playback runs, leaving the head where it is.
@@ -190,7 +215,7 @@ toString m =
             (Instant.toString >> String.dropRight 4) splitTime
 
         Finished ->
-            "00:00:00"
+            (Instant.toString >> String.dropRight 4) m.finishedAt
 
 
 getElapsed : Model -> Instant
@@ -206,7 +231,7 @@ getElapsed m =
             splitTime
 
         Finished ->
-            Instant.raceStart
+            m.finishedAt
 
 
 
