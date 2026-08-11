@@ -1,7 +1,7 @@
 module Motorsport.Race exposing
     ( Race
     , empty, fromCars
-    , lapCountAt, elapsedAtLapCount
+    , lapCountAt, elapsedAtLapCount, timeToFlagAt
     , statusAt
     )
 
@@ -15,13 +15,14 @@ moment is derived from the two, in
 
 @docs Race
 @docs empty, fromCars
-@docs lapCountAt, elapsedAtLapCount
+@docs lapCountAt, elapsedAtLapCount, timeToFlagAt
 @docs statusAt
 
 -}
 
 import Dict
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -38,22 +39,17 @@ beside it read the same race at an instant, and are
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
 
-`timeLimit` and `finishedAt` are the two moments the race can be measured to,
-and neither stands in for the other. Anything that has to weigh them against
-each other asks [`Phase`](Motorsport-Race-Phase) rather than reading both; a
-question that only ever concerned one of them is better off being handed that
-one, the way `TimelineEvent.fromCars` is handed the limit and no more.
-
-Both are given to [`fromCars`](#fromCars): the time limit because the laps do
-not say it, and the finish because scanning them a second time to find it would
-only be reading back what the file already states.
+`timeLimit` is when the race was scheduled to end, and the one thing here the
+laps do not say -- it only looks as though they do, being a whole-hour estimate
+off the last of them -- so [`fromCars`](#fromCars) is given it. Where the race
+actually ran out is not a fact about the race but a bound on playback, and is
+[`Clock`](Motorsport-Clock)'s.
 
 -}
 type alias Race =
     { cars : List Car
     , lapTotal : Int
     , timeLimit : Instant
-    , finishedAt : Instant
     , timelineEvents : List TimelineEvent
     , statusChanges : StatusChanges
     , lapCompletions : ChangePoints Int
@@ -68,7 +64,6 @@ empty =
     { cars = []
     , lapTotal = 0
     , timeLimit = Instant.raceStart
-    , finishedAt = Instant.raceStart
     , timelineEvents = []
     , statusChanges = StatusChanges.empty
     , lapCompletions = ChangePoints.empty
@@ -83,8 +78,8 @@ per-lap positions assigned produce a timeline with no lead changes in it -- see
 [`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Race
-fromCars { timeLimit, finishedAt } cars =
+fromCars : { timeLimit : Instant } -> List Car -> Race
+fromCars { timeLimit } cars =
     let
         timelineEvents =
             TimelineEvent.fromCars { timeLimit = timeLimit } cars
@@ -95,7 +90,6 @@ fromCars { timeLimit, finishedAt } cars =
     { cars = cars
     , lapTotal = ChangePoints.length lapCompletions
     , timeLimit = timeLimit
-    , finishedAt = finishedAt
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
     , lapCompletions = lapCompletions
@@ -157,6 +151,18 @@ elapsedAtLapCount lapCount race =
             Nothing ->
                 ChangePoints.timeOfNth (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
                     |> Maybe.withDefault Instant.raceStart
+
+
+{-| How long the race has left to run at a moment of it.
+
+Nought once the flag has fallen, which is a moment the race can still be read
+at: it goes on being run after the clock says it is over, the flag having fallen
+on a lap already under way.
+
+-}
+timeToFlagAt : { elapsed : Instant } -> Race -> Duration
+timeToFlagAt { elapsed } race =
+    max 0 (Instant.since { from = elapsed, to = race.timeLimit })
 
 
 {-| The status a car holds at a moment of the race.

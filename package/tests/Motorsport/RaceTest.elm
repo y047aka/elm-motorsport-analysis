@@ -69,6 +69,21 @@ suite =
                     Race.lapCountAt { elapsed = instant 99999999 } race
                         |> Expect.equal race.lapTotal
             ]
+        , describe "timeToFlagAt"
+            -- The fixture's flag falls at 7200000, well past its last lap.
+            [ test "counts down to the flag" <|
+                \_ ->
+                    [ 0, 7199999 ]
+                        |> List.map (\elapsed -> Race.timeToFlagAt { elapsed = instant elapsed } race)
+                        |> Expect.equal [ 7200000, 1 ]
+            , test "and has nothing left to count once it has fallen" <|
+                \_ ->
+                    -- The race is still readable here: it goes on being run
+                    -- after the flag, on a lap already under way.
+                    [ 7200000, 99999999 ]
+                        |> List.map (\elapsed -> Race.timeToFlagAt { elapsed = instant elapsed } race)
+                        |> Expect.equal [ 0, 0 ]
+            ]
         ]
 
 
@@ -80,7 +95,7 @@ suite =
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000, finishedAt = Instant.fromDuration 7200000 }
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000 }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000

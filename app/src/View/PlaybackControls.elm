@@ -15,8 +15,7 @@ import Html.Styled.Attributes as Attributes exposing (type_, value)
 import Html.Styled.Events exposing (onClick, onInput)
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
-import Motorsport.Instant as Instant
-import Motorsport.Race.Phase as Phase
+import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import String exposing (dropRight)
 
@@ -119,15 +118,7 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
             Replay.lapCount replay
 
         remaining =
-            case Phase.at { elapsed = elapsed } race of
-                Phase.Running ->
-                    Instant.since { from = elapsed, to = race.timeLimit }
-
-                Phase.Finishing ->
-                    0
-
-                Phase.Over ->
-                    0
+            Race.timeToFlagAt { elapsed = elapsed } race
     in
     div [ Attributes.class "flex flex-col gap-2 flex-1 min-w-0 text-xs font-medium tabular-nums opacity-70" ]
         [ div [ Attributes.class "flex justify-between" ]
