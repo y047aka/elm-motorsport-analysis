@@ -83,16 +83,27 @@ mod Motorsport.TestWec {
         }
 
     @Test
-    def testToJsonGroupsCarLapAndSectors(): Unit \ Assert =
+    def testToJsonGroupsLapAndSectors(): Unit \ Assert =
         match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
             case Ok(r) =>
                 let json = Encode.render(Wec.toJson(r));
-                Assert.assertTrue(String.contains({substr = "\"car\": {"}, json));
                 Assert.assertTrue(String.contains({substr = "\"lap\": {"}, json));
                 Assert.assertTrue(String.contains({substr = "\"sectors\": {"}, json));
                 Assert.assertTrue(not String.contains({substr = "\"lapImprovement\""}, json));
                 Assert.assertTrue(not String.contains({substr = "\"s1Improvement\""}, json));
                 Assert.assertTrue(not String.contains({substr = "\"driverNumber\""}, json))
+            case Err(_) => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testToJsonCarriesCarNumberAlone(): Unit \ Assert =
+        match decodeOne("12;1;3;2:41.963;0;;41.805;0;1:03.483;0;56.675;0;101.4;6:10.938;11:06:38.429;0:41.805;1:03.483;0:56.675;88.5;Will STEVENS;;HYPERCAR;H;Hertz Team JOTA;Porsche;SF;41.805;63.483;56.675;") {
+            case Ok(r) =>
+                let json = Encode.render(Wec.toJson(r));
+                Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json));
+                Assert.assertTrue(not String.contains({substr = "HYPERCAR"}, json));
+                Assert.assertTrue(not String.contains({substr = "Hertz Team JOTA"}, json));
+                Assert.assertTrue(not String.contains({substr = "Porsche"}, json))
             case Err(_) => Assert.assertTrue(false)
         }
 

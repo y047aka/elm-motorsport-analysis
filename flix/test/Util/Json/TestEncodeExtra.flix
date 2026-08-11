@@ -86,6 +86,46 @@ mod Util.Json.TestEncodeExtra {
         Assert.assertTrue(Extra.render(obj) == "{ \"say \\\"hi\\\"\": 1 }")
 
     @Test
+    def testOnOneLineKeepsAWideObjectOnOneLine(): Unit \ Assert =
+        let obj = JsonObject(
+            ("carNumber", JsonString("007")) ::
+            ("driverName", JsonString("Harry TINCKNELL")) ::
+            ("lapNumber", JsonInt(1)) ::
+            ("elapsed", JsonString("1:42.619")) ::
+            Nil
+        );
+        Assert.assertTrue(Extra.renderOnOneLine(obj)
+            == "{ \"carNumber\": \"007\", \"driverName\": \"Harry TINCKNELL\", \"lapNumber\": 1, \"elapsed\": \"1:42.619\" }")
+
+    @Test
+    def testOnOneLineFlattensNestedValues(): Unit \ Assert =
+        let obj = JsonObject(
+            ("miniSectors", JsonObject(
+                ("scl2", JsonObject(("time", JsonString("20.708")) :: ("elapsed", JsonString("20.708")) :: Nil)) ::
+                ("z4",   JsonObject(("time", JsonString("13.826")) :: ("elapsed", JsonString("34.534")) :: Nil)) ::
+                Nil
+            )) ::
+            ("laps", JsonArray(JsonInt(1) :: JsonInt(2) :: Nil)) ::
+            Nil
+        );
+        Assert.assertTrue(Extra.renderOnOneLine(obj)
+            == "{ \"miniSectors\": { \"scl2\": { \"time\": \"20.708\", \"elapsed\": \"20.708\" }, \"z4\": { \"time\": \"13.826\", \"elapsed\": \"34.534\" } }, \"laps\": [1, 2] }")
+
+    @Test
+    def testOnOneLineNeverEmitsANewline(): Unit \ Assert =
+        let obj = JsonObject(
+            ("a", JsonArray(JsonObject(("b", JsonInt(1)) :: ("c", JsonInt(2)) :: ("d", JsonInt(3)) :: Nil) :: Nil)) ::
+            ("e", JsonObject(Nil)) ::
+            ("f", JsonArray(Nil)) ::
+            Nil
+        );
+        Assert.assertTrue(not String.contains({substr = "\n"}, Extra.renderOnOneLine(obj)))
+
+    @Test
+    def testOnOneLineRendersScalarsAsEncodeDoes(): Unit \ Assert =
+        Assert.assertTrue(Extra.renderOnOneLine(JsonString("say \"hi\"")) == Encode.render(JsonString("say \"hi\"")))
+
+    @Test
     def testExpandedObjectMatchesEncode(): Unit \ Assert =
         let obj = JsonObject(
             ("name", JsonString("test")) ::

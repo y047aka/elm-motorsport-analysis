@@ -17,7 +17,7 @@ json =
           , "rounds":
                 [ { "id": "spa_6h", "name": "6 Hours of Spa", "date": "2026-05-09"
                   , "summary": "/static/wec/2026/spa_6h.json"
-                  , "laps": "/static/wec/2026/spa_6h_laps.json"
+                  , "laps": "/static/wec/2026/spa_6h_laps.jsonl"
                   }
                 ]
           }
@@ -25,11 +25,11 @@ json =
           , "rounds":
                 [ { "id": "spa_6h", "name": "6 Hours of Spa", "date": "2025-05-10"
                   , "summary": "/static/wec/2025/spa_6h.json"
-                  , "laps": "/static/wec/2025/spa_6h_laps.json"
+                  , "laps": "/static/wec/2025/spa_6h_laps.jsonl"
                   }
                 , { "id": "fuji_6h", "name": "6 Hours of Fuji", "date": "2025-09-28"
                   , "summary": "/static/wec/2025/fuji_6h.json"
-                  , "laps": "/static/wec/2025/fuji_6h_laps.json"
+                  , "laps": "/static/wec/2025/fuji_6h_laps.jsonl"
                   }
                 ]
           }
@@ -67,7 +67,7 @@ suite =
                         |> List.take 1
                         |> Expect.equalLists
                             [ ( "/static/wec/2026/spa_6h.json"
-                              , "/static/wec/2026/spa_6h_laps.json"
+                              , "/static/wec/2026/spa_6h_laps.jsonl"
                               )
                             ]
             , test "fails rather than guessing when a round is missing its paths" <|

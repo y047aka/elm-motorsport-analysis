@@ -1,13 +1,13 @@
 module Data.Wec.Laps exposing
     ( RawLap
-    , decoder
+    , fromJsonl
     , attach
     )
 
 {-|
 
 @docs RawLap
-@docs decoder
+@docs fromJsonl
 @docs attach
 
 -}
@@ -40,15 +40,34 @@ type alias RawLap =
 -- DECODE
 
 
-decoder : Decoder (List RawLap)
-decoder =
-    Decode.list rawLapDecoder
+{-| Reads the laps file, which holds one lap per line rather than one array.
+-}
+fromJsonl : String -> Result String (List RawLap)
+fromJsonl body =
+    body
+        |> String.lines
+        |> List.indexedMap Tuple.pair
+        |> List.foldr decodeLine (Ok [])
+
+
+decodeLine : ( Int, String ) -> Result String (List RawLap) -> Result String (List RawLap)
+decodeLine ( index, line ) rest =
+    if String.isEmpty line then
+        rest
+
+    else
+        case Decode.decodeString rawLapDecoder line of
+            Ok rawLap ->
+                Result.map ((::) rawLap) rest
+
+            Err error ->
+                Err ("line " ++ String.fromInt (index + 1) ++ ": " ++ Decode.errorToString error)
 
 
 rawLapDecoder : Decoder RawLap
 rawLapDecoder =
     Decode.succeed RawLap
-        |> required "car" (Decode.field "carNumber" string)
+        |> required "carNumber" string
         |> required "driverName" string
         |> required "lapNumber" int
         |> required "lap" (Decode.field "time" durationDecoder)

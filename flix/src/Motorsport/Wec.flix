@@ -131,9 +131,9 @@ mod Motorsport.Wec {
 
     pub def toJson(rawLap: RawLap): Encode.JsonValue =
         let leadingFields =
-            ("car",        carToJson(rawLap#car)) ::
-            ("driverName", JsonString(rawLap#driver#name)) ::
+            ("carNumber",  JsonString(rawLap#car#carNumber)) ::
             ("lapNumber",  JsonInt(rawLap#lapNumber)) ::
+            ("driverName", JsonString(rawLap#driver#name)) ::
             ("lap",        lapToJson(rawLap)) ::
             ("sectors",    sectorsToJson(rawLap)) ::
             Nil;
@@ -151,16 +151,6 @@ mod Motorsport.Wec {
             ("flagAtFl",                JsonString(flagToString(rawLap#flagAtFl))) ::
             Nil;
         JsonObject(List.append(leadingFields, List.append(miniFields, trailingFields)))
-
-    def carToJson(car: RawCar): Encode.JsonValue =
-        JsonObject(
-            ("carNumber",    JsonString(car#carNumber)) ::
-            ("class",        JsonString(car#class)) ::
-            ("group",        JsonString(car#group)) ::
-            ("team",         JsonString(car#team)) ::
-            ("manufacturer", JsonString(car#manufacturer)) ::
-            Nil
-        )
 
     def lapToJson(rawLap: RawLap): Encode.JsonValue =
         JsonObject(

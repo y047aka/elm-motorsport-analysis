@@ -21,7 +21,7 @@ mod Cli.FileTask {
             {
                 inputPath  = "${stem}.csv",
                 outputPath = "${stem}.json",
-                lapsPath   = "${stem}_laps.json",
+                lapsPath   = "${stem}_laps.jsonl",
                 entry      = entry
             }
         })

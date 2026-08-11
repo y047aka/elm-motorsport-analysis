@@ -2,7 +2,6 @@ module Data.Wec.LapsTest exposing (suite)
 
 import Data.Wec.Laps as Laps exposing (RawLap)
 import Expect
-import Json.Decode as Decode
 import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
@@ -15,17 +14,10 @@ import Test exposing (Test, describe, test)
 suite : Test
 suite =
     describe "Data.Wec.Laps"
-        [ describe "decoder"
+        [ describe "fromJsonl"
             [ test "decodes empty pitTime as Nothing and a value as Just" <|
                 \_ ->
-                    let
-                        json =
-                            """[
-                                {"car":{"carNumber":"1"},"driverName":"D","lapNumber":1,"lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""},
-                                {"car":{"carNumber":"1"},"driverName":"D","lapNumber":2,"lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
-                            ]"""
-                    in
-                    case Decode.decodeString Laps.decoder json of
+                    case Laps.fromJsonl twoLaps of
                         Ok rawLaps ->
                             let
                                 cars =
@@ -37,7 +29,23 @@ suite =
                             Expect.equal [ Nothing, Just 69953 ] pitTimes
 
                         Err err ->
-                            Expect.fail (Decode.errorToString err)
+                            Expect.fail err
+            , test "keeps the laps in the order the lines are in" <|
+                \_ ->
+                    Laps.fromJsonl twoLaps
+                        |> Result.map (List.map .lapNumber)
+                        |> Expect.equal (Ok [ 1, 2 ])
+            , test "ignores the blank line a trailing newline leaves behind" <|
+                \_ ->
+                    Laps.fromJsonl twoLaps
+                        |> Result.map List.length
+                        |> Expect.equal (Ok 2)
+            , test "names the line a bad lap is on" <|
+                \_ ->
+                    (twoLaps ++ """{"carNumber":"1"}\n""")
+                        |> Laps.fromJsonl
+                        |> Result.mapError (String.left 8)
+                        |> Expect.equal (Err "line 3: ")
             ]
         , describe "attach"
             [ test "accumulates per-car best lap times" <|
@@ -115,6 +123,13 @@ suite =
 
 
 -- HELPERS
+
+
+twoLaps : String
+twoLaps =
+    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
+{"carNumber":"1","lapNumber":2,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
+"""
 
 
 rawLap : String -> Int -> Int -> Int -> RawLap

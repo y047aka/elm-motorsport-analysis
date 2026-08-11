@@ -20,7 +20,7 @@ mod Cli.Stages.TestManifest {
     def testEveryRoundStatesWhereItsFilesAre(): Unit \ Assert =
         let json = rendered("/static/wec");
         Assert.assertTrue(String.contains({substr = "\"summary\": \"/static/wec/2025/spa_6h.json\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"laps\": \"/static/wec/2025/spa_6h_laps.json\""}, json))
+        Assert.assertTrue(String.contains({substr = "\"laps\": \"/static/wec/2025/spa_6h_laps.jsonl\""}, json))
 
     /// Nothing about where the app serves from reaches the calendar, so moving
     /// it is one edit here and not one on each side.

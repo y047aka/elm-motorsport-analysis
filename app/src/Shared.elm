@@ -215,7 +215,11 @@ resumeWaitingRound m =
                                         }
                                     , Http.get
                                         { url = round.laps
-                                        , expect = Http.expectJson (LapsLoaded_Wec (keyOf id)) WecLaps.decoder
+                                        , expect =
+                                            Http.expectString
+                                                (LapsLoaded_Wec (keyOf id)
+                                                    << Result.andThen (WecLaps.fromJsonl >> Result.mapError Http.BadBody)
+                                                )
                                         }
                                     ]
 
