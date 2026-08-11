@@ -14,6 +14,24 @@ mod Util.Json.Encode.Extra {
     pub def render(value: JsonValue): String =
         renderWithIndent(0, value)
 
+    /// Renders the whole value on one line, however many properties it holds.
+    /// For JSON Lines output, where the line break separates records and so
+    /// cannot appear inside one.
+    pub def renderOnOneLine(value: JsonValue): String =
+        match value {
+            case JsonValue.JsonArray(xs) =>
+                if (List.isEmpty(xs))
+                    "[]"
+                else
+                    "[${List.join(", ", xs |> List.map(renderOnOneLine))}]"
+            case JsonValue.JsonObject(kvs) =>
+                if (List.isEmpty(kvs))
+                    "{}"
+                else
+                    inlineObject(kvs |> List.map(match (k, v) -> "${key(k)}: ${renderOnOneLine(v)}"))
+            case scalar => Util.Json.Encode.render(scalar)
+        }
+
     def renderWithIndent(indent: Int32, value: JsonValue): String =
         match value {
             case JsonValue.JsonArray(xs)   => renderArray(indent, xs)
@@ -35,9 +53,12 @@ mod Util.Json.Encode.Extra {
                 "${key(k)}: ${renderWithIndent(indent + 2, v)}"
             );
             if (List.length(entries) <= 2 and List.forAll(fitsOnOneLine, entries))
-                "{ ${List.join(", ", entries)} }"
+                inlineObject(entries)
             else
                 onOwnLines(indent, "{", entries, "}")
+
+    def inlineObject(entries: List[String]): String =
+        "{ ${List.join(", ", entries)} }"
 
     def onOwnLines(indent: Int32, open: String, items: List[String], close: String): String =
         let spaces = String.repeat(indent, " ");

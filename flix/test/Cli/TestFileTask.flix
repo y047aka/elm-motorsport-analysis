@@ -13,7 +13,7 @@ mod Cli.TestFileTask {
             case Some(task) =>
                 Assert.assertTrue(task#inputPath  == "../app/static/wec/2025/fuji_6h.csv");
                 Assert.assertTrue(task#outputPath == "../app/static/wec/2025/fuji_6h.json");
-                Assert.assertTrue(task#lapsPath   == "../app/static/wec/2025/fuji_6h_laps.json");
+                Assert.assertTrue(task#lapsPath   == "../app/static/wec/2025/fuji_6h_laps.jsonl");
                 Assert.assertTrue(task#entry#date == "2025-09-28")
         }
 

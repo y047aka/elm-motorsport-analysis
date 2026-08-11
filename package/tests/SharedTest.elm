@@ -28,11 +28,11 @@ calendarJson =
           , "rounds":
                 [ { "id": "spa_6h", "name": "6 Hours of Spa", "date": "2025-05-10"
                   , "summary": "/static/wec/2025/spa_6h.json"
-                  , "laps": "/static/wec/2025/spa_6h_laps.json"
+                  , "laps": "/static/wec/2025/spa_6h_laps.jsonl"
                   }
                 , { "id": "fuji_6h", "name": "6 Hours of Fuji", "date": "2025-09-28"
                   , "summary": "/static/wec/2025/fuji_6h.json"
-                  , "laps": "/static/wec/2025/fuji_6h_laps.json"
+                  , "laps": "/static/wec/2025/fuji_6h_laps.jsonl"
                   }
                 ]
           }
@@ -72,20 +72,10 @@ summaryJson =
     """
 
 
-lapsJson : String
-lapsJson =
-    """
-    [ { "carNumber": "7", "driverName": "KOBAYASHI"
-      , "lapNumber": 1, "lap": { "time": "1:53.000", "improvement": 0 }
-      , "sectors":
-            { "s1": { "time": "30.000", "improvement": 0 }
-            , "s2": { "time": "45.000", "improvement": 0 }
-            , "s3": { "time": "38.000", "improvement": 0 }
-            }
-      , "elapsed": "1:53.000", "pitTime": ""
-      }
-    ]
-    """
+lapsJsonl : String
+lapsJsonl =
+    """{ "carNumber": "7", "driverName": "KOBAYASHI", "lapNumber": 1, "lap": { "time": "1:53.000", "improvement": 0 }, "sectors": { "s1": { "time": "30.000", "improvement": 0 }, "s2": { "time": "45.000", "improvement": 0 }, "s3": { "time": "38.000", "improvement": 0 } }, "elapsed": "1:53.000", "pitTime": "" }
+"""
 
 
 summary : Maybe Wec.Event
@@ -100,7 +90,7 @@ summary =
 
 laps : List WecLaps.RawLap
 laps =
-    Decode.decodeString WecLaps.decoder lapsJson
+    WecLaps.fromJsonl lapsJsonl
         |> Result.withDefault []
 
 

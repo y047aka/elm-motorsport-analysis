@@ -45,20 +45,31 @@ mod Cli.Stages.TestTransform {
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
     @Test
-    def testTransformRendersLapsJson(): Unit \ Assert =
+    def testTransformRendersLapsJsonl(): Unit \ Assert =
         let out = Transform.transform(leMans(), sampleRawLaps());
-        let json = out#lapsJson;
-        Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, json));
-        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Kamui KOBAYASHI\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, json))
+        let jsonl = out#lapsJsonl;
+        Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, jsonl));
+        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, jsonl));
+        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Kamui KOBAYASHI\""}, jsonl));
+        Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, jsonl))
 
     @Test
-    def testTransformEmptyInputProducesEmptyArrays(): Unit \ Assert =
+    def testEveryLapIsOneLine(): Unit \ Assert =
+        let out = Transform.transform(leMans(), sampleRawLaps());
+        let lines = String.splitOn({substr = "\n"}, out#lapsJsonl) |> List.filter(line -> line != "");
+        Assert.assertTrue(String.endsWith({suffix = "\n"}, out#lapsJsonl));
+        Assert.assertTrue(List.length(lines) == 3);
+        Assert.assertTrue(List.forAll(
+            line -> String.startsWith({prefix = "{ "}, line) and String.endsWith({suffix = " }"}, line),
+            lines
+        ))
+
+    @Test
+    def testTransformEmptyInputProducesNoLaps(): Unit \ Assert =
         let out = Transform.transform(leMans(), Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));
-        Assert.assertTrue(out#lapsJson == "[]")
+        Assert.assertTrue(out#lapsJsonl == "")
 
 }

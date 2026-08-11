@@ -1,7 +1,6 @@
 mod Cli.Stages.Transform {
 
     use Util.Json.Encode.Extra
-    use Util.Json.Encode.JsonValue.JsonArray
     use Motorsport.Calendar.Entry
     use Motorsport.Metadata
     use Motorsport.Wec
@@ -10,17 +9,22 @@ mod Cli.Stages.Transform {
     pub type alias Rendered = {
         lapCount     = Int32,
         metadataJson = String,
-        lapsJson     = String
+        lapsJsonl    = String
     }
 
     pub def transform(entry: Entry, rawLaps: List[RawLap]): Rendered =
         let metadata     = Metadata.fromRawLaps(entry, rawLaps);
         let metadataJson = Extra.render(Metadata.toJson(metadata));
-        let lapsJson     = Extra.render(JsonArray(List.map(Wec.toJson, rawLaps)));
+        let lapsJsonl    = renderJsonl(rawLaps);
         {
             lapCount     = List.length(rawLaps),
             metadataJson = metadataJson,
-            lapsJson     = lapsJson
+            lapsJsonl    = lapsJsonl
         }
+
+    def renderJsonl(rawLaps: List[RawLap]): String =
+        rawLaps
+            |> List.map(rawLap -> "${Extra.renderOnOneLine(Wec.toJson(rawLap))}\n")
+            |> List.join("")
 
 }

@@ -7,6 +7,7 @@ const staticDir = resolve(import.meta.dirname, "static");
 
 const mimeTypes: Record<string, string> = {
   ".json": "application/json",
+  ".jsonl": "application/jsonl",
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",

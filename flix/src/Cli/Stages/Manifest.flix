@@ -53,7 +53,7 @@ mod Cli.Stages.Manifest {
                 ("name",    JsonString(Events.displayName(r#id))) ::
                 ("date",    JsonString(r#date)) ::
                 ("summary", JsonString("${stem}.json")) ::
-                ("laps",    JsonString("${stem}_laps.json")) ::
+                ("laps",    JsonString("${stem}_laps.jsonl")) ::
                 Nil
             )
         }
