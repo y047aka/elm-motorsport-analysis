@@ -1,14 +1,14 @@
 # CLAUDE.md
 
-Motorsport race analysis and visualization app. CSV telemetry → CLI → JSON →
-Elm visualization.
+Motorsport race analysis and visualization app. CSV telemetry → CLI →
+JSON/JSONL → Elm visualization.
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
-- **`/flix`** — the CLI for CSV→JSON data processing, written in Flix.
+- **`/flix`** — the CLI for CSV→JSON/JSONL data processing, written in Flix.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -27,7 +27,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON |
+| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON/JSONL |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
@@ -36,10 +36,11 @@ the toolchain and sets the working directory. The `cli-*` commands drive
 `/flix`; there are no `flix-*` ones.
 
 `.#cli-run` takes the directory holding the season directories and converts
-every round `Motorsport.Calendar` lists, writing each round's two JSON files
-plus `index.json` beside them. **A new round is added to `Motorsport.Calendar`
-first** — the run converts nothing the calendar does not list, reports any CSV
-no round names, and fails any round whose CSV is missing.
+every round `Motorsport.Calendar` lists, writing each round's summary `.json`
+and its laps `.jsonl`, one lap per line, plus `index.json` beside them. **A new
+round is added to `Motorsport.Calendar` first** — the run converts nothing the
+calendar does not list, reports any CSV no round names, and fails any round
+whose CSV is missing.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
