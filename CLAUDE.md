@@ -113,14 +113,44 @@ moment of it).
 
 ## Comments and documentation
 
-Prefer a clear implementation to a comment explaining an unclear one. Comment
-what the code cannot say — an outside constraint, a hazard, a decision whose
-alternatives looked equal — and let names and types carry the rest. Do not
-restate what the code says, and do not argue for it.
+Prefer a clear implementation to a comment explaining an unclear one, and let
+names and types carry what they can.
 
-Why a change was made belongs in its commit message. This file holds what cannot
-be read off the code; anything derivable from it is noise, for the next agent as
-much as the next person.
+**Never write.** The examples are real, and were cut:
+
+- **The case for the code.** `held here rather than checked by the caller
+  because ...`; `Offering ▶ rather than ■ says which way the head is stuck, and
+  disabling it saves the round trip`. Why a change was made belongs in its
+  commit message.
+- **What the code already says.** `Offered forwards`, above a function every
+  caller passes a positive duration to.
+- **What the history says.** `previously this was ...`, `renamed from ...`,
+  issue and PR numbers. That is `git log`'s.
+
+**Write only what the code cannot say**, which is nearly always one of three:
+
+- **An outside constraint.** `` `finishedAt` is the file's `race.duration` `` —
+  a name on the wire that no type reaches.
+- **A hazard.** `` `Started` is defined against the wall clock, so a clock that
+  is running and not being ticked has not stopped `` — the mistake it stops the
+  next person making.
+- **A decision whose alternatives looked equal.** Why `Data.Wec.trackDecoder`
+  takes `optional` over `oneOf`.
+
+Length is not the test. That `optional`/`oneOf` note runs sixteen lines and earns
+them; every cut listed above was shorter than it. Placement is the test.
+
+This file holds what cannot be read off the code; anything derivable from it is
+noise, for the next agent as much as the next person.
+
+## Committing
+
+Re-read the comments and docstrings the change added, against the list above,
+and cut what that list forbids. It is a pass of its own, made once the code is
+finished: a comment that looked necessary while the code was being written reads
+as argument once it is not, and only the second reading tells them apart.
+
+Nothing is lost by cutting. The reasoning is what the commit message is for.
 
 ## Testing
 

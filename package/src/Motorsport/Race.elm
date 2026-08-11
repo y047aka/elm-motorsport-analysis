@@ -1,7 +1,7 @@
 module Motorsport.Race exposing
     ( Race
     , empty, fromCars
-    , lapCountAt, elapsedAtLapCount
+    , lapCountAt, elapsedAtLapCount, timeToFlagAt
     , statusAt
     )
 
@@ -15,13 +15,14 @@ moment is derived from the two, in
 
 @docs Race
 @docs empty, fromCars
-@docs lapCountAt, elapsedAtLapCount
+@docs lapCountAt, elapsedAtLapCount, timeToFlagAt
 @docs statusAt
 
 -}
 
 import Dict
 import Motorsport.BestTimes as BestTimes
+import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Race.Car exposing (Car, CarNumber)
@@ -36,9 +37,13 @@ beside it read the same race at an instant, and are
 
 `lapTotal` is read off `lapCompletions` rather than counted separately, so the
 counter's ceiling and `lapCountAt` can never disagree about how long the race
-was. `timeLimit` is the one thing the lap data does not say -- it only looks as
-though it does, being an estimate off the last lap completed -- so
-[`fromCars`](#fromCars) is given it.
+was.
+
+`timeLimit` is when the race was scheduled to end, and the one thing here the
+laps do not say -- it only looks as though they do, being a whole-hour estimate
+off the last of them -- so [`fromCars`](#fromCars) is given it. Where the race
+actually ran out bounds playback rather than describing the race, and is
+[`Clock`](Motorsport-Clock)'s.
 
 -}
 type alias Race =
@@ -146,6 +151,15 @@ elapsedAtLapCount lapCount race =
             Nothing ->
                 ChangePoints.timeOfNth (ChangePoints.length race.lapCompletions - 1) race.lapCompletions
                     |> Maybe.withDefault Instant.raceStart
+
+
+{-| How long the race has left to run at a moment of it, and nought once the
+flag has fallen -- a moment it can still be read at, the flag falling on a lap
+already under way.
+-}
+timeToFlagAt : { elapsed : Instant } -> Race -> Duration
+timeToFlagAt { elapsed } race =
+    max 0 (Instant.since { from = elapsed, to = race.timeLimit })
 
 
 {-| The status a car holds at a moment of the race.

@@ -26,12 +26,15 @@ import Motorsport.Wec.Manufacturer as Manufacturer
 
 {-| Less than the file states, and the omissions are the point.
 
-The `race` object states how long the race actually ran and the lap the leader
-finished on beside its `timeLimit`; the app works both out for itself from the
-laps it goes on to load, and having them arrive twice would only give the two
-answers a chance to disagree. `startedAt` has nothing showing a time of day to
-read it yet. `season` is what picks the `Era` this decoder is built with, so it
-has to be known before the request goes out.
+`finishedAt` is the file's `race.duration`: how long the race ran, which is past
+its `timeLimit`, the flag falling on a lap already under way. Playback runs to
+the one and the regulations are measured against the other.
+
+The `race` object also states the lap the leader finished on; the app works that
+out for itself from the laps it goes on to load, and having it arrive twice would
+only give the two answers a chance to disagree. `startedAt` has nothing showing a
+time of day to read it yet. `season` is what picks the `Era` this decoder is
+built with, so it has to be known before the request goes out.
 
 `name` and `date` say which round this is, which the calendar had already
 settled by telling the app which file to fetch. The file still states them, for
@@ -42,6 +45,7 @@ What is left is `track`, the whole of what this app knows about the circuit.
 -}
 type alias Event =
     { timeLimit : Instant
+    , finishedAt : Instant
     , track : Track
     , startingGrid : StartingGrid
     }
@@ -95,8 +99,9 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Decoder Event
 eventDecoder era =
-    Decode.map3 Event
+    Decode.map4 Event
         (field "race" (field "timeLimit" Instant.decoder))
+        (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
         (field "startingGrid" (startingGridDecoder era))
 

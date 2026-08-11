@@ -141,6 +141,10 @@ race model =
 animation frames takes. Asked here so that page does not reach through a race to
 its clock for one constructor. `Page.Debug` still reaches for the elapsed time,
 which is a value and not a question.
+
+[`Clock`](Motorsport-Clock) leaves `Started` by itself when playback runs out, so
+nothing here has to know how long the race was.
+
 -}
 isPlaying : Model -> Bool
 isPlaying model =
@@ -271,7 +275,7 @@ raceFrom summary rawLaps =
             summary.startingGrid.entries
                 |> List.map Car.fromStartingGrid
                 |> WecLaps.attach rawLaps
-                |> Replay.fromCars { timeLimit = summary.timeLimit }
+                |> Replay.fromCars { timeLimit = summary.timeLimit, finishedAt = summary.finishedAt }
     in
     { replay = replay
     , snapshot = snapshotOf replay

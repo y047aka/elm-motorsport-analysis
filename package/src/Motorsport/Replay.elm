@@ -35,10 +35,10 @@ type alias Model =
     }
 
 
-fromCars : { timeLimit : Instant } -> List Car -> Model
-fromCars race cars =
-    { race = Race.fromCars race cars
-    , playback = Clock.init
+fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Model
+fromCars { timeLimit, finishedAt } cars =
+    { race = Race.fromCars { timeLimit = timeLimit } cars
+    , playback = Clock.init { finishedAt = finishedAt }
     }
 
 
@@ -60,7 +60,6 @@ lapCount m =
 type Msg
     = Start Posix
     | Pause Posix
-    | Finish Posix
     | Tick Posix
     | SkipTime Duration
     | SetCount Int
@@ -76,37 +75,17 @@ update msg m =
             { m | playback = Clock.update now Clock.Start m.playback }
 
         Tick now ->
-            case m.playback.state of
-                Clock.Started splitTime { startedAt } ->
-                    if Instant.compare (Clock.calcElapsed startedAt now splitTime m.playback.playbackSpeed) m.race.timeLimit == LT then
-                        { m | playback = Clock.update now Clock.Tick m.playback }
-
-                    else
-                        m
-
-                _ ->
-                    m
+            { m | playback = Clock.update now Clock.Tick m.playback }
 
         Pause now ->
             { m | playback = Clock.update now Clock.Pause m.playback }
-
-        Finish now ->
-            { m | playback = Clock.update now Clock.Finish m.playback }
 
         SetPlaybackSpeed speed ->
             { m | playback = Clock.setPlaybackSpeed speed m.playback }
 
         SkipTime duration ->
-            let
-                elapsed =
-                    Clock.getElapsed m.playback
-            in
-            -- Skipping is offered forwards, and stops once the race is over.
-            if Instant.compare elapsed m.race.timeLimit == LT then
-                moveTo (Instant.add duration elapsed) m
-
-            else
-                m
+            -- The clock clamps: more than there is left lands on the end.
+            moveTo (Instant.add duration (Clock.getElapsed m.playback)) m
 
         SetCount wanted ->
             if wanted >= 0 && wanted <= m.race.lapTotal then
