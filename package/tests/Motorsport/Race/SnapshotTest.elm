@@ -135,9 +135,9 @@ suite =
                     carAt "1" (snapshotAt 7000)
                         |> Maybe.map
                             (.currentLap
-                                >> (\lap -> ( lap.miniSectors, lap.sector.sector ))
+                                >> (\lap -> ( lap.miniSectors, Maybe.map .sector lap.sector ))
                             )
-                        |> Expect.equal (Just ( Snapshot.NotRecorded, S2 ))
+                        |> Expect.equal (Just ( Snapshot.NotRecorded, Just S2 ))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|

@@ -53,38 +53,43 @@ type MiniSectorShares
 
 {-| How far round the lap a car is, as a fraction of it.
 
-Read at the finest grain the circuit and the car's own lap both have. A car's
-lap progress is preferred to either where there is one, since it is measured
-against the lap's actual time rather than against the records.
+Read at the finest grain the circuit and the car's own lap both have, so that a
+car sits between the same two boundaries the drawn track puts it between.
 
 -}
 computeProgress : TrackConfig -> CarAt -> Float
 computeProgress config car =
-    if car.currentLap.progress > 0 then
-        car.currentLap.progress
+    case ( config.miniSectors, car.currentLap.miniSectors ) of
+        ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
+            case current of
+                Just miniSector ->
+                    along (LeMans.get miniSector.miniSector shares) miniSector.progress
 
-    else
-        case ( config.miniSectors, car.currentLap.miniSectors ) of
-            ( MiniSectorShares shares, Snapshot.Recorded { current } ) ->
-                case current of
-                    Just miniSector ->
-                        along (LeMans.get miniSector.miniSector shares) miniSector.progress
+                -- Nowhere to place the car at the finer grain.
+                Nothing ->
+                    bySector config car
 
-                    -- Nowhere to place the car at the finer grain.
-                    Nothing ->
-                        bySector config car
-
-            _ ->
-                bySector config car
+        _ ->
+            bySector config car
 
 
-{-| Where round the lap the three-sector grain puts the car. Not a `let` in
-[`computeProgress`](#computeProgress): Elm would work it out even when the finer
-grain answers, once per car per frame.
+{-| Where round the lap the three-sector grain puts the car, falling back to the
+car's own lap progress for a lap with no sector time to place it by -- measured
+against that lap's total time, so it takes no account of where the boundaries
+between the stretches fall.
+
+Not a `let` in [`computeProgress`](#computeProgress): Elm would work it out even
+when the finer grain answers, once per car per frame.
+
 -}
 bySector : TrackConfig -> CarAt -> Float
 bySector config car =
-    along (Sector.get car.currentLap.sector.sector config.sectors) car.currentLap.sector.progress
+    case car.currentLap.sector of
+        Just { sector, progress } ->
+            along (Sector.get sector config.sectors) progress
+
+        Nothing ->
+            car.currentLap.progress
 
 
 along : Share -> Float -> Float

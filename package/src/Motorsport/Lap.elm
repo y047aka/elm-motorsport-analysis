@@ -317,9 +317,9 @@ currentSector clock lap =
 
 {-| How far around the lap the car is: which sector, and how far through it.
 
-Not clamped: past the end of the lap gives more than 1, before its start gives
-a negative, and a sector with no recorded time gives infinity or NaN. Capping
-is a question about what is being drawn, so it is left to the caller.
+Not clamped: past the end of the lap gives more than 1 and before its start
+gives a negative. Capping is a question about what is being drawn, so it is left
+to the caller.
 
 -}
 type alias SectorProgress =
@@ -328,15 +328,23 @@ type alias SectorProgress =
     }
 
 
-progressAt : Clock -> Lap -> SectorProgress
+{-| `Nothing` where the sector the car falls in has no recorded time: there is
+nothing to measure how far through it the clock is.
+-}
+progressAt : Clock -> Lap -> Maybe SectorProgress
 progressAt clock lap =
     let
         ( sector, segment ) =
             currentSegment clock lap
     in
-    { sector = sector
-    , progress = progressThrough clock segment
-    }
+    if segment.time <= 0 then
+        Nothing
+
+    else
+        Just
+            { sector = sector
+            , progress = progressThrough clock segment
+            }
 
 
 {-| How far through a segment a moment of race time is, as a fraction of it.

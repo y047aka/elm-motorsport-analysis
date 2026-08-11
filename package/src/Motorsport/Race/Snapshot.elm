@@ -106,12 +106,15 @@ begins, so a car that has retired or taken the flag keeps the last it ran.
 `elapsed` counts from the last time the car crossed the line, or from the race
 start for a car on its opening lap.
 
+`sector` is `Nothing` where [`Lap.progressAt`](Motorsport-Lap#progressAt) could
+not place the car: the sector it falls in has no recorded time.
+
 -}
 type alias CurrentLap =
     { elapsed : Duration
     , progress : Float
     , performance : PerformanceLevel
-    , sector : Lap.SectorProgress
+    , sector : Maybe Lap.SectorProgress
     , sectorStates : CurrentSectorStates
     , miniSectors : MiniSectorReading
     }
@@ -206,19 +209,28 @@ at clock race =
         }
 
 
-currentSectorStates : Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
-currentSectorStates current rated =
+{-| A car that cannot be placed reads as past every sector, as it does at the
+finer grain. Such a lap has no sector time to rate either, so the states come
+out `Completed` with nothing in them.
+-}
+currentSectorStates : Maybe Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
+currentSectorStates sectorProgress rated =
     let
         stateOf sector rating =
-            case Sector.compare sector current.sector of
-                LT ->
+            case sectorProgress of
+                Just current ->
+                    case Sector.compare sector current.sector of
+                        LT ->
+                            Performance.Completed rating
+
+                        EQ ->
+                            Performance.fromProgress current.progress rating
+
+                        GT ->
+                            Performance.NotEntered
+
+                Nothing ->
                     Performance.Completed rating
-
-                EQ ->
-                    Performance.fromProgress current.progress rating
-
-                GT ->
-                    Performance.NotEntered
     in
     Sector.map2 stateOf (Sector.initialize identity) rated
 
@@ -421,11 +433,11 @@ readCurrentLap :
 readCurrentLap frame lap =
     let
         sector =
-            let
-                sectorProgress =
-                    Lap.progressAt frame.clock lap
-            in
-            { sectorProgress | progress = min 1 sectorProgress.progress }
+            Lap.progressAt frame.clock lap
+                |> Maybe.map
+                    (\sectorProgress ->
+                        { sectorProgress | progress = min 1 sectorProgress.progress }
+                    )
 
         miniSectors =
             Performance.ofMiniSectors frame.records lap
