@@ -289,26 +289,13 @@ mapRace f round =
             round
 
 
-{-| A snapshot is a function of the race and the clock, and the race does not
-move, so a message that leaves the clock where it was leaves the snapshot with
-it. Starting playback, changing speed, and a skip or lap step that had nowhere
-to go all arrive here without moving the head.
--}
 stepReplay : Replay.Msg -> Race -> Race
 stepReplay replayMsg loaded =
     let
         replayNew =
             Replay.update replayMsg loaded.replay
     in
-    { loaded
-        | replay = replayNew
-        , snapshot =
-            if Clock.getElapsed replayNew.playback == Clock.getElapsed loaded.replay.playback then
-                loaded.snapshot
-
-            else
-                snapshotOf replayNew
-    }
+    { loaded | replay = replayNew, snapshot = snapshotOf replayNew }
 
 
 keyOf : RoundId -> { season : Int, id : String }
