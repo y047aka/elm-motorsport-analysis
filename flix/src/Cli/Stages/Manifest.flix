@@ -2,6 +2,7 @@ mod Cli.Stages.Manifest {
 
     use Util.Files
     use Util.Json.Encode
+    use Util.Json.Encode.Extra
     use Util.Json.Encode.JsonValue.{JsonObject, JsonString, JsonInt, JsonArray}
     use Cli.Errors.CliError
     use Motorsport.Calendar
@@ -22,7 +23,7 @@ mod Cli.Stages.Manifest {
     /// spans all of them.
     pub def write(root: String): Result[CliError, String] \ IO =
         let path = "${root}/index.json";
-        Files.write(path, Encode.render(toJson(urlRoot(), Calendar.seasons())))
+        Files.write(path, Extra.render(toJson(urlRoot(), Calendar.seasons())))
             |> Result.mapErr(CliError.File)
             |> Result.map(_ -> path)
 

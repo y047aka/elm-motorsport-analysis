@@ -11,18 +11,9 @@
   "track": {
     "direction": "clockwise",
     "sectors": {
-      "s1": {
-        "start": 0.0,
-        "share": 0.2754986583907154
-      },
-      "s2": {
-        "start": 0.2754986583907154,
-        "share": 0.47151908964536254
-      },
-      "s3": {
-        "start": 0.747017748036078,
-        "share": 0.25298225196392204
-      }
+      "s1": { "start": 0.0, "share": 0.2754986583907154 },
+      "s2": { "start": 0.2754986583907154, "share": 0.47151908964536254 },
+      "s3": { "start": 0.747017748036078, "share": 0.25298225196392204 }
     }
   },
   "startingGrid": {
@@ -33,15 +24,9 @@
         "car": {
           "carNumber": "12",
           "drivers": [
-            {
-              "name": "Will STEVENS"
-            },
-            {
-              "name": "Louis DELÉTRAZ"
-            },
-            {
-              "name": "Norman NATO"
-            }
+            { "name": "Will STEVENS" },
+            { "name": "Louis DELÉTRAZ" },
+            { "name": "Norman NATO" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -54,15 +39,9 @@
         "car": {
           "carNumber": "94",
           "drivers": [
-            {
-              "name": "Loïc DUVAL"
-            },
-            {
-              "name": "Théo POURCHAIRE"
-            },
-            {
-              "name": "Malthe JAKOBSEN"
-            }
+            { "name": "Loïc DUVAL" },
+            { "name": "Théo POURCHAIRE" },
+            { "name": "Malthe JAKOBSEN" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -75,15 +54,9 @@
         "car": {
           "carNumber": "35",
           "drivers": [
-            {
-              "name": "Ferdinand HABSBURG"
-            },
-            {
-              "name": "António FÉLIX DA COSTA"
-            },
-            {
-              "name": "Charles MILESI"
-            }
+            { "name": "Ferdinand HABSBURG" },
+            { "name": "António FÉLIX DA COSTA" },
+            { "name": "Charles MILESI" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -96,15 +69,9 @@
         "car": {
           "carNumber": "36",
           "drivers": [
-            {
-              "name": "Frédéric MAKOWIECKI"
-            },
-            {
-              "name": "Victor MARTINS"
-            },
-            {
-              "name": "Jules GOUNON"
-            }
+            { "name": "Frédéric MAKOWIECKI" },
+            { "name": "Victor MARTINS" },
+            { "name": "Jules GOUNON" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -117,12 +84,8 @@
         "car": {
           "carNumber": "38",
           "drivers": [
-            {
-              "name": "Earl BAMBER"
-            },
-            {
-              "name": "Sébastien BOURDAIS"
-            }
+            { "name": "Earl BAMBER" },
+            { "name": "Sébastien BOURDAIS" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -135,15 +98,9 @@
         "car": {
           "carNumber": "15",
           "drivers": [
-            {
-              "name": "Kevin MAGNUSSEN"
-            },
-            {
-              "name": "Raffaele MARCIELLO"
-            },
-            {
-              "name": "Dries VANTHOOR"
-            }
+            { "name": "Kevin MAGNUSSEN" },
+            { "name": "Raffaele MARCIELLO" },
+            { "name": "Dries VANTHOOR" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -156,12 +113,8 @@
         "car": {
           "carNumber": "009",
           "drivers": [
-            {
-              "name": "Marco SØRENSEN"
-            },
-            {
-              "name": "Alex RIBERAS"
-            }
+            { "name": "Marco SØRENSEN" },
+            { "name": "Alex RIBERAS" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -174,15 +127,9 @@
         "car": {
           "carNumber": "50",
           "drivers": [
-            {
-              "name": "Miguel MOLINA"
-            },
-            {
-              "name": "Nicklas NIELSEN"
-            },
-            {
-              "name": "Antonio FUOCO"
-            }
+            { "name": "Miguel MOLINA" },
+            { "name": "Nicklas NIELSEN" },
+            { "name": "Antonio FUOCO" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -195,15 +142,9 @@
         "car": {
           "carNumber": "93",
           "drivers": [
-            {
-              "name": "Paul DI RESTA"
-            },
-            {
-              "name": "Nick CASSIDY"
-            },
-            {
-              "name": "Stoffel VANDOORNE"
-            }
+            { "name": "Paul DI RESTA" },
+            { "name": "Nick CASSIDY" },
+            { "name": "Stoffel VANDOORNE" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -216,12 +157,8 @@
         "car": {
           "carNumber": "007",
           "drivers": [
-            {
-              "name": "Harry TINCKNELL"
-            },
-            {
-              "name": "Tom GAMBLE"
-            }
+            { "name": "Harry TINCKNELL" },
+            { "name": "Tom GAMBLE" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -234,15 +171,9 @@
         "car": {
           "carNumber": "7",
           "drivers": [
-            {
-              "name": "Mike CONWAY"
-            },
-            {
-              "name": "Nyck DE VRIES"
-            },
-            {
-              "name": "Kamui KOBAYASHI"
-            }
+            { "name": "Mike CONWAY" },
+            { "name": "Nyck DE VRIES" },
+            { "name": "Kamui KOBAYASHI" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -255,15 +186,9 @@
         "car": {
           "carNumber": "83",
           "drivers": [
-            {
-              "name": "Philip HANSON"
-            },
-            {
-              "name": "Yifei YE"
-            },
-            {
-              "name": "Robert KUBICA"
-            }
+            { "name": "Philip HANSON" },
+            { "name": "Yifei YE" },
+            { "name": "Robert KUBICA" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -276,15 +201,9 @@
         "car": {
           "carNumber": "20",
           "drivers": [
-            {
-              "name": "René RAST"
-            },
-            {
-              "name": "Sheldon VAN DER LINDE"
-            },
-            {
-              "name": "Robin FRIJNS"
-            }
+            { "name": "René RAST" },
+            { "name": "Sheldon VAN DER LINDE" },
+            { "name": "Robin FRIJNS" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -297,15 +216,9 @@
         "car": {
           "carNumber": "19",
           "drivers": [
-            {
-              "name": "Daniel JUNCADELLA"
-            },
-            {
-              "name": "Mathieu JAMINET"
-            },
-            {
-              "name": "Paul-Loup CHATIN"
-            }
+            { "name": "Daniel JUNCADELLA" },
+            { "name": "Mathieu JAMINET" },
+            { "name": "Paul-Loup CHATIN" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -318,15 +231,9 @@
         "car": {
           "carNumber": "51",
           "drivers": [
-            {
-              "name": "Antonio GIOVINAZZI"
-            },
-            {
-              "name": "James CALADO"
-            },
-            {
-              "name": "Alessandro PIER GUIDI"
-            }
+            { "name": "Antonio GIOVINAZZI" },
+            { "name": "James CALADO" },
+            { "name": "Alessandro PIER GUIDI" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -339,15 +246,9 @@
         "car": {
           "carNumber": "8",
           "drivers": [
-            {
-              "name": "Brendon HARTLEY"
-            },
-            {
-              "name": "Ryo HIRAKAWA"
-            },
-            {
-              "name": "Sébastien BUEMI"
-            }
+            { "name": "Brendon HARTLEY" },
+            { "name": "Ryo HIRAKAWA" },
+            { "name": "Sébastien BUEMI" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -360,15 +261,9 @@
         "car": {
           "carNumber": "17",
           "drivers": [
-            {
-              "name": "André LOTTERER"
-            },
-            {
-              "name": "Mathys JAUBERT"
-            },
-            {
-              "name": "Luis Felipe DERANI"
-            }
+            { "name": "André LOTTERER" },
+            { "name": "Mathys JAUBERT" },
+            { "name": "Luis Felipe DERANI" }
           ],
           "class": "HYPERCAR",
           "group": "",
@@ -381,15 +276,9 @@
         "car": {
           "carNumber": "78",
           "drivers": [
-            {
-              "name": "Tom VAN ROMPUY"
-            },
-            {
-              "name": "Hadrien DAVID"
-            },
-            {
-              "name": "Esteban MASSON"
-            }
+            { "name": "Tom VAN ROMPUY" },
+            { "name": "Hadrien DAVID" },
+            { "name": "Esteban MASSON" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -402,15 +291,9 @@
         "car": {
           "carNumber": "77",
           "drivers": [
-            {
-              "name": "Eric POWELL"
-            },
-            {
-              "name": "Sebastian PRIAULX"
-            },
-            {
-              "name": "Ben TUCK"
-            }
+            { "name": "Eric POWELL" },
+            { "name": "Sebastian PRIAULX" },
+            { "name": "Ben TUCK" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -423,15 +306,9 @@
         "car": {
           "carNumber": "27",
           "drivers": [
-            {
-              "name": "Ian JAMES"
-            },
-            {
-              "name": "Zacharie ROBICHON"
-            },
-            {
-              "name": "Mattia DRUDI"
-            }
+            { "name": "Ian JAMES" },
+            { "name": "Zacharie ROBICHON" },
+            { "name": "Mattia DRUDI" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -444,15 +321,9 @@
         "car": {
           "carNumber": "87",
           "drivers": [
-            {
-              "name": "Petru UMBRÄRESCU"
-            },
-            {
-              "name": "Clemens SCHMID"
-            },
-            {
-              "name": "José María LÓPEZ"
-            }
+            { "name": "Petru UMBRÄRESCU" },
+            { "name": "Clemens SCHMID" },
+            { "name": "José María LÓPEZ" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -465,15 +336,9 @@
         "car": {
           "carNumber": "34",
           "drivers": [
-            {
-              "name": "Salih YOLUÇ"
-            },
-            {
-              "name": "Peter DEMPSEY"
-            },
-            {
-              "name": "Charlie EASTWOOD"
-            }
+            { "name": "Salih YOLUÇ" },
+            { "name": "Peter DEMPSEY" },
+            { "name": "Charlie EASTWOOD" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -486,15 +351,9 @@
         "car": {
           "carNumber": "21",
           "drivers": [
-            {
-              "name": "François HÉRIAU"
-            },
-            {
-              "name": "Simon MANN"
-            },
-            {
-              "name": "Alessio ROVERA"
-            }
+            { "name": "François HÉRIAU" },
+            { "name": "Simon MANN" },
+            { "name": "Alessio ROVERA" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -507,15 +366,9 @@
         "car": {
           "carNumber": "88",
           "drivers": [
-            {
-              "name": "Stefano GATTUSO"
-            },
-            {
-              "name": "Giammarco LEVORATO"
-            },
-            {
-              "name": "Logan SARGEANT"
-            }
+            { "name": "Stefano GATTUSO" },
+            { "name": "Giammarco LEVORATO" },
+            { "name": "Logan SARGEANT" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -528,15 +381,9 @@
         "car": {
           "carNumber": "32",
           "drivers": [
-            {
-              "name": "Darren LEUNG"
-            },
-            {
-              "name": "Sean GELAEL"
-            },
-            {
-              "name": "Augusto FARFUS"
-            }
+            { "name": "Darren LEUNG" },
+            { "name": "Sean GELAEL" },
+            { "name": "Augusto FARFUS" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -549,15 +396,9 @@
         "car": {
           "carNumber": "61",
           "drivers": [
-            {
-              "name": "Martin BERRY"
-            },
-            {
-              "name": "Rui ANDRADE"
-            },
-            {
-              "name": "Maxime MARTIN"
-            }
+            { "name": "Martin BERRY" },
+            { "name": "Rui ANDRADE" },
+            { "name": "Maxime MARTIN" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -570,15 +411,9 @@
         "car": {
           "carNumber": "91",
           "drivers": [
-            {
-              "name": "James COTTINGHAM"
-            },
-            {
-              "name": "Timur BOGUSLAVSKIY"
-            },
-            {
-              "name": "Ayhancan GÜVEN"
-            }
+            { "name": "James COTTINGHAM" },
+            { "name": "Timur BOGUSLAVSKIY" },
+            { "name": "Ayhancan GÜVEN" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -591,15 +426,9 @@
         "car": {
           "carNumber": "92",
           "drivers": [
-            {
-              "name": "Yasser SHAHIN"
-            },
-            {
-              "name": "Riccardo PERA"
-            },
-            {
-              "name": "Richard LIETZ"
-            }
+            { "name": "Yasser SHAHIN" },
+            { "name": "Riccardo PERA" },
+            { "name": "Richard LIETZ" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -612,15 +441,9 @@
         "car": {
           "carNumber": "33",
           "drivers": [
-            {
-              "name": "Blake MCDONALD"
-            },
-            {
-              "name": "Jonny EDGAR"
-            },
-            {
-              "name": "Nicky CATSBURG"
-            }
+            { "name": "Blake MCDONALD" },
+            { "name": "Jonny EDGAR" },
+            { "name": "Nicky CATSBURG" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -633,15 +456,9 @@
         "car": {
           "carNumber": "10",
           "drivers": [
-            {
-              "name": "Antares AU"
-            },
-            {
-              "name": "Thomas FLEMING"
-            },
-            {
-              "name": "Marvin KIRCHHÖFER"
-            }
+            { "name": "Antares AU" },
+            { "name": "Thomas FLEMING" },
+            { "name": "Marvin KIRCHHÖFER" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -654,15 +471,9 @@
         "car": {
           "carNumber": "69",
           "drivers": [
-            {
-              "name": "Anthony MCINTOSH"
-            },
-            {
-              "name": "Parker THOMPSON"
-            },
-            {
-              "name": "Daniel HARPER"
-            }
+            { "name": "Anthony MCINTOSH" },
+            { "name": "Parker THOMPSON" },
+            { "name": "Daniel HARPER" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -675,15 +486,9 @@
         "car": {
           "carNumber": "58",
           "drivers": [
-            {
-              "name": "Alexander WEST"
-            },
-            {
-              "name": "Finn GEHRSITZ"
-            },
-            {
-              "name": "Benjamin GOETHE"
-            }
+            { "name": "Alexander WEST" },
+            { "name": "Finn GEHRSITZ" },
+            { "name": "Benjamin GOETHE" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -696,15 +501,9 @@
         "car": {
           "carNumber": "79",
           "drivers": [
-            {
-              "name": "Johannes ZELGER"
-            },
-            {
-              "name": "Matteo CRESSONI"
-            },
-            {
-              "name": "Lin HODENIUS"
-            }
+            { "name": "Johannes ZELGER" },
+            { "name": "Matteo CRESSONI" },
+            { "name": "Lin HODENIUS" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -717,15 +516,9 @@
         "car": {
           "carNumber": "23",
           "drivers": [
-            {
-              "name": "Gray NEWELL"
-            },
-            {
-              "name": "Eduardo BARRICHELLO"
-            },
-            {
-              "name": "Jonny ADAM"
-            }
+            { "name": "Gray NEWELL" },
+            { "name": "Eduardo BARRICHELLO" },
+            { "name": "Jonny ADAM" }
           ],
           "class": "LMGT3",
           "group": "",
@@ -738,15 +531,9 @@
         "car": {
           "carNumber": "54",
           "drivers": [
-            {
-              "name": "Thomas FLOHR"
-            },
-            {
-              "name": "Francesco CASTELLACCI"
-            },
-            {
-              "name": "Davide RIGON"
-            }
+            { "name": "Thomas FLOHR" },
+            { "name": "Francesco CASTELLACCI" },
+            { "name": "Davide RIGON" }
           ],
           "class": "LMGT3",
           "group": "",
