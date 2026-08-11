@@ -11,9 +11,13 @@ const target = resolve(here, "Fixture/Generated.elm");
 const summary = readFileSync(summarySource, "utf8");
 const jsonl = readFileSync(lapsSource, "utf8");
 
+// An Elm `"""` literal is raw only in that it spans lines: `"""` still ends it,
+// and a backslash still opens an escape. Either would reach Elm as something
+// other than what is on disk, so neither is carried through.
 for (const [path, contents] of [[summarySource, summary], [lapsSource, jsonl]]) {
-  if (contents.includes('"""')) {
-    throw new Error(`Source holds """, which would break the Elm raw string literal: ${path}`);
+  const hazard = ['"""', "\\"].find((s) => contents.includes(s));
+  if (hazard) {
+    throw new Error(`Source holds ${hazard}, which an Elm raw string literal would not carry through: ${path}`);
   }
 }
 
