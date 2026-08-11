@@ -4,10 +4,12 @@ mod Util.Json.Encode.Extra {
 
     use Util.Json.Encode.JsonValue
 
-    /// Renders as `Util.Json.Encode.render` does, except that an object holding
-    /// a single property whose value fits on a line is written inline:
+    /// Renders as `Util.Json.Encode.render` does, except that an object of at
+    /// most two properties, each of whose values fits on a line, is written
+    /// inline:
     ///
     ///     { "name": "James CALADO" }
+    ///     { "time": "20.708", "elapsed": "20.708" }
     ///
     pub def render(value: JsonValue): String =
         renderWithIndent(0, value)
@@ -23,30 +25,24 @@ mod Util.Json.Encode.Extra {
         if (List.isEmpty(xs))
             "[]"
         else
-            let spaces = String.repeat(indent, " ");
-            let inner = String.repeat(indent + 2, " ");
-            let items = xs |> List.map(x -> "${inner}${renderWithIndent(indent + 2, x)}");
-            "[\n${List.join(",\n", items)}\n${spaces}]"
+            onOwnLines(indent, "[", xs |> List.map(x -> renderWithIndent(indent + 2, x)), "]")
 
     def renderObject(indent: Int32, kvs: List[(String, JsonValue)]): String =
-        match kvs {
-            case Nil           => "{}"
-            case (k, v) :: Nil =>
-                let rendered = renderWithIndent(indent + 2, v);
-                if (fitsOnOneLine(rendered))
-                    "{ ${key(k)}: ${rendered} }"
-                else
-                    renderProperties(indent, kvs)
-            case _             => renderProperties(indent, kvs)
-        }
+        if (List.isEmpty(kvs))
+            "{}"
+        else
+            let entries = kvs |> List.map(match (k, v) ->
+                "${key(k)}: ${renderWithIndent(indent + 2, v)}"
+            );
+            if (List.length(entries) <= 2 and List.forAll(fitsOnOneLine, entries))
+                "{ ${List.join(", ", entries)} }"
+            else
+                onOwnLines(indent, "{", entries, "}")
 
-    def renderProperties(indent: Int32, kvs: List[(String, JsonValue)]): String =
+    def onOwnLines(indent: Int32, open: String, items: List[String], close: String): String =
         let spaces = String.repeat(indent, " ");
         let inner = String.repeat(indent + 2, " ");
-        let entries = kvs |> List.map(match (k, v) ->
-            "${inner}${key(k)}: ${renderWithIndent(indent + 2, v)}"
-        );
-        "{\n${List.join(",\n", entries)}\n${spaces}}"
+        "${open}\n${inner}${List.join(",\n${inner}", items)}\n${spaces}${close}"
 
     def fitsOnOneLine(rendered: String): Bool =
         not String.contains({substr = "\n"}, rendered)

@@ -36,9 +36,28 @@ mod Util.Json.TestEncodeExtra {
         Assert.assertTrue(Extra.render(obj) == "{\n  \"drivers\": [\n    \"a\",\n    \"b\"\n  ]\n}")
 
     @Test
-    def testTwoPropertyObjectIsNotInline(): Unit \ Assert =
+    def testTwoPropertyObjectIsInline(): Unit \ Assert =
         let obj = JsonObject(("time", JsonString("20.708")) :: ("elapsed", JsonString("20.708")) :: Nil);
-        Assert.assertTrue(Extra.render(obj) == "{\n  \"time\": \"20.708\",\n  \"elapsed\": \"20.708\"\n}")
+        Assert.assertTrue(Extra.render(obj) == "{ \"time\": \"20.708\", \"elapsed\": \"20.708\" }")
+
+    @Test
+    def testTwoPropertyObjectWithOneMultiLineValueIsNotInline(): Unit \ Assert =
+        let obj = JsonObject(
+            ("name", JsonString("test")) ::
+            ("laps", JsonArray(JsonInt(1) :: JsonInt(2) :: Nil)) ::
+            Nil
+        );
+        Assert.assertTrue(Extra.render(obj) == "{\n  \"name\": \"test\",\n  \"laps\": [\n    1,\n    2\n  ]\n}")
+
+    @Test
+    def testThreePropertyObjectIsNotInline(): Unit \ Assert =
+        let obj = JsonObject(
+            ("s1", JsonString("51.908")) ::
+            ("s2", JsonString("1:23.252")) ::
+            ("s3", JsonString("1:39.395")) ::
+            Nil
+        );
+        Assert.assertTrue(Extra.render(obj) == "{\n  \"s1\": \"51.908\",\n  \"s2\": \"1:23.252\",\n  \"s3\": \"1:39.395\"\n}")
 
     @Test
     def testInlineObjectKeepsItsIndentInsideAnArray(): Unit \ Assert =
@@ -46,14 +65,31 @@ mod Util.Json.TestEncodeExtra {
         Assert.assertTrue(Extra.render(arr) == "[\n  { \"name\": \"Alex LYNN\" }\n]")
 
     @Test
+    def testInlineObjectKeepsItsIndentAsAProperty(): Unit \ Assert =
+        let obj = JsonObject(
+            ("scl2", JsonObject(("time", JsonString("20.708")) :: ("elapsed", JsonString("20.708")) :: Nil)) ::
+            ("z4",   JsonObject(("time", JsonString("13.826")) :: ("elapsed", JsonString("34.534")) :: Nil)) ::
+            ("ip1",  JsonObject(("time", JsonString("17.374")) :: ("elapsed", JsonString("51.908")) :: Nil)) ::
+            Nil
+        );
+        Assert.assertTrue(Extra.render(obj) == List.join("\n",
+            "{" ::
+            "  \"scl2\": { \"time\": \"20.708\", \"elapsed\": \"20.708\" }," ::
+            "  \"z4\": { \"time\": \"13.826\", \"elapsed\": \"34.534\" }," ::
+            "  \"ip1\": { \"time\": \"17.374\", \"elapsed\": \"51.908\" }" ::
+            "}" :: Nil
+        ))
+
+    @Test
     def testKeyIsEscaped(): Unit \ Assert =
         let obj = JsonObject(("say \"hi\"", JsonInt(1)) :: Nil);
         Assert.assertTrue(Extra.render(obj) == "{ \"say \\\"hi\\\"\": 1 }")
 
     @Test
-    def testMultiPropertyObjectMatchesEncode(): Unit \ Assert =
+    def testExpandedObjectMatchesEncode(): Unit \ Assert =
         let obj = JsonObject(
             ("name", JsonString("test")) ::
+            ("season", JsonInt(2025)) ::
             ("laps", JsonArray(JsonInt(1) :: JsonInt(2) :: Nil)) ::
             Nil
         );
