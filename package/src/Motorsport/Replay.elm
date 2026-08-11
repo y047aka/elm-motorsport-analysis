@@ -84,8 +84,7 @@ update msg m =
             { m | playback = Clock.setPlaybackSpeed speed m.playback }
 
         SkipTime duration ->
-            -- Offered forwards, and lands on the end of the race when it is
-            -- asked for more than there is left; the clock is what says so.
+            -- The clock clamps: more than there is left lands on the end.
             moveTo (Instant.add duration (Clock.getElapsed m.playback)) m
 
         SetCount wanted ->

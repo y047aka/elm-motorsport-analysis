@@ -81,8 +81,8 @@ suite =
                         |> Expect.equal (Just Status.InPit)
             ]
         , describe "playback runs to the finish, not to the flag"
-            -- The flag falls on a lap already under way, so the closing laps sit
-            -- between the two. The lap counter has always reached them.
+            -- The flag falls on a lap already under way; the closing laps sit
+            -- between the two.
             [ test "skipping carries on past the time limit" <|
                 \_ ->
                     initialModel

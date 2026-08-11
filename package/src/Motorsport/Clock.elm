@@ -47,10 +47,8 @@ type PlaybackSpeed
     | Speed60x
 
 
-{-| `Finished` is the head parked at the end of what there is to play, and it
-carries no moment because there is only one it can be at -- `finishedAt`. It is
-reached by playback running out, never by being moved there: a head put on the
-last moment by hand is a stopped head like any other.
+{-| `Finished` carries no moment because there is only one it can be at --
+`finishedAt`. Playback running out is the only way in.
 -}
 type State
     = Initial
@@ -59,15 +57,11 @@ type State
     | Finished
 
 
-{-| `finishedAt` is as far as the head goes, settled when the data loads and
-fixed for as long as the clock lasts.
+{-| `finishedAt` is as far as the head goes, settled when the data loads.
 
-It is held here rather than checked by the caller because `Started` is defined
-against the wall clock: a running clock that is not being ticked has not
-stopped, it is only unobserved, and it reports the wall time that passed the
-moment it is asked again. Refusing to tick it is therefore no way to end
-playback -- so nothing outside this module is in a position to end it, and
-nothing outside needs to try.
+`Started` is defined against the wall clock, so a clock that is running and not
+being ticked has not stopped -- it reports the time that passed the moment it is
+asked again. Ending playback is this module's to do, not a caller's.
 
 -}
 type alias Model =
@@ -170,8 +164,7 @@ setElapsed asked m =
         Paused _ ->
             { m | state = Paused instant }
 
-        -- Stopped, not finished: playback ran out once, and the head has since
-        -- been moved off the end.
+        -- Leaving it `Finished` would strand the head at the end.
         Finished ->
             { m | state = Paused instant }
 

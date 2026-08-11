@@ -142,9 +142,8 @@ animation frames takes. Asked here so that page does not reach through a race to
 its clock for one constructor. `Page.Debug` still reaches for the elapsed time,
 which is a value and not a question.
 
-Where the race ends does not come into it. The clock leaves `Started` of its own
-accord when playback runs out -- see [`Clock`](Motorsport-Clock) -- so the frames
-stop being asked for without anything here having to know how long the race was.
+[`Clock`](Motorsport-Clock) leaves `Started` by itself when playback runs out, so
+nothing here has to know how long the race was.
 
 -}
 isPlaying : Model -> Bool

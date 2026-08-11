@@ -42,7 +42,7 @@ was.
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
 off the last of them -- so [`fromCars`](#fromCars) is given it. Where the race
-actually ran out is not a fact about the race but a bound on playback, and is
+actually ran out bounds playback rather than describing the race, and is
 [`Clock`](Motorsport-Clock)'s.
 
 -}
@@ -153,12 +153,9 @@ elapsedAtLapCount lapCount race =
                     |> Maybe.withDefault Instant.raceStart
 
 
-{-| How long the race has left to run at a moment of it.
-
-Nought once the flag has fallen, which is a moment the race can still be read
-at: it goes on being run after the clock says it is over, the flag having fallen
-on a lap already under way.
-
+{-| How long the race has left to run at a moment of it, and nought once the
+flag has fallen -- a moment it can still be read at, the flag falling on a lap
+already under way.
 -}
 timeToFlagAt : { elapsed : Instant } -> Race -> Duration
 timeToFlagAt { elapsed } race =

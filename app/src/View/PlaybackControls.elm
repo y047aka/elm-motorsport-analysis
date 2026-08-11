@@ -54,9 +54,6 @@ viewPlayPauseButton { replay, onStart, onPause } =
                 Paused _ ->
                     ( "▶", onStart, False )
 
-                -- Nothing left to play. Offering ▶ rather than ■ says which
-                -- way the head is stuck, and disabling it saves the round trip
-                -- through Started that the next tick would undo.
                 Finished ->
                     ( "▶", onStart, True )
     in
@@ -68,8 +65,8 @@ viewPlayPauseButton { replay, onStart, onPause } =
         [ text icon ]
 
 
-{-| Skipping is offered forwards only, so at the end of the race there is
-nowhere for any of these to go.
+{-| Skipping is offered forwards only, so there is nowhere to go from the end of
+the race.
 -}
 viewSkipControls : (Replay.Msg -> msg) -> Clock.State -> Html msg
 viewSkipControls toReplayMsg state =

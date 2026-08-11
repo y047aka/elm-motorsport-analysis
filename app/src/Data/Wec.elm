@@ -26,10 +26,9 @@ import Motorsport.Wec.Manufacturer as Manufacturer
 
 {-| Less than the file states, and the omissions are the point.
 
-`timeLimit` is how long the race was scheduled to run and `finishedAt` -- the
-file's `race.duration` -- how long it actually did, the flag falling on a lap
-already under way. Playback runs to the second and the regulations are measured
-against the first, so both are read.
+`finishedAt` is the file's `race.duration`: how long the race ran, which is past
+its `timeLimit`, the flag falling on a lap already under way. Playback runs to
+the one and the regulations are measured against the other.
 
 The `race` object also states the lap the leader finished on; the app works that
 out for itself from the laps it goes on to load, and having it arrive twice would

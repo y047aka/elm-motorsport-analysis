@@ -120,9 +120,8 @@ tests =
                         |> Expect.equal (instant 10000)
             , test "moving off the end leaves the head stopped, not running on from it" <|
                 \_ ->
-                    -- The wall clock keeps going while playback sits at the end.
-                    -- A head moved off it that was still `Started` would report
-                    -- all of that time the next time it was asked.
+                    -- Still `Started`, the head would report the wall time it
+                    -- had been sat at the end.
                     shortClock
                         |> Clock.update epoch Clock.Start
                         |> Clock.update (millisToPosix 20000) Clock.Tick
