@@ -48,7 +48,7 @@ decoder =
 rawLapDecoder : Decoder RawLap
 rawLapDecoder =
     Decode.succeed RawLap
-        |> required "car" (Decode.field "carNumber" string)
+        |> required "carNumber" string
         |> required "driverName" string
         |> required "lapNumber" int
         |> required "lap" (Decode.field "time" durationDecoder)
