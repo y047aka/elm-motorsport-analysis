@@ -74,7 +74,7 @@ summaryJson =
 
 lapsJsonl : String
 lapsJsonl =
-    """{ "carNumber": "7", "driverName": "KOBAYASHI", "lapNumber": 1, "lap": { "time": "1:53.000", "improvement": 0 }, "sectors": { "s1": { "time": "30.000", "improvement": 0 }, "s2": { "time": "45.000", "improvement": 0 }, "s3": { "time": "38.000", "improvement": 0 } }, "elapsed": "1:53.000", "pitTime": "" }
+    """{ "carNumber": "7", "lapNumber": 1, "driverName": "KOBAYASHI", "lap": { "time": "1:53.000", "improvement": 0 }, "sectors": { "s1": { "time": "30.000", "improvement": 0 }, "s2": { "time": "45.000", "improvement": 0 }, "s3": { "time": "38.000", "improvement": 0 } }, "elapsed": "1:53.000", "pitTime": "" }
 """
 
 

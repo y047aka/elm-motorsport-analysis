@@ -127,8 +127,8 @@ suite =
 
 twoLaps : String
 twoLaps =
-    """{"carNumber":"1","driverName":"D","lapNumber":1,"lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
-{"carNumber":"1","driverName":"D","lapNumber":2,"lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
+    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"1:35.365","improvement":0},"sectors":{"s1":{"time":"23.155"},"s2":{"time":"29.928"},"s3":{"time":"42.282"}},"elapsed":"1:35.365","pitTime":""}
+{"carNumber":"1","lapNumber":2,"driverName":"D","lap":{"time":"3:09.953","improvement":0},"sectors":{"s1":{"time":"23.000"},"s2":{"time":"29.000"},"s3":{"time":"42.000"}},"elapsed":"4:45.318","pitTime":"1:09.953"}
 """
 
 

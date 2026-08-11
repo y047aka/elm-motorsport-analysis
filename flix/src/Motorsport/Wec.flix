@@ -132,8 +132,8 @@ mod Motorsport.Wec {
     pub def toJson(rawLap: RawLap): Encode.JsonValue =
         let leadingFields =
             ("carNumber",  JsonString(rawLap#car#carNumber)) ::
-            ("driverName", JsonString(rawLap#driver#name)) ::
             ("lapNumber",  JsonInt(rawLap#lapNumber)) ::
+            ("driverName", JsonString(rawLap#driver#name)) ::
             ("lap",        lapToJson(rawLap)) ::
             ("sectors",    sectorsToJson(rawLap)) ::
             Nil;
