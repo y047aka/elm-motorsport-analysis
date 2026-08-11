@@ -47,7 +47,7 @@ config =
     , NoSimpleLetBody.rule
 
     -- jfmengels/elm-review-cognitive-complexity
-    , CognitiveComplexity.rule 21
+    , CognitiveComplexity.rule 15
 
     -- jfmengels/elm-review-common
     , NoConfusingPrefixOperator.rule

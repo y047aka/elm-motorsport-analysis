@@ -49,7 +49,7 @@ config =
       NoSimpleLetBody.rule
 
     -- jfmengels/elm-review-cognitive-complexity
-    -- , CognitiveComplexity.rule 15
+    , CognitiveComplexity.rule 15
 
     -- jfmengels/elm-review-common
     , NoConfusingPrefixOperator.rule
@@ -80,7 +80,7 @@ config =
     -- , NoUnused.CustomTypeConstructors.rule []
     -- , NoUnused.Dependencies.rule
     -- , NoUnused.Exports.rule
-    , NoUnused.Modules.rule
+    -- , NoUnused.Modules.rule
     -- , NoUnused.Parameters.rule
     , NoUnused.Patterns.rule
     -- , NoUnused.Variables.rule
