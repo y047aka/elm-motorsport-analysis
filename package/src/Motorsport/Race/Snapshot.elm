@@ -107,7 +107,9 @@ begins, so a car that has retired or taken the flag keeps the last it ran.
 start for a car on its opening lap.
 
 `sector` is `Nothing` where [`Lap.progressAt`](Motorsport-Lap#progressAt) could
-not place the car: the sector it falls in has no recorded time.
+not place the car: the sector it falls in has no recorded time. `sectorStates`
+is read apart from it and does not go blank with it -- how much of the lap is
+behind the car is something the lap can still say.
 
 -}
 type alias CurrentLap =
@@ -126,7 +128,8 @@ one. `NotRecorded` away from Le Mans.
 `current` is `Nothing` wherever [`Lap.miniSegments`](Motorsport-Lap#miniSegments)
 could not place the car: past the last mini-sector, and inside one the source
 data left without a running total. So it can fall mid-lap, with mini-sectors
-still ahead of the car.
+still ahead of the car. `states` is read apart from it and does not go blank
+with it: it stops at the last mini-sector the lap can place.
 
 -}
 type MiniSectorReading
@@ -209,57 +212,67 @@ at clock race =
         }
 
 
-{-| A car that cannot be placed reads as past every sector, as it does at the
-finer grain. Such a lap has no sector time to rate either, so the states come
-out `Completed` with nothing in them.
+{-| Read from how far round the lap the car has got, so that a sector the lap
+cannot place -- one the source data has no time for -- reads as not entered
+rather than as complete. The strip stops filling where the lap stops being able
+to say, rather than colouring stretches the car has not driven.
+
+A lap the clock has reached the end of is behind the car whole, blanks and all.
+
 -}
-currentSectorStates : Maybe Lap.SectorProgress -> SectorPerformance -> CurrentSectorStates
-currentSectorStates sectorProgress rated =
+currentSectorStates : { reached : Maybe Lap.SectorProgress, lapIsOver : Bool } -> SectorPerformance -> CurrentSectorStates
+currentSectorStates { reached, lapIsOver } rated =
     let
         stateOf sector rating =
-            case sectorProgress of
-                Just current ->
-                    case Sector.compare sector current.sector of
-                        LT ->
-                            Performance.Completed rating
+            if lapIsOver then
+                Performance.Completed rating
 
-                        EQ ->
-                            Performance.fromProgress current.progress rating
+            else
+                case reached of
+                    Just current ->
+                        case Sector.compare sector current.sector of
+                            LT ->
+                                Performance.Completed rating
 
-                        GT ->
-                            Performance.NotEntered
+                            EQ ->
+                                Performance.fromProgress current.progress rating
 
-                Nothing ->
-                    Performance.Completed rating
+                            GT ->
+                                Performance.NotEntered
+
+                    Nothing ->
+                        Performance.NotEntered
     in
     Sector.map2 stateOf (Sector.initialize identity) rated
 
 
-{-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates).
-
-A car that cannot be placed reads as past every mini-sector: right for a lap
-that is over, wrong for the mid-lap gap [`MiniSectorReading`](#MiniSectorReading)
-describes, where the strip fills in ahead of the car.
-
+{-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
+under the same rule. The gap it leaves unfilled is the common one: a lap ending
+in the pit lane never crosses the mini-sector the pit route bypasses, and the
+strip waits there until the car reaches the line.
 -}
-currentMiniSectorStates : Maybe Lap.MiniSectorProgress -> MiniSectorPerformance -> CurrentMiniSectorStates
-currentMiniSectorStates miniSectorProgress rated =
+currentMiniSectorStates : { reached : Maybe Lap.MiniSectorProgress, lapIsOver : Bool } -> MiniSectorPerformance -> CurrentMiniSectorStates
+currentMiniSectorStates { reached, lapIsOver } rated =
     let
         stateOf mini rating =
-            case miniSectorProgress of
-                Just current ->
-                    case LeMans.compare mini current.miniSector of
-                        LT ->
-                            Performance.Completed rating
+            if lapIsOver then
+                Performance.Completed rating
 
-                        EQ ->
-                            Performance.fromProgress current.progress rating
+            else
+                case reached of
+                    Just current ->
+                        case LeMans.compare mini current.miniSector of
+                            LT ->
+                                Performance.Completed rating
 
-                        GT ->
-                            Performance.NotEntered
+                            EQ ->
+                                Performance.fromProgress current.progress rating
 
-                Nothing ->
-                    Performance.Completed rating
+                            GT ->
+                                Performance.NotEntered
+
+                    Nothing ->
+                        Performance.NotEntered
     in
     LeMans.map2 stateOf (LeMans.initialize identity) rated
 
@@ -439,17 +452,21 @@ readCurrentLap frame lap =
                         { sectorProgress | progress = min 1 sectorProgress.progress }
                     )
 
+        lapIsOver =
+            Instant.compare lap.elapsed frame.clock.elapsed /= GT
+
         miniSectors =
             Performance.ofMiniSectors frame.records lap
                 |> Maybe.map
                     (\rated ->
-                        let
-                            current =
-                                Lap.miniSectorProgressAt frame.clock lap
-                        in
                         Recorded
-                            { states = currentMiniSectorStates current rated
-                            , current = current
+                            { states =
+                                currentMiniSectorStates
+                                    { reached = Lap.miniSectorReachedAt frame.clock lap
+                                    , lapIsOver = lapIsOver
+                                    }
+                                    rated
+                            , current = Lap.miniSectorProgressAt frame.clock lap
                             }
                     )
                 |> Maybe.withDefault NotRecorded
@@ -468,7 +485,12 @@ readCurrentLap frame lap =
             , fastest = frame.fastestLapTime
             }
     , sector = sector
-    , sectorStates = currentSectorStates sector (Performance.ofSectors frame.records lap)
+    , sectorStates =
+        currentSectorStates
+            { reached = Lap.reachedAt frame.clock lap
+            , lapIsOver = lapIsOver
+            }
+            (Performance.ofSectors frame.records lap)
     , miniSectors = miniSectors
     }
 
