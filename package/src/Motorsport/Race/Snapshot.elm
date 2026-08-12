@@ -215,7 +215,7 @@ at clock race =
 {-| Read from how far round the lap the car has got, so that a sector the lap
 cannot place -- one the source data has no time for -- reads as not entered
 rather than as complete. The strip stops filling where the lap stops being able
-to say, rather than colouring stretches the car has not driven.
+to say.
 
 A lap the clock has reached the end of is behind the car whole, blanks and all.
 
@@ -247,9 +247,9 @@ currentSectorStates { reached, lapIsOver } rated =
 
 
 {-| The mini-sector counterpart of [`currentSectorStates`](#currentSectorStates),
-under the same rule. The gap it leaves unfilled is the common one: a lap ending
-in the pit lane never crosses the mini-sector the pit route bypasses, and the
-strip waits there until the car reaches the line.
+under the same rule. A lap short of one running total is short of two
+mini-sectors, so the strip stops two before the car and waits there until it
+reaches the line.
 -}
 currentMiniSectorStates : { reached : Maybe Lap.MiniSectorProgress, lapIsOver : Bool } -> MiniSectorPerformance -> CurrentMiniSectorStates
 currentMiniSectorStates { reached, lapIsOver } rated =

@@ -61,8 +61,8 @@ suite =
                             )
             , test "reads a mini-sector the CLI left out as one with nothing in it" <|
                 \_ ->
-                    -- A lap that lost a marker is a key short of fifteen, and
-                    -- what is missing is a mini-sector rather than the shape.
+                    -- A key short of fifteen is a mini-sector the feed had
+                    -- nothing to say about, not a file of the wrong shape.
                     Laps.fromJsonl lapMissingAMiniSector
                         |> Result.map (List.filterMap .miniSectors >> List.map .fordout)
                         |> Expect.equal (Ok [ { time = Nothing, elapsedInLap = Nothing } ])
@@ -200,8 +200,8 @@ lapWithMiniSectors =
 """
 
 
-{-| The same lap as the file spells one that lost a marker: no `fordout` key at
-all, and an `fl` with a running total but no time of its own.
+{-| The same lap as the file spells one it is a mini-sector short of: no
+`fordout` key at all, and an `fl` with a running total but no time of its own.
 -}
 lapMissingAMiniSector : String
 lapMissingAMiniSector =

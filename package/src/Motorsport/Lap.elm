@@ -505,9 +505,9 @@ miniSectorReachedAt clock lap =
 
 
 {-| Whether the clock has reached the start of a stretch the lap can place. A
-stretch with no time is not one the car can be behind: [`segments`](#segments)
-gives an untimed sector no length, so it would otherwise read as entered and
-left at the instant the one before it ended.
+stretch with no time is not one the lap can put the car behind:
+[`segments`](#segments) gives an untimed sector no length, so it would otherwise
+read as entered and left at the instant the one before it ended.
 -}
 entered : Clock -> Segment -> Bool
 entered clock segment =

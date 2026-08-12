@@ -377,9 +377,9 @@ leMansCar =
     }
 
 
-{-| The same car, with one mini-sector's running total missing -- as the source
-data leaves the one the car was not timed through. The total places its own
-mini-sector and starts the next, so losing it loses both.
+{-| The same car, with one mini-sector's running total missing, as the source
+data leaves one it has no total for. That total places its own mini-sector and
+starts the next, so losing it loses both.
 -}
 leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
