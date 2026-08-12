@@ -250,15 +250,23 @@ minMaybe current new =
 accumulate : RawLap -> ( Bests, List Lap ) -> ( Bests, List Lap )
 accumulate raw ( bests, acc ) =
     let
+        lapTime =
+            Lap.recorded raw.lapTime
+
         newBests =
-            { lap = minMaybe bests.lap (Lap.recorded raw.lapTime)
+            { lap = minMaybe bests.lap lapTime
             , sectors = Sector.map2 minMaybe bests.sectors raw.sectors
             , miniSectors =
-                case raw.miniSectors of
-                    Just miniSectors ->
+                -- The feed records mini-sectors on a lap it has no lap time
+                -- for, which is not a lap of the circuit.
+                -- `BestTimes.miniSectorTime` and the CLI that measures the
+                -- track both throw those out, and a baseline that kept them
+                -- would rate a time against a record no one holds.
+                case ( lapTime, raw.miniSectors ) of
+                    ( Just _, Just miniSectors ) ->
                         LeMans.map2 (\best mini -> minMaybe best mini.time) bests.miniSectors miniSectors
 
-                    Nothing ->
+                    _ ->
                         bests.miniSectors
             }
 
@@ -271,7 +279,7 @@ accumulate raw ( bests, acc ) =
             -- The zero stops here: the CLI writes an unrecorded lap time out as
             -- `0.000` either way, where a blank sector cell stays blank and has
             -- already arrived as `Nothing`.
-            , time = Lap.recorded raw.lapTime
+            , time = lapTime
             , best = newBests.lap
             , sectors =
                 Sector.map2
