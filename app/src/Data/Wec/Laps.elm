@@ -1,12 +1,12 @@
 module Data.Wec.Laps exposing
-    ( RawLap
+    ( RawLap, RawMiniSector
     , fromJsonl
     , attach
     )
 
 {-|
 
-@docs RawLap
+@docs RawLap, RawMiniSector
 @docs fromJsonl
 @docs attach
 
@@ -15,7 +15,7 @@ module Data.Wec.Laps exposing
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
-import Json.Decode.Pipeline exposing (required)
+import Json.Decode.Pipeline exposing (optional, required)
 import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
@@ -23,6 +23,7 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 type alias RawLap =
@@ -31,8 +32,19 @@ type alias RawLap =
     , lapNumber : Int
     , lapTime : Duration
     , sectors : BySector (Maybe Duration)
+    , miniSectors : Maybe (ByMiniSector RawMiniSector)
     , elapsed : Instant
     , pitTime : Maybe Duration
+    }
+
+
+{-| One mini-sector of one lap as the file spells it:
+[`Lap.MiniSectorTime`](Motorsport-Lap#MiniSectorTime) without the baseline,
+which is [`attach`](#attach)'s to add.
+-}
+type alias RawMiniSector =
+    { time : Maybe Duration
+    , elapsedInLap : Maybe Duration
     }
 
 
@@ -72,6 +84,7 @@ rawLapDecoder =
         |> required "lapNumber" int
         |> required "lap" (Decode.field "time" durationDecoder)
         |> required "sectors" sectorsDecoder
+        |> optional "miniSectors" (Decode.map Just miniSectorsDecoder) Nothing
         |> required "elapsed" Instant.decoder
         |> required "pitTime" optionalDurationDecoder
 
@@ -87,6 +100,47 @@ sectorsDecoder =
 sectorTimeDecoder : Decoder (Maybe Duration)
 sectorTimeDecoder =
     Decode.field "time" optionalDurationDecoder
+
+
+{-| The mini-sector counterpart, on the rounds whose feed splits the lap that
+far. Every key is `optional`, unlike the same names in the summary's shares: the
+CLI drops a mini-sector it has neither a time nor a running total for, so a lap
+that lost a marker arrives a key short of fifteen and has to decode all the
+same.
+-}
+miniSectorsDecoder : Decoder (ByMiniSector RawMiniSector)
+miniSectorsDecoder =
+    let
+        miniSector key =
+            optional key miniSectorDecoder { time = Nothing, elapsedInLap = Nothing }
+    in
+    Decode.succeed LeMans.ByMiniSector
+        |> miniSector "scl2"
+        |> miniSector "z4"
+        |> miniSector "ip1"
+        |> miniSector "z12"
+        |> miniSector "sclc"
+        |> miniSector "a7_1"
+        |> miniSector "ip2"
+        |> miniSector "a8_1"
+        |> miniSector "sclb"
+        |> miniSector "porin"
+        |> miniSector "porout"
+        |> miniSector "pitref"
+        |> miniSector "scl1"
+        |> miniSector "fordout"
+        |> miniSector "fl"
+
+
+{-| `elapsed` on the wire is what a [`Lap`](Motorsport-Lap) calls
+`elapsedInLap`: the running total from the line, not the race clock
+`Lap.elapsed` carries.
+-}
+miniSectorDecoder : Decoder RawMiniSector
+miniSectorDecoder =
+    Decode.succeed RawMiniSector
+        |> required "time" optionalDurationDecoder
+        |> required "elapsed" optionalDurationDecoder
 
 
 durationDecoder : Decoder Duration
@@ -168,12 +222,16 @@ finalizeCarLaps raws =
 type alias Bests =
     { lap : Maybe Duration
     , sectors : BySector (Maybe Duration)
+    , miniSectors : ByMiniSector (Maybe Duration)
     }
 
 
 bestsInit : Bests
 bestsInit =
-    { lap = Nothing, sectors = Sector.initialize (always Nothing) }
+    { lap = Nothing
+    , sectors = Sector.initialize (always Nothing)
+    , miniSectors = LeMans.initialize (always Nothing)
+    }
 
 
 minMaybe : Maybe Duration -> Maybe Duration -> Maybe Duration
@@ -195,6 +253,13 @@ accumulate raw ( bests, acc ) =
         newBests =
             { lap = minMaybe bests.lap (Lap.recorded raw.lapTime)
             , sectors = Sector.map2 minMaybe bests.sectors raw.sectors
+            , miniSectors =
+                case raw.miniSectors of
+                    Just miniSectors ->
+                        LeMans.map2 (\best mini -> minMaybe best mini.time) bests.miniSectors miniSectors
+
+                    Nothing ->
+                        bests.miniSectors
             }
 
         lap =
@@ -215,7 +280,20 @@ accumulate raw ( bests, acc ) =
                     newBests.sectors
             , elapsed = raw.elapsed
             , pitTime = raw.pitTime
-            , miniSectors = Nothing
+            , miniSectors =
+                raw.miniSectors
+                    |> Maybe.map
+                        (\miniSectors ->
+                            LeMans.map2
+                                (\mini personalBest ->
+                                    { time = mini.time
+                                    , elapsedInLap = mini.elapsedInLap
+                                    , personalBest = personalBest
+                                    }
+                                )
+                                miniSectors
+                                newBests.miniSectors
+                        )
             }
     in
     ( newBests, lap :: acc )
