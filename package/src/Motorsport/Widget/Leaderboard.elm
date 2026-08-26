@@ -65,11 +65,11 @@ import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
+import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
-import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 
@@ -341,23 +341,17 @@ performanceColumn { getter, sorter, bestTimes } =
     }
 
 
-carNumberColumn_Wec :
-    { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer }
-
-    -- A top-level function, not a closure, or the Lazy below never hits.
-    , manufacturerLogoUrl : Manufacturer -> Maybe String
-    }
-    -> Column data msg
-carNumberColumn_Wec { getter, manufacturerLogoUrl } =
+carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
+carNumberColumn_Wec { getter } =
     { name = "#"
-    , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec manufacturerLogoUrl
+    , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
     , sorter = \a b -> Class.compare (getter a).class (getter b).class
     , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 
 
-viewCarNumberColumn_Wec : (Manufacturer -> Maybe String) -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
-viewCarNumberColumn_Wec manufacturerLogoUrl { carNumber, manufacturer } =
+viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
+viewCarNumberColumn_Wec { carNumber, manufacturer } =
     div
         [ css
             [ width (em 2.5)
@@ -369,16 +363,16 @@ viewCarNumberColumn_Wec manufacturerLogoUrl { carNumber, manufacturer } =
             , textAlign center
             , fontSize (px 12)
             , fontWeight bold
-            , backgroundColor (Manufacturer.toColor manufacturer)
+            , backgroundColor manufacturer.color
             , borderRadius (px 5)
             , property "line-height" "1"
             ]
         ]
-        (case manufacturerLogoUrl manufacturer of
+        (case manufacturer.logoUrl of
             Just logoUrl ->
                 [ img
                     [ src logoUrl
-                    , alt (Manufacturer.toString manufacturer)
+                    , alt manufacturer.name
                     , css
                         [ property "object-fit" "contain"
                         , height (px 14)

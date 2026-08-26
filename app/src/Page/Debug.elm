@@ -8,7 +8,6 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 
 import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
-import Data.Wec.ManufacturerLogo as ManufacturerLogo
 import DataView
 import Effect exposing (Effect)
 import Html.Styled exposing (Html, div, header, input, nav, text)
@@ -22,11 +21,11 @@ import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car as Car
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Class
-import Motorsport.Wec.Manufacturer
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
@@ -187,7 +186,7 @@ lapRow bestTimes index lap =
         , class = Motorsport.Wec.Class.none
         , group = ""
         , team = ""
-        , manufacturer = Motorsport.Wec.Manufacturer.Other
+        , manufacturer = Manufacturer.unknown
         }
     , currentDriver = lap.driver
     , lapsCompleted = lap.lap
@@ -203,7 +202,7 @@ config bestTimes =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { getter = .metadata, manufacturerLogoUrl = ManufacturerLogo.url }
+        , carNumberColumn_Wec { getter = .metadata }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lapsCompleted }
         ]

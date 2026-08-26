@@ -12,7 +12,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
-import Motorsport.Wec.Manufacturer as Manufacturer
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car as Car exposing (Car)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -547,7 +547,7 @@ metadataOf carNumber class =
     , class = class
     , group = "H"
     , team = "Team " ++ carNumber
-    , manufacturer = Manufacturer.Other
+    , manufacturer = Manufacturer.unknown
     }
 
 

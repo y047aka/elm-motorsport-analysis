@@ -9,7 +9,6 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 
 import Browser.Events
 import Css exposing (..)
-import Data.Wec.ManufacturerLogo as ManufacturerLogo
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -229,7 +228,6 @@ trackerView track snapshot m =
                 -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
                 , onSelectCar = ShowCarDetail
                 , popoverTarget = CarDetailPopover.popoverId
-                , manufacturerLogoUrl = ManufacturerLogo.url
                 }
             ]
         , div
@@ -256,7 +254,6 @@ trackerView track snapshot m =
             [ SelectedCarsStrip.view
                 { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
-                , manufacturerLogoUrl = ManufacturerLogo.url
                 }
                 snapshot
             ]

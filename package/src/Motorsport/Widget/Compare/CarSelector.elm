@@ -12,7 +12,6 @@ import Html.Styled.Attributes exposing (css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class as Class exposing (Class)
-import Motorsport.Wec.Manufacturer as Manufacturer
 
 
 {-| Lays out every car in the given class as chips; clicking a chip toggles its
@@ -45,7 +44,7 @@ carSelectorChip : (String -> msg) -> Bool -> CarAt -> Html msg
 carSelectorChip onToggleCar isSelected item =
     let
         manufacturerColor =
-            Manufacturer.toColor item.metadata.manufacturer
+            item.metadata.manufacturer.color
     in
     button
         [ onClick (onToggleCar item.metadata.carNumber)

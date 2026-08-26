@@ -10,6 +10,7 @@ module Data.Wec exposing
 
 -}
 
+import Data.Wec.Manufacturer as Manufacturer
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
@@ -21,7 +22,6 @@ import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era exposing (Era)
-import Motorsport.Wec.Manufacturer as Manufacturer
 
 
 {-| Less than the file states, and the omissions are the point.
@@ -228,13 +228,22 @@ startingGridEntryDecoder era =
 
 carMetadataDecoder : Era -> Decoder Car.Metadata
 carMetadataDecoder era =
-    Decode.succeed Car.Metadata
+    Decode.succeed
+        (\carNumber drivers class group team manufacturer ->
+            { carNumber = carNumber
+            , drivers = drivers
+            , class = class
+            , group = group
+            , team = team
+            , manufacturer = Manufacturer.fromName { name = manufacturer, carNumber = carNumber }
+            }
+        )
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" (string |> Decode.map (Class.fromString era))
         |> required "group" string
         |> required "team" string
-        |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
+        |> required "manufacturer" string
 
 
 driverDecoder : Decoder Driver

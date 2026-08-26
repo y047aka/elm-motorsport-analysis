@@ -10,7 +10,6 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Wec.Manufacturer as Manufacturer
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)
@@ -67,7 +66,7 @@ buildClassProgressionData snapshot { class, highlighted } =
                 |> List.map
                     (\( item, points ) ->
                         { points = points
-                        , color = Manufacturer.toColorWithFallback item.metadata
+                        , color = item.metadata.manufacturer.chartColor
                         , carNumber = item.metadata.carNumber
                         , emphasis =
                             if List.member item.metadata.carNumber highlighted then

@@ -15,7 +15,6 @@ as the `popovertarget` of the trigger.
 -}
 
 import Css
-import Data.Wec.ManufacturerLogo as ManufacturerLogo
 import Html.Styled as Html exposing (Html, button, text)
 import Html.Styled.Attributes as Attributes exposing (attribute, css)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -86,7 +85,6 @@ view config snapshot detailCarNumbers =
                     { onToggleCar = config.onToggleCar
                     , activeChart = config.activeChart
                     , onSelectChart = config.onSelectChart
-                    , manufacturerLogoUrl = ManufacturerLogo.url
                     }
                     snapshot
                     detailCarNumbers

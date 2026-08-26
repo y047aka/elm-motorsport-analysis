@@ -8,7 +8,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Wec.Manufacturer as Manufacturer
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race as Race
 import Motorsport.Race.Car exposing (Car, CarNumber)
 import Motorsport.Sector as Sector exposing (Sector(..))
@@ -265,7 +265,7 @@ car carNumber laps =
         , group = "Test Group"
         , team = "Test Team"
         , drivers = [ Driver.fromName "Test Driver" ]
-        , manufacturer = Manufacturer.Other
+        , manufacturer = Manufacturer.unknown
         }
     , startPosition = 0
     , laps = List.map (\lap_ -> { lap_ | carNumber = carNumber }) laps
