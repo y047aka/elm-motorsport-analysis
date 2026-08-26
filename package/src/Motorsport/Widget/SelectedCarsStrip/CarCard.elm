@@ -16,6 +16,7 @@ import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparkline
@@ -24,8 +25,8 @@ import Motorsport.Widget.SelectedCarsStrip.RivalGapSparkline as RivalGapSparklin
 {-| `allCars` is the full overall standings, not just the visible window —
 the sparkline searches it for the class rivals ahead of and behind the car.
 -}
-view : LapHistory -> List CarAt -> CarAt -> Html msg
-view lapHistory allCars item =
+view : (Manufacturer -> Maybe String) -> LapHistory -> List CarAt -> CarAt -> Html msg
+view manufacturerLogoUrl lapHistory allCars item =
     div
         [ css
             [ property "display" "grid"
@@ -52,7 +53,7 @@ view lapHistory allCars item =
                     , property "row-gap" "8px"
                     ]
                 ]
-                [ cardHeader item
+                [ cardHeader manufacturerLogoUrl item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
                 ]
@@ -60,8 +61,8 @@ view lapHistory allCars item =
         ]
 
 
-cardHeader : CarAt -> Html msg
-cardHeader item =
+cardHeader : (Manufacturer -> Maybe String) -> CarAt -> Html msg
+cardHeader manufacturerLogoUrl item =
     div
         [ css
             [ property "display" "grid"
@@ -70,7 +71,7 @@ cardHeader item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarNumberBadge.view item.metadata
+        [ CarNumberBadge.view manufacturerLogoUrl item.metadata
         , div
             [ css
                 [ property "font-size" "12px"

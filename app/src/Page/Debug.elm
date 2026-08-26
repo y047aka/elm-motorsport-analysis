@@ -8,6 +8,7 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 
 import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
+import Data.Wec.ManufacturerLogo as ManufacturerLogo
 import DataView
 import Effect exposing (Effect)
 import Html.Styled exposing (Html, div, header, input, nav, text)
@@ -202,7 +203,7 @@ config bestTimes =
     , toMsg = LeaderboardMsg
     , columns =
         [ intColumn { label = "", getter = .position }
-        , carNumberColumn_Wec { getter = .metadata }
+        , carNumberColumn_Wec { getter = .metadata, manufacturerLogoUrl = ManufacturerLogo.url }
         , driverAndTeamColumn_Wec { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
         , intColumn { label = "Lap", getter = .lapsCompleted }
         ]

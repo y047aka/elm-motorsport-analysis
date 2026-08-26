@@ -341,17 +341,23 @@ performanceColumn { getter, sorter, bestTimes } =
     }
 
 
-carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } } -> Column data msg
-carNumberColumn_Wec { getter } =
+carNumberColumn_Wec :
+    { getter : data -> { a | carNumber : String, class : Class, manufacturer : Manufacturer }
+
+    -- A top-level function, not a closure, or the Lazy below never hits.
+    , manufacturerLogoUrl : Manufacturer -> Maybe String
+    }
+    -> Column data msg
+carNumberColumn_Wec { getter, manufacturerLogoUrl } =
     { name = "#"
-    , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
+    , view = getter >> Lazy.lazy2 viewCarNumberColumn_Wec manufacturerLogoUrl
     , sorter = \a b -> Class.compare (getter a).class (getter b).class
     , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 
 
-viewCarNumberColumn_Wec : { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
-viewCarNumberColumn_Wec { carNumber, manufacturer } =
+viewCarNumberColumn_Wec : (Manufacturer -> Maybe String) -> { a | carNumber : String, class : Class, manufacturer : Manufacturer } -> Html msg
+viewCarNumberColumn_Wec manufacturerLogoUrl { carNumber, manufacturer } =
     div
         [ css
             [ width (em 2.5)
@@ -368,7 +374,7 @@ viewCarNumberColumn_Wec { carNumber, manufacturer } =
             , property "line-height" "1"
             ]
         ]
-        (case Manufacturer.toLogoUrl manufacturer of
+        (case manufacturerLogoUrl manufacturer of
             Just logoUrl ->
                 [ img
                     [ src logoUrl

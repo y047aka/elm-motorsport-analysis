@@ -3,7 +3,6 @@ module Motorsport.Wec.Manufacturer exposing
     , fromString, toString
     , toColor
     , toColorWithFallback
-    , toLogoUrl
     )
 
 {-|
@@ -12,7 +11,6 @@ module Motorsport.Wec.Manufacturer exposing
 @docs fromString, toString
 @docs toColor
 @docs toColorWithFallback
-@docs toLogoUrl
 
 -}
 
@@ -224,54 +222,3 @@ generateCarColor carNumber =
             carHash * 37 |> modBy 360 |> toFloat
     in
     oklch 0.55 0.25 hue
-
-
-{-| Get the logo URL for a manufacturer from local assets.
--}
-toLogoUrl : Manufacturer -> Maybe String
-toLogoUrl manufacturer =
-    case manufacturer of
-        Alpine ->
-            Just "/assets/manufacturer-logos/alpine.png"
-
-        AstonMartin ->
-            Just "/assets/manufacturer-logos/aston-martin.png"
-
-        BMW ->
-            Just "/assets/manufacturer-logos/bmw.png"
-
-        Cadillac ->
-            Just "/assets/manufacturer-logos/cadillac.png"
-
-        Corvette ->
-            Just "/assets/manufacturer-logos/corvette.png"
-
-        Ferrari ->
-            Just "/assets/manufacturer-logos/ferrari.png"
-
-        Ford ->
-            Just "/assets/manufacturer-logos/ford.png"
-
-        Genesis ->
-            Just "/assets/manufacturer-logos/genesis.png"
-
-        Lexus ->
-            Just "/assets/manufacturer-logos/lexus.png"
-
-        McLaren ->
-            Just "/assets/manufacturer-logos/mclaren.png"
-
-        Mercedes ->
-            Just "/assets/manufacturer-logos/mercedes.png"
-
-        Peugeot ->
-            Just "/assets/manufacturer-logos/peugeot.png"
-
-        Porsche ->
-            Just "/assets/manufacturer-logos/porsche.png"
-
-        Toyota ->
-            Just "/assets/manufacturer-logos/toyota.png"
-
-        Other ->
-            Nothing

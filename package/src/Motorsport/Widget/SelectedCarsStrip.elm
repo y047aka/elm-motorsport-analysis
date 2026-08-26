@@ -13,6 +13,7 @@ import Html.Styled exposing (Html, button, div, text)
 import Html.Styled.Attributes as Attributes exposing (class, css)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
 
@@ -23,6 +24,7 @@ internally, so callers may store them as-is.
 view :
     { offset : Int
     , onScrollTo : Int -> msg
+    , manufacturerLogoUrl : Manufacturer -> Maybe String
     }
     -> Snapshot
     -> Html msg
@@ -68,7 +70,7 @@ view config snapshot =
                         ]
                     ]
                     (List.map
-                        (CarCard.view lapHistory allCars)
+                        (CarCard.view config.manufacturerLogoUrl lapHistory allCars)
                         window
                     )
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)

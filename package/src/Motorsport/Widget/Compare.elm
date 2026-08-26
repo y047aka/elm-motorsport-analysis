@@ -17,6 +17,7 @@ import Html.Styled.Attributes exposing (css)
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
@@ -49,11 +50,12 @@ viewComparison :
     { onToggleCar : String -> msg
     , activeChart : Chart
     , onSelectChart : Chart -> msg
+    , manufacturerLogoUrl : Manufacturer -> Maybe String
     }
     -> Snapshot
     -> List String
     -> Html msg
-viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarNumbers =
+viewComparison { onToggleCar, activeChart, onSelectChart, manufacturerLogoUrl } snapshot selectedCarNumbers =
     let
         lapHistory =
             Snapshot.lapHistory snapshot
@@ -111,7 +113,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                         , property "column-gap" "16px"
                         ]
                     ]
-                    (List.map (CarSummary.carSummary lapRange distScale lapHistory) selectedEntries
+                    (List.map (CarSummary.carSummary manufacturerLogoUrl lapRange distScale lapHistory) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
                 , ChartTabs.chartTabs onSelectChart

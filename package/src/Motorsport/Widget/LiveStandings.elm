@@ -11,6 +11,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
@@ -22,6 +23,9 @@ type alias Props msg =
     -- not a closure that is recreated on every view.
     , onSelectCar : String -> msg
     , popoverTarget : String
+
+    -- A top-level function for the same reason as `onSelectCar`.
+    , manufacturerLogoUrl : Manufacturer -> Maybe String
     }
 
 
@@ -74,7 +78,7 @@ view props =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy3 carRow props.popoverTarget props.onSelectCar item
+                                    , Lazy.lazy4 carRow props.popoverTarget props.onSelectCar props.manufacturerLogoUrl item
                                     )
                                 )
                         )
@@ -84,8 +88,8 @@ view props =
         )
 
 
-carRow : String -> (String -> msg) -> CarAt -> Html msg
-carRow popoverTarget onSelect item =
+carRow : String -> (String -> msg) -> (Manufacturer -> Maybe String) -> CarAt -> Html msg
+carRow popoverTarget onSelect manufacturerLogoUrl item =
     li []
         [ button
             [ onClick (onSelect item.metadata.carNumber)
@@ -106,14 +110,14 @@ carRow popoverTarget onSelect item =
                 , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
                 ]
             ]
-            (carRowContent item)
+            (carRowContent manufacturerLogoUrl item)
         ]
 
 
-carRowContent : CarAt -> List (Html msg)
-carRowContent item =
+carRowContent : (Manufacturer -> Maybe String) -> CarAt -> List (Html msg)
+carRowContent manufacturerLogoUrl item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.standing.position) ]
-    , CarNumberBadge.viewRow item.metadata
+    , CarNumberBadge.viewRow manufacturerLogoUrl item.metadata
     , div [ class "text-xs opacity-70" ]
         [ text (Driver.toSurname item.currentDriver) ]
     , div [ class "text-xs text-right" ]

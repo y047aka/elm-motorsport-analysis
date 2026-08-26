@@ -16,6 +16,7 @@ import Motorsport.Gap as Gap
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
+import Motorsport.Wec.Manufacturer exposing (Manufacturer)
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
@@ -40,8 +41,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
-carSummary lapRange distScale lapHistory item =
+carSummary : (Manufacturer -> Maybe String) -> Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
+carSummary manufacturerLogoUrl lapRange distScale lapHistory item =
     div
         [ css
             [ property "display" "grid"
@@ -50,7 +51,7 @@ carSummary lapRange distScale lapHistory item =
             , property "align-content" "start"
             ]
         ]
-        [ header item
+        [ header manufacturerLogoUrl item
         , summaryStats item
         , lapTimePanel lapRange distScale lapHistory item
         ]
@@ -93,8 +94,8 @@ lapTimePanel maybeRange maybeScale lapHistory item =
         ]
 
 
-header : CarAt -> Html msg
-header item =
+header : (Manufacturer -> Maybe String) -> CarAt -> Html msg
+header manufacturerLogoUrl item =
     div
         [ css
             [ property "display" "grid"
@@ -103,7 +104,7 @@ header item =
             , property "column-gap" "8px"
             ]
         ]
-        [ CarNumberBadge.view item.metadata
+        [ CarNumberBadge.view manufacturerLogoUrl item.metadata
         , div
             [ css
                 [ property "display" "grid"

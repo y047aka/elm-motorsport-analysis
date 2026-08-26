@@ -19,8 +19,8 @@ import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 {-| Small stacked badge: logo on top, car number below.
 -}
-view : Car.Metadata -> Html msg
-view metadata =
+view : (Manufacturer -> Maybe String) -> Car.Metadata -> Html msg
+view toLogoUrl metadata =
     badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
         [ manufacturerLogo
             [ property "max-width" "28px"
@@ -28,6 +28,7 @@ view metadata =
             , property "object-fit" "contain"
             , property "opacity" "0.9"
             ]
+            toLogoUrl
             metadata.manufacturer
         , div [ class "text-xs font-bold leading-none" ]
             [ text metadata.carNumber ]
@@ -37,13 +38,14 @@ view metadata =
 
 {-| Horizontal badge: logo on the left, car number on the right.
 -}
-viewRow : Car.Metadata -> Html msg
-viewRow metadata =
+viewRow : (Manufacturer -> Maybe String) -> Car.Metadata -> Html msg
+viewRow toLogoUrl metadata =
     badge "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
         [ manufacturerLogo
             [ property "height" "14px"
             , property "object-fit" "contain"
             ]
+            toLogoUrl
             metadata.manufacturer
         , div [ class "text-center leading-none text-xs font-bold" ]
             [ text metadata.carNumber ]
@@ -60,9 +62,9 @@ badge containerClass children metadata =
         children
 
 
-manufacturerLogo : List Css.Style -> Manufacturer -> Html msg
-manufacturerLogo styles manufacturer =
-    case Manufacturer.toLogoUrl manufacturer of
+manufacturerLogo : List Css.Style -> (Manufacturer -> Maybe String) -> Manufacturer -> Html msg
+manufacturerLogo styles toLogoUrl manufacturer =
+    case toLogoUrl manufacturer of
         Just url ->
             img [ src url, alt (Manufacturer.toString manufacturer), css styles ] []
 
