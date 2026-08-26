@@ -97,13 +97,13 @@ type alias StartingGridEntry =
 -- DECODER
 
 
-eventDecoder : Era -> Decoder Event
-eventDecoder era =
+eventDecoder : Era -> Manufacturer.Table -> Decoder Event
+eventDecoder era manufacturers =
     Decode.map4 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
-        (field "startingGrid" (startingGridDecoder era))
+        (field "startingGrid" (startingGridDecoder era manufacturers))
 
 
 {-| Two keys the CLI leaves out when it has nothing to say, and `optional`
@@ -192,11 +192,11 @@ byMiniSectorDecoder =
         |> required "fl" shareDecoder
 
 
-startingGridDecoder : Era -> Decoder StartingGrid
-startingGridDecoder era =
+startingGridDecoder : Era -> Manufacturer.Table -> Decoder StartingGrid
+startingGridDecoder era manufacturers =
     Decode.map2 StartingGrid
         (field "basis" basisDecoder)
-        (field "entries" (list (startingGridEntryDecoder era)))
+        (field "entries" (list (startingGridEntryDecoder era manufacturers)))
 
 
 basisDecoder : Decoder Basis
@@ -219,15 +219,15 @@ basisDecoder =
             )
 
 
-startingGridEntryDecoder : Era -> Decoder StartingGridEntry
-startingGridEntryDecoder era =
+startingGridEntryDecoder : Era -> Manufacturer.Table -> Decoder StartingGridEntry
+startingGridEntryDecoder era manufacturers =
     Decode.map2 StartingGridEntry
         (field "position" int)
-        (field "car" (carMetadataDecoder era))
+        (field "car" (carMetadataDecoder era manufacturers))
 
 
-carMetadataDecoder : Era -> Decoder Car.Metadata
-carMetadataDecoder era =
+carMetadataDecoder : Era -> Manufacturer.Table -> Decoder Car.Metadata
+carMetadataDecoder era manufacturers =
     Decode.succeed
         (\carNumber drivers class group team manufacturer ->
             { carNumber = carNumber
@@ -235,7 +235,7 @@ carMetadataDecoder era =
             , class = class
             , group = group
             , team = team
-            , manufacturer = Manufacturer.fromName { name = manufacturer, carNumber = carNumber }
+            , manufacturer = Manufacturer.fromName manufacturers { name = manufacturer, carNumber = carNumber }
             }
         )
         |> required "carNumber" string

@@ -1,0 +1,74 @@
+{
+  "manufacturers": [
+    {
+      "name": "Alpine",
+      "color": { "l": 0.6, "c": 0.25, "h": 230 },
+      "logo": "/assets/manufacturer-logos/alpine.png"
+    },
+    {
+      "name": "Aston Martin",
+      "color": { "l": 0.5, "c": 0.25, "h": 180 },
+      "logo": "/assets/manufacturer-logos/aston-martin.png"
+    },
+    {
+      "name": "BMW",
+      "color": { "l": 0.5, "c": 0.25, "h": 250 },
+      "logo": "/assets/manufacturer-logos/bmw.png"
+    },
+    {
+      "name": "Cadillac",
+      "color": { "l": 0.7, "c": 0.3, "h": 105 },
+      "logo": "/assets/manufacturer-logos/cadillac.png"
+    },
+    {
+      "name": "Corvette",
+      "color": { "l": 0.7, "c": 0.3, "h": 105 },
+      "logo": "/assets/manufacturer-logos/corvette.png"
+    },
+    {
+      "name": "Ferrari",
+      "color": { "l": 0.45, "c": 0.25, "h": 30 },
+      "logo": "/assets/manufacturer-logos/ferrari.png"
+    },
+    {
+      "name": "Ford",
+      "color": { "l": 0.45, "c": 0.25, "h": 260 },
+      "logo": "/assets/manufacturer-logos/ford.png"
+    },
+    {
+      "name": "Genesis",
+      "color": { "l": 0.6, "c": 0, "h": 0 },
+      "logo": "/assets/manufacturer-logos/genesis.png"
+    },
+    {
+      "name": "Lexus",
+      "color": { "l": 0.4, "c": 0.2, "h": 50 },
+      "logo": "/assets/manufacturer-logos/lexus.png"
+    },
+    {
+      "name": "McLaren",
+      "color": { "l": 0.6, "c": 0.25, "h": 80 },
+      "logo": "/assets/manufacturer-logos/mclaren.png"
+    },
+    {
+      "name": "Mercedes",
+      "color": { "l": 0.7, "c": 0, "h": 0 },
+      "logo": "/assets/manufacturer-logos/mercedes.png"
+    },
+    {
+      "name": "Peugeot",
+      "color": { "l": 0.7, "c": 0.25, "h": 120 },
+      "logo": "/assets/manufacturer-logos/peugeot.png"
+    },
+    {
+      "name": "Porsche",
+      "color": { "l": 0.8, "c": 0, "h": 0 },
+      "logo": "/assets/manufacturer-logos/porsche.png"
+    },
+    {
+      "name": "Toyota",
+      "color": { "l": 0.6, "c": 0, "h": 0 },
+      "logo": "/assets/manufacturer-logos/toyota.png"
+    }
+  ]
+}

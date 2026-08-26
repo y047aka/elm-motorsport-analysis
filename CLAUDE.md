@@ -63,6 +63,13 @@ their files are — nothing app-side builds those paths, and a round it does not
 list cannot be opened. `Data/Series.elm` is the remains of the compile-time
 calendar it replaced: car images, which nothing imports yet.
 
+`Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
+also once, and a round waits on it as it waits on the calendar. That file is
+written by hand and no compiler reads it, so a mistake in it shows as cars drawn
+by their numbers rather than as a build that fails. Unlike an unlisted round, an
+unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
+takes a colour from its number.
+
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Widget/` and `Chart/` for rendering (Leaderboard,
@@ -74,7 +81,8 @@ passed through (`Class`, `Era`), and Le Mans's mini-sectors
 `Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
 `Data.Wec.Manufacturer` is app-side for the same reason: which manufacturers
 there are, and how each is coloured and badged, is one series' entry list and
-this application's assets.
+this application's assets. It holds none of them itself — it decodes the table
+that does.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
 in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to

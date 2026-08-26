@@ -16,6 +16,7 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.Laps as WecLaps
+import Data.Wec.Manufacturer as Manufacturer
 import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
@@ -36,13 +37,15 @@ so a half-loaded one cannot be read as a loaded one.
 -}
 type alias Model =
     { calendar : Calendar
+    , manufacturers : Maybe Manufacturer.Table
     , round : Round
     }
 
 
-{-| `Waiting` is a URL that arrived before the calendar did. The calendar is
-what says where a round's files are, so the request waits rather than being
-guessed at.
+{-| `Waiting` is a URL that arrived before the files a round is read against
+did. The calendar is what says where a round's own files are, and the
+manufacturer table is what its cars are coloured from, so the request waits
+rather than being guessed at.
 
 `Loading` carries no `Race`, which is what stops the previous round's cars being
 shown under this one's name.
@@ -90,18 +93,24 @@ type alias Race =
     }
 
 
-{-| The calendar is asked for here rather than by the page that lists it: it is
-the same file whichever route the app opened on, and a round reached by its URL
-still needs it.
+{-| The calendar and the manufacturer table are asked for here rather than by
+the pages that read them: they are the same two files whichever route the app
+opened on, and a round reached by its URL still needs both.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Calendar.empty, round = NoRound }
+    ( { calendar = Calendar.empty, manufacturers = Nothing, round = NoRound }
     , Effect.sendCmd <|
-        Http.get
-            { url = "/static/wec/index.json"
-            , expect = Http.expectJson CalendarLoaded Calendar.decoder
-            }
+        Cmd.batch
+            [ Http.get
+                { url = "/static/wec/index.json"
+                , expect = Http.expectJson CalendarLoaded Calendar.decoder
+                }
+            , Http.get
+                { url = "/static/manufacturers.json"
+                , expect = Http.expectJson ManufacturersLoaded Manufacturer.decoder
+                }
+            ]
     )
 
 
@@ -169,6 +178,13 @@ update msg m =
         CalendarLoaded (Err _) ->
             ( m, Effect.none )
 
+        ManufacturersLoaded result ->
+            -- Holding the race back over its colours is worse than running it
+            -- without them, so a table that could not be read names no one and
+            -- the cars are told apart by their numbers.
+            resumeWaitingRound
+                { m | manufacturers = Just (Result.withDefault Manufacturer.empty result) }
+
         FetchJson_Wec params ->
             resumeWaitingRound { m | round = Waiting params }
 
@@ -188,13 +204,14 @@ update msg m =
             ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
 
 
-{-| Called from both sides of the race between the URL and the calendar, so
-whichever arrives second is the one that finds everything it needs here.
+{-| Called from every side of the race between the URL, the calendar and the
+manufacturer table, so whichever arrives last is the one that finds everything
+it needs here.
 -}
 resumeWaitingRound : Model -> ( Model, Effect Msg )
 resumeWaitingRound m =
-    case m.round of
-        Waiting params ->
+    case ( m.round, m.manufacturers ) of
+        ( Waiting params, Just manufacturers ) ->
             case Calendar.findRound params m.calendar of
                 Nothing ->
                     ( m, Effect.none )
@@ -211,7 +228,7 @@ resumeWaitingRound m =
                                 Cmd.batch
                                     [ Http.get
                                         { url = round.summary
-                                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era)
+                                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers)
                                         }
                                     , Http.get
                                         { url = round.laps

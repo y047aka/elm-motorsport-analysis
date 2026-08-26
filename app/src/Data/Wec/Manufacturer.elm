@@ -1,92 +1,82 @@
-module Data.Wec.Manufacturer exposing (fromName)
+module Data.Wec.Manufacturer exposing (Table, decoder, empty, fromName)
 
 {-| Which manufacturers the timing feed names, and how each is drawn.
 
-The logos sit under `app/public/assets/manufacturer-logos`.
+The table is `/static/manufacturers.json`, which is written by hand; nothing
+generates it.
 
-@docs fromName
+@docs Table, decoder, empty, fromName
 
 -}
 
 import Css exposing (Color)
 import Css.Color exposing (oklch)
+import Dict exposing (Dict)
+import Json.Decode as Decode exposing (Decoder, field, float, string)
 import Motorsport.Manufacturer exposing (Manufacturer, unknown)
 
 
-{-| `carNumber` is what tells the cars of an unnamed manufacturer apart.
+{-| Keyed by the name the feed writes.
 -}
-fromName : { name : String, carNumber : String } -> Manufacturer
-fromName { name, carNumber } =
-    case name of
-        "Alpine" ->
-            -- Alpine Blue
-            known name (oklch 0.6 0.25 230) "alpine"
+type Table
+    = Table (Dict String Entry)
 
-        "Aston Martin" ->
-            -- Aston Martin Racing Green
-            known name (oklch 0.5 0.25 180) "aston-martin"
 
-        "BMW" ->
-            -- BMW Blue
-            known name (oklch 0.5 0.25 250) "bmw"
+type alias Entry =
+    { color : Color
+    , logoUrl : Maybe String
+    }
 
-        "Cadillac" ->
-            -- Cadillac Gold
-            known name (oklch 0.7 0.3 105) "cadillac"
 
-        "Corvette" ->
-            -- Classic Corvette Yellow
-            known name (oklch 0.7 0.3 105) "corvette"
+{-| No manufacturers, rather than a guess at which: what there is before the
+table arrives, and in place of one that could not be read.
+-}
+empty : Table
+empty =
+    Table Dict.empty
 
-        "Ferrari" ->
-            -- Ferrari Red
-            known name (oklch 0.45 0.25 30) "ferrari"
 
-        "Ford" ->
-            -- Ford Blue
-            known name (oklch 0.45 0.25 260) "ford"
+decoder : Decoder Table
+decoder =
+    field "manufacturers" (Decode.list entryDecoder)
+        |> Decode.map (Dict.fromList >> Table)
 
-        "Genesis" ->
-            known name (oklch 0.6 0 0) "genesis"
 
-        "Lexus" ->
-            -- Lexus Dark Red
-            known name (oklch 0.4 0.2 50) "lexus"
+entryDecoder : Decoder ( String, Entry )
+entryDecoder =
+    Decode.map3
+        (\name color logoUrl -> ( name, { color = color, logoUrl = logoUrl } ))
+        (field "name" string)
+        (field "color" colorDecoder)
+        (Decode.maybe (field "logo" string))
 
-        "McLaren" ->
-            -- McLaren Orange
-            known name (oklch 0.6 0.25 80) "mclaren"
 
-        "Mercedes" ->
-            -- Mercedes Silver
-            known name (oklch 0.7 0 0) "mercedes"
+colorDecoder : Decoder Color
+colorDecoder =
+    Decode.map3 oklch
+        (field "l" float)
+        (field "c" float)
+        (field "h" float)
 
-        "Peugeot" ->
-            -- Peugeot Lime Green
-            known name (oklch 0.7 0.25 120) "peugeot"
 
-        "Porsche" ->
-            -- Porsche Silver
-            known name (oklch 0.8 0 0) "porsche"
+{-| `carNumber` is what tells the cars of a manufacturer the table does not name
+apart.
+-}
+fromName : Table -> { name : String, carNumber : String } -> Manufacturer
+fromName (Table table) { name, carNumber } =
+    case Dict.get name table of
+        Just entry ->
+            { name = name
+            , color = entry.color
+            , chartColor = entry.color
+            , logoUrl = entry.logoUrl
+            }
 
-        "Toyota" ->
-            -- Toyota Dark Grey
-            known name (oklch 0.6 0 0) "toyota"
-
-        _ ->
+        Nothing ->
             { unknown
                 | name = name
                 , chartColor = generatedColor carNumber
             }
-
-
-known : String -> Color -> String -> Manufacturer
-known name color logo =
-    { name = name
-    , color = color
-    , chartColor = color
-    , logoUrl = Just ("/assets/manufacturer-logos/" ++ logo ++ ".png")
-    }
 
 
 generatedColor : String -> Color
