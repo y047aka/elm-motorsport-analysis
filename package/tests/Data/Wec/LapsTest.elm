@@ -47,6 +47,64 @@ suite =
                         |> Result.mapError (String.left 8)
                         |> Expect.equal (Err "line 3: ")
             ]
+        , describe "the mini-sectors of a lap, where the feed splits it that far"
+            [ test "reads each one's time and its running total from the line" <|
+                \_ ->
+                    Laps.fromJsonl lapWithMiniSectors
+                        |> Result.map (List.filterMap .miniSectors >> List.map (\ms -> ( ms.scl2, ms.fl )))
+                        |> Expect.equal
+                            (Ok
+                                [ ( { time = Just 20708, elapsedInLap = Just 20708 }
+                                  , { time = Just 3483, elapsedInLap = Just 234555 }
+                                  )
+                                ]
+                            )
+            , test "reads a mini-sector the CLI left out as one with nothing in it" <|
+                \_ ->
+                    -- A key short of fifteen is a mini-sector the feed had
+                    -- nothing to say about, not a file of the wrong shape.
+                    Laps.fromJsonl lapMissingAMiniSector
+                        |> Result.map (List.filterMap .miniSectors >> List.map .fordout)
+                        |> Expect.equal (Ok [ { time = Nothing, elapsedInLap = Nothing } ])
+            , test "reads a blank time on a mini-sector that still has its total" <|
+                \_ ->
+                    Laps.fromJsonl lapMissingAMiniSector
+                        |> Result.map (List.filterMap .miniSectors >> List.map .fl)
+                        |> Expect.equal (Ok [ { time = Nothing, elapsedInLap = Just 217793 } ])
+            , test "leaves a round whose feed records none without any" <|
+                \_ ->
+                    Laps.fromJsonl twoLaps
+                        |> Result.map (List.map .miniSectors)
+                        |> Expect.equal (Ok [ Nothing, Nothing ])
+            , test "carries the car's running best for each of them through attach" <|
+                \_ ->
+                    -- The second lap's SCL2 is the slower of the two, so the
+                    -- baseline it is rated against stays the first lap's.
+                    Laps.fromJsonl (lapWithMiniSectors ++ slowerSecondLap)
+                        |> Result.map
+                            (\rawLaps ->
+                                Laps.attach rawLaps (placeholderCars [ "1" ])
+                                    |> List.concatMap .laps
+                                    |> List.filterMap .miniSectors
+                                    |> List.map (.scl2 >> (\scl2 -> ( scl2.time, scl2.personalBest )))
+                            )
+                        |> Expect.equal
+                            (Ok [ ( Just 20708, Just 20708 ), ( Just 21000, Just 20708 ) ])
+            , test "keeps the mini-sectors of a lap with no lap time out of that best" <|
+                \_ ->
+                    -- The quicker SCL2 belongs to the lap the feed has no time
+                    -- for, which the records throw out; the baseline is the
+                    -- slower one the car set on a lap it did run.
+                    Laps.fromJsonl (lapWithoutALapTime ++ slowerSecondLap)
+                        |> Result.map
+                            (\rawLaps ->
+                                Laps.attach rawLaps (placeholderCars [ "1" ])
+                                    |> List.concatMap .laps
+                                    |> List.filterMap .miniSectors
+                                    |> List.map (.scl2 >> .personalBest)
+                            )
+                        |> Expect.equal (Ok [ Nothing, Just 21000 ])
+            ]
         , describe "attach"
             [ test "accumulates per-car best lap times" <|
                 \_ ->
@@ -106,6 +164,7 @@ suite =
                               , lapNumber = 2
                               , lapTime = 100000
                               , sectors = Sector.initialize (always Nothing)
+                              , miniSectors = Nothing
                               , elapsed = Instant.fromDuration 200000
                               , pitTime = Just 50000
                               }
@@ -132,6 +191,41 @@ twoLaps =
 """
 
 
+{-| One Le Mans lap, whose feed splits it into fifteen mini-sectors: each one's
+own time, and the running total from the line that places it.
+-}
+lapWithMiniSectors : String
+lapWithMiniSectors =
+    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"3:54.555","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:39.395"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fordout":{"time":"6.560","elapsed":"3:51.072"},"fl":{"time":"3.483","elapsed":"3:54.555"}},"elapsed":"3:54.555","pitTime":""}
+"""
+
+
+{-| The same lap as the file spells one it is a mini-sector short of: no
+`fordout` key at all, and an `fl` with a running total but no time of its own.
+-}
+lapMissingAMiniSector : String
+lapMissingAMiniSector =
+    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"3:37.793","improvement":0},"sectors":{"s1":{"time":"51.908"},"s2":{"time":"1:23.252"},"s3":{"time":"1:22.633"}},"miniSectors":{"scl2":{"time":"20.708","elapsed":"20.708"},"z4":{"time":"13.826","elapsed":"34.534"},"ip1":{"time":"17.374","elapsed":"51.908"},"z12":{"time":"35.154","elapsed":"1:27.062"},"sclc":{"time":"4.685","elapsed":"1:31.747"},"a7_1":{"time":"26.059","elapsed":"1:57.806"},"ip2":{"time":"17.354","elapsed":"2:15.160"},"a8_1":{"time":"6.928","elapsed":"2:22.088"},"sclb":{"time":"37.644","elapsed":"2:59.732"},"porin":{"time":"17.155","elapsed":"3:16.887"},"porout":{"time":"16.786","elapsed":"3:33.673"},"pitref":{"time":"7.954","elapsed":"3:41.627"},"scl1":{"time":"2.885","elapsed":"3:44.512"},"fl":{"time":"","elapsed":"3:37.793"}},"elapsed":"3:37.793","pitTime":""}
+"""
+
+
+{-| A lap the feed did not record, which reaches the app as a `0.000` lap time
+and its mini-sectors all the same. Its SCL2 is quicker than any real one here.
+-}
+lapWithoutALapTime : String
+lapWithoutALapTime =
+    """{"carNumber":"1","lapNumber":1,"driverName":"D","lap":{"time":"0.000","improvement":0},"sectors":{"s1":{"time":""},"s2":{"time":""},"s3":{"time":""}},"miniSectors":{"scl2":{"time":"19.000","elapsed":"19.000"}},"elapsed":"3:30.000","pitTime":""}
+"""
+
+
+{-| A second lap for the same car, quicker overall and slower through SCL2.
+-}
+slowerSecondLap : String
+slowerSecondLap =
+    """{"carNumber":"1","lapNumber":2,"driverName":"D","lap":{"time":"3:30.000","improvement":0},"sectors":{"s1":{"time":"52.000"},"s2":{"time":"1:23.000"},"s3":{"time":"1:15.000"}},"miniSectors":{"scl2":{"time":"21.000","elapsed":"21.000"}},"elapsed":"7:24.555","pitTime":""}
+"""
+
+
 rawLap : String -> Int -> Int -> Int -> RawLap
 rawLap carNumber lapNumber lapTime elapsed =
     { carNumber = carNumber
@@ -139,6 +233,7 @@ rawLap carNumber lapNumber lapTime elapsed =
     , lapNumber = lapNumber
     , lapTime = lapTime
     , sectors = Sector.initialize (always Nothing)
+    , miniSectors = Nothing
     , elapsed = Instant.fromDuration elapsed
     , pitTime = Nothing
     }

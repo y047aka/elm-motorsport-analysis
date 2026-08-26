@@ -135,9 +135,48 @@ suite =
                     carAt "1" (snapshotAt 7000)
                         |> Maybe.map
                             (.currentLap
-                                >> (\lap -> ( lap.miniSectors, lap.sector.sector ))
+                                >> (\lap -> ( lap.miniSectors, Maybe.map .sector lap.sector ))
                             )
-                        |> Expect.equal (Just ( Snapshot.NotRecorded, S2 ))
+                        |> Expect.equal (Just ( Snapshot.NotRecorded, Just S2 ))
+            ]
+        , describe "a stretch of the lap the source data cannot place"
+            [ test "stops the sectors filling in, rather than reading as one the car is through" <|
+                \_ ->
+                    -- Car 5's S3 has no time, so nothing places the car from
+                    -- 3.000, where S2 ended, to the line at 6.000.
+                    sectorStatesOf "5" (fieldWithUntimedSectors [ S3 ] 5000)
+                        |> Maybe.map (Sector.values >> List.map stateName)
+                        |> Expect.equal (Just [ "Completed", "Completed", "NotEntered" ])
+            , test "leaves every sector unentered where the lap places none of them" <|
+                \_ ->
+                    sectorStatesOf "5" (fieldWithUntimedSectors [ S1, S2, S3 ] 3000)
+                        |> Maybe.map (Sector.values >> List.map stateName)
+                        |> Expect.equal (Just [ "NotEntered", "NotEntered", "NotEntered" ])
+            , test "and reads them all as behind the car once the lap is over, blanks and all" <|
+                \_ ->
+                    sectorStatesOf "5" (fieldWithUntimedSectors [ S3 ] 6000)
+                        |> Maybe.map (Sector.values >> List.map stateName)
+                        |> Expect.equal (Just [ "Completed", "Completed", "Completed" ])
+            , test "stops the mini-sectors filling in at the last one the lap can place" <|
+                \_ ->
+                    -- SCLC's running total is what places SCLC and starts
+                    -- A7-1, so 5.500 falls in a stretch two mini-sectors wide.
+                    miniSectorStatesOf (leMansFieldMissing SCLC 5500)
+                        |> Maybe.map
+                            (\states ->
+                                ( stateName states.z12, stateName states.sclc, stateName states.fl )
+                            )
+                        |> Expect.equal (Just ( "Completed", "NotEntered", "NotEntered" ))
+            , test "leaves every mini-sector unentered where the gap is the first of them" <|
+                \_ ->
+                    miniSectorStatesOf (leMansFieldMissing SCL2 1500)
+                        |> Maybe.map (LeMans.values >> List.map stateName)
+                        |> Expect.equal (Just (List.repeat 15 "NotEntered"))
+            , test "and reads them all as behind the car once the lap is over" <|
+                \_ ->
+                    miniSectorStatesOf (leMansFieldMissing SCLC 15000)
+                        |> Maybe.map (LeMans.values >> List.map stateName)
+                        |> Expect.equal (Just (List.repeat 15 "Completed"))
             ]
         , describe "the record a running lap is rated against is the car's own, at that moment"
             [ test "it is the best of the laps the car has finished, not of the one it is running" <|
@@ -239,6 +278,15 @@ sectorStatesOf carNumber snapshot =
         |> Maybe.map (.currentLap >> .sectorStates)
 
 
+{-| The mini-sector strip of the one car every Le Mans fixture here fields.
+-}
+miniSectorStatesOf : Snapshot -> Maybe Snapshot.CurrentMiniSectorStates
+miniSectorStatesOf snapshot =
+    carAt "7" snapshot
+        |> Maybe.andThen (.currentLap >> .miniSectors >> recordedMiniSectors)
+        |> Maybe.map .states
+
+
 completedLastLap :
     Snapshot.LastLap
     ->
@@ -326,6 +374,75 @@ leMansCar =
             [ lapOf "7" 1 15000 15000 { s1 = 3000, s2 = 4000, s3 = 8000 }
                 |> withEvenMiniSectors 1000
             ]
+    }
+
+
+{-| The same car, with one mini-sector's running total missing, as the source
+data leaves one it has no total for. That total places its own mini-sector and
+starts the next, so losing it loses both.
+-}
+leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
+leMansFieldMissing missing elapsed =
+    Race.fromCars { timeLimit = Instant.raceStart }
+        [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
+        |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+
+
+withoutRunningTotalFor : LeMans2025MiniSector -> Lap -> Lap
+withoutRunningTotalFor missing lap =
+    { lap
+        | miniSectors =
+            lap.miniSectors
+                |> Maybe.map
+                    (LeMans.map2
+                        (\mini times ->
+                            if mini == missing then
+                                { times | elapsedInLap = Nothing }
+
+                            else
+                                times
+                        )
+                        (LeMans.initialize identity)
+                    )
+    }
+
+
+{-| A car the source data did not time through some of its sectors, which it
+leaves blank rather than at zero. Its one lap runs from the start to 6.000.
+-}
+fieldWithUntimedSectors : List Sector -> Duration -> Snapshot
+fieldWithUntimedSectors untimed elapsed =
+    Race.fromCars { timeLimit = Instant.raceStart } [ carWithoutSectorTimes untimed ]
+        |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+
+
+carWithoutSectorTimes : List Sector -> Car
+carWithoutSectorTimes untimed =
+    { metadata = metadataOf "5" (classOf "HYPERCAR")
+    , startPosition = 1
+    , laps =
+        withRunningBests
+            [ List.foldl withoutSectorTime
+                (lapOf "5" 1 6000 6000 { s1 = 1000, s2 = 2000, s3 = 3000 })
+                untimed
+            ]
+    }
+
+
+withoutSectorTime : Sector -> Lap -> Lap
+withoutSectorTime missing lap =
+    { lap
+        | sectors =
+            Sector.map2
+                (\sector times ->
+                    if sector == missing then
+                        { times | time = Nothing }
+
+                    else
+                        times
+                )
+                (Sector.initialize identity)
+                lap.sectors
     }
 
 

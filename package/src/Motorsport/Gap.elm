@@ -139,14 +139,26 @@ behind is now.
 lapsBetween : Clock -> { ahead : Competitor a, behind : Competitor b } -> Int
 lapsBetween clock { ahead, behind } =
     let
-        currentSector =
-            Lap.currentSector clock behind.currentLap
+        currentMini =
+            Lap.currentMiniSector clock behind.currentLap
 
         hasComeBackRound =
-            Instant.compare
-                (Lap.sectorStart currentSector ahead.currentLap)
-                (Lap.sectorStart currentSector behind.currentLap)
-                == LT
+            case currentMini of
+                Just mini ->
+                    Instant.compare
+                        (Lap.miniSectorStart mini ahead.currentLap)
+                        (Lap.miniSectorStart mini behind.currentLap)
+                        == LT
+
+                Nothing ->
+                    let
+                        currentSector =
+                            Lap.currentSector clock behind.currentLap
+                    in
+                    Instant.compare
+                        (Lap.sectorStart currentSector ahead.currentLap)
+                        (Lap.sectorStart currentSector behind.currentLap)
+                        == LT
     in
     case ahead.currentLap.lap - behind.currentLap.lap of
         0 ->
@@ -161,7 +173,7 @@ lapsBetween clock { ahead, behind } =
 
 
 {-| How long ago `ahead` was where `behind` is now, measured from the start of
-the sector `behind` is driving.
+the sector or mini-sector `behind` is driving.
 
 Both cars are read on the lap `behind` is on, which is why the lap in front
 comes out of `ahead.laps` rather than off its `currentLap`: with no lap between
@@ -174,19 +186,33 @@ secondsBetween clock { ahead, behind } =
         behindLap =
             behind.currentLap
 
-        currentSector =
-            Lap.currentSector clock behindLap
+        currentMini =
+            Lap.currentMiniSector clock behindLap
     in
     ahead.laps
         |> List.Extra.find (\lap -> lap.lap == behindLap.lap)
         |> Maybe.map
             (\aheadLap ->
-                seconds
-                    (Instant.since
-                        { from = Lap.sectorStart currentSector aheadLap
-                        , to = Lap.sectorStart currentSector behindLap
-                        }
-                    )
+                case currentMini of
+                    Just mini ->
+                        seconds
+                            (Instant.since
+                                { from = Lap.miniSectorStart mini aheadLap
+                                , to = Lap.miniSectorStart mini behindLap
+                                }
+                            )
+
+                    Nothing ->
+                        let
+                            currentSector =
+                                Lap.currentSector clock behindLap
+                        in
+                        seconds
+                            (Instant.since
+                                { from = Lap.sectorStart currentSector aheadLap
+                                , to = Lap.sectorStart currentSector behindLap
+                                }
+                            )
             )
         |> Maybe.withDefault none
 

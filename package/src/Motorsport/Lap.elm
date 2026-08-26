@@ -8,6 +8,7 @@ module Motorsport.Lap exposing
     , Segment, segments, sectorStart
     , SectorProgress, progressAt, currentSector
     , MiniSectorProgress, miniSegments, currentMiniSector, miniSectorProgressAt, miniSectorStart
+    , reachedAt, miniSectorReachedAt
     )
 
 {-|
@@ -29,6 +30,11 @@ module Motorsport.Lap exposing
 
 @docs SectorProgress, progressAt, currentSector
 @docs MiniSectorProgress, miniSegments, currentMiniSector, miniSectorProgressAt, miniSectorStart
+
+
+## How much of the lap is behind the car
+
+@docs reachedAt, miniSectorReachedAt
 
 -}
 
@@ -317,9 +323,9 @@ currentSector clock lap =
 
 {-| How far around the lap the car is: which sector, and how far through it.
 
-Not clamped: past the end of the lap gives more than 1, before its start gives
-a negative, and a sector with no recorded time gives infinity or NaN. Capping
-is a question about what is being drawn, so it is left to the caller.
+Not clamped: past the end of the lap gives more than 1 and before its start
+gives a negative. Capping is a question about what is being drawn, so it is left
+to the caller.
 
 -}
 type alias SectorProgress =
@@ -328,15 +334,23 @@ type alias SectorProgress =
     }
 
 
-progressAt : Clock -> Lap -> SectorProgress
+{-| `Nothing` where the sector the car falls in has no recorded time: there is
+nothing to measure how far through it the clock is.
+-}
+progressAt : Clock -> Lap -> Maybe SectorProgress
 progressAt clock lap =
     let
         ( sector, segment ) =
             currentSegment clock lap
     in
-    { sector = sector
-    , progress = progressThrough clock segment
-    }
+    if segment.time <= 0 then
+        Nothing
+
+    else
+        Just
+            { sector = sector
+            , progress = progressThrough clock segment
+            }
 
 
 {-| How far through a segment a moment of race time is, as a fraction of it.
@@ -451,3 +465,50 @@ miniSectorStart mini lap =
         |> List.Extra.find (\( candidate, _ ) -> candidate == mini)
         |> Maybe.map (Tuple.second >> .start)
         |> Maybe.withDefault (lapStart lap)
+
+
+
+-- HOW MUCH OF THE LAP IS BEHIND THE CAR
+
+
+{-| The last sector the clock has entered: the one it falls inside, or the one
+before a stretch the lap cannot place it in.
+
+Capped at 1, unlike [`progressAt`](#progressAt): a sector the car has left reads
+as behind it rather than as a progress past the end of it. `Nothing` where the
+lap places no sector behind the clock at all.
+
+-}
+reachedAt : Clock -> Lap -> Maybe SectorProgress
+reachedAt clock lap =
+    segments lap
+        |> Sector.toList
+        |> List.filter (\( _, segment ) -> entered clock segment)
+        |> List.Extra.last
+        |> Maybe.map
+            (\( sector, segment ) ->
+                { sector = sector, progress = min 1 (progressThrough clock segment) }
+            )
+
+
+{-| The mini-sector counterpart of [`reachedAt`](#reachedAt).
+-}
+miniSectorReachedAt : Clock -> Lap -> Maybe MiniSectorProgress
+miniSectorReachedAt clock lap =
+    miniSegments lap
+        |> List.filter (\( _, segment ) -> entered clock segment)
+        |> List.Extra.last
+        |> Maybe.map
+            (\( miniSector, segment ) ->
+                { miniSector = miniSector, progress = min 1 (progressThrough clock segment) }
+            )
+
+
+{-| Whether the clock has reached the start of a stretch the lap can place. A
+stretch with no time is not one the lap can put the car behind:
+[`segments`](#segments) gives an untimed sector no length, so it would otherwise
+read as entered and left at the instant the one before it ended.
+-}
+entered : Clock -> Segment -> Bool
+entered clock segment =
+    segment.time > 0 && Instant.compare segment.start clock.elapsed /= GT

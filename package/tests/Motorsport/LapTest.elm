@@ -114,15 +114,21 @@ tests =
                     [ 4000, 4500, 5000, 8500 ]
                         |> List.map (\elapsed -> Lap.progressAt { elapsed = instant elapsed } lap)
                         |> Expect.equal
-                            [ { sector = S1, progress = 0 }
-                            , { sector = S1, progress = 0.5 }
-                            , { sector = S2, progress = 0 }
-                            , { sector = S3, progress = 0.5 }
+                            [ Just { sector = S1, progress = 0 }
+                            , Just { sector = S1, progress = 0.5 }
+                            , Just { sector = S2, progress = 0 }
+                            , Just { sector = S3, progress = 0.5 }
                             ]
             , test "reports past the end of a lap that is already over, rather than capping" <|
                 \_ ->
-                    (Lap.progressAt { elapsed = instant 11500 } lap).progress
+                    Lap.progressAt { elapsed = instant 11500 } lap
+                        |> Maybe.map .progress
+                        |> Maybe.withDefault 0
                         |> Expect.greaterThan 1
+            , test "places no car on a lap whose sectors the source data left without times" <|
+                \_ ->
+                    Lap.progressAt { elapsed = instant 5000 } { lap | sectors = empty.sectors }
+                        |> Expect.equal Nothing
             ]
         , describe "currentSector"
             [ test "picks the sector holding the moment, and hands over on the boundary" <|
@@ -144,9 +150,9 @@ tests =
                         |> List.map (\sector -> Lap.sectorStart sector lap)
                         |> List.map (\start -> Lap.progressAt { elapsed = start } lap)
                         |> Expect.equal
-                            [ { sector = S1, progress = 0 }
-                            , { sector = S2, progress = 0 }
-                            , { sector = S3, progress = 0 }
+                            [ Just { sector = S1, progress = 0 }
+                            , Just { sector = S2, progress = 0 }
+                            , Just { sector = S3, progress = 0 }
                             ]
             ]
         , describe "miniSegments"
