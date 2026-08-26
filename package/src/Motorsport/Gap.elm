@@ -173,7 +173,7 @@ lapsBetween clock { ahead, behind } =
 
 
 {-| How long ago `ahead` was where `behind` is now, measured from the start of
-the sector `behind` is driving.
+the sector or mini-sector `behind` is driving.
 
 Both cars are read on the lap `behind` is on, which is why the lap in front
 comes out of `ahead.laps` rather than off its `currentLap`: with no lap between

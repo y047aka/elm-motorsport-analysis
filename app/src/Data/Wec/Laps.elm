@@ -103,10 +103,9 @@ sectorTimeDecoder =
 
 
 {-| The mini-sector counterpart, on the rounds whose feed splits the lap that
-far. Every key is `optional`, unlike the same names in the summary's shares: the
-CLI drops a mini-sector it has neither a time nor a running total for, so a key
-short of fifteen is a mini-sector the feed says nothing about rather than a file
-of the wrong shape, and the lap has to decode all the same.
+far. Every key is `optional`: the CLI drops a mini-sector it has neither a time
+nor a running total for, so a key short of fifteen is a mini-sector the feed
+says nothing about rather than a file of the wrong shape.
 -}
 miniSectorsDecoder : Decoder (ByMiniSector RawMiniSector)
 miniSectorsDecoder =
