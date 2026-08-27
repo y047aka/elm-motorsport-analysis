@@ -11,7 +11,6 @@ the front of the race without requiring any selection.
 import Html exposing (Html, button, div, text)
 import Html.Attributes as Attributes exposing (class)
 import Html.Events exposing (onClick)
-import Html.Styled
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
@@ -55,10 +54,7 @@ view config snapshot =
                 [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
                 , div
                     [ class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-2" ]
-                    (List.map
-                        (\car -> Html.Styled.toUnstyled (CarCard.view lapHistory allCars car))
-                        window
-                    )
+                    (List.map (CarCard.view lapHistory allCars) window)
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 

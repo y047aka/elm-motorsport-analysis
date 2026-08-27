@@ -46,11 +46,11 @@ truth is pretty great!
 import Array exposing (Array)
 import Compare exposing (Comparator)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html.Styled exposing (Attribute, Html, button, div, input, span, text)
-import Html.Styled.Attributes as Attributes exposing (class, type_)
-import Html.Styled.Events exposing (on, onClick)
-import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy as Lazy exposing (lazy4)
+import Html exposing (Attribute, Html, button, div, input, span, text)
+import Html.Attributes as Attributes exposing (class, type_)
+import Html.Events exposing (on, onClick)
+import Html.Keyed as Keyed
+import Html.Lazy as Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
 import UI.Table as Table exposing (td, th, tr)

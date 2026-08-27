@@ -91,15 +91,15 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                 [ Attributes.class "grid gap-y-3" ]
                 [ div
                     [ Attributes.class "flex items-center gap-x-3" ]
-                    [ CarSelector.classBadge first.metadata.class
-                    , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
+                    [ Html.Styled.fromUnstyled (CarSelector.classBadge first.metadata.class)
+                    , Html.Styled.fromUnstyled (CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers)
                     ]
                 , div
                     -- Tailwind's class scanner needs a literal class name, so this can't be
                     -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
                     [ Attributes.class "grid gap-x-4 grid-cols-3" ]
-                    (List.map (CarSummary.carSummary lapRange distScale lapHistory) selectedEntries
-                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
+                    (List.map (\item -> Html.Styled.fromUnstyled (CarSummary.carSummary lapRange distScale lapHistory item)) selectedEntries
+                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) (Html.Styled.fromUnstyled CarSummary.placeholderCard)
                     )
                 , Html.Styled.fromUnstyled
                     (ChartTabs.chartTabs onSelectChart

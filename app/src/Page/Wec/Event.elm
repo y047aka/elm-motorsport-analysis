@@ -201,13 +201,15 @@ trackerView track snapshot m =
         [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[minmax(0,1fr)_auto] gap-2.5" ]
         [ div
             [ Attributes.class "col-start-1 h-full overflow-y-hidden" ]
-            [ LiveStandingsWidget.view
-                { snapshot = snapshot
+            [ Html.Styled.fromUnstyled
+                (LiveStandingsWidget.view
+                    { snapshot = snapshot
 
-                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
-                , onSelectCar = ShowCarDetail
-                , popoverTarget = CarDetailPopover.popoverId
-                }
+                    -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
+                    , onSelectCar = ShowCarDetail
+                    , popoverTarget = CarDetailPopover.popoverId
+                    }
+                )
             ]
         , div
             [ Attributes.class "card bg-base-200 col-start-2" ]

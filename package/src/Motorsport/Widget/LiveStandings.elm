@@ -1,10 +1,10 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Html.Styled exposing (Html, button, div, li, text)
-import Html.Styled.Attributes exposing (attribute, class)
-import Html.Styled.Events exposing (onClick)
-import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy as Lazy
+import Html exposing (Html, button, div, li, text)
+import Html.Attributes exposing (attribute, class)
+import Html.Events exposing (onClick)
+import Html.Keyed as Keyed
+import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)

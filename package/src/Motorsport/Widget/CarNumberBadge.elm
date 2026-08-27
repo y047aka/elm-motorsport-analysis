@@ -10,8 +10,8 @@ needs, and none of it moves as the race does.
 
 -}
 
-import Html.Styled exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (alt, class, src, style)
+import Html exposing (Html, div, img, text)
+import Html.Attributes exposing (alt, class, src, style)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 

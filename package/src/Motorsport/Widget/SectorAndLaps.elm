@@ -7,18 +7,18 @@ shared by SelectedCarsStrip and Compare.
 
 -}
 
-import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class, style)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class, style)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status
-import Path.Styled as Path
+import Path
 import Shape
-import Svg.Styled exposing (Svg, g, svg)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (viewBox)
+import Svg exposing (Svg, g, svg)
+import Svg.Attributes as SvgAttr
+import TypedSvg.Attributes exposing (viewBox)
 
 
 {-| The pie shows sector progress of the current lap, so it shares a column

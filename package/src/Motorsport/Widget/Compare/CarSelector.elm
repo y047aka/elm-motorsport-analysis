@@ -6,9 +6,9 @@ module Motorsport.Widget.Compare.CarSelector exposing (carSelector, classBadge)
 
 -}
 
-import Html.Styled exposing (Html, button, div, text)
-import Html.Styled.Attributes as Attributes exposing (style)
-import Html.Styled.Events exposing (onClick)
+import Html exposing (Html, button, div, text)
+import Html.Attributes as Attributes exposing (style)
+import Html.Events exposing (onClick)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class as Class exposing (Class)
 

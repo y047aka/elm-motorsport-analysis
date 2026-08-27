@@ -7,8 +7,9 @@ Compare widget, plus the placeholder that fills an unselected slot.
 
 -}
 
-import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (class)
+import Html.Styled
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
@@ -59,16 +60,18 @@ lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> C
 lapTimePanel maybeRange maybeScale lapHistory item =
     div
         [ class (glassPanelClass ++ " p-2 grid gap-y-2") ]
-        [ Html.Styled.fromUnstyled (panelLabel "Lap time")
+        [ panelLabel "Lap time"
         , div [ class "pb-1" ]
             [ SectorAndLaps.view item ]
         , div
             [ class "pt-1 border-t border-t-[oklch(1_0_0/0.05)]" ]
             [ case ( maybeRange, maybeScale ) of
                 ( Just range, Just { domain, maxDensity } ) ->
-                    LapTimeDistribution.view
-                        { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                        [ Distribution.seriesOf lapHistory range item ]
+                    Html.Styled.toUnstyled
+                        (LapTimeDistribution.view
+                            { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
+                            [ Distribution.seriesOf lapHistory range item ]
+                        )
 
                 _ ->
                     text ""

@@ -53,9 +53,9 @@ module Motorsport.Widget.Leaderboard exposing
 import Compare
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
-import Html.Styled exposing (Html, div, img, span, text)
-import Html.Styled.Attributes exposing (alt, class, src, style)
-import Html.Styled.Lazy as Lazy
+import Html exposing (Html, div, img, span, text)
+import Html.Attributes exposing (alt, class, src, style)
+import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Chart.Histogram as Histogram
 import Motorsport.Driver as Driver exposing (Driver)

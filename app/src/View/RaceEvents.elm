@@ -12,7 +12,6 @@ elapsed time) as a sortable table.
 import Compare
 import DataView
 import Html exposing (Html, div, text)
-import Html.Styled
 import Motorsport.Clock as Clock
 import Motorsport.Instant as Instant
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
@@ -32,7 +31,7 @@ view toMsg eventsState replay =
     in
     div []
         [ Html.h2 [] [ text "Race Events" ]
-        , Html.Styled.toUnstyled (DataView.view (config toMsg) eventsState occurredEvents)
+        , DataView.view (config toMsg) eventsState occurredEvents
         ]
 
 

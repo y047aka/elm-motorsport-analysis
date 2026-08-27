@@ -9,12 +9,10 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 import Compare
 import DataView
 import Effect exposing (Effect)
-import Html
-import Html.Attributes exposing (class)
-import Html.Events exposing (onClick)
-import Html.Styled exposing (Html, div, header, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (type_, value)
-import Html.Styled.Events exposing (onInput)
+import Html exposing (Html, div, header, input, nav, text)
+import Html.Attributes as Attributes exposing (class, type_, value)
+import Html.Events exposing (onClick, onInput)
+import Html.Styled
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -89,7 +87,7 @@ view shared { leaderboardState } =
                 []
 
             Just { replay } ->
-                debugView replay leaderboardState
+                debugView replay leaderboardState |> List.map Html.Styled.fromUnstyled
     }
 
 
@@ -117,13 +115,11 @@ debugView replay leaderboardState =
                 , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
                 ]
                 []
-            , Html.Styled.fromUnstyled
-                (labeledButton []
-                    [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ Html.text "-" ]
-                    , basicLabel [ class "join-item" ] [ Html.text (String.fromInt lapCount) ]
-                    , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ Html.text "+" ]
-                    ]
-                )
+            , labeledButton []
+                [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
+                , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
+                , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
+                ]
             , text (Clock.getElapsed playback |> Instant.toString)
             ]
         , div []

@@ -1,14 +1,14 @@
 module Motorsport.Chart.Histogram exposing (view)
 
-import Html.Styled exposing (Html)
+import Html exposing (Html)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg, g, rect, svg)
-import Svg.Styled.Attributes as SvgAttributes
-import TypedSvg.Styled.Attributes as TypedSvgAttributes
-import TypedSvg.Styled.Attributes.InPx as InPx
+import Svg exposing (Svg, g, rect, svg)
+import Svg.Attributes as SvgAttributes
+import TypedSvg.Attributes as TypedSvgAttributes
+import TypedSvg.Attributes.InPx as InPx
 
 
 w : Float

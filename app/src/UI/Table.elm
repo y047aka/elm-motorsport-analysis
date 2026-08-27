@@ -10,8 +10,8 @@ module UI.Table exposing
 
 -}
 
-import Html.Styled as Html exposing (Attribute, Html)
-import Html.Styled.Attributes exposing (class)
+import Html exposing (Attribute, Html)
+import Html.Attributes exposing (class)
 
 
 {-| Basic table using daisyUI table class
