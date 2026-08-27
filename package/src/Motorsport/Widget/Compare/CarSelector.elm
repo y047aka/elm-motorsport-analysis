@@ -63,7 +63,7 @@ carSelectorChip onToggleCar isSelected item =
             , if isSelected then
                 Css.batch
                     [ property "border" ("1px solid " ++ manufacturerColor)
-                    , property "background-color" ("oklch(from " ++ manufacturerColor ++ "l c h / 0.3)")
+                    , property "background-color" ("oklch(from " ++ manufacturerColor ++ " l c h / 0.3)")
                     ]
 
               else
