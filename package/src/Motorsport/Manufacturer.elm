@@ -7,7 +7,7 @@ module Motorsport.Manufacturer exposing (Manufacturer, unknown)
 -}
 
 
-{-| The colours are CSS, ready to hand to a property or an SVG attribute.
+{-| The colours are CSS values.
 
 `chartColor` distinguishes the cars of a manufacturer that has no colour of its
 own, which `color` leaves all the same neutral.
@@ -21,8 +21,6 @@ type alias Manufacturer =
     }
 
 
-{-| The manufacturer of a car whose manufacturer is not known.
--}
 unknown : Manufacturer
 unknown =
     { name = ""

@@ -43,10 +43,9 @@ type alias Model =
     }
 
 
-{-| `Waiting` is a URL that arrived before the files a round is read against
-did. The calendar is what says where a round's own files are, and the
-manufacturer table is what its cars are coloured from, so the request waits
-rather than being guessed at.
+{-| `Waiting` is a URL that arrived before the calendar or the manufacturer
+table did. One says where a round's files are and the other what colours its
+cars, so the request waits rather than being guessed at.
 
 `Loading` carries no `Race`, which is what stops the previous round's cars being
 shown under this one's name.
@@ -95,8 +94,8 @@ type alias Race =
 
 
 {-| The calendar and the manufacturer table are asked for here rather than by
-the pages that read them: they are the same two files whichever route the app
-opened on, and a round reached by its URL still needs both.
+the pages that read them: they are the same files whichever route the app opened
+on, and a round reached by its URL still needs both.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
@@ -180,9 +179,8 @@ update msg m =
             ( m, Effect.none )
 
         ManufacturersLoaded result ->
-            -- Holding the race back over its colours is worse than running it
-            -- without them, so a table that could not be read names no one and
-            -- the cars are told apart by their numbers.
+            -- Unlike the calendar's, this failure does not hold the round
+            -- back: a table that names no one leaves the cars their numbers.
             resumeWaitingRound
                 { m | manufacturers = Just (Result.withDefault Dict.empty result) }
 
@@ -205,9 +203,8 @@ update msg m =
             ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
 
 
-{-| Called from every side of the race between the URL, the calendar and the
-manufacturer table, so whichever arrives last is the one that finds everything
-it needs here.
+{-| Called as the URL, the calendar and the manufacturer table arrive, so
+whichever is last is the one that finds everything it needs here.
 -}
 resumeWaitingRound : Model -> ( Model, Effect Msg )
 resumeWaitingRound m =
