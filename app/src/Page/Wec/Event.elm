@@ -11,9 +11,10 @@ import Browser.Events
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
-import Html.Styled exposing (Html, a, button, div, main_, nav, text)
-import Html.Styled.Attributes as Attributes exposing (attribute)
-import Html.Styled.Events exposing (onClick)
+import Html exposing (Html, a, button, div, main_, nav, text)
+import Html.Attributes as Attributes exposing (attribute)
+import Html.Events exposing (onClick)
+import Html.Styled
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
@@ -182,9 +183,10 @@ view shared m =
                             trackerView race.track race.snapshot m
 
                         Events ->
-                            Html.Styled.fromUnstyled (RaceEvents.view EventsMsg m.eventsState race.replay)
+                            RaceEvents.view EventsMsg m.eventsState race.replay
             ]
         ]
+            |> List.map Html.Styled.fromUnstyled
     }
 
 
@@ -201,45 +203,39 @@ trackerView track snapshot m =
         [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[minmax(0,1fr)_auto] gap-2.5" ]
         [ div
             [ Attributes.class "col-start-1 h-full overflow-y-hidden" ]
-            [ Html.Styled.fromUnstyled
-                (LiveStandingsWidget.view
-                    { snapshot = snapshot
+            [ LiveStandingsWidget.view
+                { snapshot = snapshot
 
-                    -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
-                    , onSelectCar = ShowCarDetail
-                    , popoverTarget = CarDetailPopover.popoverId
-                    }
-                )
+                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
+                , onSelectCar = ShowCarDetail
+                , popoverTarget = CarDetailPopover.popoverId
+                }
             ]
         , div
             [ Attributes.class "card bg-base-200 col-start-2" ]
             [ div [ Attributes.class "card-body p-3" ]
                 [ div
                     [ Attributes.class "h-full grid place-items-center" ]
-                    [ Html.Styled.fromUnstyled (TrackerChart.view track snapshot) ]
+                    [ TrackerChart.view track snapshot ]
                 ]
             ]
         , div
             [ Attributes.class "card bg-base-200 col-start-3" ]
             []
         , div [ Attributes.class "col-span-full" ]
-            [ Html.Styled.fromUnstyled
-                (SelectedCarsStrip.view
-                    { offset = m.stripOffset
-                    , onScrollTo = StripScrollTo
-                    }
-                    snapshot
-                )
-            ]
-        , Html.Styled.fromUnstyled
-            (CarDetailPopover.view
-                { activeChart = m.detailChart
-                , onToggleCar = ToggleDetailCar
-                , onSelectChart = SelectDetailChart
+            [ SelectedCarsStrip.view
+                { offset = m.stripOffset
+                , onScrollTo = StripScrollTo
                 }
                 snapshot
-                m.detailCarNumbers
-            )
+            ]
+        , CarDetailPopover.view
+            { activeChart = m.detailChart
+            , onToggleCar = ToggleDetailCar
+            , onSelectChart = SelectDetailChart
+            }
+            snapshot
+            m.detailCarNumbers
         ]
 
 
@@ -256,14 +252,12 @@ navigation title maybeRace currentMode =
                 text ""
 
             Just race ->
-                Html.Styled.fromUnstyled
-                    (PlaybackControls.view
-                        { replay = race.replay
-                        , onStart = StartRace
-                        , onPause = PauseRace
-                        , toReplayMsg = ReplayMsg
-                        }
-                    )
+                PlaybackControls.view
+                    { replay = race.replay
+                    , onStart = StartRace
+                    , onPause = PauseRace
+                    , toReplayMsg = ReplayMsg
+                    }
         , viewModeSelector currentMode
         ]
 
@@ -274,7 +268,7 @@ race list has to be reachable from the page itself.
 backLink : Html Msg
 backLink =
     a
-        [ Attributes.fromUnstyled (Route.href Route.Index)
+        [ Route.href Route.Index
         , Attributes.class "btn btn-sm btn-square btn-ghost opacity-60 hover:opacity-100"
         , attribute "aria-label" "Back to the race list"
         , Attributes.title "Back to the race list"
