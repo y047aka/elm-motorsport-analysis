@@ -21,11 +21,11 @@ import Motorsport.Duration as Duration
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime)
+import Motorsport.Manufacturer as Manufacturer
 import Motorsport.Race.Car as Car
 import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Class
-import Motorsport.Wec.Manufacturer
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
@@ -186,7 +186,7 @@ lapRow bestTimes index lap =
         , class = Motorsport.Wec.Class.none
         , group = ""
         , team = ""
-        , manufacturer = Motorsport.Wec.Manufacturer.Other
+        , manufacturer = Manufacturer.unknown
         }
     , currentDriver = lap.driver
     , lapsCompleted = lap.lap

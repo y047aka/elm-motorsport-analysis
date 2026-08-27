@@ -1,0 +1,74 @@
+{
+  "manufacturers": [
+    {
+      "name": "Alpine",
+      "color": "oklch(0.6 0.25 230)",
+      "logo": "/assets/manufacturer-logos/alpine.png"
+    },
+    {
+      "name": "Aston Martin",
+      "color": "oklch(0.5 0.25 180)",
+      "logo": "/assets/manufacturer-logos/aston-martin.png"
+    },
+    {
+      "name": "BMW",
+      "color": "oklch(0.5 0.25 250)",
+      "logo": "/assets/manufacturer-logos/bmw.png"
+    },
+    {
+      "name": "Cadillac",
+      "color": "oklch(0.7 0.3 105)",
+      "logo": "/assets/manufacturer-logos/cadillac.png"
+    },
+    {
+      "name": "Corvette",
+      "color": "oklch(0.7 0.3 105)",
+      "logo": "/assets/manufacturer-logos/corvette.png"
+    },
+    {
+      "name": "Ferrari",
+      "color": "oklch(0.45 0.25 30)",
+      "logo": "/assets/manufacturer-logos/ferrari.png"
+    },
+    {
+      "name": "Ford",
+      "color": "oklch(0.45 0.25 260)",
+      "logo": "/assets/manufacturer-logos/ford.png"
+    },
+    {
+      "name": "Genesis",
+      "color": "oklch(0.6 0 0)",
+      "logo": "/assets/manufacturer-logos/genesis.png"
+    },
+    {
+      "name": "Lexus",
+      "color": "oklch(0.4 0.2 50)",
+      "logo": "/assets/manufacturer-logos/lexus.png"
+    },
+    {
+      "name": "McLaren",
+      "color": "oklch(0.6 0.25 80)",
+      "logo": "/assets/manufacturer-logos/mclaren.png"
+    },
+    {
+      "name": "Mercedes",
+      "color": "oklch(0.7 0 0)",
+      "logo": "/assets/manufacturer-logos/mercedes.png"
+    },
+    {
+      "name": "Peugeot",
+      "color": "oklch(0.7 0.25 120)",
+      "logo": "/assets/manufacturer-logos/peugeot.png"
+    },
+    {
+      "name": "Porsche",
+      "color": "oklch(0.8 0 0)",
+      "logo": "/assets/manufacturer-logos/porsche.png"
+    },
+    {
+      "name": "Toyota",
+      "color": "oklch(0.6 0 0)",
+      "logo": "/assets/manufacturer-logos/toyota.png"
+    }
+  ]
+}

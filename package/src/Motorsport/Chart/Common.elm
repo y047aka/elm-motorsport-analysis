@@ -165,7 +165,7 @@ terminal dot, and the `label` beside it, are drawn only for the focused series.
 -}
 renderLine :
     Scales
-    -> { color : Css.Color, emphasis : Emphasis, label : String, points : List ( Int, Int ) }
+    -> { color : String, emphasis : Emphasis, label : String, points : List ( Int, Int ) }
     -> Svg msg
 renderLine scales { color, emphasis, label, points } =
     let
@@ -181,7 +181,7 @@ renderLine scales { color, emphasis, label, points } =
                     mutedColorValue color
 
                 _ ->
-                    color.value
+                    color
 
         strokeStyle =
             chooseByEmphasis
@@ -225,12 +225,12 @@ projectPoint { xScale, yScale } ( x, y ) =
 rather than all of it: a fully achromatic line would recede into the background
 but stop telling the cars apart.
 -}
-mutedColorValue : Css.Color -> String
+mutedColorValue : String -> String
 mutedColorValue color =
-    "oklch(from " ++ color.value ++ " 0.5 calc(c * 0.2) h)"
+    "oklch(from " ++ color ++ " 0.5 calc(c * 0.2) h)"
 
 
-terminalMarker : Scales -> { color : Css.Color, label : String } -> ( Int, Int ) -> Svg msg
+terminalMarker : Scales -> { color : String, label : String } -> ( Int, Int ) -> Svg msg
 terminalMarker scales { color, label } point =
     let
         ( x, y ) =
@@ -241,7 +241,7 @@ terminalMarker scales { color, label } point =
             [ InPx.cx x
             , InPx.cy y
             , InPx.r terminalDotRadius
-            , SvgAttr.css [ Css.fill color ]
+            , SvgAttr.fill color
             ]
             []
             :: (if String.isEmpty label then
@@ -253,15 +253,15 @@ terminalMarker scales { color, label } point =
         )
 
 
-terminalLabel : { x : Float, y : Float, color : Css.Color, label : String } -> Svg msg
+terminalLabel : { x : Float, y : Float, color : String, label : String } -> Svg msg
 terminalLabel { x, y, color, label } =
     text_
         [ InPx.x (x + terminalDotRadius + 3)
         , InPx.y y
         , SvgAttr.dominantBaseline "central"
+        , SvgAttr.fill color
         , SvgAttr.css
-            [ Css.fill color
-            , Css.fontSize (Css.px 9)
+            [ Css.fontSize (Css.px 9)
             , Css.fontWeight Css.bold
             ]
         ]

@@ -8,7 +8,10 @@ so how far one has got is read back through `Shared.race` and `Shared.roundId`
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar
 import Data.Wec.Laps as WecLaps
+import Data.Wec.Manufacturer as Manufacturer
+import Dict
 import Expect
+import Http
 import Json.Decode as Decode
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
@@ -78,12 +81,25 @@ lapsJsonl =
 """
 
 
+manufacturersJson : String
+manufacturersJson =
+    """
+    { "manufacturers":
+        [ { "name": "Toyota"
+          , "color": "oklch(0.6 0 0)"
+          , "logo": "/assets/manufacturer-logos/toyota.png"
+          }
+        ]
+    }
+    """
+
+
 summary : Maybe Wec.Event
 summary =
     Era.fromSeason 2025
         |> Maybe.andThen
             (\era ->
-                Decode.decodeString (Wec.eventDecoder era) summaryJson
+                Decode.decodeString (Wec.eventDecoder era manufacturers) summaryJson
                     |> Result.toMaybe
             )
 
@@ -128,6 +144,12 @@ calendar =
         |> Result.withDefault Calendar.empty
 
 
+manufacturers : Manufacturer.Manufacturers
+manufacturers =
+    Decode.decodeString Manufacturer.decoder manufacturersJson
+        |> Result.withDefault Dict.empty
+
+
 fresh : Shared.Model
 fresh =
     Shared.init () |> Tuple.first
@@ -139,6 +161,7 @@ already in when the URL arrived.
 loadingSpa : Shared.Model
 loadingSpa =
     fresh
+        |> step (ManufacturersLoaded (Ok manufacturers))
         |> step (CalendarLoaded (Ok calendar))
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
 
@@ -151,6 +174,7 @@ loadingSpaByDeepLink =
     fresh
         |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
         |> step (CalendarLoaded (Ok calendar))
+        |> step (ManufacturersLoaded (Ok manufacturers))
 
 
 step : Msg -> Shared.Model -> Shared.Model
@@ -166,12 +190,21 @@ suite =
                 ( summary /= Nothing, List.length laps )
                     |> Expect.equal ( True, 1 )
         , describe "update"
-            [ test "resolves the round whichever of the URL and the calendar is second" <|
+            [ test "resolves the round whichever of the URL, the calendar and the table is last" <|
                 \_ ->
                     [ loadingSpa, loadingSpaByDeepLink ]
                         |> List.map (Shared.roundId >> Maybe.map .name)
                         |> Expect.equalLists
                             [ Just "6 Hours of Spa", Just "6 Hours of Spa" ]
+            , test "opens a round the manufacturer table never reached" <|
+                \_ ->
+                    fresh
+                        |> step (ManufacturersLoaded (Err Http.NetworkError))
+                        |> step (CalendarLoaded (Ok calendar))
+                        |> step (FetchJson_Wec { season = "2025", event = "spa_6h" })
+                        |> Shared.roundId
+                        |> Maybe.map .name
+                        |> Expect.equal (Just "6 Hours of Spa")
             , test "loads a round reached by a deep link" <|
                 \_ ->
                     loadingSpaByDeepLink
@@ -182,6 +215,7 @@ suite =
             , test "leaves a round the calendar does not list unresolved" <|
                 \_ ->
                     fresh
+                        |> step (ManufacturersLoaded (Ok manufacturers))
                         |> step (CalendarLoaded (Ok calendar))
                         |> step (FetchJson_Wec { season = "2025", event = "monza_6h" })
                         |> (\m -> ( Shared.roundId m, Shared.race m ))

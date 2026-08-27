@@ -17,7 +17,6 @@ axis-less sparkline ([`gapSparkline`](#gapSparkline)).
 -}
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
-import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
 import List.Extra
@@ -26,14 +25,13 @@ import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
-import Motorsport.Wec.Manufacturer as Manufacturer
 import Scale
 import Svg.Styled exposing (Svg, line)
 import Svg.Styled.Attributes as SvgAttr
 
 
 type alias CarLine =
-    { color : Css.Color
+    { color : String
     , emphasis : Emphasis
     , carNumber : String
     , laps : List Lap
@@ -60,7 +58,7 @@ carLine lapHistory window emphasis entry =
         history =
             LapHistory.get entry.metadata.carNumber lapHistory
     in
-    { color = Manufacturer.toColorWithFallback entry.metadata
+    { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps =

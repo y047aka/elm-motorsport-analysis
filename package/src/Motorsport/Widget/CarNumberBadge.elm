@@ -13,8 +13,8 @@ needs, and none of it moves as the race does.
 import Css exposing (property)
 import Html.Styled exposing (Html, div, img, text)
 import Html.Styled.Attributes exposing (alt, class, css, src)
+import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
-import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 {-| Small stacked badge: logo on top, car number below.
@@ -55,16 +55,16 @@ badge : String -> List (Html msg) -> Car.Metadata -> Html msg
 badge containerClass children metadata =
     div
         [ class containerClass
-        , css [ Css.backgroundColor (Manufacturer.toColor metadata.manufacturer) ]
+        , css [ Css.property "background-color" metadata.manufacturer.color ]
         ]
         children
 
 
 manufacturerLogo : List Css.Style -> Manufacturer -> Html msg
 manufacturerLogo styles manufacturer =
-    case Manufacturer.toLogoUrl manufacturer of
+    case manufacturer.logoUrl of
         Just url ->
-            img [ src url, alt (Manufacturer.toString manufacturer), css styles ] []
+            img [ src url, alt manufacturer.name, css styles ] []
 
         Nothing ->
             div [ css styles ] []

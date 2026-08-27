@@ -6,7 +6,7 @@ import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
@@ -210,7 +210,7 @@ carWith carNumber laps =
         , class = Class.none
         , group = "H"
         , team = "Test Team"
-        , manufacturer = Other
+        , manufacturer = unknown
         }
     , startPosition = 1
     , laps = laps

@@ -65,11 +65,11 @@ import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (RatedTime, SegmentState, performanceLevel)
+import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Wec.Class as Class exposing (Class)
-import Motorsport.Wec.Manufacturer as Manufacturer exposing (Manufacturer)
 
 
 
@@ -363,16 +363,16 @@ viewCarNumberColumn_Wec { carNumber, manufacturer } =
             , textAlign center
             , fontSize (px 12)
             , fontWeight bold
-            , backgroundColor (Manufacturer.toColor manufacturer)
+            , property "background-color" manufacturer.color
             , borderRadius (px 5)
             , property "line-height" "1"
             ]
         ]
-        (case Manufacturer.toLogoUrl manufacturer of
+        (case manufacturer.logoUrl of
             Just logoUrl ->
                 [ img
                     [ src logoUrl
-                    , alt (Manufacturer.toString manufacturer)
+                    , alt manufacturer.name
                     , css
                         [ property "object-fit" "contain"
                         , height (px 14)

@@ -1,7 +1,6 @@
 module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
-import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
@@ -10,7 +9,6 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
-import Motorsport.Wec.Manufacturer as Manufacturer
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
 import Svg.Styled exposing (Svg)
@@ -67,7 +65,7 @@ buildClassProgressionData snapshot { class, highlighted } =
                 |> List.map
                     (\( item, points ) ->
                         { points = points
-                        , color = Manufacturer.toColorWithFallback item.metadata
+                        , color = item.metadata.manufacturer.color
                         , carNumber = item.metadata.carNumber
                         , emphasis =
                             if List.member item.metadata.carNumber highlighted then
@@ -93,7 +91,7 @@ type alias PositionPoint =
 
 type alias PositionSeries =
     { points : List PositionPoint
-    , color : Color
+    , color : String
     , carNumber : String
     , emphasis : Emphasis
     }

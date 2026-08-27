@@ -8,7 +8,7 @@ import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
-import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Race.TimelineEvent as TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)
 import Test exposing (Test, describe, test)
@@ -274,7 +274,7 @@ carWithLaps laps =
         , class = Class.none
         , group = "H"
         , team = "Test Team"
-        , manufacturer = Other
+        , manufacturer = unknown
         }
     , startPosition = 1
     , laps = laps

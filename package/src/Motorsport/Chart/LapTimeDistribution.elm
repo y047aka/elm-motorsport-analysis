@@ -28,7 +28,7 @@ import TypedSvg.Types exposing (Transform(..))
 removed; `lastLap` is marked as a single point on the curve.
 -}
 type alias Series =
-    { color : Css.Color
+    { color : String
     , emphasis : Emphasis
     , times : List Int
     , lastLap : Maybe Int
@@ -204,9 +204,9 @@ densityShape xScale yScale { series, samples, lastLapPoint } =
     in
     g []
         [ Path.element (Shape.area Shape.monotoneInXCurve areaPoints)
-            [ SvgAttr.fill ("oklch(from " ++ series.color.value ++ " l c h / 0.15)") ]
+            [ SvgAttr.fill ("oklch(from " ++ series.color ++ " l c h / 0.15)") ]
         , Path.element (Shape.line Shape.monotoneInXCurve linePoints)
-            [ SvgAttr.stroke series.color.value
+            [ SvgAttr.stroke series.color
             , SvgAttr.strokeWidth "2"
             , SvgAttr.fill "none"
             ]
@@ -232,17 +232,16 @@ lastLapMarker xScale yScale series lastLapPoint =
                     [ InPx.cx px
                     , InPx.cy py
                     , InPx.r 2.5
-                    , SvgAttr.css [ Css.fill series.color ]
+                    , SvgAttr.fill series.color
                     ]
                     []
                 , text_
                     [ InPx.x px
                     , InPx.y (py - 6)
                     , SvgAttr.textAnchor "middle"
+                    , SvgAttr.fill series.color
                     , SvgAttr.css
-                        [ Css.fill series.color
-                        , Css.fontSize (Css.px 9)
-                        ]
+                        [ Css.fontSize (Css.px 9) ]
                     ]
                     [ text (Duration.toString (round x)) ]
                 ]

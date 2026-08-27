@@ -10,6 +10,7 @@ module Data.Wec exposing
 
 -}
 
+import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
@@ -21,7 +22,6 @@ import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class
 import Motorsport.Wec.Era exposing (Era)
-import Motorsport.Wec.Manufacturer as Manufacturer
 
 
 {-| Less than the file states, and the omissions are the point.
@@ -97,13 +97,13 @@ type alias StartingGridEntry =
 -- DECODER
 
 
-eventDecoder : Era -> Decoder Event
-eventDecoder era =
+eventDecoder : Era -> Manufacturers -> Decoder Event
+eventDecoder era manufacturers =
     Decode.map4 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
-        (field "startingGrid" (startingGridDecoder era))
+        (field "startingGrid" (startingGridDecoder era manufacturers))
 
 
 {-| Two keys the CLI leaves out when it has nothing to say, and `optional`
@@ -192,11 +192,11 @@ byMiniSectorDecoder =
         |> required "fl" shareDecoder
 
 
-startingGridDecoder : Era -> Decoder StartingGrid
-startingGridDecoder era =
+startingGridDecoder : Era -> Manufacturers -> Decoder StartingGrid
+startingGridDecoder era manufacturers =
     Decode.map2 StartingGrid
         (field "basis" basisDecoder)
-        (field "entries" (list (startingGridEntryDecoder era)))
+        (field "entries" (list (startingGridEntryDecoder era manufacturers)))
 
 
 basisDecoder : Decoder Basis
@@ -219,22 +219,31 @@ basisDecoder =
             )
 
 
-startingGridEntryDecoder : Era -> Decoder StartingGridEntry
-startingGridEntryDecoder era =
+startingGridEntryDecoder : Era -> Manufacturers -> Decoder StartingGridEntry
+startingGridEntryDecoder era manufacturers =
     Decode.map2 StartingGridEntry
         (field "position" int)
-        (field "car" (carMetadataDecoder era))
+        (field "car" (carMetadataDecoder era manufacturers))
 
 
-carMetadataDecoder : Era -> Decoder Car.Metadata
-carMetadataDecoder era =
-    Decode.succeed Car.Metadata
+carMetadataDecoder : Era -> Manufacturers -> Decoder Car.Metadata
+carMetadataDecoder era manufacturers =
+    Decode.succeed
+        (\carNumber drivers class group team manufacturer ->
+            { carNumber = carNumber
+            , drivers = drivers
+            , class = class
+            , group = group
+            , team = team
+            , manufacturer = Manufacturer.fromName manufacturers { name = manufacturer, carNumber = carNumber }
+            }
+        )
         |> required "carNumber" string
         |> required "drivers" (Decode.list driverDecoder)
         |> required "class" (string |> Decode.map (Class.fromString era))
         |> required "group" string
         |> required "team" string
-        |> required "manufacturer" (string |> Decode.map Manufacturer.fromString)
+        |> required "manufacturer" string
 
 
 driverDecoder : Decoder Driver

@@ -5,7 +5,7 @@ import Expect
 import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant
-import Motorsport.Wec.Manufacturer exposing (Manufacturer(..))
+import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car exposing (Car)
 import Motorsport.Sector as Sector
 import Test exposing (Test, describe, test)
@@ -252,7 +252,7 @@ placeholderCar carNumber =
         , class = Class.none
         , group = ""
         , team = ""
-        , manufacturer = Other
+        , manufacturer = unknown
         }
     , startPosition = 0
     , laps = []

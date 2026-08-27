@@ -63,28 +63,39 @@ their files are — nothing app-side builds those paths, and a round it does not
 list cannot be opened. `Data/Series.elm` is the remains of the compile-time
 calendar it replaced: car images, which nothing imports yet.
 
+`Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
+also once, and a round waits on it as it waits on the calendar. That file is
+written by hand and no compiler reads it, so a mistake in it shows as cars drawn
+by their numbers rather than as a build that fails. Unlike an unlisted round, an
+unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
+takes a colour from its number.
+
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
 (`Snapshot`, `LapHistory`), `Widget/` and `Chart/` for rendering (Leaderboard,
 GapChart, BoxPlot).
 
 `Wec/` holds the WEC-specific knowledge: the class grid and the eras it has
-passed through (`Class`, `Era`), the manufacturers entering it (`Manufacturer`),
-and Le Mans's mini-sectors (`Circuit/LeMans`). Decoding the timing feed stays
-app-side in `Data.Wec` / `Data.Wec.Laps` — the shape of one publisher's files,
-not of the domain.
+passed through (`Class`, `Era`), and Le Mans's mini-sectors
+(`Circuit/LeMans`). Decoding the timing feed stays app-side in `Data.Wec` /
+`Data.Wec.Laps` — the shape of one publisher's files, not of the domain.
+`Data.Wec.Manufacturer` is app-side for the same reason: which manufacturers
+there are, and how each is coloured and badged, is one series' entry list and
+this application's assets. It holds none of them itself — it decodes the table
+that does.
 
 The names are sorted; the dependencies are not. The core imports out of `Wec/`
-in three places: `Car.Metadata` holds a `Class` and a `Manufacturer`,
-`Lap.miniSectors` is fixed to `Circuit/LeMans`'s type, and `Widget.Leaderboard`
-carries `*_Wec` and `*_LeMans24h` columns beside the generic ones. Reversing
-that arrow is its own change.
+in three places: `Car.Metadata` holds a `Class`, `Lap.miniSectors` is fixed to
+`Circuit/LeMans`'s type, and `Widget.Leaderboard` carries `*_Wec` and
+`*_LeMans24h` columns beside the generic ones. Reversing that arrow is its own
+change.
 
 There is no view-model layer between the two. `Race.Snapshot` is the whole
 per-frame derivation — sampling the cars at the clock, ordering the field,
 measuring the gaps, rating the times against the records as they stood — and
 views read a `CarAt` straight off it. Colours and geometry are the view's own: a
-widget that wants a class's colour calls `Class.toColor` itself. `Snapshot.at`
+widget that wants a class's colour calls `Class.toColor` itself, and a
+`Manufacturer` is read for the colour and logo it was built with. `Snapshot.at`
 runs once per frame and every view shares that result, which is the only reason
 the type exists; a record per car on top of it cost under 2% of the frame
 (`benchmark/PerFrameBenchmark.elm`), so nothing sits above it.
