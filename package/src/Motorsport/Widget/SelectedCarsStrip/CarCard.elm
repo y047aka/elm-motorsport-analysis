@@ -76,7 +76,7 @@ positionLabel : CarAt -> Html msg
 positionLabel item =
     div
         [ class "flex items-center gap-x-1 text-[10px] before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , attribute "style" ("--class-color: " ++ (Class.toColor item.metadata.class).value ++ ";")
+        , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
         [ text ("P" ++ String.fromInt item.standing.position) ]
 

@@ -155,7 +155,7 @@ tests =
                     let
                         colors =
                             Class.classesOf Era.GteProAndAm
-                                |> List.map (Class.toColor >> .value)
+                                |> List.map Class.toColor
                     in
                     List.Extra.unique colors
                         |> Expect.equalLists colors
@@ -207,7 +207,7 @@ classIn =
 colorOf : Int -> String -> Maybe String
 colorOf season name =
     Era.fromSeason season
-        |> Maybe.map (\era -> Class.fromString era name |> Class.toColor |> .value)
+        |> Maybe.map (\era -> Class.fromString era name |> Class.toColor)
 
 
 green : String

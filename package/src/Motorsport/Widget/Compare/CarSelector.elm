@@ -60,6 +60,6 @@ classBadge : Class -> Html msg
 classBadge class =
     div
         [ Attributes.class "flex items-center gap-x-1 text-[11px] font-bold whitespace-nowrap before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
-        , Attributes.attribute "style" ("--class-color: " ++ (Class.toColor class).value ++ ";")
+        , Attributes.attribute "style" ("--class-color: " ++ Class.toColor class ++ ";")
         ]
         [ text (Class.toString class) ]
