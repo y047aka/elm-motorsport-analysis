@@ -7,9 +7,8 @@ Compare widget, plus the placeholder that fills an unselected slot.
 
 -}
 
-import Css exposing (num, opacity, property)
 import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (class)
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
@@ -18,8 +17,17 @@ import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 import Motorsport.Widget.Compare.Distribution as Distribution
-import Motorsport.Widget.Compare.Style exposing (glassPanel, panelLabel)
+import Motorsport.Widget.Compare.Style exposing (panelLabel)
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
+
+
+{-| The glassmorphism panel background/border, shared by the two panels below.
+Kept as one string so both stay in sync with each other and with
+[`Style.glassPanel`](Motorsport-Widget-Compare-Style#glassPanel).
+-}
+glassPanelClass : String
+glassPanelClass =
+    "bg-[var(--glass-panel-bg)] border border-[var(--glass-panel-border)] rounded-lg"
 
 
 {-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
@@ -27,29 +35,14 @@ import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 placeholderCard : Html msg
 placeholderCard =
     div
-        [ css
-            [ property "display" "grid"
-            , property "place-items" "center"
-            , property "min-height" "100px"
-            , property "border" "1px dashed hsl(0 0% 100% / 0.15)"
-            , property "border-radius" "8px"
-            , property "font-size" "11px"
-            , property "color" "hsl(0 0% 100% / 0.35)"
-            ]
-        ]
+        [ class "grid place-items-center min-h-[100px] border border-dashed border-[hsl(0_0%_100%/0.15)] rounded-lg text-[11px] text-[hsl(0_0%_100%/0.35)]" ]
         [ text "車両を追加" ]
 
 
 carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
 carSummary lapRange distScale lapHistory item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-rows" "1fr auto auto"
-            , property "row-gap" "12px"
-            , property "align-content" "start"
-            ]
-        ]
+        [ class "grid grid-rows-[1fr_auto_auto] gap-y-3 content-start" ]
         [ header item
         , summaryStats item
         , lapTimePanel lapRange distScale lapHistory item
@@ -65,22 +58,12 @@ stability, comparable across cars).
 lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
 lapTimePanel maybeRange maybeScale lapHistory item =
     div
-        [ css
-            [ glassPanel
-            , property "padding" "8px"
-            , property "display" "grid"
-            , property "row-gap" "8px"
-            ]
-        ]
+        [ class (glassPanelClass ++ " p-2 grid gap-y-2") ]
         [ Html.Styled.fromUnstyled (panelLabel "Lap time")
-        , div [ css [ property "padding-bottom" "4px" ] ]
+        , div [ class "pb-1" ]
             [ SectorAndLaps.view item ]
         , div
-            [ css
-                [ property "padding-top" "4px"
-                , property "border-top" "1px solid oklch(1 0 0 / 0.05)"
-                ]
-            ]
+            [ class "pt-1 border-t border-t-[oklch(1_0_0/0.05)]" ]
             [ case ( maybeRange, maybeScale ) of
                 ( Just range, Just { domain, maxDensity } ) ->
                     LapTimeDistribution.view
@@ -96,21 +79,11 @@ lapTimePanel maybeRange maybeScale lapHistory item =
 header : CarAt -> Html msg
 header item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr auto"
-            , property "align-items" "start"
-            , property "column-gap" "8px"
-            ]
-        ]
+        [ class "grid grid-cols-[auto_1fr_auto] items-start gap-x-2" ]
         [ CarNumberBadge.view item.metadata
         , div
-            [ css
-                [ property "display" "grid"
-                , property "row-gap" "2px"
-                ]
-            ]
-            [ div [ css [ property "font-size" "14px" ] ]
+            [ class "grid gap-y-0.5" ]
+            [ div [ class "text-[14px]" ]
                 [ text item.metadata.team ]
             , driverList item
             ]
@@ -128,24 +101,17 @@ driverList item =
             Driver.isSame driver item.currentDriver
     in
     div
-        [ css
-            [ property "display" "flex"
-            , property "flex-wrap" "wrap"
-            , property "column-gap" "8px"
-            , property "row-gap" "2px"
-            , property "font-size" "11px"
-            ]
-        ]
+        [ class "flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]" ]
         (List.map
             (\driver ->
                 div
-                    [ css
-                        [ if isCurrentDriver driver then
-                            opacity (num 1)
+                    [ class
+                        (if isCurrentDriver driver then
+                            "opacity-100"
 
-                          else
-                            opacity (num 0.4)
-                        ]
+                         else
+                            "opacity-40"
+                        )
                     ]
                     [ text (Driver.toFullName driver) ]
             )
@@ -158,29 +124,12 @@ statusBadge status =
     case status of
         InPit ->
             div
-                [ css
-                    [ property "display" "grid"
-                    , property "place-items" "center"
-                    , property "padding" "1px 6px"
-                    , property "border-radius" "9999px"
-                    , property "border" "1px solid hsl(0 0% 100% / 0.6)"
-                    , property "font-size" "9px"
-                    , property "font-weight" "700"
-                    ]
-                ]
+                [ class "grid place-items-center py-px px-1.5 rounded-full border border-[hsl(0_0%_100%/0.6)] text-[9px] font-bold" ]
                 [ text "IN PIT" ]
 
         Retired ->
             div
-                [ css
-                    [ property "padding" "1px 6px"
-                    , property "border-radius" "3px"
-                    , property "background-color" "hsl(0 70% 45%)"
-                    , property "font-size" "9px"
-                    , property "font-weight" "700"
-                    , property "letter-spacing" "0.05em"
-                    ]
-                ]
+                [ class "py-px px-1.5 rounded-[3px] bg-[hsl(0_70%_45%)] text-[9px] font-bold tracking-wider" ]
                 [ text "RETIRED" ]
 
         _ ->
@@ -190,12 +139,7 @@ statusBadge status =
 summaryStats : CarAt -> Html msg
 summaryStats item =
     div
-        [ css
-            [ glassPanel
-            , property "display" "grid"
-            , property "grid-template-columns" "repeat(5, minmax(0, 1fr))"
-            ]
-        ]
+        [ class (glassPanelClass ++ " grid grid-cols-5") ]
         [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
         , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
@@ -210,29 +154,11 @@ separated by a left divider (the first cell has none).
 statCell : String -> Html msg -> Html msg
 statCell label valueHtml =
     div
-        [ css
-            [ property "display" "grid"
-            , property "row-gap" "1px"
-            , property "justify-items" "center"
-            , property "padding" "4px 2px"
-            , property "border-left" "1px solid hsl(0 0% 100% / 0.05)"
-            , Css.firstChild [ property "border-left" "none" ]
-            ]
-        ]
+        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-[hsl(0_0%_100%/0.05)] first:border-l-0" ]
         [ div
-            [ css
-                [ property "font-size" "8px"
-                , property "text-transform" "uppercase"
-                , property "letter-spacing" "0.03em"
-                , opacity (num 0.5)
-                ]
-            ]
+            [ class "text-[8px] uppercase tracking-[0.03em] opacity-50" ]
             [ text label ]
         , div
-            [ css
-                [ property "font-size" "12px"
-                , property "font-variant-numeric" "tabular-nums"
-                ]
-            ]
+            [ class "text-[12px] tabular-nums" ]
             [ valueHtml ]
         ]
