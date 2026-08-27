@@ -10,9 +10,9 @@ interaction is forwarded as a `Replay.Msg`.
 
 -}
 
-import Html.Styled exposing (Html, button, div, input, text)
-import Html.Styled.Attributes as Attributes exposing (type_, value)
-import Html.Styled.Events exposing (onClick, onInput)
+import Html exposing (Html, button, div, input, text)
+import Html.Attributes as Attributes exposing (type_, value)
+import Html.Events exposing (onClick, onInput)
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Race as Race

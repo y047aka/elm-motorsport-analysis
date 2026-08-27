@@ -187,7 +187,7 @@ view shared m =
                             trackerView race.track race.snapshot m
 
                         Events ->
-                            RaceEvents.view EventsMsg m.eventsState race.replay
+                            Html.Styled.fromUnstyled (RaceEvents.view EventsMsg m.eventsState race.replay)
             ]
         ]
     }
@@ -287,12 +287,14 @@ navigation title maybeRace currentMode =
                 text ""
 
             Just race ->
-                PlaybackControls.view
-                    { replay = race.replay
-                    , onStart = StartRace
-                    , onPause = PauseRace
-                    , toReplayMsg = ReplayMsg
-                    }
+                Html.Styled.fromUnstyled
+                    (PlaybackControls.view
+                        { replay = race.replay
+                        , onStart = StartRace
+                        , onPause = PauseRace
+                        , toReplayMsg = ReplayMsg
+                        }
+                    )
         , viewModeSelector currentMode
         ]
 
@@ -303,7 +305,7 @@ race list has to be reachable from the page itself.
 backLink : Html Msg
 backLink =
     a
-        [ Route.href Route.Index
+        [ Attributes.fromUnstyled (Route.href Route.Index)
         , Attributes.class "btn btn-sm btn-square btn-ghost opacity-60 hover:opacity-100"
         , attribute "aria-label" "Back to the race list"
         , Attributes.title "Back to the race list"

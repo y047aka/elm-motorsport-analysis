@@ -10,9 +10,12 @@ import Compare
 import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
+import Html
+import Html.Attributes exposing (class)
+import Html.Events exposing (onClick)
 import Html.Styled exposing (Html, div, header, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
-import Html.Styled.Events exposing (onClick, onInput)
+import Html.Styled.Attributes as Attributes exposing (css, type_, value)
+import Html.Styled.Events exposing (onInput)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -122,11 +125,13 @@ debugView replay leaderboardState =
                 , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
                 ]
                 []
-            , labeledButton []
-                [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
-                , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
-                ]
+            , Html.Styled.fromUnstyled
+                (labeledButton []
+                    [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ Html.text "-" ]
+                    , basicLabel [ class "join-item" ] [ Html.text (String.fromInt lapCount) ]
+                    , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ Html.text "+" ]
+                    ]
+                )
             , text (Clock.getElapsed playback |> Instant.toString)
             ]
         , div []
