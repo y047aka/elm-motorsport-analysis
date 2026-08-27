@@ -18,7 +18,7 @@ axis-less sparkline ([`gapSparkline`](#gapSparkline)).
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
 import Dict exposing (Dict)
-import Html.Styled exposing (Html, text)
+import Html exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), LapWindow(..), Scales, axisPadding, iqrFences, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -26,8 +26,8 @@ import Motorsport.Lap exposing (Lap)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Scale
-import Svg.Styled exposing (Svg, line)
-import Svg.Styled.Attributes as SvgAttr
+import Svg exposing (Svg, line)
+import Svg.Attributes as SvgAttr
 
 
 type alias CarLine =

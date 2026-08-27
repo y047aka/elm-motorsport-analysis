@@ -11,8 +11,8 @@ tabbed so only one shows at a time (to save space).
 
 -}
 
-import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes as Attributes
+import Html exposing (Html, div, text)
+import Html.Attributes as Attributes
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -91,37 +91,33 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                 [ Attributes.class "grid gap-y-3" ]
                 [ div
                     [ Attributes.class "flex items-center gap-x-3" ]
-                    [ Html.Styled.fromUnstyled (CarSelector.classBadge first.metadata.class)
-                    , Html.Styled.fromUnstyled (CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers)
+                    [ CarSelector.classBadge first.metadata.class
+                    , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
                     ]
                 , div
                     -- Tailwind's class scanner needs a literal class name, so this can't be
                     -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
                     [ Attributes.class "grid gap-x-4 grid-cols-3" ]
-                    (List.map (\item -> Html.Styled.fromUnstyled (CarSummary.carSummary lapRange distScale lapHistory item)) selectedEntries
-                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) (Html.Styled.fromUnstyled CarSummary.placeholderCard)
+                    (List.map (\item -> CarSummary.carSummary lapRange distScale lapHistory item) selectedEntries
+                        ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
-                , Html.Styled.fromUnstyled
-                    (ChartTabs.chartTabs onSelectChart
-                        activeChart
-                        [ ( GapChart
-                          , "Gap to group avg"
-                          , \() -> Html.Styled.toUnstyled (gapChart lapRange lapHistory selectedEntries)
-                          )
-                        , ( PositionChart
-                          , "Position progression"
-                          , \() ->
-                                Html.Styled.toUnstyled
-                                    (PositionProgression.view
-                                        { width = 1000, height = 250 }
-                                        snapshot
-                                        { class = class
-                                        , highlighted = selectedCarNumbers
-                                        }
-                                    )
-                          )
-                        ]
-                    )
+                , ChartTabs.chartTabs onSelectChart
+                    activeChart
+                    [ ( GapChart
+                      , "Gap to group avg"
+                      , \() -> gapChart lapRange lapHistory selectedEntries
+                      )
+                    , ( PositionChart
+                      , "Position progression"
+                      , \() ->
+                            PositionProgression.view
+                                { width = 1000, height = 250 }
+                                snapshot
+                                { class = class
+                                , highlighted = selectedCarNumbers
+                                }
+                      )
+                    ]
                 ]
 
 

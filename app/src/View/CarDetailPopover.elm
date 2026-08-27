@@ -16,7 +16,6 @@ as the `popovertarget` of the trigger.
 
 import Html exposing (Html, button, div, text)
 import Html.Attributes as Attributes exposing (attribute)
-import Html.Styled
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.Compare as CompareWidget
 
@@ -70,13 +69,11 @@ view config snapshot detailCarNumbers =
                     [ text "No cars selected. Pick a car from the standings to compare." ]
 
             _ ->
-                Html.Styled.toUnstyled
-                    (CompareWidget.viewComparison
-                        { onToggleCar = config.onToggleCar
-                        , activeChart = config.activeChart
-                        , onSelectChart = config.onSelectChart
-                        }
-                        snapshot
-                        detailCarNumbers
-                    )
+                CompareWidget.viewComparison
+                    { onToggleCar = config.onToggleCar
+                    , activeChart = config.activeChart
+                    , onSelectChart = config.onSelectChart
+                    }
+                    snapshot
+                    detailCarNumbers
         ]

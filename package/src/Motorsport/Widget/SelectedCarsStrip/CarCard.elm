@@ -9,7 +9,6 @@ status, above the driver name, sector performance, and rival gap sparkline.
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (attribute, class)
-import Html.Styled
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Race.LapHistory exposing (LapHistory)
@@ -39,7 +38,7 @@ view lapHistory allCars item =
                 [ class "card-body p-3 grid gap-y-2" ]
                 [ cardHeader item
                 , SectorAndLaps.view item
-                , Html.Styled.toUnstyled (RivalGapSparkline.view lapHistory allCars item)
+                , RivalGapSparkline.view lapHistory allCars item
                 ]
             ]
         ]

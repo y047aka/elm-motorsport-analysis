@@ -9,7 +9,6 @@ Compare widget, plus the placeholder that fills an unselected slot.
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
-import Html.Styled
 import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap
@@ -67,11 +66,9 @@ lapTimePanel maybeRange maybeScale lapHistory item =
             [ class "pt-1 border-t border-t-[oklch(1_0_0/0.05)]" ]
             [ case ( maybeRange, maybeScale ) of
                 ( Just range, Just { domain, maxDensity } ) ->
-                    Html.Styled.toUnstyled
-                        (LapTimeDistribution.view
-                            { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                            [ Distribution.seriesOf lapHistory range item ]
-                        )
+                    LapTimeDistribution.view
+                        { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
+                        [ Distribution.seriesOf lapHistory range item ]
 
                 _ ->
                     text ""
