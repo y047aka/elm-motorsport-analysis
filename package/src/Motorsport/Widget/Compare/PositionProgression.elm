@@ -21,7 +21,7 @@ view size snapshot target =
             positionProgressionChart size series
 
         Err message ->
-            Widget.emptyState message
+            Html.Styled.fromUnstyled (Widget.emptyState message)
 
 
 {-| The lap-number range `(minLap, maxLap)` the position-history chart currently

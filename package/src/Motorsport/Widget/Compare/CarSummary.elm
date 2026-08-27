@@ -72,7 +72,7 @@ lapTimePanel maybeRange maybeScale lapHistory item =
             , property "row-gap" "8px"
             ]
         ]
-        [ panelLabel "Lap time"
+        [ Html.Styled.fromUnstyled (panelLabel "Lap time")
         , div [ css [ property "padding-bottom" "4px" ] ]
             [ SectorAndLaps.view item ]
         , div

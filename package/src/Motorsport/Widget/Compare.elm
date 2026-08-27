@@ -114,23 +114,27 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                     (List.map (CarSummary.carSummary lapRange distScale lapHistory) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
-                , ChartTabs.chartTabs onSelectChart
-                    activeChart
-                    [ ( GapChart
-                      , "Gap to group avg"
-                      , \() -> gapChart lapRange lapHistory selectedEntries
-                      )
-                    , ( PositionChart
-                      , "Position progression"
-                      , \() ->
-                            PositionProgression.view
-                                { width = 1000, height = 250 }
-                                snapshot
-                                { class = class
-                                , highlighted = selectedCarNumbers
-                                }
-                      )
-                    ]
+                , Html.Styled.fromUnstyled
+                    (ChartTabs.chartTabs onSelectChart
+                        activeChart
+                        [ ( GapChart
+                          , "Gap to group avg"
+                          , \() -> Html.Styled.toUnstyled (gapChart lapRange lapHistory selectedEntries)
+                          )
+                        , ( PositionChart
+                          , "Position progression"
+                          , \() ->
+                                Html.Styled.toUnstyled
+                                    (PositionProgression.view
+                                        { width = 1000, height = 250 }
+                                        snapshot
+                                        { class = class
+                                        , highlighted = selectedCarNumbers
+                                        }
+                                    )
+                          )
+                        ]
+                    )
                 ]
 
 

@@ -251,11 +251,13 @@ trackerView track snapshot m =
             ]
             []
         , div [ css [ property "grid-column" "1 / -1" ] ]
-            [ SelectedCarsStrip.view
-                { offset = m.stripOffset
-                , onScrollTo = StripScrollTo
-                }
-                snapshot
+            [ Html.Styled.fromUnstyled
+                (SelectedCarsStrip.view
+                    { offset = m.stripOffset
+                    , onScrollTo = StripScrollTo
+                    }
+                    snapshot
+                )
             ]
         , CarDetailPopover.view
             { activeChart = m.detailChart
