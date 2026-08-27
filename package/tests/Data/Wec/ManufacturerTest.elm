@@ -31,7 +31,18 @@ table =
 suite : Test
 suite =
     describe "Data.Wec.Manufacturer"
-        [ describe "fromName"
+        [ describe "decoder"
+            [ test "refuses a logo that is not a path" <|
+                \_ ->
+                    Decode.decodeString Manufacturer.decoder
+                        """
+                        { "manufacturers":
+                            [ { "name": "Porsche", "color": { "l": 0.8, "c": 0, "h": 0 }, "logo": 42 } ]
+                        }
+                        """
+                        |> Expect.err
+            ]
+        , describe "fromName"
             [ test "draws a manufacturer the table names in its own color, with its logo" <|
                 \_ ->
                     Manufacturer.fromName table { name = "Aston Martin", carNumber = "007" }

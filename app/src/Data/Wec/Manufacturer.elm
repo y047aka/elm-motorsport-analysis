@@ -13,6 +13,7 @@ import Css exposing (Color)
 import Css.Color exposing (oklch)
 import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, field, float, string)
+import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Manufacturer exposing (Manufacturer, unknown)
 
 
@@ -44,11 +45,13 @@ decoder =
 
 entryDecoder : Decoder ( String, Entry )
 entryDecoder =
-    Decode.map3
+    Decode.succeed
         (\name color logoUrl -> ( name, { color = color, logoUrl = logoUrl } ))
-        (field "name" string)
-        (field "color" colorDecoder)
-        (Decode.maybe (field "logo" string))
+        |> required "name" string
+        |> required "color" colorDecoder
+        -- `optional` rather than `maybe`, which cannot tell a manufacturer with
+        -- no logo from a `logo` written wrong.
+        |> optional "logo" (Decode.map Just string) Nothing
 
 
 colorDecoder : Decoder Color
