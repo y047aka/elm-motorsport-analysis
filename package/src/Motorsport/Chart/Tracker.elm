@@ -6,7 +6,6 @@ module Motorsport.Chart.Tracker exposing (Track, fromConfig, view)
 
 -}
 
-import Css
 import Motorsport.Chart.Tracker.Config as Config exposing (TrackConfig)
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -14,11 +13,11 @@ import Motorsport.Sector as Sector
 import Motorsport.Wec.Circuit.LeMans as LeMans
 import Motorsport.Wec.Class as Class
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg, circle, g, line, svg, text, text_)
-import Svg.Styled.Attributes exposing (css, dominantBaseline, fill, stroke, textAnchor)
-import Svg.Styled.Keyed as Keyed
-import Svg.Styled.Lazy as Lazy
-import TypedSvg.Styled.Attributes as Attributes exposing (fontSize, strokeWidth, viewBox, x1, x2, y1, y2)
+import Svg exposing (Svg, circle, g, line, svg, text, text_)
+import Svg.Attributes exposing (class, dominantBaseline, fill, stroke, style, textAnchor)
+import Svg.Keyed as Keyed
+import Svg.Lazy as Lazy
+import TypedSvg.Attributes as Attributes exposing (fontSize, strokeWidth, viewBox, x1, x2, y1, y2)
 import TypedSvg.Types exposing (Transform(..), px)
 
 
@@ -128,7 +127,7 @@ viewWithConfig direction config standings =
     in
     svg
         [ viewBox 0 0 w h
-        , css [ Css.maxWidth (Css.pct 100), Css.maxHeight (Css.pct 90) ]
+        , class "max-w-full max-h-[90%]"
         ]
         [ Lazy.lazy2 track direction config
         , renderCars direction config standings
@@ -353,7 +352,7 @@ carMarker positionInClass classColorValue =
         , Attributes.cy (px 0)
         , Attributes.r (px carSize)
         , fill classColorValue
-        , css [ Css.property "filter" ("saturate(" ++ saturation ++ ")") ]
+        , style ("filter: saturate(" ++ saturation ++ ");")
         ]
         []
 

@@ -216,7 +216,7 @@ trackerView track snapshot m =
             [ div [ Attributes.class "card-body p-3" ]
                 [ div
                     [ Attributes.class "h-full grid place-items-center" ]
-                    [ TrackerChart.view track snapshot ]
+                    [ Html.Styled.fromUnstyled (TrackerChart.view track snapshot) ]
                 ]
             ]
         , div
