@@ -1,8 +1,7 @@
 module Motorsport.Widget.LiveStandings exposing (Props, view)
 
-import Css exposing (after, before, hover, property, qt)
 import Html.Styled exposing (Html, button, div, li, text)
-import Html.Styled.Attributes exposing (attribute, class, css)
+import Html.Styled.Attributes exposing (attribute, class)
 import Html.Styled.Events exposing (onClick)
 import Html.Styled.Keyed as Keyed
 import Html.Styled.Lazy as Lazy
@@ -28,48 +27,18 @@ type alias Props msg =
 view : Props msg -> Html msg
 view props =
     div
-        [ css
-            [ property "height" "100%"
-            , property "display" "grid"
-            , property "grid-template-rows" "repeat(3, 1fr)"
-            , property "row-gap" "10px"
-            ]
-        ]
+        [ class "h-full grid grid-rows-[repeat(3,1fr)] gap-y-2.5" ]
         (List.map
             (\( class_, cars ) ->
                 div
-                    [ class "card bg-base-200 overflow-hidden"
-                    , css
-                        [ property "display" "grid"
-                        , property "grid-template-rows" "auto 1fr"
-                        ]
-                    ]
+                    [ class "card bg-base-200 overflow-hidden grid grid-rows-[auto_1fr]" ]
                     [ div
-                        [ css
-                            [ property "display" "flex"
-                            , property "align-items" "center"
-                            , property "column-gap" "0.5em"
-                            , property "padding" "8px 10px"
-                            , property "font-size" "10px"
-                            , property "font-weight" "bold"
-                            , before
-                                [ property "display" "block"
-                                , property "content" (qt "")
-                                , property "width" "0.2em"
-                                , property "height" "1.2em"
-                                , property "border-radius" "2px"
-                                , property "background-color" (Class.toColor class_).value
-                                ]
-                            ]
+                        [ class "flex items-center gap-x-[0.5em] py-2 px-2.5 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+                        , attribute "style" ("--class-color: " ++ (Class.toColor class_).value ++ ";")
                         ]
                         [ text (Class.toString class_) ]
                     , Keyed.node "ul"
-                        [ class "list"
-                        , css
-                            [ property "overflow-y" "scroll"
-                            , property "padding" "0 10px 10px"
-                            ]
-                        ]
+                        [ class "list overflow-y-scroll p-[0_10px_10px]" ]
                         (cars
                             |> List.map
                                 (\item ->
@@ -94,17 +63,7 @@ carRow popoverTarget onSelect item =
             -- Explicit "show": the default "toggle" would close the shared
             -- popover when a second row is clicked while it is already open.
             , attribute "popovertargetaction" "show"
-            , class "list-row w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left"
-            , css
-                [ property "background" "none"
-                , property "border" "none"
-                , property "color" "inherit"
-                , property "font" "inherit"
-                , property "cursor" "pointer"
-                , property "transition" "background-color 0.2s ease"
-                , after [ property "border" "none" ]
-                , hover [ property "background-color" "hsl(0 0% 100% / 0.05)" ]
-                ]
+            , class "list-row w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [background:none] [border:none] text-inherit [font:inherit] cursor-pointer [transition:background-color_0.2s_ease] after:[border:none] hover:[background-color:hsl(0_0%_100%/0.05)]"
             ]
             (carRowContent item)
         ]

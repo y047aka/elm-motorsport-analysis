@@ -10,9 +10,8 @@ needs, and none of it moves as the race does.
 
 -}
 
-import Css exposing (property)
 import Html.Styled exposing (Html, div, img, text)
-import Html.Styled.Attributes exposing (alt, class, css, src)
+import Html.Styled.Attributes exposing (alt, class, src, style)
 import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Car as Car
 
@@ -22,13 +21,7 @@ import Motorsport.Race.Car as Car
 view : Car.Metadata -> Html msg
 view metadata =
     badge "flex flex-col items-center justify-center gap-1.5 p-1 rounded w-[35px]"
-        [ manufacturerLogo
-            [ property "max-width" "28px"
-            , property "height" "16px"
-            , property "object-fit" "contain"
-            , property "opacity" "0.9"
-            ]
-            metadata.manufacturer
+        [ manufacturerLogo "max-w-[28px] h-4 object-contain opacity-90" metadata.manufacturer
         , div [ class "text-xs font-bold leading-none" ]
             [ text metadata.carNumber ]
         ]
@@ -40,11 +33,7 @@ view metadata =
 viewRow : Car.Metadata -> Html msg
 viewRow metadata =
     badge "p-1 grid grid-cols-[20px_25px] gap-1 place-items-center rounded"
-        [ manufacturerLogo
-            [ property "height" "14px"
-            , property "object-fit" "contain"
-            ]
-            metadata.manufacturer
+        [ manufacturerLogo "h-[14px] object-contain" metadata.manufacturer
         , div [ class "text-center leading-none text-xs font-bold" ]
             [ text metadata.carNumber ]
         ]
@@ -55,16 +44,16 @@ badge : String -> List (Html msg) -> Car.Metadata -> Html msg
 badge containerClass children metadata =
     div
         [ class containerClass
-        , css [ Css.property "background-color" metadata.manufacturer.color ]
+        , style "background-color" metadata.manufacturer.color
         ]
         children
 
 
-manufacturerLogo : List Css.Style -> Manufacturer -> Html msg
-manufacturerLogo styles manufacturer =
+manufacturerLogo : String -> Manufacturer -> Html msg
+manufacturerLogo logoClass manufacturer =
     case manufacturer.logoUrl of
         Just url ->
-            img [ src url, alt manufacturer.name, css styles ] []
+            img [ src url, alt manufacturer.name, class logoClass ] []
 
         Nothing ->
-            div [ css styles ] []
+            div [ class logoClass ] []
