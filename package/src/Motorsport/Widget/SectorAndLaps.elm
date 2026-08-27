@@ -7,9 +7,8 @@ shared by SelectedCarsStrip and Compare.
 
 -}
 
-import Css exposing (batch, num, opacity, property)
 import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes exposing (class, style)
 import Motorsport.Duration as Duration
 import Motorsport.Lap.Performance as Performance exposing (SegmentState)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
@@ -28,22 +27,9 @@ with Current; the layout is a balanced 50/50 grid of `pie + Current` | `Last`.
 view : CarAt -> Html msg
 view item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "1fr 1fr"
-            , property "place-items" "center"
-            , property "column-gap" "8px"
-            ]
-        ]
+        [ class "grid grid-cols-[1fr_1fr] place-items-center gap-x-2" ]
         [ div
-            [ css
-                [ property "display" "grid"
-                , property "width" "fit-content"
-                , property "grid-template-columns" "auto auto"
-                , property "align-items" "center"
-                , property "column-gap" "8px"
-                ]
-            ]
+            [ class "grid w-fit grid-cols-[auto_auto] items-center gap-x-2" ]
             [ currentSectorPie item
             , currentLapBlock item
             ]
@@ -64,12 +50,7 @@ lastLapBlock item =
 lapBlock : String -> Html msg -> Html msg
 lapBlock label timeCell =
     div
-        [ css
-            [ property "display" "grid"
-            , property "place-items" "center"
-            , property "row-gap" "1px"
-            ]
-        ]
+        [ class "grid place-items-center gap-y-px" ]
         [ labelText label
         , timeCell
         ]
@@ -77,17 +58,9 @@ lapBlock label timeCell =
 
 currentLapTimeCell : CarAt -> Html msg
 currentLapTimeCell item =
-    let
-        colorStyle =
-            applyPerformanceColor item.currentLap.performance
-    in
     div
-        [ css
-            [ property "font-size" "13px"
-            , property "font-variant-numeric" "tabular-nums"
-            , property "text-align" "right"
-            , colorStyle
-            ]
+        [ class "text-[13px] tabular-nums text-right"
+        , style "color" (performanceColor item.currentLap.performance)
         ]
         [ text
             (if Status.hasRetired item.status then
@@ -111,28 +84,19 @@ lastLapTimeCell item =
                     Nothing
     in
     div
-        [ css
-            [ property "font-size" "13px"
-            , property "font-variant-numeric" "tabular-nums"
-            , property "text-align" "right"
-            , case rated of
-                Just { performance } ->
-                    applyPerformanceColor performance
-
-                Nothing ->
-                    batch []
-            ]
+        [ class "text-[13px] tabular-nums text-right"
+        , style "color" (rated |> Maybe.map (.performance >> performanceColor) |> Maybe.withDefault "inherit")
         ]
         [ text (rated |> Maybe.map (.time >> Duration.toString) |> Maybe.withDefault "-") ]
 
 
-applyPerformanceColor : Performance.PerformanceLevel -> Css.Style
-applyPerformanceColor performance =
+performanceColor : Performance.PerformanceLevel -> String
+performanceColor performance =
     if Performance.isStandard performance then
-        batch []
+        "inherit"
 
     else
-        property "color" (Performance.toColorVariable performance)
+        Performance.toColorVariable performance
 
 
 {-| Small three-slot donut showing sector results of the current lap.
@@ -180,7 +144,7 @@ sectorPie slots =
     svg
         [ SvgAttr.width (String.fromFloat pieSize ++ "px")
         , SvgAttr.height (String.fromFloat pieSize ++ "px")
-        , SvgAttr.css [ Css.property "display" "block" ]
+        , SvgAttr.style "display: block;"
         , viewBox 0 0 pieSize pieSize
         ]
         [ g
@@ -248,9 +212,5 @@ pieGap =
 labelText : String -> Html msg
 labelText label =
     div
-        [ css
-            [ property "font-size" "9px"
-            , opacity (num 0.6)
-            ]
-        ]
+        [ class "text-[9px] opacity-60" ]
         [ text label ]
