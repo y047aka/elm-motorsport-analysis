@@ -231,13 +231,15 @@ trackerView track snapshot m =
                     snapshot
                 )
             ]
-        , CarDetailPopover.view
-            { activeChart = m.detailChart
-            , onToggleCar = ToggleDetailCar
-            , onSelectChart = SelectDetailChart
-            }
-            snapshot
-            m.detailCarNumbers
+        , Html.Styled.fromUnstyled
+            (CarDetailPopover.view
+                { activeChart = m.detailChart
+                , onToggleCar = ToggleDetailCar
+                , onSelectChart = SelectDetailChart
+                }
+                snapshot
+                m.detailCarNumbers
+            )
         ]
 
 
