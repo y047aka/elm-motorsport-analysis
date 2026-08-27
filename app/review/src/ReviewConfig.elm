@@ -54,7 +54,7 @@ config =
     -- jfmengels/elm-review-common
     , NoConfusingPrefixOperator.rule
     , NoExposingEverything.rule
-    , NoImportingEverything.rule [ "Css" ]
+    , NoImportingEverything.rule []
     , NoMissingTypeAnnotation.rule
 
     -- jfmengels/elm-review-debug
