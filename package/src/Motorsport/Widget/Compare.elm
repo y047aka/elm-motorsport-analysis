@@ -11,9 +11,8 @@ tabbed so only one shows at a time (to save space).
 
 -}
 
-import Css exposing (property)
 import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (css)
+import Html.Styled.Attributes as Attributes
 import Motorsport.Chart.GapChart as GapChart
 import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
@@ -89,28 +88,16 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                     Distribution.scaleOf distSeries
             in
             div
-                [ css
-                    [ property "display" "grid"
-                    , property "row-gap" "12px"
-                    ]
-                ]
+                [ Attributes.class "grid gap-y-3" ]
                 [ div
-                    [ css
-                        [ property "display" "flex"
-                        , property "align-items" "center"
-                        , property "column-gap" "12px"
-                        ]
-                    ]
+                    [ Attributes.class "flex items-center gap-x-3" ]
                     [ CarSelector.classBadge first.metadata.class
                     , CarSelector.carSelector onToggleCar snapshot class selectedCarNumbers
                     ]
                 , div
-                    [ css
-                        [ property "display" "grid"
-                        , property "grid-template-columns" ("repeat(" ++ String.fromInt maxComparisonCars ++ ", minmax(0, 1fr))")
-                        , property "column-gap" "16px"
-                        ]
-                    ]
+                    -- Tailwind's class scanner needs a literal class name, so this can't be
+                    -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
+                    [ Attributes.class "grid gap-x-4 grid-cols-3" ]
                     (List.map (CarSummary.carSummary lapRange distScale lapHistory) selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )

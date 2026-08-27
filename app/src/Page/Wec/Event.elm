@@ -8,12 +8,11 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
-import Css exposing (..)
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
 import Html.Styled exposing (Html, a, button, div, main_, nav, text)
-import Html.Styled.Attributes as Attributes exposing (attribute, css)
+import Html.Styled.Attributes as Attributes exposing (attribute)
 import Html.Styled.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
@@ -168,18 +167,14 @@ view shared m =
     , body =
         [ main_
             [ attribute "data-theme" "forest"
-            , css
-                [ height (pct 100)
-                , property "display" "grid"
-                , property "grid-template-rows" "auto 1fr"
-                ]
+            , Attributes.class "h-full grid grid-rows-[auto_1fr]"
             ]
             [ navigation (headerTitle shared) maybeRace m.mode
             , case maybeRace of
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
                     -- round before it.
-                    div [ css [ property "grid-row" "2" ] ] []
+                    div [ Attributes.class "row-start-2" ] []
 
                 Just race ->
                     case m.mode of
@@ -203,25 +198,9 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
 trackerView track snapshot m =
     div
-        [ css
-            [ property "grid-row" "2"
-            , property "height" "100%"
-            , overflowY hidden
-            , padding4 (px 0) (px 10) (px 10) (px 10)
-            , property "display" "grid"
-            , property "grid-template-columns" "300px 1fr 300px"
-            , property "grid-template-rows" "minmax(0, 1fr) auto"
-            , property "row-gap" "10px"
-            , property "column-gap" "10px"
-            ]
-        ]
+        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[minmax(0,1fr)_auto] gap-2.5" ]
         [ div
-            [ css
-                [ property "grid-column" "1"
-                , property "height" "100%"
-                , overflowY hidden
-                ]
-            ]
+            [ Attributes.class "col-start-1 h-full overflow-y-hidden" ]
             [ LiveStandingsWidget.view
                 { snapshot = snapshot
 
@@ -231,26 +210,17 @@ trackerView track snapshot m =
                 }
             ]
         , div
-            [ Attributes.class "card bg-base-200"
-            , css [ property "grid-column" "2" ]
-            ]
+            [ Attributes.class "card bg-base-200 col-start-2" ]
             [ div [ Attributes.class "card-body p-3" ]
                 [ div
-                    [ css
-                        [ property "height" "100%"
-                        , property "display" "grid"
-                        , property "place-items" "center"
-                        ]
-                    ]
+                    [ Attributes.class "h-full grid place-items-center" ]
                     [ TrackerChart.view track snapshot ]
                 ]
             ]
         , div
-            [ Attributes.class "card bg-base-200"
-            , css [ property "grid-column" "3" ]
-            ]
+            [ Attributes.class "card bg-base-200 col-start-3" ]
             []
-        , div [ css [ property "grid-column" "1 / -1" ] ]
+        , div [ Attributes.class "col-span-full" ]
             [ Html.Styled.fromUnstyled
                 (SelectedCarsStrip.view
                     { offset = m.stripOffset
@@ -272,14 +242,7 @@ trackerView track snapshot m =
 navigation : String -> Maybe Shared.Race -> Mode -> Html Msg
 navigation title maybeRace currentMode =
     nav
-        [ Attributes.class "p-3"
-        , css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr auto"
-            , alignItems center
-            , property "column-gap" "40px"
-            ]
-        ]
+        [ Attributes.class "p-3 grid grid-cols-[auto_1fr_auto] items-center gap-x-10" ]
         [ div [ Attributes.class "flex items-center gap-2 whitespace-nowrap" ]
             [ backLink
             , div [ Attributes.class "text-sm" ] [ text title ]
