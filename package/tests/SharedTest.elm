@@ -9,6 +9,7 @@ import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar
 import Data.Wec.Laps as WecLaps
 import Data.Wec.Manufacturer as Manufacturer
+import Dict
 import Expect
 import Http
 import Json.Decode as Decode
@@ -85,7 +86,7 @@ manufacturersJson =
     """
     { "manufacturers":
         [ { "name": "Toyota"
-          , "color": { "l": 0.6, "c": 0, "h": 0 }
+          , "color": "oklch(0.6 0 0)"
           , "logo": "/assets/manufacturer-logos/toyota.png"
           }
         ]
@@ -143,10 +144,10 @@ calendar =
         |> Result.withDefault Calendar.empty
 
 
-manufacturers : Manufacturer.Table
+manufacturers : Manufacturer.Manufacturers
 manufacturers =
     Decode.decodeString Manufacturer.decoder manufacturersJson
-        |> Result.withDefault Manufacturer.empty
+        |> Result.withDefault Dict.empty
 
 
 fresh : Shared.Model

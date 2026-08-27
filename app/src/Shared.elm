@@ -16,7 +16,8 @@ loaded at runtime via `Http`, so no `BackendTask` is involved.
 import Data.Wec as Wec
 import Data.Wec.Calendar as Calendar exposing (Calendar)
 import Data.Wec.Laps as WecLaps
-import Data.Wec.Manufacturer as Manufacturer
+import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
+import Dict
 import Effect exposing (Effect)
 import Http
 import Motorsport.Chart.Tracker as Tracker
@@ -37,7 +38,7 @@ so a half-loaded one cannot be read as a loaded one.
 -}
 type alias Model =
     { calendar : Calendar
-    , manufacturers : Maybe Manufacturer.Table
+    , manufacturers : Maybe Manufacturers
     , round : Round
     }
 
@@ -183,7 +184,7 @@ update msg m =
             -- without them, so a table that could not be read names no one and
             -- the cars are told apart by their numbers.
             resumeWaitingRound
-                { m | manufacturers = Just (Result.withDefault Manufacturer.empty result) }
+                { m | manufacturers = Just (Result.withDefault Dict.empty result) }
 
         FetchJson_Wec params ->
             resumeWaitingRound { m | round = Waiting params }

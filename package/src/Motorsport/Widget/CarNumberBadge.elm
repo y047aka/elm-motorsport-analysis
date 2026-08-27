@@ -55,7 +55,7 @@ badge : String -> List (Html msg) -> Car.Metadata -> Html msg
 badge containerClass children metadata =
     div
         [ class containerClass
-        , css [ Css.backgroundColor metadata.manufacturer.color ]
+        , css [ Css.property "background-color" metadata.manufacturer.color ]
         ]
         children
 

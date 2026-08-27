@@ -62,8 +62,8 @@ carSelectorChip onToggleCar isSelected item =
             , property "font-family" "inherit"
             , if isSelected then
                 Css.batch
-                    [ property "border" ("1px solid " ++ manufacturerColor.value)
-                    , property "background-color" ("oklch(from " ++ manufacturerColor.value ++ "l c h / 0.3)")
+                    [ property "border" ("1px solid " ++ manufacturerColor)
+                    , property "background-color" ("oklch(from " ++ manufacturerColor ++ "l c h / 0.3)")
                     ]
 
               else

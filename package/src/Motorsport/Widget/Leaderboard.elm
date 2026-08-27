@@ -363,7 +363,7 @@ viewCarNumberColumn_Wec { carNumber, manufacturer } =
             , textAlign center
             , fontSize (px 12)
             , fontWeight bold
-            , backgroundColor manufacturer.color
+            , property "background-color" manufacturer.color
             , borderRadius (px 5)
             , property "line-height" "1"
             ]

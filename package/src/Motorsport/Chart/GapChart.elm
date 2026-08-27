@@ -17,7 +17,6 @@ axis-less sparkline ([`gapSparkline`](#gapSparkline)).
 -}
 
 import Axis exposing (tickCount, tickFormat, tickPadding, tickSizeInner, tickSizeOuter)
-import Css
 import Dict exposing (Dict)
 import Html.Styled exposing (Html, text)
 import List.Extra
@@ -32,7 +31,7 @@ import Svg.Styled.Attributes as SvgAttr
 
 
 type alias CarLine =
-    { color : Css.Color
+    { color : String
     , emphasis : Emphasis
     , carNumber : String
     , laps : List Lap

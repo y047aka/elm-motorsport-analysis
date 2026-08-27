@@ -10,7 +10,7 @@ module Data.Wec exposing
 
 -}
 
-import Data.Wec.Manufacturer as Manufacturer
+import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Json.Decode as Decode exposing (Decoder, field, float, int, list, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, TrackConfig)
@@ -97,7 +97,7 @@ type alias StartingGridEntry =
 -- DECODER
 
 
-eventDecoder : Era -> Manufacturer.Table -> Decoder Event
+eventDecoder : Era -> Manufacturers -> Decoder Event
 eventDecoder era manufacturers =
     Decode.map4 Event
         (field "race" (field "timeLimit" Instant.decoder))
@@ -192,7 +192,7 @@ byMiniSectorDecoder =
         |> required "fl" shareDecoder
 
 
-startingGridDecoder : Era -> Manufacturer.Table -> Decoder StartingGrid
+startingGridDecoder : Era -> Manufacturers -> Decoder StartingGrid
 startingGridDecoder era manufacturers =
     Decode.map2 StartingGrid
         (field "basis" basisDecoder)
@@ -219,14 +219,14 @@ basisDecoder =
             )
 
 
-startingGridEntryDecoder : Era -> Manufacturer.Table -> Decoder StartingGridEntry
+startingGridEntryDecoder : Era -> Manufacturers -> Decoder StartingGridEntry
 startingGridEntryDecoder era manufacturers =
     Decode.map2 StartingGridEntry
         (field "position" int)
         (field "car" (carMetadataDecoder era manufacturers))
 
 
-carMetadataDecoder : Era -> Manufacturer.Table -> Decoder Car.Metadata
+carMetadataDecoder : Era -> Manufacturers -> Decoder Car.Metadata
 carMetadataDecoder era manufacturers =
     Decode.succeed
         (\carNumber drivers class group team manufacturer ->

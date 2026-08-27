@@ -1,7 +1,6 @@
 module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
-import Css exposing (Color)
 import Html.Styled exposing (Html)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
@@ -92,7 +91,7 @@ type alias PositionPoint =
 
 type alias PositionSeries =
     { points : List PositionPoint
-    , color : Color
+    , color : String
     , carNumber : String
     , emphasis : Emphasis
     }

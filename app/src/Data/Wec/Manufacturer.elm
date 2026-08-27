@@ -1,79 +1,53 @@
-module Data.Wec.Manufacturer exposing (Table, decoder, empty, fromName)
+module Data.Wec.Manufacturer exposing (Manufacturers, decoder, fromName)
 
 {-| Which manufacturers the timing feed names, and how each is drawn.
 
 The table is `/static/manufacturers.json`, which is written by hand; nothing
 generates it.
 
-@docs Table, decoder, empty, fromName
+@docs Manufacturers, decoder, fromName
 
 -}
 
-import Css exposing (Color)
-import Css.Color exposing (oklch)
 import Dict exposing (Dict)
-import Json.Decode as Decode exposing (Decoder, field, float, string)
+import Json.Decode as Decode exposing (Decoder, field, string)
 import Json.Decode.Pipeline exposing (optional, required)
 import Motorsport.Manufacturer exposing (Manufacturer, unknown)
 
 
 {-| Keyed by the name the feed writes.
 -}
-type Table
-    = Table (Dict String Entry)
+type alias Manufacturers =
+    Dict String Manufacturer
 
 
-type alias Entry =
-    { color : Color
-    , logoUrl : Maybe String
-    }
-
-
-{-| No manufacturers, rather than a guess at which: what there is before the
-table arrives, and in place of one that could not be read.
--}
-empty : Table
-empty =
-    Table Dict.empty
-
-
-decoder : Decoder Table
+decoder : Decoder Manufacturers
 decoder =
     field "manufacturers" (Decode.list entryDecoder)
-        |> Decode.map (Dict.fromList >> Table)
+        |> Decode.map Dict.fromList
 
 
-entryDecoder : Decoder ( String, Entry )
+entryDecoder : Decoder ( String, Manufacturer )
 entryDecoder =
     Decode.succeed
-        (\name color logoUrl -> ( name, { color = color, logoUrl = logoUrl } ))
+        (\name color logoUrl ->
+            ( name, { name = name, color = color, chartColor = color, logoUrl = logoUrl } )
+        )
         |> required "name" string
-        |> required "color" colorDecoder
+        |> required "color" string
         -- `optional` rather than `maybe`, which cannot tell a manufacturer with
         -- no logo from a `logo` written wrong.
         |> optional "logo" (Decode.map Just string) Nothing
 
 
-colorDecoder : Decoder Color
-colorDecoder =
-    Decode.map3 oklch
-        (field "l" float)
-        (field "c" float)
-        (field "h" float)
-
-
 {-| `carNumber` is what tells the cars of a manufacturer the table does not name
 apart.
 -}
-fromName : Table -> { name : String, carNumber : String } -> Manufacturer
-fromName (Table table) { name, carNumber } =
-    case Dict.get name table of
-        Just entry ->
-            { name = name
-            , color = entry.color
-            , chartColor = entry.color
-            , logoUrl = entry.logoUrl
-            }
+fromName : Manufacturers -> { name : String, carNumber : String } -> Manufacturer
+fromName manufacturers { name, carNumber } =
+    case Dict.get name manufacturers of
+        Just manufacturer ->
+            manufacturer
 
         Nothing ->
             { unknown
@@ -82,7 +56,7 @@ fromName (Table table) { name, carNumber } =
             }
 
 
-generatedColor : String -> Color
+generatedColor : String -> String
 generatedColor carNumber =
     let
         carHash =
@@ -91,4 +65,4 @@ generatedColor carNumber =
         hue =
             carHash * 37 |> modBy 360 |> toFloat
     in
-    oklch 0.55 0.25 hue
+    "oklch(0.55 0.25 " ++ String.fromFloat hue ++ ")"

@@ -6,17 +6,17 @@ module Motorsport.Manufacturer exposing (Manufacturer, unknown)
 
 -}
 
-import Css exposing (Color)
-import Css.Color exposing (oklch)
 
+{-| The colours are CSS, ready to hand to a property or an SVG attribute.
 
-{-| `chartColor` distinguishes the cars of a manufacturer that has no colour of
-its own, which `color` leaves all the same neutral.
+`chartColor` distinguishes the cars of a manufacturer that has no colour of its
+own, which `color` leaves all the same neutral.
+
 -}
 type alias Manufacturer =
     { name : String
-    , color : Color
-    , chartColor : Color
+    , color : String
+    , chartColor : String
     , logoUrl : Maybe String
     }
 
@@ -26,7 +26,7 @@ type alias Manufacturer =
 unknown : Manufacturer
 unknown =
     { name = ""
-    , color = oklch 0.5 0 0
-    , chartColor = oklch 0.5 0 0
+    , color = "oklch(0.5 0 0)"
+    , chartColor = "oklch(0.5 0 0)"
     , logoUrl = Nothing
     }
