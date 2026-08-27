@@ -58,7 +58,7 @@ carLine lapHistory window emphasis entry =
         history =
             LapHistory.get entry.metadata.carNumber lapHistory
     in
-    { color = entry.metadata.manufacturer.chartColor
+    { color = entry.metadata.manufacturer.color
     , emphasis = emphasis
     , carNumber = entry.metadata.carNumber
     , laps =

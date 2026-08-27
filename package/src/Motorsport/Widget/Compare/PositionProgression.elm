@@ -65,7 +65,7 @@ buildClassProgressionData snapshot { class, highlighted } =
                 |> List.map
                     (\( item, points ) ->
                         { points = points
-                        , color = item.metadata.manufacturer.chartColor
+                        , color = item.metadata.manufacturer.color
                         , carNumber = item.metadata.carNumber
                         , emphasis =
                             if List.member item.metadata.carNumber highlighted then

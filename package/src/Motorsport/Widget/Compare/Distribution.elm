@@ -46,7 +46,7 @@ excluding pit and out laps.
 -}
 seriesOf : LapHistory -> ( Int, Int ) -> CarAt -> LapTimeDistribution.Series
 seriesOf lapHistory range entry =
-    { color = entry.metadata.manufacturer.chartColor
+    { color = entry.metadata.manufacturer.color
     , emphasis = Focused
     , times = racingTimes lapHistory range entry
     , lastLap = lastLapTime entry

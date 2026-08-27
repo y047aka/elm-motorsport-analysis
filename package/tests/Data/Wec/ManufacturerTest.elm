@@ -49,7 +49,6 @@ suite =
                         |> Expect.equal
                             { name = "Aston Martin"
                             , color = "oklch(0.5 0.25 180)"
-                            , chartColor = "oklch(0.5 0.25 180)"
                             , logoUrl = Just "/assets/manufacturer-logos/aston-martin.png"
                             }
             , test "leaves an entry with no logo its color and no image" <|
@@ -58,22 +57,21 @@ suite =
                         |> Expect.equal
                             { name = "Oreca"
                             , color = "oklch(0.4 0.2 20)"
-                            , chartColor = "oklch(0.4 0.2 20)"
                             , logoUrl = Nothing
                             }
-            , test "keeps the name of a manufacturer the table does not have, and draws it neutral" <|
+            , test "keeps the name of a manufacturer the table does not have, and gives it no logo" <|
                 \_ ->
                     Manufacturer.fromName Dict.empty { name = "Oreca", carNumber = "22" }
                         |> Expect.all
                             [ .name >> Expect.equal "Oreca"
-                            , .color >> Expect.equal unknown.color
+                            , .color >> Expect.notEqual unknown.color
                             , .logoUrl >> Expect.equal Nothing
                             ]
             , test "tells the cars of a manufacturer the table does not have apart" <|
                 \_ ->
                     Manufacturer.fromName Dict.empty { name = "Oreca", carNumber = "22" }
-                        |> .chartColor
+                        |> .color
                         |> Expect.notEqual
-                            (Manufacturer.fromName Dict.empty { name = "Oreca", carNumber = "23" }).chartColor
+                            (Manufacturer.fromName Dict.empty { name = "Oreca", carNumber = "23" }).color
             ]
         ]

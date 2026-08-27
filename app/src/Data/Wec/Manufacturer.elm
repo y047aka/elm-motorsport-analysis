@@ -30,7 +30,7 @@ entryDecoder : Decoder ( String, Manufacturer )
 entryDecoder =
     Decode.succeed
         (\name color logoUrl ->
-            ( name, { name = name, color = color, chartColor = color, logoUrl = logoUrl } )
+            ( name, { name = name, color = color, logoUrl = logoUrl } )
         )
         |> required "name" string
         |> required "color" string
@@ -51,7 +51,7 @@ fromName manufacturers { name, carNumber } =
         Nothing ->
             { unknown
                 | name = name
-                , chartColor = generatedColor carNumber
+                , color = generatedColor carNumber
             }
 
 
