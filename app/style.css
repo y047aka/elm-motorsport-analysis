@@ -10,6 +10,13 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
+@layer base {
+  html,
+  body {
+    height: 100vh;
+  }
+}
+
 [data-theme="forest"]{
   --color-base-100: oklch(0.2 0 0);
   --color-base-200: oklch(0.23 0 0);

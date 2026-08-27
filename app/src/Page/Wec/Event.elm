@@ -14,7 +14,6 @@ import Effect exposing (Effect)
 import Html exposing (Html, a, button, div, main_, nav, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
-import Html.Styled
 import Motorsport.Chart.Tracker as TrackerChart
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Replay as Replay
@@ -186,7 +185,6 @@ view shared m =
                             RaceEvents.view EventsMsg m.eventsState race.replay
             ]
         ]
-            |> List.map Html.Styled.fromUnstyled
     }
 
 

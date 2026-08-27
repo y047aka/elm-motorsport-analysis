@@ -10,7 +10,6 @@ calendar it lists is loaded once by `Shared`.
 import Data.Wec.Calendar exposing (Round, Season)
 import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
 import Html.Attributes exposing (attribute, class)
-import Html.Styled
 import Route
 import Shared
 import View exposing (View)
@@ -24,16 +23,14 @@ view : Shared.Model -> View msg
 view { calendar } =
     { title = "Race Analysis"
     , body =
-        [ Html.Styled.fromUnstyled
-            (div
-                [ attribute "data-theme" "forest"
-                , class "h-full overflow-y-auto bg-base-100 text-base-content"
-                ]
-                [ pageHeader
-                , main_ [ class "mx-auto flex max-w-5xl flex-col gap-12 px-6 pb-20" ]
-                    (List.indexedMap (\i season -> seasonSection { isLatest = i == 0 } season) calendar)
-                ]
-            )
+        [ div
+            [ attribute "data-theme" "forest"
+            , class "h-full overflow-y-auto bg-base-100 text-base-content"
+            ]
+            [ pageHeader
+            , main_ [ class "mx-auto flex max-w-5xl flex-col gap-12 px-6 pb-20" ]
+                (List.indexedMap (\i season -> seasonSection { isLatest = i == 0 } season) calendar)
+            ]
         ]
     }
 

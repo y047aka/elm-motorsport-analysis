@@ -12,7 +12,6 @@ import Effect exposing (Effect)
 import Html exposing (Html, div, header, input, nav, text)
 import Html.Attributes as Attributes exposing (class, type_, value)
 import Html.Events exposing (onClick, onInput)
-import Html.Styled
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -87,7 +86,7 @@ view shared { leaderboardState } =
                 []
 
             Just { replay } ->
-                debugView replay leaderboardState |> List.map Html.Styled.fromUnstyled
+                debugView replay leaderboardState
     }
 
 
