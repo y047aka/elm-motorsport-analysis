@@ -1,15 +1,14 @@
 module Motorsport.Chart.Histogram exposing (view)
 
-import Css exposing (px)
-import Html.Styled exposing (Html)
+import Html exposing (Html)
 import Motorsport.BestTimes as BestTimes exposing (Holder)
 import Motorsport.Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (performanceLevel)
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg, g, rect, svg)
-import Svg.Styled.Attributes as SvgAttributes
-import TypedSvg.Styled.Attributes as TypedSvgAttributes
-import TypedSvg.Styled.Attributes.InPx as InPx
+import Svg exposing (Svg, g, rect, svg)
+import Svg.Attributes as SvgAttributes
+import TypedSvg.Attributes as TypedSvgAttributes
+import TypedSvg.Attributes.InPx as InPx
 
 
 w : Float
@@ -94,7 +93,7 @@ view bestTimes coefficient laps =
         timedLaps =
             List.filter (\lap -> lap.time /= Nothing) laps
     in
-    svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.css [ Css.width (px 200) ] ]
+    svg [ TypedSvgAttributes.viewBox 0 0 w h, SvgAttributes.style "width: 200px;" ]
         [ histogram_
             { x = .time >> Maybe.withDefault 0 >> toFloat >> Scale.convert xScale
             , y = always 0 >> Scale.convert yScale

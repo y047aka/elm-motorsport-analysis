@@ -7,12 +7,11 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 -}
 
 import Compare
-import Css exposing (backgroundColor, displayFlex, hsl, justifyContent, position, spaceBetween, sticky, top, zero)
 import DataView
 import Effect exposing (Effect)
-import Html.Styled exposing (Html, div, header, input, nav, text)
-import Html.Styled.Attributes as Attributes exposing (class, css, type_, value)
-import Html.Styled.Events exposing (onClick, onInput)
+import Html exposing (Html, div, header, input, nav, text)
+import Html.Attributes as Attributes exposing (class, type_, value)
+import Html.Events exposing (onClick, onInput)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -106,14 +105,7 @@ debugView replay leaderboardState =
             BestTimes.final race.bestTimeChanges
     in
     [ header
-        [ css
-            [ position sticky
-            , top zero
-            , displayFlex
-            , justifyContent spaceBetween
-            , backgroundColor (hsl 0 0 0.4)
-            ]
-        ]
+        [ Attributes.class "sticky top-0 flex justify-between bg-[hsl(0,0%,40%)]" ]
         [ nav []
             [ input
                 [ type_ "range"

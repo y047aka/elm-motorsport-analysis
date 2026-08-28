@@ -1,7 +1,7 @@
 module UI.Label exposing (basicLabel)
 
-import Html.Styled as Html exposing (Attribute, Html)
-import Html.Styled.Attributes exposing (class)
+import Html exposing (Attribute, Html)
+import Html.Attributes exposing (class)
 
 
 {-| Outlined badge

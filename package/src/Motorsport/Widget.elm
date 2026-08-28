@@ -10,9 +10,8 @@ module Motorsport.Widget exposing
 
 -}
 
-import Css exposing (..)
-import Html.Styled exposing (Html, div, h3, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html exposing (Html, div, h3, text)
+import Html.Attributes exposing (class)
 
 
 {-| Create a standard widget container with consistent styling
@@ -20,9 +19,7 @@ import Html.Styled.Attributes exposing (class, css)
 container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
-        [ class "card card-sm"
-        , css [ property "background-color" "var(--widget-bg)" ]
-        ]
+        [ class "card card-sm bg-[var(--widget-bg)]" ]
         [ div [ class "card-body" ]
             [ h3 [ class "card-title" ] [ text widgetTitle ]
             , content
@@ -35,11 +32,5 @@ container widgetTitle content =
 emptyState : String -> Html msg
 emptyState message =
     div
-        [ css
-            [ padding (px 20)
-            , textAlign center
-            , fontStyle italic
-            , color (hsl 0 0 0.7)
-            ]
-        ]
+        [ class "p-5 text-center italic text-[hsl(0,0%,70%)]" ]
         [ text message ]

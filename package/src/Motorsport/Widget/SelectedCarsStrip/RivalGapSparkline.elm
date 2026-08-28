@@ -8,7 +8,7 @@ shown at the bottom of each SelectedCarsStrip card.
 -}
 
 import Dict
-import Html.Styled exposing (Html, text)
+import Html exposing (Html, text)
 import List.Extra
 import Motorsport.Chart.Common exposing (Emphasis(..), LapWindow(..))
 import Motorsport.Chart.GapChart as GapChart

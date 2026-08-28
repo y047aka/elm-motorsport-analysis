@@ -11,7 +11,7 @@ elapsed time) as a sortable table.
 
 import Compare
 import DataView
-import Html.Styled as Html exposing (Html, div, text)
+import Html exposing (Html, div, text)
 import Motorsport.Clock as Clock
 import Motorsport.Instant as Instant
 import Motorsport.Race.TimelineEvent exposing (CarEventType(..), EventType(..), TimelineEvent)

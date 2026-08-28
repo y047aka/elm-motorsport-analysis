@@ -8,10 +8,9 @@ the front of the race without requiring any selection.
 
 -}
 
-import Css exposing (num, opacity, property)
-import Html.Styled exposing (Html, button, div, text)
-import Html.Styled.Attributes as Attributes exposing (class, css)
-import Html.Styled.Events exposing (onClick)
+import Html exposing (Html, button, div, text)
+import Html.Attributes as Attributes exposing (class)
+import Html.Events exposing (onClick)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
 
@@ -51,26 +50,11 @@ view config snapshot =
 
         _ ->
             div
-                [ css
-                    [ property "display" "grid"
-                    , property "grid-template-columns" "auto 1fr auto"
-                    , property "align-items" "center"
-                    , property "column-gap" "8px"
-                    ]
-                ]
+                [ class "grid grid-cols-[auto_1fr_auto] items-center gap-2" ]
                 [ navButton "◀" (config.onScrollTo (offset - 1)) (offset <= 0)
                 , div
-                    [ css
-                        [ property "display" "grid"
-                        , property "grid-auto-flow" "column"
-                        , property "grid-auto-columns" "minmax(0, 1fr)"
-                        , property "column-gap" "8px"
-                        ]
-                    ]
-                    (List.map
-                        (CarCard.view lapHistory allCars)
-                        window
-                    )
+                    [ class "grid grid-flow-col auto-cols-[minmax(0,1fr)] gap-2" ]
+                    (List.map (CarCard.view lapHistory allCars) window)
                 , navButton "▶" (config.onScrollTo (offset + 1)) (offset >= maxOffset)
                 ]
 
@@ -95,11 +79,5 @@ navButton label msg isDisabled =
 emptyState : Html msg
 emptyState =
     div
-        [ css
-            [ property "display" "grid"
-            , property "place-items" "center"
-            , property "font-size" "11px"
-            , opacity (num 0.5)
-            ]
-        ]
+        [ class "grid place-items-center text-[11px] opacity-50" ]
         [ text "No cars on track" ]

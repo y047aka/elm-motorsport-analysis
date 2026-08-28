@@ -3,7 +3,7 @@
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
 JSON/JSONL → Elm visualization.
 
-- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + elm-css). The only npm
+- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + DaisyUI). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached

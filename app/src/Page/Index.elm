@@ -8,8 +8,8 @@ calendar it lists is loaded once by `Shared`.
 -}
 
 import Data.Wec.Calendar exposing (Round, Season)
-import Html.Styled exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
-import Html.Styled.Attributes exposing (attribute, class)
+import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
+import Html.Attributes exposing (attribute, class)
 import Route
 import Shared
 import View exposing (View)

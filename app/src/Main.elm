@@ -7,10 +7,8 @@ elm-pages framework.
 
 import Browser
 import Browser.Navigation as Nav
-import Css exposing (height, vh)
-import Css.Global
 import Effect exposing (Effect)
-import Html.Styled
+import Html
 import Json.Decode as Decode
 import Page.Debug
 import Page.Index
@@ -184,18 +182,7 @@ view model =
         { title, body } =
             viewPage model
     in
-    { title = title
-    , body =
-        List.map Html.Styled.toUnstyled (globalReset :: body)
-    }
-
-
-globalReset : Html.Styled.Html msg
-globalReset =
-    Css.Global.global
-        [ Css.Global.html [ height (vh 100) ]
-        , Css.Global.body [ height (vh 100) ]
-        ]
+    { title = title, body = body }
 
 
 viewPage : Model -> View Msg
@@ -214,5 +201,5 @@ viewPage model =
 
         NotFoundPage ->
             { title = "Not Found"
-            , body = [ Html.Styled.text "Page not found. Maybe try another URL?" ]
+            , body = [ Html.text "Page not found. Maybe try another URL?" ]
             }

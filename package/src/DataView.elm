@@ -45,13 +45,12 @@ truth is pretty great!
 
 import Array exposing (Array)
 import Compare exposing (Comparator)
-import Css exposing (..)
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
-import Html.Styled exposing (Attribute, Html, button, div, input, span, text)
-import Html.Styled.Attributes as Attributes exposing (class, css, type_)
-import Html.Styled.Events exposing (on, onClick)
-import Html.Styled.Keyed as Keyed
-import Html.Styled.Lazy as Lazy exposing (lazy4)
+import Html exposing (Attribute, Html, button, div, input, span, text)
+import Html.Attributes as Attributes exposing (class, type_)
+import Html.Events exposing (on, onClick)
+import Html.Keyed as Keyed
+import Html.Lazy as Lazy exposing (lazy4)
 import Json.Decode as D
 import List.Extra
 import UI.Table as Table exposing (td, th, tr)
@@ -483,7 +482,7 @@ theadCell toMsg model c =
         (case model.options.sorting of
             Sorting ->
                 [ onClick <| toMsg <| Sort c.name
-                , css [ property "user-select" "none" ]
+                , class "select-none"
                 ]
 
             NoSorting ->
@@ -509,12 +508,12 @@ sortIndicator direction =
 
 darkGrey : String -> Html msg
 darkGrey symbol =
-    span [ css [ color (hex "#555") ] ] [ text symbol ]
+    span [ class "text-[#555]" ] [ text symbol ]
 
 
 lightGrey : String -> Html msg
 lightGrey symbol =
-    span [ css [ color (hex "#ccc") ] ] [ text symbol ]
+    span [ class "text-[#ccc]" ] [ text symbol ]
 
 
 viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )
@@ -581,12 +580,7 @@ calculatePageCount option totalItems =
 pagination : (Msg -> msg) -> Int -> Int -> Html msg
 pagination toMsg currentPage totalPages =
     div
-        [ css
-            [ displayFlex
-            , justifyContent flexEnd
-            , paddingTop (rem 0.5)
-            ]
-        ]
+        [ class "flex justify-end pt-2" ]
         (List.map (paginationButton toMsg currentPage) (List.range 0 (totalPages - 1)))
 
 
@@ -597,24 +591,15 @@ paginationButton toMsg activePage n =
             n + 1
     in
     button
-        [ css
-            [ border3 (px 1) solid <| hex "63B3ED"
-            , backgroundColor <| rgb 255 255 255
-            , color <| rgb 0 0 0
-            , borderRadius (px 2)
-            , display inline
-            , margin (rem 0.1)
-            , padding2 (rem 0.25) (rem 0.5)
-            , hover [ cursor pointer ]
-            , batch <|
-                if page == activePage then
-                    [ backgroundColor <| hex "63B3ED"
-                    , color <| hex "FFFFFF"
-                    ]
+        [ class
+            ("border border-[#63B3ED] bg-white text-black rounded-[2px] inline m-[0.1rem] py-1 px-2 hover:cursor-pointer"
+                ++ (if page == activePage then
+                        " bg-[#63B3ED] text-white"
 
-                else
-                    []
-            ]
+                    else
+                        ""
+                   )
+            )
         , onClick <| toMsg <| SetPage page
         ]
         [ text <| String.fromInt page ]

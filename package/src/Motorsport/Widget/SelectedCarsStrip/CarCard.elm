@@ -7,9 +7,8 @@ status, above the driver name, sector performance, and rival gap sparkline.
 
 -}
 
-import Css exposing (before, num, opacity, property, qt)
-import Html.Styled exposing (Html, div, text)
-import Html.Styled.Attributes exposing (class, css)
+import Html exposing (Html, div, text)
+import Html.Attributes exposing (attribute, class)
 import Motorsport.Driver as Driver
 import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Race.LapHistory exposing (LapHistory)
@@ -27,31 +26,16 @@ the sparkline searches it for the class rivals ahead of and behind the car.
 view : LapHistory -> List CarAt -> CarAt -> Html msg
 view lapHistory allCars item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "row-gap" "4px"
-            ]
-        ]
+        [ class "grid gap-y-1" ]
         [ div
-            [ css
-                [ property "padding-inline" "8px"
-                , property "display" "grid"
-                , property "grid-template-columns" "auto 1fr auto"
-                , property "column-gap" "16px"
-                ]
-            ]
+            [ class "px-2 grid grid-cols-[auto_1fr_auto] gap-x-4" ]
             [ positionLabel item
             , gapsRow item
             , statusBadge item.status
             ]
         , div [ class "card bg-base-200" ]
             [ div
-                [ class "card-body p-3"
-                , css
-                    [ property "display" "grid"
-                    , property "row-gap" "8px"
-                    ]
-                ]
+                [ class "card-body p-3 grid gap-y-2" ]
                 [ cardHeader item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item
@@ -63,22 +47,10 @@ view lapHistory allCars item =
 cardHeader : CarAt -> Html msg
 cardHeader item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr"
-            , property "align-items" "center"
-            , property "column-gap" "8px"
-            ]
-        ]
+        [ class "grid grid-cols-[auto_1fr] items-center gap-x-2" ]
         [ CarNumberBadge.view item.metadata
         , div
-            [ css
-                [ property "font-size" "12px"
-                , property "white-space" "nowrap"
-                , property "overflow" "hidden"
-                , property "text-overflow" "ellipsis"
-                ]
-            ]
+            [ class "text-[12px] truncate" ]
             [ text (Driver.toFullName item.currentDriver) ]
         ]
 
@@ -88,31 +60,12 @@ statusBadge status =
     case status of
         InPit ->
             div
-                [ css
-                    [ property "display" "grid"
-                    , property "place-items" "center"
-                    , property "width" "16px"
-                    , property "height" "16px"
-                    , property "border-radius" "9999px"
-                    , property "border" "1px solid hsl(0 0% 100% / 0.6)"
-                    , property "font-size" "9px"
-                    , property "font-weight" "700"
-                    , property "line-height" "1"
-                    ]
-                ]
+                [ class "grid place-items-center w-4 h-4 rounded-full border border-[hsl(0_0%_100%/0.6)] text-[9px] font-bold leading-none" ]
                 [ text "P" ]
 
         Retired ->
             div
-                [ css
-                    [ property "padding" "1px 4px"
-                    , property "border-radius" "3px"
-                    , property "background-color" "hsl(0 70% 45%)"
-                    , property "font-size" "9px"
-                    , property "font-weight" "700"
-                    , property "letter-spacing" "0.05em"
-                    ]
-                ]
+                [ class "py-px px-1 rounded-[3px] bg-[hsl(0_70%_45%)] text-[9px] font-bold tracking-wider" ]
                 [ text "RET" ]
 
         _ ->
@@ -122,20 +75,8 @@ statusBadge status =
 positionLabel : CarAt -> Html msg
 positionLabel item =
     div
-        [ css
-            [ property "display" "flex"
-            , property "align-items" "center"
-            , property "column-gap" "4px"
-            , property "font-size" "10px"
-            , before
-                [ property "display" "block"
-                , property "content" (qt "")
-                , property "width" "0.2em"
-                , property "height" "1em"
-                , property "border-radius" "2px"
-                , property "background-color" (Class.toColor item.metadata.class).value
-                ]
-            ]
+        [ class "flex items-center gap-x-1 text-[10px] before:block before:content-[''] before:w-[0.2em] before:h-[1em] before:rounded-[2px] before:[background-color:var(--class-color)]"
+        , attribute "style" ("--class-color: " ++ Class.toColor item.metadata.class ++ ";")
         ]
         [ text ("P" ++ String.fromInt item.standing.position) ]
 
@@ -143,31 +84,17 @@ positionLabel item =
 gapsRow : CarAt -> Html msg
 gapsRow item =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "1fr"
-            , property "align-items" "baseline"
-            , property "font-size" "10px"
-            , opacity (num 0.75)
-            ]
-        ]
+        [ class "grid grid-cols-[1fr] items-baseline text-[10px] opacity-75" ]
         [ gapCell "Interval" item.standing.intervalToAhead ]
 
 
 gapCell : String -> Gap -> Html msg
 gapCell label gap =
     div
-        [ css
-            [ property "display" "grid"
-            , property "grid-template-columns" "auto 1fr"
-            , property "align-items" "baseline"
-            , property "column-gap" "4px"
-            , property "font-variant-numeric" "tabular-nums"
-            ]
-        ]
-        [ div [ css [ opacity (num 0.7) ] ]
+        [ class "grid grid-cols-[auto_1fr] items-baseline gap-x-1 tabular-nums" ]
+        [ div [ class "opacity-70" ]
             [ text label ]
         , div
-            [ css [ property "text-align" "right" ] ]
+            [ class "text-right" ]
             [ text (Gap.toString gap) ]
         ]

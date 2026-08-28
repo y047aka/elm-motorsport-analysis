@@ -18,8 +18,6 @@ module Motorsport.Wec.Class exposing
 
 -}
 
-import Css
-import Css.Color exposing (oklch)
 import List.Extra
 import Motorsport.Wec.Era as Era exposing (Era)
 
@@ -37,7 +35,7 @@ that season's grid of three.
 -}
 type Class
     = None
-    | Racing { category : Category, index : Int, color : Css.Color }
+    | Racing { category : Category, index : Int, color : String }
 
 
 {-| Which category, regardless of era -- only the name it prints depends on it.
@@ -69,7 +67,7 @@ The single source of era-dependent knowledge: a new era is a case here, a new
 season is nothing at all.
 
 -}
-grid : Era -> List ( Category, Css.Color )
+grid : Era -> List ( Category, String )
 grid era =
     case era of
         Era.GteProAndAm ->
@@ -187,7 +185,7 @@ compare a b =
 
 {-| The color a class was drawn in, in its own era.
 -}
-toColor : Class -> Css.Color
+toColor : Class -> String
 toColor class =
     case class of
         Racing { color } ->
@@ -197,21 +195,26 @@ toColor class =
             oklch 0 0 0
 
 
-red : Css.Color
+red : String
 red =
     oklch 0.5 0.25 29
 
 
-blue : Css.Color
+blue : String
 blue =
     oklch 0.5 0.25 264
 
 
-green : Css.Color
+green : String
 green =
     oklch 0.5 0.25 142
 
 
-orange : Css.Color
+orange : String
 orange =
     oklch 0.7 0.2 43
+
+
+oklch : Float -> Float -> Float -> String
+oklch luminance chroma hue =
+    "oklch(" ++ String.fromFloat (luminance * 100) ++ "% " ++ String.fromFloat chroma ++ " " ++ String.fromFloat hue ++ ")"

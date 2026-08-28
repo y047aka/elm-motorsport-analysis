@@ -9,18 +9,17 @@ show. Passing several `Series` to `view` overlays them on a shared lap-time axis
 -}
 
 import Axis
-import Css
-import Html.Styled exposing (Html, text)
+import Html exposing (Html, text)
 import Motorsport.Chart.Common as Common exposing (Emphasis)
 import Motorsport.Duration as Duration
-import Path.Styled as Path
+import Path
 import Scale exposing (ContinuousScale)
 import Shape
 import Statistics
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, text_)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform)
-import TypedSvg.Styled.Attributes.InPx as InPx
+import Svg exposing (Svg, circle, g, text_)
+import Svg.Attributes as SvgAttr
+import TypedSvg.Attributes exposing (transform)
+import TypedSvg.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -240,8 +239,7 @@ lastLapMarker xScale yScale series lastLapPoint =
                     , InPx.y (py - 6)
                     , SvgAttr.textAnchor "middle"
                     , SvgAttr.fill series.color
-                    , SvgAttr.css
-                        [ Css.fontSize (Css.px 9) ]
+                    , SvgAttr.class "text-[9px]"
                     ]
                     [ text (Duration.toString (round x)) ]
                 ]
@@ -252,14 +250,13 @@ lastLapMarker xScale yScale series lastLapPoint =
 
 xAxis : Float -> ContinuousScale Float -> Svg msg
 xAxis height xScale =
-    g [ transform [ Translate 0 (height - padding.bottom) ], SvgAttr.css [ Common.axisStyle ] ]
-        [ fromUnstyled <|
-            Axis.bottom
-                [ Axis.tickCount 4
-                , Axis.tickFormat (round >> Duration.toString)
-                , Axis.tickSizeOuter 0
-                ]
-                xScale
+    g [ transform [ Translate 0 (height - padding.bottom) ], Common.axisStyle ]
+        [ Axis.bottom
+            [ Axis.tickCount 4
+            , Axis.tickFormat (round >> Duration.toString)
+            , Axis.tickSizeOuter 0
+            ]
+            xScale
         ]
 
 

@@ -21,17 +21,14 @@ grid drawing, and the outlier statistics.
 -}
 
 import Axis exposing (tickFormat, tickPadding, tickSizeInner, tickSizeOuter, ticks)
-import Css
-import Css.Extra
-import Css.Global exposing (descendants, each)
 import List.Extra
-import Path.Styled as Path
+import Path
 import Scale
 import Shape
-import Svg.Styled exposing (Svg, circle, fromUnstyled, g, line, text, text_)
-import Svg.Styled.Attributes as SvgAttr
-import TypedSvg.Styled.Attributes exposing (transform, viewBox)
-import TypedSvg.Styled.Attributes.InPx as InPx
+import Svg exposing (Svg, circle, g, line, text, text_)
+import Svg.Attributes as SvgAttr
+import TypedSvg.Attributes exposing (transform, viewBox)
+import TypedSvg.Attributes.InPx as InPx
 import TypedSvg.Types exposing (Transform(..))
 
 
@@ -151,9 +148,9 @@ xContinuousScale { width, padding } domain =
 -}
 svg : { width : Float, height : Float } -> List (Svg msg) -> Svg msg
 svg { width, height } children =
-    Svg.Styled.svg
+    Svg.svg
         [ SvgAttr.width "100%"
-        , SvgAttr.css [ Css.property "display" "block" ]
+        , SvgAttr.class "block"
         , viewBox 0 0 width height
         ]
         children
@@ -260,10 +257,7 @@ terminalLabel { x, y, color, label } =
         , InPx.y y
         , SvgAttr.dominantBaseline "central"
         , SvgAttr.fill color
-        , SvgAttr.css
-            [ Css.fontSize (Css.px 9)
-            , Css.fontWeight Css.bold
-            ]
+        , SvgAttr.class "text-[9px] font-bold"
         ]
         [ text label ]
 
@@ -277,23 +271,15 @@ terminalDotRadius =
 -- Axes & grid
 
 
-{-| Common style for axis text and tick lines.
+{-| Common style for axis text and tick lines. `Axis.bottom`/`Axis.left` draw
+their ticks as bare `text`/`line`/`path` elements we don't construct
+ourselves, so this reaches them by tag name through Tailwind's descendant
+arbitrary variant rather than attributes set on each one individually.
 -}
-axisStyle : Css.Style
+axisStyle : Svg.Attribute msg
 axisStyle =
-    descendants
-        [ Css.Global.typeSelector "text"
-            [ Css.fill (Css.hsl 0 0 0.7)
-            , Css.fontSize (Css.px 9)
-            ]
-        , each
-            [ Css.Global.typeSelector "line"
-            , Css.Global.typeSelector "path"
-            ]
-            [ Css.Extra.strokeWidth 1
-            , Css.property "stroke" "oklch(0.5 0 0 / 1)"
-            ]
-        ]
+    SvgAttr.class
+        "[&_text]:fill-[hsl(0,0%,70%)] [&_text]:text-[9px] [&_line]:stroke-[oklch(0.5_0_0)] [&_line]:[stroke-width:1] [&_path]:stroke-[oklch(0.5_0_0)] [&_path]:[stroke-width:1]"
 
 
 {-| Vertical grid lines every 5 laps, across the height of the plot area.
@@ -322,10 +308,7 @@ lapGridLines { height, padding } xScale ( minLap, maxLap ) =
                     , SvgAttr.x2 (String.fromFloat x)
                     , SvgAttr.y1 (String.fromFloat top)
                     , SvgAttr.y2 (String.fromFloat bottom)
-                    , SvgAttr.css
-                        [ Css.property "stroke" "oklch(0.5 0 0 / 0.3)"
-                        , Css.Extra.strokeWidth 1
-                        ]
+                    , SvgAttr.class "stroke-[oklch(0.5_0_0/0.3)] [stroke-width:1]"
                     ]
                     []
             )
@@ -342,25 +325,24 @@ lapAxis { height, padding } xScale ( minLap, maxLap ) =
             List.range minLap maxLap |> List.map toFloat
 
         axis =
-            fromUnstyled <|
-                Axis.bottom
-                    [ ticks allLaps
-                    , tickSizeOuter 0
-                    , tickSizeInner -3
-                    , tickPadding 8
-                    , tickFormat
-                        (\f ->
-                            if modBy 5 (round f) == 0 then
-                                String.fromInt (round f)
+            Axis.bottom
+                [ ticks allLaps
+                , tickSizeOuter 0
+                , tickSizeInner -3
+                , tickPadding 8
+                , tickFormat
+                    (\f ->
+                        if modBy 5 (round f) == 0 then
+                            String.fromInt (round f)
 
-                            else
-                                ""
-                        )
-                    ]
-                    xScale
+                        else
+                            ""
+                    )
+                ]
+                xScale
     in
     g
-        [ SvgAttr.css [ axisStyle ]
+        [ axisStyle
         , transform [ Translate 0 (height - padding.bottom) ]
         ]
         [ axis ]
@@ -372,10 +354,10 @@ the style and the translation are shared.
 yAxis : Dimensions -> List (Axis.Attribute Float) -> Scale.ContinuousScale Float -> Svg msg
 yAxis { padding } attributes yScale =
     g
-        [ SvgAttr.css [ axisStyle ]
+        [ axisStyle
         , transform [ Translate padding.left 0 ]
         ]
-        [ fromUnstyled (Axis.left attributes yScale) ]
+        [ Axis.left attributes yScale ]
 
 
 

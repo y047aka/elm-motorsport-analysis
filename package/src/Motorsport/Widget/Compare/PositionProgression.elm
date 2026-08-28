@@ -1,7 +1,7 @@
 module Motorsport.Widget.Compare.PositionProgression exposing (lapRange, view)
 
 import Axis exposing (tickFormat, tickSizeInner, tickSizeOuter, ticks)
-import Html.Styled exposing (Html)
+import Html exposing (Html)
 import List.Extra
 import Motorsport.Chart.Common exposing (Dimensions, Emphasis(..), Scales, axisPadding, lapAxis, lapGridLines, renderLine, sortForDrawing, svg, xContinuousScale, yAxis)
 import Motorsport.Instant as Instant
@@ -11,7 +11,7 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Wec.Class exposing (Class)
 import Motorsport.Widget as Widget
 import Scale exposing (ContinuousScale)
-import Svg.Styled exposing (Svg)
+import Svg exposing (Svg)
 
 
 view : { width : Float, height : Float } -> Snapshot -> { class : Class, highlighted : List String } -> Html msg

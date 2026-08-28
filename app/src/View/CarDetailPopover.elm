@@ -14,9 +14,8 @@ as the `popovertarget` of the trigger.
 
 -}
 
-import Css
-import Html.Styled as Html exposing (Html, button, text)
-import Html.Styled.Attributes as Attributes exposing (attribute, css)
+import Html exposing (Html, button, div, text)
+import Html.Attributes as Attributes exposing (attribute)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.Compare as CompareWidget
 
@@ -42,29 +41,18 @@ view config snapshot detailCarNumbers =
         -- Style with daisyUI's modal-box. modal-box sets no display, so the UA's
         -- "a closed popover is display:none" applies as-is.
         , Attributes.class "modal-box"
-        , css
-            [ -- Tailwind preflight cancels the UA's margin:auto, so set it explicitly to center.
-              Css.property "margin" "auto"
-            , Css.property "max-width" "min(90vw, 1200px)"
-            , Css.property "padding" "1rem"
 
-            -- Glassmorphism: translucent background + backdrop blur + border.
-            -- Colors are managed by app-side DaisyUI theme tokens (--glass-*).
-            , Css.property "background-color" "var(--glass-bg)"
-            , Css.property "backdrop-filter" "blur(16px)"
-            , Css.property "-webkit-backdrop-filter" "blur(16px)"
-            , Css.property "border" "1px solid var(--glass-border)"
-            , Css.property "box-shadow" "0 0 80px var(--glass-shadow)"
+        -- Tailwind preflight cancels the UA's margin:auto, so set it explicitly to center.
+        , Attributes.class "m-auto max-w-[min(90vw,1200px)] p-4"
 
-            -- .modal-box collapses opacity/scale assuming it opens inside a .modal,
-            -- so restore them in the popover's open state.
-            , Css.pseudoClass "popover-open"
-                [ Css.property "opacity" "1"
-                , Css.property "scale" "1"
-                ]
-            , Css.pseudoElement "backdrop"
-                [ Css.property "background-color" "var(--glass-backdrop)" ]
-            ]
+        -- Glassmorphism: translucent background + backdrop blur + border.
+        -- Colors are managed by app-side DaisyUI theme tokens (--glass-*).
+        , Attributes.class "bg-[var(--glass-bg)] backdrop-blur-lg border border-[var(--glass-border)] shadow-[0_0_80px_var(--glass-shadow)]"
+
+        -- .modal-box collapses opacity/scale assuming it opens inside a .modal,
+        -- so restore them in the popover's open state.
+        , Attributes.class "[&:popover-open]:opacity-100 [&:popover-open]:scale-100"
+        , Attributes.class "backdrop:bg-[var(--glass-backdrop)]"
         ]
         [ button
             [ attribute "popovertarget" popoverId
@@ -76,7 +64,7 @@ view config snapshot detailCarNumbers =
             [] ->
                 -- Deselecting the last car must not leave an empty modal:
                 -- keep the close button above and explain how to recover.
-                Html.div
+                div
                     [ Attributes.class "py-8 text-center text-sm opacity-70" ]
                     [ text "No cars selected. Pick a car from the standings to compare." ]
 
