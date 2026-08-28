@@ -438,7 +438,7 @@ view ({ columns } as config) model dataList =
 table : Config data msg -> Model -> Array data -> List Int -> Html msg
 table config model dataArray displayIndexes =
     Table.table
-        [ class "table table-sm" ]
+        [ class "text-sm" ]
         [ thead config model dataArray
         , Keyed.node "tbody" [] <|
             viewBodyRows config model displayIndexes dataArray

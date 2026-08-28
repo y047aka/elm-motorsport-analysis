@@ -166,8 +166,7 @@ view shared m =
     { title = "Wec"
     , body =
         [ main_
-            [ attribute "data-theme" "forest"
-            , Attributes.class "h-full grid grid-rows-[auto_1fr]"
+            [ Attributes.class "dark h-full grid grid-rows-[auto_1fr]"
             ]
             [ navigation (headerTitle shared) maybeRace m.mode
             , case maybeRace of
@@ -210,15 +209,15 @@ trackerView track snapshot m =
                 }
             ]
         , div
-            [ Attributes.class "card bg-base-200 col-start-2" ]
-            [ div [ Attributes.class "card-body p-3" ]
+            [ Attributes.class "flex flex-col rounded-lg border border-border bg-card col-start-2" ]
+            [ div [ Attributes.class "flex flex-col p-3" ]
                 [ div
                     [ Attributes.class "h-full grid place-items-center" ]
                     [ TrackerChart.view track snapshot ]
                 ]
             ]
         , div
-            [ Attributes.class "card bg-base-200 col-start-3" ]
+            [ Attributes.class "flex flex-col rounded-lg border border-border bg-card col-start-3" ]
             []
         , div [ Attributes.class "col-span-full" ]
             [ SelectedCarsStrip.view
@@ -267,7 +266,7 @@ backLink : Html Msg
 backLink =
     a
         [ Route.href Route.Index
-        , Attributes.class "btn btn-sm btn-square btn-ghost opacity-60 hover:opacity-100"
+        , Attributes.class "inline-flex items-center justify-center size-8 rounded-md cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground opacity-60 hover:opacity-100"
         , attribute "aria-label" "Back to the race list"
         , Attributes.title "Back to the race list"
         ]
@@ -276,7 +275,7 @@ backLink =
 
 viewModeSelector : Mode -> Html Msg
 viewModeSelector currentMode =
-    div [ Attributes.class "join" ]
+    div [ Attributes.class "inline-flex" ]
         [ modeButton "Tracker" Tracker (currentMode == Tracker)
         , modeButton "Events" Events (currentMode == Events)
         ]
@@ -292,12 +291,12 @@ joinButton label isActive msg =
     button
         [ onClick msg
         , Attributes.class
-            ("join-item btn btn-sm btn-soft"
+            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
                 ++ (if isActive then
-                        " btn-active"
+                        " bg-primary text-primary-foreground border-primary"
 
                     else
-                        ""
+                        " bg-accent/40 text-foreground hover:bg-accent/70"
                    )
             )
         ]

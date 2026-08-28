@@ -33,9 +33,9 @@ view lapHistory allCars item =
             , gapsRow item
             , statusBadge item.status
             ]
-        , div [ class "card bg-base-200" ]
+        , div [ class "rounded-lg border border-border bg-card" ]
             [ div
-                [ class "card-body p-3 grid gap-y-2" ]
+                [ class "grid gap-y-2 p-3" ]
                 [ cardHeader item
                 , SectorAndLaps.view item
                 , RivalGapSparkline.view lapHistory allCars item

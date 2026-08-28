@@ -10,7 +10,7 @@ import Compare
 import DataView
 import Effect exposing (Effect)
 import Html exposing (Html, div, header, input, nav, text)
-import Html.Attributes as Attributes exposing (class, type_, value)
+import Html.Attributes as Attributes exposing (type_, value)
 import Html.Events exposing (onClick, onInput)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
@@ -115,9 +115,9 @@ debugView replay leaderboardState =
                 ]
                 []
             , labeledButton []
-                [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
-                , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
+                [ button [ onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
+                , basicLabel [] [ text (String.fromInt lapCount) ]
+                , button [ onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
                 ]
             , text (Clock.getElapsed playback |> Instant.toString)
             ]

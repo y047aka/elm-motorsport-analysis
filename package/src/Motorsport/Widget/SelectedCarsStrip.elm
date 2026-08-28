@@ -71,7 +71,7 @@ navButton label msg isDisabled =
     button
         [ onClick msg
         , Attributes.disabled isDisabled
-        , class "btn btn-circle btn-sm text-xs"
+        , class "inline-flex items-center justify-center size-8 rounded-full text-xs cursor-pointer transition-colors bg-card hover:bg-accent hover:text-accent-foreground disabled:opacity-40 disabled:pointer-events-none"
         ]
         [ text label ]
 

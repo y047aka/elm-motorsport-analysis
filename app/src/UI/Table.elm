@@ -14,11 +14,11 @@ import Html exposing (Attribute, Html)
 import Html.Attributes exposing (class)
 
 
-{-| Basic table using daisyUI table class
+{-| Basic table.
 -}
 table : List (Attribute msg) -> List (Html msg) -> Html msg
 table attrs children =
-    Html.table (class "table" :: attrs) children
+    Html.table (class "w-full border-collapse text-left text-sm" :: attrs) children
 
 
 {-| Table header

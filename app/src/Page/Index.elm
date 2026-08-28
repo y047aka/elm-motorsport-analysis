@@ -9,7 +9,7 @@ calendar it lists is loaded once by `Shared`.
 
 import Data.Wec.Calendar exposing (Round, Season)
 import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
-import Html.Attributes exposing (attribute, class)
+import Html.Attributes exposing (class)
 import Route
 import Shared
 import View exposing (View)
@@ -24,8 +24,7 @@ view { calendar } =
     { title = "Race Analysis"
     , body =
         [ div
-            [ attribute "data-theme" "forest"
-            , class "h-full overflow-y-auto bg-base-100 text-base-content"
+            [ class "dark h-full overflow-y-auto bg-background text-foreground"
             ]
             [ pageHeader
             , main_ [ class "mx-auto flex max-w-5xl flex-col gap-12 px-6 pb-20" ]
@@ -38,7 +37,7 @@ view { calendar } =
 pageHeader : Html msg
 pageHeader =
     header [ class "mx-auto max-w-5xl px-6 pt-14 pb-10" ]
-        [ span [ class "badge badge-sm badge-outline badge-primary" ] [ text "FIA WEC" ]
+        [ span [ class "inline-flex items-center rounded-full border border-primary px-2 py-0.5 text-xs font-medium text-primary" ] [ text "FIA WEC" ]
         , h1 [ class "mt-3 text-4xl font-bold tracking-tight" ] [ text "Race Analysis" ]
         , p [ class "mt-2 text-sm opacity-60" ]
             [ text "Select a race to explore lap times, gaps and position changes." ]
@@ -55,7 +54,7 @@ seasonSection { isLatest } { season, rounds } =
         [ div [ class "mb-4 flex items-center gap-3" ]
             [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ seasonLabel) ]
             , if isLatest then
-                span [ class "badge badge-sm badge-primary" ] [ text "Latest" ]
+                span [ class "inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground" ] [ text "Latest" ]
 
               else
                 text ""
@@ -71,13 +70,13 @@ eventCard : String -> Round -> Html msg
 eventCard season round =
     a
         [ Route.href (Route.WecEvent { season = season, event = round.id })
-        , class "group card card-border border-base-300 bg-base-200 transition duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:brightness-125"
+        , class "group flex flex-col rounded-lg border border-border bg-card transition duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:brightness-125"
         ]
-        [ div [ class "card-body gap-3 p-5" ]
+        [ div [ class "flex flex-col gap-3 p-5" ]
             [ span [ class "text-xs tabular-nums opacity-60" ]
                 [ text (formatDate round.date) ]
             , div [ class "flex items-end justify-between gap-2" ]
-                [ h3 [ class "card-title text-base leading-snug" ] [ text round.name ]
+                [ h3 [ class "text-base font-semibold leading-snug" ] [ text round.name ]
                 , span [ class "text-lg opacity-20 transition-opacity group-hover:opacity-70" ]
                     [ text "→" ]
                 ]

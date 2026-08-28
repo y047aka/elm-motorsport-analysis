@@ -13,7 +13,7 @@ import List.Extra
 
 
 {-| Switches charts via tabs to fit them into a single chart's footprint. The tab
-mechanism is the same `join` button group as the Event page's mode selector:
+mechanism is the same joined button group as the Event page's mode selector:
 clicking fires `onSelect` to switch `active` (the caller holds the state). Each
 content is passed as a lazy thunk so inactive charts are not rendered.
 -}
@@ -21,7 +21,7 @@ chartTabs : (tab -> msg) -> tab -> List ( tab, String, () -> Html msg ) -> Html 
 chartTabs onSelect active tabs =
     div
         [ class "bg-[var(--glass-panel-dark-bg)] border border-[var(--glass-panel-dark-border)] rounded-lg p-2 grid" ]
-        [ div [ class "join" ]
+        [ div [ class "inline-flex" ]
             (List.map (\( chart, label, _ ) -> chartTabButton onSelect chart label (chart == active)) tabs)
         , tabs
             |> List.Extra.find (\( chart, _, _ ) -> chart == active)
@@ -37,12 +37,12 @@ chartTabButton onSelect chart label isActive =
     button
         [ onClick (onSelect chart)
         , class
-            ("join-item btn btn-sm btn-soft"
+            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md"
                 ++ (if isActive then
-                        " btn-active"
+                        " bg-primary text-primary-foreground border-primary"
 
                     else
-                        ""
+                        " bg-accent/40 text-foreground hover:bg-accent/70"
                    )
             )
         ]

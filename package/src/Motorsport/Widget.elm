@@ -19,9 +19,9 @@ import Html.Attributes exposing (class)
 container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
-        [ class "card card-sm bg-[var(--widget-bg)]" ]
-        [ div [ class "card-body" ]
-            [ h3 [ class "card-title" ] [ text widgetTitle ]
+        [ class "rounded-lg border border-border bg-[var(--widget-bg)]" ]
+        [ div [ class "flex flex-col gap-2 p-3" ]
+            [ h3 [ class "font-semibold text-sm" ] [ text widgetTitle ]
             , content
             ]
         ]

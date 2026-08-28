@@ -38,26 +38,24 @@ view config snapshot detailCarNumbers =
         [ Attributes.id popoverId
         , attribute "popover" "auto"
 
-        -- Style with daisyUI's modal-box. modal-box sets no display, so the UA's
-        -- "a closed popover is display:none" applies as-is.
-        , Attributes.class "modal-box"
-
         -- Tailwind preflight cancels the UA's margin:auto, so set it explicitly to center.
-        , Attributes.class "m-auto max-w-[min(90vw,1200px)] p-4"
+        -- The popover has no containing block to size against but the viewport,
+        -- so its width is set explicitly rather than left to shrink to content.
+        , Attributes.class "m-auto w-11/12 max-w-[min(90vw,1200px)] p-4 rounded-xl overflow-y-auto max-h-screen"
 
         -- Glassmorphism: translucent background + backdrop blur + border.
-        -- Colors are managed by app-side DaisyUI theme tokens (--glass-*).
+        -- Colors are managed by app-side theme tokens (--glass-*).
         , Attributes.class "bg-[var(--glass-bg)] backdrop-blur-lg border border-[var(--glass-border)] shadow-[0_0_80px_var(--glass-shadow)]"
 
-        -- .modal-box collapses opacity/scale assuming it opens inside a .modal,
-        -- so restore them in the popover's open state.
-        , Attributes.class "[&:popover-open]:opacity-100 [&:popover-open]:scale-100"
+        -- A closed popover is display:none by the UA, but its entrance
+        -- transition still needs an explicit closed state to animate from.
+        , Attributes.class "opacity-0 scale-95 transition-[opacity,scale] duration-200 [&:popover-open]:opacity-100 [&:popover-open]:scale-100"
         , Attributes.class "backdrop:bg-[var(--glass-backdrop)]"
         ]
         [ button
             [ attribute "popovertarget" popoverId
             , attribute "popovertargetaction" "hide"
-            , Attributes.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
+            , Attributes.class "inline-flex items-center justify-center size-8 rounded-full text-sm cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground absolute right-2 top-2"
             ]
             [ text "✕" ]
         , case detailCarNumbers of

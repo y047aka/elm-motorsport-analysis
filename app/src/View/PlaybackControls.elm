@@ -60,7 +60,7 @@ viewPlayPauseButton { replay, onStart, onPause } =
     button
         [ onClick action
         , Attributes.disabled isDisabled
-        , Attributes.class "btn btn-circle btn-sm btn-ghost text-xs"
+        , Attributes.class "inline-flex items-center justify-center size-8 rounded-full text-xs cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground"
         ]
         [ text icon ]
 
@@ -79,7 +79,7 @@ viewSkipControls toReplayMsg state =
                 , onPress = toReplayMsg (Replay.SkipTime duration)
                 }
     in
-    div [ Attributes.class "join" ]
+    div [ Attributes.class "inline-flex" ]
         [ skipButton "+10s" (10 * 1000)
         , skipButton "+1m" (60 * 1000)
         , skipButton "+1h" (60 * 60 * 1000)
@@ -88,7 +88,7 @@ viewSkipControls toReplayMsg state =
 
 viewSpeedControls : (Replay.Msg -> msg) -> Clock.PlaybackSpeed -> Html msg
 viewSpeedControls toReplayMsg currentSpeed =
-    div [ Attributes.class "join" ]
+    div [ Attributes.class "inline-flex" ]
         [ speedSegmentButton toReplayMsg "1×" Clock.Speed1x (currentSpeed == Clock.Speed1x)
         , speedSegmentButton toReplayMsg "10×" Clock.Speed10x (currentSpeed == Clock.Speed10x)
         , speedSegmentButton toReplayMsg "60×" Clock.Speed60x (currentSpeed == Clock.Speed60x)
@@ -129,7 +129,7 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
             , Attributes.max (String.fromInt race.lapTotal)
             , value (String.fromInt lapCount)
             , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> toReplayMsg)
-            , Attributes.class "range range-xs w-full"
+            , Attributes.class "w-full h-1.5 appearance-none rounded-full bg-muted cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-muted"
             ]
             []
         ]
@@ -141,12 +141,12 @@ joinButton { label, isActive, isDisabled, onPress } =
         [ onClick onPress
         , Attributes.disabled isDisabled
         , Attributes.class
-            ("join-item btn btn-sm btn-soft"
+            ("inline-flex h-8 items-center justify-center border border-border px-3 text-sm font-medium cursor-pointer transition-colors -ml-px first:ml-0 first:rounded-l-md last:rounded-r-md disabled:opacity-40 disabled:pointer-events-none"
                 ++ (if isActive then
-                        " btn-active"
+                        " bg-primary text-primary-foreground border-primary"
 
                     else
-                        ""
+                        " bg-accent/40 text-foreground hover:bg-accent/70"
                    )
             )
         ]
