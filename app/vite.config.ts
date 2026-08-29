@@ -49,6 +49,10 @@ function staticAssets(): Plugin {
 }
 
 export default defineConfig({
+  // No tsconfig.json here, so esbuild would otherwise fall back to the classic
+  // JSX transform and the custom element would fail at runtime with
+  // "React is not defined" while the rest of the page renders.
+  esbuild: { jsx: "automatic" },
   // `debug: false` disables the Elm time-travel debugger overlay in dev so it
   // never appears in VRT screenshots. Production build still optimizes because
   // `vite build` sets NODE_ENV=production (optimize defaults to true then).

@@ -1,3 +1,4 @@
+import "./src/shadcn/slider-element";
 import { Elm } from "./src/Main.elm";
 
 const node = document.getElementById("app");

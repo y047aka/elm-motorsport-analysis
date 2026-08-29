@@ -1,10 +1,15 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
 @import "tailwindcss";
 
+/* Named data-attribute variants (data-horizontal, data-disabled, ...) that the
+   shadcn component sources are written against. */
+@import "shadcn/tailwind.css";
+
 @custom-variant dark (&:is(.dark *));
 
 @source "./**/*.elm";
 @source "../package/**/*.elm";
+@source "./src/shadcn";
 
 @theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

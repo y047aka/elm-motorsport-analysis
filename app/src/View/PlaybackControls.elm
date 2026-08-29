@@ -10,14 +10,15 @@ interaction is forwarded as a `Replay.Msg`.
 
 -}
 
-import Html exposing (Html, button, div, input, text)
-import Html.Attributes as Attributes exposing (type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, button, div, text)
+import Html.Attributes as Attributes
+import Html.Events exposing (onClick)
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import String exposing (dropRight)
+import UI.Slider as Slider
 
 
 view :
@@ -123,14 +124,12 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
             , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt race.lapTotal) ]
             , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
-        , input
-            [ type_ "range"
-            , Attributes.min "0"
-            , Attributes.max (String.fromInt race.lapTotal)
-            , value (String.fromInt lapCount)
-            , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> toReplayMsg)
-            , Attributes.class "w-full h-1.5 appearance-none rounded-full bg-muted cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-moz-range-track]:h-1.5 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-muted"
-            ]
+        , Slider.view
+            { min = 0
+            , max = race.lapTotal
+            , value = lapCount
+            , onChange = Replay.SetCount >> toReplayMsg
+            }
             []
         ]
 

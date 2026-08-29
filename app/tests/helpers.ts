@@ -25,12 +25,15 @@ export async function waitForPageReady(page: Page, contentSelector: string) {
  * SetCount derives elapsed time purely from lap data, so any mid-race
  * state (positions, gaps, lap-history-based charts) can be reproduced
  * deterministically without playback (▶). The value is set through the
- * native setter and an input event is dispatched so Elm's onInput
- * receives it.
+ * native setter and an input event is dispatched, which Base UI's slider
+ * turns into the value change the custom element reports to Elm.
+ *
+ * The range input belongs to Base UI and is clipped away from sight, so it is
+ * waited for as attached rather than visible.
  */
 export async function setLapCount(page: Page, lap: number) {
   const slider = page.locator('input[type="range"]');
-  await slider.waitFor({ state: 'visible', timeout: WAIT_TIMEOUT });
+  await slider.waitFor({ state: 'attached', timeout: WAIT_TIMEOUT });
   // The slider renders with max="0" until the race JSON has been fetched, and a
   // value set before that is clamped back to 0. Wait for the lap data to land.
   await expect(slider).not.toHaveAttribute('max', '0', { timeout: WAIT_TIMEOUT });
