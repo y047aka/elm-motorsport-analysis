@@ -19,7 +19,7 @@ import Html.Attributes exposing (class)
 container : String -> Html msg -> Html msg
 container widgetTitle content =
     div
-        [ class "rounded-lg border border-border bg-[var(--widget-bg)]" ]
+        [ class "rounded-lg border border-border bg-card" ]
         [ div [ class "flex flex-col gap-2 p-3" ]
             [ h3 [ class "font-semibold text-sm" ] [ text widgetTitle ]
             , content
@@ -32,5 +32,5 @@ container widgetTitle content =
 emptyState : String -> Html msg
 emptyState message =
     div
-        [ class "p-5 text-center italic text-[hsl(0,0%,70%)]" ]
+        [ class "p-5 text-center italic text-muted-foreground" ]
         [ text message ]

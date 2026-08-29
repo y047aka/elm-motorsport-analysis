@@ -2,7 +2,7 @@ module View.CarDetailPopover exposing (popoverId, view)
 
 {-| Car detail popover.
 
-A glassmorphism popover that wraps `Compare.viewComparison`. It is always
+A popover that wraps `Compare.viewComparison`. It is always
 rendered so a row click can open it via `popovertarget`; only its contents are
 built from the currently selected cars (and stay live-updating while open).
 `popover="auto"` gives light-dismiss (outside click / Esc).
@@ -42,15 +42,12 @@ view config snapshot detailCarNumbers =
         -- The popover has no containing block to size against but the viewport,
         -- so its width is set explicitly rather than left to shrink to content.
         , Attributes.class "m-auto w-11/12 max-w-[min(90vw,1200px)] p-4 rounded-xl overflow-y-auto max-h-screen"
-
-        -- Glassmorphism: translucent background + backdrop blur + border.
-        -- Colors are managed by app-side theme tokens (--glass-*).
-        , Attributes.class "bg-[var(--glass-bg)] backdrop-blur-lg border border-[var(--glass-border)] shadow-[0_0_80px_var(--glass-shadow)]"
+        , Attributes.class "bg-popover text-popover-foreground border border-border shadow-lg"
 
         -- A closed popover is display:none by the UA, but its entrance
         -- transition still needs an explicit closed state to animate from.
         , Attributes.class "opacity-0 scale-95 transition-[opacity,scale] duration-200 [&:popover-open]:opacity-100 [&:popover-open]:scale-100"
-        , Attributes.class "backdrop:bg-[var(--glass-backdrop)]"
+        , Attributes.class "backdrop:bg-black/50"
         ]
         [ button
             [ attribute "popovertarget" popoverId

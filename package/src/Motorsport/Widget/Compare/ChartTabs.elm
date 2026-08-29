@@ -20,7 +20,7 @@ content is passed as a lazy thunk so inactive charts are not rendered.
 chartTabs : (tab -> msg) -> tab -> List ( tab, String, () -> Html msg ) -> Html msg
 chartTabs onSelect active tabs =
     div
-        [ class "bg-[var(--glass-panel-dark-bg)] border border-[var(--glass-panel-dark-border)] rounded-lg p-2 grid" ]
+        [ class "bg-card border border-border rounded-lg p-2 grid" ]
         [ div [ class "inline-flex" ]
             (List.map (\( chart, label, _ ) -> chartTabButton onSelect chart label (chart == active)) tabs)
         , tabs

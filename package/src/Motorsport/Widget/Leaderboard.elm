@@ -398,7 +398,7 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
                                         ""
 
                                     else
-                                        " text-[hsl(0_0%_75%)]"
+                                        " text-muted-foreground"
                                    )
                             )
                         ]

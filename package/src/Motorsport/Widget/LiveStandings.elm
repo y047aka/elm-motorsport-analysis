@@ -63,7 +63,7 @@ carRow popoverTarget onSelect item =
             -- Explicit "show": the default "toggle" would close the shared
             -- popover when a second row is clicked while it is already open.
             , attribute "popovertargetaction" "show"
-            , class "relative rounded-md w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [background:none] [border:none] text-inherit [font:inherit] [word-break:break-word] cursor-pointer [transition:background-color_0.2s_ease] after:[border:none] hover:[background-color:hsl(0_0%_100%/0.05)]"
+            , class "relative rounded-md w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [word-break:break-word] cursor-pointer transition-colors hover:bg-accent"
             ]
             (carRowContent item)
         ]

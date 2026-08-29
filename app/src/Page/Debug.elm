@@ -105,7 +105,7 @@ debugView replay leaderboardState =
             BestTimes.final race.bestTimeChanges
     in
     [ header
-        [ Attributes.class "sticky top-0 flex justify-between bg-[hsl(0,0%,40%)]" ]
+        [ Attributes.class "sticky top-0 flex justify-between border-b border-border bg-background" ]
         [ nav []
             [ input
                 [ type_ "range"

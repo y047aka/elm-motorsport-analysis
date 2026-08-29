@@ -60,12 +60,12 @@ statusBadge status =
     case status of
         InPit ->
             div
-                [ class "grid place-items-center w-4 h-4 rounded-full border border-[hsl(0_0%_100%/0.6)] text-[9px] font-bold leading-none" ]
+                [ class "grid place-items-center w-4 h-4 rounded-full border border-border text-[9px] font-bold leading-none" ]
                 [ text "P" ]
 
         Retired ->
             div
-                [ class "py-px px-1 rounded-[3px] bg-[hsl(0_70%_45%)] text-[9px] font-bold tracking-wider" ]
+                [ class "py-px px-1 rounded-md bg-destructive/10 text-destructive text-[9px] font-bold tracking-wider" ]
                 [ text "RET" ]
 
         _ ->

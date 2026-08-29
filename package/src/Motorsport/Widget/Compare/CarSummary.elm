@@ -21,13 +21,12 @@ import Motorsport.Widget.Compare.Style exposing (panelLabel)
 import Motorsport.Widget.SectorAndLaps as SectorAndLaps
 
 
-{-| The glassmorphism panel background/border, shared by the two panels below.
-Kept as one string so both stay in sync with each other and with
-[`Style.glassPanel`](Motorsport-Widget-Compare-Style#glassPanel).
+{-| The panel background/border, shared by the two panels below. Kept as one
+string so both stay in sync.
 -}
-glassPanelClass : String
-glassPanelClass =
-    "bg-[var(--glass-panel-bg)] border border-[var(--glass-panel-border)] rounded-lg"
+panelClass : String
+panelClass =
+    "bg-card border border-border rounded-lg"
 
 
 {-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
@@ -35,7 +34,7 @@ glassPanelClass =
 placeholderCard : Html msg
 placeholderCard =
     div
-        [ class "grid place-items-center min-h-[100px] border border-dashed border-[hsl(0_0%_100%/0.15)] rounded-lg text-[11px] text-[hsl(0_0%_100%/0.35)]" ]
+        [ class "grid place-items-center min-h-[100px] border border-dashed border-border rounded-lg text-[11px] text-muted-foreground" ]
         [ text "車両を追加" ]
 
 
@@ -58,12 +57,12 @@ stability, comparable across cars).
 lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
 lapTimePanel maybeRange maybeScale lapHistory item =
     div
-        [ class (glassPanelClass ++ " p-2 grid gap-y-2") ]
+        [ class (panelClass ++ " p-2 grid gap-y-2") ]
         [ panelLabel "Lap time"
         , div [ class "pb-1" ]
             [ SectorAndLaps.view item ]
         , div
-            [ class "pt-1 border-t border-t-[oklch(1_0_0/0.05)]" ]
+            [ class "pt-1 border-t border-t-border" ]
             [ case ( maybeRange, maybeScale ) of
                 ( Just range, Just { domain, maxDensity } ) ->
                     LapTimeDistribution.view
@@ -124,12 +123,12 @@ statusBadge status =
     case status of
         InPit ->
             div
-                [ class "grid place-items-center py-px px-1.5 rounded-full border border-[hsl(0_0%_100%/0.6)] text-[9px] font-bold" ]
+                [ class "grid place-items-center py-px px-1.5 rounded-full border border-border text-[9px] font-bold" ]
                 [ text "IN PIT" ]
 
         Retired ->
             div
-                [ class "py-px px-1.5 rounded-[3px] bg-[hsl(0_70%_45%)] text-[9px] font-bold tracking-wider" ]
+                [ class "py-px px-1.5 rounded-md bg-destructive/10 text-destructive text-[9px] font-bold tracking-wider" ]
                 [ text "RETIRED" ]
 
         _ ->
@@ -139,7 +138,7 @@ statusBadge status =
 summaryStats : CarAt -> Html msg
 summaryStats item =
     div
-        [ class (glassPanelClass ++ " grid grid-cols-5") ]
+        [ class (panelClass ++ " grid grid-cols-5") ]
         [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
         , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
         , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
@@ -154,7 +153,7 @@ separated by a left divider (the first cell has none).
 statCell : String -> Html msg -> Html msg
 statCell label valueHtml =
     div
-        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-[hsl(0_0%_100%/0.05)] first:border-l-0" ]
+        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
         [ div
             [ class "text-[8px] uppercase tracking-[0.03em] opacity-50" ]
             [ text label ]
