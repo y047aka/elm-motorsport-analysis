@@ -73,18 +73,21 @@ takes a colour from its number.
 ### The shadcn components
 
 `app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
-UI, not Radix — fetched from `https://ui.shadcn.com/r/styles/base-nova/<name>.json`.
-Each `app/src/shadcn/<name>-element.tsx` mounts one of them into a custom
-element, `index.ts` registers them all, and `app/src/UI/<Name>.elm` is the Elm
-side. The Elm wrappers hold no Tailwind classes; the class strings are the
+UI, not Radix. Each `app/src/shadcn/<name>-element.tsx` mounts one of them into
+a custom element, `index.ts` registers them all, and `app/src/UI/<Name>.elm` is
+the Elm side. The Elm wrappers hold no Tailwind classes; the class strings are the
 vendored file's.
 
-Two edits are made on the way in, neither of which any tool records: the
-`@/registry/base-nova/...` imports are rewritten relative, and `"use client"` is
-stripped, since Rollup only warns that it ignored it. Anything this app adds to
-a vendored component carries a `Not in upstream base-nova:` comment — running
-`shadcn add` again overwrites the file, and that comment is the only mark of
-what was ours.
+`components.json` configures the CLI, so `shadcn add <name>` writes these files
+and `shadcn add <name> --diff` reports how far one has drifted from upstream.
+That holds only while the `@/*` alias resolves the same way in `tsconfig.json`
+and in `vite.config.ts` — the CLI writes `@/shadcn/...` imports, and neither
+file alone makes them build.
+
+Anything this app adds to a vendored component carries a
+`Not in upstream base-nova:` comment. `--diff` should report those lines and
+nothing else: a line it reports without one is drift to fold back in, since
+`add` overwrites the file.
 
 Every prop is set as a JS property, so what crosses the boundary is JSON and
 Elm holds the state. Three things that boundary will not carry, all found by
