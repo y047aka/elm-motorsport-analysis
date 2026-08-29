@@ -1,5 +1,6 @@
 import { createRoot, type Root } from "react-dom/client";
 import { Button } from "./ui/button";
+import { sharedSheets } from "./shared-sheets";
 
 /**
  * Wraps shadcn's Button, whose content is whatever Elm put inside the element.
@@ -11,30 +12,8 @@ import { Button } from "./ui/button";
  *
  * Slotted content is styled by the page's stylesheet because it never leaves
  * the light DOM. The button React renders does leave it, so the page's rules
- * are adopted into every shadow root -- built once and shared, since a
- * constructed sheet can be adopted by many roots.
+ * are adopted into the shadow root.
  */
-
-let pageSheets: CSSStyleSheet[] | null = null;
-
-function sharedSheets(): CSSStyleSheet[] {
-  if (pageSheets) return pageSheets;
-  pageSheets = [];
-  for (const sheet of document.styleSheets) {
-    let rules: CSSRuleList;
-    try {
-      rules = sheet.cssRules;
-    } catch {
-      // A cross-origin sheet (the Google Fonts import) cannot be read; the
-      // shadow tree does not need it, so skip rather than fail.
-      continue;
-    }
-    const copy = new CSSStyleSheet();
-    copy.replaceSync(Array.from(rules, (r) => r.cssText).join("\n"));
-    pageSheets.push(copy);
-  }
-  return pageSheets;
-}
 
 export class ShadcnButton extends HTMLElement {
   private root: Root | null = null;

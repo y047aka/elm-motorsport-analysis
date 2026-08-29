@@ -3,7 +3,7 @@
 Drives real shadcn components from Elm through custom elements, to find out
 what the integration costs before committing to it. Not wired into the app.
 
-Three elements, each answering something different:
+The elements, each answering something different:
 
 - `shadcn-select` — a data-shaped component (Radix `Select`, pinned from the
   `new-york-v4` registry). Takes options, returns a value, has no children.
@@ -13,6 +13,10 @@ Three elements, each answering something different:
 - `ce-probe` — a styling-only stand-in, used twice: twelve in an `Html.Keyed`
   list that can be rotated, to price a reorder, and sixty-two in a list that
   can be mounted and unmounted, to price a mount against plain Elm nodes.
+- `card-slotted`, `card-named-slots`, `card-plain-*` — three ways of putting
+  Elm's content inside shadcn's Card, drawn side by side from the same
+  children. Card is the case where the component's own CSS reads the tree its
+  content sits in.
 
 ## Run
 
@@ -94,6 +98,61 @@ components worth writing as plain Elm.
 animation frames, Elm applies its patch on one, and the measurement then
 reports the wait for a frame rather than the work — 2011ms for a list that was
 already complete.
+
+## Putting Elm's content inside a Card
+
+Card carries no behaviour at all — seven `<div>`s typed `React.ComponentProps<"div">` —
+but its classes read what it contains:
+
+```
+has-data-[slot=card-footer]:pb-0     drop the bottom padding when a footer is inside
+has-[>img:first-child]:pt-0          drop the top padding when an image leads
+*:[img:first-child]:rounded-t-xl     round that image's top corners
+```
+
+`:has()`, `group-*` and `*:` all match within one tree, and slotted content is
+not in the tree of the shadow root it is projected into. Three arrangements,
+with the footer and the leading image both switched on:
+
+```
+                     padding-bottom   padding-top   img radius
+A2  Elm's parts slotted into a
+    React-rendered Card                     16px         16px         0px
+A1  React renders every part,
+    Elm fills named slots                    0px         16px         0px
+B   elements apply the vendored
+    classes to themselves                    0px          0px        14px
+```
+
+**A2 is the naive reading of the goal and none of the three rules fire.** React
+draws the Card into a shadow root and Elm's header, content and footer arrive
+through a `<slot>`; the `data-slot="card-footer"` is right there on screen and
+Card cannot see it.
+
+**A1 recovers whatever React renders and nothing else.** With every part drawn
+by React inside the shadow root, the footer is in Card's own tree and the
+padding collapses. The image is still Elm's, still slotted, so the two rules
+about a leading image stay dark.
+
+**B is the only one where Card behaves as upstream wrote it**, because there is
+only one tree. Each element sets the vendored class string and `data-slot` on
+itself and Elm renders the structure and its content as ordinary children. No
+React root and no shadow root, so the mount costs what a plain Elm node costs.
+
+What B needs in exchange:
+
+- Card's class strings have to be reachable. They are literals inside
+  `cn(...)` in the component bodies, not a `cva` export like `buttonVariants`,
+  so `ui/card.tsx` hoists them into an exported `cardClasses` — the marked
+  deviation `shadcn add --diff` will report.
+- A custom element is `display: inline` where the divs upstream renders are
+  blocks. The fallback goes in `@layer base` so the display utilities inside
+  those same class strings still win.
+
+The criterion this leaves is not the one the Button measurement gave. There the
+question was whether React does any work. Here it is **whether the component's
+own CSS reads the tree its content lives in** — if it does, the content has to
+share that tree, and only B puts it there.
 
 ## Costs
 

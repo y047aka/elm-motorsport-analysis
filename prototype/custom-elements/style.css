@@ -108,6 +108,18 @@
     height: 100vh;
   }
 
+  /* The class-applier card parts are custom elements, and a custom element is
+     inline where the divs upstream renders are blocks. Declared in `base` so
+     the display utilities in their own class strings still win. */
+  card-plain,
+  card-plain-header,
+  card-plain-title,
+  card-plain-description,
+  card-plain-content,
+  card-plain-footer {
+    display: block;
+  }
+
   * {
     @apply border-border outline-ring/50;
   }
