@@ -12,6 +12,7 @@ import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span,
 import Html.Attributes exposing (class)
 import Route
 import Shared
+import UI.Badge as Badge
 import View exposing (View)
 
 
@@ -37,7 +38,7 @@ view { calendar } =
 pageHeader : Html msg
 pageHeader =
     header [ class "mx-auto max-w-5xl px-6 pt-14 pb-10" ]
-        [ span [ class "inline-flex items-center rounded-full border border-primary px-2 py-0.5 text-xs font-medium text-primary" ] [ text "FIA WEC" ]
+        [ Badge.view { label = "FIA WEC", variant = "outline-primary" } []
         , h1 [ class "mt-3 text-4xl font-bold tracking-tight" ] [ text "Race Analysis" ]
         , p [ class "mt-2 text-sm opacity-60" ]
             [ text "Select a race to explore lap times, gaps and position changes." ]
@@ -54,7 +55,7 @@ seasonSection { isLatest } { season, rounds } =
         [ div [ class "mb-4 flex items-center gap-3" ]
             [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ seasonLabel) ]
             , if isLatest then
-                span [ class "inline-flex items-center rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground" ] [ text "Latest" ]
+                Badge.view { label = "Latest", variant = "default" } []
 
               else
                 text ""

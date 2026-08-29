@@ -1,3 +1,6 @@
+import "./src/shadcn/badge-element";
+import "./src/shadcn/button-element";
+import "./src/shadcn/button-group-element";
 import "./src/shadcn/slider-element";
 import { Elm } from "./src/Main.elm";
 

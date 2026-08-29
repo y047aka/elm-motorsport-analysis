@@ -11,7 +11,7 @@ import DataView
 import Effect exposing (Effect)
 import Html exposing (Html, div, header, input, nav, text)
 import Html.Attributes as Attributes exposing (type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html.Events exposing (onInput)
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -28,8 +28,8 @@ import Motorsport.Wec.Class
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
-import UI.Button exposing (button, labeledButton)
-import UI.Label exposing (basicLabel)
+import UI.Badge as Badge
+import UI.Button as Button
 import View exposing (View)
 
 
@@ -114,10 +114,14 @@ debugView replay leaderboardState =
                 , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
                 ]
                 []
-            , labeledButton []
-                [ button [ onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
-                , basicLabel [] [ text (String.fromInt lapCount) ]
-                , button [ onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
+            , div [ Attributes.class "inline-flex items-center gap-1" ]
+                [ Button.view
+                    { label = "-", variant = "outline", size = "icon-xs", shape = "default", disabled = False, onPress = ReplayMsg Replay.PreviousLap }
+                    []
+                , Badge.view { label = String.fromInt lapCount, variant = "outline" } []
+                , Button.view
+                    { label = "+", variant = "outline", size = "icon-xs", shape = "default", disabled = False, onPress = ReplayMsg Replay.NextLap }
+                    []
                 ]
             , text (Clock.getElapsed playback |> Instant.toString)
             ]
