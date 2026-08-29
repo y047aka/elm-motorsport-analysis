@@ -1,12 +1,15 @@
 module UI.ButtonGroup exposing (Item, view)
 
-{-| A row of segmented buttons, drawn by shadcn's Base UI components behind
+{-| A row of joined action buttons, drawn by shadcn's Base UI components behind
 the `shadcn-button-group` custom element registered in `index.ts`.
 
 The group is rendered as one React tree rather than as separately-mounted
 `UI.Button`s: the corner-merging between adjacent segments is plain CSS
 matching each button's own `data-slot` against its siblings, which only
 lines up when every button in the group shares a parent.
+
+The group holds no selection; a row that picks one of its items is
+[`UI.ToggleGroup`](UI-ToggleGroup).
 
 @docs Item, view
 
@@ -15,36 +18,46 @@ lines up when every button in the group shares a parent.
 import Html exposing (Attribute, Html)
 import Html.Attributes exposing (property)
 import Html.Events
-import Json.Decode as Decode
+import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 
 
-type alias Item =
-    { value : String
-    , label : String
-    , active : Bool
+type alias Item msg =
+    { label : String
     , disabled : Bool
+    , onPress : msg
     }
 
 
-{-| `onPress` receives the `value` of whichever item was pressed.
--}
-view : { items : List Item, onPress : String -> msg } -> List (Attribute msg) -> Html msg
+view : { items : List (Item msg) } -> List (Attribute msg) -> Html msg
 view config attributes =
     Html.node "shadcn-button-group"
         (property "items" (Encode.list encodeItem config.items)
-            :: Html.Events.on "button-group-press"
-                (Decode.at [ "detail" ] Decode.string |> Decode.map config.onPress)
+            :: Html.Events.on "button-group-press" (pressDecoder config.items)
             :: attributes
         )
         []
 
 
-encodeItem : Item -> Encode.Value
+encodeItem : Item msg -> Encode.Value
 encodeItem item =
     Encode.object
-        [ ( "value", Encode.string item.value )
-        , ( "label", Encode.string item.label )
-        , ( "active", Encode.bool item.active )
+        [ ( "label", Encode.string item.label )
         , ( "disabled", Encode.bool item.disabled )
         ]
+
+
+{-| The element names the pressed item by its index in `items`.
+-}
+pressDecoder : List (Item msg) -> Decoder msg
+pressDecoder items =
+    Decode.at [ "detail" ] Decode.int
+        |> Decode.andThen
+            (\index ->
+                case List.drop index items |> List.head of
+                    Just item ->
+                        Decode.succeed item.onPress
+
+                    Nothing ->
+                        Decode.fail ("no button at index " ++ String.fromInt index)
+            )

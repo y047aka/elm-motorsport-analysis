@@ -3,9 +3,7 @@ import { Button } from "./ui/button";
 import { ButtonGroup } from "./ui/button-group";
 
 type Item = {
-  value: string;
   label: string;
-  active: boolean;
   disabled: boolean;
 };
 
@@ -16,8 +14,8 @@ type Item = {
  * against its siblings, which only lines up when every button in the group
  * is rendered by the same React tree.
  *
- * A press dispatches `button-group-press` with the pressed item's `value` as
- * `detail`.
+ * The group holds no selection — that is `shadcn-toggle-group`. A press
+ * dispatches `button-group-press` with the pressed item's index as `detail`.
  */
 export class ShadcnButtonGroup extends HTMLElement {
   private root: Root | null = null;
@@ -49,15 +47,15 @@ export class ShadcnButtonGroup extends HTMLElement {
     if (!this.root) return;
     this.root.render(
       <ButtonGroup>
-        {this._items.map((item) => (
+        {this._items.map((item, index) => (
           <Button
-            key={item.value}
+            key={index}
             size="sm"
-            variant={item.active ? "default" : "outline"}
+            variant="outline"
             disabled={item.disabled}
             onClick={() =>
               this.dispatchEvent(
-                new CustomEvent("button-group-press", { detail: item.value })
+                new CustomEvent("button-group-press", { detail: index })
               )
             }
           >

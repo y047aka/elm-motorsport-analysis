@@ -38,7 +38,7 @@ view { calendar } =
 pageHeader : Html msg
 pageHeader =
     header [ class "mx-auto max-w-5xl px-6 pt-14 pb-10" ]
-        [ Badge.view { label = "FIA WEC", variant = "outline-primary" } []
+        [ Badge.view { label = "FIA WEC", variant = Badge.OutlinePrimary } []
         , h1 [ class "mt-3 text-4xl font-bold tracking-tight" ] [ text "Race Analysis" ]
         , p [ class "mt-2 text-sm opacity-60" ]
             [ text "Select a race to explore lap times, gaps and position changes." ]
@@ -55,7 +55,7 @@ seasonSection { isLatest } { season, rounds } =
         [ div [ class "mb-4 flex items-center gap-3" ]
             [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ seasonLabel) ]
             , if isLatest then
-                Badge.view { label = "Latest", variant = "default" } []
+                Badge.view { label = "Latest", variant = Badge.Primary } []
 
               else
                 text ""

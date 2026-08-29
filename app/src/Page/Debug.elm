@@ -115,13 +115,9 @@ debugView replay leaderboardState =
                 ]
                 []
             , div [ Attributes.class "inline-flex items-center gap-1" ]
-                [ Button.view
-                    { label = "-", variant = "outline", size = "icon-xs", shape = "default", disabled = False, onPress = ReplayMsg Replay.PreviousLap }
-                    []
-                , Badge.view { label = String.fromInt lapCount, variant = "outline" } []
-                , Button.view
-                    { label = "+", variant = "outline", size = "icon-xs", shape = "default", disabled = False, onPress = ReplayMsg Replay.NextLap }
-                    []
+                [ nudgeButton "-" (ReplayMsg Replay.PreviousLap)
+                , Badge.view { label = String.fromInt lapCount, variant = Badge.Outline } []
+                , nudgeButton "+" (ReplayMsg Replay.NextLap)
                 ]
             , text (Clock.getElapsed playback |> Instant.toString)
             ]
@@ -149,6 +145,19 @@ debugView replay leaderboardState =
       in
       DataView.view (config bestTimes) leaderboardState (List.indexedMap (lapRow bestTimes) laps)
     ]
+
+
+nudgeButton : String -> Msg -> Html Msg
+nudgeButton label msg =
+    Button.view
+        { label = label
+        , variant = Button.Outline
+        , size = Button.IconExtraSmall
+        , shape = Button.Rectangle
+        , disabled = False
+        , onPress = msg
+        }
+        []
 
 
 {-| One row of this page is one lap of one car, not one car of the race. The

@@ -20,6 +20,7 @@ import String exposing (dropRight)
 import UI.Button as Button
 import UI.ButtonGroup as ButtonGroup
 import UI.Slider as Slider
+import UI.ToggleGroup as ToggleGroup
 
 
 view :
@@ -60,7 +61,13 @@ viewPlayPauseButton { replay, onStart, onPause } =
                     ( "▶", onStart, True )
     in
     Button.view
-        { label = icon, variant = "ghost", size = "icon", shape = "circle", disabled = isDisabled, onPress = action }
+        { label = icon
+        , variant = Button.Ghost
+        , size = Button.Icon
+        , shape = Button.Circle
+        , disabled = isDisabled
+        , onPress = action
+        }
         []
 
 
@@ -71,10 +78,9 @@ viewSkipControls : (Replay.Msg -> msg) -> Clock.State -> Html msg
 viewSkipControls toReplayMsg state =
     let
         skipItem label duration =
-            { value = String.fromInt duration
-            , label = label
-            , active = False
+            { label = label
             , disabled = state == Finished
+            , onPress = toReplayMsg (Replay.SkipTime duration)
             }
     in
     ButtonGroup.view
@@ -83,11 +89,6 @@ viewSkipControls toReplayMsg state =
             , skipItem "+1m" (60 * 1000)
             , skipItem "+1h" (60 * 60 * 1000)
             ]
-        , onPress =
-            String.toInt
-                >> Maybe.withDefault 0
-                >> Replay.SkipTime
-                >> toReplayMsg
         }
         []
 
@@ -96,50 +97,20 @@ viewSpeedControls : (Replay.Msg -> msg) -> Clock.PlaybackSpeed -> Html msg
 viewSpeedControls toReplayMsg currentSpeed =
     let
         speedItem label speed =
-            { value = speedToString speed
-            , label = label
+            { label = label
             , active = currentSpeed == speed
             , disabled = False
+            , onSelect = toReplayMsg (Replay.SetPlaybackSpeed speed)
             }
     in
-    ButtonGroup.view
+    ToggleGroup.view
         { items =
             [ speedItem "1×" Clock.Speed1x
             , speedItem "10×" Clock.Speed10x
             , speedItem "60×" Clock.Speed60x
             ]
-        , onPress =
-            speedFromString
-                >> Replay.SetPlaybackSpeed
-                >> toReplayMsg
         }
         []
-
-
-speedToString : Clock.PlaybackSpeed -> String
-speedToString speed =
-    case speed of
-        Clock.Speed1x ->
-            "1x"
-
-        Clock.Speed10x ->
-            "10x"
-
-        Clock.Speed60x ->
-            "60x"
-
-
-speedFromString : String -> Clock.PlaybackSpeed
-speedFromString string =
-    case string of
-        "10x" ->
-            Clock.Speed10x
-
-        "60x" ->
-            Clock.Speed60x
-
-        _ ->
-            Clock.Speed1x
 
 
 viewProgressBar : (Replay.Msg -> msg) -> Replay.Model -> Html msg
