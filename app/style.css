@@ -48,6 +48,8 @@
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
 
+  --shadow-glass: 0 0 80px oklch(0% 0 0 / 0.8);
+
   --sidebar-width: 16rem;
   --sidebar-width-icon: 3rem;
 }
@@ -61,9 +63,13 @@
 
   --background: oklch(0.2 0 0);
   --foreground: oklch(0.838 0.001 17.911);
-  --card: oklch(0.23 0 0);
+
+  /* Both surface tokens are translucent, so `bg-card` and `bg-popover` take
+     their shade from whatever they are stacked on rather than carrying one.
+     An opaque surface has to ask for `bg-background`. */
+  --card: oklch(1 0 0 / 0.04);
   --card-foreground: oklch(0.838 0.001 17.911);
-  --popover: oklch(0.27 0 0);
+  --popover: oklch(0.5 0 0 / 0.04);
   --popover-foreground: oklch(0.838 0.001 17.911);
   --primary: oklch(0.686 0.185 148.958);
   --primary-foreground: oklch(0 0 0);

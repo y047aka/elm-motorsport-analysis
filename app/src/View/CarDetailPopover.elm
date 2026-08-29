@@ -42,12 +42,12 @@ view config snapshot detailCarNumbers =
         -- The popover has no containing block to size against but the viewport,
         -- so its width is set explicitly rather than left to shrink to content.
         , Attributes.class "m-auto w-11/12 max-w-[min(90vw,1200px)] p-4 rounded-xl overflow-y-auto max-h-screen"
-        , Attributes.class "bg-popover text-popover-foreground border border-border shadow-lg"
+        , Attributes.class "bg-popover text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
 
         -- A closed popover is display:none by the UA, but its entrance
         -- transition still needs an explicit closed state to animate from.
         , Attributes.class "opacity-0 scale-95 transition-[opacity,scale] duration-200 [&:popover-open]:opacity-100 [&:popover-open]:scale-100"
-        , Attributes.class "backdrop:bg-black/50"
+        , Attributes.class "backdrop:bg-black/10"
         ]
         [ button
             [ attribute "popovertarget" popoverId
