@@ -3,7 +3,7 @@
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
 JSON/JSONL → Elm visualization.
 
-- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + DaisyUI). The only npm
+- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + shadcn/ui). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
@@ -55,7 +55,7 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Button, Label, Table)
+- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Button, Badge, Table)
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared`. It is
 the app's only source for which rounds exist, what they are called and where
@@ -69,6 +69,37 @@ written by hand and no compiler reads it, so a mistake in it shows as cars drawn
 by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number.
+
+### The shadcn components
+
+`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
+UI, not Radix — fetched from `https://ui.shadcn.com/r/styles/base-nova/<name>.json`.
+Each `app/src/shadcn/<name>-element.tsx` mounts one of them into a custom
+element, `index.ts` registers them all, and `app/src/UI/<Name>.elm` is the Elm
+side. The Elm wrappers hold no Tailwind classes; the class strings are the
+vendored file's.
+
+Two edits are made on the way in, neither of which any tool records: the
+`@/registry/base-nova/...` imports are rewritten relative, and `"use client"` is
+stripped, since Rollup only warns that it ignored it. Anything this app adds to
+a vendored component carries a `Not in upstream base-nova:` comment — running
+`shadcn add` again overwrites the file, and that comment is the only mark of
+what was ours.
+
+Every prop is set as a JS property, so what crosses the boundary is JSON and
+Elm holds the state. Three things that boundary will not carry, all found by
+running it rather than by building it:
+
+- React's synthetic events never reach a custom element's slotted children, so
+  a component Elm passes children to cannot report its own clicks. `UI.Button`
+  takes its label as a property for this reason.
+- A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
+  teardown queued by `disconnectedCallback` has to be cancelled when the node
+  comes back, or every reorder destroys a React root.
+- A directory named `src/ui` is folded into the Elm `src/UI` on macOS and only
+  fails on Linux CI, which is why the React sources are under `src/shadcn`.
+
+`prototype/custom-elements/` holds what this cost when it was measured.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

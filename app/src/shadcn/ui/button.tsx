@@ -36,7 +36,7 @@ const buttonVariants = cva(
       // buttons have no equivalent among the stock size/variant classes.
       shape: {
         default: "",
-        circle: "rounded-full!",
+        circle: "rounded-full",
       },
     },
     defaultVariants: {
