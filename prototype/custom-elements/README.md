@@ -5,8 +5,6 @@ what the integration costs before committing to it. Not wired into the app.
 
 The elements, each answering something different:
 
-- `shadcn-select` — a data-shaped component (Radix `Select`, pinned from the
-  `new-york-v4` registry). Takes options, returns a value, has no children.
 - `shadcn-button` — a container-shaped one (Base UI `Button`, from the
   `base-nova` registry the app went on to use), whose content comes from Elm
   through a shadow root and a `<slot>`.
@@ -26,28 +24,28 @@ nix develop --command bash -c 'cd prototype/custom-elements && pnpm vite'
 
 The strips at the bottom of the page carry the counters. They are painted by
 the page itself because a devtools console evaluates in an isolated world,
-where `window.__ceStats` is a different object than the one the elements
+where `window.__probeStats` is a different object than the one the elements
 mutate — reading the counters any other way gives stale numbers.
 
 ## What it establishes
 
-**The round trip works in both directions.** Elm passes `options` as a JSON
-property and receives a `value-change` custom event; Radix portals its popup to
-`document.body`, and the page's Tailwind reaches the trigger because React
-renders into the light DOM rather than a shadow root.
+**The round trip works in both directions.** Elm passes state as JSON
+properties and gets a custom event back, and the page's Tailwind reaches what
+React drew, because React renders into the light DOM rather than a shadow root.
 
-**Elm has to own the state, and one line decides whether it does.** With
-`value={this._value ?? undefined}`, clearing the selection from Elm left the
-trigger still showing the old label: React reads `undefined` as "uncontrolled"
-and Radix then keeps its own selection, so the two states silently diverge.
-`?? ""` keeps it controlled. Nothing in the types catches this — the element
-renders and the app looks fine until something clears the value.
+**Elm has to own the state, and one line decides whether it does.** Passing a
+property through as `undefined` reads to React as "leave this uncontrolled",
+and the component then keeps a value of its own beside the one Elm holds: Elm
+clears the value, the component goes on showing the old one, and neither side
+is wrong about its own copy. Nothing in the types catches it. The element
+renders, the app looks right, and it stays right until something clears a value
+— which is why the app's wrappers always pass one.
 
-**Unrelated re-renders are cheap.** Ticking the model ~30 times without
-touching the selection left the counters at `react renders 1 | options set 1`:
-Elm did not re-assign the properties, so React never re-rendered. A real state
-change costs 2 property assignments and 2 React renders. Since the app this is
-for redraws every animation frame, that was the main risk, and it does not
+**Unrelated re-renders are cheap.** Twenty-five ticks of the model, touching
+nothing the elements read, left `probe: react renders 12` and `button: react
+renders 1` — exactly their mounts. Elm does not re-assign a property whose
+value has not changed, so React is never asked. Since the app this is for
+redraws every animation frame, that was the main risk, and it does not
 materialise.
 
 **A keyed reorder is nearly free, once a move is told apart from a removal.**
@@ -156,13 +154,14 @@ share that tree, and only B puts it there.
 
 ## Costs
 
-React + Base UI + Radix add ~118KB gzipped over an Elm-only build. Irrelevant
-for a Tauri app, decisive for a web one.
+React and Base UI took the app's bundle from 45.68KB gzipped to 136.03KB,
+about three times. Irrelevant for a Tauri app, decisive for a web one.
 
-JSX needs `esbuild: { jsx: "automatic" }` in `vite.config.ts`; without a
-`tsconfig.json` esbuild defaults to the classic transform and the element fails
-at runtime with `React is not defined` while the rest of the page renders
-normally.
+JSX needs either a `tsconfig.json` saying `"jsx": "react-jsx"` or an
+`esbuild: { jsx: "automatic" }` in `vite.config.ts`, which is what this
+prototype has. With neither, esbuild defaults to the classic transform and the
+element fails at runtime with `React is not defined` while the rest of the page
+renders normally.
 
 ## Limits
 

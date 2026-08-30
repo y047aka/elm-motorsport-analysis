@@ -1,4 +1,3 @@
-import "./shadcn-select";
 import "./ce-probe";
 import "./shadcn-button";
 import "./card-slotted";

@@ -90,9 +90,13 @@ nothing else: a line it reports without one is drift to fold back in, since
 `add` overwrites the file.
 
 Every prop is set as a JS property, so what crosses the boundary is JSON and
-Elm holds the state. Three things that boundary will not carry, all found by
+Elm holds the state. Four things that boundary will not carry, all found by
 running it rather than by building it:
 
+- A property that arrives as `undefined` reads to React as "leave this
+  uncontrolled", and the component then keeps a value beside the one Elm
+  holds. Elm clears the value, the component goes on showing the old one, and
+  nothing fails — so an element always passes a value, never a hole.
 - React's synthetic events never reach a custom element's slotted children, so
   a component Elm passes children to cannot report its own clicks. `UI.Button`
   takes its label as a property for this reason.

@@ -1,30 +1,26 @@
 module Main exposing (main)
 
-{-| Drives the shadcn Select custom element from Elm.
+{-| Drives the shadcn custom elements from Elm.
 
 `tick` exists to force unrelated re-renders: the app this is for redraws every
-animation frame, so the question is not only whether the element works but
-whether Elm re-sets its properties on every unrelated render. Watch
-`window.__ceStats.optionsSets` while the counter runs.
+animation frame, so the question is not only whether an element works but
+whether Elm re-sets its properties on every unrelated render. Watch the
+`react renders` counters while it runs.
 
 -}
 
 import Browser
-import Html exposing (Html, button, div, h2, node, p, span, text)
+import Html exposing (Html, button, div, h2, node, span, text)
 import Html.Attributes exposing (class, property)
 import Html.Events exposing (onClick)
 import Html.Keyed
-import Html.Lazy
-import Json.Decode as Decode
 import Json.Encode as Encode
 import Time
 
 
 type alias Model =
-    { selected : Maybe String
-    , tick : Int
+    { tick : Int
     , ticking : Bool
-    , useLazy : Bool
     , rotation : Int
     , presses : Int
     , mount : MountMode
@@ -42,11 +38,8 @@ type MountMode
 
 
 type Msg
-    = Selected String
-    | Tick
+    = Tick
     | ToggleTicking
-    | ClearSelection
-    | ToggleLazy
     | Rotate
     | Pressed
     | SetMount MountMode
@@ -57,7 +50,7 @@ type Msg
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( { selected = Nothing, tick = 0, ticking = False, useLazy = True, rotation = 0, presses = 0, mount = MountOff, cardFooter = False, cardMedia = False }, Cmd.none )
+        { init = \_ -> ( { tick = 0, ticking = False, rotation = 0, presses = 0, mount = MountOff, cardFooter = False, cardMedia = False }, Cmd.none )
         , update = update
         , subscriptions =
             \m ->
@@ -73,20 +66,11 @@ main =
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        Selected value ->
-            ( { model | selected = Just value }, Cmd.none )
-
         Tick ->
             ( { model | tick = model.tick + 1 }, Cmd.none )
 
         ToggleTicking ->
             ( { model | ticking = not model.ticking }, Cmd.none )
-
-        ClearSelection ->
-            ( { model | selected = Nothing }, Cmd.none )
-
-        ToggleLazy ->
-            ( { model | useLazy = not model.useLazy }, Cmd.none )
 
         Rotate ->
             ( { model | rotation = model.rotation + 1 }, Cmd.none )
@@ -104,42 +88,10 @@ update msg model =
             ( { model | cardMedia = not model.cardMedia }, Cmd.none )
 
 
-options : List { value : String, label : String }
-options =
-    [ { value = "hypercar", label = "Hypercar" }
-    , { value = "lmp2", label = "LMP2" }
-    , { value = "lmgt3", label = "LMGT3" }
-    ]
-
-
-encodeOptions : List { value : String, label : String } -> Encode.Value
-encodeOptions =
-    Encode.list
-        (\o ->
-            Encode.object
-                [ ( "value", Encode.string o.value )
-                , ( "label", Encode.string o.label )
-                ]
-        )
-
-
 view : Model -> Html Msg
 view model =
     div [ class "dark min-h-screen bg-background text-foreground p-8 flex flex-col gap-6" ]
-        [ h2 [ class "text-xl font-semibold" ] [ text "shadcn Select via a custom element" ]
-        , div [ class "flex items-center gap-4" ]
-            [ viewSelect model.useLazy model.selected
-            , button
-                [ onClick ClearSelection
-                , class "rounded-md border border-input px-3 h-9 text-sm"
-                ]
-                [ text "Clear from Elm" ]
-            ]
-        , p [ class "text-sm" ]
-            [ text "Elm holds: "
-            , span [ class "font-mono", Html.Attributes.id "elm-state" ]
-                [ text (Maybe.withDefault "(nothing)" model.selected) ]
-            ]
+        [ h2 [ class "text-xl font-semibold" ] [ text "shadcn components via custom elements" ]
         , div [ class "flex items-center gap-4" ]
             [ button
                 [ onClick ToggleTicking
@@ -155,18 +107,6 @@ view model =
                 ]
             , span [ class "text-sm font-mono", Html.Attributes.id "tick" ]
                 [ text ("tick " ++ String.fromInt model.tick) ]
-            , button
-                [ onClick ToggleLazy
-                , class "rounded-md border border-input px-3 h-9 text-sm"
-                ]
-                [ text
-                    (if model.useLazy then
-                        "lazy: ON"
-
-                     else
-                        "lazy: OFF"
-                    )
-                ]
             ]
         , viewCards model
         , viewMountBench model.mount
@@ -387,34 +327,3 @@ viewKeyedProbes rotation =
                 rotated
             )
         ]
-
-
-{-| `options` never changes, so it is passed through `lazy` to find out whether
-that is enough to stop Elm from re-setting the property on unrelated renders.
--}
-viewSelect : Bool -> Maybe String -> Html Msg
-viewSelect useLazy selected =
-    if useLazy then
-        Html.Lazy.lazy selectNode selected
-
-    else
-        selectNode selected
-
-
-selectNode : Maybe String -> Html Msg
-selectNode selected =
-    node "shadcn-select"
-        [ property "options" (encodeOptions options)
-        , property "value"
-            (case selected of
-                Just v ->
-                    Encode.string v
-
-                Nothing ->
-                    Encode.null
-            )
-        , property "placeholder" (Encode.string "Pick a class…")
-        , Html.Events.on "value-change"
-            (Decode.map Selected (Decode.at [ "detail" ] Decode.string))
-        ]
-        []
