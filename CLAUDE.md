@@ -102,7 +102,9 @@ running it rather than by building it:
   takes its label as a property for this reason.
 - A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
   teardown queued by `disconnectedCallback` has to be cancelled when the node
-  comes back, or every reorder destroys a React root.
+  comes back, or every reorder destroys a React root. `ReactElement` guards
+  that with its `leaving` flag, and nothing exercises the guard: no element of
+  this kind sits in a keyed list today.
 - A directory named `src/ui` is folded into the Elm `src/UI` on macOS and only
   fails on Linux CI, which is why the React sources are under `src/shadcn`.
 
@@ -113,9 +115,12 @@ the shadow root's tree, so `card-elements.ts` puts the vendored class strings
 on custom elements Elm fills directly. Nothing may pass one of those a `class`:
 the element owns that attribute, and layout belongs on a wrapper around it.
 
-`prototype/custom-elements/` holds what this cost when it was measured. Its one
-remaining element extends `ReactElement`, so it is also where the reorder guard
-is exercised — nothing in the app puts one of these in a keyed list.
+What one of these costs, measured: mounting sixty-two of them takes ~26ms
+against ~2ms for the same number of plain Elm nodes, about ten times, paid once
+when the list appears. A reorder and an unrelated re-render cost nothing —
+Elm does not re-assign a property whose value has not changed, so React is
+never asked. Ten times a node it only lends class strings to is the reason
+`UI.Card` mounts nothing.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
