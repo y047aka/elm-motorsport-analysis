@@ -5,16 +5,14 @@ what the integration costs before committing to it. Not wired into the app.
 
 The elements, each answering something different:
 
-- `shadcn-button` — a container-shaped one (Base UI `Button`, from the
-  `base-nova` registry the app went on to use), whose content comes from Elm
-  through a shadow root and a `<slot>`.
+- `shadcn-button` — a container-shaped one, whose content comes from Elm
+  through a shadow root and a `<slot>`. It renders the app's own
+  `app/src/shadcn/ui/button.tsx` rather than a second vendoring, so what it
+  measures is what the app ships. This is the one arrangement here that the
+  app has not adopted: `UI.Button` takes a label instead.
 - `ce-probe` — a styling-only stand-in, used twice: twelve in an `Html.Keyed`
   list that can be rotated, to price a reorder, and sixty-two in a list that
   can be mounted and unmounted, to price a mount against plain Elm nodes.
-- `card-slotted`, `card-named-slots`, `card-plain-*` — three ways of putting
-  Elm's content inside shadcn's Card, drawn side by side from the same
-  children. Card is the case where the component's own CSS reads the tree its
-  content sits in.
 
 ## Run
 
@@ -99,6 +97,10 @@ already complete.
 
 ## Putting Elm's content inside a Card
 
+Measured with three elements that are no longer here: the arrangement it chose
+ships as `card-elements.ts`, and a second copy of `ui/card.tsx` beside the
+app's had already drifted from it within a day.
+
 Card carries no behaviour at all — seven `<div>`s typed `React.ComponentProps<"div">` —
 but its classes read what it contains:
 
@@ -109,8 +111,7 @@ has-[>img:first-child]:pt-0          drop the top padding when an image leads
 ```
 
 `:has()`, `group-*` and `*:` all match within one tree, and slotted content is
-not in the tree of the shadow root it is projected into. Three arrangements,
-with the footer and the leading image both switched on:
+not in the tree of the shadow root it is projected into. Three arrangements:
 
 ```
                      padding-bottom   padding-top   img radius
@@ -121,6 +122,8 @@ A1  React renders every part,
 B   elements apply the vendored
     classes to themselves                    0px          0px        14px
 ```
+
+with the footer and the leading image both switched on.
 
 **A2 is the naive reading of the goal and none of the three rules fire.** React
 draws the Card into a shadow root and Elm's header, content and footer arrive

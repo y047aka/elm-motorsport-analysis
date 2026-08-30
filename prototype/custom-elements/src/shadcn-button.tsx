@@ -1,9 +1,11 @@
 import { createRoot, type Root } from "react-dom/client";
-import { Button } from "./ui/button";
+import { Button } from "@/shadcn/ui/button";
 import { sharedSheets } from "./shared-sheets";
 
 /**
- * Wraps shadcn's Button, whose content is whatever Elm put inside the element.
+ * Wraps shadcn's Button -- the app's own copy of it, so this measures what the
+ * app ships rather than a second vendoring of the same component -- whose
+ * content is whatever Elm put inside the element.
  *
  * Unlike the Select, this one needs a shadow root. React renders the button
  * into it and places a `<slot>` where the label goes; Elm's children stay in

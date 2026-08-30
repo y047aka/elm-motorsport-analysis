@@ -7,6 +7,9 @@
 
 @source "./src";
 
+/* The Button comes from the app, so its classes are only found there. */
+@source "../../app/src/shadcn";
+
 @theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -90,18 +93,6 @@
   html,
   body {
     height: 100vh;
-  }
-
-  /* The class-applier card parts are custom elements, and a custom element is
-     inline where the divs upstream renders are blocks. Declared in `base` so
-     the display utilities in their own class strings still win. */
-  card-plain,
-  card-plain-header,
-  card-plain-title,
-  card-plain-description,
-  card-plain-content,
-  card-plain-footer {
-    display: block;
   }
 
   * {

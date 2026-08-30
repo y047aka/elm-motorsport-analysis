@@ -24,8 +24,6 @@ type alias Model =
     , rotation : Int
     , presses : Int
     , mount : MountMode
-    , cardFooter : Bool
-    , cardMedia : Bool
     }
 
 
@@ -43,14 +41,12 @@ type Msg
     | Rotate
     | Pressed
     | SetMount MountMode
-    | ToggleCardFooter
-    | ToggleCardMedia
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( { tick = 0, ticking = False, rotation = 0, presses = 0, mount = MountOff, cardFooter = False, cardMedia = False }, Cmd.none )
+        { init = \_ -> ( { tick = 0, ticking = False, rotation = 0, presses = 0, mount = MountOff }, Cmd.none )
         , update = update
         , subscriptions =
             \m ->
@@ -81,12 +77,6 @@ update msg model =
         SetMount mode ->
             ( { model | mount = mode }, Cmd.none )
 
-        ToggleCardFooter ->
-            ( { model | cardFooter = not model.cardFooter }, Cmd.none )
-
-        ToggleCardMedia ->
-            ( { model | cardMedia = not model.cardMedia }, Cmd.none )
-
 
 view : Model -> Html Msg
 view model =
@@ -108,117 +98,10 @@ view model =
             , span [ class "text-sm font-mono", Html.Attributes.id "tick" ]
                 [ text ("tick " ++ String.fromInt model.tick) ]
             ]
-        , viewCards model
         , viewMountBench model.mount
         , viewSlottedButton model.presses
         , viewKeyedProbes model.rotation
         ]
-
-
-{-| Three ways of putting Elm's content inside shadcn's Card, drawn from the
-same children. Card's padding is conditional on what it contains, so the
-strip at the bottom of the page says which of the three Card can see.
--}
-viewCards : Model -> Html Msg
-viewCards model =
-    div [ class "flex flex-col gap-3" ]
-        [ div [ class "flex items-center gap-2" ]
-            [ button
-                [ onClick ToggleCardFooter
-                , Html.Attributes.attribute "data-card" "footer"
-                , class "rounded-md border border-input px-3 h-8 text-xs"
-                ]
-                [ text
-                    (if model.cardFooter then
-                        "footer: ON"
-
-                     else
-                        "footer: OFF"
-                    )
-                ]
-            , button
-                [ onClick ToggleCardMedia
-                , Html.Attributes.attribute "data-card" "media"
-                , class "rounded-md border border-input px-3 h-8 text-xs"
-                ]
-                [ text
-                    (if model.cardMedia then
-                        "leading image: ON"
-
-                     else
-                        "leading image: OFF"
-                    )
-                ]
-            ]
-        , div [ class "grid grid-cols-3 gap-4 items-start" ]
-            [ node "card-slotted"
-                [ Html.Attributes.id "a2" ]
-                (cardParts model)
-            , node "card-named-slots"
-                [ Html.Attributes.id "a1"
-                , property "footer" (Encode.bool model.cardFooter)
-                ]
-                (namedSlotParts model)
-            , node "card-plain"
-                [ Html.Attributes.id "b" ]
-                (cardParts model)
-            ]
-        ]
-
-
-{-| The same markup for A2 and B: only the element wrapping it differs.
--}
-cardParts : Model -> List (Html Msg)
-cardParts model =
-    List.concat
-        [ if model.cardMedia then
-            [ Html.img [ Html.Attributes.src mediaSrc, class "h-16 w-full object-cover" ] [] ]
-
-          else
-            []
-        , [ node "card-plain-header"
-                []
-                [ node "card-plain-title" [] [ text "6 Hours of Imola" ] ]
-          , node "card-plain-content" [] [ text "Elm renders this." ]
-          ]
-        , if model.cardFooter then
-            [ node "card-plain-footer" [] [ text "footer" ] ]
-
-          else
-            []
-        ]
-
-
-namedSlotParts : Model -> List (Html Msg)
-namedSlotParts model =
-    List.concat
-        [ if model.cardMedia then
-            [ Html.img
-                [ Html.Attributes.src mediaSrc
-                , Html.Attributes.attribute "slot" "media"
-                , class "h-16 w-full object-cover"
-                ]
-                []
-            ]
-
-          else
-            []
-        , [ span [ Html.Attributes.attribute "slot" "title" ] [ text "6 Hours of Imola" ]
-          , span [ Html.Attributes.attribute "slot" "content" ] [ text "Elm renders this." ]
-          ]
-        , if model.cardFooter then
-            [ span [ Html.Attributes.attribute "slot" "footer" ] [ text "footer" ] ]
-
-          else
-            []
-        ]
-
-
-{-| A one-pixel image, inlined so the measurement never waits on the network.
--}
-mediaSrc : String
-mediaSrc =
-    "data:image/gif;base64,R0lGODlhAQABAIAAAFmZzAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
 
 {-| 62 badges, the size the standings list runs at, drawn either as custom
