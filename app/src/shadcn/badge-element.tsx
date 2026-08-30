@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Badge } from "./shadcn/badge";
+import { Badge } from "./ui/badge";
 import { ReactElement } from "./react-element";
 
 type Variant = ComponentProps<typeof Badge>["variant"];

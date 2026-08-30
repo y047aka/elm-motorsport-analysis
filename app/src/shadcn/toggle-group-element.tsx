@@ -1,4 +1,4 @@
-import { ToggleGroup, ToggleGroupItem } from "./shadcn/toggle-group";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { ReactElement } from "./react-element";
 
 type Item = {

@@ -1,6 +1,6 @@
 import * as React from "react"
 
-import { cn } from "@/custom-elements/lib/utils"
+import { cn } from "@/shadcn/lib/utils"
 
 // Not in upstream base-nova: the class strings are hoisted out of the
 // component bodies and exported. Card's own rules read the tree its content

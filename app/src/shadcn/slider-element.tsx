@@ -1,4 +1,4 @@
-import { Slider } from "./shadcn/slider";
+import { Slider } from "./ui/slider";
 import { ReactElement } from "./react-element";
 
 /**

@@ -1,4 +1,4 @@
-module Shadcn.Slider exposing (view)
+module UI.Shadcn.Slider exposing (view)
 
 {-| Slider, drawn by shadcn's Base UI component behind the `shadcn-slider`
 custom element registered in `index.ts`.

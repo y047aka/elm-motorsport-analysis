@@ -55,8 +55,8 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `Shadcn/` (Button,
-  Badge, Card, ...), `UI/` (Table)
+- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Table,
+  and `Shadcn/` for the wrappers)
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared`. It is
 the app's only source for which rounds exist, what they are called and where
@@ -73,21 +73,19 @@ takes a colour from its number.
 
 ### The shadcn components
 
-`app/src/custom-elements/shadcn/` is vendored from shadcn's **`base-nova`**
-registry — Base UI, not Radix. Each
-`app/src/custom-elements/<name>-element.tsx` mounts one of them into a custom
-element, `index.ts` registers them all, and `app/src/Shadcn/<Name>.elm` is the
-Elm side. The Elm wrappers hold no Tailwind classes; the class strings
-are the vendored file's. `src/UI/` is what is left beside them: Elm that writes
-its own Tailwind and answers to no vendored file.
+`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
+UI, not Radix. Each `app/src/shadcn/<name>-element.tsx` mounts one of them into
+a custom element, `index.ts` registers them all, and
+`app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
+Tailwind classes; the class strings are the vendored file's. `UI.Table` is what
+sits beside them: Elm that writes its own Tailwind and answers to no vendored
+file.
 
 `components.json` configures the CLI, so `shadcn add <name>` writes these files
 and `shadcn add <name> --diff` reports how far one has drifted from upstream.
-The directory holding them is the `ui` alias' value, not the `ui` the registry
-is written against; the CLI rewrites every import through the alias, so a
-vendored file reaches its siblings as `@/custom-elements/shadcn/...`. That
-holds only while the `@/*` alias resolves the same way in `tsconfig.json` and
-in `vite.config.ts` — neither file alone makes those imports build.
+That holds only while the `@/*` alias resolves the same way in `tsconfig.json`
+and in `vite.config.ts` — the CLI writes `@/shadcn/...` imports, and neither
+file alone makes them build.
 
 Anything this app adds to a vendored component carries a
 `Not in upstream base-nova:` comment. `--diff` should report those lines and
@@ -103,20 +101,21 @@ running it rather than by building it:
   holds. Elm clears the value, the component goes on showing the old one, and
   nothing fails — so an element always passes a value, never a hole.
 - React's synthetic events never reach a custom element's slotted children, so
-  a component Elm passes children to cannot report its own clicks. `Shadcn.Button`
-  takes its label as a property for this reason.
+  a component Elm passes children to cannot report its own clicks.
+  `UI.Shadcn.Button` takes its label as a property for this reason.
 - A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
   teardown queued by `disconnectedCallback` has to be cancelled when the node
   comes back, or every reorder destroys a React root. `ReactElement` guards
   that with its `leaving` flag, and nothing exercises the guard: no element of
   this kind sits in a keyed list today.
-- A directory whose name differs from an Elm one only in case — `src/ui`
-  against `src/UI`, `src/shadcn` against `src/Shadcn` — is folded into it on
-  macOS and only fails on Linux CI. `src/custom-elements/` cannot be folded
-  into anything: an Elm module name has no hyphen in it.
+- A directory whose name differs from an Elm one only in case is folded into
+  it on macOS and only fails on Linux CI. The React sources are laid out as
+  the registry expects, so `src/shadcn/` and `src/shadcn/ui/` are both taken:
+  the Elm side is `UI.Shadcn.*`, and no top-level Elm module may be named
+  `Shadcn` or `Ui`.
 
-`Shadcn.Card` is the one wrapper with no React behind it. Card's classes read the
-tree its content sits in — `has-data-[slot=card-footer]`,
+`UI.Shadcn.Card` is the one wrapper with no React behind it. Card's classes
+read the tree its content sits in — `has-data-[slot=card-footer]`,
 `has-[>img:first-child]` — and content projected through a `<slot>` is not in
 the shadow root's tree, so `card-elements.ts` puts the vendored class strings
 on custom elements Elm fills directly. Nothing may pass one of those a `class`:
@@ -127,7 +126,7 @@ against ~2ms for the same number of plain Elm nodes, about ten times, paid once
 when the list appears. A reorder and an unrelated re-render cost nothing —
 Elm does not re-assign a property whose value has not changed, so React is
 never asked. Ten times a node it only lends class strings to is the reason
-`Shadcn.Card` mounts nothing.
+`UI.Shadcn.Card` mounts nothing.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

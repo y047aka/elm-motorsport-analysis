@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react";
-import { Button } from "./shadcn/button";
+import { Button } from "./ui/button";
 import { ReactElement } from "./react-element";
 
 type Variant = ComponentProps<typeof Button>["variant"];

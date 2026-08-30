@@ -1,4 +1,4 @@
-module Shadcn.Badge exposing (Variant(..), view)
+module UI.Shadcn.Badge exposing (Variant(..), view)
 
 {-| Badge, drawn by shadcn's Base UI component behind the `shadcn-badge`
 custom element registered in `index.ts`.

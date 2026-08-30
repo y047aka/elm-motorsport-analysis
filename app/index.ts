@@ -1,9 +1,9 @@
-import "./src/custom-elements/badge-element";
-import "./src/custom-elements/button-element";
-import "./src/custom-elements/button-group-element";
-import "./src/custom-elements/card-elements";
-import "./src/custom-elements/slider-element";
-import "./src/custom-elements/toggle-group-element";
+import "./src/shadcn/badge-element";
+import "./src/shadcn/button-element";
+import "./src/shadcn/button-group-element";
+import "./src/shadcn/card-elements";
+import "./src/shadcn/slider-element";
+import "./src/shadcn/toggle-group-element";
 import { Elm } from "./src/Main.elm";
 
 const node = document.getElementById("app");

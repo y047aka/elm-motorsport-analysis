@@ -9,7 +9,7 @@
 
 @source "./**/*.elm";
 @source "../package/**/*.elm";
-@source "./src/custom-elements";
+@source "./src/shadcn";
 
 @theme inline {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;

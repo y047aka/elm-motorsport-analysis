@@ -16,11 +16,11 @@ import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
-import Shadcn.Button as Button
-import Shadcn.ButtonGroup as ButtonGroup
-import Shadcn.Slider as Slider
-import Shadcn.ToggleGroup as ToggleGroup
 import String exposing (dropRight)
+import UI.Shadcn.Button as Button
+import UI.Shadcn.ButtonGroup as ButtonGroup
+import UI.Shadcn.Slider as Slider
+import UI.Shadcn.ToggleGroup as ToggleGroup
 
 
 view :
