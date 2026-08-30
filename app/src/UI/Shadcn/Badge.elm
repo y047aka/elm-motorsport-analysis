@@ -1,7 +1,6 @@
 module UI.Shadcn.Badge exposing (Variant(..), view)
 
-{-| Badge, drawn by shadcn's Base UI component behind the `shadcn-badge`
-custom element registered in `index.ts`.
+{-| Badge, drawn by shadcn's component behind the `shadcn-badge` element.
 
 @docs Variant, view
 

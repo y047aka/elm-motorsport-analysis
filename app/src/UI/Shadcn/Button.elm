@@ -1,7 +1,6 @@
 module UI.Shadcn.Button exposing (Variant(..), Size(..), Shape(..), view)
 
-{-| Button, drawn by shadcn's Base UI component behind the `shadcn-button`
-custom element registered in `index.ts`.
+{-| Button, drawn by shadcn's component behind the `shadcn-button` element.
 
 @docs Variant, Size, Shape, view
 
@@ -27,7 +26,7 @@ type Variant
 
 
 {-| The `size` axis of shadcn's `buttonVariants`. `Medium` is the one it calls
-"default", and it sits between `Small` and `Large`.
+"default".
 -}
 type Size
     = Medium
@@ -40,8 +39,8 @@ type Size
     | IconLarge
 
 
-{-| This app's own addition to the vendored component, for the circular
-playback and close buttons.
+{-| Not one of shadcn's axes: `Circle` is `rounded-full`, applied by the
+element rather than by the vendored component.
 -}
 type Shape
     = Rectangle

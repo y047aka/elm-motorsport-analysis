@@ -7,12 +7,9 @@ type Size = ComponentProps<typeof Button>["size"];
 type Shape = "default" | "circle";
 
 /**
- * Wraps shadcn's button so Elm can drive it. Takes its label as a property
- * rather than children, since a caller passing element children would hit
- * the rule that React's synthetic events never reach a custom element's
- * slotted children — every caller here only ever wants a text label anyway.
- *
- * A press dispatches `button-press`; Elm decides whether that means anything.
+ * Wraps shadcn's button so Elm can drive it. The label is a property, not
+ * children: a slotted child's clicks would never reach React. A press
+ * dispatches `button-press`.
  */
 export class ShadcnButton extends ReactElement {
   private _label = "";

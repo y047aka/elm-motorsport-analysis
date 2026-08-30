@@ -1,7 +1,6 @@
 module UI.Shadcn.Slider exposing (view)
 
-{-| Slider, drawn by shadcn's Base UI component behind the `shadcn-slider`
-custom element registered in `index.ts`.
+{-| Slider, drawn by shadcn's component behind the `shadcn-slider` element.
 
 @docs view
 

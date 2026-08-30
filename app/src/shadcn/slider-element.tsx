@@ -2,15 +2,9 @@ import { Slider } from "./ui/slider";
 import { ReactElement } from "./react-element";
 
 /**
- * Wraps shadcn's Base UI slider so Elm can drive it.
- *
- * React renders into the light DOM rather than a shadow root, so the page's
- * Tailwind reaches the track and thumb; the element takes no children, so
- * neither side has to share nodes with the other.
- *
- * `value` comes in as a property and a drag leaves as a `slider-change` event.
- * The element keeps no position of its own: the clock owns it, and a frame that
- * moves the clock has to move the thumb even while a drag is in progress.
+ * Wraps shadcn's slider so Elm can drive it. `value` comes in as a property
+ * and a drag leaves as a `slider-change` event; the element keeps no position
+ * of its own, so the clock moves the thumb even while a drag is in progress.
  */
 export class ShadcnSlider extends ReactElement {
   private _value = 0;

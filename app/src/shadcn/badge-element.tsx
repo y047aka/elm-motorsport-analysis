@@ -5,8 +5,8 @@ import { ReactElement } from "./react-element";
 type Variant = ComponentProps<typeof Badge>["variant"];
 
 /**
- * Wraps shadcn's badge so Elm can drive it. Purely presentational (no
- * events), so unlike the slider it only ever reacts to property writes.
+ * Wraps shadcn's badge so Elm can drive it. Presentational: it reads property
+ * writes and dispatches nothing.
  */
 export class ShadcnBadge extends ReactElement {
   private _label = "";

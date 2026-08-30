@@ -1,8 +1,7 @@
 module UI.Shadcn.Card exposing (card, header, title, description, action, content, footer)
 
-{-| Card, drawn by the custom elements `card-elements.ts` registers. Unlike the
-other wrappers here these carry no React: Card's classes read what it contains,
-so its parts and the content Elm puts in them have to be one tree.
+{-| Card, drawn by the elements `card-elements.ts` registers. Alone among the
+wrappers here it mounts no React, so Elm's content sits in Card's own tree.
 
 Nothing takes a `class`. Each element sets its own, and layout around a card
 belongs to whatever the caller wraps it in.

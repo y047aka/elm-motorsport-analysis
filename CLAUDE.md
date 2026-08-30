@@ -91,7 +91,9 @@ file alone makes them build.
 Anything this app adds to a vendored component carries a
 `Not in upstream base-nova:` comment. `--diff` should report those lines and
 nothing else: a line it reports without one is drift to fold back in, since
-`add` overwrites the file.
+`add` overwrites the file. A single class the registry has no variant for does
+not need to be added there at all — `cn` puts `className` last, so the element
+can pass it and win, which is how a circular button gets `rounded-full`.
 
 Every prop is set as a JS property, so what crosses the boundary is JSON and
 Elm holds the state. Four things that boundary will not carry, all found by

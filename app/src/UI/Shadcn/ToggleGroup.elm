@@ -1,8 +1,7 @@
 module UI.Shadcn.ToggleGroup exposing (Item, view)
 
 {-| A row of joined buttons of which exactly one is pressed, drawn by shadcn's
-Base UI components behind the `shadcn-toggle-group` custom element registered
-in `index.ts`.
+components behind the `shadcn-toggle-group` element.
 
 Base UI gives each item `aria-pressed` and makes the whole row one arrow-key
 stop. A row of independent actions, carrying no selection, is
