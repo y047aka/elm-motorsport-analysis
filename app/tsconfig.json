@@ -9,10 +9,9 @@
     "skipLibCheck": true,
     "noEmit": true,
     "isolatedModules": true,
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["index.ts", "src/**/*.ts", "src/**/*.tsx"]
+  "include": ["index.ts", "vite.config.ts", "src/**/*.ts", "src/**/*.tsx"]
 }

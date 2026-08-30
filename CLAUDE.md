@@ -22,6 +22,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | elm-verify-examples + elm-test |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots |
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
@@ -226,12 +227,17 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring
   examples. Benchmarks live in `/package/benchmark/`.
+- **TypeScript** — `tsc --noEmit`, over `index.ts`, `vite.config.ts` and
+  `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
+  from the flake rather than from `node_modules`, so `@playwright/test` does
+  not resolve for `tsc`.
 - **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
   (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
   snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the
   branch.
 
-CI (ubuntu-24.04) runs the unit tests in `test.yml` and VRT in `playwright.yml`.
+CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml` and VRT
+in `playwright.yml`.
 Snapshots are generated on Linux, so VRT failures on macOS are usually the
 platform, not the change.
 
