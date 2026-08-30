@@ -1,5 +1,5 @@
-import { createRoot, type Root } from "react-dom/client";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { ReactElement } from "./react-element";
 
 type Item = {
   label: string;
@@ -12,36 +12,17 @@ type Item = {
  * its index in `items`, and a selection dispatches `toggle-group-press` with
  * that index as `detail`.
  */
-export class ShadcnToggleGroup extends HTMLElement {
-  private root: Root | null = null;
-  private leaving = false;
+export class ShadcnToggleGroup extends ReactElement {
   private _items: Item[] = [];
 
   set items(v: Item[]) {
     this._items = Array.isArray(v) ? v : [];
-    this.render();
+    this.update();
   }
 
-  connectedCallback() {
-    this.leaving = false;
-    if (!this.root) this.root = createRoot(this);
-    this.render();
-  }
-
-  disconnectedCallback() {
-    this.leaving = true;
-    queueMicrotask(() => {
-      if (!this.leaving || this.isConnected) return;
-      const root = this.root;
-      this.root = null;
-      root?.unmount();
-    });
-  }
-
-  private render() {
-    if (!this.root) return;
+  protected draw() {
     const active = this._items.findIndex((item) => item.active);
-    this.root.render(
+    return (
       <ToggleGroup
         variant="outline"
         size="sm"

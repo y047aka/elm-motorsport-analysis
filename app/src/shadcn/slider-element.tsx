@@ -1,5 +1,5 @@
-import { createRoot, type Root } from "react-dom/client";
 import { Slider } from "./ui/slider";
+import { ReactElement } from "./react-element";
 
 /**
  * Wraps shadcn's Base UI slider so Elm can drive it.
@@ -12,16 +12,14 @@ import { Slider } from "./ui/slider";
  * The element keeps no position of its own: the clock owns it, and a frame that
  * moves the clock has to move the thumb even while a drag is in progress.
  */
-export class ShadcnSlider extends HTMLElement {
-  private root: Root | null = null;
-  private leaving = false;
+export class ShadcnSlider extends ReactElement {
   private _value = 0;
   private _min = 0;
   private _max = 100;
 
   set value(v: number) {
     this._value = Number(v) || 0;
-    this.render();
+    this.update();
   }
   get value() {
     return this._value;
@@ -29,35 +27,16 @@ export class ShadcnSlider extends HTMLElement {
 
   set min(v: number) {
     this._min = Number(v) || 0;
-    this.render();
+    this.update();
   }
 
   set max(v: number) {
     this._max = Number(v) || 0;
-    this.render();
+    this.update();
   }
 
-  connectedCallback() {
-    // A keyed reorder removes and re-inserts within one task, so a teardown
-    // queued by that removal has to be cancelled when the node comes back.
-    this.leaving = false;
-    if (!this.root) this.root = createRoot(this);
-    this.render();
-  }
-
-  disconnectedCallback() {
-    this.leaving = true;
-    queueMicrotask(() => {
-      if (!this.leaving || this.isConnected) return;
-      const root = this.root;
-      this.root = null;
-      root?.unmount();
-    });
-  }
-
-  private render() {
-    if (!this.root) return;
-    this.root.render(
+  protected draw() {
+    return (
       <Slider
         // A bare number leaves shadcn's wrapper falling back to [min, max],
         // which draws the two thumbs of a range slider; a one-element array is

@@ -9,9 +9,8 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 import Compare
 import DataView
 import Effect exposing (Effect)
-import Html exposing (Html, div, header, input, nav, text)
-import Html.Attributes as Attributes exposing (type_, value)
-import Html.Events exposing (onInput)
+import Html exposing (Html, div, header, nav, text)
+import Html.Attributes as Attributes
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -30,6 +29,7 @@ import Shared
 import Shared.Msg
 import UI.Badge as Badge
 import UI.Button as Button
+import UI.Slider as Slider
 import View exposing (View)
 
 
@@ -107,13 +107,15 @@ debugView replay leaderboardState =
     [ header
         [ Attributes.class "sticky top-0 flex justify-between border-b border-border bg-background" ]
         [ nav []
-            [ input
-                [ type_ "range"
-                , Attributes.max <| String.fromInt race.lapTotal
-                , value (String.fromInt lapCount)
-                , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
+            [ div [ Attributes.class "w-64" ]
+                [ Slider.view
+                    { min = 0
+                    , max = race.lapTotal
+                    , value = lapCount
+                    , onChange = Replay.SetCount >> ReplayMsg
+                    }
+                    []
                 ]
-                []
             , div [ Attributes.class "inline-flex items-center gap-1" ]
                 [ nudgeButton "-" (ReplayMsg Replay.PreviousLap)
                 , Badge.view { label = String.fromInt lapCount, variant = Badge.Outline } []

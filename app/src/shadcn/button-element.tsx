@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react";
-import { createRoot, type Root } from "react-dom/client";
 import { Button } from "./ui/button";
+import { ReactElement } from "./react-element";
 
 type Variant = ComponentProps<typeof Button>["variant"];
 type Size = ComponentProps<typeof Button>["size"];
@@ -14,9 +14,7 @@ type Shape = ComponentProps<typeof Button>["shape"];
  *
  * A press dispatches `button-press`; Elm decides whether that means anything.
  */
-export class ShadcnButton extends HTMLElement {
-  private root: Root | null = null;
-  private leaving = false;
+export class ShadcnButton extends ReactElement {
   private _label = "";
   private _variant: Variant = "default";
   private _size: Size = "default";
@@ -25,48 +23,31 @@ export class ShadcnButton extends HTMLElement {
 
   set label(v: string) {
     this._label = v;
-    this.render();
+    this.update();
   }
 
   set variant(v: string) {
     this._variant = (v || "default") as Variant;
-    this.render();
+    this.update();
   }
 
   set size(v: string) {
     this._size = (v || "default") as Size;
-    this.render();
+    this.update();
   }
 
   set shape(v: string) {
     this._shape = (v || "default") as Shape;
-    this.render();
+    this.update();
   }
 
   set disabled(v: boolean) {
     this._disabled = v;
-    this.render();
+    this.update();
   }
 
-  connectedCallback() {
-    this.leaving = false;
-    if (!this.root) this.root = createRoot(this);
-    this.render();
-  }
-
-  disconnectedCallback() {
-    this.leaving = true;
-    queueMicrotask(() => {
-      if (!this.leaving || this.isConnected) return;
-      const root = this.root;
-      this.root = null;
-      root?.unmount();
-    });
-  }
-
-  private render() {
-    if (!this.root) return;
-    this.root.render(
+  protected draw() {
+    return (
       <Button
         variant={this._variant}
         size={this._size}

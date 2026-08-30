@@ -1,6 +1,6 @@
-import { createRoot, type Root } from "react-dom/client";
 import { Button } from "./ui/button";
 import { ButtonGroup } from "./ui/button-group";
+import { ReactElement } from "./react-element";
 
 type Item = {
   label: string;
@@ -17,35 +17,16 @@ type Item = {
  * The group holds no selection — that is `shadcn-toggle-group`. A press
  * dispatches `button-group-press` with the pressed item's index as `detail`.
  */
-export class ShadcnButtonGroup extends HTMLElement {
-  private root: Root | null = null;
-  private leaving = false;
+export class ShadcnButtonGroup extends ReactElement {
   private _items: Item[] = [];
 
   set items(v: Item[]) {
     this._items = Array.isArray(v) ? v : [];
-    this.render();
+    this.update();
   }
 
-  connectedCallback() {
-    this.leaving = false;
-    if (!this.root) this.root = createRoot(this);
-    this.render();
-  }
-
-  disconnectedCallback() {
-    this.leaving = true;
-    queueMicrotask(() => {
-      if (!this.leaving || this.isConnected) return;
-      const root = this.root;
-      this.root = null;
-      root?.unmount();
-    });
-  }
-
-  private render() {
-    if (!this.root) return;
-    this.root.render(
+  protected draw() {
+    return (
       <ButtonGroup>
         {this._items.map((item, index) => (
           <Button
