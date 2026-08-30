@@ -13,11 +13,10 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 
 
-{-| The `variant` axis of shadcn's `buttonVariants`. `Primary` is the one it
-calls "default".
+{-| The `variant` axis of shadcn's `buttonVariants`.
 -}
 type Variant
-    = Primary
+    = Default
     | Outline
     | Secondary
     | Ghost
@@ -78,7 +77,7 @@ encodeVariant : Variant -> Encode.Value
 encodeVariant variant =
     Encode.string <|
         case variant of
-            Primary ->
+            Default ->
                 "default"
 
             Outline ->

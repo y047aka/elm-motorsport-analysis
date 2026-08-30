@@ -11,12 +11,11 @@ import Html.Attributes exposing (property)
 import Json.Encode as Encode
 
 
-{-| The `variant` axis of shadcn's `badgeVariants`. `Primary` is the one it
-calls "default"; `OutlinePrimary` is this app's own addition to the vendored
-component.
+{-| The `variant` axis of shadcn's `badgeVariants`. `OutlinePrimary` is this
+app's own addition to the vendored component.
 -}
 type Variant
-    = Primary
+    = Default
     | Secondary
     | Destructive
     | Outline
@@ -39,7 +38,7 @@ encodeVariant : Variant -> Encode.Value
 encodeVariant variant =
     Encode.string <|
         case variant of
-            Primary ->
+            Default ->
                 "default"
 
             Secondary ->

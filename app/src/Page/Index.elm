@@ -56,7 +56,7 @@ seasonSection { isLatest } { season, rounds } =
         [ div [ class "mb-4 flex items-center gap-3" ]
             [ h2 [ class "text-xl font-semibold tracking-tight" ] [ text ("WEC " ++ seasonLabel) ]
             , if isLatest then
-                Badge.view { label = "Latest", variant = Badge.Primary } []
+                Badge.view { label = "Latest", variant = Badge.Default } []
 
               else
                 text ""
