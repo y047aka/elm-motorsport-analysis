@@ -8,7 +8,7 @@ The elements, each answering something different:
 - `shadcn-select` — a data-shaped component (Radix `Select`, pinned from the
   `new-york-v4` registry). Takes options, returns a value, has no children.
 - `shadcn-button` — a container-shaped one (Base UI `Button`, from the
-  `base-nova` registry elm-chadcn derives from), whose content comes from Elm
+  `base-nova` registry the app went on to use), whose content comes from Elm
   through a shadow root and a `<slot>`.
 - `ce-probe` — a styling-only stand-in, used twice: twelve in an `Html.Keyed`
   list that can be rotated, to price a reorder, and sixty-two in a list that

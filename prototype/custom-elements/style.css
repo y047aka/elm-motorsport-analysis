@@ -50,16 +50,20 @@
 
 /* The app renders one theme only (no light/dark toggle), so the shadcn
    tokens are defined once rather than duplicated under :root and .dark.
-   `.dark` still gates elm-chadcn's `dark:` utility classes; it is set
-   unconditionally on each page's root element. */
+   `.dark` still gates the vendored components' `dark:` classes; it is set
+   unconditionally on the root element. */
 :root {
   --radius: 0.625rem;
 
   --background: oklch(0.2 0 0);
   --foreground: oklch(0.838 0.001 17.911);
-  --card: oklch(0.23 0 0);
+
+  /* Both surface tokens are translucent, so `bg-card` and `bg-popover` take
+     their shade from whatever they are stacked on rather than carrying one.
+     An opaque surface has to ask for `bg-background`. */
+  --card: oklch(1 0 0 / 0.04);
   --card-foreground: oklch(0.838 0.001 17.911);
-  --popover: oklch(0.27 0 0);
+  --popover: oklch(0.5 0 0 / 0.04);
   --popover-foreground: oklch(0.838 0.001 17.911);
   --primary: oklch(0.686 0.185 148.958);
   --primary-foreground: oklch(0 0 0);
@@ -80,26 +84,6 @@
   --sidebar-accent-foreground: var(--accent-foreground);
   --sidebar-border: var(--border);
   --sidebar-ring: var(--ring);
-
-  --widget-bg: oklch(1 0 0 / 0.04);
-
-  /* グラスモーフィズム配色は2層構造で管理する.
-     --glass-*       : ダイアログ表面(半透明の濃色地 + 白10%縁取り + 影 + 背後の暗幕)
-     --glass-panel-* : その表面に重ねる入れ子パネル(白を薄く敷いて1段持ち上げる) */
-  --glass-bg: oklch(50% 0 0 / 0.04);
-  --glass-border: oklch(100% 0 0 / 0.1);
-  --glass-shadow: oklch(0% 0 0 / 0.8);
-  --glass-backdrop: oklch(0% 0 0 / 0.1);
-
-  --glass-panel-bg: oklch(1 0 0 / 0.04);
-  --glass-panel-border: oklch(1 0 0 / 0.01);
-
-  --glass-panel-dark-bg: oklch(0 0 0 / 0.15);
-  --glass-panel-dark-border: oklch(1 0 0 / 0.045);
-
-  --performance-standard: oklch(0.8652 0.1768 90.38);
-  --performance-personal-best: oklch(0.7323 0.249195 142.4953);
-  --performance-fastest: oklch(0.7017 0.3225 328.36);
 }
 
 @layer base {
