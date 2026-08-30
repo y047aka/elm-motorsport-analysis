@@ -4,7 +4,7 @@ import { ReactElement } from "./react-element";
 
 type Variant = ComponentProps<typeof Button>["variant"];
 type Size = ComponentProps<typeof Button>["size"];
-type Shape = ComponentProps<typeof Button>["shape"];
+type Shape = "default" | "circle";
 
 /**
  * Wraps shadcn's button so Elm can drive it. Takes its label as a property
@@ -37,7 +37,7 @@ export class ShadcnButton extends ReactElement {
   }
 
   set shape(v: string) {
-    this._shape = (v || "default") as Shape;
+    this._shape = v === "circle" ? "circle" : "default";
     this.update();
   }
 
@@ -51,7 +51,9 @@ export class ShadcnButton extends ReactElement {
       <Button
         variant={this._variant}
         size={this._size}
-        shape={this._shape}
+        // `cn` puts className last, so this wins over the `rounded-*` the
+        // size variants set.
+        className={this._shape === "circle" ? "rounded-full" : undefined}
         disabled={this._disabled}
         onClick={() => this.dispatchEvent(new CustomEvent("button-press"))}
       >
