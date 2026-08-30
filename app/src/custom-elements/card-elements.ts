@@ -1,4 +1,4 @@
-import { cardClasses } from "./ui/card";
+import { cardClasses } from "./shadcn/card";
 
 /**
  * Card, driven from Elm without React. Every other component here mounts a

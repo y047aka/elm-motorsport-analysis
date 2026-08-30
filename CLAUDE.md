@@ -73,7 +73,7 @@ takes a colour from its number.
 
 ### The shadcn components
 
-`app/src/custom-elements/ui/` is vendored from shadcn's **`base-nova`**
+`app/src/custom-elements/shadcn/` is vendored from shadcn's **`base-nova`**
 registry — Base UI, not Radix. Each
 `app/src/custom-elements/<name>-element.tsx` mounts one of them into a custom
 element, `index.ts` registers them all, and `app/src/Shadcn/<Name>.elm` is the
@@ -83,9 +83,11 @@ its own Tailwind and answers to no vendored file.
 
 `components.json` configures the CLI, so `shadcn add <name>` writes these files
 and `shadcn add <name> --diff` reports how far one has drifted from upstream.
-That holds only while the `@/*` alias resolves the same way in `tsconfig.json`
-and in `vite.config.ts` — the CLI writes `@/custom-elements/...` imports, and
-neither file alone makes them build.
+The directory holding them is the `ui` alias' value, not the `ui` the registry
+is written against; the CLI rewrites every import through the alias, so a
+vendored file reaches its siblings as `@/custom-elements/shadcn/...`. That
+holds only while the `@/*` alias resolves the same way in `tsconfig.json` and
+in `vite.config.ts` — neither file alone makes those imports build.
 
 Anything this app adds to a vendored component carries a
 `Not in upstream base-nova:` comment. `--diff` should report those lines and

@@ -1,5 +1,5 @@
-import { Button } from "./ui/button";
-import { ButtonGroup } from "./ui/button-group";
+import { Button } from "./shadcn/button";
+import { ButtonGroup } from "./shadcn/button-group";
 import { ReactElement } from "./react-element";
 
 type Item = {

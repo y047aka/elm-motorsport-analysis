@@ -13,7 +13,7 @@
   "iconLibrary": "lucide",
   "aliases": {
     "components": "@/custom-elements",
-    "ui": "@/custom-elements/ui",
+    "ui": "@/custom-elements/shadcn",
     "lib": "@/custom-elements/lib",
     "utils": "@/custom-elements/lib/utils",
     "hooks": "@/custom-elements/hooks"
