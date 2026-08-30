@@ -75,7 +75,7 @@ takes a colour from its number.
 ### The shadcn components
 
 `app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
-UI, not Radix. Each `app/src/shadcn/<name>-element.tsx` mounts one of them into
+UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
 a custom element, `index.ts` registers them all, and
 `app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
 Tailwind classes; the class strings are the vendored file's. `UI.Table` is what
@@ -92,8 +92,8 @@ Anything this app adds to a vendored component carries a
 `Not in upstream base-nova:` comment. `--diff` should report those lines and
 nothing else: a line it reports without one is drift to fold back in, since
 `add` overwrites the file. A single class the registry has no variant for does
-not need to be added there at all — `cn` puts `className` last, so the element
-can pass it and win, which is how a circular button gets `rounded-full`.
+not need to be added there at all — `cn` puts it last, so the element can pass
+it and win, which is how a circular button gets `rounded-full`.
 
 Every prop is set as a JS property, so what crosses the boundary is JSON and
 Elm holds the state. Four things that boundary will not carry, all found by
@@ -104,8 +104,9 @@ running it rather than by building it:
   holds. Elm clears the value, the component goes on showing the old one, and
   nothing fails — so an element always passes a value, never a hole.
 - React's synthetic events never reach a custom element's slotted children, so
-  a component Elm passes children to cannot report its own clicks.
-  `UI.Shadcn.Button` takes its label as a property for this reason.
+  a component Elm passes children to cannot report its own clicks. No element
+  takes children at all: the ones that mount nothing render their own node,
+  and children Elm rendered would land beside it rather than inside it.
 - A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
   teardown queued by `disconnectedCallback` has to be cancelled when the node
   comes back, or every reorder destroys a React root. `ReactElement` guards
@@ -117,17 +118,25 @@ running it rather than by building it:
   the Elm side is `UI.Shadcn.*`, and no top-level Elm module may be named
   `Shadcn` or `Ui`.
 
-`UI.Shadcn.Card` is the one wrapper with no React behind it. Card's classes
-read the tree its content sits in — `has-data-[slot=card-footer]`,
+Two of the elements mount React: the slider and the toggle-group, which are
+the two that borrow behaviour — a drag, and a row that answers the arrow keys.
+The rest are class strings, and the registry hands those out without React:
+`badgeVariants`, `buttonVariants` and `buttonGroupVariants` are all exported,
+so the badge, button and button-group elements build their own DOM from them
+with nothing vendored changed. A class the registry has no variant for goes on
+through `cn`, which is also what drops a base class a variant contradicts.
+
+`card-elements.ts` has a second reason to mount nothing. Card's classes read
+the tree its content sits in — `has-data-[slot=card-footer]`,
 `has-[>img:first-child]` — and content projected through a `<slot>` is not in
-the shadow root's tree, so `card-elements.ts` puts the vendored class strings
-on custom elements Elm fills directly. Nothing may pass one of those a `class`:
-the element owns that attribute, and layout belongs on a wrapper around it.
+the shadow root's tree, so the element carries the vendored class string and
+Elm fills it directly. Nothing may pass one of those a `class`: the element
+owns that attribute, and layout belongs on a wrapper around it.
 
 What one of these costs, measured: mounting sixty-two of them takes ~26ms
 against ~2ms for the same number of plain Elm nodes, about ten times, paid once
 when the list appears. A reorder costs nothing. Ten times a node it only lends
-class strings to is the reason `UI.Shadcn.Card` mounts nothing.
+class strings to is the reason nothing mounts React for class strings alone.
 
 An unrelated re-render costs nothing only where the property is a primitive.
 Elm compares a property against the last one by reference, so a re-encoded list
