@@ -1,12 +1,12 @@
 import * as React from "react"
 
-import { cn } from "@/shadcn/lib/utils"
+import { cn } from "@/custom-elements/lib/utils"
 
 // Not in upstream base-nova: the class strings are hoisted out of the
 // component bodies and exported. Card's own rules read the tree its content
 // sits in, so the content has to share that tree, which rules out rendering
 // it through React; `card-elements.ts` puts these on custom elements Elm
-// fills directly. See prototype/custom-elements/README.md.
+// fills directly.
 const cardClasses = {
   card:
     "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl bg-card py-(--card-spacing) text-sm text-card-foreground ring-1 ring-foreground/10 [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",

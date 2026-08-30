@@ -22,11 +22,11 @@ import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route
+import Shadcn.Card as Card
 import Shared
 import Shared.Msg
 import Task
 import Time
-import UI.Card as Card
 import View exposing (View)
 import View.CarDetailPopover as CarDetailPopover
 import View.PlaybackControls as PlaybackControls

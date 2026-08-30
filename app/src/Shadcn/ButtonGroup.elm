@@ -1,15 +1,15 @@
-module UI.ButtonGroup exposing (Item, view)
+module Shadcn.ButtonGroup exposing (Item, view)
 
 {-| A row of joined action buttons, drawn by shadcn's Base UI components behind
 the `shadcn-button-group` custom element registered in `index.ts`.
 
 The group is rendered as one React tree rather than as separately-mounted
-`UI.Button`s: the corner-merging between adjacent segments is plain CSS
+`Shadcn.Button`s: the corner-merging between adjacent segments is plain CSS
 matching each button's own `data-slot` against its siblings, which only
 lines up when every button in the group shares a parent.
 
 The group holds no selection; a row that picks one of its items is
-[`UI.ToggleGroup`](UI-ToggleGroup).
+[`Shadcn.ToggleGroup`](Shadcn-ToggleGroup).
 
 @docs Item, view
 

@@ -1,4 +1,4 @@
-module UI.Button exposing (Variant(..), Size(..), Shape(..), view)
+module Shadcn.Button exposing (Variant(..), Size(..), Shape(..), view)
 
 {-| Button, drawn by shadcn's Base UI component behind the `shadcn-button`
 custom element registered in `index.ts`.

@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
  * The lifecycle every element that mounts React shares. A subclass declares
  * its properties and a `draw`, and calls `update()` from each setter.
  *
- * `UI.Card` is not one of these: Card has no behaviour to borrow and its
+ * `Shadcn.Card` is not one of these: Card has no behaviour to borrow and its
  * classes read the tree its content sits in, so `card-elements.ts` mounts
  * nothing at all.
  */

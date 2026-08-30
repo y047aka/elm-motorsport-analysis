@@ -1,4 +1,4 @@
-module UI.Card exposing (card, header, title, description, action, content, footer)
+module Shadcn.Card exposing (card, header, title, description, action, content, footer)
 
 {-| Card, drawn by the custom elements `card-elements.ts` registers. Unlike the
 other wrappers here these carry no React: Card's classes read what it contains,

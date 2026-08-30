@@ -11,9 +11,9 @@ import Data.Wec.Calendar exposing (Round, Season)
 import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span, text)
 import Html.Attributes exposing (class)
 import Route
+import Shadcn.Badge as Badge
+import Shadcn.Card as Card
 import Shared
-import UI.Badge as Badge
-import UI.Card as Card
 import View exposing (View)
 
 

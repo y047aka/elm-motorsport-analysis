@@ -25,11 +25,11 @@ import Motorsport.Replay as Replay
 import Motorsport.Sector as Sector
 import Motorsport.Wec.Class
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
+import Shadcn.Badge as Badge
+import Shadcn.Button as Button
+import Shadcn.Slider as Slider
 import Shared
 import Shared.Msg
-import UI.Badge as Badge
-import UI.Button as Button
-import UI.Slider as Slider
 import View exposing (View)
 
 
