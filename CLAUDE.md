@@ -248,13 +248,18 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
   from the flake rather than from `node_modules`, so `@playwright/test` does
   not resolve for `tsc`.
+- **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
+  half of the boundary neither compiler sees. It drives the elements from a
+  page directly, and reads the values Elm can send out of the wrapper sources
+  rather than repeating them, so a constructor added without a matching
+  variant in the vendored component fails here instead of shipping unstyled.
 - **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
   (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
   snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the
   branch.
 
-CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml` and VRT
-in `playwright.yml`.
+CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
+everything needing a browser in `playwright.yml`.
 Snapshots are generated on Linux, so VRT failures on macOS are usually the
 platform, not the change.
 

@@ -31,7 +31,7 @@ jobs:
           name: playwright-report
           path: app/playwright-report/
           retention-days: 30
-      - name: Comment PR on VRT failure
+      - name: Comment PR on failure
         if: failure() && github.event_name == 'pull_request'
         uses: actions/github-script@v8
         with:
@@ -41,5 +41,5 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: context.issue.number,
-              body: `## VRT 失敗\nPlaywright レポート: ${url}`
+              body: `## Playwright 失敗\nレポート: ${url}`
             });
