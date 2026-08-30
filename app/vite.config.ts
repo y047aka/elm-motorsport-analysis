@@ -49,11 +49,27 @@ function staticAssets(): Plugin {
 }
 
 export default defineConfig({
+  // `@/*` is the import alias `components.json` names, so it has to resolve the
+  // same way here as it does in `tsconfig.json` for `shadcn add` to write
+  // imports this build can follow.
+  resolve: { alias: { "@": resolve(import.meta.dirname, "src") } },
   // `debug: false` disables the Elm time-travel debugger overlay in dev so it
   // never appears in VRT screenshots. Production build still optimizes because
   // `vite build` sets NODE_ENV=production (optimize defaults to true then).
   plugins: [elmPlugin({ debug: false }), staticAssets()],
   publicDir: "public",
   server: { port: 1234, strictPort: true },
-  build: { outDir: "dist", emptyOutDir: true },
+  build: {
+    outDir: "dist",
+    emptyOutDir: true,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Base UI and whichever vendored components `shadcn add` writes a
+        // "use client" onto carry one; nothing in this bundle reads the
+        // directive, and Rollup reports every file that has one.
+        if (warning.code === "MODULE_LEVEL_DIRECTIVE") return;
+        warn(warning);
+      },
+    },
+  },
 });

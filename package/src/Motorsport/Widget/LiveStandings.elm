@@ -31,14 +31,14 @@ view props =
         (List.map
             (\( class_, cars ) ->
                 div
-                    [ class "card bg-base-200 overflow-hidden grid grid-rows-[auto_1fr]" ]
+                    [ class "rounded-lg border border-border bg-card overflow-hidden grid grid-rows-[auto_1fr]" ]
                     [ div
                         [ class "flex items-center gap-x-[0.5em] py-2 px-2.5 text-[10px] font-bold before:block before:content-[''] before:w-[0.2em] before:h-[1.2em] before:rounded-[2px] before:[background-color:var(--class-color)]"
                         , attribute "style" ("--class-color: " ++ Class.toColor class_ ++ ";")
                         ]
                         [ text (Class.toString class_) ]
                     , Keyed.node "ul"
-                        [ class "list overflow-y-scroll p-[0_10px_10px]" ]
+                        [ class "flex flex-col text-sm overflow-y-scroll p-[0_10px_10px]" ]
                         (cars
                             |> List.map
                                 (\item ->
@@ -63,7 +63,7 @@ carRow popoverTarget onSelect item =
             -- Explicit "show": the default "toggle" would close the shared
             -- popover when a second row is clicked while it is already open.
             , attribute "popovertargetaction" "show"
-            , class "list-row w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [background:none] [border:none] text-inherit [font:inherit] cursor-pointer [transition:background-color_0.2s_ease] after:[border:none] hover:[background-color:hsl(0_0%_100%/0.05)]"
+            , class "relative rounded-md w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [word-break:break-word] cursor-pointer transition-colors hover:bg-accent"
             ]
             (carRowContent item)
         ]

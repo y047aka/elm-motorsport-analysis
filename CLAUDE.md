@@ -3,7 +3,7 @@
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
 JSON/JSONL → Elm visualization.
 
-- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + DaisyUI). The only npm
+- **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + shadcn/ui). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
@@ -22,6 +22,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#dev` | Vite dev server (localhost:1234) |
 | `nix run .#build` | Production build |
 | `nix run .#test` | elm-verify-examples + elm-test |
+| `nix run .#typecheck` | `tsc --noEmit` over the app's TypeScript |
 | `nix run .#test-vrt` | Playwright VRT |
 | `nix run .#update-snapshots-vrt` | Update VRT snapshots |
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
@@ -55,7 +56,8 @@ fetched at runtime via `Http`.
 - `Shared.elm` — app-wide state (race control, view model) + data loading
 - `Effect.elm` — elm-spa-style effects (`sendCmd`, `sendSharedMsg`, `pushRoute`, ...)
 - `Page/` — one module per page, plain TEA
-- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Button, Label, Table)
+- `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Table,
+  and `Shadcn/` for the wrappers)
 
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared`. It is
 the app's only source for which rounds exist, what they are called and where
@@ -69,6 +71,80 @@ written by hand and no compiler reads it, so a mistake in it shows as cars drawn
 by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number.
+
+### The shadcn components
+
+`app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
+UI, not Radix. Each `app/src/shadcn/<name>-element.ts` puts one of them behind
+a custom element, `index.ts` registers them all, and
+`app/src/UI/Shadcn/<Name>.elm` is the Elm side. The Elm wrappers hold no
+Tailwind classes; the class strings are the vendored file's. `UI.Table` is what
+sits beside them: Elm that writes its own Tailwind and answers to no vendored
+file.
+
+`components.json` configures the CLI, so `shadcn add <name>` writes these files
+and `shadcn add <name> --diff` reports how far one has drifted from upstream.
+That holds only while the `@/*` alias resolves the same way in `tsconfig.json`
+and in `vite.config.ts` — the CLI writes `@/shadcn/...` imports, and neither
+file alone makes them build.
+
+Anything this app adds to a vendored component carries a
+`Not in upstream base-nova:` comment. `--diff` should report those lines and
+nothing else: a line it reports without one is drift to fold back in, since
+`add` overwrites the file. A single class the registry has no variant for does
+not need to be added there at all — `cn` puts it last, so the element can pass
+it and win, which is how a circular button gets `rounded-full`.
+
+Every prop is set as a JS property, so what crosses the boundary is JSON and
+Elm holds the state. Four things that boundary will not carry, all found by
+running it rather than by building it:
+
+- A property that arrives as `undefined` reads to React as "leave this
+  uncontrolled", and the component then keeps a value beside the one Elm
+  holds. Elm clears the value, the component goes on showing the old one, and
+  nothing fails — so an element always passes a value, never a hole.
+- React's synthetic events never reach a custom element's slotted children, so
+  a component Elm passes children to cannot report its own clicks. No element
+  takes children at all: the ones that mount nothing render their own node,
+  and children Elm rendered would land beside it rather than inside it.
+- A `Html.Keyed` reorder removes and re-inserts a node within one task, so a
+  teardown queued by `disconnectedCallback` has to be cancelled when the node
+  comes back, or every reorder destroys a React root. `ReactElement` guards
+  that with its `leaving` flag, and nothing exercises the guard: no element of
+  this kind sits in a keyed list today.
+- A directory whose name differs from an Elm one only in case is folded into
+  it on macOS and only fails on Linux CI. The React sources are laid out as
+  the registry expects, so `src/shadcn/` and `src/shadcn/ui/` are both taken:
+  the Elm side is `UI.Shadcn.*`, and no top-level Elm module may be named
+  `Shadcn` or `Ui`.
+
+Two of the elements mount React: the slider and the toggle-group, which are
+the two that borrow behaviour — a drag, and a row that answers the arrow keys.
+The rest are class strings, and the registry hands those out without React:
+`badgeVariants`, `buttonVariants` and `buttonGroupVariants` are all exported,
+so the badge, button and button-group elements build their own DOM from them
+with nothing vendored changed. A class the registry has no variant for goes on
+through `cn`, which is also what drops a base class a variant contradicts.
+
+`card-elements.ts` has a second reason to mount nothing. Card's classes read
+the tree its content sits in — `has-data-[slot=card-footer]`,
+`has-[>img:first-child]` — and content projected through a `<slot>` is not in
+the shadow root's tree, so the element carries the vendored class string and
+Elm fills it directly. Nothing may pass one of those a `class`: the element
+owns that attribute, and layout belongs on a wrapper around it.
+
+What one of these costs, measured: mounting sixty-two of them takes ~26ms
+against ~2ms for the same number of plain Elm nodes, about ten times, paid once
+when the list appears. A reorder costs nothing. Ten times a node it only lends
+class strings to is the reason nothing mounts React for class strings alone.
+
+An unrelated re-render costs nothing only where the property is a primitive.
+Elm compares a property against the last one by reference, so a re-encoded list
+or record arrives as a write however little it has changed, and a view that
+runs every animation frame then renders React every animation frame. Measured
+on the event page: the two elements taking an `items` array rendered on 181 of
+181 frames of playback, showing nothing new. `changed` in `react-element.ts` is
+what an object-valued setter compares with, and both are back to zero.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
@@ -168,12 +244,22 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 
 - **Elm** — `elm-test` for unit tests, `elm-verify-examples` for docstring
   examples. Benchmarks live in `/package/benchmark/`.
+- **TypeScript** — `tsc --noEmit`, over `index.ts`, `vite.config.ts` and
+  `src/`. `/app/tests/` is outside the TS project on purpose: Playwright comes
+  from the flake rather than from `node_modules`, so `@playwright/test` does
+  not resolve for `tsc`.
+- **The Elm/element contract** (`/app/tests/custom-elements.spec.ts`) — the
+  half of the boundary neither compiler sees. It drives the elements from a
+  page directly, and reads the values Elm can send out of the wrapper sources
+  rather than repeating them, so a constructor added without a matching
+  variant in the vendored component fails here instead of shipping unstyled.
 - **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
   (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
   snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the
   branch.
 
-CI (ubuntu-24.04) runs the unit tests in `test.yml` and VRT in `playwright.yml`.
+CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
+everything needing a browser in `playwright.yml`.
 Snapshots are generated on Linux, so VRT failures on macOS are usually the
 platform, not the change.
 

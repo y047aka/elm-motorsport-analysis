@@ -438,7 +438,7 @@ view ({ columns } as config) model dataList =
 table : Config data msg -> Model -> Array data -> List Int -> Html msg
 table config model dataArray displayIndexes =
     Table.table
-        [ class "table table-sm" ]
+        [ class "text-sm" ]
         [ thead config model dataArray
         , Keyed.node "tbody" [] <|
             viewBodyRows config model displayIndexes dataArray
@@ -497,23 +497,23 @@ sortIndicator : Direction -> Html msg
 sortIndicator direction =
     case direction of
         Ascending ->
-            darkGrey "↑"
+            sorted "↑"
 
         Descending ->
-            darkGrey "↓"
+            sorted "↓"
 
         None ->
-            lightGrey "↕"
+            unsorted "↕"
 
 
-darkGrey : String -> Html msg
-darkGrey symbol =
-    span [ class "text-[#555]" ] [ text symbol ]
+sorted : String -> Html msg
+sorted symbol =
+    span [ class "text-foreground" ] [ text symbol ]
 
 
-lightGrey : String -> Html msg
-lightGrey symbol =
-    span [ class "text-[#ccc]" ] [ text symbol ]
+unsorted : String -> Html msg
+unsorted symbol =
+    span [ class "text-muted-foreground" ] [ text symbol ]
 
 
 viewBodyRows : Config data msg -> Model -> List Int -> Array data -> List ( String, Html msg )

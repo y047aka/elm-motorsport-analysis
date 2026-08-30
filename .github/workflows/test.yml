@@ -1,9 +1,10 @@
 name: Tests
 
-# The unit tests: Elm (elm-verify-examples + elm-test) and the Flix CLI.
-# Kept apart from the VRT workflow because they fail for different reasons —
-# these say the code is wrong, a VRT failure usually says the snapshots are
-# stale — and a red check should tell you which without being opened.
+# The checks that say the code is wrong: the Elm tests (elm-verify-examples +
+# elm-test), the Flix CLI's tests, and `tsc` over the app's TypeScript. Kept
+# apart from the VRT workflow because that one usually fails for a different
+# reason — stale snapshots — and a red check should tell you which without
+# being opened.
 
 on:
   push:
@@ -29,3 +30,20 @@ jobs:
         run: nix run .#test
       - name: CLI tests
         run: nix run .#cli-test
+
+  # Its own job because it is the one check here that needs node_modules, and
+  # because a type error and a failing test should not share a red mark.
+  typecheck:
+    timeout-minutes: 30
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v6
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: nix-community/cache-nix-action@v7
+        with:
+          primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
+          restore-prefixes-first-match: nix-${{ runner.os }}-
+      - name: Install dependencies
+        run: nix develop --command pnpm -C app install --frozen-lockfile
+      - name: Type-check
+        run: nix run .#typecheck

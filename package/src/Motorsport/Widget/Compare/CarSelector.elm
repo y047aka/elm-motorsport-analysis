@@ -42,7 +42,7 @@ carSelectorChip onToggleCar isSelected item =
     in
     button
         ([ onClick (onToggleCar item.metadata.carNumber)
-         , Attributes.class "flex items-center gap-x-1 py-0.5 px-2 rounded-full text-[11px] font-bold tabular-nums cursor-pointer text-inherit [font-family:inherit]"
+         , Attributes.class "flex items-center gap-x-1 py-0.5 px-2 rounded-full text-[11px] font-bold tabular-nums cursor-pointer"
          ]
             ++ (if isSelected then
                     [ style "border" ("1px solid " ++ manufacturerColor)
@@ -50,7 +50,7 @@ carSelectorChip onToggleCar isSelected item =
                     ]
 
                 else
-                    [ Attributes.class "border border-[hsl(0_0%_100%/0.2)] bg-transparent opacity-70" ]
+                    [ Attributes.class "border border-border bg-transparent opacity-70" ]
                )
         )
         [ text ("#" ++ item.metadata.carNumber) ]

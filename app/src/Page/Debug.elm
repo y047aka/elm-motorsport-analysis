@@ -9,9 +9,8 @@ module Page.Debug exposing (Model, Msg, init, update, view)
 import Compare
 import DataView
 import Effect exposing (Effect)
-import Html exposing (Html, div, header, input, nav, text)
-import Html.Attributes as Attributes exposing (class, type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, div, header, nav, text)
+import Html.Attributes as Attributes
 import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Clock as Clock
@@ -28,8 +27,9 @@ import Motorsport.Wec.Class
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (bestTimeColumn, carNumberColumn_Wec, customColumn, driverAndTeamColumn_Wec, initialSort, intColumn, lastLapColumn, sectorTimeColumn)
 import Shared
 import Shared.Msg
-import UI.Button exposing (button, labeledButton)
-import UI.Label exposing (basicLabel)
+import UI.Shadcn.Badge as Badge
+import UI.Shadcn.Button as Button
+import UI.Shadcn.Slider as Slider
 import View exposing (View)
 
 
@@ -105,19 +105,21 @@ debugView replay leaderboardState =
             BestTimes.final race.bestTimeChanges
     in
     [ header
-        [ Attributes.class "sticky top-0 flex justify-between bg-[hsl(0,0%,40%)]" ]
+        [ Attributes.class "sticky top-0 flex justify-between border-b border-border bg-background" ]
         [ nav []
-            [ input
-                [ type_ "range"
-                , Attributes.max <| String.fromInt race.lapTotal
-                , value (String.fromInt lapCount)
-                , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> ReplayMsg)
+            [ div [ Attributes.class "w-64" ]
+                [ Slider.view
+                    { min = 0
+                    , max = race.lapTotal
+                    , value = lapCount
+                    , onChange = Replay.SetCount >> ReplayMsg
+                    }
+                    []
                 ]
-                []
-            , labeledButton []
-                [ button [ class "join-item", onClick (ReplayMsg Replay.PreviousLap) ] [ text "-" ]
-                , basicLabel [ class "join-item" ] [ text (String.fromInt lapCount) ]
-                , button [ class "join-item", onClick (ReplayMsg Replay.NextLap) ] [ text "+" ]
+            , div [ Attributes.class "inline-flex items-center gap-1" ]
+                [ nudgeButton "-" (ReplayMsg Replay.PreviousLap)
+                , Badge.view { label = String.fromInt lapCount, variant = Badge.Outline } []
+                , nudgeButton "+" (ReplayMsg Replay.NextLap)
                 ]
             , text (Clock.getElapsed playback |> Instant.toString)
             ]
@@ -145,6 +147,19 @@ debugView replay leaderboardState =
       in
       DataView.view (config bestTimes) leaderboardState (List.indexedMap (lapRow bestTimes) laps)
     ]
+
+
+nudgeButton : String -> Msg -> Html Msg
+nudgeButton label msg =
+    Button.view
+        { label = label
+        , variant = Button.Outline
+        , size = Button.IconExtraSmall
+        , shape = Button.Rectangle
+        , disabled = False
+        , onPress = msg
+        }
+        []
 
 
 {-| One row of this page is one lap of one car, not one car of the race. The

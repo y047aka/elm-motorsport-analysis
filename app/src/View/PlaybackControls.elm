@@ -10,14 +10,17 @@ interaction is forwarded as a `Replay.Msg`.
 
 -}
 
-import Html exposing (Html, button, div, input, text)
-import Html.Attributes as Attributes exposing (type_, value)
-import Html.Events exposing (onClick, onInput)
+import Html exposing (Html, div, text)
+import Html.Attributes as Attributes
 import Motorsport.Clock as Clock exposing (State(..))
 import Motorsport.Duration as Duration
 import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import String exposing (dropRight)
+import UI.Shadcn.Button as Button
+import UI.Shadcn.ButtonGroup as ButtonGroup
+import UI.Shadcn.Slider as Slider
+import UI.Shadcn.ToggleGroup as ToggleGroup
 
 
 view :
@@ -57,12 +60,15 @@ viewPlayPauseButton { replay, onStart, onPause } =
                 Finished ->
                     ( "▶", onStart, True )
     in
-    button
-        [ onClick action
-        , Attributes.disabled isDisabled
-        , Attributes.class "btn btn-circle btn-sm btn-ghost text-xs"
-        ]
-        [ text icon ]
+    Button.view
+        { label = icon
+        , variant = Button.Ghost
+        , size = Button.Icon
+        , shape = Button.Circle
+        , disabled = isDisabled
+        , onPress = action
+        }
+        []
 
 
 {-| Skipping is offered forwards only, so there is nowhere to go from the end of
@@ -71,38 +77,40 @@ the race.
 viewSkipControls : (Replay.Msg -> msg) -> Clock.State -> Html msg
 viewSkipControls toReplayMsg state =
     let
-        skipButton label duration =
-            joinButton
-                { label = label
-                , isActive = False
-                , isDisabled = state == Finished
-                , onPress = toReplayMsg (Replay.SkipTime duration)
-                }
+        skipItem label duration =
+            { label = label
+            , disabled = state == Finished
+            , onPress = toReplayMsg (Replay.SkipTime duration)
+            }
     in
-    div [ Attributes.class "join" ]
-        [ skipButton "+10s" (10 * 1000)
-        , skipButton "+1m" (60 * 1000)
-        , skipButton "+1h" (60 * 60 * 1000)
-        ]
+    ButtonGroup.view
+        { items =
+            [ skipItem "+10s" (10 * 1000)
+            , skipItem "+1m" (60 * 1000)
+            , skipItem "+1h" (60 * 60 * 1000)
+            ]
+        }
+        []
 
 
 viewSpeedControls : (Replay.Msg -> msg) -> Clock.PlaybackSpeed -> Html msg
 viewSpeedControls toReplayMsg currentSpeed =
-    div [ Attributes.class "join" ]
-        [ speedSegmentButton toReplayMsg "1×" Clock.Speed1x (currentSpeed == Clock.Speed1x)
-        , speedSegmentButton toReplayMsg "10×" Clock.Speed10x (currentSpeed == Clock.Speed10x)
-        , speedSegmentButton toReplayMsg "60×" Clock.Speed60x (currentSpeed == Clock.Speed60x)
-        ]
-
-
-speedSegmentButton : (Replay.Msg -> msg) -> String -> Clock.PlaybackSpeed -> Bool -> Html msg
-speedSegmentButton toReplayMsg label speed isActive =
-    joinButton
-        { label = label
-        , isActive = isActive
-        , isDisabled = False
-        , onPress = toReplayMsg (Replay.SetPlaybackSpeed speed)
+    let
+        speedItem label speed =
+            { label = label
+            , active = currentSpeed == speed
+            , disabled = False
+            , onSelect = toReplayMsg (Replay.SetPlaybackSpeed speed)
+            }
+    in
+    ToggleGroup.view
+        { items =
+            [ speedItem "1×" Clock.Speed1x
+            , speedItem "10×" Clock.Speed10x
+            , speedItem "60×" Clock.Speed60x
+            ]
         }
+        []
 
 
 viewProgressBar : (Replay.Msg -> msg) -> Replay.Model -> Html msg
@@ -123,31 +131,11 @@ viewProgressBar toReplayMsg ({ playback, race } as replay) =
             , div [] [ text ("Lap " ++ String.fromInt lapCount ++ " / " ++ String.fromInt race.lapTotal) ]
             , div [] [ text (Duration.toString remaining |> dropRight 4) ]
             ]
-        , input
-            [ type_ "range"
-            , Attributes.min "0"
-            , Attributes.max (String.fromInt race.lapTotal)
-            , value (String.fromInt lapCount)
-            , onInput (String.toInt >> Maybe.withDefault 0 >> Replay.SetCount >> toReplayMsg)
-            , Attributes.class "range range-xs w-full"
-            ]
+        , Slider.view
+            { min = 0
+            , max = race.lapTotal
+            , value = lapCount
+            , onChange = Replay.SetCount >> toReplayMsg
+            }
             []
         ]
-
-
-joinButton : { label : String, isActive : Bool, isDisabled : Bool, onPress : msg } -> Html msg
-joinButton { label, isActive, isDisabled, onPress } =
-    button
-        [ onClick onPress
-        , Attributes.disabled isDisabled
-        , Attributes.class
-            ("join-item btn btn-sm btn-soft"
-                ++ (if isActive then
-                        " btn-active"
-
-                    else
-                        ""
-                   )
-            )
-        ]
-        [ text label ]
