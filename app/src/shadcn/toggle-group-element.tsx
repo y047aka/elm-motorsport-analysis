@@ -1,5 +1,5 @@
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
-import { ReactElement } from "./react-element";
+import { ReactElement, changed } from "./react-element";
 
 type Item = {
   label: string;
@@ -16,7 +16,9 @@ export class ShadcnToggleGroup extends ReactElement {
   private _items: Item[] = [];
 
   set items(v: Item[]) {
-    this._items = Array.isArray(v) ? v : [];
+    const next = Array.isArray(v) ? v : [];
+    if (!changed(this._items, next)) return;
+    this._items = next;
     this.update();
   }
 

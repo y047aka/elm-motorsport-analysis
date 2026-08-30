@@ -1,6 +1,6 @@
 import { Button } from "./ui/button";
 import { ButtonGroup } from "./ui/button-group";
-import { ReactElement } from "./react-element";
+import { ReactElement, changed } from "./react-element";
 
 type Item = {
   label: string;
@@ -16,7 +16,9 @@ export class ShadcnButtonGroup extends ReactElement {
   private _items: Item[] = [];
 
   set items(v: Item[]) {
-    this._items = Array.isArray(v) ? v : [];
+    const next = Array.isArray(v) ? v : [];
+    if (!changed(this._items, next)) return;
+    this._items = next;
     this.update();
   }
 

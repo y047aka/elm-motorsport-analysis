@@ -2,6 +2,21 @@ import { createRoot, type Root } from "react-dom/client";
 import type { ReactNode } from "react";
 
 /**
+ * Whether a property Elm just wrote differs from the one held.
+ *
+ * Elm compares a property against the last one by reference, and re-encoding a
+ * list or a record hands over a new object every view, so an unchanged value
+ * still arrives as a write. Primitives are told apart by `===`; everything
+ * else has to be compared by what it holds, or a view that runs every frame
+ * renders React every frame.
+ */
+export function changed(held: unknown, next: unknown): boolean {
+  if (held === next) return false;
+  if (typeof held !== "object" || typeof next !== "object") return true;
+  return JSON.stringify(held) !== JSON.stringify(next);
+}
+
+/**
  * The lifecycle every element that mounts React shares. A subclass declares
  * its properties and a `draw`, and calls `update()` from each setter.
  *

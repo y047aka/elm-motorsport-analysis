@@ -126,10 +126,16 @@ the element owns that attribute, and layout belongs on a wrapper around it.
 
 What one of these costs, measured: mounting sixty-two of them takes ~26ms
 against ~2ms for the same number of plain Elm nodes, about ten times, paid once
-when the list appears. A reorder and an unrelated re-render cost nothing —
-Elm does not re-assign a property whose value has not changed, so React is
-never asked. Ten times a node it only lends class strings to is the reason
-`UI.Shadcn.Card` mounts nothing.
+when the list appears. A reorder costs nothing. Ten times a node it only lends
+class strings to is the reason `UI.Shadcn.Card` mounts nothing.
+
+An unrelated re-render costs nothing only where the property is a primitive.
+Elm compares a property against the last one by reference, so a re-encoded list
+or record arrives as a write however little it has changed, and a view that
+runs every animation frame then renders React every animation frame. Measured
+on the event page: the two elements taking an `items` array rendered on 181 of
+181 frames of playback, showing nothing new. `changed` in `react-element.ts` is
+what an object-valued setter compares with, and both are back to zero.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment
