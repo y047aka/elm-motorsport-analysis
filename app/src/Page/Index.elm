@@ -13,6 +13,7 @@ import Html.Attributes exposing (class)
 import Route
 import Shared
 import UI.Badge as Badge
+import UI.Card as Card
 import View exposing (View)
 
 
@@ -71,15 +72,16 @@ eventCard : String -> Round -> Html msg
 eventCard season round =
     a
         [ Route.href (Route.WecEvent { season = season, event = round.id })
-        , class "group flex flex-col rounded-lg border border-border bg-card transition duration-150 hover:-translate-y-0.5 hover:border-primary/50 hover:brightness-125"
+        , class "group block transition duration-150 hover:-translate-y-0.5 hover:brightness-125"
         ]
-        [ div [ class "flex flex-col gap-3 p-5" ]
-            [ span [ class "text-xs tabular-nums opacity-60" ]
-                [ text (formatDate round.date) ]
-            , div [ class "flex items-end justify-between gap-2" ]
-                [ h3 [ class "text-base font-semibold leading-snug" ] [ text round.name ]
-                , span [ class "text-lg opacity-20 transition-opacity group-hover:opacity-70" ]
-                    [ text "→" ]
+        [ Card.card []
+            [ Card.header []
+                [ Card.description [] [ text (formatDate round.date) ]
+                , Card.title [] [ text round.name ]
+                , Card.action []
+                    [ span [ class "text-lg opacity-20 transition-opacity group-hover:opacity-70" ]
+                        [ text "→" ]
+                    ]
                 ]
             ]
         ]

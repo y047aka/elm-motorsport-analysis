@@ -106,6 +106,19 @@
     @apply border-border outline-ring/50;
   }
 
+  /* The card parts are custom elements, and a custom element is inline where
+     the divs shadcn renders are blocks. Declared in `base` so the display
+     utilities in their own class strings still win. */
+  shadcn-card,
+  shadcn-card-header,
+  shadcn-card-title,
+  shadcn-card-description,
+  shadcn-card-action,
+  shadcn-card-content,
+  shadcn-card-footer {
+    display: block;
+  }
+
   body {
     @apply bg-background text-foreground;
   }

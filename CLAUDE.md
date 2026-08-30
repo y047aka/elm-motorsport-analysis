@@ -102,6 +102,13 @@ running it rather than by building it:
 - A directory named `src/ui` is folded into the Elm `src/UI` on macOS and only
   fails on Linux CI, which is why the React sources are under `src/shadcn`.
 
+`UI.Card` is the one wrapper with no React behind it. Card's classes read the
+tree its content sits in — `has-data-[slot=card-footer]`,
+`has-[>img:first-child]` — and content projected through a `<slot>` is not in
+the shadow root's tree, so `card-elements.ts` puts the vendored class strings
+on custom elements Elm fills directly. Nothing may pass one of those a `class`:
+the element owns that attribute, and layout belongs on a wrapper around it.
+
 `prototype/custom-elements/` holds what this cost when it was measured.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),

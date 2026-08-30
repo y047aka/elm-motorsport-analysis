@@ -26,6 +26,7 @@ import Shared
 import Shared.Msg
 import Task
 import Time
+import UI.Card as Card
 import View exposing (View)
 import View.CarDetailPopover as CarDetailPopover
 import View.PlaybackControls as PlaybackControls
@@ -208,17 +209,16 @@ trackerView track snapshot m =
                 , popoverTarget = CarDetailPopover.popoverId
                 }
             ]
-        , div
-            [ Attributes.class "flex flex-col rounded-lg border border-border bg-card col-start-2" ]
-            [ div [ Attributes.class "flex flex-col p-3" ]
-                [ div
-                    [ Attributes.class "h-full grid place-items-center" ]
-                    [ TrackerChart.view track snapshot ]
+        , div [ Attributes.class "col-start-2 grid" ]
+            [ Card.card []
+                [ Card.content []
+                    [ div
+                        [ Attributes.class "h-full grid place-items-center" ]
+                        [ TrackerChart.view track snapshot ]
+                    ]
                 ]
             ]
-        , div
-            [ Attributes.class "flex flex-col rounded-lg border border-border bg-card col-start-3" ]
-            []
+        , div [ Attributes.class "col-start-3 grid" ] [ Card.card [] [] ]
         , div [ Attributes.class "col-span-full" ]
             [ SelectedCarsStrip.view
                 { offset = m.stripOffset
