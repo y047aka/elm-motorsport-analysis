@@ -113,7 +113,9 @@ the shadow root's tree, so `card-elements.ts` puts the vendored class strings
 on custom elements Elm fills directly. Nothing may pass one of those a `class`:
 the element owns that attribute, and layout belongs on a wrapper around it.
 
-`prototype/custom-elements/` holds what this cost when it was measured.
+`prototype/custom-elements/` holds what this cost when it was measured. Its one
+remaining element extends `ReactElement`, so it is also where the reorder guard
+is exercised — nothing in the app puts one of these in a keyed list.
 
 **`/package/src/Motorsport/`** — domain models (`Car`, `Driver`, `Lap`, `Gap`),
 `Race/` for the loaded race, its indices, and readings of it at a moment

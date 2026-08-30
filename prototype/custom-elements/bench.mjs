@@ -80,6 +80,6 @@ const ratio = median(results["custom elements"]) / median(results["plain elm"]);
 console.log(`\n  custom elements / plain elm: ${ratio.toFixed(1)}x`);
 
 const stats = await page.evaluate(() => window.__probeStats);
-console.log(`  react roots created: ${stats.rootsCreated}`);
+console.log(`  react mounts: ${stats.reactMounts}`);
 
 await browser.close();

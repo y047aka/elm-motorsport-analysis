@@ -1,18 +1,13 @@
 # shadcn via Custom Elements prototype
 
-Drives real shadcn components from Elm through custom elements, to find out
-what the integration costs before committing to it. Not wired into the app.
+What a React component behind a custom element costs, measured rather than
+estimated. Not wired into the app.
 
-The elements, each answering something different:
-
-- `shadcn-button` — a container-shaped one, whose content comes from Elm
-  through a shadow root and a `<slot>`. It renders the app's own
-  `app/src/shadcn/ui/button.tsx` rather than a second vendoring, so what it
-  measures is what the app ships. This is the one arrangement here that the
-  app has not adopted: `UI.Button` takes a label instead.
-- `ce-probe` — a styling-only stand-in, used twice: twelve in an `Html.Keyed`
-  list that can be rotated, to price a reorder, and sixty-two in a list that
-  can be mounted and unmounted, to price a mount against plain Elm nodes.
+One element is left, `ce-probe`: a styling-only stand-in for a Badge, extending
+the app's own `ReactElement`, so what is measured is the lifecycle the app
+ships. It appears twice on the page — twelve in an `Html.Keyed` list that can
+be rotated, to price a reorder, and sixty-two in a list that can be mounted and
+unmounted, to price a mount against plain Elm nodes.
 
 ## Run
 
@@ -27,60 +22,38 @@ mutate — reading the counters any other way gives stale numbers.
 
 ## What it establishes
 
-**The round trip works in both directions.** Elm passes state as JSON
-properties and gets a custom event back, and the page's Tailwind reaches what
-React drew, because React renders into the light DOM rather than a shadow root.
-
-**Elm has to own the state, and one line decides whether it does.** Passing a
-property through as `undefined` reads to React as "leave this uncontrolled",
-and the component then keeps a value of its own beside the one Elm holds: Elm
-clears the value, the component goes on showing the old one, and neither side
-is wrong about its own copy. Nothing in the types catches it. The element
-renders, the app looks right, and it stays right until something clears a value
-— which is why the app's wrappers always pass one.
-
 **Unrelated re-renders are cheap.** Twenty-five ticks of the model, touching
-nothing the elements read, left `probe: react renders 12` and `button: react
-renders 1` — exactly their mounts. Elm does not re-assign a property whose
-value has not changed, so React is never asked. Since the app this is for
-redraws every animation frame, that was the main risk, and it does not
-materialise.
+nothing the elements read, left `react renders` exactly where the reorder had
+put it. Elm does not re-assign a property whose value has not changed, so React
+is never asked. Since the app this is for redraws every animation frame, that
+was the main risk, and it does not materialise.
 
 **A keyed reorder is nearly free, once a move is told apart from a removal.**
 Elm does move the DOM node — an instance id rendered inside `ce-probe` travels
-with its label — but the lifecycle barely fires and the React root survives.
-Twelve elements over six rotations cost one disconnect, one connect, and no
-root teardown at all.
+with its label — and the React root survives the trip. Twelve elements over six
+rotations:
+
+```
+  connects 12 → 18    disconnects 0 → 6    react mounts 12 → 12
+```
+
+Six moves, six disconnect/connect pairs, and not one React tree rebuilt.
+`react mounts` counts a `useEffect(…, [])` inside the probe, which fires again
+only if the root was torn down and a new one mounted the component afresh.
 
 Telling a move from a removal is the whole trick: a reorder removes and
 re-inserts within one task, so a teardown queued from the removal has to be
-cancelled when the node comes back. Unmounting straight from
-`disconnectedCallback` instead rebuilds a root on every move, and React then
-warns that `createRoot` was called on a container that already had one.
-
-**Elm's children can go inside, through a shadow root and a `<slot>`.** They
-stay in the light DOM, so the page's Tailwind reaches them, and Elm updates
-them without React re-rendering: pressing the button three times left React at
-its single initial render. The button React draws is inside the shadow root, so
-the page's rules are adopted into it — built once and shared between instances.
-
-**React never sees a click on slotted content.** Its synthetic `onClick` stayed
-at zero across three presses while the native event reached the host every
-time: React attaches its listeners inside its own container, and the event's
-target is in the light DOM, outside it. Elm listens for the native event on the
-host instead.
-
-That last one decides what a custom element is worth for a container component.
-For a Button the interactive surface *is* the slotted children, so React's
-behaviour layer is bypassed and what remains is the class strings, which do not
-need React to produce.
+cancelled when the node comes back. `ReactElement` does that with its `leaving`
+flag. Unmounting straight from `disconnectedCallback` instead rebuilds a root on
+every move, and React then warns that `createRoot` was called on a container
+that already had one.
 
 **Mounting costs about ten times as much as a plain Elm node.** Sixty-two
 badges, the size the standings list runs at, measured under Playwright:
 
 ```
-  plain elm        2.8ms   [3, 3, 3, 2, 3, 3, 2]
-  custom elements  26.6ms  [25, 26, 27, 14, 28, 27, 27]
+  plain elm         2.2ms   [2, 2, 2, 2, 2, 3, 3]
+  custom elements  25.8ms   [18, 27, 26, 27, 26, 26, 27]
 ```
 
 In absolute terms that is ~24ms extra, a frame and a half, paid once when the
@@ -95,11 +68,46 @@ animation frames, Elm applies its patch on one, and the measurement then
 reports the wait for a frame rather than the work — 2011ms for a list that was
 already complete.
 
-## Putting Elm's content inside a Card
+## What it established, with the elements now gone
+
+Two questions are closed: the app made its choice, the arrangements it did not
+take were deleted, and a second copy of a vendored component beside the app's
+had already drifted from it within a day.
+
+### Elm's content inside a shadcn container
+
+Measured with `shadcn-button`, which rendered the app's own `ui/button.tsx`
+into a shadow root and put a `<slot>` where the label goes.
+
+It works, in both directions. Elm passes state as JSON properties and gets a
+custom event back; Elm's children stay in the light DOM, so the page's Tailwind
+reaches them, and Elm updates them without React re-rendering — pressing the
+button three times left React at its single initial render. The button React
+draws is inside the shadow root, so the page's rules are adopted into it, built
+once and shared between instances.
+
+**But React never sees a click on slotted content.** Its synthetic `onClick`
+stayed at zero across three presses while the native event reached the host
+every time: React attaches its listeners inside its own container, and the
+event's target is in the light DOM, outside it.
+
+That decides what a custom element is worth for a container component. For a
+Button the interactive surface *is* the slotted children, so React's behaviour
+layer is bypassed and what remains is the class strings, which do not need
+React to produce. `UI.Button` takes its label as a property instead.
+
+**Elm has to own the state, and one line decides whether it does.** Passing a
+property through as `undefined` reads to React as "leave this uncontrolled",
+and the component then keeps a value of its own beside the one Elm holds: Elm
+clears the value, the component goes on showing the old one, and neither side
+is wrong about its own copy. Nothing in the types catches it. The element
+renders, the app looks right, and it stays right until something clears a value
+— which is why the app's wrappers always pass one.
+
+### Elm's content inside a Card
 
 Measured with three elements that are no longer here: the arrangement it chose
-ships as `card-elements.ts`, and a second copy of `ui/card.tsx` beside the
-app's had already drifted from it within a day.
+ships as `card-elements.ts`.
 
 Card carries no behaviour at all — seven `<div>`s typed `React.ComponentProps<"div">` —
 but its classes read what it contains:
@@ -168,8 +176,8 @@ renders normally.
 
 ## Limits
 
-Memory was not measured. Sixty-two live React roots, plus a shadow root each
-where children are taken, is a standing cost this says nothing about.
+Memory was not measured. Sixty-two live React roots are a standing cost this
+says nothing about.
 
 An earlier version of this prototype reported a reorder destroying a React root
 per moved element. That measurement was wrong twice over: it unmounted from

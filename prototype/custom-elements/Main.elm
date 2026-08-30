@@ -1,11 +1,12 @@
 module Main exposing (main)
 
-{-| Drives the shadcn custom elements from Elm.
+{-| Drives `ce-probe` from Elm, in the three shapes it is measured in: many at
+once, reordered, and left alone while the model changes.
 
 `tick` exists to force unrelated re-renders: the app this is for redraws every
 animation frame, so the question is not only whether an element works but
 whether Elm re-sets its properties on every unrelated render. Watch the
-`react renders` counters while it runs.
+`react renders` counter while it runs.
 
 -}
 
@@ -22,7 +23,6 @@ type alias Model =
     { tick : Int
     , ticking : Bool
     , rotation : Int
-    , presses : Int
     , mount : MountMode
     }
 
@@ -39,14 +39,13 @@ type Msg
     = Tick
     | ToggleTicking
     | Rotate
-    | Pressed
     | SetMount MountMode
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( { tick = 0, ticking = False, rotation = 0, presses = 0, mount = MountOff }, Cmd.none )
+        { init = \_ -> ( { tick = 0, ticking = False, rotation = 0, mount = MountOff }, Cmd.none )
         , update = update
         , subscriptions =
             \m ->
@@ -71,17 +70,14 @@ update msg model =
         Rotate ->
             ( { model | rotation = model.rotation + 1 }, Cmd.none )
 
-        Pressed ->
-            ( { model | presses = model.presses + 1 }, Cmd.none )
-
         SetMount mode ->
             ( { model | mount = mode }, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
-    div [ class "dark min-h-screen bg-background text-foreground p-8 flex flex-col gap-6" ]
-        [ h2 [ class "text-xl font-semibold" ] [ text "shadcn components via custom elements" ]
+    div [ class "min-h-screen bg-background text-foreground p-8 flex flex-col gap-6" ]
+        [ h2 [ class "text-xl font-semibold" ] [ text "custom element lifecycle probe" ]
         , div [ class "flex items-center gap-4" ]
             [ button
                 [ onClick ToggleTicking
@@ -99,7 +95,6 @@ view model =
                 [ text ("tick " ++ String.fromInt model.tick) ]
             ]
         , viewMountBench model.mount
-        , viewSlottedButton model.presses
         , viewKeyedProbes model.rotation
         ]
 
@@ -155,28 +150,6 @@ mountedBadges mode =
                             ]
                             [ text ("#" ++ String.fromInt i) ]
                     )
-
-
-{-| The label is Elm-rendered content inside a shadow-root component, and it
-changes on every press: if the two virtual DOMs contended for those nodes, this
-is where it would show.
--}
-viewSlottedButton : Int -> Html Msg
-viewSlottedButton presses =
-    div [ class "flex items-center gap-4" ]
-        [ node "shadcn-button"
-            [ Html.Attributes.attribute "variant" "outline"
-            , Html.Attributes.attribute "size" "sm"
-
-            -- React's synthetic onClick never sees a click on slotted
-            -- content, so the native event on the host is what Elm listens to.
-            , onClick Pressed
-            ]
-            [ span [ class "font-mono" ] [ text ("pressed " ++ String.fromInt presses) ]
-            , span [ class "opacity-60" ] [ text " · slotted from Elm" ]
-            ]
-        , span [ class "text-sm" ] [ text "children come from Elm, chrome from React" ]
-        ]
 
 
 {-| Mirrors how the standings list reorders: the same keys in a different
