@@ -55,13 +55,13 @@ mod Cli.Db.TestLapRow {
 
     @Test
     def theRoundIsTheCalendarEntryAndNotTheFeed(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#season == 2025);
         Assert.assertTrue(row#round == "fuji_6h")
 
     @Test
     def durationsBecomeMilliseconds(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#lapTimeMs == 95365);
         Assert.assertTrue(row#elapsedMs == 95365);
         Assert.assertTrue(row#s1Ms == Some(23155));
@@ -70,41 +70,41 @@ mod Cli.Db.TestLapRow {
 
     @Test
     def theHourBecomesMillisecondsSinceMidnight(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#hourMs == 39720000)
 
     @Test
     def flagsAndImprovementsKeepTheEncodingTheJsonUses(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#flagAtFl == "SF");
         Assert.assertTrue(row#lapImprovement == 0);
         Assert.assertTrue(row#s3Improvement == 2)
 
     @Test
     def speedsStayTheTextTheFeedGave(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#kph == "160.7");
         Assert.assertTrue(row#topSpeed == "310.5")
 
     @Test
     def whatTheFeedLeftBlankIsAbsent(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(plainLap());
+        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#pitTimeMs == None);
         Assert.assertTrue(row#miniSectors == None);
-        let pit = LapRow.fromRawLap(fuji())(pitLap());
+        let pit = LapRow.fromRawLap(fuji(), 2, pitLap());
         Assert.assertTrue(pit#pitTimeMs == Some(65500));
         Assert.assertTrue(pit#topSpeed == "")
 
     @Test
     def theBoxColumnBecomesABoolean(): Unit \ Assert =
-        Assert.assertTrue(not LapRow.fromRawLap(fuji())(plainLap())#crossingFinishLineInPit);
-        Assert.assertTrue(LapRow.fromRawLap(fuji())(pitLap())#crossingFinishLineInPit)
+        Assert.assertTrue(not LapRow.fromRawLap(fuji(), 1, plainLap())#crossingFinishLineInPit);
+        Assert.assertTrue(LapRow.fromRawLap(fuji(), 2, pitLap())#crossingFinishLineInPit)
 
     /// The object the JSON Lines output carries, on one line: the two readings
     /// of a round cannot disagree about what was measured.
     @Test
     def miniSectorsBecomeTheJsonTheFilesCarry(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji())(miniSectorLap());
+        let row = LapRow.fromRawLap(fuji(), 1, miniSectorLap());
         Assert.assertTrue(row#miniSectors == Some("{ \"scl2\": { \"time\": \"20.708\", \"elapsed\": \"20.708\" } }"))
 
     @Test
@@ -113,11 +113,19 @@ mod Cli.Db.TestLapRow {
         Assert.assertTrue(List.length(rows) == 2);
         Assert.assertTrue(List.map(r -> r#lapNumber, rows) == 1 :: 2 :: Nil)
 
+    /// The file's order, not the lap's: the two agree for one car and part
+    /// company as soon as a second one is interleaved with it.
+    @Test
+    def theRowsAreNumberedByWhereTheFileListedThem(): Unit \ Assert =
+        let rows = LapRow.fromRawLaps(fuji(), pitLap() :: plainLap() :: pitLap() :: Nil);
+        Assert.assertTrue(List.map(r -> r#sourceRow, rows) == 1 :: 2 :: 3 :: Nil);
+        Assert.assertTrue(List.map(r -> r#lapNumber, rows) == 2 :: 1 :: 2 :: Nil)
+
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        let values = LapRow.values(LapRow.fromRawLap(fuji())(plainLap()));
-        Assert.assertTrue(List.take(3, values)
-            == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Text("12") :: Nil);
+        let values = LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
+        Assert.assertTrue(List.take(4, values)
+            == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableJsonb(None)))
 
 }

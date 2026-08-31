@@ -199,6 +199,12 @@ milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so t
 load parses nothing the decoder did not. Le Mans's mini-sectors are a `jsonb`
 column rather than thirty more: only one round in the archive has them.
 
+`source_row` carries the position the file listed the lap in, which nothing else
+in the table recovers. It is what makes the table an image of the CSV rather than
+a set of it, and every reading that would move off Flix needs it: the validator's
+baseline is the file's first row, and a car's drivers are in the order the file
+first showed them.
+
 `Cli.Db` is an effect, not a module of functions, so that what a round would
 send can be read back without a server: `runRecording` keeps the statements,
 `runDiscarding` drops them, and `Cli.Db.Jdbc` is the only file that imports

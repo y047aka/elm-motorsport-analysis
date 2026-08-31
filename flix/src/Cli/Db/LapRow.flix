@@ -12,9 +12,15 @@ mod Cli.Db.LapRow {
     /// a `Duration` is the milliseconds it holds, and `kph` / `topSpeed` stay
     /// the text the feed gave, so nothing here parses or rounds anything the
     /// decoder did not.
+    ///
+    /// `sourceRow` counts the file's laps from one, header excluded. The order
+    /// the CSV listed them in is read by `Cli.Stages.Validation` for its
+    /// baseline and by `Motorsport.Metadata` for a car's drivers, and no other
+    /// column here can be sorted on to recover it.
     pub type alias LapRow = {
         season = Int32,
         round = String,
+        sourceRow = Int32,
         carNumber = String,
         class = String,
         carGroup = String,
@@ -51,12 +57,17 @@ mod Cli.Db.LapRow {
     }
 
     pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
-        rawLaps |> List.map(fromRawLap(entry))
+        rawLaps
+            |> List.zipWithIndex
+            |> List.map(pair -> match pair {
+                case (index, rawLap) => fromRawLap(entry, index + 1, rawLap)
+            })
 
-    pub def fromRawLap(entry: Entry): RawLap -> LapRow =
-        rawLap -> {
+    pub def fromRawLap(entry: Entry, sourceRow: Int32, rawLap: RawLap): LapRow =
+        {
             season = entry#season,
             round = entry#id,
+            sourceRow = sourceRow,
             carNumber = rawLap#car#carNumber,
             class = rawLap#car#class,
             carGroup = rawLap#car#group,
@@ -90,6 +101,7 @@ mod Cli.Db.LapRow {
     pub def values(row: LapRow): List[Value] =
         Value.Integer(row#season) ::
         Value.Text(row#round) ::
+        Value.Integer(row#sourceRow) ::
         Value.Text(row#carNumber) ::
         Value.Text(row#class) ::
         Value.Text(row#carGroup) ::

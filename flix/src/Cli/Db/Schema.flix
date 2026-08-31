@@ -6,7 +6,8 @@ mod Cli.Db.Schema {
     pub def createTable(): String =
         "CREATE TABLE laps (\n"
             + (definitions() |> List.map(d -> "  ${d}") |> List.join(",\n"))
-            + ",\n  PRIMARY KEY (season, round, car_number, lap_number)\n)"
+            + ",\n  PRIMARY KEY (season, round, car_number, lap_number)"
+            + ",\n  UNIQUE (season, round, source_row)\n)"
 
     pub def insert(): String =
         "INSERT INTO laps (" + List.join(", ", columns()) + ") VALUES ("
@@ -27,6 +28,7 @@ mod Cli.Db.Schema {
     def definitions(): List[String] =
         "season int not null" ::
         "round text not null" ::
+        "source_row int not null" ::
         "car_number text not null" ::
         "class text not null" ::
         "car_group text not null" ::

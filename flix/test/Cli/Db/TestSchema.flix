@@ -9,8 +9,8 @@ mod Cli.Db.TestSchema {
     /// other fails here or not at all.
     @Test
     def everyColumnHasAValue(): Unit \ Assert =
-        let row = LapRow.fromRawLap({ season = 2025, id = "fuji_6h", date = "2025-09-28" })(
-            TestLapRow.sampleLap()
+        let row = LapRow.fromRawLap(
+            { season = 2025, id = "fuji_6h", date = "2025-09-28" }, 1, TestLapRow.sampleLap()
         );
         Assert.assertTrue(List.length(Schema.columns()) == List.length(LapRow.values(row)))
 
@@ -30,6 +30,15 @@ mod Cli.Db.TestSchema {
     def theTableIsKeyedByTheLapItHolds(): Unit \ Assert =
         Assert.assertTrue(String.contains(
             {substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
+            Schema.createTable()
+        ))
+
+    /// The loader numbers the rows, so the database is where a gap or a repeat
+    /// in that numbering can still be caught.
+    @Test
+    def theFilesOrderIsUniquePerRound(): Unit \ Assert =
+        Assert.assertTrue(String.contains(
+            {substr = "UNIQUE (season, round, source_row)"},
             Schema.createTable()
         ))
 
