@@ -196,8 +196,12 @@ describe can be read back as a `VIEW` over the table, and normalising them out
 would buy about 16% of its size in exchange for resolving ids on the way in.
 A column takes the type its Flix value already has — a `Duration` is the
 milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
-load parses nothing the decoder did not. Le Mans's mini-sectors are a `jsonb`
-column rather than thirty more: only one round in the archive has them.
+load parses nothing the decoder did not. Le Mans's mini-sectors are two `int[]`
+columns rather than thirty more: only one round in the archive has them. They
+hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a subscript
+is a place on the circuit and a null is a marker the feed left blank. That is the
+shape a query wants rather than the shape the JSON output has, which is the whole
+reason they are not the object `Motorsport.Wec` writes.
 
 `source_row` carries the position the file listed the lap in, which nothing else
 in the table recovers. It is what makes the table an image of the CSV rather than

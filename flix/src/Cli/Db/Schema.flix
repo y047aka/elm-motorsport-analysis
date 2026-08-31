@@ -13,12 +13,12 @@ mod Cli.Db.Schema {
         "INSERT INTO laps (" + List.join(", ", columns()) + ") VALUES ("
             + List.join(", ", placeholders()) + ")"
 
-    /// `jsonb` takes an explicit cast. A bound string reaches the server as
-    /// `text`, which the column refuses, and the placeholder is the only place
-    /// left to say what it is.
+    /// An array column takes an explicit cast. A bound string reaches the
+    /// server as `text`, which the column refuses, and the placeholder is the
+    /// only place left to say what it is.
     def placeholders(): List[String] =
         definitions() |> List.map(definition ->
-            if (String.endsWith({suffix = "jsonb"}, definition)) "?::jsonb" else "?"
+            if (String.endsWith({suffix = "int[]"}, definition)) "?::int[]" else "?"
         )
 
     /// In the order `Cli.Db.LapRow.values` produces them.
@@ -52,7 +52,10 @@ mod Cli.Db.Schema {
         "top_speed text not null" ::
         "pit_time_ms int" ::
         "flag_at_fl text not null" ::
-        "mini_sectors jsonb" ::
+        // In `Motorsport.MiniSector.all()` order, so a subscript is a place
+        // on the circuit.
+        "mini_sector_time_ms int[]" ::
+        "mini_sector_elapsed_ms int[]" ::
         Nil
 
 }

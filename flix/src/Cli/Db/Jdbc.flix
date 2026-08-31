@@ -85,9 +85,9 @@ mod Cli.Db.Jdbc {
                 case Some(n) => pstmt.setInt(index, n)
                 case None    => pstmt.setNull(index, Types.INTEGER)
             }
-            case Value.NullableJsonb(o) => match o {
-                case Some(s) => pstmt.setString(index, s)
-                case None    => pstmt.setNull(index, Types.VARCHAR)
+            case Value.NullableIntArray(o) => match o {
+                case Some(xs) => pstmt.setString(index, LapRow.arrayLiteral(xs))
+                case None     => pstmt.setNull(index, Types.VARCHAR)
             }
         }
 

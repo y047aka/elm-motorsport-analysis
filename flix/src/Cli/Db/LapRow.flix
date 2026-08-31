@@ -3,15 +3,20 @@ mod Cli.Db.LapRow {
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
+    use Motorsport.Wec.RawMiniSector
     use Motorsport.Wec.RawSector
     use Util.Duration
     use Util.HourClock
-    use Util.Json.Encode.Extra
 
     /// One row of `laps`. A column takes the type the Flix value already has:
     /// a `Duration` is the milliseconds it holds, and `kph` / `topSpeed` stay
     /// the text the feed gave, so nothing here parses or rounds anything the
     /// decoder did not.
+    ///
+    /// The mini-sectors are the fifteen of `Motorsport.MiniSector.all()` in
+    /// track order, so a position in either list is a place on the circuit and
+    /// a `None` is a marker the feed left blank. `None` for the pair itself is
+    /// a round that measured none.
     ///
     /// `sourceRow` counts the file's laps from one, header excluded. The order
     /// the CSV listed them in is read by `Cli.Stages.Validation` for its
@@ -44,7 +49,8 @@ mod Cli.Db.LapRow {
         topSpeed = String,
         pitTimeMs = Option[Int32],
         flagAtFl = String,
-        miniSectors = Option[String]
+        miniSectorTimeMs = Option[List[Option[Int32]]],
+        miniSectorElapsedMs = Option[List[Option[Int32]]]
     }
 
     /// A bound value, in the type its column has.
@@ -53,7 +59,7 @@ mod Cli.Db.LapRow {
         case Integer(Int32)
         case Boolean(Bool)
         case NullableInteger(Option[Int32])
-        case NullableJsonb(Option[String])
+        case NullableIntArray(Option[List[Option[Int32]]])
     }
 
     pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
@@ -91,11 +97,22 @@ mod Cli.Db.LapRow {
             topSpeed = rawLap#topSpeed,
             pitTimeMs = Option.map(Duration.millis, rawLap#pitTime),
             flagAtFl = Wec.flagToString(rawLap#flagAtFl),
-            miniSectors = Option.map(
-                list -> Extra.renderOnOneLine(Wec.miniSectorsToJson(list)),
-                rawLap#miniSectors
-            )
+            miniSectorTimeMs = miniSectorMs(sector -> sector#time, rawLap),
+            miniSectorElapsedMs = miniSectorMs(sector -> sector#elapsed, rawLap)
         }
+
+    def miniSectorMs(reading: RawMiniSector -> Option[Duration.Duration], rawLap: RawLap): Option[List[Option[Int32]]] =
+        rawLap#miniSectors |> Option.map(List.map(match (_, sector) ->
+            reading(sector) |> Option.map(Duration.millis)
+        ))
+
+    /// A PostgreSQL array literal, which is how the values reach a column the
+    /// driver would otherwise be told nothing about.
+    pub def arrayLiteral(values: List[Option[Int32]]): String =
+        "{" + (values |> List.map(v -> match v {
+            case Some(n) => "${n}"
+            case None    => "NULL"
+        }) |> List.join(",")) + "}"
 
     /// In the order `Cli.Db.Schema.columns` names them.
     pub def values(row: LapRow): List[Value] =
@@ -125,7 +142,8 @@ mod Cli.Db.LapRow {
         Value.Text(row#topSpeed) ::
         Value.NullableInteger(row#pitTimeMs) ::
         Value.Text(row#flagAtFl) ::
-        Value.NullableJsonb(row#miniSectors) ::
+        Value.NullableIntArray(row#miniSectorTimeMs) ::
+        Value.NullableIntArray(row#miniSectorElapsedMs) ::
         Nil
 
     def sectorMs(sector: RawSector): Option[Int32] =

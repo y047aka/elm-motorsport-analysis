@@ -90,7 +90,8 @@ mod Cli.Db.TestLapRow {
     def whatTheFeedLeftBlankIsAbsent(): Unit \ Assert =
         let row = LapRow.fromRawLap(fuji(), 1, plainLap());
         Assert.assertTrue(row#pitTimeMs == None);
-        Assert.assertTrue(row#miniSectors == None);
+        Assert.assertTrue(row#miniSectorTimeMs == None);
+        Assert.assertTrue(row#miniSectorElapsedMs == None);
         let pit = LapRow.fromRawLap(fuji(), 2, pitLap());
         Assert.assertTrue(pit#pitTimeMs == Some(65500));
         Assert.assertTrue(pit#topSpeed == "")
@@ -100,12 +101,25 @@ mod Cli.Db.TestLapRow {
         Assert.assertTrue(not LapRow.fromRawLap(fuji(), 1, plainLap())#crossingFinishLineInPit);
         Assert.assertTrue(LapRow.fromRawLap(fuji(), 2, pitLap())#crossingFinishLineInPit)
 
-    /// The object the JSON Lines output carries, on one line: the two readings
-    /// of a round cannot disagree about what was measured.
+    /// A place in either list is a place on the circuit, so the fifteen are
+    /// all there and a marker the feed left blank keeps its place as a blank.
     @Test
-    def miniSectorsBecomeTheJsonTheFilesCarry(): Unit \ Assert =
+    def miniSectorsBecomeMillisecondsInTrackOrder(): Unit \ Assert =
         let row = LapRow.fromRawLap(fuji(), 1, miniSectorLap());
-        Assert.assertTrue(row#miniSectors == Some("{ \"scl2\": { \"time\": \"20.708\", \"elapsed\": \"20.708\" } }"))
+        match (row#miniSectorTimeMs, row#miniSectorElapsedMs) {
+            case (Some(times), Some(elapsed)) =>
+                Assert.assertTrue(List.length(times) == 15);
+                Assert.assertTrue(List.length(elapsed) == 15);
+                Assert.assertTrue(List.head(times) == Some(Some(20708)));
+                Assert.assertTrue(List.head(elapsed) == Some(Some(20708)));
+                Assert.assertTrue(List.drop(1, times) |> List.forAll(t -> t == None))
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def theArrayLiteralKeepsTheBlanksInPlace(): Unit \ Assert =
+        Assert.assertTrue(LapRow.arrayLiteral(Some(1) :: None :: Some(3) :: Nil) == "{1,NULL,3}");
+        Assert.assertTrue(LapRow.arrayLiteral(Nil) == "{}")
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
@@ -126,6 +140,6 @@ mod Cli.Db.TestLapRow {
         let values = LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
         Assert.assertTrue(List.take(4, values)
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
-        Assert.assertTrue(List.last(values) == Some(Value.NullableJsonb(None)))
+        Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
 
 }

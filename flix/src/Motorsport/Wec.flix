@@ -375,7 +375,7 @@ mod Motorsport.Wec {
         );
         if (hasAny) Some(list) else None
 
-    pub def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
+    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
         let entries = list |> List.filterMap(match (id, sector) ->
             if (sector#time == None and sector#elapsed == None)
                 None
