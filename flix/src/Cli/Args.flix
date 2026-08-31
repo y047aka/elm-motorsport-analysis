@@ -24,7 +24,7 @@ mod Cli.Args {
             optionIds     = Nil,
             optionNames   = "postgres" :: Nil,
             argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Postgres(url)), "URL"),
-            explanation   = "JDBC URL to load every round into, beside the files\n(defaults to DATABASE_URL)"
+            explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL)"
         } :: Nil
 
     pub def parse(args: List[String]): Result[ArgsError, ParsedArgs] =

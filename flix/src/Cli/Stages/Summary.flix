@@ -73,12 +73,16 @@ mod Cli.Stages.Summary {
             ) yield (carNumber, driverName)
         ))
 
+    /// A car is what the file first said it was. Grouping by the attributes
+    /// instead would be a row per distinct combination, so a feed that changed
+    /// a car's team mid-round would put that car on the grid twice.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
         Db.fetch(
             "WITH c AS ("
-                + " SELECT car_number, class, car_group, team, manufacturer, MIN(source_row) AS first_seen"
+                + " SELECT DISTINCT ON (car_number)"
+                + " car_number, class, car_group, team, manufacturer, source_row AS first_seen"
                 + " FROM laps WHERE " + scope(entry)
-                + " GROUP BY car_number, class, car_group, team, manufacturer),"
+                + " ORDER BY car_number, source_row),"
                 + " l1 AS ("
                 + " SELECT DISTINCT ON (car_number) car_number, s1_ms, elapsed_ms"
                 + " FROM laps WHERE " + scope(entry) + " AND lap_number = 1"

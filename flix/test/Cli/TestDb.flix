@@ -33,6 +33,21 @@ mod Cli.TestDb {
             case _ => Assert.assertTrue(false)
         }
 
+    /// Nothing was written, so a read cannot be answered. The handler says so
+    /// rather than handing back an empty round, which would read as a round
+    /// with no violations and no cars in it.
+    @Test
+    def recordingCannotAnswerARead(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() -> Cli.Db.fetch("SELECT 1"));
+        match result {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
+        };
+        match statements {
+            case Statement.Fetch(sql) :: Nil => Assert.assertTrue(sql == "SELECT 1")
+            case _                           => Assert.assertTrue(false)
+        }
+
     @Test
     def theStatementsAreKeptInTheOrderTheyWereSent(): Unit \ Assert =
         let (_, statements) = Db.runRecording(() -> {

@@ -97,14 +97,19 @@
           };
 
         # The same, for the commands that need a database. A caller who has
-        # already said which one is left alone; anyone else gets the working
-        # copy's, started if it is not up.
+        # already said which one -- by the variable or by `--postgres` -- is
+        # left alone; anyone else gets the working copy's, started if it is
+        # not up.
         mkFlixAppWithDb = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
             runtimeInputs = [ flix pkgs.postgresql ];
             text = ''
-              if [ -z "''${DATABASE_URL:-}" ]; then
+              named=""
+              for arg in "$@"; do
+                case "$arg" in --postgres | --postgres=*) named=yes ;; esac
+              done
+              if [ -z "''${DATABASE_URL:-}" ] && [ -z "$named" ]; then
               ${pgEnsure}
                 export DATABASE_URL="${pgUrl}"
               fi

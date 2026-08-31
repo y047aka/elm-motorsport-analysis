@@ -32,11 +32,12 @@ mod Cli.Db {
                     record(log, Statement.InsertLaps(rows));
                     k(Ok(List.length(rows)))
                 }
-                // Reads nothing back: a caller that goes on to read what it
-                // wrote needs a database, not this.
+                // Nothing was written, so there is nothing to read back: a
+                // caller that reads the round it sent needs a database, and
+                // is told so rather than handed an empty one.
                 def fetch(sql, k) = {
                     record(log, Statement.Fetch(sql));
-                    k(Ok(Nil))
+                    k(Err("nothing was sent to a database, so nothing can be read back"))
                 }
             };
             (result, List.reverse(Ref.get(log)))

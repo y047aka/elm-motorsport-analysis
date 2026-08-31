@@ -18,7 +18,7 @@ mod Cli.Errors {
             case CliError.EmptyFile(p)         => "Empty file: ${p}"
             case CliError.File(cause)          => "${cause}"
             case CliError.Csv(r)               => "Failed to decode ${r#path} (caused by: ${r#message})"
-            case CliError.Database(cause)      => "Database rejected the rows (caused by: ${cause})"
+            case CliError.Database(cause)      => "Database error (caused by: ${cause})"
         }
     }
 
