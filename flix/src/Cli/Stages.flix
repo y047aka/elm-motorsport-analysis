@@ -51,7 +51,7 @@ mod Cli.Stages {
                     Console.println("${FileTask.label(task)}: Wrote ${report#lapCount} laps");
                     Console.println("${FileTask.label(task)}: Metadata -> ${report#outputPath}");
                     Console.println("${FileTask.label(task)}: Laps     -> ${report#lapsPath}");
-                    reportLoad(task, report);
+                    Console.println("${FileTask.label(task)}: Rows     -> ${report#loadedRows} loaded");
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
@@ -65,12 +65,6 @@ mod Cli.Stages {
         let errors = summary#errors + calendarErrors;
         Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
         if (errors == 0) 0 else 1
-
-    def reportLoad(task: FileTask.FileTask, report: ProcessingReport): Unit \ Console =
-        if (report#loadedRows > 0)
-            Console.println("${FileTask.label(task)}: Rows     -> ${report#loadedRows} loaded")
-        else
-            ()
 
     /// Not an error: the run converted everything it was asked for, and this is
     /// about what it was not asked for. Saying it is what keeps a forgotten line

@@ -4,9 +4,9 @@ mod Cli {
 
     /// Every write the run makes to a database.
     ///
-    /// `insertLaps` answers with the number of rows written rather than with the
-    /// number it was given, because a run that reached no database returns zero
-    /// here and that is the only thing telling the two runs apart.
+    /// `insertLaps` answers with the number of rows the database took rather
+    /// than with the number it was handed, so the run reports what was accepted
+    /// beside what it decoded.
     ///
     /// `fetch` answers with every cell as text, `None` where the column was
     /// null. The server has the types and the caller knows what it asked for,
