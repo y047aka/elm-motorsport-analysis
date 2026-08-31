@@ -217,6 +217,27 @@ trackerView track snapshot m =
                     , onSelect = ModeChange Tracker
                     , detail = TrackerChart.Compact
                     }
+
+        placeholderBody =
+            case m.mode of
+                Tracker ->
+                    []
+
+                _ ->
+                    -- A card's content does not shrink below what it holds, so
+                    -- the box that scrolls has to be a flex child of the card.
+                    [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+                        [ Card.content []
+                            [ CarDetailPopover.view
+                                { activeChart = m.detailChart
+                                , onToggleCar = ToggleDetailCar
+                                , onSelectChart = SelectDetailChart
+                                }
+                                snapshot
+                                m.detailCarNumbers
+                            ]
+                        ]
+                    ]
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
@@ -227,10 +248,10 @@ trackerView track snapshot m =
 
                 -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
                 , onSelectCar = ShowCarDetail
-                , popoverTarget = CarDetailPopover.popoverId
+                , popoverTarget = standingsPopoverId
                 }
             ]
-        , div [ Attributes.class (tracker.placeholder ++ " grid") ] [ Card.card [] [] ]
+        , div [ Attributes.class (tracker.placeholder ++ " grid") ] [ Card.card [] placeholderBody ]
         , div
             -- The cell is the only box in the chain whose height is settled,
             -- so a square SVG measured against the width overflows the card.
@@ -253,13 +274,38 @@ trackerView track snapshot m =
                 }
                 snapshot
             ]
-        , CarDetailPopover.view
-            { activeChart = m.detailChart
-            , onToggleCar = ToggleDetailCar
-            , onSelectChart = SelectDetailChart
-            }
-            snapshot
-            m.detailCarNumbers
+        , standingsPopover
+        ]
+
+
+standingsPopoverId : String
+standingsPopoverId =
+    "standings-popover"
+
+
+standingsPopover : Html Msg
+standingsPopover =
+    Html.node "div"
+        [ Attributes.id standingsPopoverId
+        , attribute "popover" "auto"
+
+        -- Tailwind preflight cancels the UA's margin:auto, so set it explicitly to center.
+        -- The popover has no containing block to size against but the viewport,
+        -- so its width is set explicitly rather than left to shrink to content.
+        , Attributes.class "m-auto w-11/12 max-w-[min(90vw,1200px)] p-4 rounded-xl overflow-y-auto max-h-screen"
+        , Attributes.class "bg-popover text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+
+        -- A closed popover is display:none by the UA, but its entrance
+        -- transition still needs an explicit closed state to animate from.
+        , Attributes.class "opacity-0 scale-95 transition-[opacity,scale] duration-200 [&:popover-open]:opacity-100 [&:popover-open]:scale-100"
+        , Attributes.class "backdrop:bg-black/10"
+        ]
+        [ button
+            [ attribute "popovertarget" standingsPopoverId
+            , attribute "popovertargetaction" "hide"
+            , Attributes.class "inline-flex items-center justify-center size-8 rounded-full text-sm cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground absolute right-2 top-2"
+            ]
+            [ text "✕" ]
         ]
 
 
