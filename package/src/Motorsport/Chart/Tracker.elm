@@ -1,8 +1,8 @@
-module Motorsport.Chart.Tracker exposing (Track, fromConfig, view)
+module Motorsport.Chart.Tracker exposing (Detail(..), Track, fromConfig, view)
 
 {-| The field drawn going round the circuit.
 
-@docs Track, fromConfig, view
+@docs Detail, Track, fromConfig, view
 
 -}
 
@@ -21,6 +21,16 @@ import TypedSvg.Attributes as Attributes exposing (fontSize, strokeWidth, viewBo
 import TypedSvg.Types exposing (Transform(..), px)
 
 
+{-| How much of the chart is drawn. The chart is scaled to whatever box it is
+given, so every length below is divided by that box: at `Compact`'s size the
+labels would stand a few pixels tall, so it carries none, and spends the room
+they would need on the circle instead.
+-}
+type Detail
+    = Compact
+    | Full
+
+
 type alias Constants =
     { viewBox : { w : Float, h : Float }
     , track :
@@ -32,49 +42,77 @@ type alias Constants =
         , startFinishLineStrokeWidth : Float
         , sectorBoundaryOffset : Float
         , sectorBoundaryStrokeWidth : Float
-        , sectorLabelRadius : Float
-        , sectorLabelFontSize : Float
-        , miniSectorLabelRadius : Float
-        , miniSectorLabelFontSize : Float
         }
-    , car :
-        { size : Float
-        , labelRadius : Float
-        , labelFontSize : Float
-        }
+    , car : { size : Float }
+    , labels : Labels
     }
 
 
-constants : Constants
-constants =
-    let
-        viewBoxWidth =
-            800
+type Labels
+    = NoLabels
+    | Labels
+        { sectorRadius : Float
+        , sectorFontSize : Float
+        , miniSectorRadius : Float
+        , miniSectorFontSize : Float
+        , carRadius : Float
+        , carFontSize : Float
+        }
 
-        viewBoxHeight =
-            600
-    in
-    { viewBox = { w = viewBoxWidth, h = viewBoxHeight }
-    , track =
-        { cx = viewBoxWidth / 2
-        , cy = viewBoxHeight / 2
-        , r = 250
-        , trackWidth = 4
-        , startFinishLineExtension = 15
-        , startFinishLineStrokeWidth = 2
-        , sectorBoundaryOffset = 10
-        , sectorBoundaryStrokeWidth = 3
-        , sectorLabelRadius = 300
-        , sectorLabelFontSize = 16
-        , miniSectorLabelRadius = 230
-        , miniSectorLabelFontSize = 10
-        }
-    , car =
-        { size = 8
-        , labelRadius = 270
-        , labelFontSize = 12
-        }
-    }
+
+constants : Detail -> Constants
+constants detail =
+    case detail of
+        Compact ->
+            let
+                -- No wider than the field drawn on the circle.
+                size =
+                    540
+            in
+            { viewBox = { w = size, h = size }
+            , track =
+                { cx = size / 2
+                , cy = size / 2
+                , r = 250
+                , trackWidth = 2
+                , startFinishLineExtension = 12
+                , startFinishLineStrokeWidth = 3
+                , sectorBoundaryOffset = 10
+                , sectorBoundaryStrokeWidth = 4
+                }
+            , car = { size = 10 }
+            , labels = NoLabels
+            }
+
+        Full ->
+            let
+                -- Wide enough for the sector labels outside the circle, and
+                -- the font they are drawn in.
+                size =
+                    630
+            in
+            { viewBox = { w = size, h = size }
+            , track =
+                { cx = size / 2
+                , cy = size / 2
+                , r = 250
+                , trackWidth = 1.5
+                , startFinishLineExtension = 15
+                , startFinishLineStrokeWidth = 2
+                , sectorBoundaryOffset = 10
+                , sectorBoundaryStrokeWidth = 3
+                }
+            , car = { size = 9 }
+            , labels =
+                Labels
+                    { sectorRadius = 300
+                    , sectorFontSize = 16
+                    , miniSectorRadius = 230
+                    , miniSectorFontSize = 12
+                    , carRadius = 270
+                    , carFontSize = 13
+                    }
+            }
 
 
 {-| Scale function converting a track progress value (0-1) into an angle (radians).
@@ -114,31 +152,34 @@ fromConfig =
     Track
 
 
-view : Track -> Snapshot -> Svg msg
-view (Track { direction, config }) standings =
-    viewWithConfig direction config standings
+view : Detail -> Track -> Snapshot -> Svg msg
+view detail (Track { direction, config }) standings =
+    viewWithConfig detail direction config standings
 
 
-viewWithConfig : Direction -> TrackConfig -> Snapshot -> Svg msg
-viewWithConfig direction config standings =
+viewWithConfig : Detail -> Direction -> TrackConfig -> Snapshot -> Svg msg
+viewWithConfig detail direction config standings =
     let
         { w, h } =
-            constants.viewBox
+            (constants detail).viewBox
     in
     svg
         [ viewBox 0 0 w h
-        , class "max-w-full max-h-[90%]"
+        , class "max-w-full max-h-full"
         ]
-        [ Lazy.lazy2 track direction config
-        , renderCars direction config standings
+        [ Lazy.lazy3 track detail direction config
+        , renderCars detail direction config standings
         ]
 
 
-track : Direction -> TrackConfig -> Svg msg
-track direction config =
+track : Detail -> Direction -> TrackConfig -> Svg msg
+track detail direction config =
     let
+        c =
+            constants detail
+
         { cx, cy, r, trackWidth } =
-            constants.track
+            c.track
 
         trackCircle color width =
             circle
@@ -152,27 +193,27 @@ track direction config =
                 []
 
         outerTrackCircle =
-            trackCircle "oklch(1 0 0 / 0.2)" 1
+            trackCircle "oklch(1 0 0 / 0.2)" trackWidth
 
         startFinishLine =
             line
                 [ x1 (px cx)
-                , y1 (px (cy - r - constants.track.startFinishLineExtension))
+                , y1 (px (cy - r - c.track.startFinishLineExtension))
                 , x2 (px cx)
-                , y2 (px (cy - r + constants.track.startFinishLineExtension))
+                , y2 (px (cy - r + c.track.startFinishLineExtension))
                 , stroke "#fff"
-                , strokeWidth (px constants.track.startFinishLineStrokeWidth)
+                , strokeWidth (px c.track.startFinishLineStrokeWidth)
                 ]
                 []
 
         makeBoundary angle =
             line
-                [ x1 (px (cx + (r - constants.track.sectorBoundaryOffset) * cos angle))
-                , y1 (px (cy + (r - constants.track.sectorBoundaryOffset) * sin angle))
-                , x2 (px (cx + (r + constants.track.sectorBoundaryOffset) * cos angle))
-                , y2 (px (cy + (r + constants.track.sectorBoundaryOffset) * sin angle))
+                [ x1 (px (cx + (r - c.track.sectorBoundaryOffset) * cos angle))
+                , y1 (px (cy + (r - c.track.sectorBoundaryOffset) * sin angle))
+                , x2 (px (cx + (r + c.track.sectorBoundaryOffset) * cos angle))
+                , y2 (px (cy + (r + c.track.sectorBoundaryOffset) * sin angle))
                 , stroke "oklch(0.23 0 0)"
-                , strokeWidth (px constants.track.sectorBoundaryStrokeWidth)
+                , strokeWidth (px c.track.sectorBoundaryStrokeWidth)
                 ]
                 []
 
@@ -182,48 +223,58 @@ track direction config =
                 |> List.map (\angle -> makeBoundary angle)
 
         sectorLabels =
-            renderSectorLabels direction config
+            renderSectorLabels detail direction config
 
         miniSectorLabels =
-            renderMiniSectorLabels direction config
+            renderMiniSectorLabels detail direction config
     in
     g [] (outerTrackCircle :: boundaries ++ startFinishLine :: sectorLabels ++ miniSectorLabels)
 
 
-renderSectorLabels : Direction -> TrackConfig -> List (Svg msg)
-renderSectorLabels direction config =
-    config.sectors
-        |> Sector.toList
-        |> List.map
-            (\( sector, { start, share } ) ->
-                makeLabel direction
-                    { progress = start + (share / 2)
-                    , radius = constants.track.sectorLabelRadius
-                    , fontSize = constants.track.sectorLabelFontSize
-                    , color = "oklch(1 0 0 / 0.5)"
-                    , label = Sector.toString sector
-                    }
-            )
-
-
-renderMiniSectorLabels : Direction -> TrackConfig -> List (Svg msg)
-renderMiniSectorLabels direction config =
-    case config.miniSectors of
-        Config.NoMiniSectors ->
+renderSectorLabels : Detail -> Direction -> TrackConfig -> List (Svg msg)
+renderSectorLabels detail direction config =
+    case (constants detail).labels of
+        NoLabels ->
             []
 
-        Config.MiniSectorShares shares ->
+        Labels { sectorRadius, sectorFontSize } ->
+            config.sectors
+                |> Sector.toList
+                |> List.map
+                    (\( sector, { start, share } ) ->
+                        makeLabel detail
+                            direction
+                            { progress = start + (share / 2)
+                            , radius = sectorRadius
+                            , fontSize = sectorFontSize
+                            , color = "oklch(1 0 0 / 0.5)"
+                            , label = Sector.toString sector
+                            }
+                    )
+
+
+renderMiniSectorLabels : Detail -> Direction -> TrackConfig -> List (Svg msg)
+renderMiniSectorLabels detail direction config =
+    case ( (constants detail).labels, config.miniSectors ) of
+        ( NoLabels, _ ) ->
+            []
+
+        ( _, Config.NoMiniSectors ) ->
+            []
+
+        ( Labels { miniSectorRadius, miniSectorFontSize }, Config.MiniSectorShares shares ) ->
             shares
                 |> LeMans.toList
                 |> List.map
                     (\( mini, { start, share } ) ->
-                        makeLabel direction
+                        makeLabel detail
+                            direction
                             -- At the end of the mini-sector, not the middle of
                             -- it as a sector's label is: fifteen of them round
                             -- one circle leaves no room to centre them in.
                             { progress = start + share
-                            , radius = constants.track.miniSectorLabelRadius
-                            , fontSize = constants.track.miniSectorLabelFontSize
+                            , radius = miniSectorRadius
+                            , fontSize = miniSectorFontSize
                             , color = "oklch(0.5 0 0)"
                             , label = LeMans.toString mini
                             }
@@ -231,7 +282,8 @@ renderMiniSectorLabels direction config =
 
 
 makeLabel :
-    Direction
+    Detail
+    -> Direction
     ->
         { progress : Float
         , radius : Float
@@ -240,10 +292,10 @@ makeLabel :
         , label : String
         }
     -> Svg msg
-makeLabel direction { progress, radius, fontSize, color, label } =
+makeLabel detail direction { progress, radius, fontSize, color, label } =
     let
         { cx, cy } =
-            constants.track
+            (constants detail).track
 
         angle =
             Scale.convert (progressToAngleScale direction) progress
@@ -265,8 +317,8 @@ makeLabel direction { progress, radius, fontSize, color, label } =
         [ text label ]
 
 
-renderCars : Direction -> TrackConfig -> Snapshot -> Svg msg
-renderCars direction config standings =
+renderCars : Detail -> Direction -> TrackConfig -> Snapshot -> Svg msg
+renderCars detail direction config standings =
     Keyed.node "g"
         []
         (Snapshot.toList standings
@@ -274,26 +326,26 @@ renderCars direction config standings =
             |> List.map
                 (\car ->
                     ( car.metadata.carNumber
-                    , Lazy.lazy3 renderCarOnTrack direction config car
+                    , Lazy.lazy4 renderCarOnTrack detail direction config car
                     )
                 )
         )
 
 
-renderCarOnTrack : Direction -> TrackConfig -> CarAt -> Svg msg
-renderCarOnTrack direction config car =
+renderCarOnTrack : Detail -> Direction -> TrackConfig -> CarAt -> Svg msg
+renderCarOnTrack detail direction config car =
     let
         coords =
-            coordinatesOnTrack direction config car
+            coordinatesOnTrack detail direction config car
     in
-    renderCar direction car coords
+    renderCar detail car coords
 
 
-coordinatesOnTrack : Direction -> TrackConfig -> CarAt -> { angle : Float, x : Float, y : Float }
-coordinatesOnTrack direction config car =
+coordinatesOnTrack : Detail -> Direction -> TrackConfig -> CarAt -> { angle : Float, x : Float, y : Float }
+coordinatesOnTrack detail direction config car =
     let
         { cx, cy, r } =
-            constants.track
+            (constants detail).track
 
         progress =
             Config.computeProgress config car
@@ -307,36 +359,41 @@ coordinatesOnTrack direction config car =
     }
 
 
-renderCar : Direction -> CarAt -> { angle : Float, x : Float, y : Float } -> Svg msg
-renderCar direction car { angle, x, y } =
+renderCar : Detail -> CarAt -> { angle : Float, x : Float, y : Float } -> Svg msg
+renderCar detail car { angle, x, y } =
     let
+        c =
+            constants detail
+
         { cx, cy } =
-            constants.track
+            c.track
 
-        labelRadius =
-            constants.car.labelRadius
-
-        labelX =
-            cx + labelRadius * cos angle
-
-        labelY =
-            cy + labelRadius * sin angle
+        marker =
+            g [ Attributes.transform [ Translate x y ] ]
+                [ Lazy.lazy3 carMarker c.car.size car.standing.positionInClass (Class.toColor car.metadata.class) ]
     in
-    g []
-        [ g [ Attributes.transform [ Translate x y ] ]
-            [ Lazy.lazy2 carMarker car.standing.positionInClass (Class.toColor car.metadata.class) ]
-        , carLabel car.standing.positionInClass { x = labelX, y = labelY } { carNumber = car.metadata.carNumber }
-        ]
+    case c.labels of
+        NoLabels ->
+            marker
+
+        Labels { carRadius, carFontSize } ->
+            g []
+                [ marker
+                , carLabel carFontSize
+                    car.standing.positionInClass
+                    { x = cx + carRadius * cos angle, y = cy + carRadius * sin angle }
+                    { carNumber = car.metadata.carNumber }
+                ]
 
 
-carMarker : Int -> String -> Svg msg
-carMarker positionInClass classColorValue =
+carMarker : Float -> Int -> String -> Svg msg
+carMarker size positionInClass classColorValue =
     let
         scaleFactor =
             max 0.4 (1 - (toFloat positionInClass * 0.1))
 
         carSize =
-            constants.car.size * scaleFactor
+            size * scaleFactor
 
         saturation =
             if positionInClass <= 3 then
@@ -355,8 +412,8 @@ carMarker positionInClass classColorValue =
         []
 
 
-carLabel : Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
-carLabel positionInClass { x, y } { carNumber } =
+carLabel : Float -> Int -> { x : Float, y : Float } -> { carNumber : String } -> Svg msg
+carLabel labelFontSize positionInClass { x, y } { carNumber } =
     let
         scaleFactor =
             max 0.75 (1 - (toFloat positionInClass * 0.02))
@@ -364,7 +421,7 @@ carLabel positionInClass { x, y } { carNumber } =
     text_
         [ Attributes.x (px x)
         , Attributes.y (px y)
-        , fontSize (px (constants.car.labelFontSize * scaleFactor))
+        , fontSize (px (labelFontSize * scaleFactor))
         , textAnchor "middle"
         , dominantBaseline "central"
         , fill "oklch(1 0 0 / 0.7)"

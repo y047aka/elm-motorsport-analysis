@@ -49,13 +49,14 @@ type alias Model =
 
 
 type Mode
-    = Tracker
+    = Default
+    | Tracker
     | Events
 
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Tracker
+    ( { mode = Default
       , leaderboardState = initialSort "Position"
       , eventsState =
             DataView.init "Time"
@@ -178,6 +179,9 @@ view shared m =
 
                 Just race ->
                     case m.mode of
+                        Default ->
+                            trackerView race.track race.snapshot m
+
                         Tracker ->
                             trackerView race.track race.snapshot m
 
@@ -197,10 +201,27 @@ headerTitle shared =
 
 trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
 trackerView track snapshot m =
+    let
+        tracker =
+            case m.mode of
+                Tracker ->
+                    { cell = "col-start-2 row-start-1 row-span-2"
+                    , placeholder = "col-start-3 row-start-1"
+                    , onSelect = ModeChange Default
+                    , detail = TrackerChart.Full
+                    }
+
+                _ ->
+                    { cell = "col-start-3 row-start-1"
+                    , placeholder = "col-start-2 row-start-1 row-span-2"
+                    , onSelect = ModeChange Tracker
+                    , detail = TrackerChart.Compact
+                    }
+    in
     div
-        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[minmax(0,1fr)_auto] gap-2.5" ]
+        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
         [ div
-            [ Attributes.class "col-start-1 h-full overflow-y-hidden" ]
+            [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
             [ LiveStandingsWidget.view
                 { snapshot = snapshot
 
@@ -209,17 +230,23 @@ trackerView track snapshot m =
                 , popoverTarget = CarDetailPopover.popoverId
                 }
             ]
-        , div [ Attributes.class "col-start-2 grid" ]
+        , div [ Attributes.class (tracker.placeholder ++ " grid") ] [ Card.card [] [] ]
+        , div
+            -- The cell is the only box in the chain whose height is settled,
+            -- so a square SVG measured against the width overflows the card.
+            [ Attributes.class (tracker.cell ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
+            , onClick tracker.onSelect
+            ]
             [ Card.card []
                 [ Card.content []
                     [ div
                         [ Attributes.class "h-full grid place-items-center" ]
-                        [ TrackerChart.view track snapshot ]
+                        [ TrackerChart.view tracker.detail track snapshot ]
                     ]
                 ]
             ]
-        , div [ Attributes.class "col-start-3 grid" ] [ Card.card [] [] ]
-        , div [ Attributes.class "col-span-full" ]
+        , div [ Attributes.class "col-start-3 row-start-2 grid" ] [ Card.card [] [] ]
+        , div [ Attributes.class "col-span-full row-start-3" ]
             [ SelectedCarsStrip.view
                 { offset = m.stripOffset
                 , onScrollTo = StripScrollTo
@@ -276,7 +303,8 @@ backLink =
 viewModeSelector : Mode -> Html Msg
 viewModeSelector currentMode =
     div [ Attributes.class "inline-flex" ]
-        [ modeButton "Tracker" Tracker (currentMode == Tracker)
+        [ modeButton "Default" Default (currentMode == Default)
+        , modeButton "Tracker" Tracker (currentMode == Tracker)
         , modeButton "Events" Events (currentMode == Events)
         ]
 
