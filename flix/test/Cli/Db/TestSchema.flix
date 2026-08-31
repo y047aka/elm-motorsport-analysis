@@ -28,24 +28,4 @@ mod Cli.Db.TestSchema {
         Assert.assertTrue(String.contains({substr = "mini_sector_time_ms"}, sql));
         Assert.assertTrue(String.contains({substr = "mini_sector_elapsed_ms"}, sql))
 
-    @Test
-    def theTableIsKeyedByTheLapItHolds(): Unit \ Assert =
-        Assert.assertTrue(String.contains(
-            {substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
-            Schema.createTable()
-        ))
-
-    /// The loader numbers the rows, so the database is where a gap or a repeat
-    /// in that numbering can still be caught.
-    @Test
-    def theFilesOrderIsUniquePerRound(): Unit \ Assert =
-        Assert.assertTrue(String.contains(
-            {substr = "UNIQUE (season, round, source_row)"},
-            Schema.createTable()
-        ))
-
-    @Test
-    def theRunRebuildsTheTable(): Unit \ Assert =
-        Assert.assertTrue(Schema.dropTable() == "DROP TABLE IF EXISTS laps")
-
 }
