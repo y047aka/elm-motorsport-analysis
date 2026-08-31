@@ -1,7 +1,7 @@
 name: Tests
 
 # The checks that say the code is wrong: the Elm tests (elm-verify-examples +
-# elm-test), the Flix CLI's tests, and `tsc` over the app's TypeScript. Kept
+# elm-test), the tests of both CLIs, and `tsc` over the app's TypeScript. Kept
 # apart from the VRT workflow because that one usually fails for a different
 # reason — stale snapshots — and a red check should tell you which without
 # being opened.
@@ -23,13 +23,15 @@ jobs:
         with:
           primary-key: nix-${{ runner.os }}-${{ hashFiles('flake.lock') }}
           restore-prefixes-first-match: nix-${{ runner.os }}-
-      # No `pnpm install`: neither command touches node_modules. The Elm tests
-      # need only the elm toolchain the flake supplies, and the CLI resolves
-      # its own dependencies through flix.
+      # No `pnpm install`: none of these touch node_modules. The Elm tests need
+      # only the elm toolchain the flake supplies, the Flix CLI resolves its own
+      # dependencies through flix, and the OCaml one has none to resolve.
       - name: Elm tests
         run: nix run .#test
       - name: CLI tests
         run: nix run .#cli-test
+      - name: OCaml CLI tests
+        run: nix run .#ocaml-cli-test
 
   # Its own job because it is the one check here that needs node_modules, and
   # because a type error and a failing test should not share a red mark.

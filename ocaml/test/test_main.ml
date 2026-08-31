@@ -1,0 +1,25 @@
+let () =
+  Harness.run
+    [
+      Test_duration.suite;
+      Test_hour_clock.suite;
+      Test_json.suite;
+      Test_json_encode_extra.suite;
+      Test_csv_parser.suite;
+      Test_csv_decode.suite;
+      Test_mini_sector.suite;
+      Test_calendar.suite;
+      Test_events.suite;
+      Test_wec.suite;
+      Test_track.suite;
+      Test_metadata.suite;
+      Test_args.suite;
+      Test_errors.suite;
+      Test_file_task.suite;
+      Test_stage_csv_input.suite;
+      Test_stage_csv_decode.suite;
+      Test_manifest.suite;
+      Test_transform.suite;
+      Test_unlisted.suite;
+      Test_validation.suite;
+    ]

@@ -96,10 +96,25 @@
             '';
           };
 
+        # Runner for the OCaml copy of the CLI. The subproject is entered first:
+        # dune resolves dune-project from the cwd upwards, and the run's argument
+        # is written relative to it.
+        mkOcamlApp = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ pkgs.ocaml pkgs.dune_3 ];
+            text = ''
+              cd ocaml
+              ${cmd}
+            '';
+          };
+
         # The CLI's one argument is the directory holding the season directories.
         # It takes nothing else, and converts the rounds `Motorsport.Calendar`
         # lists.
         cliRunCmd = "flix run -- ../app/static/wec";
+
+        ocamlCliRunCmd = "dune exec bin/cli_run.exe -- ../app/static/wec";
 
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
@@ -128,7 +143,7 @@
         # merits. It reads the credentials `gh auth login` wrote; nix supplies
         # the binary, not the login.
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ocaml dune_3 ]
             ++ [ flix ] ++ elmTools;
         });
 
@@ -148,6 +163,9 @@
           cli-build            = { type = "app"; program = "${mkFlixApp "cli-build" "flix build"}/bin/cli-build";                                                    meta.description = "Build the CLI"; };
           cli-test             = { type = "app"; program = "${mkFlixApp "cli-test"  "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
           cli-run              = { type = "app"; program = "${mkFlixApp "cli-run"   cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
+          ocaml-cli-build      = { type = "app"; program = "${mkOcamlApp "ocaml-cli-build" "dune build"}/bin/ocaml-cli-build";                                        meta.description = "Build the OCaml CLI"; };
+          ocaml-cli-test       = { type = "app"; program = "${mkOcamlApp "ocaml-cli-test"  "dune test"}/bin/ocaml-cli-test";                                          meta.description = "Run the OCaml CLI's tests"; };
+          ocaml-cli-run        = { type = "app"; program = "${mkOcamlApp "ocaml-cli-run"   ocamlCliRunCmd}/bin/ocaml-cli-run";                                        meta.description = "Run the OCaml CLI (CSV -> JSON)"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });

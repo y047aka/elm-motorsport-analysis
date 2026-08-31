@@ -9,8 +9,12 @@ JSON/JSONL → Elm visualization.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
 - **`/flix`** — the CLI for CSV→JSON/JSONL data processing, written in Flix.
+- **`/ocaml`** — the same CLI in OCaml, module for module. Neither is the other's
+  source: they are two spellings of one program, and the pair is only worth
+  keeping while both write the same bytes for the same CSVs. `/ocaml/README.md`
+  says what the second spelling cost.
 
-There is no manifest at the repository root; the flake is what ties the three
+There is no manifest at the repository root; the flake is what ties the four
 together.
 
 ## Commands
@@ -29,12 +33,15 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON/JSONL |
+| `nix run .#ocaml-cli-build` / `.#ocaml-cli-test` / `.#ocaml-cli-run` | The same, for the OCaml copy |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
-Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
-the toolchain and sets the working directory. The `cli-*` commands drive
-`/flix`; there are no `flix-*` ones.
+Prefer these over invoking `pnpm` / `cargo` / `flix` / `dune` directly — the
+flake pins the toolchain and sets the working directory. The `cli-*` commands
+drive `/flix` and the `ocaml-cli-*` ones `/ocaml`; there are no `flix-*` ones.
+Both runs take the same argument and write the same files, so pointing them at
+one directory in turn has the second overwrite the first.
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, writing each round's summary `.json`

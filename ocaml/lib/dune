@@ -1,0 +1,2 @@
+(library
+ (name motorsport_cli))

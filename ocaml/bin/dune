@@ -1,0 +1,3 @@
+(executable
+ (name cli_run)
+ (libraries motorsport_cli))
