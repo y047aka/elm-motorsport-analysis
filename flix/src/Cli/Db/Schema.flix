@@ -1,5 +1,18 @@
 mod Cli.Db.Schema {
 
+    /// The rows of one round: every reading of the table is of a single round,
+    /// and the pair is what names one.
+    pub def scope(season: Int32, round: String): String =
+        "season = ${season} AND round = '${quote(round)}'"
+
+    /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
+    /// and which is therefore where the round's start time is written.
+    pub def hourOffset(): String =
+        "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
+
+    def quote(value: String): String =
+        String.replace({src = "'"}, {dst = "''"}, value)
+
     pub def dropTable(): String =
         "DROP TABLE IF EXISTS laps"
 

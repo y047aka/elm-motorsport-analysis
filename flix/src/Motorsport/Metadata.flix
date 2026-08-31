@@ -9,7 +9,6 @@ mod Motorsport.Metadata {
     use Motorsport.Car.Car
     use Motorsport.Events
     use Motorsport.Track
-    use Motorsport.Wec.RawLap
 
     /// What the grid order was derived from. The timing feed carries no
     /// qualifying result, so all three are estimates read back off the race.
@@ -68,90 +67,41 @@ mod Motorsport.Metadata {
         startingGrid = StartingGrid
     }
 
-    pub def fromRawLaps(entry: Calendar.Entry, rawLaps: List[RawLap]): Metadata =
-        let builds = buildCars(rawLaps);
-        {
-            name         = Events.displayName(entry#id),
-            season       = entry#season,
-            date         = entry#date,
-            race         = particularsOf(rawLaps),
-            track        = Track.fromRawLaps(Events.direction(entry#id), rawLaps),
-            startingGrid = estimateGrid(builds)
-        }
-
-    def particularsOf(rawLaps: List[RawLap]): Particulars =
-        let duration = rawLaps |> List.foldLeft((acc, lap) -> laterOf(acc, lap#elapsed), Util.Duration.zero());
-        {
-            startedAt = rawLaps |> List.head |> Option.map(startedAtOf),
-            duration  = duration,
-            timeLimit = floorToHour(duration),
-            lapTotal  = rawLaps |> List.foldLeft((acc, lap) -> Int32.max(acc, lap#lapNumber), 0)
-        }
-
-    def laterOf(a: Duration, b: Duration): Duration =
-        if (Util.Duration.millis(b) > Util.Duration.millis(a)) b else a
-
-    def startedAtOf(lap: RawLap): Hour =
-        Hour.Hour(HourClock.offsetFrom(lap#hour, Util.Duration.millis(lap#elapsed)))
-
-    def floorToHour(d: Duration): Duration =
-        let hourMs = 3600000;
-        Util.Duration.fromMillis((Util.Duration.millis(d) / hourMs) * hourMs)
-
-    type alias CarBuild = {
+    /// What a car was, and the two readings the grid order can be made from.
+    /// The list is in the order the file first showed the cars, which is the
+    /// order a tie falls back to.
+    pub type alias CarBuild = {
         car         = Car,
         lap1S1      = Option[Duration],
         lap1Elapsed = Option[Duration]
     }
 
-    def buildCars(rawLaps: List[RawLap]): List[CarBuild] =
-        rawLaps |> List.foldLeft((acc, lap) -> upsertBuild(acc, lap), Nil)
-
-    def upsertBuild(acc: List[CarBuild], lap: RawLap): List[CarBuild] =
-        if (List.exists(b -> b#car#carNumber == lap#car#carNumber, acc))
-            acc |> List.map(b ->
-                if (b#car#carNumber == lap#car#carNumber) updateBuildWithLap(b, lap) else b
-            )
-        else
-            List.append(acc, buildFromLap(lap) :: Nil)
-
-    def buildFromLap(lap: RawLap): CarBuild =
-        // The Rust version normalizes unknown class values to Class::None; omitted because the Elm side consumes the raw values.
-        let car: Car = {
-            carNumber    = lap#car#carNumber,
-            drivers      = lap#driver#name :: Nil,
-            class        = lap#car#class,
-            group        = lap#car#group,
-            team         = lap#car#team,
-            manufacturer = lap#car#manufacturer
-        };
-        { car = car, lap1S1 = lap1S1(lap), lap1Elapsed = lap1Elapsed(lap) }
-
-    def updateBuildWithLap(build: CarBuild, lap: RawLap): CarBuild =
-        let updatedCar = { drivers = appendUnique(build#car#drivers, lap#driver#name) | build#car };
+    pub def fromReadings(
+        entry: Calendar.Entry,
+        race: Particulars,
+        track: Track.Track,
+        builds: List[CarBuild]
+    ): Metadata =
         {
-            car         = updatedCar,
-            lap1S1      = keepFirst(build#lap1S1, lap1S1(lap)),
-            lap1Elapsed = keepFirst(build#lap1Elapsed, lap1Elapsed(lap))
+            name         = Events.displayName(entry#id),
+            season       = entry#season,
+            date         = entry#date,
+            race         = race,
+            track        = track,
+            startingGrid = estimateGrid(builds)
         }
 
-    def keepFirst(seen: Option[Duration], candidate: Option[Duration]): Option[Duration] =
-        match seen {
-            case Some(_) => seen
-            case None    => candidate
+    pub def particulars(startedAt: Option[Hour], duration: Duration, lapTotal: Int32): Particulars =
+        {
+            startedAt = startedAt,
+            duration  = duration,
+            timeLimit = floorToHour(duration),
+            lapTotal  = lapTotal
         }
 
-    def lap1S1(lap: RawLap): Option[Duration] =
-        if (lap#lapNumber == 1) lap#s1#value
-        else None
-
-    def lap1Elapsed(lap: RawLap): Option[Duration] =
-        if (lap#lapNumber == 1) Some(lap#elapsed)
-        else None
-
-    def appendUnique(xs: List[String], x: String): List[String] =
-        if (List.memberOf(x, xs)) xs
-        else List.append(xs, x :: Nil)
+    def floorToHour(d: Duration): Duration =
+        let hourMs = 3600000;
+        Util.Duration.fromMillis((Util.Duration.millis(d) / hourMs) * hourMs)
 
     def estimateGrid(builds: List[CarBuild]): StartingGrid =
         let basis = basisOf(builds);

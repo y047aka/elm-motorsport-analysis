@@ -1,6 +1,8 @@
-mod Motorsport.TestTrack {
+mod Cli.Stages.TestTrack {
 
-    use Motorsport.Circuit.Direction.Direction
+    use Cli.TestRound
+    use Cli.Stages.Summary
+    use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Sector.Sector
@@ -12,6 +14,26 @@ mod Motorsport.TestTrack {
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json.Encode
+
+    /// Rounds whose ids give `Motorsport.Events` the direction each test is
+    /// about. Written out rather than looked up, so a change to the real
+    /// calendar cannot quietly rewrite what a test asserts.
+    def clockwise(): Entry = { season = 2025, id = "spa_6h", date = "2025-05-09" }
+
+    def counterClockwise(): Entry = { season = 2025, id = "imola_6h", date = "2025-04-19" }
+
+    def unknownDirection(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
+
+    def track(entry: Entry, laps: List[RawLap]): Track.Track \ IO =
+        TestRound.onRound(entry, numbered(laps), () -> Summary.read(entry))#track
+
+    /// The fixtures are each written as lap one, which the table's key will not
+    /// take twice for the same car. Numbering them changes nothing a share is
+    /// read from.
+    def numbered(laps: List[RawLap]): List[RawLap] =
+        laps |> List.zipWithIndex |> List.map(pair -> match pair {
+            case (index, lap) => { lapNumber = index + 1 | lap }
+        })
 
     /// A lap with only the columns the track's proportions are read from; of
     /// the 16, the rest are placeholders.
@@ -73,50 +95,50 @@ mod Motorsport.TestTrack {
         }
 
     @Test
-    def testSectorTakesTheShareItsRecordIsOfTheLap(): Unit \ Assert =
+    def testSectorTakesTheShareItsRecordIsOfTheLap(): Unit \ {Assert, IO} =
         // 20 + 30 + 50 of a 100-second lap.
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 0.2f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(0.2f64, 0.3f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(0.5f64, 0.5f64, shareOf(Sector.S3, track)))
 
     @Test
-    def testRecordIsTheQuickestOfEveryLapNotTheFirst(): Unit \ Assert =
+    def testRecordIsTheQuickestOfEveryLapNotTheFirst(): Unit \ {Assert, IO} =
         let laps =
             mkLap(200000, Some(80000), Some(60000), Some(60000)) ::
             mkLap(100000, Some(20000), Some(30000), Some(50000)) ::
             Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 0.2f64, shareOf(Sector.S1, track)))
 
     @Test
-    def testStretchWithNoTimeTakesNoShare(): Unit \ Assert =
+    def testStretchWithNoTimeTakesNoShare(): Unit \ {Assert, IO} =
         // S2 was never recorded, so S3 starts where S1 left off and the lap is
         // still divided in full.
         let laps = mkLap(50000, Some(20000), None, Some(30000)) :: Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 0.4f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(0.4f64, 0.0f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(0.4f64, 0.6f64, shareOf(Sector.S3, track)))
 
     @Test
-    def testNoRecordsAtAllDividesTheLapEvenly(): Unit \ Assert =
+    def testNoRecordsAtAllDividesTheLapEvenly(): Unit \ {Assert, IO} =
         // Nothing is known about how long each stretch is until a lap has been
         // round, whether the file holds a blank lap or no laps at all.
         List#{mkLap(0, None, None, None) :: Nil, Nil} |> List.forEach(laps -> {
-            let track = Track.fromRawLaps(None, laps);
+            let track = track(unknownDirection(), laps);
             Assert.assertTrue(isShare(0.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S1, track)));
             Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)));
             Assert.assertTrue(Option.isEmpty(track#miniSectors))
         })
 
     @Test
-    def testSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ Assert =
+    def testSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ {Assert, IO} =
         // Fifteen equal mini-sectors, grouped 3 / 4 / 8. The sectors' own
         // columns say something else entirely and are not consulted.
         let laps = withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) :: Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 3.0f64 / 15.0f64, shareOf(Sector.S1, track)));
         Assert.assertTrue(isShare(3.0f64 / 15.0f64, 4.0f64 / 15.0f64, shareOf(Sector.S2, track)));
         Assert.assertTrue(isShare(7.0f64 / 15.0f64, 8.0f64 / 15.0f64, shareOf(Sector.S3, track)));
@@ -124,29 +146,29 @@ mod Motorsport.TestTrack {
         Assert.assertTrue(isShare(14.0f64 / 15.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.FL, track)))
 
     @Test
-    def testMiniSectorsOfALapWithNoLapTimeAreNotRecords(): Unit \ Assert =
+    def testMiniSectorsOfALapWithNoLapTimeAreNotRecords(): Unit \ {Assert, IO} =
         // The first lap has no lap time -- the feed writes 0.000 -- so its
         // impossibly quick SCL2 does not take the record from the second.
         let laps =
             withMiniSectors(id -> if (id == MiniSectorId.SCL2) Some(1) else Some(1000), mkLap(0, None, None, None)) ::
             withEvenMiniSectors(1000, mkLap(15000, None, None, None)) ::
             Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.SCL2, track)))
 
     @Test
-    def testOneRoundWithMiniSectorsPutsEveryLapAtThatGrain(): Unit \ Assert =
+    def testOneRoundWithMiniSectorsPutsEveryLapAtThatGrain(): Unit \ {Assert, IO} =
         let laps =
             mkLap(15000, Some(1000), Some(1000), Some(1000)) ::
             withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) ::
             Nil;
-        let track = Track.fromRawLaps(Some(Direction.Clockwise), laps);
+        let track = track(clockwise(), laps);
         Assert.assertTrue(isShare(0.0f64, 3.0f64 / 15.0f64, shareOf(Sector.S1, track)))
 
     @Test
-    def testToJsonRendersExpectedKeys(): Unit \ Assert =
+    def testToJsonRendersExpectedKeys(): Unit \ {Assert, IO} =
         let laps = withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) :: Nil;
-        let json = Encode.render(Track.toJson(Track.fromRawLaps(Some(Direction.Clockwise), laps)));
+        let json = Encode.render(Track.toJson(track(clockwise(), laps)));
         Assert.assertTrue(String.contains({substr = "\"sectors\""}, json));
         Assert.assertTrue(String.contains({substr = "\"s1\""}, json));
         Assert.assertTrue(String.contains({substr = "\"start\""}, json));
@@ -156,21 +178,21 @@ mod Motorsport.TestTrack {
         Assert.assertTrue(String.contains({substr = "\"fl\""}, json))
 
     @Test
-    def testDirectionIsWrittenOutAsGiven(): Unit \ Assert =
+    def testDirectionIsWrittenOutAsGiven(): Unit \ {Assert, IO} =
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(Track.fromRawLaps(Some(Direction.CounterClockwise), laps)));
+        let json = Encode.render(Track.toJson(track(counterClockwise(), laps)));
         Assert.assertTrue(String.contains({substr = "\"direction\": \"counter_clockwise\""}, json))
 
     @Test
-    def testCircuitOfUnknownDirectionSaysNothing(): Unit \ Assert =
+    def testCircuitOfUnknownDirectionSaysNothing(): Unit \ {Assert, IO} =
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(Track.fromRawLaps(None, laps)));
+        let json = Encode.render(Track.toJson(track(unknownDirection(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"direction\""}, json))
 
     @Test
-    def testRoundWithoutMiniSectorsOmitsThem(): Unit \ Assert =
+    def testRoundWithoutMiniSectorsOmitsThem(): Unit \ {Assert, IO} =
         let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let json = Encode.render(Track.toJson(Track.fromRawLaps(Some(Direction.Clockwise), laps)));
+        let json = Encode.render(Track.toJson(track(clockwise(), laps)));
         Assert.assertTrue(not String.contains({substr = "\"miniSectors\""}, json))
 
 }

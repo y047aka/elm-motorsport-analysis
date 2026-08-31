@@ -211,10 +211,20 @@ is a place on the circuit and a null is a marker the feed left blank. That is th
 shape a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
-`Cli.Stages.Validation` is what reads the table back: its five rules are SQL over
-the round just loaded, and only the message formatting is left in Flix. Three are
-a comparison per row; the two that walk a lap need the mini-sectors in track
-order, which is what the `int[]` columns are for.
+Two stages read the table back. `Cli.Stages.Validation` runs its five rules as
+SQL over the round just loaded, leaving only the message formatting in Flix:
+three are a comparison per row, and the two that walk a lap need the mini-sectors
+in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
+reads the round's summary the same way.
+
+What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
+`Motorsport.Track` still choose the grid's basis, break its ties, and divide the
+lap; they take the readings those decisions are made from rather than the laps
+they were counted out of, and neither imports `Motorsport.Wec` any more. The
+counting is what SQL is better at and what cost the most: reading a round's cars
+off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
+against 62 cars, and `GROUP BY` is not. A whole run of the archive takes 12s
+rather than 23s.
 
 `source_row` carries the position the file listed the lap in, which nothing else
 in the table recovers. It is what makes the table an image of the CSV rather than

@@ -2,9 +2,7 @@ mod Cli.Stages.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
-    use Cli.Db
-    use Cli.Db.Jdbc
-    use Cli.Db.LapRow
+    use Cli.TestRound
     use Cli.Stages.Validation
     use Cli.Stages.Validation.Violation
     use Motorsport.Calendar.Entry
@@ -15,34 +13,11 @@ mod Cli.Stages.TestValidation {
 
     def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
 
-    /// Loads the laps as a round of their own and reads the rules back over
-    /// them. A schema of the tests' own, so what they drop and rebuild is
-    /// never the archive a working copy has loaded.
-    def onRound(laps: List[RawLap], read: Unit -> Result[String, a] \ Db): a \ IO =
-        let url = Sys.Env.runWithIO(() -> Sys.Env.getVar("DATABASE_URL"))
-            |> Option.getWithDefault("");
-        match Jdbc.connect(url) {
-            case Err(cause) => bug!("no database (${cause})")
-            case Ok(conn) =>
-                let result = Jdbc.runWith(conn, () -> forM(
-                    _     <- Cli.Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
-                    _     <- Cli.Db.execute("SET search_path TO cli_test");
-                    _     <- Cli.Db.prepare();
-                    _     <- Cli.Db.insertLaps(LapRow.fromRawLaps(entry(), laps));
-                    value <- read()
-                ) yield value);
-                Jdbc.close(conn);
-                match result {
-                    case Ok(value)  => value
-                    case Err(cause) => bug!(cause)
-                }
-        }
-
     def detect(laps: List[RawLap]): List[Violation] \ IO =
-        onRound(laps, () -> Validation.detect(entry()))
+        TestRound.onRound(entry(), laps, () -> Validation.detect(entry()))
 
     def validate(laps: List[RawLap]): List[String] \ IO =
-        onRound(laps, () -> Validation.validate(entry()))
+        TestRound.onRound(entry(), laps, () -> Validation.validate(entry()))
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"

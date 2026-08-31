@@ -37,6 +37,8 @@
 mod Cli.Stages.Validation {
 
     use Cli.Db
+    use Cli.Db.Row
+    use Cli.Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
@@ -94,9 +96,9 @@ mod Cli.Stages.Validation {
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 lap      <- lapOf(row);
-                lapTime  <- intAt(2, row);
-                sum      <- intAt(3, row);
-                blanks   <- textAt(4, row)
+                lapTime  <- Row.int(2, row);
+                sum      <- Row.int(3, row);
+                blanks   <- Row.text(4, row)
             ) yield Violation.SectorSum(lap, lapTime, sum, splitLabels(blanks))
         ))
 
@@ -111,23 +113,23 @@ mod Cli.Stages.Validation {
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 lap      <- lapOf(row);
-                expected <- intAt(2, row);
-                actual   <- intAt(3, row)
+                expected <- Row.int(2, row);
+                actual   <- Row.int(3, row)
             ) yield Violation.ElapsedDrift(lap, expected, actual)
         ))
 
     def hourOffsetViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Db.fetch(
-            "WITH o AS (SELECT car_number, lap_number, source_row, " + offsetExpr() + " AS off,"
-                + " FIRST_VALUE(" + offsetExpr() + ") OVER (ORDER BY source_row) AS base"
+            "WITH o AS (SELECT car_number, lap_number, source_row, " + Schema.hourOffset() + " AS off,"
+                + " FIRST_VALUE(" + Schema.hourOffset() + ") OVER (ORDER BY source_row) AS base"
                 + " FROM laps WHERE " + scope(entry) + ")"
                 + " SELECT car_number, lap_number, base, off FROM o"
                 + " WHERE off <> base ORDER BY source_row"
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 lap    <- lapOf(row);
-                base   <- intAt(2, row);
-                actual <- intAt(3, row)
+                base   <- Row.int(2, row);
+                actual <- Row.int(3, row)
             ) yield Violation.HourElapsedOffset(lap, base, actual)
         ))
 
@@ -160,10 +162,10 @@ mod Cli.Stages.Validation {
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 lap       <- lapOf(row);
-                sourceRow <- intAt(2, row);
-                lapTime   <- intAt(3, row);
-                sum       <- intAt(4, row);
-                blanks    <- textAt(5, row);
+                sourceRow <- Row.int(2, row);
+                lapTime   <- Row.int(3, row);
+                sum       <- Row.int(4, row);
+                blanks    <- Row.text(5, row);
                 ids       <- positions(blanks)
             ) yield (sourceRow, 0, Violation.MiniSectorSum(lap, lapTime, sum, ids))
         ))
@@ -180,11 +182,11 @@ mod Cli.Stages.Validation {
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 lap         <- lapOf(row);
-                sourceRow   <- intAt(2, row);
-                prevOrd     <- intAt(3, row);
-                prevElapsed <- intAt(4, row);
-                ord         <- intAt(5, row);
-                elapsed     <- intAt(6, row);
+                sourceRow   <- Row.int(2, row);
+                prevOrd     <- Row.int(3, row);
+                prevElapsed <- Row.int(4, row);
+                ord         <- Row.int(5, row);
+                elapsed     <- Row.int(6, row);
                 prevId      <- miniSectorAt(prevOrd);
                 currId      <- miniSectorAt(ord)
             ) yield (sourceRow, ord, Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, elapsed))
@@ -193,13 +195,7 @@ mod Cli.Stages.Validation {
     // ------------------------------------------------------------------- sql
 
     def scope(entry: Entry): String =
-        "season = ${entry#season} AND round = '${quote(entry#id)}'"
-
-    def quote(value: String): String =
-        String.replace({src = "'"}, {dst = "''"}, value)
-
-    def offsetExpr(): String =
-        "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
+        Schema.scope(entry#season, entry#id)
 
     /// Built from `Motorsport.MiniSector` rather than written out, so the
     /// signatures are named in one place and the positions follow track order.
@@ -216,28 +212,9 @@ mod Cli.Stages.Validation {
 
     def lapOf(row: List[Option[String]]): Result[String, Lap] =
         forM(
-            carNumber <- textAt(0, row);
-            lapNumber <- intAt(1, row)
+            carNumber <- Row.text(0, row);
+            lapNumber <- Row.int(1, row)
         ) yield { carNumber = carNumber, lapNumber = lapNumber }
-
-    def textAt(index: Int32, row: List[Option[String]]): Result[String, String] =
-        match List.nth(index, row) {
-            case Some(Some(value)) => Ok(value)
-            case Some(None)        => Ok("")
-            case None              => Err("no column ${index} in the row")
-        }
-
-    def intAt(index: Int32, row: List[Option[String]]): Result[String, Int32] =
-        forM(
-            text  <- textAt(index, row);
-            value <- Int32.fromString(text) |> optionToResult("column ${index} is not a number: \"${text}\"")
-        ) yield value
-
-    def optionToResult(message: String, value: Option[a]): Result[String, a] =
-        match value {
-            case Some(x) => Ok(x)
-            case None    => Err(message)
-        }
 
     def splitLabels(joined: String): List[String] =
         if (String.isEmpty(joined)) Nil else String.splitOn({substr = ","}, joined)
@@ -245,14 +222,14 @@ mod Cli.Stages.Validation {
     def positions(joined: String): Result[String, List[MiniSectorId]] =
         splitLabels(joined) |> Result.traverse(text ->
             forM(
-                position <- Int32.fromString(text) |> optionToResult("not a position: \"${text}\"");
+                position <- Int32.fromString(text) |> Row.expect("not a position: \"${text}\"");
                 id       <- miniSectorAt(position)
             ) yield id
         )
 
     def miniSectorAt(position: Int32): Result[String, MiniSectorId] =
         MiniSector.atPosition(position)
-            |> optionToResult("no mini-sector at position ${position}")
+            |> Row.expect("no mini-sector at position ${position}")
 
     // ---------------------------------------------------------------- format
 

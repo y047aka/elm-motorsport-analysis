@@ -1,5 +1,7 @@
-mod Motorsport.TestMetadata {
+mod Cli.Stages.TestSummary {
 
+    use Cli.TestRound
+    use Cli.Stages.Summary
     use Motorsport.Calendar.Entry
     use Motorsport.Metadata
     use Motorsport.Metadata.Basis
@@ -8,6 +10,9 @@ mod Motorsport.TestMetadata {
     use Util.Duration
     use Util.HourClock.Hour
     use Util.Json.Encode
+
+    def metadata(entry: Entry, laps: List[RawLap]): Metadata.Metadata \ IO =
+        TestRound.onRound(entry, laps, () -> Summary.read(entry))
 
     /// The calendar entries these tests convert. Written out rather than looked
     /// up, so a change to the real calendar cannot quietly rewrite what a test
@@ -69,26 +74,26 @@ mod Motorsport.TestMetadata {
         Duration.fromString(raw) |> Option.getWithDefault(Duration.zero())
 
     @Test
-    def testEventDisplayNameApplied(): Unit \ Assert =
+    def testEventDisplayNameApplied(): Unit \ {Assert, IO} =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         Assert.assertTrue(meta#name == "24 Hours of Le Mans")
 
     @Test
-    def testUnknownEventPassThrough(): Unit \ Assert =
+    def testUnknownEventPassThrough(): Unit \ {Assert, IO} =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let meta = Metadata.fromRawLaps(unlisted(), laps);
+        let meta = metadata(unlisted(), laps);
         Assert.assertTrue(meta#name == "custom_event")
 
     @Test
-    def testGridOrderedByLap1S1NotElapsed(): Unit \ Assert =
+    def testGridOrderedByLap1S1NotElapsed(): Unit \ {Assert, IO} =
         // 12 leads on S1, but 7 was first to finish the lap. The CSV order
         // (7, 12) does not survive either.
         let laps =
             withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1S1);
         match grid#entries {
             case e12 :: e7 :: Nil =>
@@ -100,13 +105,13 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testGridFallsBackToLap1Elapsed(): Unit \ Assert =
+    def testGridFallsBackToLap1Elapsed(): Unit \ {Assert, IO} =
         // A feed with no S1 is read by lap-1 elapsed, and basis says so.
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
         match grid#entries {
             case e7 :: e12 :: Nil =>
@@ -118,14 +123,14 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testMixedFeedOrdersEveryoneByElapsed(): Unit \ Assert =
+    def testMixedFeedOrdersEveryoneByElapsed(): Unit \ {Assert, IO} =
         // One car short of an S1 puts every readable car on elapsed. #7's S1
         // (1:10) is under #12's elapsed (1:35), but the two are not compared.
         let laps =
             withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
         match grid#entries {
             case e12 :: e7 :: Nil =>
@@ -137,7 +142,7 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ Assert =
+    def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ {Assert, IO} =
         // #99 turned no first lap, so it has no say in the choice and does not
         // take the other two cars' S1 down with it.
         let laps =
@@ -145,13 +150,13 @@ mod Motorsport.TestMetadata {
             withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Lap1S1);
         let order = grid#entries |> List.map(e -> e#car#carNumber);
         Assert.assertTrue(order == "12" :: "7" :: "99" :: Nil)
 
     @Test
-    def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ Assert =
+    def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ {Assert, IO} =
         // All three share an S1. 7 comes out on top on elapsed; 9 and 10 tie
         // there too, so the car number settles it, as strings: "10" before "9".
         let laps =
@@ -159,17 +164,17 @@ mod Motorsport.TestMetadata {
             withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             withS1("29.100", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         let order = grid#entries |> List.map(e -> e#car#carNumber);
         Assert.assertTrue(order == "7" :: "10" :: "9" :: Nil)
 
     @Test
-    def testDriversAccumulatedInCsvOrder(): Unit \ Assert =
+    def testDriversAccumulatedInCsvOrder(): Unit \ {Assert, IO} =
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 2, "3:07.610", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
@@ -177,13 +182,13 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testDriversDeduped(): Unit \ Assert =
+    def testDriversDeduped(): Unit \ {Assert, IO} =
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 2, "3:07.610", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 3, "4:50.000", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
             Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#drivers == "STEVENS" :: "FRIJNS" :: Nil)
@@ -191,11 +196,11 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testCarMetaFromFirstLap(): Unit \ Assert =
+    def testCarMetaFromFirstLap(): Unit \ {Assert, IO} =
         let laps =
             mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota Gazoo Racing", "Toyota") ::
             Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {
             case entry :: Nil =>
                 Assert.assertTrue(entry#car#class == "HYPERCAR");
@@ -206,14 +211,14 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testCarWithoutLap1GoesToTheBack(): Unit \ Assert =
+    def testCarWithoutLap1GoesToTheBack(): Unit \ {Assert, IO} =
         // Placed at the back rather than dropped. Car number 1 sorts under 7 and
         // still does not pass a car that could be read.
         let laps =
             mkLap("1", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {
             case e7 :: e1 :: Nil =>
                 Assert.assertTrue(e7#car#carNumber == "7");
@@ -224,13 +229,13 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ Assert =
+    def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ {Assert, IO} =
         // Positions still fill 1..n when no car can be read.
         let laps =
             mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
             mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::
             Nil;
-        let grid = Metadata.fromRawLaps(leMans(), laps)#startingGrid;
+        let grid = metadata(leMans(), laps)#startingGrid;
         Assert.assertTrue(grid#basis == Basis.Unknown);
         match grid#entries {
             case e8 :: e99 :: Nil =>
@@ -242,7 +247,7 @@ mod Motorsport.TestMetadata {
         }
 
     @Test
-    def testRaceRanAsFarAsTheLastLapTaken(): Unit \ Assert =
+    def testRaceRanAsFarAsTheLastLapTaken(): Unit \ {Assert, IO} =
         // The last car home did 2:30:00, so a two-hour race ran half an hour
         // over -- which is the ordinary way a timed race ends, on the lap in
         // progress when the flag falls.
@@ -251,58 +256,58 @@ mod Motorsport.TestMetadata {
             mkLap("12", 3, "2:30:00.000", "STEVENS",   "HYPERCAR", "H", "Hertz",  "Porsche") ::
             mkLap("7",  2, "2:29:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
             Nil;
-        let race = Metadata.fromRawLaps(fuji(), laps)#race;
+        let race = metadata(fuji(), laps)#race;
         Assert.assertTrue(race#duration == mkDuration("2:30:00.000"));
         Assert.assertTrue(race#timeLimit == mkDuration("2:00:00.000"));
         Assert.assertTrue(race#lapTotal == 3)
 
     @Test
-    def testStartedAtIsHourLessElapsed(): Unit \ Assert =
+    def testStartedAtIsHourLessElapsed(): Unit \ {Assert, IO} =
         // Fuji 2025's opening lap: crossed the line at 11:02:32.086 having
         // taken 1:35.343 to get there.
         let laps =
             withHour("11:02:32.086", mkLap("7", 1, "1:35.343", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let race = Metadata.fromRawLaps(fuji(), laps)#race;
+        let race = metadata(fuji(), laps)#race;
         Assert.assertTrue(race#startedAt == Some(mkHour("11:00:56.743")))
 
     @Test
-    def testStartedAtSurvivesMidnight(): Unit \ Assert =
+    def testStartedAtSurvivesMidnight(): Unit \ {Assert, IO} =
         // Le Mans starts at 16:00 and runs past midnight, so hour wraps while
         // elapsed keeps growing: a lap done at 02:00 is ten hours in.
         let laps =
             withHour("02:00:00.000", mkLap("7", 300, "10:00:00.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
             Nil;
-        let race = Metadata.fromRawLaps(leMans(), laps)#race;
+        let race = metadata(leMans(), laps)#race;
         Assert.assertTrue(race#startedAt == Some(mkHour("16:00:00.000")))
 
     @Test
-    def testNoLapsLeavesTheRaceUnread(): Unit \ Assert =
-        let race = Metadata.fromRawLaps(fuji(), Nil)#race;
+    def testNoLapsLeavesTheRaceUnread(): Unit \ {Assert, IO} =
+        let race = metadata(fuji(), Nil)#race;
         Assert.assertTrue(race#startedAt == None);
         Assert.assertTrue(race#duration == Duration.zero());
         Assert.assertTrue(race#timeLimit == Duration.zero());
         Assert.assertTrue(race#lapTotal == 0)
 
     @Test
-    def testUnreadStartIsOmittedRatherThanMidnight(): Unit \ Assert =
-        let json = Encode.render(Metadata.toJson(Metadata.fromRawLaps(fuji(), Nil)));
+    def testUnreadStartIsOmittedRatherThanMidnight(): Unit \ {Assert, IO} =
+        let json = Encode.render(Metadata.toJson(metadata(fuji(), Nil)));
         Assert.assertTrue(not String.contains({substr = "\"startedAt\""}, json))
 
     /// The name still falls back to the id, because an entry can name a round
     /// `Motorsport.Events` has never been told about. The date cannot fall back
     /// to anything, and does not have to: it came in with the entry.
     @Test
-    def testAnUnnamedRoundIsStillDated(): Unit \ Assert =
+    def testAnUnnamedRoundIsStillDated(): Unit \ {Assert, IO} =
         let laps = mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") :: Nil;
-        let meta = Metadata.fromRawLaps(unlisted(), laps);
+        let meta = metadata(unlisted(), laps);
         Assert.assertTrue(meta#name == "custom_event");
         Assert.assertTrue(meta#date == "2025-01-01")
 
     @Test
-    def testToJsonRendersExpectedKeys(): Unit \ Assert =
+    def testToJsonRendersExpectedKeys(): Unit \ {Assert, IO} =
         let laps = withHour("16:01:33.291", withS1("29.100", mkLap("7", 1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota"))) :: Nil;
-        let meta = Metadata.fromRawLaps(leMans(), laps);
+        let meta = metadata(leMans(), laps);
         let json = Encode.render(Metadata.toJson(meta));
         // Asserts the shape: that the keys are present.
         Assert.assertTrue(String.contains({substr = "\"name\""}, json));

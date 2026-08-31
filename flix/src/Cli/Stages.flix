@@ -10,10 +10,12 @@ mod Cli.Stages {
     use Cli.Stages.CsvInput
     use Cli.Stages.Manifest
     use Cli.Stages.Output
+    use Cli.Stages.Summary
     use Cli.Stages.Transform
     use Cli.Stages.Transform.Rendered
     use Cli.Stages.Unlisted
     use Cli.Stages.Validation
+    use Motorsport.Metadata
     use Motorsport.Wec.RawLap
 
     type alias ProcessingReport = {
@@ -100,6 +102,7 @@ mod Cli.Stages {
             |> Result.flatMap(decode(task))
             |> Result.flatMap(load(task))
             |> Result.flatMap(reportViolations(task))
+            |> Result.flatMap(summarise(task))
             |> Result.flatMap(write(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
@@ -122,9 +125,15 @@ mod Cli.Stages {
                     (rawLaps, loadedRows)
                 })
 
-    def write(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, ProcessingReport] \ IO =
-        match (rawLaps, loadedRows) -> {
-            let rendered = Transform.transform(task#entry, rawLaps);
+    def summarise(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, (List[RawLap], Int32, Metadata.Metadata)] \ Db =
+        match (rawLaps, loadedRows) ->
+            Summary.read(task#entry)
+                |> Result.mapErr(CliError.Database)
+                |> Result.map(metadata -> (rawLaps, loadedRows, metadata))
+
+    def write(task: FileTask.FileTask): ((List[RawLap], Int32, Metadata.Metadata)) -> Result[CliError, ProcessingReport] \ IO =
+        match (rawLaps, loadedRows, metadata) -> {
+            let rendered = Transform.transform(metadata, rawLaps);
             Output.write(task, rendered) |> Result.map(_ -> toReport(task, rendered, loadedRows))
         }
 
