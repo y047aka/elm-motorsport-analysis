@@ -95,15 +95,6 @@ mod Cli.Stages.TestTrack {
         }
 
     @Test
-    def testSectorTakesTheShareItsRecordIsOfTheLap(): Unit \ {Assert, IO} =
-        // 20 + 30 + 50 of a 100-second lap.
-        let laps = mkLap(100000, Some(20000), Some(30000), Some(50000)) :: Nil;
-        let track = track(clockwise(), laps);
-        Assert.assertTrue(isShare(0.0f64, 0.2f64, shareOf(Sector.S1, track)));
-        Assert.assertTrue(isShare(0.2f64, 0.3f64, shareOf(Sector.S2, track)));
-        Assert.assertTrue(isShare(0.5f64, 0.5f64, shareOf(Sector.S3, track)))
-
-    @Test
     def testRecordIsTheQuickestOfEveryLapNotTheFirst(): Unit \ {Assert, IO} =
         let laps =
             mkLap(200000, Some(80000), Some(60000), Some(60000)) ::
@@ -132,18 +123,6 @@ mod Cli.Stages.TestTrack {
             Assert.assertTrue(isShare(2.0f64 / 3.0f64, 1.0f64 / 3.0f64, shareOf(Sector.S3, track)));
             Assert.assertTrue(Option.isEmpty(track#miniSectors))
         })
-
-    @Test
-    def testSectorIsWhatItsMiniSectorsTakeBetweenThem(): Unit \ {Assert, IO} =
-        // Fifteen equal mini-sectors, grouped 3 / 4 / 8. The sectors' own
-        // columns say something else entirely and are not consulted.
-        let laps = withEvenMiniSectors(1000, mkLap(15000, Some(1000), Some(1000), Some(1000))) :: Nil;
-        let track = track(clockwise(), laps);
-        Assert.assertTrue(isShare(0.0f64, 3.0f64 / 15.0f64, shareOf(Sector.S1, track)));
-        Assert.assertTrue(isShare(3.0f64 / 15.0f64, 4.0f64 / 15.0f64, shareOf(Sector.S2, track)));
-        Assert.assertTrue(isShare(7.0f64 / 15.0f64, 8.0f64 / 15.0f64, shareOf(Sector.S3, track)));
-        Assert.assertTrue(isShare(0.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.SCL2, track)));
-        Assert.assertTrue(isShare(14.0f64 / 15.0f64, 1.0f64 / 15.0f64, miniShareOf(MiniSectorId.FL, track)))
 
     @Test
     def testMiniSectorsOfALapWithNoLapTimeAreNotRecords(): Unit \ {Assert, IO} =

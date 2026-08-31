@@ -105,70 +105,6 @@ mod Cli.Stages.TestSummary {
         }
 
     @Test
-    def testGridFallsBackToLap1Elapsed(): Unit \ {Assert, IO} =
-        // A feed with no S1 is read by lap-1 elapsed, and basis says so.
-        let laps =
-            mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
-            mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota") ::
-            Nil;
-        let grid = metadata(leMans(), laps)#startingGrid;
-        Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
-        match grid#entries {
-            case e7 :: e12 :: Nil =>
-                Assert.assertTrue(e7#car#carNumber == "7");
-                Assert.assertTrue(e7#position == 1);
-                Assert.assertTrue(e12#car#carNumber == "12");
-                Assert.assertTrue(e12#position == 2)
-            case _ => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testMixedFeedOrdersEveryoneByElapsed(): Unit \ {Assert, IO} =
-        // One car short of an S1 puts every readable car on elapsed. #7's S1
-        // (1:10) is under #12's elapsed (1:35), but the two are not compared.
-        let laps =
-            withS1("1:10.000", mkLap("7",  1, "1:40.000", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
-            mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
-            Nil;
-        let grid = metadata(leMans(), laps)#startingGrid;
-        Assert.assertTrue(grid#basis == Basis.Lap1Elapsed);
-        match grid#entries {
-            case e12 :: e7 :: Nil =>
-                Assert.assertTrue(e12#car#carNumber == "12");
-                Assert.assertTrue(e12#position == 1);
-                Assert.assertTrue(e7#car#carNumber == "7");
-                Assert.assertTrue(e7#position == 2)
-            case _ => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testUnreadableCarDoesNotCostTheFieldItsS1(): Unit \ {Assert, IO} =
-        // #99 turned no first lap, so it has no say in the choice and does not
-        // take the other two cars' S1 down with it.
-        let laps =
-            withS1("30.500", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
-            withS1("29.100", mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
-            mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
-            Nil;
-        let grid = metadata(leMans(), laps)#startingGrid;
-        Assert.assertTrue(grid#basis == Basis.Lap1S1);
-        let order = grid#entries |> List.map(e -> e#car#carNumber);
-        Assert.assertTrue(order == "12" :: "7" :: "99" :: Nil)
-
-    @Test
-    def testEqualS1BreaksOnElapsedThenCarNumber(): Unit \ {Assert, IO} =
-        // All three share an S1. 7 comes out on top on elapsed; 9 and 10 tie
-        // there too, so the car number settles it, as strings: "10" before "9".
-        let laps =
-            withS1("29.100", mkLap("9",  1, "1:35.365", "X", "LMGT3", "G", "T", "M")) ::
-            withS1("29.100", mkLap("10", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
-            withS1("29.100", mkLap("7",  1, "1:33.291", "KOBAYASHI", "HYPERCAR", "H", "Toyota", "Toyota")) ::
-            Nil;
-        let grid = metadata(leMans(), laps)#startingGrid;
-        let order = grid#entries |> List.map(e -> e#car#carNumber);
-        Assert.assertTrue(order == "7" :: "10" :: "9" :: Nil)
-
-    @Test
     def testDriversAccumulatedInCsvOrder(): Unit \ {Assert, IO} =
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
@@ -225,24 +161,6 @@ mod Cli.Stages.TestSummary {
                 Assert.assertTrue(e7#position == 1);
                 Assert.assertTrue(e1#car#carNumber == "1");
                 Assert.assertTrue(e1#position == 2)
-            case _ => Assert.assertTrue(false)
-        }
-
-    @Test
-    def testGridWithoutAnyLap1IsUnknownButStillPlaced(): Unit \ {Assert, IO} =
-        // Positions still fill 1..n when no car can be read.
-        let laps =
-            mkLap("99", 2, "3:30.000", "X", "HYPERCAR", "H", "T", "M") ::
-            mkLap("8",  2, "3:31.000", "Y", "HYPERCAR", "H", "T", "M") ::
-            Nil;
-        let grid = metadata(leMans(), laps)#startingGrid;
-        Assert.assertTrue(grid#basis == Basis.Unknown);
-        match grid#entries {
-            case e8 :: e99 :: Nil =>
-                Assert.assertTrue(e8#car#carNumber == "8");
-                Assert.assertTrue(e8#position == 1);
-                Assert.assertTrue(e99#car#carNumber == "99");
-                Assert.assertTrue(e99#position == 2)
             case _ => Assert.assertTrue(false)
         }
 

@@ -42,9 +42,10 @@ mod Motorsport.TestMetadata {
         Assert.assertTrue(order(builds) == "8" :: "7" :: Nil)
 
     @Test
-    def aFieldThatTurnedNoFirstLapHasNoBasis(): Unit \ Assert =
+    def aFieldThatTurnedNoFirstLapHasNoBasisAndIsStillPlaced(): Unit \ Assert =
         let builds = build("7", None, None) :: build("8", Some(30000), None) :: Nil;
-        Assert.assertTrue(Metadata.estimateGrid(builds)#basis == Basis.Unknown)
+        Assert.assertTrue(Metadata.estimateGrid(builds)#basis == Basis.Unknown);
+        Assert.assertTrue(order(builds) == "7" :: "8" :: Nil)
 
     @Test
     def anEqualReadingBreaksOnTheWholeFirstLap(): Unit \ Assert =
