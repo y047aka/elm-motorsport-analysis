@@ -42,7 +42,7 @@ mod Cli.Stages.Validation {
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Util.Duration
+    use Util.Duration.Duration
 
     /// Which lap a violation is about. The rows carry no more of one than the
     /// report names.
@@ -52,21 +52,21 @@ mod Cli.Stages.Validation {
     }
 
     pub enum Violation {
-        /// Args: lap / lapTime ms / sector sum ms / labels of blank sectors.
-        case SectorSum(Lap, Int32, Int32, List[String])
+        /// Args: lap / lapTime / sector sum / labels of blank sectors.
+        case SectorSum(Lap, Duration, Duration, List[String])
 
-        /// Args: lap / expected = running sum ms / actual = elapsed ms.
-        case ElapsedDrift(Lap, Int32, Int32)
+        /// Args: lap / expected = running sum / actual = elapsed.
+        case ElapsedDrift(Lap, Duration, Duration)
 
         /// Args: lap / baseline offset ms / actual offset ms.
         case HourElapsedOffset(Lap, Int32, Int32)
 
-        /// Args: lap / lapTime ms / sum ms / IDs of sub-sectors with blank
-        /// time, in track order.
-        case MiniSectorSum(Lap, Int32, Int32, List[MiniSectorId])
+        /// Args: lap / lapTime / sum / IDs of sub-sectors with blank time,
+        /// in track order.
+        case MiniSectorSum(Lap, Duration, Duration, List[MiniSectorId])
 
-        /// Args: lap / prev id / prev elapsed ms / curr id / curr elapsed ms.
-        case MiniSectorElapsedMonotonic(Lap, MiniSectorId, Int32, MiniSectorId, Int32)
+        /// Args: lap / prev id / prev elapsed / curr id / curr elapsed.
+        case MiniSectorElapsedMonotonic(Lap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
 
     pub def validate(entry: Entry): Result[String, List[String]] \ Db =
@@ -99,7 +99,7 @@ mod Cli.Stages.Validation {
                 lapTime  <- Row.int(2, row);
                 sum      <- Row.int(3, row);
                 blanks   <- Row.text(4, row)
-            ) yield Violation.SectorSum(lap, lapTime, sum, splitLabels(blanks))
+            ) yield Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blanks))
         ))
 
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
@@ -115,7 +115,7 @@ mod Cli.Stages.Validation {
                 lap      <- lapOf(row);
                 expected <- Row.int(2, row);
                 actual   <- Row.int(3, row)
-            ) yield Violation.ElapsedDrift(lap, expected, actual)
+            ) yield Violation.ElapsedDrift(lap, duration(expected), duration(actual))
         ))
 
     def hourOffsetViolations(entry: Entry): Result[String, List[Violation]] \ Db =
@@ -167,7 +167,7 @@ mod Cli.Stages.Validation {
                 sum       <- Row.int(4, row);
                 blanks    <- Row.text(5, row);
                 ids       <- positions(blanks)
-            ) yield (sourceRow, 0, Violation.MiniSectorSum(lap, lapTime, sum, ids))
+            ) yield (sourceRow, 0, Violation.MiniSectorSum(lap, duration(lapTime), duration(sum), ids))
         ))
 
     def miniSectorMonotonicViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
@@ -189,7 +189,7 @@ mod Cli.Stages.Validation {
                 elapsed     <- Row.int(6, row);
                 prevId      <- miniSectorAt(prevOrd);
                 currId      <- miniSectorAt(ord)
-            ) yield (sourceRow, ord, Violation.MiniSectorElapsedMonotonic(lap, prevId, prevElapsed, currId, elapsed))
+            ) yield (sourceRow, ord, Violation.MiniSectorElapsedMonotonic(lap, prevId, duration(prevElapsed), currId, duration(elapsed)))
         ))
 
     // ------------------------------------------------------------------- sql
@@ -215,6 +215,9 @@ mod Cli.Stages.Validation {
             carNumber <- Row.text(0, row);
             lapNumber <- Row.int(1, row)
         ) yield { carNumber = carNumber, lapNumber = lapNumber }
+
+    def duration(ms: Int32): Duration =
+        Util.Duration.fromMillis(ms)
 
     def splitLabels(joined: String): List[String] =
         if (String.isEmpty(joined)) Nil else String.splitOn({substr = ","}, joined)
@@ -256,7 +259,7 @@ mod Cli.Stages.Validation {
     /// Emits `{eventName}: [car X #N] kind: expected=<fmt> (<ms>ms) actual=<fmt> (<ms>ms)`.
     /// The raw ms is included alongside the formatted duration to keep the
     /// output both human-readable and grep-friendly.
-    def formatDurationPair(eventName: String, lap: Lap, kind: String, expected: Int32, actual: Int32): String =
+    def formatDurationPair(eventName: String, lap: Lap, kind: String, expected: Duration, actual: Duration): String =
         formatLabelledDurationPair(eventName, lap, kind, "expected", expected, "actual", actual)
 
     def formatLabelledDurationPair(
@@ -264,17 +267,17 @@ mod Cli.Stages.Validation {
         lap: Lap,
         kind: String,
         leftLabel: String,
-        leftValue: Int32,
+        leftValue: Duration,
         rightLabel: String,
-        rightValue: Int32
+        rightValue: Duration
     ): String =
-        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: ${leftLabel}=${Duration.formatMillis(leftValue)} (${leftValue}ms) ${rightLabel}=${Duration.formatMillis(rightValue)} (${rightValue}ms)"
+        "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: ${leftLabel}=${leftValue} (${Util.Duration.millis(leftValue)}ms) ${rightLabel}=${rightValue} (${Util.Duration.millis(rightValue)}ms)"
 
     def formatSignedMsPair(eventName: String, lap: Lap, kind: String, expected: Int32, actual: Int32): String =
         "${eventName}: [car ${lap#carNumber} #${lap#lapNumber}] ${kind}: expected=${formatSignedMs(expected)} (${expected}ms) actual=${formatSignedMs(actual)} (${actual}ms)"
 
     def formatSignedMs(ms: Int32): String =
-        if (ms < 0) "-" + Duration.formatMillis(0 - ms)
-        else Duration.formatMillis(ms)
+        if (ms < 0) "-" + Util.Duration.formatMillis(0 - ms)
+        else Util.Duration.formatMillis(ms)
 
 }
