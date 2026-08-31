@@ -17,7 +17,6 @@ mod Motorsport.Track {
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Sector
     use Motorsport.Sector.Sector
-    use Motorsport.Wec.RawLap
 
     /// Where a stretch begins and how much of the lap it takes, both as
     /// fractions of the whole.
@@ -38,29 +37,28 @@ mod Motorsport.Track {
     }
 
     /// Which grain the lap is divided at follows from what the feed carries,
-    /// rather than from a list of event names.
-    pub def fromRawLaps(direction: Option[Direction], rawLaps: List[RawLap]): Track =
-        if (List.exists(hasMiniSectors, rawLaps))
-            atMiniSectorGrain(direction, rawLaps)
-        else
-            atSectorGrain(direction, rawLaps)
-
-    def hasMiniSectors(lap: RawLap): Bool =
-        match lap#miniSectors {
-            case Some(_) => true
-            case None    => false
+    /// rather than from a list of event names: `miniSectorTime` is given only
+    /// for a round that measured them.
+    pub def fromFastest(
+        direction: Option[Direction],
+        sectorTime: Sector -> Option[Duration],
+        miniSectorTime: Option[MiniSectorId -> Option[Duration]]
+    ): Track =
+        match miniSectorTime {
+            case Some(timeOf) => atMiniSectorGrain(direction, timeOf)
+            case None         => atSectorGrain(direction, sectorTime)
         }
 
-    def atSectorGrain(direction: Option[Direction], rawLaps: List[RawLap]): Track =
-        let ratio = ratiosOver(Sector.all(), sector -> fastest(sectorTime(sector), rawLaps));
+    def atSectorGrain(direction: Option[Direction], sectorTime: Sector -> Option[Duration]): Track =
+        let ratio = ratiosOver(Sector.all(), sectorTime);
         {
             direction   = direction,
             sectors     = sharesOver(ratio, Sector.all()),
             miniSectors = None
         }
 
-    def atMiniSectorGrain(direction: Option[Direction], rawLaps: List[RawLap]): Track =
-        let miniRatio = ratiosOver(MiniSector.all(), id -> fastest(miniSectorTime(id), rawLaps));
+    def atMiniSectorGrain(direction: Option[Direction], miniSectorTime: MiniSectorId -> Option[Duration]): Track =
+        let miniRatio = ratiosOver(MiniSector.all(), miniSectorTime);
         let sectorRatio = sector ->
             MiniSector.all()
                 |> List.filter(id -> MiniSector.sectorOf(id) == sector)
@@ -88,27 +86,6 @@ mod Motorsport.Track {
 
     def sum(xs: List[Float64]): Float64 =
         List.foldLeft((acc, x) -> acc + x, 0.0f64, xs)
-
-    def fastest(timeOf: RawLap -> Option[Duration], rawLaps: List[RawLap]): Option[Duration] =
-        rawLaps |> List.filterMap(timeOf) |> List.minimum
-
-    def sectorTime(sector: Sector): RawLap -> Option[Duration] =
-        lap -> match sector {
-            case Sector.S1 => lap#s1#value
-            case Sector.S2 => lap#s2#value
-            case Sector.S3 => lap#s3#value
-        }
-
-    /// The feed writes a lap it did not record as `0.000`, and the
-    /// mini-sectors of such a lap are not a lap of the circuit either.
-    def miniSectorTime(id: MiniSectorId): RawLap -> Option[Duration] =
-        lap ->
-            if (Util.Duration.millis(lap#lapTime) == 0)
-                None
-            else
-                lap#miniSectors
-                    |> Option.flatMap(list -> List.findLeft(match (other, _) -> other == id, list))
-                    |> Option.flatMap(match (_, sector) -> sector#time)
 
     pub def toJson(track: Track): Encode.JsonValue =
         let direction = match track#direction {

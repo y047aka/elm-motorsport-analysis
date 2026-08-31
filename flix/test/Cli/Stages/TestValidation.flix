@@ -3,12 +3,22 @@ mod Cli.Stages.TestValidation {
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Util.Duration
+    use Cli.TestRound
     use Cli.Stages.Validation
     use Cli.Stages.Validation.Violation
+    use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
+
+    def entry(): Entry = { season = 2025, id = "test", date = "2025-01-01" }
+
+    def detect(laps: List[RawLap]): List[Violation] \ IO =
+        TestRound.onRound(entry(), laps, () -> Validation.detect(entry()))
+
+    def validate(laps: List[RawLap]): List[String] \ IO =
+        TestRound.onRound(entry(), laps, () -> Validation.validate(entry()))
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -80,11 +90,11 @@ mod Cli.Stages.TestValidation {
 
     /// Pulls carNumber off the leading RawLap arg shared by every variant.
     def violationCar(v: Violation): String = match v {
-        case Violation.SectorSum(lap, _, _, _)      => lap#car#carNumber
-        case Violation.ElapsedDrift(lap, _, _) => lap#car#carNumber
-        case Violation.HourElapsedOffset(lap, _, _) => lap#car#carNumber
-        case Violation.MiniSectorSum(lap, _, _, _)  => lap#car#carNumber
-        case Violation.MiniSectorElapsedMonotonic(lap, _, _, _, _) => lap#car#carNumber
+        case Violation.SectorSum(lap, _, _, _)      => lap#carNumber
+        case Violation.ElapsedDrift(lap, _, _) => lap#carNumber
+        case Violation.HourElapsedOffset(lap, _, _) => lap#carNumber
+        case Violation.MiniSectorSum(lap, _, _, _)  => lap#carNumber
+        case Violation.MiniSectorElapsedMonotonic(lap, _, _, _, _) => lap#carNumber
     }
 
     def isSectorSum(v: Violation): Bool = match v {
@@ -113,18 +123,18 @@ mod Cli.Stages.TestValidation {
     }
 
     @Test
-    def testValidLapsProduceNoViolations(): Unit \ Assert =
+    def testValidLapsProduceNoViolations(): Unit \ {Assert, IO} =
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "14:04:00.000");
-        let violations = Validation.detect(l1 :: l2 :: Nil);
+        let violations = detect(l1 :: l2 :: Nil);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testSectorSumMismatchDetected(): Unit \ Assert =
+    def testSectorSumMismatchDetected(): Unit \ {Assert, IO} =
         // s1+s2+s3 = 30.000+60.000+30.001 = 2:00.001, lapTime = 2:00.000 -> 1ms diff.
         // elapsed and hour are aligned with lapTime so SectorSum is the only violation.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
-        let violations = Validation.detect(lap :: Nil);
+        let violations = detect(lap :: Nil);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.SectorSum(_, lapMs, sum, _)) =>
@@ -134,15 +144,15 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testElapsedDriftMismatchDetected(): Unit \ Assert =
+    def testElapsedDriftMismatchDetected(): Unit \ {Assert, IO} =
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         // lap2 elapsed should be 4:00.000 but is 4:00.500
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
-        let violations = Validation.detect(l1 :: l2 :: Nil);
+        let violations = detect(l1 :: l2 :: Nil);
         Assert.assertTrue(List.exists(isElapsedDrift, violations))
 
     @Test
-    def testElapsedDriftCumulativeReportsTrailingLaps(): Unit \ Assert =
+    def testElapsedDriftCumulativeReportsTrailingLaps(): Unit \ {Assert, IO} =
         // Cumulative-sum: when lap 2 drifts by 500ms, lap 3 is "consistent
         // relative to lap 2" (an adjacent-diff check would clear it) but still
         // disagrees with the running sum, so it must be reported too. This
@@ -150,7 +160,7 @@ mod Cli.Stages.TestValidation {
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
         let l3 = buildLap("7", 3, "2:00.000", "30.000", "60.000", "30.000", "6:00.500", "14:06:00.500");
-        let violations = Validation.detect(l1 :: l2 :: l3 :: Nil)
+        let violations = detect(l1 :: l2 :: l3 :: Nil)
             |> List.filter(isElapsedDrift);
         Assert.assertTrue(List.length(violations) == 2);
         // 1st: lap 2, expected=4:00.000 (running sum), actual=4:00.500
@@ -172,30 +182,30 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testHourElapsedMismatchDetected(): Unit \ Assert =
+    def testHourElapsedMismatchDetected(): Unit \ {Assert, IO} =
         // baseline (race-wide first valid row) = 14:02:00.000 - 2:00.000 = 13:58:00.000
         // lap 2 offset = 14:04:00.500 - 4:00.000 = 13:58:00.500 (off by 500ms vs baseline)
         let l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "14:04:00.500");
         // make elapsed cumulative consistent so we isolate the hour-elapsed rule
-        let violations = Validation.detect(l1 :: l2 :: Nil)
+        let violations = detect(l1 :: l2 :: Nil)
             |> List.filter(isHourElapsedOffset);
         Assert.assertTrue(List.length(violations) == 1)
 
     @Test
-    def testMidnightWrapAccepted(): Unit \ Assert =
+    def testMidnightWrapAccepted(): Unit \ {Assert, IO} =
         // race starts near midnight: lap1 hour=23:59:00.000, lap2 hour=00:01:00.000 (next day)
         let l1 = buildLap("7", 1, "1:00.000", "20.000", "20.000", "20.000", "1:00.000", "23:59:00.000");
         let l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "3:00.000", "0:01:00.000");
-        let violations = Validation.detect(l1 :: l2 :: Nil)
+        let violations = detect(l1 :: l2 :: Nil)
             |> List.filter(isHourElapsedOffset);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testBlankSectorTreatedAsZeroAndAnnotated(): Unit \ Assert =
+    def testBlankSectorTreatedAsZeroAndAnnotated(): Unit \ {Assert, IO} =
         // empty s2: sum = 30+0+30 = 1:00.000, lapTime = 2:00.000 -> violation with blanks = ["s2"]
         let lap = buildLap("7", 1, "2:00.000", "30.000", "", "30.000", "2:00.000", "14:02:00.000");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isSectorSum);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -205,20 +215,20 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testMultipleCarsGroupedSeparately(): Unit \ Assert =
+    def testMultipleCarsGroupedSeparately(): Unit \ {Assert, IO} =
         // car 7 ok, car 8 has elapsed mismatch on lap 2
         let c7l1 = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let c7l2 = buildLap("7", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "14:04:00.000");
         let c8l1 = buildLap("8", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         let c8l2 = buildLap("8", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.500", "14:04:00.500");
-        let violations = Validation.detect(c7l1 :: c7l2 :: c8l1 :: c8l2 :: Nil);
+        let violations = detect(c7l1 :: c7l2 :: c8l1 :: c8l2 :: Nil);
         let car7Issues = violations |> List.filter(v -> violationCar(v) == "7");
         let car8Issues = violations |> List.filter(v -> violationCar(v) == "8");
         Assert.assertTrue(List.isEmpty(car7Issues));
         Assert.assertTrue(not List.isEmpty(car8Issues))
 
     @Test
-    def testRaceWideBaselineIsolatesBadFirstLap(): Unit \ Assert =
+    def testRaceWideBaselineIsolatesBadFirstLap(): Unit \ {Assert, IO} =
         // The race-wide baseline is taken from the first valid row in the
         // whole CSV, so even if car "8" lap 1's hour is 1 ms off, car "7"
         // lap 1 anchors the baseline and only car "8" lap 1 is flagged
@@ -228,18 +238,18 @@ mod Cli.Stages.TestValidation {
         let c8l1 = buildLap("8", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.001");
         // car 8 lap 2 matches baseline (elapsed=4:00.000, hour=14:04:00.000)
         let c8l2 = buildLap("8", 2, "2:00.000", "30.000", "60.000", "30.000", "4:00.000", "14:04:00.000");
-        let violations = Validation.detect(c7l1 :: c8l1 :: c8l2 :: Nil)
+        let violations = detect(c7l1 :: c8l1 :: c8l2 :: Nil)
             |> List.filter(isHourElapsedOffset);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
             case Some(Violation.HourElapsedOffset(lap, _, _)) =>
-                Assert.assertTrue(lap#car#carNumber == "8");
+                Assert.assertTrue(lap#carNumber == "8");
                 Assert.assertTrue(lap#lapNumber == 1)
             case _ => Assert.assertTrue(false)
         }
 
     @Test
-    def testCsvOrderPreservedInReport(): Unit \ Assert =
+    def testCsvOrderPreservedInReport(): Unit \ {Assert, IO} =
         // car "10" appears before car "7" in the CSV; violations should
         // come back in that same order. (Map.toList orders by key, so
         // "10" < "7" lexically — without an explicit sort the report
@@ -250,7 +260,7 @@ mod Cli.Stages.TestValidation {
         let c7l1  = buildLap("7",  1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
         // car "7" lap 2 elapsed is also off by 1 ms
         let c7l2  = buildLap("7",  2, "2:00.000", "30.000", "60.000", "30.000", "4:00.001", "14:04:00.001");
-        let violations = Validation.detect(c10l1 :: c10l2 :: c7l1 :: c7l2 :: Nil)
+        let violations = detect(c10l1 :: c10l2 :: c7l1 :: c7l2 :: Nil)
             |> List.filter(isElapsedDrift);
         Assert.assertTrue(List.length(violations) == 2);
         // First violation should be car "10", second car "7" (CSV order).
@@ -269,28 +279,28 @@ mod Cli.Stages.TestValidation {
         ";8.000;1:04.000;8.000;1:12.000;8.000;1:20.000;8.000;1:28.000;8.000;1:36.000;8.000;1:44.000;8.000;1:52.000;8.000;2:00.000"
 
     @Test
-    def testMiniSectorsAbsentLapProducesNoMiniViolations(): Unit \ Assert =
+    def testMiniSectorsAbsentLapProducesNoMiniViolations(): Unit \ {Assert, IO} =
         // Standard (non-Le Mans) header → miniSectors = None → mini-sector
         // checks must be skipped entirely.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.000", "2:00.000", "14:02:00.000");
-        let violations = Validation.detect(lap :: Nil);
+        let violations = detect(lap :: Nil);
         Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorSum, violations)));
         Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorMonotonic, violations)))
 
     @Test
-    def testValidLeMansLapProducesNoMiniViolations(): Unit \ Assert =
+    def testValidLeMansLapProducesNoMiniViolations(): Unit \ {Assert, IO} =
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", cleanMiniTail());
-        let violations = Validation.detect(lap :: Nil);
+        let violations = detect(lap :: Nil);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorSumMismatchDetected(): Unit \ Assert =
+    def testMiniSectorSumMismatchDetected(): Unit \ {Assert, IO} =
         // Bump the FL_time from 8.000 → 8.001, leaving lapTime 2:00.000 →
         // sum = 2:00.001, off by 1 ms. Note this also breaks the FL_elapsed
         // monotonic chain so we filter to the SectorSum-style violation.
         let badTail = String.replace({src = "8.000;2:00.000"}, {dst = "8.001;2:00.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -301,12 +311,12 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testMiniSectorBlankTimeAnnotated(): Unit \ Assert =
+    def testMiniSectorBlankTimeAnnotated(): Unit \ {Assert, IO} =
         // Blank Z4_time → counted as 0 ms in the sum (8 + 0 + 8 + ... = 1:52.000),
         // so we expect a MiniSectorSum violation with Z4 in the blanks list.
         let badTail = String.replace({src = "8.000;8.000;8.000;16.000"}, {dst = "8.000;8.000;;16.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -316,12 +326,12 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testMiniSectorElapsedMonotonicViolationDetected(): Unit \ Assert =
+    def testMiniSectorElapsedMonotonicViolationDetected(): Unit \ {Assert, IO} =
         // Replace IP1_elapsed (24.000) with 15.000 — strictly less than the
         // previous Z4_elapsed (16.000) — to trigger a backwards step.
         let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;15.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorMonotonic);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -334,14 +344,14 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testMiniSectorElapsedEqualPairFlagged(): Unit \ Assert =
+    def testMiniSectorElapsedEqualPairFlagged(): Unit \ {Assert, IO} =
         // Two adjacent timing loops cannot physically fire at the same
         // millisecond. Replace IP1_elapsed (24.000) with 16.000 so it
         // matches the previous Z4_elapsed exactly — the strict
         // monotonic check should report this as a violation.
         let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;16.000"}, cleanMiniTail());
         let lap = buildLeMansLap("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail);
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorMonotonic);
         Assert.assertTrue(List.length(violations) == 1);
         match List.head(violations) {
@@ -354,76 +364,76 @@ mod Cli.Stages.TestValidation {
         }
 
     @Test
-    def testMiniSectorSumSkippedOnBoxedFinishLineLap(): Unit \ Assert =
+    def testMiniSectorSumSkippedOnBoxedFinishLineLap(): Unit \ {Assert, IO} =
         // Real pit-entry pattern: car crosses FL inside the pit lane
         // (CROSSING_FINISH_LINE_IN_PIT = "B"), bypasses FORDOUT and the
         // FL_time loop. Sum of mini-sector times = 1:44.000 << lapTime
         // = 2:00.000, but we expect NO MiniSectorSum violation because
         // the lap is identified as a pit lap.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "B", "");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorSumSkippedWhenPitTimeRecorded(): Unit \ Assert =
+    def testMiniSectorSumSkippedWhenPitTimeRecorded(): Unit \ {Assert, IO} =
         // Even without the boxed-finish-line flag, a recorded PIT_TIME
         // also marks the lap as a pit lap and skips the sum check.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "", "30.500");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorSumStillReportsNonPitLapWithBlankTrailingMarkers(): Unit \ Assert =
+    def testMiniSectorSumStillReportsNonPitLapWithBlankTrailingMarkers(): Unit \ {Assert, IO} =
         // {fordout, fl} blank without any pit or track-limits signal —
         // a genuine timing anomaly (e.g. Le Mans 2025 car 150 lap 14:
         // 4:23.067 lap with FORDOUT and FL_time both blank, no pitTime,
         // no box flag, no track-limits signature). The validator must
         // STILL flag this as a MiniSectorSum violation.
         let lap = buildLeMansLapWith("150", 14, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", pitEntryMiniTail(), "", "");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.length(violations) == 1)
 
     @Test
-    def testMiniSectorSumSkippedOnSCL1FordoutTrackLimits(): Unit \ Assert =
+    def testMiniSectorSumSkippedOnSCL1FordoutTrackLimits(): Unit \ {Assert, IO} =
         // Track-limits violation at the second Ford chicane: SCL1 and
         // FORDOUT loops are not triggered. No pit signal.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_SCL1_FORDOUT_MiniTail(), "", "");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorSumSkippedOnPitrefScl1TrackLimits(): Unit \ Assert =
+    def testMiniSectorSumSkippedOnPitrefScl1TrackLimits(): Unit \ {Assert, IO} =
         // Track-limits violation at the first Ford chicane: PITREF and
         // SCL1 loops are not triggered, but the car rejoins before
         // FORDOUT so FORDOUT and FL fire normally.
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", trackLimits_PITREF_SCL1_MiniTail(), "", "");
-        let violations = Validation.detect(lap :: Nil)
+        let violations = detect(lap :: Nil)
             |> List.filter(isMiniSectorSum);
         Assert.assertTrue(List.isEmpty(violations))
 
     @Test
-    def testMiniSectorMonotonicStillRunsOnPitLaps(): Unit \ Assert =
+    def testMiniSectorMonotonicStillRunsOnPitLaps(): Unit \ {Assert, IO} =
         // The Monotonic check is independent of pit context: missing
         // markers don't break monotonicity (blank elapsed is skipped),
         // but a backwards step must still be reported even when the lap
         // is a pit lap.
         let badTail = String.replace({src = "16.000;8.000;24.000"}, {dst = "16.000;8.000;15.000"}, pitEntryMiniTail());
         let lap = buildLeMansLapWith("7", 1, "2:00.000", "24.000", "32.000", "64.000", "2:00.000", "14:02:00.000", badTail, "B", "");
-        let violations = Validation.detect(lap :: Nil);
+        let violations = detect(lap :: Nil);
         Assert.assertTrue(List.isEmpty(List.filter(isMiniSectorSum, violations)));
         Assert.assertTrue(List.length(List.filter(isMiniSectorMonotonic, violations)) == 1)
 
     @Test
-    def testValidateRendersFormattedString(): Unit \ Assert =
+    def testValidateRendersFormattedString(): Unit \ {Assert, IO} =
         // New format: "sector-sum" slug + "expected=...ms... actual=...ms...".
         // elapsed and hour are aligned with lapTime so the formatted output
         // is validated solely against the SectorSum case.
         let lap = buildLap("7", 1, "2:00.000", "30.000", "60.000", "30.001", "2:00.000", "14:02:00.000");
-        let messages = Validation.validate("test", lap :: Nil);
+        let messages = validate(lap :: Nil);
         Assert.assertTrue(List.length(messages) == 1);
         match List.head(messages) {
             case Some(msg) =>

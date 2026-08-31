@@ -3,6 +3,8 @@ use Sys.Console
 use Sys.Exit
 use Util.Files
 use Cli.Args
+use Cli.Args.ParsedArgs
+use Cli.Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Stages
 
@@ -18,10 +20,38 @@ def main(): Unit \ {Env, IO, Exit, Console} =
                     Console.eprintln("Error: ${e}");
                     1
                 case Ok(()) =>
-                    Stages.runAll(parsed#root)
+                    runStages(parsed)
             }
     };
     Exit.exit(code)
+
+/// The run computes in a database, so a run given none is one that cannot say
+/// what it found.
+def runStages(parsed: ParsedArgs): Int32 \ {Env, IO, Console} =
+    match databaseUrl(parsed) {
+        case None =>
+            Console.eprintln("Error: no database. Pass --postgres <jdbc url> or set DATABASE_URL.");
+            1
+        case Some(url) =>
+            match Jdbc.connect(url) {
+                case Err(e) =>
+                    Console.eprintln("Error: ${e}");
+                    1
+                case Ok(conn) =>
+                    let code = Jdbc.runWith(conn, () -> Stages.runAll(parsed#root));
+                    Jdbc.close(conn);
+                    code
+            }
+    }
+
+/// `--postgres` first, then `DATABASE_URL`: the flag points one run somewhere
+/// else, and the variable is how a shell that already has a database hands the
+/// same one to every run made in it.
+def databaseUrl(parsed: ParsedArgs): Option[String] \ Env =
+    match parsed#postgres {
+        case Some(url) => Some(url)
+        case None      => Env.getVar("DATABASE_URL")
+    }
 
 /// Checked once here rather than once per round, so a mistyped root reads as one
 /// mistake instead of as every race being missing.

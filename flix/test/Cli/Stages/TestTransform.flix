@@ -1,5 +1,7 @@
 mod Cli.Stages.TestTransform {
 
+    use Cli.TestRound
+    use Cli.Stages.Summary
     use Cli.Stages.Transform
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
@@ -30,14 +32,18 @@ mod Cli.Stages.TestTransform {
             case Err(_) => unreachable!()
         }
 
+    def rendered(): Transform.Rendered \ IO =
+        let laps = sampleRawLaps();
+        Transform.transform(TestRound.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
+
     @Test
-    def testTransformCountsLaps(): Unit \ Assert =
-        let out = Transform.transform(leMans(), sampleRawLaps());
+    def testTransformCountsLaps(): Unit \ {Assert, IO} =
+        let out = rendered();
         Assert.assertTrue(out#lapCount == 3)
 
     @Test
-    def testTransformRendersMetadataJson(): Unit \ Assert =
-        let out = Transform.transform(leMans(), sampleRawLaps());
+    def testTransformRendersMetadataJson(): Unit \ {Assert, IO} =
+        let out = rendered();
         let json = out#metadataJson;
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
@@ -45,8 +51,8 @@ mod Cli.Stages.TestTransform {
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
     @Test
-    def testTransformRendersLapsJsonl(): Unit \ Assert =
-        let out = Transform.transform(leMans(), sampleRawLaps());
+    def testTransformRendersLapsJsonl(): Unit \ {Assert, IO} =
+        let out = rendered();
         let jsonl = out#lapsJsonl;
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, jsonl));
@@ -54,8 +60,8 @@ mod Cli.Stages.TestTransform {
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, jsonl))
 
     @Test
-    def testEveryLapIsOneLine(): Unit \ Assert =
-        let out = Transform.transform(leMans(), sampleRawLaps());
+    def testEveryLapIsOneLine(): Unit \ {Assert, IO} =
+        let out = rendered();
         let lines = String.splitOn({substr = "\n"}, out#lapsJsonl) |> List.filter(line -> line != "");
         Assert.assertTrue(String.endsWith({suffix = "\n"}, out#lapsJsonl));
         Assert.assertTrue(List.length(lines) == 3);
@@ -65,8 +71,8 @@ mod Cli.Stages.TestTransform {
         ))
 
     @Test
-    def testTransformEmptyInputProducesNoLaps(): Unit \ Assert =
-        let out = Transform.transform(leMans(), Nil);
+    def testTransformEmptyInputProducesNoLaps(): Unit \ {Assert, IO} =
+        let out = Transform.transform(TestRound.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));

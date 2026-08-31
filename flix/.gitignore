@@ -4,4 +4,5 @@
 artifact/
 build/
 lib/
+.pg/
 crash_report_*.txt

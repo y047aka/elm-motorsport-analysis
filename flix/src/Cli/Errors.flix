@@ -8,6 +8,7 @@ mod Cli.Errors {
         case EmptyFile(String)
         case File(FileError)
         case Csv({ path = String, message = String })
+        case Database(String)
     }
 
     instance ToString[CliError] {
@@ -17,6 +18,7 @@ mod Cli.Errors {
             case CliError.EmptyFile(p)         => "Empty file: ${p}"
             case CliError.File(cause)          => "${cause}"
             case CliError.Csv(r)               => "Failed to decode ${r#path} (caused by: ${r#message})"
+            case CliError.Database(cause)      => "Database error (caused by: ${cause})"
         }
     }
 

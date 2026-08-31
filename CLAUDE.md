@@ -29,6 +29,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON/JSONL |
+| `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
@@ -42,6 +43,19 @@ and its laps `.jsonl`, one lap per line, plus `index.json` beside them. **A new
 round is added to `Motorsport.Calendar` first** — the run converts nothing the
 calendar does not list, reports any CSV no round names, and fails any round
 whose CSV is missing.
+
+The run computes in PostgreSQL, so it needs one: `--postgres <jdbc url>` names
+it, `DATABASE_URL` says the same to every run made in a shell, and `.#cli-run`
+starts the working copy's when neither does. A run that reaches none writes
+nothing. The JSON files are still the product — nothing reads the database at
+runtime — but the integrity checks are read back out of the rows a round was
+just loaded into.
+
+`.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
+the variable from; `.#pg-stop` takes it down. The data directory is in the
+working copy rather than under /tmp, so what a run left there is still there to
+be queried. Passing the flag instead goes through `nix run .#cli-run --
+--postgres ...`, since the flake forwards what follows.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
@@ -180,6 +194,53 @@ Modules serving both sides sit directly under `Motorsport/` rather than in a
 subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
 and `Lap.Performance` rates a lap for either side, so neither owns them.
 
+### The `laps` table
+
+The run loads every round it converts into one flat `laps` table, dropped and
+rebuilt each time as the JSON files are rewritten each time. Flat is
+a decision, not an omission: `class`, `team` and `manufacturer` never vary within
+a `(season, round, car_number)` across the whole archive, so the 579 entries they
+describe can be read back as a `VIEW` over the table, and normalising them out
+would buy about 16% of its size in exchange for resolving ids on the way in.
+A column takes the type its Flix value already has — a `Duration` is the
+milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
+load parses nothing the decoder did not. Le Mans's mini-sectors are two `int[]`
+columns rather than thirty more: only one round in the archive has them. They
+hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a subscript
+is a place on the circuit and a null is a marker the feed left blank. That is the
+shape a query wants rather than the shape the JSON output has, which is the whole
+reason they are not the object `Motorsport.Wec` writes.
+
+Two stages read the table back. `Cli.Stages.Validation` runs its five rules as
+SQL over the round just loaded, leaving only the message formatting in Flix:
+three are a comparison per row, and the two that walk a lap need the mini-sectors
+in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
+reads the round's summary the same way.
+
+What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
+`Motorsport.Track` still choose the grid's basis, break its ties, and divide the
+lap; they take the readings those decisions are made from rather than the laps
+they were counted out of, and neither imports `Motorsport.Wec` any more. The
+counting is what SQL is better at and what cost the most: reading a round's cars
+off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
+against 62 cars, and `GROUP BY` is not. A whole run of the archive takes 12s
+rather than 23s.
+
+`source_row` carries the position the file listed the lap in, which nothing else
+in the table recovers. It is what makes the table an image of the CSV rather than
+a set of it, and every reading that would move off Flix needs it: the validator's
+baseline is the file's first row, and a car's drivers are in the order the file
+first showed them.
+
+`Cli.Db` is an effect, not a module of functions, so that what a round would
+send can be read back without a server: `runRecording` keeps the statements,
+`runDiscarding` drops them, and `Cli.Db.Jdbc` is the only file that imports
+`java.sql`. `Cli.Db.Schema.columns` and `Cli.Db.LapRow.values` are two lists no
+compiler sees together, which is what `Cli.Db.TestSchema` is for.
+
+The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
+into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
+
 ### Reading the race at a moment
 
 Nothing in a `Race` moves; a clock is applied to it to get what is true then.
@@ -253,6 +314,16 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
+- **Where a test lives** — `test/Motorsport/` drives the domain's decisions
+  given the readings they are made from (the grid's basis and its tie-breaks,
+  how the lap divides) and needs no database; `test/Cli/Stages/` drives the
+  reading, and needs one. A subject with both has a file in each, named for the
+  module it drives.
+- **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
+  names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
+  standing in for it. A test that reaches no database fails rather than
+  skipping: the boundary is the thing it is there to check. Connecting costs
+  about 350ms once and about 5ms per test after that.
 - **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
   (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
   snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the

@@ -3,11 +3,6 @@
 /// Invariant: 0 <= ms < DAY_MS. `Util.Duration.fromString` accepts `H:MM:SS`,
 /// `M:SS`, and `SS` interchangeably; Hour, in contrast, only accepts strict
 /// time-of-day values with two colons and a result below 24h.
-///
-/// `offsetFrom(elapsedMs)` computes `(hourMs - elapsedMs) mod 24h`, so an
-/// endurance-race day-rollover (hour wraps at 24h while elapsed keeps
-/// growing) is handled internally — callers can compare offsets directly
-/// without thinking about midnight.
 mod Util.HourClock {
 
     use Util.Duration
@@ -37,19 +32,6 @@ mod Util.HourClock {
     pub def msSinceMidnight(h: Hour): Int32 =
         match h {
             case Hour.Hour(ms) => ms
-        }
-
-    /// `(self - elapsedMs) mod 24h`, normalized to `[0, 24h)`. Flix integer
-    /// division truncates toward zero, so a negative remainder is shifted
-    /// up by dayMs.
-    pub def offsetFrom(h: Hour, elapsedMs: Int32): Int32 =
-        match h {
-            case Hour.Hour(ms) =>
-                let d = dayMs();
-                let diff = ms - elapsedMs;
-                let q = diff / d;
-                let r = diff - q * d;
-                if (r < 0) r + d else r
         }
 
     /// Renders as `HH:MM:SS.mmm` with the hour zero-padded to two digits.

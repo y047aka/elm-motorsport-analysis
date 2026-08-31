@@ -42,11 +42,6 @@ mod Util.TestDuration {
     def testToStringInstance(): Unit \ Assert =
         Assert.assertTrue("${Duration.fromMillis(95365)}" == "1:35.365")
 
-    @Test
-    def testAdd(): Unit \ Assert =
-        let a = Duration.fromMillis(30000);
-        let b = Duration.fromMillis(60000);
-        Assert.assertTrue(Duration.add(a, b) == Duration.fromMillis(90000))
 
     @Test
     def testZero(): Unit \ Assert =

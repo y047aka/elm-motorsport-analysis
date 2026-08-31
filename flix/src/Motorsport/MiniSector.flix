@@ -103,8 +103,17 @@ mod Motorsport.MiniSector {
     /// True when `blanks` matches one of the known Ford-chicane track-limits
     /// signatures observed at Le Mans 2025: `SCL1+FORDOUT` (second chicane)
     /// or `PITREF+SCL1` (first chicane). Assumes the input is in track order.
-    pub def isTrackLimitsSignature(blanks: List[MiniSectorId]): Bool =
-        blanks == List#{MiniSectorId.SCL1, MiniSectorId.FORDOUT}
-            or blanks == List#{MiniSectorId.PITREF, MiniSectorId.SCL1}
+    pub def trackLimitsSignatures(): List[List[MiniSectorId]] =
+        List#{MiniSectorId.SCL1, MiniSectorId.FORDOUT} ::
+        List#{MiniSectorId.PITREF, MiniSectorId.SCL1} ::
+        Nil
+
+    /// Where the marker falls in `all`, counted from one, so that a place in a
+    /// list the database holds in track order can be named again.
+    pub def positionOf(id: MiniSectorId): Int32 =
+        all() |> List.takeWhile(other -> other != id) |> List.length |> x -> x + 1
+
+    pub def atPosition(position: Int32): Option[MiniSectorId] =
+        List.nth(position - 1, all())
 
 }
