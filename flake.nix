@@ -96,10 +96,11 @@
             '';
           };
 
-        # The CLI's one argument is the directory holding the season directories.
-        # It takes nothing else, and converts the rounds `Motorsport.Calendar`
-        # lists.
-        cliRunCmd = "flix run -- ../app/static/wec";
+        # The CLI's one argument is the directory holding the season directories,
+        # and it converts the rounds `Motorsport.Calendar` lists. Anything else
+        # given to `nix run` is forwarded, which is how `--postgres <url>` is
+        # reached.
+        cliRunCmd = "flix run -- ../app/static/wec \"$@\"";
 
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —

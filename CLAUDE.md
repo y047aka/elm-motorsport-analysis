@@ -43,6 +43,12 @@ round is added to `Motorsport.Calendar` first** — the run converts nothing the
 calendar does not list, reports any CSV no round names, and fails any round
 whose CSV is missing.
 
+`--postgres <jdbc url>` gives the same run a second place to put the rounds. The
+files are written either way and are not built from the database: a run without
+the flag reaches no database at all, and one whose database refuses a round has
+still written that round's JSON. Reaching it goes through `nix run .#cli-run --
+--postgres ...`, since the flake forwards what follows.
+
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
 ## Architecture
@@ -179,6 +185,28 @@ the type exists; a record per car on top of it cost under 2% of the frame
 Modules serving both sides sit directly under `Motorsport/` rather than in a
 subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
 and `Lap.Performance` rates a lap for either side, so neither owns them.
+
+### The `laps` table
+
+`--postgres` loads every round the run converted into one flat `laps` table,
+dropped and rebuilt each time as the JSON files are rewritten each time. Flat is
+a decision, not an omission: `class`, `team` and `manufacturer` never vary within
+a `(season, round, car_number)` across the whole archive, so the 579 entries they
+describe can be read back as a `VIEW` over the table, and normalising them out
+would buy about 16% of its size in exchange for resolving ids on the way in.
+A column takes the type its Flix value already has — a `Duration` is the
+milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
+load parses nothing the decoder did not. Le Mans's mini-sectors are a `jsonb`
+column rather than thirty more: only one round in the archive has them.
+
+`Cli.Db` is an effect, not a module of functions, so that what a round would
+send can be read back without a server: `runRecording` keeps the statements,
+`runDiscarding` drops them, and `Cli.Db.Jdbc` is the only file that imports
+`java.sql`. `Cli.Db.Schema.columns` and `Cli.Db.LapRow.values` are two lists no
+compiler sees together, which is what `Cli.Db.TestSchema` is for.
+
+The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
+into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
 
 ### Reading the race at a moment
 

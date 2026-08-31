@@ -1,0 +1,122 @@
+mod Cli.Db.LapRow {
+
+    use Motorsport.Calendar.Entry
+    use Motorsport.Wec
+    use Motorsport.Wec.RawLap
+    use Motorsport.Wec.RawSector
+    use Util.Duration
+    use Util.HourClock
+    use Util.Json.Encode.Extra
+
+    /// One row of `laps`. A column takes the type the Flix value already has:
+    /// a `Duration` is the milliseconds it holds, and `kph` / `topSpeed` stay
+    /// the text the feed gave, so nothing here parses or rounds anything the
+    /// decoder did not.
+    pub type alias LapRow = {
+        season = Int32,
+        round = String,
+        carNumber = String,
+        class = String,
+        carGroup = String,
+        team = String,
+        manufacturer = String,
+        driverNumber = Int32,
+        driverName = String,
+        lapNumber = Int32,
+        lapTimeMs = Int32,
+        lapImprovement = Int32,
+        crossingFinishLineInPit = Bool,
+        s1Ms = Option[Int32],
+        s1Improvement = Int32,
+        s2Ms = Option[Int32],
+        s2Improvement = Int32,
+        s3Ms = Option[Int32],
+        s3Improvement = Int32,
+        kph = String,
+        elapsedMs = Int32,
+        hourMs = Int32,
+        topSpeed = String,
+        pitTimeMs = Option[Int32],
+        flagAtFl = String,
+        miniSectors = Option[String]
+    }
+
+    /// A bound value, in the type its column has.
+    pub enum Value with Eq, ToString {
+        case Text(String)
+        case Integer(Int32)
+        case Boolean(Bool)
+        case NullableInteger(Option[Int32])
+        case NullableJsonb(Option[String])
+    }
+
+    pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
+        rawLaps |> List.map(fromRawLap(entry))
+
+    pub def fromRawLap(entry: Entry): RawLap -> LapRow =
+        rawLap -> {
+            season = entry#season,
+            round = entry#id,
+            carNumber = rawLap#car#carNumber,
+            class = rawLap#car#class,
+            carGroup = rawLap#car#group,
+            team = rawLap#car#team,
+            manufacturer = rawLap#car#manufacturer,
+            driverNumber = rawLap#driver#number,
+            driverName = rawLap#driver#name,
+            lapNumber = rawLap#lapNumber,
+            lapTimeMs = Duration.millis(rawLap#lapTime),
+            lapImprovement = Wec.improvementToInt(rawLap#lapImprovement),
+            crossingFinishLineInPit = rawLap#crossingFinishLineInPit,
+            s1Ms = sectorMs(rawLap#s1),
+            s1Improvement = Wec.improvementToInt(rawLap#s1#improvement),
+            s2Ms = sectorMs(rawLap#s2),
+            s2Improvement = Wec.improvementToInt(rawLap#s2#improvement),
+            s3Ms = sectorMs(rawLap#s3),
+            s3Improvement = Wec.improvementToInt(rawLap#s3#improvement),
+            kph = rawLap#kph,
+            elapsedMs = Duration.millis(rawLap#elapsed),
+            hourMs = HourClock.msSinceMidnight(rawLap#hour),
+            topSpeed = rawLap#topSpeed,
+            pitTimeMs = Option.map(Duration.millis, rawLap#pitTime),
+            flagAtFl = Wec.flagToString(rawLap#flagAtFl),
+            miniSectors = Option.map(
+                list -> Extra.renderOnOneLine(Wec.miniSectorsToJson(list)),
+                rawLap#miniSectors
+            )
+        }
+
+    /// In the order `Cli.Db.Schema.columns` names them.
+    pub def values(row: LapRow): List[Value] =
+        Value.Integer(row#season) ::
+        Value.Text(row#round) ::
+        Value.Text(row#carNumber) ::
+        Value.Text(row#class) ::
+        Value.Text(row#carGroup) ::
+        Value.Text(row#team) ::
+        Value.Text(row#manufacturer) ::
+        Value.Integer(row#driverNumber) ::
+        Value.Text(row#driverName) ::
+        Value.Integer(row#lapNumber) ::
+        Value.Integer(row#lapTimeMs) ::
+        Value.Integer(row#lapImprovement) ::
+        Value.Boolean(row#crossingFinishLineInPit) ::
+        Value.NullableInteger(row#s1Ms) ::
+        Value.Integer(row#s1Improvement) ::
+        Value.NullableInteger(row#s2Ms) ::
+        Value.Integer(row#s2Improvement) ::
+        Value.NullableInteger(row#s3Ms) ::
+        Value.Integer(row#s3Improvement) ::
+        Value.Text(row#kph) ::
+        Value.Integer(row#elapsedMs) ::
+        Value.Integer(row#hourMs) ::
+        Value.Text(row#topSpeed) ::
+        Value.NullableInteger(row#pitTimeMs) ::
+        Value.Text(row#flagAtFl) ::
+        Value.NullableJsonb(row#miniSectors) ::
+        Nil
+
+    def sectorMs(sector: RawSector): Option[Int32] =
+        Option.map(Duration.millis, sector#value)
+
+}

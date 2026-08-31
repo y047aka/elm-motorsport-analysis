@@ -2,6 +2,8 @@ mod Cli.Stages {
 
     use Sys.Console
     use Util.Files
+    use Cli.Db
+    use Cli.Db.LapRow
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.CsvDecode
@@ -17,7 +19,8 @@ mod Cli.Stages {
     type alias ProcessingReport = {
         lapCount   = Int32,
         outputPath = String,
-        lapsPath   = String
+        lapsPath   = String,
+        loadedRows = Int32
     }
 
     type alias RunSummary = {
@@ -25,11 +28,20 @@ mod Cli.Stages {
         errors    = Int32
     }
 
+    pub def runAll(root: String): Int32 \ {IO, Console, Db} =
+        match Db.prepare() {
+            case Err(e) =>
+                Console.eprintln("Database: ${e}");
+                1
+            case Ok(()) =>
+                convertRounds(root)
+        }
+
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    pub def runAll(root: String): Int32 \ {IO, Console} =
+    def convertRounds(root: String): Int32 \ {IO, Console, Db} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
@@ -37,6 +49,7 @@ mod Cli.Stages {
                     Console.println("${FileTask.label(task)}: Wrote ${report#lapCount} laps");
                     Console.println("${FileTask.label(task)}: Metadata -> ${report#outputPath}");
                     Console.println("${FileTask.label(task)}: Laps     -> ${report#lapsPath}");
+                    reportLoad(task, report);
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
@@ -50,6 +63,12 @@ mod Cli.Stages {
         let errors = summary#errors + calendarErrors;
         Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
         if (errors == 0) 0 else 1
+
+    def reportLoad(task: FileTask.FileTask, report: ProcessingReport): Unit \ Console =
+        if (report#loadedRows > 0)
+            Console.println("${FileTask.label(task)}: Rows     -> ${report#loadedRows} loaded")
+        else
+            ()
 
     /// Not an error: the run converted everything it was asked for, and this is
     /// about what it was not asked for. Saying it is what keeps a forgotten line
@@ -76,13 +95,12 @@ mod Cli.Stages {
                 1
         }
 
-    def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console} =
+    def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console, Db} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
             |> Result.map(reportViolations(task))
-            |> Result.map(render(task))
             |> Result.flatMap(write(task))
-            |> Result.map(toReport(task))
+            |> Result.flatMap(load(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
@@ -93,17 +111,26 @@ mod Cli.Stages {
             rawLaps
         }
 
-    def render(task: FileTask.FileTask): List[RawLap] -> Rendered =
-        rawLaps -> Transform.transform(task#entry, rawLaps)
+    def write(task: FileTask.FileTask): List[RawLap] -> Result[CliError, (List[RawLap], Rendered)] \ IO =
+        rawLaps -> {
+            let rendered = Transform.transform(task#entry, rawLaps);
+            Output.write(task, rendered) |> Result.map(_ -> (rawLaps, rendered))
+        }
 
-    def write(task: FileTask.FileTask): Rendered -> Result[CliError, Rendered] \ IO =
-        rendered -> Output.write(task, rendered) |> Result.map(_ -> rendered)
+    /// After the files, so a database that refuses a round leaves that round's
+    /// JSON written and every other output of the run untouched.
+    def load(task: FileTask.FileTask): ((List[RawLap], Rendered)) -> Result[CliError, ProcessingReport] \ Db =
+        match (rawLaps, rendered) ->
+            Db.insertLaps(LapRow.fromRawLaps(task#entry, rawLaps))
+                |> Result.mapErr(CliError.Database)
+                |> Result.map(loadedRows -> toReport(task, rendered, loadedRows))
 
-    def toReport(task: FileTask.FileTask): Rendered -> ProcessingReport =
-        rendered -> {
+    def toReport(task: FileTask.FileTask, rendered: Rendered, loadedRows: Int32): ProcessingReport =
+        {
             lapCount   = rendered#lapCount,
             outputPath = task#outputPath,
-            lapsPath   = task#lapsPath
+            lapsPath   = task#lapsPath,
+            loadedRows = loadedRows
         }
 
 }

@@ -3,6 +3,9 @@ use Sys.Console
 use Sys.Exit
 use Util.Files
 use Cli.Args
+use Cli.Args.ParsedArgs
+use Cli.Db
+use Cli.Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Stages
 
@@ -18,10 +21,29 @@ def main(): Unit \ {Env, IO, Exit, Console} =
                     Console.eprintln("Error: ${e}");
                     1
                 case Ok(()) =>
-                    Stages.runAll(parsed#root)
+                    runStages(parsed)
             }
     };
     Exit.exit(code)
+
+/// Which handler the run's database writes meet. Without `--postgres` they meet
+/// the one that drops them, and the run is the file-writing run it has always
+/// been.
+def runStages(parsed: ParsedArgs): Int32 \ {IO, Console} =
+    match parsed#postgres {
+        case None =>
+            Db.runDiscarding(() -> Stages.runAll(parsed#root))
+        case Some(url) =>
+            match Jdbc.connect(url) {
+                case Err(e) =>
+                    Console.eprintln("Error: ${e}");
+                    1
+                case Ok(conn) =>
+                    let code = Jdbc.runWith(conn, () -> Stages.runAll(parsed#root));
+                    Jdbc.close(conn);
+                    code
+            }
+    }
 
 /// Checked once here rather than once per round, so a mistyped root reads as one
 /// mistake instead of as every race being missing.

@@ -318,7 +318,7 @@ mod Motorsport.Wec {
             case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
         }
 
-    def improvementToInt(imp: Improvement): Int32 =
+    pub def improvementToInt(imp: Improvement): Int32 =
         match imp {
             case Improvement.None        => 0
             case Improvement.DriverBest  => 1
@@ -329,7 +329,7 @@ mod Motorsport.Wec {
     def boxToString(b: Bool): String =
         if (b) "B" else ""
 
-    def flagToString(flag: Flag): String =
+    pub def flagToString(flag: Flag): String =
         match flag {
             case Flag.Green            => "GF"
             case Flag.SlowZone         => "SF"
@@ -375,7 +375,7 @@ mod Motorsport.Wec {
         );
         if (hasAny) Some(list) else None
 
-    def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
+    pub def miniSectorsToJson(list: List[(MiniSectorId, RawMiniSector)]): Encode.JsonValue =
         let entries = list |> List.filterMap(match (id, sector) ->
             if (sector#time == None and sector#elapsed == None)
                 None
