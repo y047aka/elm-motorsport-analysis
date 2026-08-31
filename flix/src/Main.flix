@@ -29,8 +29,8 @@ def main(): Unit \ {Env, IO, Exit, Console} =
 /// Which handler the run's database writes meet. Without `--postgres` they meet
 /// the one that drops them, and the run is the file-writing run it has always
 /// been.
-def runStages(parsed: ParsedArgs): Int32 \ {IO, Console} =
-    match parsed#postgres {
+def runStages(parsed: ParsedArgs): Int32 \ {Env, IO, Console} =
+    match databaseUrl(parsed) {
         case None =>
             Db.runDiscarding(() -> Stages.runAll(parsed#root))
         case Some(url) =>
@@ -43,6 +43,15 @@ def runStages(parsed: ParsedArgs): Int32 \ {IO, Console} =
                     Jdbc.close(conn);
                     code
             }
+    }
+
+/// `--postgres` first, then `DATABASE_URL`: the flag points one run somewhere
+/// else, and the variable is how a shell that already has a database hands the
+/// same one to every run made in it.
+def databaseUrl(parsed: ParsedArgs): Option[String] \ Env =
+    match parsed#postgres {
+        case Some(url) => Some(url)
+        case None      => Env.getVar("DATABASE_URL")
     }
 
 /// Checked once here rather than once per round, so a mistyped root reads as one

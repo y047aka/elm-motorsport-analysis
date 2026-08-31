@@ -29,6 +29,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON/JSONL |
+| `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
@@ -43,10 +44,16 @@ round is added to `Motorsport.Calendar` first** — the run converts nothing the
 calendar does not list, reports any CSV no round names, and fails any round
 whose CSV is missing.
 
-`--postgres <jdbc url>` gives the same run a second place to put the rounds. The
-files are written either way and are not built from the database: a run without
-the flag reaches no database at all, and one whose database refuses a round has
-still written that round's JSON. Reaching it goes through `nix run .#cli-run --
+`--postgres <jdbc url>` gives the same run a second place to put the rounds, and
+`DATABASE_URL` says the same to every run made in a shell. The files are written
+either way and are not built from the database: a run that names no database
+reaches none at all, and one whose database refuses a round has still written
+that round's JSON.
+
+`.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
+the variable from; `.#pg-stop` takes it down. The data directory is in the
+working copy rather than under /tmp, so what a run left there is still there to
+be queried. Passing the flag instead goes through `nix run .#cli-run --
 --postgres ...`, since the flake forwards what follows.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
