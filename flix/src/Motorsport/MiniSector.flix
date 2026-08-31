@@ -103,9 +103,6 @@ mod Motorsport.MiniSector {
     /// True when `blanks` matches one of the known Ford-chicane track-limits
     /// signatures observed at Le Mans 2025: `SCL1+FORDOUT` (second chicane)
     /// or `PITREF+SCL1` (first chicane). Assumes the input is in track order.
-    pub def isTrackLimitsSignature(blanks: List[MiniSectorId]): Bool =
-        List.memberOf(blanks, trackLimitsSignatures())
-
     pub def trackLimitsSignatures(): List[List[MiniSectorId]] =
         List#{MiniSectorId.SCL1, MiniSectorId.FORDOUT} ::
         List#{MiniSectorId.PITREF, MiniSectorId.SCL1} ::

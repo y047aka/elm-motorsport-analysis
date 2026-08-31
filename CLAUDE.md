@@ -196,8 +196,8 @@ and `Lap.Performance` rates a lap for either side, so neither owns them.
 
 ### The `laps` table
 
-`--postgres` loads every round the run converted into one flat `laps` table,
-dropped and rebuilt each time as the JSON files are rewritten each time. Flat is
+The run loads every round it converts into one flat `laps` table, dropped and
+rebuilt each time as the JSON files are rewritten each time. Flat is
 a decision, not an omission: `class`, `team` and `manufacturer` never vary within
 a `(season, round, car_number)` across the whole archive, so the 579 entries they
 describe can be read back as a `VIEW` over the table, and normalising them out

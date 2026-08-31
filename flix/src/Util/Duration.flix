@@ -16,9 +16,6 @@ mod Util.Duration {
         let Duration.Duration(ms) = d;
         ms
 
-    pub def add(a: Duration, b: Duration): Duration =
-        Duration.Duration(millis(a) + millis(b))
-
     pub def fromString(s: String): Option[Duration] =
         if (String.isEmpty(s)) None
         else match String.split({regex = "\\."}, s) {
