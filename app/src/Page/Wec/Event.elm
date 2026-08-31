@@ -28,7 +28,7 @@ import Task
 import Time
 import UI.Shadcn.Card as Card
 import View exposing (View)
-import View.CarDetailPopover as CarDetailPopover
+import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
 import View.RaceEvents as RaceEvents
 
@@ -228,7 +228,7 @@ trackerView track snapshot m =
                     -- the box that scrolls has to be a flex child of the card.
                     [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
                         [ Card.content []
-                            [ CarDetailPopover.view
+                            [ CarDetail.view
                                 { activeChart = m.detailChart
                                 , onToggleCar = ToggleDetailCar
                                 , onSelectChart = SelectDetailChart

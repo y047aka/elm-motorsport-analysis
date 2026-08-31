@@ -1,4 +1,4 @@
-module View.CarDetailPopover exposing (elementId, view)
+module View.CarDetail exposing (elementId, view)
 
 {-| Per-car detail, drawn in place on the event page.
 
