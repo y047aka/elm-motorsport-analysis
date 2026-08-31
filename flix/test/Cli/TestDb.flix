@@ -45,9 +45,5 @@ mod Cli.TestDb {
             case _ => Assert.assertTrue(false)
         }
 
-    @Test
-    def discardingWritesNothingAndReportsNoRows(): Unit \ Assert =
-        Assert.assertTrue(Db.runDiscarding(() -> Db.insertLaps(sampleRows())) == Ok(0));
-        Assert.assertTrue(Db.runDiscarding(() -> Db.prepare()) == Ok())
 
 }

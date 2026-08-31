@@ -18,16 +18,6 @@ mod Cli.Db {
         case Fetch(String)
     }
 
-    /// The handler for a run given no `--postgres` URL.
-    pub def runDiscarding(f: Unit -> a \ ef): a \ (ef - Db) =
-        run {
-            f()
-        } with handler Db {
-            def execute(_sql, k) = k(Ok())
-            def insertLaps(_rows, k) = k(Ok(0))
-            def fetch(_sql, k) = k(Err("no database was named"))
-        }
-
     pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - Db) =
         region rc {
             let log = Ref.fresh(rc, (Nil: List[Statement]));

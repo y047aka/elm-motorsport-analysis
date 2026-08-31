@@ -44,11 +44,12 @@ round is added to `Motorsport.Calendar` first** — the run converts nothing the
 calendar does not list, reports any CSV no round names, and fails any round
 whose CSV is missing.
 
-`--postgres <jdbc url>` gives the same run a second place to put the rounds, and
-`DATABASE_URL` says the same to every run made in a shell. The files are written
-either way and are not built from the database: a run that names no database
-reaches none at all, and one whose database refuses a round has still written
-that round's JSON.
+The run computes in PostgreSQL, so it needs one: `--postgres <jdbc url>` names
+it, `DATABASE_URL` says the same to every run made in a shell, and `.#cli-run`
+starts the working copy's when neither does. A run that reaches none writes
+nothing. The JSON files are still the product — nothing reads the database at
+runtime — but the integrity checks are read back out of the rows a round was
+just loaded into.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
@@ -209,6 +210,11 @@ hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a subscript
 is a place on the circuit and a null is a marker the feed left blank. That is the
 shape a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
+
+`Cli.Stages.Validation` is what reads the table back: its five rules are SQL over
+the round just loaded, and only the message formatting is left in Flix. Three are
+a comparison per row; the two that walk a lap need the mini-sectors in track
+order, which is what the `int[]` columns are for.
 
 `source_row` carries the position the file listed the lap in, which nothing else
 in the table recovers. It is what makes the table an image of the CSV rather than

@@ -4,7 +4,6 @@ use Sys.Exit
 use Util.Files
 use Cli.Args
 use Cli.Args.ParsedArgs
-use Cli.Db
 use Cli.Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Stages
@@ -26,13 +25,13 @@ def main(): Unit \ {Env, IO, Exit, Console} =
     };
     Exit.exit(code)
 
-/// Which handler the run's database writes meet. Without `--postgres` they meet
-/// the one that drops them, and the run is the file-writing run it has always
-/// been.
+/// The run computes in a database, so a run given none is one that cannot say
+/// what it found.
 def runStages(parsed: ParsedArgs): Int32 \ {Env, IO, Console} =
     match databaseUrl(parsed) {
         case None =>
-            Db.runDiscarding(() -> Stages.runAll(parsed#root))
+            Console.eprintln("Error: no database. Pass --postgres <jdbc url> or set DATABASE_URL.");
+            1
         case Some(url) =>
             match Jdbc.connect(url) {
                 case Err(e) =>

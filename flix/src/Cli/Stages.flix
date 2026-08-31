@@ -98,32 +98,35 @@ mod Cli.Stages {
     def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console, Db} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
-            |> Result.map(reportViolations(task))
-            |> Result.flatMap(write(task))
             |> Result.flatMap(load(task))
+            |> Result.flatMap(reportViolations(task))
+            |> Result.flatMap(write(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    def reportViolations(task: FileTask.FileTask): List[RawLap] -> List[RawLap] \ Console =
-        rawLaps -> {
-            Validation.validate(task#entry#id, rawLaps) |> List.forEach(Console.eprintln);
-            rawLaps
-        }
-
-    def write(task: FileTask.FileTask): List[RawLap] -> Result[CliError, (List[RawLap], Rendered)] \ IO =
-        rawLaps -> {
-            let rendered = Transform.transform(task#entry, rawLaps);
-            Output.write(task, rendered) |> Result.map(_ -> (rawLaps, rendered))
-        }
-
-    /// After the files, so a database that refuses a round leaves that round's
-    /// JSON written and every other output of the run untouched.
-    def load(task: FileTask.FileTask): ((List[RawLap], Rendered)) -> Result[CliError, ProcessingReport] \ Db =
-        match (rawLaps, rendered) ->
+    /// The rows go in before anything reads the round back, because the checks
+    /// are made of what the database holds and not of the laps in hand.
+    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, (List[RawLap], Int32)] \ Db =
+        rawLaps ->
             Db.insertLaps(LapRow.fromRawLaps(task#entry, rawLaps))
                 |> Result.mapErr(CliError.Database)
-                |> Result.map(loadedRows -> toReport(task, rendered, loadedRows))
+                |> Result.map(loadedRows -> (rawLaps, loadedRows))
+
+    def reportViolations(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, (List[RawLap], Int32)] \ {Console, Db} =
+        match (rawLaps, loadedRows) ->
+            Validation.validate(task#entry)
+                |> Result.mapErr(CliError.Database)
+                |> Result.map(messages -> {
+                    messages |> List.forEach(Console.eprintln);
+                    (rawLaps, loadedRows)
+                })
+
+    def write(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, ProcessingReport] \ IO =
+        match (rawLaps, loadedRows) -> {
+            let rendered = Transform.transform(task#entry, rawLaps);
+            Output.write(task, rendered) |> Result.map(_ -> toReport(task, rendered, loadedRows))
+        }
 
     def toReport(task: FileTask.FileTask, rendered: Rendered, loadedRows: Int32): ProcessingReport =
         {
