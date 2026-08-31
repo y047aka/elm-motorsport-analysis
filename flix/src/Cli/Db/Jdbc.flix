@@ -3,6 +3,7 @@ mod Cli.Db.Jdbc {
     import java.sql.Connection
     import java.sql.DriverManager
     import java.sql.PreparedStatement
+    import java.sql.ResultSet
     import java.sql.SQLException
     import java.sql.Types
 
@@ -43,7 +44,38 @@ mod Cli.Db.Jdbc {
         } with handler Db {
             def execute(sql, k) = k(runStatement(conn, sql))
             def insertLaps(rows, k) = k(insertRows(conn, rows))
+            def fetch(sql, k) = k(runFetch(conn, sql))
         }
+
+    def runFetch(conn: Connection, sql: String): Result[String, List[List[Option[String]]]] \ IO =
+        try {
+            let stmt = conn.createStatement();
+            let rs = stmt.executeQuery(sql);
+            let width = rs.getMetaData().getColumnCount();
+            let rows = readRows(rs, width, Nil);
+            rs.close();
+            stmt.close();
+            conn.commit();
+            Ok(rows)
+        } catch {
+            case e: SQLException => rollback(conn); Err("${e.getMessage()}")
+        }
+
+    def readRows(rs: ResultSet, width: Int32, acc: List[List[Option[String]]]): List[List[Option[String]]] \ IO =
+        if (rs.next())
+            readRows(rs, width, readRow(rs, 1, width, Nil) :: acc)
+        else
+            List.reverse(acc)
+
+    def readRow(rs: ResultSet, index: Int32, width: Int32, acc: List[Option[String]]): List[Option[String]] \ IO =
+        if (index > width)
+            List.reverse(acc)
+        else
+            readRow(rs, index + 1, width, cell(rs, index) :: acc)
+
+    def cell(rs: ResultSet, index: Int32): Option[String] \ IO =
+        let value = rs.getString(index);
+        if (rs.wasNull()) None else Some(value)
 
     def runStatement(conn: Connection, sql: String): Result[String, Unit] \ IO =
         try {

@@ -15,6 +15,7 @@ mod Cli.Db {
     pub enum Statement {
         case Execute(String)
         case InsertLaps(List[LapRow])
+        case Fetch(String)
     }
 
     /// The handler for a run given no `--postgres` URL.
@@ -24,6 +25,7 @@ mod Cli.Db {
         } with handler Db {
             def execute(_sql, k) = k(Ok())
             def insertLaps(_rows, k) = k(Ok(0))
+            def fetch(_sql, k) = k(Err("no database was named"))
         }
 
     pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - Db) =
@@ -39,6 +41,12 @@ mod Cli.Db {
                 def insertLaps(rows, k) = {
                     record(log, Statement.InsertLaps(rows));
                     k(Ok(List.length(rows)))
+                }
+                // Reads nothing back: a caller that goes on to read what it
+                // wrote needs a database, not this.
+                def fetch(sql, k) = {
+                    record(log, Statement.Fetch(sql));
+                    k(Ok(Nil))
                 }
             };
             (result, List.reverse(Ref.get(log)))

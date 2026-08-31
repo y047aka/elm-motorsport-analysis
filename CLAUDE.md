@@ -298,6 +298,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
+- **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
+  names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
+  standing in for it. A test that reaches no database fails rather than
+  skipping: the boundary is the thing it is there to check. Connecting costs
+  about 350ms once and about 5ms per test after that.
 - **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
   (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
   snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the

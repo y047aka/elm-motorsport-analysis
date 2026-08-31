@@ -96,6 +96,23 @@
             '';
           };
 
+        # The same, for the commands that need a database. A caller who has
+        # already said which one is left alone; anyone else gets the working
+        # copy's, started if it is not up.
+        mkFlixAppWithDb = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ flix pkgs.postgresql ];
+            text = ''
+              if [ -z "''${DATABASE_URL:-}" ]; then
+              ${pgEnsure}
+                export DATABASE_URL="${pgUrl}"
+              fi
+              cd flix
+              ${cmd}
+            '';
+          };
+
         # A PostgreSQL for the CLI to compute in. The data directory sits in the
         # working copy rather than under /tmp, so the rows a run left behind are
         # still there to be queried, and `nix run .#pg-start` prints the URL for
@@ -107,7 +124,9 @@
             text = cmd;
           };
 
-        pgStartCmd = ''
+        pgUrl = "jdbc:postgresql://127.0.0.1:55433/motorsport?user=postgres";
+
+        pgEnsure = ''
           data=flix/.pg
           if [ ! -d "$data" ]; then
             initdb -D "$data" -U postgres --auth=trust >/dev/null
@@ -117,8 +136,9 @@
               -o "-p 55433 -k /tmp -c listen_addresses=127.0.0.1" -w start >&2
           fi
           createdb -h 127.0.0.1 -p 55433 -U postgres motorsport 2>/dev/null || true
-          echo "jdbc:postgresql://127.0.0.1:55433/motorsport?user=postgres"
         '';
+
+        pgStartCmd = pgEnsure + ''echo "${pgUrl}"'';
 
         pgStopCmd = "pg_ctl -D flix/.pg -m fast stop";
 
@@ -173,8 +193,8 @@
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           cli-build            = { type = "app"; program = "${mkFlixApp "cli-build" "flix build"}/bin/cli-build";                                                    meta.description = "Build the CLI"; };
-          cli-test             = { type = "app"; program = "${mkFlixApp "cli-test"  "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
-          cli-run              = { type = "app"; program = "${mkFlixApp "cli-run"   cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
+          cli-test             = { type = "app"; program = "${mkFlixAppWithDb "cli-test" "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
+          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
           pg-start             = { type = "app"; program = "${mkPgApp   "pg-start" pgStartCmd}/bin/pg-start";                                                     meta.description = "Start the local PostgreSQL and print its JDBC URL"; };
           pg-stop              = { type = "app"; program = "${mkPgApp   "pg-stop"  pgStopCmd}/bin/pg-stop";                                                       meta.description = "Stop the local PostgreSQL"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
