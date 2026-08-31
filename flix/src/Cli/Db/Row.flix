@@ -9,10 +9,11 @@ mod Cli.Db.Row {
             case None       => Err("no column ${index} in the row")
         }
 
-    /// A null column reads as the empty string, which is what the feed's own
-    /// blank columns already decode to.
     pub def text(index: Int32, row: List[Option[String]]): Result[String, String] =
-        optionalText(index, row) |> Result.map(Option.getWithDefault(""))
+        forM(
+            cell  <- optionalText(index, row);
+            value <- expect("column ${index} was null", cell)
+        ) yield value
 
     pub def int(index: Int32, row: List[Option[String]]): Result[String, Int32] =
         forM(

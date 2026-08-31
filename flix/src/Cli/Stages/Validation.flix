@@ -105,7 +105,7 @@ mod Cli.Stages.Validation {
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Db.fetch(
             "WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
-                + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
+                + " (SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number))::int AS running,"
                 + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
                 + " FROM laps WHERE " + scope(entry) + ")"
                 + " SELECT car_number, lap_number, running, elapsed_ms FROM c"
@@ -148,7 +148,7 @@ mod Cli.Stages.Validation {
         Db.fetch(
             "WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
                 + " crossing_finish_line_in_pit, pit_time_ms,"
-                + " (SELECT COALESCE(SUM(t), 0) FROM UNNEST(mini_sector_time_ms) t) AS sum_ms,"
+                + " (SELECT COALESCE(SUM(t), 0) FROM UNNEST(mini_sector_time_ms) t)::int AS sum_ms,"
                 + " COALESCE((SELECT ARRAY_AGG(ord::int ORDER BY ord)"
                 + "  FROM UNNEST(mini_sector_time_ms) WITH ORDINALITY u(t, ord)"
                 + "  WHERE t IS NULL), '{}'::int[]) AS blanks"

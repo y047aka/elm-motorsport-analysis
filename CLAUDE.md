@@ -314,6 +314,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
+- **Where a test lives** — `test/Motorsport/` drives the domain's decisions
+  given the readings they are made from (the grid's basis and its tie-breaks,
+  how the lap divides) and needs no database; `test/Cli/Stages/` drives the
+  reading, and needs one. A subject with both has a file in each, named for the
+  module it drives.
 - **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
   names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
   standing in for it. A test that reaches no database fails rather than

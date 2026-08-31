@@ -103,7 +103,7 @@ mod Motorsport.Metadata {
         let hourMs = 3600000;
         Util.Duration.fromMillis((Util.Duration.millis(d) / hourMs) * hourMs)
 
-    def estimateGrid(builds: List[CarBuild]): StartingGrid =
+    pub def estimateGrid(builds: List[CarBuild]): StartingGrid =
         let basis = basisOf(builds);
         let entries = builds
             |> List.sortBy(b -> orderingKey(basis, b))
