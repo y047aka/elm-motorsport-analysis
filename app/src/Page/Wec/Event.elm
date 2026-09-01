@@ -54,7 +54,6 @@ type alias Model =
 type Mode
     = Default
     | Tracker
-    | Standings
     | Events
 
 
@@ -184,9 +183,6 @@ view shared m =
                         Tracker ->
                             trackerView race.track race.snapshot m
 
-                        Standings ->
-                            trackerView race.track race.snapshot m
-
                         Events ->
                             RaceEvents.view EventsMsg m.eventsState race.replay
             ]
@@ -211,17 +207,6 @@ trackerView track snapshot m =
                     , trackerDetail = TrackerChart.Full
                     , onTracker = ModeChange Default
                     , detail = "col-start-3 row-start-1"
-                    , leaderboard = Nothing
-                    , spare = Just "col-start-3 row-start-2"
-                    }
-
-                Standings ->
-                    { tracker = "col-start-3 row-start-1"
-                    , trackerDetail = TrackerChart.Compact
-                    , onTracker = ModeChange Tracker
-                    , detail = "col-start-3 row-start-2"
-                    , leaderboard = Just "col-start-2 row-start-1 row-span-2"
-                    , spare = Nothing
                     }
 
                 _ ->
@@ -229,8 +214,6 @@ trackerView track snapshot m =
                     , trackerDetail = TrackerChart.Compact
                     , onTracker = ModeChange Tracker
                     , detail = "col-start-2 row-start-1 row-span-2"
-                    , leaderboard = Nothing
-                    , spare = Just "col-start-3 row-start-2"
                     }
 
         detailBody =
@@ -255,42 +238,44 @@ trackerView track snapshot m =
                     []
     in
     div
-        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[250px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
-        ([ div
-            [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden cursor-pointer"
-            , onClick (ModeChange Standings)
+        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
+        [ div
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[250px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+            [ div
+                [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
+                [ LiveStandingsWidget.view snapshot ]
+            , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
+            , div
+                -- The cell is the only box in the chain whose height is settled,
+                -- so a square SVG measured against the width overflows the card.
+                [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
+                , onClick layout.onTracker
+                ]
+                [ Card.card []
+                    [ Card.content []
+                        [ div
+                            [ Attributes.class "h-full grid place-items-center" ]
+                            [ TrackerChart.view layout.trackerDetail track snapshot ]
+                        ]
+                    ]
+                ]
+            , sparePanel "col-start-3 row-start-2"
+            , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
+                [ SelectedCarsStrip.view
+                    { offset = m.stripOffset
+                    , onScrollTo = StripScrollTo
+                    }
+                    snapshot
+                ]
             ]
-            [ LiveStandingsWidget.view snapshot ]
-         , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
-         , div
-            -- The cell is the only box in the chain whose height is settled,
-            -- so a square SVG measured against the width overflows the card.
-            [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
-            , onClick layout.onTracker
-            ]
+        , div [ Attributes.class "shrink-0 grid" ]
             [ Card.card []
                 [ Card.content []
-                    [ div
-                        [ Attributes.class "h-full grid place-items-center" ]
-                        [ TrackerChart.view layout.trackerDetail track snapshot ]
-                    ]
+                    [ Leaderboard.view leaderboardConfig m.leaderboardState snapshot ]
                 ]
             ]
-         ]
-            ++ List.filterMap identity
-                [ Maybe.map (leaderboardCell m.leaderboardState snapshot) layout.leaderboard
-                , Maybe.map sparePanel layout.spare
-                ]
-            ++ [ div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
-                    [ SelectedCarsStrip.view
-                        { offset = m.stripOffset
-                        , onScrollTo = StripScrollTo
-                        }
-                        snapshot
-                    ]
-               , standingsPopover
-               ]
-        )
+        , standingsPopover
+        ]
 
 
 sparePanel : String -> Html Msg
@@ -301,20 +286,6 @@ sparePanel cell =
         , Attributes.class (cell ++ " grid cursor-pointer text-left")
         ]
         [ Card.card [] [] ]
-
-
-leaderboardCell : Leaderboard.Model -> Snapshot -> String -> Html Msg
-leaderboardCell leaderboardState snapshot cell =
-    div [ Attributes.class (cell ++ " grid min-h-0") ]
-        [ Card.card []
-            -- A card's content does not shrink below what it holds, so
-            -- the box that scrolls has to be a flex child of the card.
-            [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
-                [ Card.content []
-                    [ Leaderboard.view leaderboardConfig leaderboardState snapshot ]
-                ]
-            ]
-        ]
 
 
 leaderboardConfig : Leaderboard.Config CarAt Msg
@@ -433,7 +404,6 @@ viewModeSelector currentMode =
     div [ Attributes.class "inline-flex" ]
         [ modeButton "Default" Default (currentMode == Default)
         , modeButton "Tracker" Tracker (currentMode == Tracker)
-        , modeButton "Standings" Standings (currentMode == Standings)
         , modeButton "Events" Events (currentMode == Events)
         ]
 
