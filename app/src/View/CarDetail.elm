@@ -11,8 +11,9 @@ built from the currently selected cars, so it stays live-updating.
 
 import Html exposing (Html, div, text)
 import Html.Attributes as Attributes
-import Motorsport.Race.Snapshot exposing (Snapshot)
+import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
 import Motorsport.Widget.Compare as CompareWidget
+import Motorsport.Widget.Compare.CarSelector as CarSelector
 
 
 view :
@@ -27,9 +28,20 @@ view config snapshot detailCarNumbers =
     div [ Attributes.id elementId ]
         [ case detailCarNumbers of
             [] ->
-                div
-                    [ Attributes.class "py-8 text-center text-sm opacity-70" ]
-                    [ text "No cars selected. Pick a car from the standings to compare." ]
+                div [ Attributes.class "grid gap-y-3" ]
+                    (div
+                        [ Attributes.class "text-sm opacity-70" ]
+                        [ text "No cars selected. Pick a car to compare." ]
+                        :: (Snapshot.toClassList snapshot
+                                |> List.map
+                                    (\( class_, _ ) ->
+                                        div [ Attributes.class "flex items-start gap-x-3" ]
+                                            [ CarSelector.classBadge class_
+                                            , CarSelector.carSelector config.onToggleCar snapshot class_ []
+                                            ]
+                                    )
+                           )
+                    )
 
             _ ->
                 CompareWidget.viewComparison

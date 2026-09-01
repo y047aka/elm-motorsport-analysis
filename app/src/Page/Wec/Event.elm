@@ -8,6 +8,7 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
+import Compare
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -15,7 +16,9 @@ import Html exposing (Html, a, button, div, main_, nav, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Gap as Gap
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
@@ -51,6 +54,7 @@ type alias Model =
 type Mode
     = Default
     | Tracker
+    | Standings
     | Events
 
 
@@ -89,7 +93,6 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | StripScrollTo Int
-    | ShowCarDetail String
     | ToggleDetailCar String
     | SelectDetailChart CompareWidget.Chart
 
@@ -121,10 +124,6 @@ update msg m =
 
         StripScrollTo offset ->
             ( { m | stripOffset = max 0 offset }, Effect.none )
-
-        ShowCarDetail carNumber ->
-            -- Opening the modal from a standings row click; reset the selection to this single car.
-            ( { m | detailCarNumbers = [ carNumber ] }, Effect.none )
 
         ToggleDetailCar carNumber ->
             -- In-modal selector; toggle selection up to a maximum of 3 cars.
@@ -185,6 +184,9 @@ view shared m =
                         Tracker ->
                             trackerView race.track race.snapshot m
 
+                        Standings ->
+                            trackerView race.track race.snapshot m
+
                         Events ->
                             RaceEvents.view EventsMsg m.eventsState race.replay
             ]
@@ -202,28 +204,38 @@ headerTitle shared =
 trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
 trackerView track snapshot m =
     let
-        tracker =
+        layout =
             case m.mode of
                 Tracker ->
-                    { cell = "col-start-2 row-start-1 row-span-2"
-                    , placeholder = "col-start-3 row-start-1"
-                    , onSelect = ModeChange Default
-                    , detail = TrackerChart.Full
+                    { tracker = "col-start-2 row-start-1 row-span-2"
+                    , trackerDetail = TrackerChart.Full
+                    , onTracker = ModeChange Default
+                    , detail = "col-start-3 row-start-1"
+                    , leaderboard = Nothing
+                    , spare = Just "col-start-3 row-start-2"
+                    }
+
+                Standings ->
+                    { tracker = "col-start-3 row-start-1"
+                    , trackerDetail = TrackerChart.Compact
+                    , onTracker = ModeChange Tracker
+                    , detail = "col-start-3 row-start-2"
+                    , leaderboard = Just "col-start-2 row-start-1 row-span-2"
+                    , spare = Nothing
                     }
 
                 _ ->
-                    { cell = "col-start-3 row-start-1"
-                    , placeholder = "col-start-2 row-start-1 row-span-2"
-                    , onSelect = ModeChange Tracker
-                    , detail = TrackerChart.Compact
+                    { tracker = "col-start-3 row-start-1"
+                    , trackerDetail = TrackerChart.Compact
+                    , onTracker = ModeChange Tracker
+                    , detail = "col-start-2 row-start-1 row-span-2"
+                    , leaderboard = Nothing
+                    , spare = Just "col-start-3 row-start-2"
                     }
 
-        placeholderBody =
+        detailBody =
             case m.mode of
-                Tracker ->
-                    []
-
-                _ ->
+                Default ->
                     -- A card's content does not shrink below what it holds, so
                     -- the box that scrolls has to be a flex child of the card.
                     [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
@@ -238,44 +250,114 @@ trackerView track snapshot m =
                             ]
                         ]
                     ]
+
+                _ ->
+                    []
     in
     div
         [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
-        [ div
-            [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
-            [ LiveStandingsWidget.view
-                { snapshot = snapshot
-
-                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
-                , onSelectCar = ShowCarDetail
-                , popoverTarget = standingsPopoverId
-                }
+        ([ div
+            [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden cursor-pointer"
+            , onClick (ModeChange Standings)
             ]
-        , div [ Attributes.class (tracker.placeholder ++ " grid") ] [ Card.card [] placeholderBody ]
-        , div
+            [ LiveStandingsWidget.view snapshot ]
+         , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
+         , div
             -- The cell is the only box in the chain whose height is settled,
             -- so a square SVG measured against the width overflows the card.
-            [ Attributes.class (tracker.cell ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
-            , onClick tracker.onSelect
+            [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
+            , onClick layout.onTracker
             ]
             [ Card.card []
                 [ Card.content []
                     [ div
                         [ Attributes.class "h-full grid place-items-center" ]
-                        [ TrackerChart.view tracker.detail track snapshot ]
+                        [ TrackerChart.view layout.trackerDetail track snapshot ]
                     ]
                 ]
             ]
-        , div [ Attributes.class "col-start-3 row-start-2 grid" ] [ Card.card [] [] ]
-        , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
-            [ SelectedCarsStrip.view
-                { offset = m.stripOffset
-                , onScrollTo = StripScrollTo
-                }
-                snapshot
-            ]
-        , standingsPopover
+         ]
+            ++ List.filterMap identity
+                [ Maybe.map (leaderboardCell m.leaderboardState snapshot) layout.leaderboard
+                , Maybe.map sparePanel layout.spare
+                ]
+            ++ [ div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
+                    [ SelectedCarsStrip.view
+                        { offset = m.stripOffset
+                        , onScrollTo = StripScrollTo
+                        }
+                        snapshot
+                    ]
+               , standingsPopover
+               ]
+        )
+
+
+sparePanel : String -> Html Msg
+sparePanel cell =
+    button
+        [ attribute "popovertarget" standingsPopoverId
+        , attribute "popovertargetaction" "show"
+        , Attributes.class (cell ++ " grid cursor-pointer text-left")
         ]
+        [ Card.card [] [] ]
+
+
+leaderboardCell : Leaderboard.Model -> Snapshot -> String -> Html Msg
+leaderboardCell leaderboardState snapshot cell =
+    div [ Attributes.class (cell ++ " grid min-h-0") ]
+        [ Card.card []
+            -- A card's content does not shrink below what it holds, so
+            -- the box that scrolls has to be a flex child of the card.
+            [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+                [ Card.content []
+                    [ Leaderboard.view leaderboardConfig leaderboardState snapshot ]
+                ]
+            ]
+        ]
+
+
+leaderboardConfig : Leaderboard.Config CarAt Msg
+leaderboardConfig =
+    { toId = .metadata >> .carNumber
+    , toMsg = LeaderboardMsg
+    , columns =
+        [ Leaderboard.intColumn { label = "", getter = .standing >> .position }
+        , Leaderboard.carNumberColumn_Wec { getter = .metadata }
+        , Leaderboard.driverAndTeamColumn_Wec
+            { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
+        , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
+        , Leaderboard.customColumn
+            { label = "Gap"
+            , getter = .standing >> .gapToLeader >> Gap.toString
+            , sorter = Compare.by (.standing >> .position)
+            }
+        , Leaderboard.customColumn
+            { label = "Interval"
+            , getter = .standing >> .intervalToAhead >> Gap.toString
+            , sorter = Compare.by (.standing >> .position)
+            }
+        , Leaderboard.currentLapColumn_Wec
+            { getter = identity
+            , sorter = Compare.by (.currentLap >> .elapsed)
+            }
+        , Leaderboard.lastLapColumn_Wec
+            { getter = .lastLap
+            , sorter = Compare.by (.lastLap >> lastLapTime)
+            }
+        , Leaderboard.bestTimeColumn { getter = .bestLap }
+        ]
+    }
+
+
+lastLapTime : Snapshot.LastLap -> Duration
+lastLapTime lastLap =
+    case lastLap of
+        Snapshot.Completed { rated } ->
+            rated |> Maybe.map .time |> Maybe.withDefault 0
+
+        Snapshot.NoLapYet ->
+            0
 
 
 standingsPopoverId : String
@@ -351,6 +433,7 @@ viewModeSelector currentMode =
     div [ Attributes.class "inline-flex" ]
         [ modeButton "Default" Default (currentMode == Default)
         , modeButton "Tracker" Tracker (currentMode == Tracker)
+        , modeButton "Standings" Standings (currentMode == Standings)
         , modeButton "Events" Events (currentMode == Events)
         ]
 

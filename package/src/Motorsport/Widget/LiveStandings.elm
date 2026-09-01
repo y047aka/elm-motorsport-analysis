@@ -1,8 +1,7 @@
-module Motorsport.Widget.LiveStandings exposing (Props, view)
+module Motorsport.Widget.LiveStandings exposing (view)
 
-import Html exposing (Html, button, div, li, text)
+import Html exposing (Html, div, li, text)
 import Html.Attributes exposing (attribute, class)
-import Html.Events exposing (onClick)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
@@ -13,19 +12,8 @@ import Motorsport.Wec.Class as Class
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
 
 
-type alias Props msg =
-    { snapshot : Snapshot
-
-    -- Returns the carNumber of the selected car.
-    -- To keep Lazy effective, pass a stable reference such as a Msg constructor,
-    -- not a closure that is recreated on every view.
-    , onSelectCar : String -> msg
-    , popoverTarget : String
-    }
-
-
-view : Props msg -> Html msg
-view props =
+view : Snapshot -> Html msg
+view snapshot =
     div
         [ class "h-full grid grid-rows-[repeat(3,1fr)] gap-y-2.5" ]
         (List.map
@@ -43,30 +31,21 @@ view props =
                             |> List.map
                                 (\item ->
                                     ( item.metadata.carNumber
-                                    , Lazy.lazy3 carRow props.popoverTarget props.onSelectCar item
+                                    , Lazy.lazy carRow item
                                     )
                                 )
                         )
                     ]
             )
-            (Snapshot.toClassList props.snapshot)
+            (Snapshot.toClassList snapshot)
         )
 
 
-carRow : String -> (String -> msg) -> CarAt -> Html msg
-carRow popoverTarget onSelect item =
-    li []
-        [ button
-            [ onClick (onSelect item.metadata.carNumber)
-            , attribute "popovertarget" popoverTarget
-
-            -- Explicit "show": the default "toggle" would close the shared
-            -- popover when a second row is clicked while it is already open.
-            , attribute "popovertargetaction" "show"
-            , class "relative rounded-md w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [word-break:break-word] cursor-pointer transition-colors hover:bg-accent"
-            ]
-            (carRowContent item)
-        ]
+carRow : CarAt -> Html msg
+carRow item =
+    li
+        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [word-break:break-word]" ]
+        (carRowContent item)
 
 
 carRowContent : CarAt -> List (Html msg)
