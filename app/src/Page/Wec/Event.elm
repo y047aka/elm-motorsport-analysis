@@ -242,7 +242,7 @@ trackerView track snapshot m =
     div
         [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
         [ div
-            [ Attributes.class "col-start-1 row-start-1 row-span-2 h-full overflow-y-hidden" ]
+            [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
             [ LiveStandingsWidget.view
                 { snapshot = snapshot
 
@@ -267,7 +267,7 @@ trackerView track snapshot m =
                 ]
             ]
         , div [ Attributes.class "col-start-3 row-start-2 grid" ] [ Card.card [] [] ]
-        , div [ Attributes.class "col-span-full row-start-3" ]
+        , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
             [ SelectedCarsStrip.view
                 { offset = m.stripOffset
                 , onScrollTo = StripScrollTo

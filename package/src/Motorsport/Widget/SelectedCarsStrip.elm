@@ -12,7 +12,7 @@ import Html exposing (Html, button, div, text)
 import Html.Attributes as Attributes exposing (class)
 import Html.Events exposing (onClick)
 import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
-import Motorsport.Widget.SelectedCarsStrip.CarCard as CarCard
+import Motorsport.Widget.CarCard as CarCard
 
 
 {-| `offset` is the 0-based position of the first card in the visible window.

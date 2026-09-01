@@ -19,7 +19,6 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Widget.Compare.CarSelector as CarSelector
 import Motorsport.Widget.Compare.CarSummary as CarSummary
 import Motorsport.Widget.Compare.ChartTabs as ChartTabs
-import Motorsport.Widget.Compare.Distribution as Distribution
 import Motorsport.Widget.Compare.PositionProgression as PositionProgression
 
 
@@ -75,17 +74,6 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
 
                 lapRange =
                     PositionProgression.lapRange snapshot class
-
-                distSeries =
-                    case lapRange of
-                        Just range ->
-                            List.map (Distribution.seriesOf lapHistory range) selectedEntries
-
-                        Nothing ->
-                            []
-
-                distScale =
-                    Distribution.scaleOf distSeries
             in
             div
                 [ Attributes.class "grid gap-y-3" ]
@@ -98,7 +86,7 @@ viewComparison { onToggleCar, activeChart, onSelectChart } snapshot selectedCarN
                     -- Tailwind's class scanner needs a literal class name, so this can't be
                     -- built from maxComparisonCars; grid-cols-3 must be kept in sync with it by hand.
                     [ Attributes.class "grid gap-x-4 grid-cols-3" ]
-                    (List.map (\item -> CarSummary.carSummary lapRange distScale lapHistory item) selectedEntries
+                    (List.map CarSummary.carSummary selectedEntries
                         ++ List.repeat (maxComparisonCars - List.length selectedEntries) CarSummary.placeholderCard
                     )
                 , ChartTabs.chartTabs onSelectChart

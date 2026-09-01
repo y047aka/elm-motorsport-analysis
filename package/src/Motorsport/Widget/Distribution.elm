@@ -1,10 +1,9 @@
-module Motorsport.Widget.Compare.Distribution exposing (Scale, scaleOf, seriesOf)
+module Motorsport.Widget.Distribution exposing (Scale, scaleOf, seriesOf)
 
-{-| Lap-time distribution chart data for the Compare widget.
+{-| Lap-time distribution chart data.
 
-Builds a KDE series from each selected car's racing laps (`seriesOf`) and computes
-a shared scale that aligns the X domain and peak density across all selected cars
-(`scaleOf`).
+Builds a KDE series from a car's racing laps (`seriesOf`) and computes a scale
+that aligns the X domain and peak density across several of them (`scaleOf`).
 
 @docs Scale, scaleOf, seriesOf
 
@@ -17,8 +16,8 @@ import Motorsport.Race.Snapshot as Snapshot exposing (CarAt)
 
 
 {-| Shared scale for the lap-time distribution chart. Aligns the X axis (domain)
-and Y axis (max density) across all selected cars so the columns are drawn on the
-same scale in both directions.
+and Y axis (max density) across several cars so they are drawn on the same scale
+in both directions.
 -}
 type alias Scale =
     { domain : ( Float, Float )
@@ -26,8 +25,8 @@ type alias Scale =
     }
 
 
-{-| Computes the shared scale from every selected car's series, so each column's
-distribution can be compared on the same scale.
+{-| Computes the shared scale from every series given, so the distributions can
+be compared on the same scale.
 -}
 scaleOf : List LapTimeDistribution.Series -> Maybe Scale
 scaleOf series =
