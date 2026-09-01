@@ -5,7 +5,6 @@ import Html.Attributes exposing (attribute, class)
 import Html.Keyed as Keyed
 import Html.Lazy as Lazy
 import Motorsport.Driver as Driver
-import Motorsport.Gap as Gap
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Status as Status
 import Motorsport.Wec.Class as Class
@@ -44,7 +43,7 @@ view snapshot =
 carRow : CarAt -> Html msg
 carRow item =
     li
-        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr_auto_24px] items-center gap-2 text-left [word-break:break-word]" ]
+        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr_24px] items-center gap-2 text-left [word-break:break-word]" ]
         (carRowContent item)
 
 
@@ -54,8 +53,6 @@ carRowContent item =
     , CarNumberBadge.viewRow item.metadata
     , div [ class "text-xs opacity-70" ]
         [ text (Driver.toSurname item.currentDriver) ]
-    , div [ class "text-xs text-right" ]
-        [ text (Gap.toString item.standing.intervalToAhead) ]
     , if item.status == Status.InPit then
         div
             [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]

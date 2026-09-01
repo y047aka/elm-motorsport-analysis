@@ -255,7 +255,7 @@ trackerView track snapshot m =
                     []
     in
     div
-        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[250px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
         ([ div
             [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden cursor-pointer"
             , onClick (ModeChange Standings)
