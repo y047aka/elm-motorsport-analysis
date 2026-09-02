@@ -16,7 +16,7 @@ mod Cli.Args {
     /// and no directory.
     pub enum Command {
         case Convert({ root = String, postgres = Option[String] })
-        case Serve({ port = Int32, postgres = Option[String] })
+        case Serve({ port = Int32, postgres = Option[String], seed = Option[String] })
     }
 
     def defaultPort(): Int32 = 8080
@@ -25,6 +25,7 @@ mod Cli.Args {
         case Postgres(String)
         case Serve
         case Port(Int32)
+        case Seed(String)
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
@@ -39,6 +40,12 @@ mod Cli.Args {
             optionNames   = "serve" :: Nil,
             argDescriptor = ArgDescr.NoArg(Setting.Serve),
             explanation   = "serve the loaded rounds over HTTP instead of converting"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "seed" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(path -> Some(Setting.Seed(path)), "FILE"),
+            explanation   = "rows to load before serving, if the database has none"
         } ::
         {
             optionIds     = Nil,
@@ -57,7 +64,7 @@ mod Cli.Args {
         let postgres = postgresUrl(settings);
         if (serving(settings))
             match nonOptions {
-                case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
+                case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres, seed = seed(settings) }))
                 case extras => Err(ArgsError.UnexpectedArguments(extras))
             }
         else
@@ -88,6 +95,12 @@ mod Cli.Args {
         settings |> List.foldLeft((acc, setting) -> match setting {
             case Setting.Postgres(url) => Some(url)
             case _                     => acc
+        }, None)
+
+    def seed(settings: List[Setting]): Option[String] =
+        settings |> List.foldLeft((acc, setting) -> match setting {
+            case Setting.Seed(path) => Some(path)
+            case _                  => acc
         }, None)
 
     def port(settings: List[Setting]): Int32 =

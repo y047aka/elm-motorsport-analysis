@@ -22,6 +22,11 @@ mod Cli.Db.Schema {
             + ",\n  PRIMARY KEY (season, round, car_number, lap_number)"
             + ",\n  UNIQUE (season, round, source_row)\n)"
 
+    /// The bundled database is initialised once and kept, so its schema is
+    /// asked for rather than dropped and rebuilt.
+    pub def createTableIfMissing(): String =
+        String.replace({src = "CREATE TABLE"}, {dst = "CREATE TABLE IF NOT EXISTS"}, createTable())
+
     pub def insert(): String =
         "INSERT INTO laps (" + List.join(", ", columns()) + ") VALUES ("
             + List.join(", ", placeholders()) + ")"

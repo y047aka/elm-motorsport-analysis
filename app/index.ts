@@ -13,13 +13,13 @@ const nativeApi = "http://127.0.0.1:8080";
 
 const isNative = "__TAURI_INTERNALS__" in window;
 
-// The JVM the native build starts takes a moment to answer, so a refused
-// connection is waited out. A 503 is not: the server is up and saying it has no
-// database, which no amount of waiting changes. Either way the bundle's export
-// is there to fall back on.
+// The native build's first launch initialises a database and fills it before
+// the server answers, so a refused connection is waited out for a while. A 503
+// is not: the server is up and saying it has no database, which no amount of
+// waiting changes. Either way the bundle's export is there to fall back on.
 async function apiBase(): Promise<string> {
   if (!isNative) return "";
-  for (let attempt = 0; attempt < 20; attempt++) {
+  for (let attempt = 0; attempt < 60; attempt++) {
     try {
       const health = await fetch(nativeApi + "/api/health");
       return health.ok ? nativeApi : "";

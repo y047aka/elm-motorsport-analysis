@@ -16,7 +16,7 @@ def main(): Unit \ {Env, IO, Exit, Console} =
             Console.eprintln(Args.usage());
             1
         case Ok(Command.Serve(serve)) =>
-            runServer(serve#port, serve#postgres)
+            runServer(serve#port, serve#postgres, serve#seed)
         case Ok(Command.Convert(convert)) =>
             match checkRoot(convert#root) {
                 case Err(e) =>
@@ -44,15 +44,35 @@ def runStages(root: String, postgres: Option[String]): Int32 \ {Env, IO, Console
     )
 
 /// The database is reached once per request, so the server starts before one is
-/// up and reports it per request.
-def runServer(port: Int32, postgres: Option[String]): Int32 \ {Env, IO, Console} =
-    withDatabase(postgres, url -> {
-        Console.println("Serving /api on port ${port}");
-        match Server.serve(port, url) {
-            case Ok(())  => 0
-            case Err(e)  => Console.eprintln("Error: ${e}"); 1
+/// up and reports it per request. The seeding is the exception: it is what makes
+/// a database worth reading, so it is done before the first request rather than
+/// during one.
+def runServer(port: Int32, postgres: Option[String], seed: Option[String]): Int32 \ {Env, IO, Console} =
+    withDatabase(postgres, url ->
+        match seedRows(url, seed) {
+            case Err(e) => Console.eprintln("Error: ${e}"); 1
+            case Ok(()) =>
+                Console.println("Serving /api on port ${port}");
+                match Server.serve(port, url) {
+                    case Ok(())  => 0
+                    case Err(e)  => Console.eprintln("Error: ${e}"); 1
+                }
         }
-    })
+    )
+
+def seedRows(url: String, seed: Option[String]): Result[String, Unit] \ {IO, Console} =
+    match seed {
+        case None       => Ok(())
+        case Some(path) =>
+            forM(
+                conn  <- Jdbc.connect(url);
+                added <- {
+                    let result = Jdbc.runWith(conn, () -> Cli.Seed.loadIfEmpty(path));
+                    Jdbc.close(conn);
+                    result
+                }
+            ) yield (if (added > 0) Console.println("Seeded ${added} laps from ${path}") else ())
+    }
 
 def withDatabase(postgres: Option[String], f: String -> Int32 \ ef): Int32 \ ef + Env + Console =
     match databaseUrl(postgres) {

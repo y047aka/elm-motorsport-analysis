@@ -69,7 +69,7 @@
         mkTauriApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri flix pkgs.jdk21_headless ]
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri flix pkgs.jdk21_headless pkgs.postgresql pkgs.unzip pkgs.gzip ]
               ++ elmTools
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
             text = sidecarBuild + ''
@@ -77,6 +77,24 @@
               ${cmd}
             '';
           };
+
+        # PostgreSQL built to be relocated: nixpkgs' own is wired to
+        # /nix/store, which a machine that installs the app does not have.
+        # These are the binaries the embedded-postgres project publishes to
+        # Maven, and they carry the libraries they load through @rpath.
+        pgBinaries = {
+          "aarch64-darwin" = {
+            classifier = "darwin-arm64v8";
+            hash = "sha256-ocJ4assMOY+bLXaAb8UvXciyIsvI6Tg6m5cCCE2q86U=";
+          };
+        }.${system} or (throw "no bundled PostgreSQL for ${system}");
+
+        pgVersion = "17.11.0";
+
+        pgArchive = pkgs.fetchurl {
+          url = "https://repo1.maven.org/maven2/io/zonky/test/postgres/embedded-postgres-binaries-${pgBinaries.classifier}/${pgVersion}/embedded-postgres-binaries-${pgBinaries.classifier}-${pgVersion}.jar";
+          inherit (pgBinaries) hash;
+        };
 
         # What the native build carries: the server, and a JVM to run it on.
         #
@@ -106,6 +124,51 @@
             # copied them once cannot copy over its own copy.
             chmod -R u+w "$out/jre"
             rm -rf "$(dirname "$work")"
+          fi
+        '' + pgUnpack + pgDump;
+
+        # The binaries as published are universal and carry a copy of each ICU
+        # library under an unversioned name that nothing links against: thinned
+        # to this machine's architecture and deduplicated, 298MB becomes 115MB.
+        # Thinning invalidates a signature, and macOS will not run an arm64
+        # binary without one.
+        pgUnpack = ''
+          out=app/src-tauri/sidecar
+          if [ ! -x "$out/pg/bin/initdb" ]; then
+            rm -rf "$out/pg"
+            mkdir -p "$out/pg"
+            unpack=$(mktemp -d)
+            unzip -q -o -j "${pgArchive}" '*.txz' -d "$unpack"
+            tar xf "$unpack"/*.txz -C "$out/pg"
+            rm -rf "$unpack"
+            if [ "$(uname -s)" = "Darwin" ]; then
+              find "$out/pg" -type f -perm -u+x -exec sh -c '
+                for f; do
+                  if lipo -info "$f" 2>/dev/null | grep -q "^Architectures in the fat file"; then
+                    lipo -thin "$(uname -m)" "$f" -output "$f.thin" && mv "$f.thin" "$f"
+                    codesign -s - -f "$f" 2>/dev/null
+                  fi
+                done' sh {} +
+              find "$out/pg/lib" -name "libicu*.dylib" ! -name "*[0-9].dylib" -delete
+            fi
+          fi
+        '';
+
+        # The rows the bundled database starts with, read out of the working
+        # copy's. `COPY` writes a field per tab and `\N` for a null, which is
+        # what `Cli.Seed` reads back, so a field holding either would not
+        # survive the round trip.
+        pgDump = ''
+        '' + pgEnsure + ''
+          out=app/src-tauri/sidecar
+          psql "${pgPsqlUrl}" -c "\copy laps to stdout" | gzip -9 > "$out/laps.tsv.gz"
+          if [ "$(gzcat "$out/laps.tsv.gz" | wc -l)" -eq 0 ]; then
+            echo "sidecar: the working copy's database holds no laps; run nix run .#cli-run first" >&2
+            exit 1
+          fi
+          if gzcat "$out/laps.tsv.gz" | sed 's/[\]N//g' | grep -q '[\]'; then
+            echo "sidecar: the dump holds a backslash, which the seed reader cannot take" >&2
+            exit 1
           fi
         '';
 
@@ -190,6 +253,8 @@
           };
 
         pgUrl = "jdbc:postgresql://127.0.0.1:55433/motorsport?user=postgres";
+
+        pgPsqlUrl = "postgresql://postgres@127.0.0.1:55433/motorsport";
 
         pgEnsure = ''
           data=flix/.pg

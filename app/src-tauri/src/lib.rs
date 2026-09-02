@@ -1,35 +1,100 @@
 // Entry point for the Tauri v2 app.
 //
-// The window loads the frontend build (app/dist), and the API it reads is
-// started here: `sidecar/` holds the server's jar and a JVM to run it on, and
-// the frontend reaches it at http://127.0.0.1:8080 rather than same-origin,
-// because the page is tauri://localhost.
+// The window loads the frontend build (app/dist), and what it reads is started
+// here: `sidecar/` holds a PostgreSQL, the rows to fill it with, the server's
+// jar and a JVM to run it on. The frontend reaches the server at
+// http://127.0.0.1:8080 rather than same-origin, because the page is
+// tauri://localhost.
 //
-// Nothing here fails the launch. A machine with no database, or one where the
-// JVM will not start, leaves the frontend to read the export bundled beside it.
+// Nothing here fails the launch. A database that will not start, or a JVM that
+// will not, leaves the frontend to read the export bundled beside it.
 
 use std::env;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Child, Command};
 use std::sync::Mutex;
 
 use tauri::path::BaseDirectory;
 use tauri::{Manager, RunEvent};
 
-/// The URL `nix run .#pg-start` prints, which is the database a working copy
-/// has. `DATABASE_URL` names another.
-const DEFAULT_DATABASE_URL: &str = "jdbc:postgresql://127.0.0.1:55433/motorsport?user=postgres";
-
 /// The port `index.ts` looks for the server on.
-const PORT: &str = "8080";
+const API_PORT: &str = "8080";
 
-struct Server(Mutex<Option<Child>>);
+/// Not 55433, which is the working copy's: a checkout and the installed app
+/// are two databases, and only one of them is rebuilt by a run of the CLI.
+const DATABASE_PORT: &str = "55434";
 
-fn spawn(app: &tauri::AppHandle) -> Result<Child, String> {
-    let sidecar: PathBuf = app
-        .path()
+#[derive(Default)]
+struct Services {
+    api: Option<Child>,
+    database: Option<PathBuf>,
+}
+
+fn sidecar(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    app.path()
         .resolve("sidecar", BaseDirectory::Resource)
-        .map_err(|e| format!("no sidecar in this build ({e})"))?;
+        .map_err(|e| format!("no sidecar in this build ({e})"))
+}
+
+/// The database this launch reads. `DATABASE_URL` is one someone else is
+/// keeping -- a checkout's, say -- and is taken as it is; otherwise the bundled
+/// one is started, and initialised the first time.
+fn database(app: &tauri::AppHandle, sidecar: &Path, services: &mut Services) -> Result<String, String> {
+    if let Ok(named) = env::var("DATABASE_URL") {
+        return Ok(named);
+    }
+    let data = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("no application directory ({e})"))?
+        .join("pg");
+    if !data.join("PG_VERSION").exists() {
+        run_program(
+            sidecar.join("pg/bin/initdb"),
+            &[
+                "-D".as_ref(),
+                data.as_os_str(),
+                "-U".as_ref(),
+                "postgres".as_ref(),
+                "-A".as_ref(),
+                "trust".as_ref(),
+                "--no-locale".as_ref(),
+                "--encoding=UTF8".as_ref(),
+            ],
+        )?;
+    }
+    // A launch that found one already up leaves it running, and leaves
+    // stopping it to whoever started it.
+    let pg_ctl = sidecar.join("pg/bin/pg_ctl");
+    let running = run_program(pg_ctl.clone(), &["-D".as_ref(), data.as_os_str(), "status".as_ref()]).is_ok();
+    if !running {
+        // `-o` is split on spaces by `pg_ctl`, and the data directory's path
+        // holds one, so the socket directory cannot be named in it. Nothing
+        // here connects over a socket: the driver speaks TCP.
+        run_program(
+            pg_ctl,
+            &[
+                "-D".as_ref(),
+                data.as_os_str(),
+                "-l".as_ref(),
+                data.join("server.log").as_os_str(),
+                "-o".as_ref(),
+                format!("-p {DATABASE_PORT} -c listen_addresses=127.0.0.1 -c unix_socket_directories=")
+                    .as_ref(),
+                "-w".as_ref(),
+                "start".as_ref(),
+            ],
+        )?;
+        services.database = Some(data);
+    }
+    Ok(format!(
+        "jdbc:postgresql://127.0.0.1:{DATABASE_PORT}/postgres?user=postgres"
+    ))
+}
+
+/// The rows are the ones the build was made from, and are loaded into a
+/// database that has none: an installed app seeds itself once.
+fn start_api(sidecar: &Path, database: &str) -> Result<Child, String> {
     let java = sidecar
         .join("jre/bin")
         .join(if cfg!(windows) { "java.exe" } else { "java" });
@@ -40,36 +105,77 @@ fn spawn(app: &tauri::AppHandle) -> Result<Child, String> {
     Command::new(java)
         .args(["-cp"])
         .arg(class_path)
-        .args(["Main", "--serve", "--port", PORT])
-        .env(
-            "DATABASE_URL",
-            env::var("DATABASE_URL").unwrap_or_else(|_| DEFAULT_DATABASE_URL.to_string()),
-        )
+        .args(["Main", "--serve", "--port", API_PORT, "--postgres"])
+        .arg(database)
+        .arg("--seed")
+        .arg(sidecar.join("laps.tsv.gz"))
         .spawn()
         .map_err(|e| format!("could not start the server ({e})"))
+}
+
+fn run_program(program: PathBuf, args: &[&std::ffi::OsStr]) -> Result<(), String> {
+    let named = program.display().to_string();
+    let status = Command::new(&program)
+        .args(args)
+        .status()
+        .map_err(|e| format!("could not run {named} ({e})"))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(format!("{named} exited with {status}"))
+    }
+}
+
+fn start(app: &tauri::AppHandle, services: &mut Services) -> Result<(), String> {
+    let sidecar = sidecar(app)?;
+    let database = database(app, &sidecar, services)?;
+    services.api = Some(start_api(&sidecar, &database)?);
+    Ok(())
+}
+
+fn stop(app: &tauri::AppHandle, services: &mut Services) {
+    // Both outlive this process if they are left: the JVM holds the port
+    // against the next launch, and the database holds its own data directory.
+    if let Some(mut api) = services.api.take() {
+        let _ = api.kill();
+        let _ = api.wait();
+    }
+    if let Some(data) = services.database.take() {
+        if let Ok(sidecar) = sidecar(app) {
+            let _ = run_program(
+                sidecar.join("pg/bin/pg_ctl"),
+                &[
+                    "-D".as_ref(),
+                    data.as_os_str(),
+                    "-m".as_ref(),
+                    "fast".as_ref(),
+                    "stop".as_ref(),
+                ],
+            );
+        }
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
-        .manage(Server(Mutex::new(None)))
+        .manage(Mutex::new(Services::default()))
         .setup(|app| {
-            match spawn(app.handle()) {
-                Ok(child) => *app.state::<Server>().0.lock().unwrap() = Some(child),
-                Err(cause) => eprintln!("API: {cause}"),
+            let handle = app.handle().clone();
+            let state = app.state::<Mutex<Services>>();
+            let mut services = state.lock().unwrap();
+            if let Err(cause) = start(&handle, &mut services) {
+                eprintln!("API: {cause}");
             }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
         .run(|app, event| {
-            // The JVM is a child of this process and would outlive it, holding
-            // the port against the next launch.
             if let RunEvent::Exit = event {
-                if let Some(mut child) = app.state::<Server>().0.lock().unwrap().take() {
-                    let _ = child.kill();
-                    let _ = child.wait();
-                }
+                let state = app.state::<Mutex<Services>>();
+                let mut services = state.lock().unwrap();
+                stop(app, &mut services);
             }
         });
 }

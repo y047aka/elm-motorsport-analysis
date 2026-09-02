@@ -129,22 +129,37 @@ disagreeing about the same round.
 
 ### The native build
 
-`.#tauri-dev` and `.#tauri-build` assemble `app/src-tauri/sidecar` first: the
-server's jar, the JDBC driver, and a JRE `jlink` cuts down to the modules
-`jdeps` names for those two (52MB). Tauri bundles the directory as a resource,
-and `lib.rs` starts the JVM on the port `index.ts` looks for, killing it when
-the app exits.
+`.#tauri-dev` and `.#tauri-build` assemble `app/src-tauri/sidecar` first, and
+Tauri bundles it as a resource. It holds everything the window reads:
+
+- `api.jar` and the JDBC driver beside it, and a JRE `jlink` cuts to the
+  modules `jdeps` names for the two (52MB).
+- `pg/`, PostgreSQL 17 as the embedded-postgres project publishes it to Maven.
+  nixpkgs' own is wired to /nix/store, which an installed app does not have;
+  these carry their libraries through `@rpath`. Thinned to one architecture and
+  stripped of the ICU copies nothing links against, 298MB becomes 115MB --
+  thinning invalidates the signature, so each binary is signed again ad hoc.
+- `laps.tsv.gz`, the `laps` table as `COPY` writes it, read out of the working
+  copy's database at build time. A build made before `.#cli-run` has filled
+  that one fails rather than bundling nothing.
+
+`lib.rs` runs the three: `initdb` into the application data directory the first
+time, `pg_ctl start`, then the JVM with `--postgres` naming it and `--seed`
+naming the file. `Cli.Seed` fills a database that has no rows and leaves one
+that has them, so the seeding is the first launch only. Both are stopped when
+the app exits -- the JVM would hold the port against the next launch, and the
+database its own data directory. `DATABASE_URL` skips all of it and points the
+server at the database it names.
 
 Nothing there fails the launch. `index.ts` asks `/api/health` before it boots
-Elm: an answer names the server as `Shared.apiBase`, and a refusal or a 503 --
-no database on this machine -- leaves it empty, which is the bundle's own
-export under `/static/wec`. The build writes `dist/api/wec/index.json` for
-exactly that case.
+Elm: an answer names the server as `Shared.apiBase`, and a refusal it waits out,
+or a 503 -- the server is up and has no database -- leaves it empty, which is
+the bundle's own export under `/static/wec`. The build writes
+`dist/api/wec/index.json` for exactly that case.
 
 The base cannot be dropped for a relative path: the page is `tauri://localhost`
 and the server is another origin, which is also why `Cli.Server` sends
-`Access-Control-Allow-Origin`. The database is the one `DATABASE_URL` names,
-and the URL `.#pg-start` prints when it names none.
+`Access-Control-Allow-Origin`.
 
 ### The shadcn components
 
