@@ -11,3 +11,6 @@
 /icons/Square*Logo.png
 /icons/StoreLogo.png
 /icons/64x64.png
+
+# The server and the JVM it runs on, assembled by the flake before a Tauri build.
+/sidecar

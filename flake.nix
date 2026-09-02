@@ -69,14 +69,45 @@
         mkTauriApp = name: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri ]
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri flix pkgs.jdk21_headless ]
               ++ elmTools
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
-            text = ''
+            text = sidecarBuild + ''
               cd app
               ${cmd}
             '';
           };
+
+        # What the native build carries: the server, and a JVM to run it on.
+        #
+        # The jar is built from a copy holding only `src/`, because
+        # `flix build-jar` packs the build directory whole and a working copy
+        # that has run the tests has their classes in it -- 1.7MB against
+        # 600MB. The JRE holds the modules `jdeps` names for that jar and the
+        # JDBC driver, and nothing else.
+        sidecarBuild = ''
+          out=app/src-tauri/sidecar
+          if [ ! -f "$out/api.jar" ] || [ -n "$(find flix/src -name '*.flix' -newer "$out/api.jar" 2>/dev/null)" ]; then
+            work=$(mktemp -d)/api
+            mkdir -p "$work"
+            cp flix/flix.toml "$work/"
+            cp -R flix/src "$work/src"
+            if [ -d flix/lib ]; then cp -R flix/lib "$work/lib"; fi
+            (cd "$work" && flix build-jar) >&2
+            rm -rf "$out"
+            mkdir -p "$out/lib"
+            cp "$work"/artifact/api.jar "$out/api.jar"
+            find "$work/lib" -name '*.jar' -exec cp {} "$out/lib/" \;
+            jlink \
+              --add-modules "$(jdeps --multi-release 21 --ignore-missing-deps --print-module-deps "$out/api.jar" "$out"/lib/*.jar)" \
+              --strip-debug --no-header-files --no-man-pages --compress=zip-6 \
+              --output "$out/jre"
+            # jlink writes the licences read-only, and a Tauri build that has
+            # copied them once cannot copy over its own copy.
+            chmod -R u+w "$out/jre"
+            rm -rf "$(dirname "$work")"
+          fi
+        '';
 
         flix = pkgs.flix.overrideAttrs (old: rec {
           version = "0.75.1";

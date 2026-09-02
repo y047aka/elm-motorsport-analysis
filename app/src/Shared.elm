@@ -20,6 +20,7 @@ import Data.Wec.Manufacturer as Manufacturer exposing (Manufacturers)
 import Dict
 import Effect exposing (Effect)
 import Http
+import Json.Decode as Decode
 import Motorsport.Chart.Tracker as Tracker
 import Motorsport.Clock as Clock
 import Motorsport.Race.Car as Car
@@ -35,9 +36,15 @@ import Shared.Msg exposing (Msg(..))
 
 {-| Everything about a round hangs off `Round` rather than sitting beside it,
 so a half-loaded one cannot be read as a loaded one.
+
+`apiBase` is empty everywhere but the native build, where the page is served
+from `tauri://localhost` and the server listens on a port of its own: the paths
+the calendar names are then reached at another origin, not this one.
+
 -}
 type alias Model =
-    { calendar : Calendar
+    { apiBase : String
+    , calendar : Calendar
     , manufacturers : Maybe Manufacturers
     , round : Round
     }
@@ -97,13 +104,18 @@ type alias Race =
 the pages that read them: they are the same files whichever route the app opened
 on, and a round reached by its URL still needs both.
 -}
-init : flags -> ( Model, Effect Msg )
-init _ =
-    ( { calendar = Calendar.empty, manufacturers = Nothing, round = NoRound }
+init : Decode.Value -> ( Model, Effect Msg )
+init flags =
+    let
+        apiBase =
+            Decode.decodeValue (Decode.field "apiBase" Decode.string) flags
+                |> Result.withDefault ""
+    in
+    ( { apiBase = apiBase, calendar = Calendar.empty, manufacturers = Nothing, round = NoRound }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
-                { url = "/api/wec/index.json"
+                { url = apiBase ++ "/api/wec/index.json"
                 , expect = Http.expectJson CalendarLoaded Calendar.decoder
                 }
             , Http.get
@@ -225,11 +237,11 @@ resumeWaitingRound m =
                             Effect.sendCmd <|
                                 Cmd.batch
                                     [ Http.get
-                                        { url = round.summary
+                                        { url = m.apiBase ++ round.summary
                                         , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers)
                                         }
                                     , Http.get
-                                        { url = round.laps
+                                        { url = m.apiBase ++ round.laps
                                         , expect =
                                             Http.expectString
                                                 (LapsLoaded_Wec (keyOf id)

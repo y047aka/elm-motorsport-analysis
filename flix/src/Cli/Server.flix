@@ -48,7 +48,11 @@ mod Cli.Server {
     def send(exchange: HttpExchange, response: Response): Unit \ IO =
         try {
             let bytes = response#body.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", response#contentType);
+            let headers = exchange.getResponseHeaders();
+            headers.add("Content-Type", response#contentType);
+            // The native build's page is `tauri://localhost`, which is another
+            // origin than the one this listens on.
+            headers.add("Access-Control-Allow-Origin", "*");
             exchange.sendResponseHeaders(response#status, Int32.toInt64(Array.length(bytes)));
             let out = exchange.getResponseBody();
             out.write(bytes);

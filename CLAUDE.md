@@ -31,7 +31,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→PostgreSQL + JSON/JSONL |
 | `nix run .#cli-serve` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
-| `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
+| `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`), server included |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
 Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
@@ -72,6 +72,11 @@ Its operating form is the jar, since `flix run` takes the JVM down with `main`
 and the server's does not return. `flix build-jar` leaves the Maven
 dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
+
+What it does put in is the build directory whole, tests and all: a working copy
+that has run `.#cli-test` writes a 600MB jar, of which 57% is test classes.
+`.#cli-serve` runs that one; the native build's is built from a copy holding
+only `src/`, which is 1.7MB.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
@@ -121,6 +126,25 @@ routes that read nothing are answered without a database in the tests through
 `Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
 and `Motorsport.Wec` render for the export, so the two paths cannot drift into
 disagreeing about the same round.
+
+### The native build
+
+`.#tauri-dev` and `.#tauri-build` assemble `app/src-tauri/sidecar` first: the
+server's jar, the JDBC driver, and a JRE `jlink` cuts down to the modules
+`jdeps` names for those two (52MB). Tauri bundles the directory as a resource,
+and `lib.rs` starts the JVM on the port `index.ts` looks for, killing it when
+the app exits.
+
+Nothing there fails the launch. `index.ts` asks `/api/health` before it boots
+Elm: an answer names the server as `Shared.apiBase`, and a refusal or a 503 --
+no database on this machine -- leaves it empty, which is the bundle's own
+export under `/static/wec`. The build writes `dist/api/wec/index.json` for
+exactly that case.
+
+The base cannot be dropped for a relative path: the page is `tauri://localhost`
+and the server is another origin, which is also why `Cli.Server` sends
+`Access-Control-Allow-Origin`. The database is the one `DATABASE_URL` names,
+and the URL `.#pg-start` prints when it names none.
 
 ### The shadcn components
 

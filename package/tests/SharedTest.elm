@@ -13,6 +13,7 @@ import Dict
 import Expect
 import Http
 import Json.Decode as Decode
+import Json.Encode as Encode
 import Motorsport.Replay as Replay
 import Motorsport.Wec.Era as Era
 import Shared
@@ -152,7 +153,12 @@ manufacturers =
 
 fresh : Shared.Model
 fresh =
-    Shared.init () |> Tuple.first
+    initWith Encode.null
+
+
+initWith : Encode.Value -> Shared.Model
+initWith flags =
+    Shared.init flags |> Tuple.first
 
 
 {-| Reached the way a link from the index page reaches it: the calendar was
@@ -189,6 +195,16 @@ suite =
             \_ ->
                 ( summary /= Nothing, List.length laps )
                     |> Expect.equal ( True, 1 )
+        , describe "init"
+            [ test "takes the API's origin from its flags" <|
+                \_ ->
+                    initWith (Encode.object [ ( "apiBase", Encode.string "http://127.0.0.1:8080" ) ])
+                        |> .apiBase
+                        |> Expect.equal "http://127.0.0.1:8080"
+            , test "reads flags that name none as this origin" <|
+                \_ ->
+                    fresh |> .apiBase |> Expect.equal ""
+            ]
         , describe "update"
             [ test "resolves the round whichever of the URL, the calendar and the table is last" <|
                 \_ ->
