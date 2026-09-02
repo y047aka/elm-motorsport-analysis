@@ -34,6 +34,11 @@ mod Cli.Db.Schema {
             if (String.endsWith({suffix = "int[]"}, definition)) "?::int[]" else "?"
         )
 
+    pub def selectRound(season: Int32, round: String): String =
+        "SELECT " + List.join(", ", columns())
+            + " FROM laps WHERE " + scope(season, round)
+            + " ORDER BY source_row"
+
     /// In the order `Cli.Db.LapRow.values` produces them.
     pub def columns(): List[String] =
         definitions() |> List.map(d -> String.takeWhile(c -> c != ' ', d))

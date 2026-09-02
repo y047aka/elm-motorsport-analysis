@@ -1,6 +1,7 @@
 mod Cli.TestArgs {
 
     use Cli.Args
+    use Cli.Args.Command
 
     @Test
     def testParseNoArgs(): Unit \ Assert =
@@ -9,8 +10,8 @@ mod Cli.TestArgs {
     @Test
     def testParseRoot(): Unit \ Assert =
         match Args.parse("../app/static/wec" :: Nil) {
-            case Ok(parsed) => Assert.assertTrue(parsed#root == "../app/static/wec")
-            case Err(_)     => Assert.assertTrue(false)
+            case Ok(Command.Convert(convert)) => Assert.assertTrue(convert#root == "../app/static/wec")
+            case _                            => Assert.assertTrue(false)
         }
 
     @Test
@@ -22,5 +23,24 @@ mod Cli.TestArgs {
     @Test
     def testOutputIsNoLongerAnOption(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--output" :: "out.json" :: Nil)))
+
+    @Test
+    def testParseServe(): Unit \ Assert =
+        match Args.parse("--serve" :: Nil) {
+            case Ok(Command.Serve(serve)) => Assert.assertTrue(serve#port == 8080)
+            case _                        => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testParseServePort(): Unit \ Assert =
+        match Args.parse("--serve" :: "--port" :: "9000" :: Nil) {
+            case Ok(Command.Serve(serve)) => Assert.assertTrue(serve#port == 9000)
+            case _                        => Assert.assertTrue(false)
+        }
+
+    /// Serving reads what a run loaded, so there is no directory to give it.
+    @Test
+    def testServeTakesNoRoot(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "../app/static/wec" :: Nil)))
 
 }

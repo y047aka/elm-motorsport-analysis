@@ -103,7 +103,7 @@ init _ =
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
-                { url = "/static/wec/index.json"
+                { url = "/api/wec/index.json"
                 , expect = Http.expectJson CalendarLoaded Calendar.decoder
                 }
             , Http.get

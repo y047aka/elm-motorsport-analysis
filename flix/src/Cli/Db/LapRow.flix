@@ -5,6 +5,9 @@ mod Cli.Db.LapRow {
     use Motorsport.Wec.RawLap
     use Motorsport.Wec.RawMiniSector
     use Motorsport.Wec.RawSector
+    use Motorsport.MiniSector
+    use Motorsport.MiniSector.MiniSectorId
+    use Cli.Db.Row
     use Util.Duration
     use Util.HourClock
 
@@ -145,6 +148,121 @@ mod Cli.Db.LapRow {
         Value.NullableIntArray(row#miniSectorTimeMs) ::
         Value.NullableIntArray(row#miniSectorElapsedMs) ::
         Nil
+
+
+    /// A row of the `SELECT` in `Cli.Db.Schema.selectRound`, whose columns are
+    /// `Cli.Db.Schema.columns` in order.
+    pub def fromRow(row: List[Option[String]]): Result[String, LapRow] =
+        forM(
+            season                  <- Row.int(0, row);
+            round                   <- Row.text(1, row);
+            sourceRow               <- Row.int(2, row);
+            carNumber               <- Row.text(3, row);
+            class                   <- Row.text(4, row);
+            carGroup                <- Row.text(5, row);
+            team                    <- Row.text(6, row);
+            manufacturer            <- Row.text(7, row);
+            driverNumber            <- Row.int(8, row);
+            driverName              <- Row.text(9, row);
+            lapNumber               <- Row.int(10, row);
+            lapTimeMs               <- Row.int(11, row);
+            lapImprovement          <- Row.int(12, row);
+            crossingFinishLineInPit <- Row.bool(13, row);
+            s1Ms                    <- Row.optionalInt(14, row);
+            s1Improvement           <- Row.int(15, row);
+            s2Ms                    <- Row.optionalInt(16, row);
+            s2Improvement           <- Row.int(17, row);
+            s3Ms                    <- Row.optionalInt(18, row);
+            s3Improvement           <- Row.int(19, row);
+            kph                     <- Row.text(20, row);
+            elapsedMs               <- Row.int(21, row);
+            hourMs                  <- Row.int(22, row);
+            topSpeed                <- Row.text(23, row);
+            pitTimeMs               <- Row.optionalInt(24, row);
+            flagAtFl                <- Row.text(25, row);
+            miniSectorTimeMs        <- Row.optionalIntArray(26, row);
+            miniSectorElapsedMs     <- Row.optionalIntArray(27, row)
+        ) yield {
+            season = season,
+            round = round,
+            sourceRow = sourceRow,
+            carNumber = carNumber,
+            class = class,
+            carGroup = carGroup,
+            team = team,
+            manufacturer = manufacturer,
+            driverNumber = driverNumber,
+            driverName = driverName,
+            lapNumber = lapNumber,
+            lapTimeMs = lapTimeMs,
+            lapImprovement = lapImprovement,
+            crossingFinishLineInPit = crossingFinishLineInPit,
+            s1Ms = s1Ms,
+            s1Improvement = s1Improvement,
+            s2Ms = s2Ms,
+            s2Improvement = s2Improvement,
+            s3Ms = s3Ms,
+            s3Improvement = s3Improvement,
+            kph = kph,
+            elapsedMs = elapsedMs,
+            hourMs = hourMs,
+            topSpeed = topSpeed,
+            pitTimeMs = pitTimeMs,
+            flagAtFl = flagAtFl,
+            miniSectorTimeMs = miniSectorTimeMs,
+            miniSectorElapsedMs = miniSectorElapsedMs
+        }
+
+    pub def toRawLap(row: LapRow): Result[String, RawLap] =
+        forM(
+            lapImprovement <- improvement("LAP_IMPROVEMENT", row#lapImprovement);
+            s1Improvement  <- improvement("S1_IMPROVEMENT", row#s1Improvement);
+            s2Improvement  <- improvement("S2_IMPROVEMENT", row#s2Improvement);
+            s3Improvement  <- improvement("S3_IMPROVEMENT", row#s3Improvement);
+            flagAtFl       <- flag(row#flagAtFl)
+        ) yield {
+            car = {
+                carNumber    = row#carNumber,
+                class        = row#class,
+                group        = row#carGroup,
+                team         = row#team,
+                manufacturer = row#manufacturer
+            },
+            driver = { number = row#driverNumber, name = row#driverName },
+            lapNumber = row#lapNumber,
+            lapTime = Duration.fromMillis(row#lapTimeMs),
+            lapImprovement = lapImprovement,
+            crossingFinishLineInPit = row#crossingFinishLineInPit,
+            s1 = { value = Option.map(Duration.fromMillis, row#s1Ms), improvement = s1Improvement },
+            s2 = { value = Option.map(Duration.fromMillis, row#s2Ms), improvement = s2Improvement },
+            s3 = { value = Option.map(Duration.fromMillis, row#s3Ms), improvement = s3Improvement },
+            kph = row#kph,
+            elapsed = Duration.fromMillis(row#elapsedMs),
+            hour = HourClock.Hour.Hour(row#hourMs),
+            topSpeed = row#topSpeed,
+            pitTime = Option.map(Duration.fromMillis, row#pitTimeMs),
+            flagAtFl = flagAtFl,
+            miniSectors = miniSectors(row)
+        }
+
+    def improvement(column: String, value: Int32): Result[String, Wec.Improvement] =
+        Wec.improvementFromInt(value)
+            |> Option.toOk("${column} is not 0/1/2/3: ${value}")
+
+    def flag(value: String): Result[String, Wec.Flag] =
+        Wec.flagFromString(value)
+            |> Option.toOk("FLAG_AT_FL is not GF/SF/FCY/FF/RF: \"${value}\"")
+
+    def miniSectors(row: LapRow): Option[List[(MiniSectorId, RawMiniSector)]] =
+        match (row#miniSectorTimeMs, row#miniSectorElapsedMs) {
+            case (Some(times), Some(elapsed)) =>
+                Some(List.zip(MiniSector.all(), List.zip(times, elapsed))
+                    |> List.map(match (id, (time, cumulative)) -> (id, {
+                        time    = Option.map(Duration.fromMillis, time),
+                        elapsed = Option.map(Duration.fromMillis, cumulative)
+                    })))
+            case _ => None
+        }
 
     def sectorMs(sector: RawSector): Option[Int32] =
         Option.map(Duration.millis, sector#value)

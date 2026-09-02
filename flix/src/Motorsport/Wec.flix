@@ -309,13 +309,28 @@ mod Motorsport.Wec {
         stringField(name) |> Decode.andThen(s -> Decode.fromResult(parseFlag(name, s)))
 
     def parseFlag(name: String, s: String): Result[String, Flag] =
+        match flagFromString(s) {
+            case Some(flag) => Ok(flag)
+            case None       => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
+        }
+
+    pub def flagFromString(s: String): Option[Flag] =
         match s {
-            case "GF"  => Ok(Flag.Green)
-            case "SF"  => Ok(Flag.SlowZone)
-            case "FCY" => Ok(Flag.FullCourseYellow)
-            case "FF"  => Ok(Flag.Finish)
-            case "RF"  => Ok(Flag.Red)
-            case _     => Err("${name}: expected GF/SF/FCY/FF/RF but got \"${s}\"")
+            case "GF"  => Some(Flag.Green)
+            case "SF"  => Some(Flag.SlowZone)
+            case "FCY" => Some(Flag.FullCourseYellow)
+            case "FF"  => Some(Flag.Finish)
+            case "RF"  => Some(Flag.Red)
+            case _     => None
+        }
+
+    pub def improvementFromInt(n: Int32): Option[Improvement] =
+        match n {
+            case 0 => Some(Improvement.None)
+            case 1 => Some(Improvement.DriverBest)
+            case 2 => Some(Improvement.CarBest)
+            case 3 => Some(Improvement.OverallBest)
+            case _ => None
         }
 
     pub def improvementToInt(imp: Improvement): Int32 =
