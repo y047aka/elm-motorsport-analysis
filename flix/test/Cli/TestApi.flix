@@ -4,6 +4,7 @@ mod Cli.TestApi {
     use Cli.Api.Response
     use Cli.Api.Route
     use Cli.Db
+    use Cli.Stages.Manifest
     use Cli.Stages.Summary
     use Cli.Stages.Transform
     use Cli.TestRound
@@ -58,6 +59,17 @@ mod Cli.TestApi {
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)
+
+    /// One path is the other with its root replaced. The dev server answers
+    /// `/api` out of `static/` on that, and so does the calendar a bundle with
+    /// no server behind it is built with.
+    @Test
+    def theTwoRootsNameTheSameRounds(): Unit \ Assert =
+        let served = offline(Route.Calendar)#body;
+        let exported = Extra.render(Manifest.toJson(Manifest.urlRoot(), Motorsport.Calendar.seasons()));
+        Assert.assertTrue(
+            String.replace({src = Api.urlRoot()}, {dst = Manifest.urlRoot()}, served) == exported
+        )
 
     /// The calendar the server hands out points back at the server.
     @Test
