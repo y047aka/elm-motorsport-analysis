@@ -373,6 +373,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   how the lap divides) and needs no database; `test/Cli/Stages/` and
   `test/Cli/TestApi.flix` drive the reading, and need one. A subject with both
   has a file in each, named for the module it drives.
+- **A clean build** — `flix build` and `flix test` are incremental, and CI is
+  not: a compile that only fails from cold passes locally until `flix/build`
+  is removed. `rm -rf flix/build` before believing a green run.
 - **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
   names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
   standing in for it. A test that reaches no database fails rather than
