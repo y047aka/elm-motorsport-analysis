@@ -3,8 +3,11 @@ mod Cli.Server {
     import com.sun.net.httpserver.HttpExchange
     import com.sun.net.httpserver.HttpHandler
     import com.sun.net.httpserver.HttpServer
+    import java.io.ByteArrayOutputStream
     import java.io.IOException
     import java.lang.Throwable
+    import java.util.zip.CRC32
+    import java.util.zip.GZIPOutputStream
     import java.net.InetSocketAddress
     import java.nio.charset.StandardCharsets
     import java.util.concurrent.CountDownLatch
@@ -59,16 +62,72 @@ mod Cli.Server {
                 answered
         }
 
+    /// A round is answered with the bytes it was answered with last time until
+    /// a run reloads it, and Le Mans is 24MB of them: worth a tag to be spared
+    /// re-sending, and worth compressing when it is sent.
     def send(exchange: HttpExchange, response: Response): Unit \ IO =
         try {
             let bytes = response#body.getBytes(StandardCharsets.UTF_8);
-            exchange.getResponseHeaders().add("Content-Type", response#contentType);
-            exchange.sendResponseHeaders(response#status, Int32.toInt64(Array.length(bytes)));
-            let out = exchange.getResponseBody();
-            out.write(bytes);
-            out.close()
+            let headers = exchange.getResponseHeaders();
+            headers.add("Content-Type", response#contentType);
+            // Tagged only where there is a round to tag. A 404 and a 500 say
+            // what is true now, and nothing is spared by asking about them
+            // again.
+            let tag = if (response#status == 200) Some(etag(bytes)) else None;
+            match tag {
+                case None => sendBody(exchange, response#status, bytes, acceptsGzip(exchange))
+                case Some(value) =>
+                    headers.add("ETag", value);
+                    // Without this a browser is free to reuse the body without
+                    // asking, and a reload after a run would show the round
+                    // before it.
+                    headers.add("Cache-Control", "no-cache");
+                    if (requestHeader(exchange, "If-None-Match") == Some(value))
+                        notModified(exchange)
+                    else
+                        sendBody(exchange, response#status, bytes, acceptsGzip(exchange))
+            }
         } catch {
             case _e: Throwable => exchange.close()
         }
+
+    def notModified(exchange: HttpExchange): Unit \ IO =
+        // -1 is "no body at all", which is what a 304 is.
+        exchange.sendResponseHeaders(304, -1i64);
+        exchange.close()
+
+    def sendBody(exchange: HttpExchange, status: Int32, bytes: Array[Int8, Static], compress: Bool): Unit \ IO =
+        let sent = if (compress) {
+            exchange.getResponseHeaders().add("Content-Encoding", "gzip");
+            gzip(bytes)
+        } else bytes;
+        exchange.sendResponseHeaders(status, Int32.toInt64(Array.length(sent)));
+        let out = exchange.getResponseBody();
+        out.write(sent);
+        out.close()
+
+    def gzip(bytes: Array[Int8, Static]): Array[Int8, Static] \ IO =
+        let buffer = new ByteArrayOutputStream();
+        let out = new GZIPOutputStream(buffer);
+        out.write(bytes);
+        out.close();
+        buffer.toByteArray()
+
+    /// CRC32 of the body with its length, which is enough to notice a round
+    /// that has been loaded again. Not a hash of the rows: the answer is what
+    /// is being compared, and it is in hand here.
+    def etag(bytes: Array[Int8, Static]): String \ IO =
+        let crc = new CRC32();
+        crc.update(bytes);
+        "\"${Array.length(bytes)}-${crc.getValue()}\""
+
+    def acceptsGzip(exchange: HttpExchange): Bool \ IO =
+        match requestHeader(exchange, "Accept-Encoding") {
+            case Some(accepted) => String.contains({substr = "gzip"}, accepted)
+            case None           => false
+        }
+
+    def requestHeader(exchange: HttpExchange, name: String): Option[String] \ IO =
+        Object.toOption(exchange.getRequestHeaders().getFirst(name))
 
 }

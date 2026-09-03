@@ -118,6 +118,11 @@ the stages rather than restating them: `Cli.Api.respond` runs under
 routes that read nothing are answered without a database in the tests through
 `Cli.Db.runRecording`.
 
+An answer is tagged and compressed: a round is the same bytes until a run
+loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
+a 304, and a body goes out gzipped where the request accepts it -- Le Mans's
+laps are 24MB, and 3.4MB on the wire.
+
 `Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
 and `Motorsport.Wec` render for the export, so the two paths cannot drift into
 disagreeing about the same round.
