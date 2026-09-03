@@ -1,4 +1,4 @@
-mod Cli.Db.Jdbc {
+mod Db.Jdbc {
 
     import java.sql.Connection
     import java.sql.DriverManager
@@ -9,11 +9,10 @@ mod Cli.Db.Jdbc {
 
     import org.postgresql.Driver
 
-    use Cli.Db
-    use Cli.Db.LapRow
-    use Cli.Db.LapRow.LapRow
-    use Cli.Db.LapRow.Value
-    use Cli.Db.Schema
+    use Db.LapRow
+    use Db.LapRow.LapRow
+    use Db.LapRow.Value
+    use Db.Schema
 
     def batchSize(): Int32 = 1000
 

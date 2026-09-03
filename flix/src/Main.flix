@@ -4,8 +4,7 @@ use Sys.Exit
 use Util.Files
 use Cli.Args
 use Cli.Args.Command
-use Cli.Db
-use Cli.Db.Jdbc
+use Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Server
 use Cli.Stages

@@ -2,7 +2,6 @@
 mod Cli.Stages.Export {
 
     use Sys.Console
-    use Cli.Db
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.Laps

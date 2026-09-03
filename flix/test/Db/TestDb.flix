@@ -1,9 +1,8 @@
-mod Cli.TestDb {
+mod Db.TestDb {
 
-    use Cli.Db
-    use Cli.Db.Statement
-    use Cli.Db.LapRow
-    use Cli.Db.TestLapRow
+    use Db.Statement
+    use Db.LapRow
+    use Db.TestLapRow
 
     def sampleRows(): List[LapRow.LapRow] =
         LapRow.fromRawLaps(
@@ -38,7 +37,7 @@ mod Cli.TestDb {
     /// with no violations and no cars in it.
     @Test
     def recordingCannotAnswerARead(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Cli.Db.fetch("SELECT 1"));
+        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1"));
         match result {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)

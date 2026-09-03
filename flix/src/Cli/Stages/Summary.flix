@@ -4,9 +4,8 @@
 /// decisions stays in `Motorsport`: this reads, and hands over.
 mod Cli.Stages.Summary {
 
-    use Cli.Db
-    use Cli.Db.Row
-    use Cli.Db.Schema
+    use Db.Row
+    use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.Car.Car
     use Motorsport.Events

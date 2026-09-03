@@ -1,7 +1,7 @@
-mod Cli.Db.TestLapRow {
+mod Db.TestLapRow {
 
-    use Cli.Db.LapRow
-    use Cli.Db.LapRow.Value
+    use Db.LapRow
+    use Db.LapRow.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
@@ -146,7 +146,7 @@ mod Cli.Db.TestLapRow {
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
 
-    /// The cells a `SELECT` of `Cli.Db.Schema.columns` comes back as, so a
+    /// The cells a `SELECT` of `Db.Schema.columns` comes back as, so a
     /// column read at the wrong index is a wrong field here rather than a
     /// wrong lap in an answer.
     def cells(): List[Option[String]] =

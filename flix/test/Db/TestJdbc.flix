@@ -1,9 +1,8 @@
-mod Cli.Db.TestJdbc {
+mod Db.TestJdbc {
 
-    use Cli.Db
-    use Cli.Db.Jdbc
-    use Cli.Db.LapRow
-    use Cli.Db.TestLapRow
+    use Db.Jdbc
+    use Db.LapRow
+    use Db.TestLapRow
     use Motorsport.Calendar.Entry
 
     /// The database `nix run .#cli-test` brings up and names in `DATABASE_URL`.
@@ -22,12 +21,12 @@ mod Cli.Db.TestJdbc {
 
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> Cli.Db.fetch("select 'a', null::text, 42, null::int"));
+        let result = connected(() -> Db.fetch("select 'a', null::text, 42, null::int"));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
-        let result = connected(() -> Cli.Db.fetch("select n from generate_series(3, 1, -1) as n"));
+        let result = connected(() -> Db.fetch("select n from generate_series(3, 1, -1) as n"));
         Assert.assertTrue(result == Ok(
             (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
         ))
@@ -39,12 +38,12 @@ mod Cli.Db.TestJdbc {
         let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
         let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
-            discard Cli.Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
-            discard Cli.Db.execute("SET search_path TO cli_test");
-            discard Cli.Db.prepare();
-            let accepted = Cli.Db.insertLaps(rows);
-            let refused  = Cli.Db.insertLaps(rows);
-            let counted  = Cli.Db.fetch("SELECT COUNT(*) FROM laps");
+            discard Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
+            discard Db.execute("SET search_path TO cli_test");
+            discard Db.prepare();
+            let accepted = Db.insertLaps(rows);
+            let refused  = Db.insertLaps(rows);
+            let counted  = Db.fetch("SELECT COUNT(*) FROM laps");
             Ok((accepted, refused, counted))
         });
         match outcome {
@@ -60,7 +59,7 @@ mod Cli.Db.TestJdbc {
 
     @Test
     def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> Cli.Db.fetch("select 1 where false"));
+        let result = connected(() -> Db.fetch("select 1 where false"));
         Assert.assertTrue(result == Ok(Nil))
 
 }

@@ -1,4 +1,4 @@
-mod Cli.Db.Schema {
+mod Db.Schema {
 
     /// The rows of one round: every reading of the table is of a single round,
     /// and the pair is what names one.
@@ -39,7 +39,7 @@ mod Cli.Db.Schema {
             + " FROM laps WHERE " + scope(season, round)
             + " ORDER BY source_row"
 
-    /// In the order `Cli.Db.LapRow.values` produces them.
+    /// In the order `Db.LapRow.values` produces them.
     pub def columns(): List[String] =
         definitions() |> List.map(d -> String.takeWhile(c -> c != ' ', d))
 

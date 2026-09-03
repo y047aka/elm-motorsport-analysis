@@ -3,12 +3,11 @@ mod Cli.TestApi {
     use Cli.Api
     use Cli.Api.Response
     use Cli.Api.Route
-    use Cli.Db
     use Cli.Stages.Manifest
     use Cli.Stages.Summary
     use Cli.Stages.Transform
     use Cli.TestRound
-    use Cli.Db.TestLapRow
+    use Db.TestLapRow
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap

@@ -1,9 +1,8 @@
 /// The round's laps, read back out of the rows it was loaded into.
 mod Cli.Stages.Laps {
 
-    use Cli.Db
-    use Cli.Db.LapRow
-    use Cli.Db.Schema
+    use Db.LapRow
+    use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
 

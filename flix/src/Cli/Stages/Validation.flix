@@ -36,9 +36,8 @@
 ///     Le Mans 2025.
 mod Cli.Stages.Validation {
 
-    use Cli.Db
-    use Cli.Db.Row
-    use Cli.Db.Schema
+    use Db.Row
+    use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId

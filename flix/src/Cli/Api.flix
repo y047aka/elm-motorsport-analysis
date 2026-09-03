@@ -2,7 +2,6 @@
 /// `Cli.Stages` writes to a file, byte for byte.
 mod Cli.Api {
 
-    use Cli.Db
     use Cli.Stages.Laps
     use Cli.Stages.Manifest
     use Cli.Stages.Summary

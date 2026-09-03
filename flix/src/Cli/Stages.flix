@@ -2,8 +2,7 @@ mod Cli.Stages {
 
     use Sys.Console
     use Util.Files
-    use Cli.Db
-    use Cli.Db.LapRow
+    use Db.LapRow
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.CsvDecode

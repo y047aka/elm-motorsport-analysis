@@ -1,6 +1,6 @@
 mod Cli.Stages.TestLaps {
 
-    use Cli.Db.TestLapRow
+    use Db.TestLapRow
     use Cli.Stages.Laps
     use Cli.TestRound
     use Motorsport.Calendar.Entry

@@ -16,8 +16,7 @@ mod Cli.Server {
     use Cli.Api
     use Cli.Api.Response
     use Cli.Api.Route
-    use Cli.Db
-    use Cli.Db.Jdbc
+    use Db.Jdbc
 
     def threads(): Int32 = 8
 

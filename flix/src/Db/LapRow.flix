@@ -1,4 +1,4 @@
-mod Cli.Db.LapRow {
+mod Db.LapRow {
 
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -7,7 +7,7 @@ mod Cli.Db.LapRow {
     use Motorsport.Wec.RawSector
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Cli.Db.Row
+    use Db.Row
     use Util.Duration
     use Util.HourClock
 
@@ -117,7 +117,7 @@ mod Cli.Db.LapRow {
             case None    => "NULL"
         }) |> List.join(",")) + "}"
 
-    /// In the order `Cli.Db.Schema.columns` names them.
+    /// In the order `Db.Schema.columns` names them.
     pub def values(row: LapRow): List[Value] =
         Value.Integer(row#season) ::
         Value.Text(row#round) ::
@@ -150,8 +150,8 @@ mod Cli.Db.LapRow {
         Nil
 
 
-    /// A row of the `SELECT` in `Cli.Db.Schema.selectRound`, whose columns are
-    /// `Cli.Db.Schema.columns` in order.
+    /// A row of the `SELECT` in `Db.Schema.selectRound`, whose columns are
+    /// `Db.Schema.columns` in order.
     ///
     /// Read in groups: a `forM` over all twenty-eight at once overflows the
     /// type checker's own stack on a clean build (Flix 0.75.1), on a thread

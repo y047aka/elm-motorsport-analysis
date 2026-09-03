@@ -1,6 +1,6 @@
 mod Cli.Stages.TestExport {
 
-    use Cli.Db.TestLapRow
+    use Db.TestLapRow
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.Export

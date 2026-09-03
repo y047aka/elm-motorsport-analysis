@@ -1,7 +1,7 @@
-/// Reading one row of a `Cli.Db.fetch` result. Every cell arrives as text, or
+/// Reading one row of a `Db.fetch` result. Every cell arrives as text, or
 /// as nothing where the column was null, so what a query means is settled here
 /// beside the query rather than at the boundary.
-mod Cli.Db.Row {
+mod Db.Row {
 
     pub def optionalText(index: Int32, row: List[Option[String]]): Result[String, Option[String]] =
         match List.nth(index, row) {

@@ -1,8 +1,8 @@
-mod Cli.Db.TestSchema {
+mod Db.TestSchema {
 
-    use Cli.Db.LapRow
-    use Cli.Db.Schema
-    use Cli.Db.TestLapRow
+    use Db.LapRow
+    use Db.Schema
+    use Db.TestLapRow
 
     /// Neither compiler sees the two lists together: the columns are text and
     /// the values are bound by position, so a column added to one and not the

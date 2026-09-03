@@ -5,9 +5,8 @@
 /// the archive a working copy has loaded.
 mod Cli.TestRound {
 
-    use Cli.Db
-    use Cli.Db.Jdbc
-    use Cli.Db.LapRow
+    use Db.Jdbc
+    use Db.LapRow
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
 
@@ -18,10 +17,10 @@ mod Cli.TestRound {
             case Err(cause) => bug!("no database (${cause})")
             case Ok(conn) =>
                 let result = Jdbc.runWith(conn, () -> forM(
-                    _     <- Cli.Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
-                    _     <- Cli.Db.execute("SET search_path TO cli_test");
-                    _     <- Cli.Db.prepare();
-                    _     <- Cli.Db.insertLaps(LapRow.fromRawLaps(entry, laps));
+                    _     <- Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
+                    _     <- Db.execute("SET search_path TO cli_test");
+                    _     <- Db.prepare();
+                    _     <- Db.insertLaps(LapRow.fromRawLaps(entry, laps));
                     value <- read()
                 ) yield value);
                 Jdbc.close(conn);
