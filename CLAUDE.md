@@ -8,7 +8,9 @@ PostgreSQL → HTTP or a JSON export → Elm visualization.
   `pnpm -C app`.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
-- **`/flix`** — the CLI for CSV→JSON/JSONL data processing, written in Flix.
+- **`/flix`** — written in Flix, and two things rather than one: the CLI that
+  moves CSV through PostgreSQL into JSON/JSONL, and the server that answers
+  `/api` out of the same rows.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -28,16 +30,19 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→PostgreSQL→JSON/JSONL |
+| `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
+| `nix run .#cli-run` | CSV→PostgreSQL→JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
-| `nix run .#cli-serve` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
-| `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
+| `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
+| `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for both |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
 Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
-the toolchain and sets the working directory. The `cli-*` commands drive
-`/flix`; there are no `flix-*` ones.
+the toolchain and sets the working directory. `/flix` is reached by three
+prefixes, and which one says what is being run rather than what is being built:
+`flix-*` builds and tests the project, `cli-*` moves the data through it, and
+`serve-api` is the server. All of them come out of the same jar.
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
@@ -59,7 +64,7 @@ Both stages compute in PostgreSQL, so both need one: `--postgres <jdbc url>`
 names it, `DATABASE_URL` says the same to every run made in a shell, and the
 commands start the working copy's when neither does. One that reaches none does
 nothing. The integrity checks are read back out of the rows a round was just
-loaded into, and so is everything the export writes and `.#cli-serve` answers
+loaded into, and so is everything the export writes and `.#serve-api` answers
 with.
 
 What the export writes is not a leftover of the run. A bundle of `dist` is a
@@ -76,7 +81,7 @@ working copy rather than under /tmp, so what a run left there is still there to
 be queried. Passing the flag instead goes through `nix run .#cli-run --
 --postgres ...`, since the flake forwards what follows.
 
-`.#cli-serve` answers `/api` out of the rows a run loaded: `/api/health`,
+`.#serve-api` answers `/api` out of the rows a run loaded: `/api/health`,
 `/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json` and
 `_laps.jsonl`. The Vite dev server forwards `/api` to port 8080, and answers it
 from `static/` when nothing is listening.
@@ -395,7 +400,7 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.
-- **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
+- **The database** — `.#flix-test` brings up the working copy's PostgreSQL and
   names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
   standing in for it. A test that reaches no database fails rather than
   skipping: the boundary is the thing it is there to check. Connecting costs
