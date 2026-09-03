@@ -53,6 +53,9 @@ mod Cli.Export {
     /// A round the rows hold none of reads as a race that never ran rather than
     /// as a failure, and written out it would replace the round's files with an
     /// empty one.
+    ///
+    /// `pub` reaches no further than `Cli.TestExport`, which drives it without
+    /// a directory to write into.
     pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
         forM(
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
@@ -67,23 +70,18 @@ mod Cli.Export {
         ) yield ()
 
     /// Written once for the export, not once per round, and written even by one
-    /// that wrote no round: the calendar is not made from the laps.
+    /// that wrote no round: the calendar is not made from the laps. It sits
+    /// beside the season directories rather than inside one, because it spans
+    /// all of them.
     def writeCalendar(root: String): Int32 \ {IO, Console} =
-        match writeManifest(root) {
-            case Ok(path) =>
+        let path = "${root}/index.json";
+        match Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))) {
+            case Ok(_) =>
                 Console.println("Calendar -> ${path}");
                 0
             case Err(e) =>
                 Console.eprintln("Calendar: ${e}");
                 1
         }
-
-    /// Written beside the season directories rather than inside one, because it
-    /// spans all of them.
-    def writeManifest(root: String): Result[CliError, String] \ IO =
-        let path = "${root}/index.json";
-        Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons())))
-            |> Result.mapErr(CliError.File)
-            |> Result.map(_ -> path)
 
 }
