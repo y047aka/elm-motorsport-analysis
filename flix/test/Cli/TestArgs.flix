@@ -38,6 +38,12 @@ mod Cli.TestArgs {
             case _                        => Assert.assertTrue(false)
         }
 
+    /// A converting run has nothing to serve on, so a port given to one is a
+    /// mistake rather than a setting with nowhere to apply.
+    @Test
+    def testPortWithoutServe(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--port" :: "9000" :: Nil)))
+
     /// Serving reads what a run loaded, so there is no directory to give it.
     @Test
     def testServeTakesNoRoot(): Unit \ Assert =

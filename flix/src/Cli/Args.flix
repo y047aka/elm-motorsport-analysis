@@ -60,6 +60,8 @@ mod Cli.Args {
                 case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
                 case extras => Err(ArgsError.UnexpectedArguments(extras))
             }
+        else if (List.exists(isPort, settings))
+            Err(ArgsError.ParseErrors("--port is only for --serve" :: Nil))
         else
             extractRoot(nonOptions)
                 |> Result.map(root -> Command.Convert({ root = root, postgres = postgres }))
@@ -75,6 +77,12 @@ mod Cli.Args {
             case root :: Nil => Ok(root)
             case Nil         => Err(ArgsError.MissingRoot)
             case extras      => Err(ArgsError.UnexpectedArguments(extras))
+        }
+
+    def isPort(setting: Setting): Bool =
+        match setting {
+            case Setting.Port(_) => true
+            case _               => false
         }
 
     def serving(settings: List[Setting]): Bool =
