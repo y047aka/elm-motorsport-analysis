@@ -14,7 +14,7 @@ mod Cli.FileTask {
     }
 
     /// Every round the calendar holds, under `root`. A CSV no entry names is
-    /// not here, so it is never read; `Cli.Unlisted` reports those.
+    /// not here, so it is never read; `Cli.Load.Unlisted` reports those.
     pub def fromCalendar(root: String): List[FileTask] =
         Calendar.entries() |> List.map(entry -> {
             let stem = "${root}/${entry#season}/${entry#id}";

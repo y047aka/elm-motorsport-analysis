@@ -34,7 +34,7 @@
 ///     leaves a known blank pattern, `Motorsport.MiniSector.trackLimitsSignatures`.
 ///     These are the dominant non-pit cause of residual sum mismatches in
 ///     Le Mans 2025.
-mod Cli.Validation {
+mod Cli.Load.Validation {
 
     use Db.Row
     use Db.Schema

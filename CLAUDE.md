@@ -291,7 +291,7 @@ is a place on the circuit and a null is a marker the feed left blank. That is th
 shape a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
-Three readers of the table. `Cli.Validation` runs its five rules as
+Three readers of the table. `Cli.Load.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what the `int[]` columns are for. `Round.Summary`
