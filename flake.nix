@@ -234,8 +234,13 @@
               fi
               cd flix
               jar=artifact/flix.jar
-              if [ ! -f "$jar" ] || [ -n "$(find src -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+              # The marker, not the jar: a build-jar that was interrupted leaves
+              # a jar with no central directory in it, and one newer than every
+              # source it was made from.
+              if [ ! -f "$jar.ok" ] || [ -n "$(find src -name '*.flix' -newer "$jar.ok" 2>/dev/null)" ]; then
+                rm -f "$jar" "$jar.ok"
                 flix build-jar >&2
+                touch "$jar.ok"
               fi
               java -cp "$jar:$(find lib -name '*.jar' | tr '\n' ':')" Main ${args} "$@"
             '';
