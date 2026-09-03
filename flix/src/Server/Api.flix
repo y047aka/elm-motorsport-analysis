@@ -1,6 +1,6 @@
 /// The rounds, served rather than exported. An endpoint answers with what
 /// `Cli.Stages` writes to a file, byte for byte.
-mod Cli.Api {
+mod Server.Api {
 
     use Cli.Stages.Laps
     use Cli.Stages.Manifest

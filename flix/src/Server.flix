@@ -1,4 +1,4 @@
-mod Cli.Server {
+mod Server {
 
     import com.sun.net.httpserver.HttpExchange
     import com.sun.net.httpserver.HttpHandler
@@ -13,9 +13,9 @@ mod Cli.Server {
     import java.util.concurrent.CountDownLatch
     import java.util.concurrent.Executors
 
-    use Cli.Api
-    use Cli.Api.Response
-    use Cli.Api.Route
+    use Server.Api
+    use Server.Api.Response
+    use Server.Api.Route
     use Db.Jdbc
 
     def threads(): Int32 = 8

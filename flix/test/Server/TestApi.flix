@@ -1,8 +1,8 @@
-mod Cli.TestApi {
+mod Server.TestApi {
 
-    use Cli.Api
-    use Cli.Api.Response
-    use Cli.Api.Route
+    use Server.Api
+    use Server.Api.Response
+    use Server.Api.Route
     use Cli.Stages.Manifest
     use Cli.Stages.Summary
     use Cli.Stages.Transform

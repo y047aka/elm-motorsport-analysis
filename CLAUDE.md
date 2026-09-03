@@ -126,17 +126,17 @@ takes a colour from its number.
 
 ### The server
 
-`Cli.Server` is `com.sun.net.httpserver` reached through Java interop: the
+`Server` is `com.sun.net.httpserver` reached through Java interop: the
 handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
 returning from it would take the JVM with it. Requests are answered on a pool
 of eight, and each one connects to PostgreSQL of its own —
 `java.sql.Connection` is not thread-safe.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
-the stages rather than restating them: `Cli.Api.respond` runs under
-`Cli.Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. A route
+the stages rather than restating them: `Server.Api.respond` runs under
+`Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. A route
 that reads nothing is answered before connecting at all, through
-`Cli.Db.runRecording`: the calendar is `Motorsport.Calendar` rather than a
+`Db.runRecording`: the calendar is `Motorsport.Calendar` rather than a
 count of the rows, so a database that is down stops a round being opened and
 not the app being used.
 
@@ -145,7 +145,7 @@ loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
 a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
-`Cli.Api` decides nothing about a round, and renders none of one either. A
+`Server.Api` decides nothing about a round, and renders none of one either. A
 round it answers with is read back by `Cli.Stages.Summary` and
 `Cli.Stages.Laps` and rendered by `Motorsport.Metadata` and
 `Cli.Stages.Transform` — which is what `Cli.Stages.Export` does, down to the
@@ -289,8 +289,8 @@ SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
 reads the round's summary the same way. `Cli.Stages.Laps` reads a whole round
-back, `Cli.Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
-`Cli.Stages.Export` and `Cli.Api` are both rendered from what it and
+back, `Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
+`Cli.Stages.Export` and `Server.Api` are both rendered from what it and
 `Cli.Stages.Summary` return, so the files written and the round served are the
 same bytes rather than two renderings that agree. Nothing renders a round from
 the laps a CSV decoded to: `Cli.Stages` sends the rows and stops there.
@@ -310,11 +310,11 @@ a set of it, and every reading that would move off Flix needs it: the validator'
 baseline is the file's first row, and a car's drivers are in the order the file
 first showed them.
 
-`Cli.Db` is an effect, not a module of functions, so that what a round would
+`Db` is an effect, not a module of functions, so that what a round would
 send can be read back without a server: `runRecording` keeps the statements,
-`runDiscarding` drops them, and `Cli.Db.Jdbc` is the only file that imports
-`java.sql`. `Cli.Db.Schema.columns` and `Cli.Db.LapRow.values` are two lists no
-compiler sees together, which is what `Cli.Db.TestSchema` is for.
+`runDiscarding` drops them, and `Db.Jdbc` is the only file that imports
+`java.sql`. `Db.Schema.columns` and `Db.LapRow.values` are two lists no
+compiler sees together, which is what `Db.TestSchema` is for.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
