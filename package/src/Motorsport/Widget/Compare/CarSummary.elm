@@ -1,7 +1,7 @@
 module Motorsport.Widget.Compare.CarSummary exposing (carSummary, placeholderCard)
 
-{-| Per-car summary card (header + standings strip + lap-time panel) for the
-Compare widget, plus the placeholder that fills an unselected slot.
+{-| Per-car summary card for the Compare widget: who the car is, and who is
+driving it. Plus the placeholder that fills an unselected slot.
 
 @docs carSummary, placeholderCard
 
@@ -9,24 +9,10 @@ Compare widget, plus the placeholder that fills an unselected slot.
 
 import Html exposing (Html, div, text)
 import Html.Attributes exposing (class)
-import Motorsport.Chart.LapTimeDistribution as LapTimeDistribution
 import Motorsport.Driver as Driver
-import Motorsport.Gap as Gap
-import Motorsport.Race.LapHistory exposing (LapHistory)
 import Motorsport.Race.Snapshot exposing (CarAt)
 import Motorsport.Status exposing (Status(..))
 import Motorsport.Widget.CarNumberBadge as CarNumberBadge
-import Motorsport.Widget.Compare.Distribution as Distribution
-import Motorsport.Widget.Compare.Style exposing (panelLabel)
-import Motorsport.Widget.SectorAndLaps as SectorAndLaps
-
-
-{-| The panel background/border, shared by the two panels below. Kept as one
-string so both stay in sync.
--}
-panelClass : String
-panelClass =
-    "bg-card border border-border rounded-lg"
 
 
 {-| Subtle placeholder filling an unselected slot. Nudges toward the selector above.
@@ -38,45 +24,8 @@ placeholderCard =
         [ text "車両を追加" ]
 
 
-carSummary : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
-carSummary lapRange distScale lapHistory item =
-    div
-        [ class "grid grid-rows-[1fr_auto_auto] gap-y-3 content-start" ]
-        [ header item
-        , summaryStats item
-        , lapTimePanel lapRange distScale lapHistory item
-        ]
-
-
-{-| Panel that gathers "sector progress + Current/Last lap + lap-time distribution"
-into one, concentrating all lap-time display here. The distribution draws one car
-as a KDE curve, with both axes (lap time / density) aligned to the shared
-`distScale` so the three columns share one scale (height = peak sharpness = pace
-stability, comparable across cars).
--}
-lapTimePanel : Maybe ( Int, Int ) -> Maybe Distribution.Scale -> LapHistory -> CarAt -> Html msg
-lapTimePanel maybeRange maybeScale lapHistory item =
-    div
-        [ class (panelClass ++ " p-2 grid gap-y-2") ]
-        [ panelLabel "Lap time"
-        , div [ class "pb-1" ]
-            [ SectorAndLaps.view item ]
-        , div
-            [ class "pt-1 border-t border-t-border" ]
-            [ case ( maybeRange, maybeScale ) of
-                ( Just range, Just { domain, maxDensity } ) ->
-                    LapTimeDistribution.view
-                        { width = 300, height = 70, domain = domain, maxDensity = maxDensity }
-                        [ Distribution.seriesOf lapHistory range item ]
-
-                _ ->
-                    text ""
-            ]
-        ]
-
-
-header : CarAt -> Html msg
-header item =
+carSummary : CarAt -> Html msg
+carSummary item =
     div
         [ class "grid grid-cols-[auto_1fr_auto] items-start gap-x-2" ]
         [ CarNumberBadge.view item.metadata
@@ -133,31 +82,3 @@ statusBadge status =
 
         _ ->
             text ""
-
-
-summaryStats : CarAt -> Html msg
-summaryStats item =
-    div
-        [ class (panelClass ++ " grid grid-cols-5") ]
-        [ statCell "Pos" (text ("P" ++ String.fromInt item.standing.position))
-        , statCell "Class" (text ("P" ++ String.fromInt item.standing.positionInClass))
-        , statCell "Laps" (text (String.fromInt item.standing.lapsCompleted))
-        , statCell "Gap" (text (Gap.toString item.standing.gapToLeader))
-        , statCell "Int" (text (Gap.toString item.standing.intervalToAhead))
-        ]
-
-
-{-| Small cell for packing position/gap values into a single strip. Cells are
-separated by a left divider (the first cell has none).
--}
-statCell : String -> Html msg -> Html msg
-statCell label valueHtml =
-    div
-        [ class "grid gap-y-px justify-items-center py-1 px-0.5 border-l border-l-border first:border-l-0" ]
-        [ div
-            [ class "text-[8px] uppercase tracking-[0.03em] opacity-50" ]
-            [ text label ]
-        , div
-            [ class "text-[12px] tabular-nums" ]
-            [ valueHtml ]
-        ]

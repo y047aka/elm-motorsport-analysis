@@ -8,6 +8,7 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
+import Compare
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -15,7 +16,9 @@ import Html exposing (Html, a, button, div, main_, nav, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Race.Snapshot as Snapshot exposing (Snapshot)
+import Motorsport.Duration exposing (Duration)
+import Motorsport.Gap as Gap
+import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.Compare as CompareWidget
 import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
@@ -29,7 +32,7 @@ import Time
 import UI.Notice as Notice
 import UI.Shadcn.Card as Card
 import View exposing (View)
-import View.CarDetailPopover as CarDetailPopover
+import View.CarDetail as CarDetail
 import View.PlaybackControls as PlaybackControls
 import View.RaceEvents as RaceEvents
 
@@ -50,13 +53,14 @@ type alias Model =
 
 
 type Mode
-    = Tracker
+    = Default
+    | Tracker
     | Events
 
 
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
-    ( { mode = Tracker
+    ( { mode = Default
       , leaderboardState = initialSort "Position"
       , eventsState =
             DataView.init "Time"
@@ -89,7 +93,6 @@ type Msg
     | LeaderboardMsg Leaderboard.Msg
     | EventsMsg DataView.Msg
     | StripScrollTo Int
-    | ShowCarDetail String
     | ToggleDetailCar String
     | SelectDetailChart CompareWidget.Chart
 
@@ -121,10 +124,6 @@ update msg m =
 
         StripScrollTo offset ->
             ( { m | stripOffset = max 0 offset }, Effect.none )
-
-        ShowCarDetail carNumber ->
-            -- Opening the modal from a standings row click; reset the selection to this single car.
-            ( { m | detailCarNumbers = [ carNumber ] }, Effect.none )
 
         ToggleDetailCar carNumber ->
             -- In-modal selector; toggle selection up to a maximum of 3 cars.
@@ -179,6 +178,9 @@ view shared m =
 
                 Just race ->
                     case m.mode of
+                        Default ->
+                            trackerView race.track race.snapshot m
+
                         Tracker ->
                             trackerView race.track race.snapshot m
 
@@ -225,42 +227,166 @@ headerTitle shared =
 
 trackerView : TrackerChart.Track -> Snapshot -> Model -> Html Msg
 trackerView track snapshot m =
-    div
-        [ Attributes.class "row-start-2 h-full overflow-y-hidden p-[0_10px_10px_10px] grid grid-cols-[300px_1fr_300px] grid-rows-[minmax(0,1fr)_auto] gap-2.5" ]
-        [ div
-            [ Attributes.class "col-start-1 h-full overflow-y-hidden" ]
-            [ LiveStandingsWidget.view
-                { snapshot = snapshot
+    let
+        layout =
+            case m.mode of
+                Tracker ->
+                    { tracker = "col-start-2 row-start-1 row-span-2"
+                    , trackerDetail = TrackerChart.Full
+                    , onTracker = ModeChange Default
+                    , detail = "col-start-3 row-start-1"
+                    }
 
-                -- Pass the Msg constructor directly instead of a closure, so the row-level Lazy stays effective
-                , onSelectCar = ShowCarDetail
-                , popoverTarget = CarDetailPopover.popoverId
-                }
-            ]
-        , div [ Attributes.class "col-start-2 grid" ]
-            [ Card.card []
-                [ Card.content []
-                    [ div
-                        [ Attributes.class "h-full grid place-items-center" ]
-                        [ TrackerChart.view track snapshot ]
+                _ ->
+                    { tracker = "col-start-3 row-start-1"
+                    , trackerDetail = TrackerChart.Compact
+                    , onTracker = ModeChange Tracker
+                    , detail = "col-start-2 row-start-1 row-span-2"
+                    }
+
+        detailBody =
+            case m.mode of
+                Default ->
+                    -- A card's content does not shrink below what it holds, so
+                    -- the box that scrolls has to be a flex child of the card.
+                    [ div [ Attributes.class "flex-1 min-h-0 overflow-y-auto" ]
+                        [ Card.content []
+                            [ CarDetail.view
+                                { activeChart = m.detailChart
+                                , onToggleCar = ToggleDetailCar
+                                , onSelectChart = SelectDetailChart
+                                }
+                                snapshot
+                                m.detailCarNumbers
+                            ]
+                        ]
+                    ]
+
+                _ ->
+                    []
+    in
+    div
+        [ Attributes.class "row-start-2 h-full overflow-y-auto p-[0_10px_10px_10px] flex flex-col gap-2.5" ]
+        [ div
+            [ Attributes.class "shrink-0 h-full grid grid-cols-[250px_1fr_300px] grid-rows-[300px_minmax(0,1fr)_auto] gap-2.5" ]
+            [ div
+                [ Attributes.class "col-start-1 row-start-1 row-span-3 h-full overflow-y-hidden" ]
+                [ LiveStandingsWidget.view snapshot ]
+            , div [ Attributes.class (layout.detail ++ " grid") ] [ Card.card [] detailBody ]
+            , div
+                -- The cell is the only box in the chain whose height is settled,
+                -- so a square SVG measured against the width overflows the card.
+                [ Attributes.class (layout.tracker ++ " grid place-self-center h-full max-w-full aspect-square cursor-pointer")
+                , onClick layout.onTracker
+                ]
+                [ Card.card []
+                    [ Card.content []
+                        [ div
+                            [ Attributes.class "h-full grid place-items-center" ]
+                            [ TrackerChart.view layout.trackerDetail track snapshot ]
+                        ]
                     ]
                 ]
+            , sparePanel "col-start-3 row-start-2"
+            , div [ Attributes.class "col-start-2 col-span-2 row-start-3" ]
+                [ SelectedCarsStrip.view
+                    { offset = m.stripOffset
+                    , onScrollTo = StripScrollTo
+                    }
+                    snapshot
+                ]
             ]
-        , div [ Attributes.class "col-start-3 grid" ] [ Card.card [] [] ]
-        , div [ Attributes.class "col-span-full" ]
-            [ SelectedCarsStrip.view
-                { offset = m.stripOffset
-                , onScrollTo = StripScrollTo
-                }
-                snapshot
+        , div [ Attributes.class "shrink-0 grid" ]
+            [ Card.card []
+                [ Card.content []
+                    [ Leaderboard.view leaderboardConfig m.leaderboardState snapshot ]
+                ]
             ]
-        , CarDetailPopover.view
-            { activeChart = m.detailChart
-            , onToggleCar = ToggleDetailCar
-            , onSelectChart = SelectDetailChart
+        , standingsPopover
+        ]
+
+
+sparePanel : String -> Html Msg
+sparePanel cell =
+    button
+        [ attribute "popovertarget" standingsPopoverId
+        , attribute "popovertargetaction" "show"
+        , Attributes.class (cell ++ " grid cursor-pointer text-left")
+        ]
+        [ Card.card [] [] ]
+
+
+leaderboardConfig : Leaderboard.Config CarAt Msg
+leaderboardConfig =
+    { toId = .metadata >> .carNumber
+    , toMsg = LeaderboardMsg
+    , columns =
+        [ Leaderboard.intColumn { label = "", getter = .standing >> .position }
+        , Leaderboard.carNumberColumn_Wec { getter = .metadata }
+        , Leaderboard.driverAndTeamColumn_Wec
+            { getter = \item -> { metadata = item.metadata, currentDriver = item.currentDriver } }
+        , Leaderboard.intColumn { label = "Lap", getter = .standing >> .lapsCompleted }
+        , Leaderboard.customColumn
+            { label = "Gap"
+            , getter = .standing >> .gapToLeader >> Gap.toString
+            , sorter = Compare.by (.standing >> .position)
             }
-            snapshot
-            m.detailCarNumbers
+        , Leaderboard.customColumn
+            { label = "Interval"
+            , getter = .standing >> .intervalToAhead >> Gap.toString
+            , sorter = Compare.by (.standing >> .position)
+            }
+        , Leaderboard.currentLapColumn_Wec
+            { getter = identity
+            , sorter = Compare.by (.currentLap >> .elapsed)
+            }
+        , Leaderboard.lastLapColumn_Wec
+            { getter = .lastLap
+            , sorter = Compare.by (.lastLap >> lastLapTime)
+            }
+        , Leaderboard.bestTimeColumn { getter = .bestLap }
+        ]
+    }
+
+
+lastLapTime : Snapshot.LastLap -> Duration
+lastLapTime lastLap =
+    case lastLap of
+        Snapshot.Completed { rated } ->
+            rated |> Maybe.map .time |> Maybe.withDefault 0
+
+        Snapshot.NoLapYet ->
+            0
+
+
+standingsPopoverId : String
+standingsPopoverId =
+    "standings-popover"
+
+
+standingsPopover : Html Msg
+standingsPopover =
+    Html.node "div"
+        [ Attributes.id standingsPopoverId
+        , attribute "popover" "auto"
+
+        -- Tailwind preflight cancels the UA's margin:auto, so set it explicitly to center.
+        -- The popover has no containing block to size against but the viewport,
+        -- so its width is set explicitly rather than left to shrink to content.
+        , Attributes.class "m-auto w-11/12 max-w-[min(90vw,1200px)] p-4 rounded-xl overflow-y-auto max-h-screen"
+        , Attributes.class "bg-popover text-popover-foreground backdrop-blur-lg border border-border shadow-glass"
+
+        -- A closed popover is display:none by the UA, but its entrance
+        -- transition still needs an explicit closed state to animate from.
+        , Attributes.class "opacity-0 scale-95 transition-[opacity,scale] duration-200 [&:popover-open]:opacity-100 [&:popover-open]:scale-100"
+        , Attributes.class "backdrop:bg-black/10"
+        ]
+        [ button
+            [ attribute "popovertarget" standingsPopoverId
+            , attribute "popovertargetaction" "hide"
+            , Attributes.class "inline-flex items-center justify-center size-8 rounded-full text-sm cursor-pointer transition-colors hover:bg-accent hover:text-accent-foreground absolute right-2 top-2"
+            ]
+            [ text "✕" ]
         ]
 
 
@@ -304,7 +430,8 @@ backLink =
 viewModeSelector : Mode -> Html Msg
 viewModeSelector currentMode =
     div [ Attributes.class "inline-flex" ]
-        [ modeButton "Tracker" Tracker (currentMode == Tracker)
+        [ modeButton "Default" Default (currentMode == Default)
+        , modeButton "Tracker" Tracker (currentMode == Tracker)
         , modeButton "Events" Events (currentMode == Events)
         ]
 
