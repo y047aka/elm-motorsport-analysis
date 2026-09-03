@@ -4,6 +4,7 @@ mod Cli.Server {
     import com.sun.net.httpserver.HttpHandler
     import com.sun.net.httpserver.HttpServer
     import java.io.IOException
+    import java.lang.Throwable
     import java.net.InetSocketAddress
     import java.nio.charset.StandardCharsets
     import java.util.concurrent.CountDownLatch
@@ -32,18 +33,31 @@ mod Cli.Server {
             case e: IOException => Err("could not listen on port ${port} (caused by: ${e.getMessage()})")
         }
 
+    /// Anything thrown while the answer is worked out becomes a 500. Left to
+    /// fall through, it leaves the exchange open and the caller waiting: the
+    /// request neither fails nor returns.
+    def answer(databaseUrl: String, exchange: HttpExchange): Unit \ IO =
+        let response = try {
+            respond(databaseUrl, exchange)
+        } catch {
+            case e: Throwable =>
+                Sys.Console.runWithIO(() ->
+                    Sys.Console.eprintln("500 ${exchange.getRequestURI().getPath()}: ${e.toString()}"));
+                { status = 500, contentType = "text/plain", body = "the request could not be answered" }
+        };
+        send(exchange, response)
+
     /// A connection per request. `java.sql.Connection` is not thread-safe, and
     /// the requests are answered on a pool.
-    def answer(databaseUrl: String, exchange: HttpExchange): Unit \ IO =
+    def respond(databaseUrl: String, exchange: HttpExchange): Response \ IO =
         let route = Api.route(exchange.getRequestURI().getPath());
-        let response = match Jdbc.connect(databaseUrl) {
+        match Jdbc.connect(databaseUrl) {
             case Err(cause) => { status = 503, contentType = "text/plain", body = cause }
             case Ok(conn)   =>
                 let answered = Jdbc.runWith(conn, () -> Api.respond(route));
                 Jdbc.close(conn);
                 answered
-        };
-        send(exchange, response)
+        }
 
     def send(exchange: HttpExchange, response: Response): Unit \ IO =
         try {
@@ -54,7 +68,7 @@ mod Cli.Server {
             out.write(bytes);
             out.close()
         } catch {
-            case _e: IOException => exchange.close()
+            case _e: Throwable => exchange.close()
         }
 
 }
