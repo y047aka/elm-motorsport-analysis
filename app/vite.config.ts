@@ -35,8 +35,7 @@ function sendFile(res: ServerResponse, filePath: string): boolean {
 
 // What answers `/api` while no server is running. The rounds `cli-serve` reads
 // out of the database are the rounds `cli-run` exported under `static/wec`, and
-// one path is the other with its root replaced -- so the VRT and a dev session
-// with no JVM see what the server would have sent.
+// one path is the other with its root replaced.
 function serveExport(urlPath: string, res: ServerResponse): void {
   const exported = urlPath.startsWith("/api/wec/")
     ? join(staticDir, "wec", urlPath.slice("/api/wec/".length))
@@ -70,7 +69,6 @@ function apiServer(): Plugin {
             const value = answer.headers.get(name);
             if (value) res.setHeader(name, value);
           }
-          // A 304 is the whole answer: the browser has the body already.
           if (answer.status === 304) res.end();
           else res.end(Buffer.from(await answer.arrayBuffer()));
         } catch {

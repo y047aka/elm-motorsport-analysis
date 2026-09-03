@@ -54,8 +54,7 @@ mod Cli.Server {
         if (Api.needsDatabase(route))
             fromDatabase(databaseUrl, route, exchange)
         else
-            // No statement is sent, so there is nothing for the recording to
-            // hold and nothing for it to answer with.
+            // Nothing is sent, so there is nothing for the recording to hold.
             match Db.runRecording(() -> Api.respond(route)) {
                 case (answered, _) => answered
             }
@@ -63,9 +62,8 @@ mod Cli.Server {
     /// A connection per request. `java.sql.Connection` is not thread-safe, and
     /// the requests are answered on a pool.
     ///
-    /// Closed on the way out of a request that throws as well as one that
-    /// answers: a connection the pool thread lost is one PostgreSQL holds open
-    /// until the process ends.
+    /// A connection a thrown request left behind is one PostgreSQL holds until
+    /// the process ends, so the close is outside the catch.
     def fromDatabase(databaseUrl: String, route: Route, exchange: HttpExchange): Response \ IO =
         match Jdbc.connect(databaseUrl) {
             case Err(cause) => { status = 503, contentType = "text/plain", body = cause }
@@ -84,25 +82,19 @@ mod Cli.Server {
             Sys.Console.eprintln("500 ${exchange.getRequestURI().getPath()}: ${e.toString()}"));
         { status = 500, contentType = "text/plain", body = "the request could not be answered" }
 
-    /// A round is answered with the bytes it was answered with last time until
-    /// a run reloads it, and Le Mans is 24MB of them: worth a tag to be spared
-    /// re-sending, and worth compressing when it is sent.
+    /// A round is the same bytes until a run loads it again, which is what
+    /// makes a tag over the body it is answered with enough.
     def send(exchange: HttpExchange, response: Response): Unit \ IO =
         try {
             let bytes = response#body.getBytes(StandardCharsets.UTF_8);
             let headers = exchange.getResponseHeaders();
             headers.add("Content-Type", response#contentType);
-            // Tagged only where there is a round to tag. A 404 and a 500 say
-            // what is true now, and nothing is spared by asking about them
-            // again.
             let tag = if (response#status == 200) Some(etag(bytes)) else None;
             match tag {
                 case None => sendBody(exchange, response#status, bytes, acceptsGzip(exchange))
                 case Some(value) =>
                     headers.add("ETag", value);
-                    // Without this a browser is free to reuse the body without
-                    // asking, and a reload after a run would show the round
-                    // before it.
+                    // Left off, a reload after a run may show the round before it.
                     headers.add("Cache-Control", "no-cache");
                     if (requestHeader(exchange, "If-None-Match") == Some(value))
                         notModified(exchange)
@@ -136,8 +128,7 @@ mod Cli.Server {
         buffer.toByteArray()
 
     /// CRC32 of the body with its length, which is enough to notice a round
-    /// that has been loaded again. Not a hash of the rows: the answer is what
-    /// is being compared, and it is in hand here.
+    /// that has been loaded again.
     def etag(bytes: Array[Int8, Static]): String \ IO =
         let crc = new CRC32();
         crc.update(bytes);

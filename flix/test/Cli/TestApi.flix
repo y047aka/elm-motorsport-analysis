@@ -17,7 +17,7 @@ mod Cli.TestApi {
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
 
     /// Answered without reaching a database, which is what `runRecording` is
-    /// for: the routes that read nothing send nothing either.
+    /// for.
     def offline(route: Route): Response =
         match Db.runRecording(() -> Api.respond(route)) {
             case (response, _) => response
@@ -60,9 +60,8 @@ mod Cli.TestApi {
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)
 
-    /// One path is the other with its root replaced. The dev server answers
-    /// `/api` out of `static/` on that, and so does the calendar a bundle with
-    /// no server behind it is built with.
+    /// One path is the other with its root replaced, which is what the dev
+    /// server's fallback and a bundle's own calendar are built on.
     @Test
     def theTwoRootsNameTheSameRounds(): Unit \ Assert =
         let served = offline(Route.Calendar)#body;
@@ -80,9 +79,8 @@ mod Cli.TestApi {
         Assert.assertTrue(not String.contains({substr = "/static/"}, body))
 
     /// The round the server answers with is the round the run would have
-    /// written. Compared against `Cli.Stages.Transform`, which is what writes
-    /// it: an endpoint that starts rendering a round of its own fails here
-    /// rather than in a reader that meets both.
+    /// written, compared against `Cli.Stages.Transform`, which is what writes
+    /// it.
     @Test
     def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
         let laps = TestLapRow.sampleLaps();

@@ -1,8 +1,7 @@
 module UI.Notice exposing (view, httpError)
 
-{-| What a page shows in place of what it cannot show. The alternative is an
-empty page, which reads as a slow one: the round that never arrives and the
-round still on its way look the same until one of them says so.
+{-| What a page shows in place of what it cannot show. Left empty, the round
+that never arrives and the round still on its way look the same.
 
 @docs view, httpError
 
@@ -22,9 +21,8 @@ view notice =
         ]
 
 
-{-| The failure in the words of the thing that failed. `BadBody` carries the
-decoder's own report, which is long and worth reading: this application is
-read by the people who write its feed.
+{-| The failure in the words of the thing that failed. `BadBody` is handed on
+unedited: the decoder's own report is long and worth reading.
 -}
 httpError : Http.Error -> String
 httpError error =

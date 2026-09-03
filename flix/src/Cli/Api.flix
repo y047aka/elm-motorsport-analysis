@@ -1,6 +1,5 @@
-/// The rounds, served rather than exported. What an endpoint answers with is
-/// what `Cli.Stages` writes to a file: the same summary, and the same laps in
-/// the same order, so a reader cannot tell the two apart.
+/// The rounds, served rather than exported. An endpoint answers with what
+/// `Cli.Stages` writes to a file, byte for byte.
 mod Cli.Api {
 
     use Cli.Db
@@ -53,17 +52,13 @@ mod Cli.Api {
                 }
         }
 
-    /// The calendar is what says a round exists, here as in the export: a round
-    /// it does not list has no rows to read and no path to reach them by.
     def listed(season: Int32, id: String, found: Route): Route =
         match Calendar.find(season, id) {
             case Some(_) => found
             case None    => Route.NotFound
         }
 
-    /// The calendar is `Motorsport.Calendar`, written down rather than counted
-    /// out of the rows, and health is the process answering at all. Neither is
-    /// a reason to need a database that a round is.
+    /// The calendar is `Motorsport.Calendar`, not a count of the rows.
     pub def needsDatabase(route: Route): Bool =
         match route {
             case Route.Summary(_, _) => true

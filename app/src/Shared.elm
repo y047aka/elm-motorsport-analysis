@@ -53,8 +53,8 @@ type Catalogue
     | Missing Http.Error
 
 
-{-| Why a round the URL named is not being shown. A round that cannot arrive
-has to say so: left as `Loading`, it is a page that waits for ever.
+{-| Why a round the URL named is not being shown. A round left as `Loading`
+instead is a page that waits for ever.
 -}
 type Problem
     = NotListed
@@ -315,9 +315,8 @@ withSummary summary id partial =
             Loading id (GotSummary summary)
 
 
-{-| The round the response was for, given up on. A response naming any other
-round is left over from one already navigated away from, and is dropped by
-`arrived` as a late success is.
+{-| The round the response was for, given up on. A response naming another is
+dropped by `arrived`, as a late success is.
 -}
 didNotArrive : { season : Int, id : String } -> Http.Error -> Round -> Round
 didNotArrive key error round =
