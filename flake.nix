@@ -182,6 +182,11 @@
         # reached.
         cliRunCmd = "flix run -- ../app/static/wec \"$@\"";
 
+        # The two stages of that run, taken singly: `--load` stops at the rows,
+        # and `--export` writes the files out of rows already there.
+        cliLoadCmd   = "flix run -- --load ../app/static/wec \"$@\"";
+        cliExportCmd = "flix run -- --export ../app/static/wec \"$@\"";
+
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
@@ -228,7 +233,9 @@
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           cli-build            = { type = "app"; program = "${mkFlixApp "cli-build" "flix build"}/bin/cli-build";                                                    meta.description = "Build the CLI"; };
           cli-test             = { type = "app"; program = "${mkFlixAppWithDb "cli-test" "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
-          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
+          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> PostgreSQL -> JSON/JSONL)"; };
+          cli-load             = { type = "app"; program = "${mkFlixAppWithDb "cli-load"   cliLoadCmd}/bin/cli-load";                                                     meta.description = "Load the CSV into PostgreSQL, writing no files"; };
+          cli-export           = { type = "app"; program = "${mkFlixAppWithDb "cli-export" cliExportCmd}/bin/cli-export";                                                 meta.description = "Write the loaded rounds out as the export"; };
           cli-serve            = { type = "app"; program = "${mkFlixServerApp "cli-serve" "--serve"}/bin/cli-serve";                                             meta.description = "Serve the loaded rounds over HTTP (/api)"; };
           pg-start             = { type = "app"; program = "${mkPgApp   "pg-start" pgStartCmd}/bin/pg-start";                                                     meta.description = "Start the local PostgreSQL and print its JDBC URL"; };
           pg-stop              = { type = "app"; program = "${mkPgApp   "pg-stop"  pgStopCmd}/bin/pg-stop";                                                       meta.description = "Stop the local PostgreSQL"; };

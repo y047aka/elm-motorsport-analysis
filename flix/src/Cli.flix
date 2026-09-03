@@ -11,7 +11,7 @@ mod Cli {
     /// `fetch` answers with every cell as text, `None` where the column was
     /// null. The server has the types and the caller knows what it asked for,
     /// so nothing is gained by carrying them across in between.
-    eff Db {
+    pub eff Db {
         def execute(sql: String): Result[String, Unit]
         def insertLaps(rows: List[LapRow]): Result[String, Int32]
         def fetch(sql: String): Result[String, List[List[Option[String]]]]

@@ -28,7 +28,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→PostgreSQL + JSON/JSONL |
+| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→PostgreSQL→JSON/JSONL |
+| `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#cli-serve` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
@@ -39,25 +40,35 @@ the toolchain and sets the working directory. The `cli-*` commands drive
 `/flix`; there are no `flix-*` ones.
 
 `.#cli-run` takes the directory holding the season directories and converts
-every round `Motorsport.Calendar` lists, writing each round's summary `.json`
-and its laps `.jsonl`, one lap per line, plus `index.json` beside them. **A new
+every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
+`laps` table, and each round's summary `.json`, its laps `.jsonl` one lap per
+line, and `index.json` beside them are written back out of the rows. **A new
 round is added to `Motorsport.Calendar` first** — the run converts nothing the
 calendar does not list, reports any CSV no round names, and fails any round
 whose CSV is missing.
 
-The run computes in PostgreSQL, so it needs one: `--postgres <jdbc url>` names
-it, `DATABASE_URL` says the same to every run made in a shell, and `.#cli-run`
-starts the working copy's when neither does. A run that reaches none writes
-nothing. The integrity checks are read back out of the rows a round was just
-loaded into, and so is everything `.#cli-serve` answers with.
+`.#cli-load` and `.#cli-export` are those two stages singly. The stage that
+writes reads none of the CSV, so the files are an image of the rows and of
+nothing else: a row corrected in SQL is exported, and re-exporting after a
+change to a renderer costs no decoding. **A round no run has loaded fails the
+export** rather than being written out as a race that never ran — the rows read
+back as one, which is the one thing they cannot say for themselves — and the
+files it would have replaced are left alone.
 
-The JSON files it also writes are the export, and it is not a leftover. A
-bundle of `dist` is a whole application on its own, with no JVM and no
-database behind it: the build writes the export's calendar to
-`dist/api/wec/index.json`, which is the one URL the app asks for before it
-knows anything, and the rounds it names sit under `/static/wec` beside it.
-That is what the Tauri build bundles and what the VRT runs against. `/api` is
-where the rows are read live, not what the app needs to run.
+Both stages compute in PostgreSQL, so both need one: `--postgres <jdbc url>`
+names it, `DATABASE_URL` says the same to every run made in a shell, and the
+commands start the working copy's when neither does. One that reaches none does
+nothing. The integrity checks are read back out of the rows a round was just
+loaded into, and so is everything the export writes and `.#cli-serve` answers
+with.
+
+What the export writes is not a leftover of the run. A bundle of `dist` is a
+whole application on its own, with no JVM and no database behind it: the build
+writes the export's calendar to `dist/api/wec/index.json`, which is the one URL
+the app asks for before it knows anything, and the rounds it names sit under
+`/static/wec` beside it. That is what the Tauri build bundles and what the VRT
+runs against. `/api` is where the rows are read live, not what the app needs to
+run.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
@@ -129,14 +140,19 @@ loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
 a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
-`Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
-and `Motorsport.Wec` render for the export, and names a round the way the
-export names its files, so one path is the other with `/static/wec` and
-`/api/wec` swapped. Both are asserted rather than assumed — `Cli.TestApi`
-compares a round against `Cli.Stages.Transform` and the served calendar
-against `Cli.Stages.Manifest` with its root replaced — because the dev
-server's fallback and the bundle's calendar are built on them and neither
-would notice them failing.
+`Cli.Api` decides nothing about a round, and renders none of one either. A
+round it answers with is read back by `Cli.Stages.Summary` and
+`Cli.Stages.Laps` and rendered by `Motorsport.Metadata` and
+`Cli.Stages.Transform` — which is what `Cli.Stages.Export` does, down to the
+call — so what is served and what is written are the same bytes rather than
+two renderings that agree.
+
+The root is the one thing that differs, and it is asserted rather than
+assumed: `Cli.TestApi` compares the served calendar against
+`Cli.Stages.Manifest` with its root replaced, because the dev server's
+fallback and a bundle's own calendar are built on one path being the other
+with `/static/wec` and `/api/wec` swapped, and neither would notice that
+failing.
 
 ### The shadcn components
 
@@ -267,9 +283,12 @@ Three readers of the table. `Cli.Stages.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
-reads the round's summary the same way. `Cli.Api` reads a whole round back:
-`Cli.Db.LapRow.fromRow` and `toRawLap` are the reverse of the load, so the laps
-it serves are rendered by the encoder that writes the export.
+reads the round's summary the same way. `Cli.Stages.Laps` reads a whole round
+back, `Cli.Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
+`Cli.Stages.Export` and `Cli.Api` are both rendered from what it and
+`Cli.Stages.Summary` return, so the files written and the round served are the
+same bytes rather than two renderings that agree. Nothing renders a round from
+the laps a CSV decoded to: `Cli.Stages` sends the rows and stops there.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the

@@ -7,11 +7,27 @@ mod Cli.TestArgs {
     def testParseNoArgs(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse(Nil)))
 
+    /// Neither stage named is both of them.
     @Test
     def testParseRoot(): Unit \ Assert =
         match Args.parse("../app/static/wec" :: Nil) {
             case Ok(Command.Convert(convert)) => Assert.assertTrue(convert#root == "../app/static/wec")
             case _                            => Assert.assertTrue(false)
+        }
+
+    @Test
+    def testParseLoad(): Unit \ Assert =
+        match Args.parse("--load" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#root == "../app/static/wec")
+            case _                      => Assert.assertTrue(false)
+        }
+
+    /// Naming both stages is naming the run they make up.
+    @Test
+    def testParseLoadAndExport(): Unit \ Assert =
+        match Args.parse("--load" :: "--export" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Convert(_)) => Assert.assertTrue(true)
+            case _                      => Assert.assertTrue(false)
         }
 
     @Test
@@ -23,6 +39,25 @@ mod Cli.TestArgs {
     @Test
     def testOutputIsNoLongerAnOption(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--output" :: "out.json" :: Nil)))
+
+    @Test
+    def testParseExport(): Unit \ Assert =
+        match Args.parse("--export" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Export(export)) => Assert.assertTrue(export#root == "../app/static/wec")
+            case _                          => Assert.assertTrue(false)
+        }
+
+    /// Every stage is given the same root, whether it reads the season
+    /// directories or writes them.
+    @Test
+    def testEveryStageTakesARoot(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--export" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("--load" :: Nil)))
+
+    @Test
+    def testServeIsNotAStage(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--export" :: "--serve" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("--load" :: "--serve" :: Nil)))
 
     @Test
     def testParseServe(): Unit \ Assert =

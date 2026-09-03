@@ -4,10 +4,12 @@ use Sys.Exit
 use Util.Files
 use Cli.Args
 use Cli.Args.Command
+use Cli.Db
 use Cli.Db.Jdbc
 use Cli.Errors.CliError
 use Cli.Server
 use Cli.Stages
+use Cli.Stages.Export
 
 def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
@@ -18,30 +20,42 @@ def main(): Unit \ {Env, IO, Exit, Console} =
         case Ok(Command.Serve(serve)) =>
             runServer(serve#port, serve#postgres)
         case Ok(Command.Convert(convert)) =>
-            match checkRoot(convert#root) {
-                case Err(e) =>
-                    Console.eprintln("Error: ${e}");
-                    1
-                case Ok(()) =>
-                    runStages(convert#root, convert#postgres)
-            }
+            onRoot(convert#root, convert#postgres, loadAndExport)
+        case Ok(Command.Load(load)) =>
+            onRoot(load#root, load#postgres, Stages.runAll)
+        case Ok(Command.Export(export)) =>
+            onRoot(export#root, export#postgres, Export.runAll)
     };
     Exit.exit(code)
 
-/// The run computes in a database, so a run given none is one that cannot say
+/// A round that failed to load has no rows, so the export fails it too and
+/// leaves the files it would have replaced alone. The rounds beside it are
+/// written either way.
+def loadAndExport(root: String): Int32 \ {IO, Console, Db} =
+    let loaded = Stages.runAll(root);
+    let exported = Export.runAll(root);
+    if (loaded == 0 and exported == 0) 0 else 1
+
+/// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def runStages(root: String, postgres: Option[String]): Int32 \ {Env, IO, Console} =
-    withDatabase(postgres, url ->
-        match Jdbc.connect(url) {
-            case Err(e) =>
-                Console.eprintln("Error: ${e}");
-                1
-            case Ok(conn) =>
-                let code = Jdbc.runWith(conn, () -> Stages.runAll(root));
-                Jdbc.close(conn);
-                code
-        }
-    )
+def onRoot(root: String, postgres: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
+    match checkRoot(root) {
+        case Err(e) =>
+            Console.eprintln("Error: ${e}");
+            1
+        case Ok(()) =>
+            withDatabase(postgres, url ->
+                match Jdbc.connect(url) {
+                    case Err(e) =>
+                        Console.eprintln("Error: ${e}");
+                        1
+                    case Ok(conn) =>
+                        let code = Jdbc.runWith(conn, () -> stage(root));
+                        Jdbc.close(conn);
+                        code
+                }
+            )
+    }
 
 /// The database is reached once per request, so the server starts before one is
 /// up and reports it per request.

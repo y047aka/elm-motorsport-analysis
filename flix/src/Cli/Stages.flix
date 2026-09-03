@@ -8,22 +8,9 @@ mod Cli.Stages {
     use Cli.FileTask
     use Cli.Stages.CsvDecode
     use Cli.Stages.CsvInput
-    use Cli.Stages.Manifest
-    use Cli.Stages.Output
-    use Cli.Stages.Summary
-    use Cli.Stages.Transform
-    use Cli.Stages.Transform.Rendered
     use Cli.Stages.Unlisted
     use Cli.Stages.Validation
-    use Motorsport.Metadata
     use Motorsport.Wec.RawLap
-
-    type alias ProcessingReport = {
-        lapCount   = Int32,
-        outputPath = String,
-        lapsPath   = String,
-        loadedRows = Int32
-    }
 
     type alias RunSummary = {
         processed = Int32,
@@ -47,11 +34,8 @@ mod Cli.Stages {
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
-                case Ok(report) =>
-                    Console.println("${FileTask.label(task)}: Wrote ${report#lapCount} laps");
-                    Console.println("${FileTask.label(task)}: Metadata -> ${report#outputPath}");
-                    Console.println("${FileTask.label(task)}: Laps     -> ${report#lapsPath}");
-                    Console.println("${FileTask.label(task)}: Rows     -> ${report#loadedRows} loaded");
+                case Ok(loadedRows) =>
+                    Console.println("${FileTask.label(task)}: Rows -> ${loadedRows} loaded");
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
@@ -61,10 +45,8 @@ mod Cli.Stages {
             tasks
         );
         reportUnlistedCsvFiles(root, tasks);
-        let calendarErrors = writeCalendar(root);
-        let errors = summary#errors + calendarErrors;
-        Console.println("Processing completed: ${summary#processed} processed, ${errors} errors");
-        if (errors == 0) 0 else 1
+        Console.println("Processing completed: ${summary#processed} processed, ${summary#errors} errors");
+        if (summary#errors == 0) 0 else 1
 
     /// Not an error: the run converted everything it was asked for, and this is
     /// about what it was not asked for. Saying it is what keeps a forgotten line
@@ -79,64 +61,27 @@ mod Cli.Stages {
                     )
         }
 
-    /// Written once for the run, not once per file, and written even by a run
-    /// that decoded nothing: the calendar is not made from the laps.
-    def writeCalendar(root: String): Int32 \ {IO, Console} =
-        match Manifest.write(root) {
-            case Ok(path) =>
-                Console.println("Calendar -> ${path}");
-                0
-            case Err(e) =>
-                Console.eprintln("Calendar: ${e}");
-                1
-        }
-
-    def processFile(task: FileTask.FileTask): Result[CliError, ProcessingReport] \ {IO, Console, Db} =
+    def processFile(task: FileTask.FileTask): Result[CliError, Int32] \ {IO, Console, Db} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
             |> Result.flatMap(load(task))
             |> Result.flatMap(reportViolations(task))
-            |> Result.flatMap(summarise(task))
-            |> Result.flatMap(write(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    /// The rows go in before anything reads the round back, because the checks
-    /// are made of what the database holds and not of the laps in hand.
-    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, (List[RawLap], Int32)] \ Db =
+    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Int32] \ Db =
         rawLaps ->
             Db.insertLaps(LapRow.fromRawLaps(task#entry, rawLaps))
                 |> Result.mapErr(CliError.Database)
-                |> Result.map(loadedRows -> (rawLaps, loadedRows))
 
-    def reportViolations(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, (List[RawLap], Int32)] \ {Console, Db} =
-        match (rawLaps, loadedRows) ->
+    def reportViolations(task: FileTask.FileTask): Int32 -> Result[CliError, Int32] \ {Console, Db} =
+        loadedRows ->
             Validation.validate(task#entry)
                 |> Result.mapErr(CliError.Database)
                 |> Result.map(messages -> {
                     messages |> List.forEach(Console.eprintln);
-                    (rawLaps, loadedRows)
+                    loadedRows
                 })
-
-    def summarise(task: FileTask.FileTask): ((List[RawLap], Int32)) -> Result[CliError, (List[RawLap], Int32, Metadata.Metadata)] \ Db =
-        match (rawLaps, loadedRows) ->
-            Summary.read(task#entry)
-                |> Result.mapErr(CliError.Database)
-                |> Result.map(metadata -> (rawLaps, loadedRows, metadata))
-
-    def write(task: FileTask.FileTask): ((List[RawLap], Int32, Metadata.Metadata)) -> Result[CliError, ProcessingReport] \ IO =
-        match (rawLaps, loadedRows, metadata) -> {
-            let rendered = Transform.transform(metadata, rawLaps);
-            Output.write(task, rendered) |> Result.map(_ -> toReport(task, rendered, loadedRows))
-        }
-
-    def toReport(task: FileTask.FileTask, rendered: Rendered, loadedRows: Int32): ProcessingReport =
-        {
-            lapCount   = rendered#lapCount,
-            outputPath = task#outputPath,
-            lapsPath   = task#lapsPath,
-            loadedRows = loadedRows
-        }
 
 }

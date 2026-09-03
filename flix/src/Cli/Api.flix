@@ -3,8 +3,7 @@
 mod Cli.Api {
 
     use Cli.Db
-    use Cli.Db.LapRow
-    use Cli.Db.Schema
+    use Cli.Stages.Laps
     use Cli.Stages.Manifest
     use Cli.Stages.Summary
     use Cli.Stages.Transform
@@ -93,12 +92,9 @@ mod Cli.Api {
             |> Result.map(metadata -> Extra.render(Metadata.toJson(metadata)))
 
     def laps(season: Int32, id: String): Result[String, String] \ Db =
-        forM(
-            _       <- entry(season, id);
-            rows    <- Db.fetch(Schema.selectRound(season, id));
-            lapRows <- Result.traverse(LapRow.fromRow, rows);
-            rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
-        ) yield Transform.renderJsonl(rawLaps)
+        entry(season, id)
+            |> Result.flatMap(Laps.read)
+            |> Result.map(Transform.renderJsonl)
 
     def entry(season: Int32, id: String): Result[String, Entry] =
         Calendar.find(season, id)
