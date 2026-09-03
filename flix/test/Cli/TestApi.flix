@@ -4,6 +4,8 @@ mod Cli.TestApi {
     use Cli.Api.Response
     use Cli.Api.Route
     use Cli.Db
+    use Cli.Stages.Summary
+    use Cli.Stages.Transform
     use Cli.TestRound
     use Cli.Db.TestLapRow
     use Motorsport.Calendar.Entry
@@ -65,14 +67,31 @@ mod Cli.TestApi {
         Assert.assertTrue(String.contains({substr = "\"laps\": \"/api/wec/2025/fuji_6h_laps.jsonl\""}, body));
         Assert.assertTrue(not String.contains({substr = "/static/"}, body))
 
-    /// The laps come back as the export writes them: one lap per line, in the
-    /// order the file listed them, rendered by the same encoder.
+    /// The round the server answers with is the round the run would have
+    /// written. Compared against `Cli.Stages.Transform`, which is what writes
+    /// it: an endpoint that starts rendering a round of its own fails here
+    /// rather than in a reader that meets both.
     @Test
-    def theLapsAreTheExportsLaps(): Unit \ {IO, Assert} =
-        let laps = TestLapRow.sampleLap() :: Nil;
-        let response = TestRound.onRound(fuji(), laps, () -> Ok(Api.respond(Route.Laps(2025, "fuji_6h"))));
-        Assert.assertTrue(response#status == 200);
-        Assert.assertTrue(response#body == Extra.renderOnOneLine(Wec.toJson(TestLapRow.sampleLap())) + "\n")
+    def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
+        let laps = TestLapRow.sampleLaps();
+        match served(laps) {
+            case (summary, lapsBody, rendered) =>
+                Assert.assertTrue(summary#status == 200);
+                Assert.assertTrue(summary#body == rendered#metadataJson);
+                Assert.assertTrue(lapsBody#status == 200);
+                Assert.assertTrue(lapsBody#body == rendered#lapsJsonl)
+        }
+
+    def served(laps: List[RawLap]): (Response, Response, Transform.Rendered) \ IO =
+        TestRound.onRound(fuji(), laps, () ->
+            forM(
+                metadata <- Summary.read(fuji())
+            ) yield (
+                Api.respond(Route.Summary(2025, "fuji_6h")),
+                Api.respond(Route.Laps(2025, "fuji_6h")),
+                Transform.transform(metadata, laps)
+            )
+        )
 
     @Test
     def aRoundWithNoRowsIsAnsweredWithNoLaps(): Unit \ {IO, Assert} =

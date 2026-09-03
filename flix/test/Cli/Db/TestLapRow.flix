@@ -26,6 +26,10 @@ mod Cli.Db.TestLapRow {
 
     pub def sampleLap(): RawLap = plainLap()
 
+    /// One of each shape the encoder treats differently: a plain lap, a lap
+    /// that pitted, and a lap of the round that measures mini-sectors.
+    pub def sampleLaps(): List[RawLap] = plainLap() :: pitLap() :: miniSectorLap() :: Nil
+
     def plainLap(): RawLap =
         let csv =
             header() + "\n" +
