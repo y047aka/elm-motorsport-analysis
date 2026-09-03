@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
-PostgreSQL → HTTP → Elm visualization.
+PostgreSQL → HTTP or a JSON export → Elm visualization.
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + shadcn/ui). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
@@ -51,14 +51,13 @@ starts the working copy's when neither does. A run that reaches none writes
 nothing. The integrity checks are read back out of the rows a round was just
 loaded into, and so is everything `.#cli-serve` answers with.
 
-The JSON files it also writes are the export, and it is not a leftover: the
-Tauri build and the VRT read it, and the dev server falls back to it when no
-server is up. A bundle of `dist` is a whole application on its own, with no
-JVM and no database behind it -- the build writes the export's calendar to
+The JSON files it also writes are the export, and it is not a leftover. A
+bundle of `dist` is a whole application on its own, with no JVM and no
+database behind it: the build writes the export's calendar to
 `dist/api/wec/index.json`, which is the one URL the app asks for before it
-knows anything, and the rounds that calendar names are under `/static/wec`
-beside it. `/api` is where the rows are read live, not what the app needs to
-run.
+knows anything, and the rounds it names sit under `/static/wec` beside it.
+That is what the Tauri build bundles and what the VRT runs against. `/api` is
+where the rows are read live, not what the app needs to run.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
@@ -68,10 +67,8 @@ be queried. Passing the flag instead goes through `nix run .#cli-run --
 
 `.#cli-serve` answers `/api` out of the rows a run loaded: `/api/health`,
 `/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json` and
-`_laps.jsonl`. A round is named there the way the export names its files, so one
-path is the other with `/static/wec` and `/api/wec` swapped, and every body is
-byte for byte what the export holds. The Vite dev server proxies `/api` to port
-8080 and answers from `static/` when nothing is listening.
+`_laps.jsonl`. The Vite dev server forwards `/api` to port 8080, and answers it
+from `static/` when nothing is listening.
 
 Its operating form is the jar, since `flix run` takes the JVM down with `main`
 and the server's does not return. `flix build-jar` leaves the Maven
@@ -97,10 +94,12 @@ fetched at runtime via `Http`.
 `Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
 `/api/wec/index.json`. It is the app's only source for which rounds exist, what
 they are called and where their files are — nothing app-side builds those paths,
-and a round it does not list cannot be opened. That one URL is the whole of what
-the app knows about where its data comes from: the calendar names each round's
-summary and laps, and the server and the export name them the same way. `Data/Series.elm` is the remains of the compile-time
-calendar it replaced: car images, which nothing imports yet.
+and a round it does not list cannot be opened. That one URL is the whole of
+what the app knows about where its data comes from: the calendar names each
+round's summary and laps, and nothing else does.
+
+`Data/Series.elm` is the remains of the compile-time calendar it replaced: car
+images, which nothing imports yet.
 
 `Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
 also once, and a round waits on it as it waits on the calendar. That file is
@@ -119,22 +118,25 @@ of eight, and each one connects to PostgreSQL of its own —
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
 the stages rather than restating them: `Cli.Api.respond` runs under
-`Cli.Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. The
-routes that read nothing are answered without a database in the tests through
-`Cli.Db.runRecording`.
+`Cli.Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. A route
+that reads nothing is answered before connecting at all, through
+`Cli.Db.runRecording`: the calendar is `Motorsport.Calendar` rather than a
+count of the rows, so a database that is down stops a round being opened and
+not the app being used.
 
 An answer is tagged and compressed: a round is the same bytes until a run
 loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
-a 304, and a body goes out gzipped where the request accepts it -- Le Mans's
+a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
 `Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
-and `Motorsport.Wec` render for the export, so the two paths cannot drift into
-disagreeing about the same round, and `Cli.TestApi` holds them to it: a round
-is compared against `Cli.Stages.Transform`, and the calendar against
-`Cli.Stages.Manifest` with its root replaced. That substitution is the whole
-of what lets `static/` stand in for the server, so it is asserted rather than
-assumed.
+and `Motorsport.Wec` render for the export, and names a round the way the
+export names its files, so one path is the other with `/static/wec` and
+`/api/wec` swapped. Both are asserted rather than assumed — `Cli.TestApi`
+compares a round against `Cli.Stages.Transform` and the served calendar
+against `Cli.Stages.Manifest` with its root replaced — because the dev
+server's fallback and the bundle's calendar are built on them and neither
+would notice them failing.
 
 ### The shadcn components
 
@@ -376,13 +378,12 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   standing in for it. A test that reaches no database fails rather than
   skipping: the boundary is the thing it is there to check. Connecting costs
   about 350ms once and about 5ms per test after that.
-- **VRT** (`/app/tests/`) — runs against the export rather than the server: the
-  dev server's `/api` proxy answers from `static/` when nothing is listening, so
-  the snapshots are of the same bytes either way. Local runs allow a 0.1%
-  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform diffs;
-  CI is strict 0. Update
-  snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the
-  branch.
+- **VRT** (`/app/tests/`) — runs against the export rather than the server, so
+  it needs nothing set up: with nothing listening on 8080 the dev server
+  answers `/api` from `static/`, and those are the same bytes. Local runs allow
+  a 0.1% pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
+  diffs; CI is strict 0. Update snapshots locally, or trigger the
+  workflow_dispatch in CI to auto-push to the branch.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.
