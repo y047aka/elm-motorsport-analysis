@@ -140,7 +140,7 @@
               fi
               cd flix
               jar=artifact/flix.jar
-              if [ ! -f "$jar" ] || [ -n "$(find src -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+              if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
                 flix build-jar >&2
               fi
               java -cp "$jar:$(find lib -name '*.jar' | tr '\n' ':')" Main ${args} "$@"
