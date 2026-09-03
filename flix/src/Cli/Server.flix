@@ -15,6 +15,8 @@ mod Cli.Server {
 
     use Cli.Api
     use Cli.Api.Response
+    use Cli.Api.Route
+    use Cli.Db
     use Cli.Db.Jdbc
 
     def threads(): Int32 = 8
@@ -43,24 +45,44 @@ mod Cli.Server {
         let response = try {
             respond(databaseUrl, exchange)
         } catch {
-            case e: Throwable =>
-                Sys.Console.runWithIO(() ->
-                    Sys.Console.eprintln("500 ${exchange.getRequestURI().getPath()}: ${e.toString()}"));
-                { status = 500, contentType = "text/plain", body = "the request could not be answered" }
+            case e: Throwable => failed(exchange, e)
         };
         send(exchange, response)
 
-    /// A connection per request. `java.sql.Connection` is not thread-safe, and
-    /// the requests are answered on a pool.
     def respond(databaseUrl: String, exchange: HttpExchange): Response \ IO =
         let route = Api.route(exchange.getRequestURI().getPath());
+        if (Api.needsDatabase(route))
+            fromDatabase(databaseUrl, route, exchange)
+        else
+            // No statement is sent, so there is nothing for the recording to
+            // hold and nothing for it to answer with.
+            match Db.runRecording(() -> Api.respond(route)) {
+                case (answered, _) => answered
+            }
+
+    /// A connection per request. `java.sql.Connection` is not thread-safe, and
+    /// the requests are answered on a pool.
+    ///
+    /// Closed on the way out of a request that throws as well as one that
+    /// answers: a connection the pool thread lost is one PostgreSQL holds open
+    /// until the process ends.
+    def fromDatabase(databaseUrl: String, route: Route, exchange: HttpExchange): Response \ IO =
         match Jdbc.connect(databaseUrl) {
             case Err(cause) => { status = 503, contentType = "text/plain", body = cause }
             case Ok(conn)   =>
-                let answered = Jdbc.runWith(conn, () -> Api.respond(route));
+                let answered = try {
+                    Jdbc.runWith(conn, () -> Api.respond(route))
+                } catch {
+                    case e: Throwable => failed(exchange, e)
+                };
                 Jdbc.close(conn);
                 answered
         }
+
+    def failed(exchange: HttpExchange, e: Throwable): Response \ IO =
+        Sys.Console.runWithIO(() ->
+            Sys.Console.eprintln("500 ${exchange.getRequestURI().getPath()}: ${e.toString()}"));
+        { status = 500, contentType = "text/plain", body = "the request could not be answered" }
 
     /// A round is answered with the bytes it was answered with last time until
     /// a run reloads it, and Le Mans is 24MB of them: worth a tag to be spared

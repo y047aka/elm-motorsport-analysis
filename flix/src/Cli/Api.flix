@@ -61,6 +61,16 @@ mod Cli.Api {
             case None    => Route.NotFound
         }
 
+    /// The calendar is `Motorsport.Calendar`, written down rather than counted
+    /// out of the rows, and health is the process answering at all. Neither is
+    /// a reason to need a database that a round is.
+    pub def needsDatabase(route: Route): Bool =
+        match route {
+            case Route.Summary(_, _) => true
+            case Route.Laps(_, _)    => true
+            case _                   => false
+        }
+
     pub def respond(route: Route): Response \ Db =
         match route {
             case Route.Health            => ok("text/plain", "ok")

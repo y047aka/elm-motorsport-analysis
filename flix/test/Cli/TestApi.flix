@@ -43,6 +43,16 @@ mod Cli.TestApi {
         Assert.assertTrue(Api.route("/api/wec") == Route.NotFound);
         Assert.assertTrue(Api.route("/static/wec/index.json") == Route.NotFound)
 
+    /// A database that is down is not a reason to be unable to list the
+    /// rounds: the calendar is written down, not counted out of the rows.
+    @Test
+    def onlyARoundNeedsADatabase(): Unit \ Assert =
+        Assert.assertTrue(not Api.needsDatabase(Route.Health));
+        Assert.assertTrue(not Api.needsDatabase(Route.Calendar));
+        Assert.assertTrue(not Api.needsDatabase(Route.NotFound));
+        Assert.assertTrue(Api.needsDatabase(Route.Summary(2025, "fuji_6h")));
+        Assert.assertTrue(Api.needsDatabase(Route.Laps(2025, "fuji_6h")))
+
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)
