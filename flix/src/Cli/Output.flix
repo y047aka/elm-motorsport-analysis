@@ -1,4 +1,4 @@
-mod Cli.Stages.Output {
+mod Cli.Output {
 
     use Util.Files
     use Cli.Errors.CliError

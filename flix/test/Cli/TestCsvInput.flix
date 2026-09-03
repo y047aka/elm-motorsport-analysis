@@ -1,7 +1,7 @@
-mod Cli.Stages.TestCsvInput {
+mod Cli.TestCsvInput {
 
     use Cli.Errors.CliError
-    use Cli.Stages.CsvInput
+    use Cli.CsvInput
 
     /// The other half of the calendar's two-way check: a round is listed and
     /// its CSV was never filed.

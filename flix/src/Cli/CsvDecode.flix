@@ -1,4 +1,4 @@
-mod Cli.Stages.CsvDecode {
+mod Cli.CsvDecode {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames

@@ -147,7 +147,7 @@ laps are 24MB, and 3.4MB on the wire.
 `Server.Api` decides nothing about a round, and renders none of one either. A
 round it answers with is read back by `Round.Summary` and `Round.Laps` and
 rendered by `Motorsport.Metadata` and `Round.Render` — which is what
-`Cli.Stages.Export` does, down to the call — so what is served and what is
+`Cli.Export` does, down to the call — so what is served and what is
 written are the same bytes rather than two renderings that agree. `Round.*` is
 reached by both and knows of neither: it takes an `Entry` and a database, and
 answers with what the rows hold.
@@ -285,16 +285,16 @@ is a place on the circuit and a null is a marker the feed left blank. That is th
 shape a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
-Three readers of the table. `Cli.Stages.Validation` runs its five rules as
+Three readers of the table. `Cli.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what the `int[]` columns are for. `Round.Summary`
 reads the round's summary the same way. `Round.Laps` reads a whole round back,
 `Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
-`Cli.Stages.Export` and `Server.Api` are both rendered from what it and
+`Cli.Export` and `Server.Api` are both rendered from what it and
 `Round.Summary` return, so the files written and the round served are the same
 bytes rather than two renderings that agree. Nothing renders a round from the
-laps a CSV decoded to: `Cli.Stages` sends the rows and stops there.
+laps a CSV decoded to: `Cli.Load` sends the rows and stops there.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the

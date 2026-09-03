@@ -1,6 +1,6 @@
-mod Cli.Stages.TestCsvDecode {
+mod Cli.TestCsvDecode {
 
-    use Cli.Stages.CsvDecode
+    use Cli.CsvDecode
     use Cli.Errors.CliError
 
     def header(): String =

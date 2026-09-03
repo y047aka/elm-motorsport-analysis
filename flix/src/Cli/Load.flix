@@ -1,14 +1,14 @@
-mod Cli.Stages {
+mod Cli.Load {
 
     use Sys.Console
     use Util.Files
     use Db.LapRow
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Stages.CsvDecode
-    use Cli.Stages.CsvInput
-    use Cli.Stages.Unlisted
-    use Cli.Stages.Validation
+    use Cli.CsvDecode
+    use Cli.CsvInput
+    use Cli.Unlisted
+    use Cli.Validation
     use Motorsport.Wec.RawLap
 
     type alias RunSummary = {

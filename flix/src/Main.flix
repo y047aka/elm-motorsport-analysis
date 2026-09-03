@@ -6,8 +6,8 @@ use Cli.Args
 use Cli.Args.Command
 use Db.Jdbc
 use Cli.Errors.CliError
-use Cli.Stages
-use Cli.Stages.Export
+use Cli.Load
+use Cli.Export
 
 def main(): Unit \ {Env, IO, Exit, Console} =
     let code = match Args.parse(Env.getArgs()) {
@@ -20,7 +20,7 @@ def main(): Unit \ {Env, IO, Exit, Console} =
         case Ok(Command.Convert(convert)) =>
             onRoot(convert#root, convert#postgres, loadAndExport)
         case Ok(Command.Load(load)) =>
-            onRoot(load#root, load#postgres, Stages.runAll)
+            onRoot(load#root, load#postgres, Load.runAll)
         case Ok(Command.Export(export)) =>
             onRoot(export#root, export#postgres, Export.runAll)
     };
@@ -30,7 +30,7 @@ def main(): Unit \ {Env, IO, Exit, Console} =
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
 def loadAndExport(root: String): Int32 \ {IO, Console, Db} =
-    let loaded = Stages.runAll(root);
+    let loaded = Load.runAll(root);
     let exported = Export.runAll(root);
     if (loaded == 0 and exported == 0) 0 else 1
 

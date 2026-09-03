@@ -1,11 +1,11 @@
-mod Cli.Stages.TestValidation {
+mod Cli.TestValidation {
 
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Util.Duration
     use Round.TestRound
-    use Cli.Stages.Validation
-    use Cli.Stages.Validation.Violation
+    use Cli.Validation
+    use Cli.Validation.Violation
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId

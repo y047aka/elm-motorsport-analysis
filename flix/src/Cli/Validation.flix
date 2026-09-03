@@ -1,6 +1,6 @@
 /// Source-data integrity checks, run against the rows the round was just
 /// loaded into rather than against the laps in memory. Violations are warnings
-/// only; they do not affect the exit code. `Cli.Stages` prints them to stderr.
+/// only; they do not affect the exit code. `Cli.Load` prints them to stderr.
 ///
 /// Rules:
 ///   1. SectorSum                  — `s1 + s2 + s3 == lapTime` (per row)
@@ -34,7 +34,7 @@
 ///     leaves a known blank pattern, `Motorsport.MiniSector.trackLimitsSignatures`.
 ///     These are the dominant non-pit cause of residual sum mismatches in
 ///     Le Mans 2025.
-mod Cli.Stages.Validation {
+mod Cli.Validation {
 
     use Db.Row
     use Db.Schema

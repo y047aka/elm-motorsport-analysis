@@ -1,7 +1,7 @@
-mod Cli.Stages.TestUnlisted {
+mod Cli.TestUnlisted {
 
     use Cli.FileTask
-    use Cli.Stages.Unlisted
+    use Cli.Unlisted
 
     def tasks(root: String): List[FileTask.FileTask] = FileTask.fromCalendar(root)
 

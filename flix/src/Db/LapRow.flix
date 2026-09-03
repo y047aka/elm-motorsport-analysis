@@ -22,7 +22,7 @@ mod Db.LapRow {
     /// a round that measured none.
     ///
     /// `sourceRow` counts the file's laps from one, header excluded. The order
-    /// the CSV listed them in is read by `Cli.Stages.Validation` for its
+    /// the CSV listed them in is read by `Cli.Validation` for its
     /// baseline and by `Motorsport.Metadata` for a car's drivers, and no other
     /// column here can be sorted on to recover it.
     pub type alias LapRow = {
