@@ -12,13 +12,17 @@ mod Round.Render {
     }
 
     pub def render(metadata: Metadata.Metadata, rawLaps: List[RawLap]): Rendered =
-        let metadataJson = Extra.render(Metadata.toJson(metadata));
-        let lapsJsonl    = renderJsonl(rawLaps);
         {
             lapCount     = List.length(rawLaps),
-            metadataJson = metadataJson,
-            lapsJsonl    = lapsJsonl
+            metadataJson = renderMetadata(metadata),
+            lapsJsonl    = renderJsonl(rawLaps)
         }
+
+    /// Reached on its own by an answer that carries the summary without the
+    /// laps, which is a round's worth of rows it would otherwise read to throw
+    /// away.
+    pub def renderMetadata(metadata: Metadata.Metadata): String =
+        Extra.render(Metadata.toJson(metadata))
 
     pub def renderJsonl(rawLaps: List[RawLap]): String =
         rawLaps

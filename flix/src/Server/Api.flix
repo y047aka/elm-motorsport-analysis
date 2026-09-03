@@ -7,7 +7,6 @@ mod Server.Api {
     use Round.Summary
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
-    use Motorsport.Metadata
     use Motorsport.Wec
     use Util.Json.Encode.Extra
 
@@ -87,7 +86,7 @@ mod Server.Api {
     def summary(season: Int32, id: String): Result[String, String] \ Db =
         entry(season, id)
             |> Result.flatMap(Summary.read)
-            |> Result.map(metadata -> Extra.render(Metadata.toJson(metadata)))
+            |> Result.map(Render.renderMetadata)
 
     def laps(season: Int32, id: String): Result[String, String] \ Db =
         entry(season, id)

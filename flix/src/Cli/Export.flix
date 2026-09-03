@@ -2,10 +2,11 @@
 mod Cli.Export {
 
     use Sys.Console
+    use Util.Files
+    use Util.Json.Encode.Extra
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Manifest
-    use Cli.Output
+    use Motorsport.Calendar
     use Round.Laps
     use Round.Render
     use Round.Render.Rendered
@@ -15,6 +16,14 @@ mod Cli.Export {
         exported = Int32,
         errors   = Int32
     }
+
+    /// Where the app reads the exported files from, as `/api/wec` is where it
+    /// reads the served rounds from.
+    ///
+    /// Not where the files are written to. That is the run's argument, and
+    /// `../app/static/wec` and `/static/wec` are the same place reached two
+    /// different ways.
+    pub def urlRoot(): String = "/static/wec"
 
     pub def runAll(root: String): Int32 \ {IO, Console, Db} =
         let summary = List.foldLeft(
@@ -38,7 +47,7 @@ mod Cli.Export {
 
     def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, Db} =
         read(task) |> Result.flatMap(rendered ->
-            Output.write(task, rendered) |> Result.map(_ -> rendered)
+            writeRound(task, rendered) |> Result.map(_ -> rendered)
         )
 
     /// A round the rows hold none of reads as a race that never ran rather than
@@ -51,10 +60,16 @@ mod Cli.Export {
             _        <- if (List.isEmpty(rawLaps)) Err(CliError.RoundNotLoaded) else Ok()
         ) yield Render.render(metadata, rawLaps)
 
+    def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
+        forM(
+            _ <- Files.write(task#outputPath, rendered#metadataJson) |> Result.mapErr(CliError.File);
+            _ <- Files.write(task#lapsPath, rendered#lapsJsonl) |> Result.mapErr(CliError.File)
+        ) yield ()
+
     /// Written once for the export, not once per round, and written even by one
     /// that wrote no round: the calendar is not made from the laps.
     def writeCalendar(root: String): Int32 \ {IO, Console} =
-        match Manifest.write(root) {
+        match writeManifest(root) {
             case Ok(path) =>
                 Console.println("Calendar -> ${path}");
                 0
@@ -62,5 +77,13 @@ mod Cli.Export {
                 Console.eprintln("Calendar: ${e}");
                 1
         }
+
+    /// Written beside the season directories rather than inside one, because it
+    /// spans all of them.
+    def writeManifest(root: String): Result[CliError, String] \ IO =
+        let path = "${root}/index.json";
+        Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons())))
+            |> Result.mapErr(CliError.File)
+            |> Result.map(_ -> path)
 
 }

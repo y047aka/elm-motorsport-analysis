@@ -63,9 +63,9 @@ mod Server.TestApi {
     @Test
     def theTwoRootsNameTheSameRounds(): Unit \ Assert =
         let served = offline(Route.Calendar)#body;
-        let exported = Extra.render(Manifest.toJson(Cli.Manifest.urlRoot(), Motorsport.Calendar.seasons()));
+        let exported = Extra.render(Manifest.toJson(Cli.Export.urlRoot(), Motorsport.Calendar.seasons()));
         Assert.assertTrue(
-            String.replace({src = Api.urlRoot()}, {dst = Cli.Manifest.urlRoot()}, served) == exported
+            String.replace({src = Api.urlRoot()}, {dst = Cli.Export.urlRoot()}, served) == exported
         )
 
     /// The calendar the server hands out points back at the server.
