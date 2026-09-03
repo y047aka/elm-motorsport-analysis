@@ -51,9 +51,14 @@ starts the working copy's when neither does. A run that reaches none writes
 nothing. The integrity checks are read back out of the rows a round was just
 loaded into, and so is everything `.#cli-serve` answers with.
 
-The JSON files it also writes are the export. Nothing the app reads comes from
-them any more, but the VRT and the Tauri build still do, and the dev server
-falls back to them when no server is up.
+The JSON files it also writes are the export, and it is not a leftover: the
+Tauri build and the VRT read it, and the dev server falls back to it when no
+server is up. A bundle of `dist` is a whole application on its own, with no
+JVM and no database behind it -- the build writes the export's calendar to
+`dist/api/wec/index.json`, which is the one URL the app asks for before it
+knows anything, and the rounds that calendar names are under `/static/wec`
+beside it. `/api` is where the rows are read live, not what the app needs to
+run.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
@@ -125,7 +130,11 @@ laps are 24MB, and 3.4MB on the wire.
 
 `Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
 and `Motorsport.Wec` render for the export, so the two paths cannot drift into
-disagreeing about the same round.
+disagreeing about the same round, and `Cli.TestApi` holds them to it: a round
+is compared against `Cli.Stages.Transform`, and the calendar against
+`Cli.Stages.Manifest` with its root replaced. That substitution is the whole
+of what lets `static/` stand in for the server, so it is asserted rather than
+assumed.
 
 ### The shadcn components
 
