@@ -1,7 +1,7 @@
-mod Cli.Stages.TestSummary {
+mod Round.TestSummary {
 
-    use Cli.TestRound
-    use Cli.Stages.Summary
+    use Round.TestRound
+    use Round.Summary
     use Motorsport.Calendar.Entry
     use Motorsport.Metadata
     use Motorsport.Metadata.Basis

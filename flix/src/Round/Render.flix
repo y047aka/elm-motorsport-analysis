@@ -1,4 +1,4 @@
-mod Cli.Stages.Transform {
+mod Round.Render {
 
     use Util.Json.Encode.Extra
     use Motorsport.Metadata
@@ -11,7 +11,7 @@ mod Cli.Stages.Transform {
         lapsJsonl    = String
     }
 
-    pub def transform(metadata: Metadata.Metadata, rawLaps: List[RawLap]): Rendered =
+    pub def render(metadata: Metadata.Metadata, rawLaps: List[RawLap]): Rendered =
         let metadataJson = Extra.render(Metadata.toJson(metadata));
         let lapsJsonl    = renderJsonl(rawLaps);
         {

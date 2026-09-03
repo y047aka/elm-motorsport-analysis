@@ -3,7 +3,7 @@ mod Cli.Stages.Output {
     use Util.Files
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Stages.Transform.Rendered
+    use Round.Render.Rendered
 
     pub def write(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(

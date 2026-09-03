@@ -1,8 +1,8 @@
-mod Cli.Stages.TestLaps {
+mod Round.TestLaps {
 
     use Db.TestLapRow
-    use Cli.Stages.Laps
-    use Cli.TestRound
+    use Round.Laps
+    use Round.TestRound
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap

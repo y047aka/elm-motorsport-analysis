@@ -133,12 +133,11 @@ of eight, and each one connects to PostgreSQL of its own —
 `java.sql.Connection` is not thread-safe.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
-the stages rather than restating them: `Server.Api.respond` runs under
-`Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. A route
-that reads nothing is answered before connecting at all, through
-`Db.runRecording`: the calendar is `Motorsport.Calendar` rather than a
-count of the rows, so a database that is down stops a round being opened and
-not the app being used.
+`Round`'s readers rather than restating them: `Server.Api.respond` runs under
+`Db.Jdbc.runWith` and calls `Round.Summary.read` unchanged. A route that reads
+nothing is answered before connecting at all, through `Db.runRecording`: the
+calendar is `Motorsport.Calendar` rather than a count of the rows, so a
+database that is down stops a round being opened and not the app being used.
 
 An answer is tagged and compressed: a round is the same bytes until a run
 loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
@@ -146,18 +145,20 @@ a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
 `Server.Api` decides nothing about a round, and renders none of one either. A
-round it answers with is read back by `Cli.Stages.Summary` and
-`Cli.Stages.Laps` and rendered by `Motorsport.Metadata` and
-`Cli.Stages.Transform` — which is what `Cli.Stages.Export` does, down to the
-call — so what is served and what is written are the same bytes rather than
-two renderings that agree.
+round it answers with is read back by `Round.Summary` and `Round.Laps` and
+rendered by `Motorsport.Metadata` and `Round.Render` — which is what
+`Cli.Stages.Export` does, down to the call — so what is served and what is
+written are the same bytes rather than two renderings that agree. `Round.*` is
+reached by both and knows of neither: it takes an `Entry` and a database, and
+answers with what the rows hold.
 
 The root is the one thing that differs, and it is asserted rather than
-assumed: `Cli.TestApi` compares the served calendar against
-`Cli.Stages.Manifest` with its root replaced, because the dev server's
-fallback and a bundle's own calendar are built on one path being the other
-with `/static/wec` and `/api/wec` swapped, and neither would notice that
-failing.
+assumed: `Server.TestApi` compares the served calendar against `Manifest`
+rendered with `Cli.Manifest`'s root, because the dev server's fallback and a
+bundle's own calendar are built on one path being the other with
+`/static/wec` and `/api/wec` swapped, and neither would notice that failing.
+`Manifest.toJson` is the rendering either root goes through; `Cli.Manifest` is
+the CLI's own root and the write to disk, which the server has no use for.
 
 ### The shadcn components
 
@@ -287,13 +288,13 @@ reason they are not the object `Motorsport.Wec` writes.
 Three readers of the table. `Cli.Stages.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
-in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
-reads the round's summary the same way. `Cli.Stages.Laps` reads a whole round
-back, `Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
+in track order, which is what the `int[]` columns are for. `Round.Summary`
+reads the round's summary the same way. `Round.Laps` reads a whole round back,
+`Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
 `Cli.Stages.Export` and `Server.Api` are both rendered from what it and
-`Cli.Stages.Summary` return, so the files written and the round served are the
-same bytes rather than two renderings that agree. Nothing renders a round from
-the laps a CSV decoded to: `Cli.Stages` sends the rows and stops there.
+`Round.Summary` return, so the files written and the round served are the same
+bytes rather than two renderings that agree. Nothing renders a round from the
+laps a CSV decoded to: `Cli.Stages` sends the rows and stops there.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the
@@ -394,9 +395,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   variant in the vendored component fails here instead of shipping unstyled.
 - **Where a test lives** — `test/Motorsport/` drives the domain's decisions
   given the readings they are made from (the grid's basis and its tie-breaks,
-  how the lap divides) and needs no database; `test/Cli/Stages/` and
-  `test/Cli/TestApi.flix` drive the reading, and need one. A subject with both
-  has a file in each, named for the module it drives.
+  how the lap divides) and needs no database; `test/Round/` and
+  `test/Server/TestApi.flix` drive the reading, and need one. A subject with
+  both has a file in each, named for the module it drives.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.

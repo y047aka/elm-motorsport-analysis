@@ -1,7 +1,7 @@
-mod Cli.Stages.TestTrack {
+mod Round.TestTrack {
 
-    use Cli.TestRound
-    use Cli.Stages.Summary
+    use Round.TestRound
+    use Round.Summary
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId

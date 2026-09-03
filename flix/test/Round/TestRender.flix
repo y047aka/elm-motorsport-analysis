@@ -1,8 +1,8 @@
-mod Cli.Stages.TestTransform {
+mod Round.TestRender {
 
-    use Cli.TestRound
-    use Cli.Stages.Summary
-    use Cli.Stages.Transform
+    use Round.Render
+    use Round.Summary
+    use Round.TestRound
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
@@ -32,17 +32,17 @@ mod Cli.Stages.TestTransform {
             case Err(_) => unreachable!()
         }
 
-    def rendered(): Transform.Rendered \ IO =
+    def rendered(): Render.Rendered \ IO =
         let laps = sampleRawLaps();
-        Transform.transform(TestRound.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
+        Render.render(TestRound.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
 
     @Test
-    def testTransformCountsLaps(): Unit \ {Assert, IO} =
+    def testRenderCountsLaps(): Unit \ {Assert, IO} =
         let out = rendered();
         Assert.assertTrue(out#lapCount == 3)
 
     @Test
-    def testTransformRendersMetadataJson(): Unit \ {Assert, IO} =
+    def testRenderRendersMetadataJson(): Unit \ {Assert, IO} =
         let out = rendered();
         let json = out#metadataJson;
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
@@ -51,7 +51,7 @@ mod Cli.Stages.TestTransform {
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
     @Test
-    def testTransformRendersLapsJsonl(): Unit \ {Assert, IO} =
+    def testRenderRendersLapsJsonl(): Unit \ {Assert, IO} =
         let out = rendered();
         let jsonl = out#lapsJsonl;
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, jsonl));
@@ -71,8 +71,8 @@ mod Cli.Stages.TestTransform {
         ))
 
     @Test
-    def testTransformEmptyInputProducesNoLaps(): Unit \ {Assert, IO} =
-        let out = Transform.transform(TestRound.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
+    def testRenderEmptyInputProducesNoLaps(): Unit \ {Assert, IO} =
+        let out = Render.render(TestRound.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));

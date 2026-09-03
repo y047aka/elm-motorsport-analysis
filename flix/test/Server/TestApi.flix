@@ -3,10 +3,9 @@ mod Server.TestApi {
     use Server.Api
     use Server.Api.Response
     use Server.Api.Route
-    use Cli.Stages.Manifest
-    use Cli.Stages.Summary
-    use Cli.Stages.Transform
-    use Cli.TestRound
+    use Round.Render
+    use Round.Summary
+    use Round.TestRound
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -64,9 +63,9 @@ mod Server.TestApi {
     @Test
     def theTwoRootsNameTheSameRounds(): Unit \ Assert =
         let served = offline(Route.Calendar)#body;
-        let exported = Extra.render(Manifest.toJson(Manifest.urlRoot(), Motorsport.Calendar.seasons()));
+        let exported = Extra.render(Manifest.toJson(Cli.Manifest.urlRoot(), Motorsport.Calendar.seasons()));
         Assert.assertTrue(
-            String.replace({src = Api.urlRoot()}, {dst = Manifest.urlRoot()}, served) == exported
+            String.replace({src = Api.urlRoot()}, {dst = Cli.Manifest.urlRoot()}, served) == exported
         )
 
     /// The calendar the server hands out points back at the server.
@@ -78,8 +77,7 @@ mod Server.TestApi {
         Assert.assertTrue(not String.contains({substr = "/static/"}, body))
 
     /// The round the server answers with is the round the run would have
-    /// written, compared against `Cli.Stages.Transform`, which is what writes
-    /// it.
+    /// written, compared against `Round.Render`, which is what writes it.
     @Test
     def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
         let laps = TestLapRow.sampleLaps();
@@ -91,14 +89,14 @@ mod Server.TestApi {
                 Assert.assertTrue(lapsBody#body == rendered#lapsJsonl)
         }
 
-    def served(laps: List[RawLap]): (Response, Response, Transform.Rendered) \ IO =
+    def served(laps: List[RawLap]): (Response, Response, Render.Rendered) \ IO =
         TestRound.onRound(fuji(), laps, () ->
             forM(
                 metadata <- Summary.read(fuji())
             ) yield (
                 Api.respond(Route.Summary(2025, "fuji_6h")),
                 Api.respond(Route.Laps(2025, "fuji_6h")),
-                Transform.transform(metadata, laps)
+                Render.render(metadata, laps)
             )
         )
 

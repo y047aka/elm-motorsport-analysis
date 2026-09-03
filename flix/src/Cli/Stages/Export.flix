@@ -4,12 +4,12 @@ mod Cli.Stages.Export {
     use Sys.Console
     use Cli.Errors.CliError
     use Cli.FileTask
-    use Cli.Stages.Laps
-    use Cli.Stages.Manifest
+    use Cli.Manifest
     use Cli.Stages.Output
-    use Cli.Stages.Summary
-    use Cli.Stages.Transform
-    use Cli.Stages.Transform.Rendered
+    use Round.Laps
+    use Round.Render
+    use Round.Render.Rendered
+    use Round.Summary
 
     type alias RunSummary = {
         exported = Int32,
@@ -49,7 +49,7 @@ mod Cli.Stages.Export {
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
             rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database);
             _        <- if (List.isEmpty(rawLaps)) Err(CliError.RoundNotLoaded) else Ok()
-        ) yield Transform.transform(metadata, rawLaps)
+        ) yield Render.render(metadata, rawLaps)
 
     /// Written once for the export, not once per round, and written even by one
     /// that wrote no round: the calendar is not made from the laps.

@@ -1,11 +1,10 @@
 /// The rounds, served rather than exported. An endpoint answers with what
-/// `Cli.Stages` writes to a file, byte for byte.
+/// `Cli.Export` writes to a file, byte for byte.
 mod Server.Api {
 
-    use Cli.Stages.Laps
-    use Cli.Stages.Manifest
-    use Cli.Stages.Summary
-    use Cli.Stages.Transform
+    use Round.Laps
+    use Round.Render
+    use Round.Summary
     use Motorsport.Calendar
     use Motorsport.Calendar.Entry
     use Motorsport.Metadata
@@ -93,7 +92,7 @@ mod Server.Api {
     def laps(season: Int32, id: String): Result[String, String] \ Db =
         entry(season, id)
             |> Result.flatMap(Laps.read)
-            |> Result.map(Transform.renderJsonl)
+            |> Result.map(Render.renderJsonl)
 
     def entry(season: Int32, id: String): Result[String, Entry] =
         Calendar.find(season, id)

@@ -1,8 +1,7 @@
-mod Cli.Stages.TestManifest {
+mod Manifest.TestManifest {
 
     use Util.Json.Encode
-    use Cli.Stages.Manifest
-    use Motorsport.Calendar
+        use Motorsport.Calendar
 
     def rendered(urlRoot: String): String =
         Encode.render(Manifest.toJson(urlRoot, Calendar.seasons()))

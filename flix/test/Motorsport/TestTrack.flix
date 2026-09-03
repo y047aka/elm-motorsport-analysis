@@ -1,6 +1,5 @@
 /// How the lap divides, given the records it divides on. Which lap set those
-/// records is `Cli.Stages.Summary`'s to find and `Cli.Stages.TestTrack`'s to
-/// check.
+/// records is `Round.Summary`'s to find and `Round.TestTrack`'s to check.
 mod Motorsport.TestTrack {
 
     use Motorsport.Circuit.Direction.Direction

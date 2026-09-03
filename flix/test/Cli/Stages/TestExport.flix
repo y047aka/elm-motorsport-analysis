@@ -4,8 +4,8 @@ mod Cli.Stages.TestExport {
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Stages.Export
-    use Cli.Stages.Transform.Rendered
-    use Cli.TestRound
+    use Round.Render.Rendered
+    use Round.TestRound
     use Motorsport.Calendar.Entry
 
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }

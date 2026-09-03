@@ -1,5 +1,5 @@
 /// The round's laps, read back out of the rows it was loaded into.
-mod Cli.Stages.Laps {
+mod Round.Laps {
 
     use Db.LapRow
     use Db.Schema
