@@ -20,7 +20,7 @@ mod Cli.Stages.Transform {
             lapsJsonl    = lapsJsonl
         }
 
-    def renderJsonl(rawLaps: List[RawLap]): String =
+    pub def renderJsonl(rawLaps: List[RawLap]): String =
         rawLaps
             |> List.map(rawLap -> "${Extra.renderOnOneLine(Wec.toJson(rawLap))}\n")
             |> List.join("")

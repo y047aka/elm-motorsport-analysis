@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
-JSON/JSONL → Elm visualization.
+PostgreSQL → HTTP or a JSON export → Elm visualization.
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + shadcn/ui). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
@@ -28,7 +28,8 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#benchmark` | Serve `/package/benchmark` (elm reactor) |
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
-| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→JSON/JSONL |
+| `nix run .#cli-build` / `.#cli-test` / `.#cli-run` | CLI build / test / CSV→PostgreSQL + JSON/JSONL |
+| `nix run .#cli-serve` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for the CLI |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
@@ -47,15 +48,32 @@ whose CSV is missing.
 The run computes in PostgreSQL, so it needs one: `--postgres <jdbc url>` names
 it, `DATABASE_URL` says the same to every run made in a shell, and `.#cli-run`
 starts the working copy's when neither does. A run that reaches none writes
-nothing. The JSON files are still the product — nothing reads the database at
-runtime — but the integrity checks are read back out of the rows a round was
-just loaded into.
+nothing. The integrity checks are read back out of the rows a round was just
+loaded into, and so is everything `.#cli-serve` answers with.
+
+The JSON files it also writes are the export, and it is not a leftover. A
+bundle of `dist` is a whole application on its own, with no JVM and no
+database behind it: the build writes the export's calendar to
+`dist/api/wec/index.json`, which is the one URL the app asks for before it
+knows anything, and the rounds it names sit under `/static/wec` beside it.
+That is what the Tauri build bundles and what the VRT runs against. `/api` is
+where the rows are read live, not what the app needs to run.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
 working copy rather than under /tmp, so what a run left there is still there to
 be queried. Passing the flag instead goes through `nix run .#cli-run --
 --postgres ...`, since the flake forwards what follows.
+
+`.#cli-serve` answers `/api` out of the rows a run loaded: `/api/health`,
+`/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json` and
+`_laps.jsonl`. The Vite dev server forwards `/api` to port 8080, and answers it
+from `static/` when nothing is listening.
+
+Its operating form is the jar, since `flix run` takes the JVM down with `main`
+and the server's does not return. `flix build-jar` leaves the Maven
+dependencies out of what it writes, so the JDBC driver is named on the class
+path beside the jar rather than bundled in it.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
@@ -73,11 +91,15 @@ fetched at runtime via `Http`.
 - `Css/` (Color, Palette, Typography), `Data/` (feed decoding), `UI/` (Table,
   and `Shadcn/` for the wrappers)
 
-`Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared`. It is
-the app's only source for which rounds exist, what they are called and where
-their files are — nothing app-side builds those paths, and a round it does not
-list cannot be opened. `Data/Series.elm` is the remains of the compile-time
-calendar it replaced: car images, which nothing imports yet.
+`Data/Wec/Calendar.elm` decodes `index.json`, fetched once by `Shared` from
+`/api/wec/index.json`. It is the app's only source for which rounds exist, what
+they are called and where their files are — nothing app-side builds those paths,
+and a round it does not list cannot be opened. That one URL is the whole of
+what the app knows about where its data comes from: the calendar names each
+round's summary and laps, and nothing else does.
+
+`Data/Series.elm` is the remains of the compile-time calendar it replaced: car
+images, which nothing imports yet.
 
 `Data/Wec/Manufacturer.elm` decodes `/static/manufacturers.json` the same way,
 also once, and a round waits on it as it waits on the calendar. That file is
@@ -85,6 +107,36 @@ written by hand and no compiler reads it, so a mistake in it shows as cars drawn
 by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number.
+
+### The server
+
+`Cli.Server` is `com.sun.net.httpserver` reached through Java interop: the
+handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
+returning from it would take the JVM with it. Requests are answered on a pool
+of eight, and each one connects to PostgreSQL of its own —
+`java.sql.Connection` is not thread-safe.
+
+A Flix effect handler runs inside a request, which is why the endpoints reuse
+the stages rather than restating them: `Cli.Api.respond` runs under
+`Cli.Db.Jdbc.runWith` and calls `Cli.Stages.Summary.read` unchanged. A route
+that reads nothing is answered before connecting at all, through
+`Cli.Db.runRecording`: the calendar is `Motorsport.Calendar` rather than a
+count of the rows, so a database that is down stops a round being opened and
+not the app being used.
+
+An answer is tagged and compressed: a round is the same bytes until a run
+loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
+a 304, and a body goes out gzipped where the request accepts it — Le Mans's
+laps are 24MB, and 3.4MB on the wire.
+
+`Cli.Api` decides nothing about a round. It renders what `Motorsport.Metadata`
+and `Motorsport.Wec` render for the export, and names a round the way the
+export names its files, so one path is the other with `/static/wec` and
+`/api/wec` swapped. Both are asserted rather than assumed — `Cli.TestApi`
+compares a round against `Cli.Stages.Transform` and the served calendar
+against `Cli.Stages.Manifest` with its root replaced — because the dev
+server's fallback and the bundle's calendar are built on them and neither
+would notice them failing.
 
 ### The shadcn components
 
@@ -211,11 +263,13 @@ is a place on the circuit and a null is a marker the feed left blank. That is th
 shape a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
-Two stages read the table back. `Cli.Stages.Validation` runs its five rules as
+Three readers of the table. `Cli.Stages.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what the `int[]` columns are for. `Cli.Stages.Summary`
-reads the round's summary the same way.
+reads the round's summary the same way. `Cli.Api` reads a whole round back:
+`Cli.Db.LapRow.fromRow` and `toRawLap` are the reverse of the load, so the laps
+it serves are rendered by the encoder that writes the export.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the
@@ -316,18 +370,23 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   variant in the vendored component fails here instead of shipping unstyled.
 - **Where a test lives** — `test/Motorsport/` drives the domain's decisions
   given the readings they are made from (the grid's basis and its tie-breaks,
-  how the lap divides) and needs no database; `test/Cli/Stages/` drives the
-  reading, and needs one. A subject with both has a file in each, named for the
-  module it drives.
+  how the lap divides) and needs no database; `test/Cli/Stages/` and
+  `test/Cli/TestApi.flix` drive the reading, and need one. A subject with both
+  has a file in each, named for the module it drives.
+- **A clean build** — `flix build` and `flix test` are incremental, and CI is
+  not: a compile that only fails from cold passes locally until `flix/build`
+  is removed. `rm -rf flix/build` before believing a green run.
 - **The database** — `.#cli-test` brings up the working copy's PostgreSQL and
   names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
   standing in for it. A test that reaches no database fails rather than
   skipping: the boundary is the thing it is there to check. Connecting costs
   about 350ms once and about 5ms per test after that.
-- **VRT** (`/app/tests/`) — local runs allow a 0.1% pixel-ratio tolerance
-  (`maxDiffPixelRatio: 0.001`) for cross-platform diffs; CI is strict 0. Update
-  snapshots locally, or trigger the workflow_dispatch in CI to auto-push to the
-  branch.
+- **VRT** (`/app/tests/`) — runs against the export rather than the server, so
+  it needs nothing set up: with nothing listening on 8080 the dev server
+  answers `/api` from `static/`, and those are the same bytes. Local runs allow
+  a 0.1% pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
+  diffs; CI is strict 0. Update snapshots locally, or trigger the
+  workflow_dispatch in CI to auto-push to the branch.
 
 CI (ubuntu-24.04) runs the unit tests and the typecheck in `test.yml`, and
 everything needing a browser in `playwright.yml`.

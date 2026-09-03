@@ -17,7 +17,7 @@ mod Cli.Stages.Manifest {
     /// Not where the files are written to. That is the run's argument, and
     /// `../app/static/wec` and `/static/wec` are the same place reached two
     /// different ways.
-    def urlRoot(): String = "/static/wec"
+    pub def urlRoot(): String = "/static/wec"
 
     /// Written beside the season directories rather than inside one, because it
     /// spans all of them.

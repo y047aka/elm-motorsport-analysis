@@ -118,6 +118,35 @@
             '';
           };
 
+        # The server's operating form is the jar: `flix run` takes the JVM down
+        # with `main`, and the server's `main` does not return. Rebuilt when a
+        # source is newer than it, as the deps-audit jar is.
+        #
+        # `flix build-jar` leaves the Maven dependencies out of the jar it
+        # writes, so the JDBC driver is named on the class path beside it and
+        # the jar is run by its main class rather than by `java -jar`.
+        mkFlixServerApp = name: args:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ flix pkgs.jdk21_headless pkgs.postgresql ];
+            text = ''
+              named=""
+              for arg in "$@"; do
+                case "$arg" in --postgres | --postgres=*) named=yes ;; esac
+              done
+              if [ -z "''${DATABASE_URL:-}" ] && [ -z "$named" ]; then
+              '' + pgEnsure + ''
+                export DATABASE_URL="${pgUrl}"
+              fi
+              cd flix
+              jar=artifact/flix.jar
+              if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
+                flix build-jar >&2
+              fi
+              java -cp "$jar:$(find lib -name '*.jar' | tr '\n' ':')" Main ${args} "$@"
+            '';
+          };
+
         # A PostgreSQL for the CLI to compute in. The data directory sits in the
         # working copy rather than under /tmp, so the rows a run left behind are
         # still there to be queried, and `nix run .#pg-start` prints the URL for
@@ -200,6 +229,7 @@
           cli-build            = { type = "app"; program = "${mkFlixApp "cli-build" "flix build"}/bin/cli-build";                                                    meta.description = "Build the CLI"; };
           cli-test             = { type = "app"; program = "${mkFlixAppWithDb "cli-test" "flix test"}/bin/cli-test";                                                      meta.description = "Run the CLI's tests"; };
           cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> JSON)"; };
+          cli-serve            = { type = "app"; program = "${mkFlixServerApp "cli-serve" "--serve"}/bin/cli-serve";                                             meta.description = "Serve the loaded rounds over HTTP (/api)"; };
           pg-start             = { type = "app"; program = "${mkPgApp   "pg-start" pgStartCmd}/bin/pg-start";                                                     meta.description = "Start the local PostgreSQL and print its JDBC URL"; };
           pg-stop              = { type = "app"; program = "${mkPgApp   "pg-stop"  pgStopCmd}/bin/pg-stop";                                                       meta.description = "Stop the local PostgreSQL"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };

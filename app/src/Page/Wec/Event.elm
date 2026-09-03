@@ -26,6 +26,7 @@ import Shared
 import Shared.Msg
 import Task
 import Time
+import UI.Notice as Notice
 import UI.Shadcn.Card as Card
 import View exposing (View)
 import View.CarDetailPopover as CarDetailPopover
@@ -174,7 +175,7 @@ view shared m =
                 Nothing ->
                     -- Named but not loaded. Nothing is drawn rather than the
                     -- round before it.
-                    div [ Attributes.class "row-start-2" ] []
+                    div [ Attributes.class "row-start-2" ] [ unavailable shared ]
 
                 Just race ->
                     case m.mode of
@@ -186,6 +187,33 @@ view shared m =
             ]
         ]
     }
+
+
+{-| Nothing while a round is on its way, and why once it is not coming.
+-}
+unavailable : Shared.Model -> Html Msg
+unavailable shared =
+    case Shared.problem shared of
+        Nothing ->
+            text ""
+
+        Just Shared.NotListed ->
+            Notice.view
+                { headline = "No such round."
+                , detail = "The calendar does not list this season and event."
+                }
+
+        Just Shared.NoClassGrid ->
+            Notice.view
+                { headline = "This season cannot be read yet."
+                , detail = "There is no class grid for it, so its cars have no classes to be put in."
+                }
+
+        Just (Shared.LoadFailed error) ->
+            Notice.view
+                { headline = "The round could not be loaded."
+                , detail = Notice.httpError error
+                }
 
 
 headerTitle : Shared.Model -> String

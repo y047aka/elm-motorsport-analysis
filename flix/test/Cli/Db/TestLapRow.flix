@@ -26,6 +26,10 @@ mod Cli.Db.TestLapRow {
 
     pub def sampleLap(): RawLap = plainLap()
 
+    /// One of each shape the encoder treats differently: a plain lap, a lap
+    /// that pitted, and a lap of the round that measures mini-sectors.
+    pub def sampleLaps(): List[RawLap] = plainLap() :: pitLap() :: miniSectorLap() :: Nil
+
     def plainLap(): RawLap =
         let csv =
             header() + "\n" +
@@ -141,5 +145,45 @@ mod Cli.Db.TestLapRow {
         Assert.assertTrue(List.take(4, values)
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
+
+    /// The cells a `SELECT` of `Cli.Db.Schema.columns` comes back as, so a
+    /// column read at the wrong index is a wrong field here rather than a
+    /// wrong lap in an answer.
+    def cells(): List[Option[String]] =
+        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
+        Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
+        Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("f") ::
+        Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
+        Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
+        None :: Some("SF") :: None :: None :: Nil
+
+    @Test
+    def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
+        match LapRow.fromRow(cells()) {
+            case Err(_)  => Assert.assertTrue(false)
+            case Ok(row) =>
+                Assert.assertTrue(LapRow.values(row) == LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
+        }
+
+    @Test
+    def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
+        let withMiniSectors = List.append(
+            List.take(26, cells()),
+            Some("{20708,NULL}") :: Some("{20708,NULL}") :: Nil
+        );
+        match LapRow.fromRow(withMiniSectors) {
+            case Err(_)  => Assert.assertTrue(false)
+            case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
+        }
+
+    /// What the reading gives back is what the writing was handed.
+    @Test
+    def aRowMakesTheLapItWasMadeFrom(): Unit \ Assert =
+        let rendered = lap -> Util.Json.Encode.Extra.renderOnOneLine(Wec.toJson(lap));
+        let roundTrip = lap ->
+            LapRow.toRawLap(LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
+        Assert.assertTrue(roundTrip(plainLap()) == Ok(rendered(plainLap())));
+        Assert.assertTrue(roundTrip(pitLap()) == Ok(rendered(pitLap())));
+        Assert.assertTrue(roundTrip(miniSectorLap()) == Ok(rendered(miniSectorLap())))
 
 }
