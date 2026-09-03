@@ -157,9 +157,16 @@ or a 503 -- the server is up and has no database -- leaves it empty, which is
 the bundle's own export under `/static/wec`. The build writes
 `dist/api/wec/index.json` for exactly that case.
 
-The base cannot be dropped for a relative path: the page is `tauri://localhost`
-and the server is another origin, which is also why `Cli.Server` sends
-`Access-Control-Allow-Origin`.
+The window opens `http://localhost:1430`, which `tauri-plugin-localhost` serves
+the bundle's own assets on, rather than `tauri://localhost`. Elm reads the
+page's location through `Url.fromString`, which takes no scheme but http and
+https and crashes the program on anything else -- and `--optimize` leaves that
+crash without a message, so the window is simply blank.
+
+The API is a port of its own, so the base cannot be dropped for a relative
+path, and `Cli.Server` sends `Access-Control-Allow-Origin`. Serving the page
+from the plugin rather than from that server is what keeps the window filling
+when the JVM does not start.
 
 ### The shadcn components
 

@@ -1,10 +1,13 @@
 // Entry point for the Tauri v2 app.
 //
-// The window loads the frontend build (app/dist), and what it reads is started
-// here: `sidecar/` holds a PostgreSQL, the rows to fill it with, the server's
-// jar and a JVM to run it on. The frontend reaches the server at
-// http://127.0.0.1:8080 rather than same-origin, because the page is
-// tauri://localhost.
+// The window loads the frontend build (app/dist) over http from a server of
+// its own rather than from `tauri://localhost`: Elm's `Browser.application`
+// reads the page's location through `Url.fromString`, which takes no scheme
+// but http and https and crashes on anything else.
+//
+// What the page reads is started here: `sidecar/` holds a PostgreSQL, the rows
+// to fill it with, the server's jar and a JVM to run it on. The API is another
+// port, so it is another origin than the page.
 //
 // Nothing here fails the launch. A database that will not start, or a JVM that
 // will not, leaves the frontend to read the export bundled beside it.
@@ -15,10 +18,13 @@ use std::process::{Child, Command};
 use std::sync::Mutex;
 
 use tauri::path::BaseDirectory;
-use tauri::{Manager, RunEvent};
+use tauri::{Manager, RunEvent, WebviewUrl, WebviewWindowBuilder};
 
 /// The port `index.ts` looks for the server on.
 const API_PORT: &str = "8080";
+
+/// Where the frontend is served from, which is what the window opens.
+const PAGE_PORT: u16 = 1430;
 
 /// Not 55433, which is the working copy's: a checkout and the installed app
 /// are two databases, and only one of them is rebuilt by a run of the CLI.
@@ -159,14 +165,26 @@ fn stop(app: &tauri::AppHandle, services: &mut Services) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_localhost::Builder::new(PAGE_PORT).build())
         .manage(Mutex::new(Services::default()))
         .setup(|app| {
             let handle = app.handle().clone();
-            let state = app.state::<Mutex<Services>>();
-            let mut services = state.lock().unwrap();
-            if let Err(cause) = start(&handle, &mut services) {
-                eprintln!("API: {cause}");
+            {
+                let state = app.state::<Mutex<Services>>();
+                let mut services = state.lock().unwrap();
+                if let Err(cause) = start(&handle, &mut services) {
+                    eprintln!("API: {cause}");
+                }
             }
+            WebviewWindowBuilder::new(
+                app,
+                "main",
+                WebviewUrl::External(format!("http://localhost:{PAGE_PORT}").parse()?),
+            )
+            .title("Motorsport Analysis")
+            .inner_size(1440.0, 900.0)
+            .min_inner_size(1024.0, 640.0)
+            .build()?;
             Ok(())
         })
         .build(tauri::generate_context!())

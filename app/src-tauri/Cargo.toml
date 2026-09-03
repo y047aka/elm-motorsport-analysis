@@ -19,5 +19,9 @@ tauri-build = { version = "2", features = [] }
 
 [dependencies]
 tauri = { version = "2", features = [] }
+# The window is loaded over http rather than from `tauri://localhost`: Elm's
+# `Browser.application` reads `document.location` through `Url.fromString`,
+# which takes no scheme but http and https, and crashes on anything else.
+tauri-plugin-localhost = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
