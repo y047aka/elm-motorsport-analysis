@@ -3,7 +3,7 @@
 ///
 /// The tests keep to a schema of their own: what they drop and rebuild is never
 /// the archive a working copy has loaded.
-mod Round.TestRound {
+mod Round.TestSupport {
 
     use Db.Jdbc
     use Db.LapRow

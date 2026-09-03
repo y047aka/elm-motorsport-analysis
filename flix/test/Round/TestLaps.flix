@@ -2,7 +2,7 @@ mod Round.TestLaps {
 
     use Db.TestLapRow
     use Round.Laps
-    use Round.TestRound
+    use Round.TestSupport
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
@@ -11,7 +11,7 @@ mod Round.TestLaps {
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
 
     def readBack(laps: List[RawLap]): List[RawLap] \ IO =
-        TestRound.onRound(fuji(), laps, () -> Laps.read(fuji()))
+        TestSupport.onRound(fuji(), laps, () -> Laps.read(fuji()))
 
     def rendered(laps: List[RawLap]): List[String] =
         laps |> List.map(lap -> Extra.renderOnOneLine(Wec.toJson(lap)))

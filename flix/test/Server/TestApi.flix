@@ -5,7 +5,7 @@ mod Server.TestApi {
     use Server.Api.Route
     use Round.Render
     use Round.Summary
-    use Round.TestRound
+    use Round.TestSupport
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -90,7 +90,7 @@ mod Server.TestApi {
         }
 
     def served(laps: List[RawLap]): (Response, Response, Render.Rendered) \ IO =
-        TestRound.onRound(fuji(), laps, () ->
+        TestSupport.onRound(fuji(), laps, () ->
             forM(
                 metadata <- Summary.read(fuji())
             ) yield (
@@ -102,7 +102,7 @@ mod Server.TestApi {
 
     @Test
     def aRoundWithNoRowsIsAnsweredWithNoLaps(): Unit \ {IO, Assert} =
-        let response = TestRound.onRound(fuji(), Nil, () -> Ok(Api.respond(Route.Laps(2025, "imola_6h"))));
+        let response = TestSupport.onRound(fuji(), Nil, () -> Ok(Api.respond(Route.Laps(2025, "imola_6h"))));
         Assert.assertTrue(response#status == 200);
         Assert.assertTrue(response#body == "")
 

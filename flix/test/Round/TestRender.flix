@@ -2,7 +2,7 @@ mod Round.TestRender {
 
     use Round.Render
     use Round.Summary
-    use Round.TestRound
+    use Round.TestSupport
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
@@ -34,7 +34,7 @@ mod Round.TestRender {
 
     def rendered(): Render.Rendered \ IO =
         let laps = sampleRawLaps();
-        Render.render(TestRound.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
+        Render.render(TestSupport.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
 
     @Test
     def testRenderCountsLaps(): Unit \ {Assert, IO} =
@@ -72,7 +72,7 @@ mod Round.TestRender {
 
     @Test
     def testRenderEmptyInputProducesNoLaps(): Unit \ {Assert, IO} =
-        let out = Render.render(TestRound.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
+        let out = Render.render(TestSupport.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
         Assert.assertTrue(out#lapCount == 0);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
         Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));

@@ -5,7 +5,7 @@ mod Cli.TestExport {
     use Cli.FileTask
     use Cli.Export
     use Round.Render.Rendered
-    use Round.TestRound
+    use Round.TestSupport
     use Motorsport.Calendar.Entry
 
     def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
@@ -17,7 +17,7 @@ mod Cli.TestExport {
         { inputPath = "", outputPath = "", lapsPath = "", entry = entry }
 
     def readBack(loaded: Entry, wanted: Entry): Result[CliError, Rendered] \ IO =
-        TestRound.onRound(loaded, TestLapRow.sampleLaps(), () -> Ok(Export.read(task(wanted))))
+        TestSupport.onRound(loaded, TestLapRow.sampleLaps(), () -> Ok(Export.read(task(wanted))))
 
     @Test
     def aRoundNoRunHasLoadedIsNotWrittenOut(): Unit \ {Assert, IO} =

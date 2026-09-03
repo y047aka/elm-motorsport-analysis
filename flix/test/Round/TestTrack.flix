@@ -1,6 +1,6 @@
 mod Round.TestTrack {
 
-    use Round.TestRound
+    use Round.TestSupport
     use Round.Summary
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
@@ -25,7 +25,7 @@ mod Round.TestTrack {
     def unknownDirection(): Entry = { season = 2025, id = "custom_event", date = "2025-01-01" }
 
     def track(entry: Entry, laps: List[RawLap]): Track.Track \ IO =
-        TestRound.onRound(entry, numbered(laps), () -> Summary.read(entry))#track
+        TestSupport.onRound(entry, numbered(laps), () -> Summary.read(entry))#track
 
     /// The fixtures are each written as lap one, which the table's key will not
     /// take twice for the same car. Numbering them changes nothing a share is

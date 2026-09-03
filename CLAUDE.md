@@ -144,21 +144,27 @@ loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
 a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
-`Server.Api` decides nothing about a round, and renders none of one either. A
-round it answers with is read back by `Round.Summary` and `Round.Laps` and
-rendered by `Motorsport.Metadata` and `Round.Render` — which is what
-`Cli.Export` does, down to the call — so what is served and what is
-written are the same bytes rather than two renderings that agree. `Round.*` is
-reached by both and knows of neither: it takes an `Entry` and a database, and
-answers with what the rows hold.
+`Round` is one round on its way out of the table, both halves of the trip:
+`Round.Summary` and `Round.Laps` take an `Entry` and the `Db` effect and read
+it; `Round.Render` takes what they returned, is pure, and turns it into the
+bytes that go out. None of the three knows whether a file or a request is
+waiting at the other end.
+
+`Server.Api` decides nothing about a round, then, and renders none of one
+either: it makes the same calls `Cli.Export` makes, so what is served and what
+is written are the same bytes rather than two renderings that agree. An answer
+carrying the summary alone stops at `Round.Render.renderMetadata` rather than
+reading a round's laps to throw them away, which is the one thing the two
+callers do differently.
 
 The root is the one thing that differs, and it is asserted rather than
 assumed: `Server.TestApi` compares the served calendar against `Manifest`
-rendered with `Cli.Manifest`'s root, because the dev server's fallback and a
+rendered with `Cli.Export`'s root, because the dev server's fallback and a
 bundle's own calendar are built on one path being the other with
 `/static/wec` and `/api/wec` swapped, and neither would notice that failing.
-`Manifest.toJson` is the rendering either root goes through; `Cli.Manifest` is
-the CLI's own root and the write to disk, which the server has no use for.
+`Manifest.toJson` is the rendering either root goes through, and it is the
+only module of that name: `Cli.Export.urlRoot` and `Server.Api.urlRoot` are
+what the two sides hand it.
 
 ### The shadcn components
 
@@ -312,10 +318,10 @@ baseline is the file's first row, and a car's drivers are in the order the file
 first showed them.
 
 `Db` is an effect, not a module of functions, so that what a round would
-send can be read back without a server: `runRecording` keeps the statements,
-`runDiscarding` drops them, and `Db.Jdbc` is the only file that imports
-`java.sql`. `Db.Schema.columns` and `Db.LapRow.values` are two lists no
-compiler sees together, which is what `Db.TestSchema` is for.
+send can be read back without a server: `Db.runRecording` keeps the statements
+and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
+only file that imports `java.sql`. `Db.Schema.columns` and `Db.LapRow.values`
+are two lists no compiler sees together, which is what `Db.TestSchema` is for.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
