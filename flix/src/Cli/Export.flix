@@ -9,12 +9,20 @@ mod Cli.Export {
     use Motorsport.Calendar
     use Round.Laps
     use Round.Render
-    use Round.Render.Rendered
     use Round.Summary
 
     type alias RunSummary = {
         exported = Int32,
         errors   = Int32
+    }
+
+    /// The three files' worth of a round, held together so the count reported
+    /// is the count of what was written. Nothing outside the export wants all
+    /// three at once: an answer carrying the summary has no use for the laps.
+    pub type alias Rendered = {
+        lapCount     = Int32,
+        metadataJson = String,
+        lapsJsonl    = String
     }
 
     /// Where the app reads the exported files from, as `/api/wec` is where it
@@ -61,7 +69,14 @@ mod Cli.Export {
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
             rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database);
             _        <- if (List.isEmpty(rawLaps)) Err(CliError.RoundNotLoaded) else Ok()
-        ) yield Render.render(metadata, rawLaps)
+        ) yield render(metadata, rawLaps)
+
+    def render(metadata: Motorsport.Metadata.Metadata, rawLaps: List[Motorsport.Wec.RawLap]): Rendered =
+        {
+            lapCount     = List.length(rawLaps),
+            metadataJson = Render.renderMetadata(metadata),
+            lapsJsonl    = Render.renderJsonl(rawLaps)
+        }
 
     def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =
         forM(

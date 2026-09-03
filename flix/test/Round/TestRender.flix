@@ -6,6 +6,7 @@ mod Round.TestRender {
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
     use Motorsport.Calendar.Entry
+    use Motorsport.Metadata
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
 
@@ -32,38 +33,37 @@ mod Round.TestRender {
             case Err(_) => unreachable!()
         }
 
-    def rendered(): Render.Rendered \ IO =
-        let laps = sampleRawLaps();
-        Render.render(TestSupport.onRound(leMans(), laps, () -> Summary.read(leMans())), laps)
+    def summaryOf(laps: List[RawLap]): Metadata.Metadata \ IO =
+        TestSupport.onRound(leMans(), laps, () -> Summary.read(leMans()))
 
     @Test
-    def testRenderCountsLaps(): Unit \ {Assert, IO} =
-        let out = rendered();
-        Assert.assertTrue(out#lapCount == 3)
-
-    @Test
-    def testRenderRendersMetadataJson(): Unit \ {Assert, IO} =
-        let out = rendered();
-        let json = out#metadataJson;
+    def testRenderMetadataRendersTheRoundsSummary(): Unit \ {Assert, IO} =
+        let json = Render.renderMetadata(summaryOf(sampleRawLaps()));
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"7\""}, json));
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
+    /// A round with no laps still has a summary, and it still renders.
     @Test
-    def testRenderRendersLapsJsonl(): Unit \ {Assert, IO} =
-        let out = rendered();
-        let jsonl = out#lapsJsonl;
+    def testRenderMetadataOfARoundWithNoLaps(): Unit \ {Assert, IO} =
+        let json = Render.renderMetadata(summaryOf(Nil));
+        Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, json))
+
+    @Test
+    def testRenderJsonlRendersEveryLap(): Unit \ Assert =
+        let jsonl = Render.renderJsonl(sampleRawLaps());
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Kamui KOBAYASHI\""}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, jsonl))
 
     @Test
-    def testEveryLapIsOneLine(): Unit \ {Assert, IO} =
-        let out = rendered();
-        let lines = String.splitOn({substr = "\n"}, out#lapsJsonl) |> List.filter(line -> line != "");
-        Assert.assertTrue(String.endsWith({suffix = "\n"}, out#lapsJsonl));
+    def testEveryLapIsOneLine(): Unit \ Assert =
+        let jsonl = Render.renderJsonl(sampleRawLaps());
+        let lines = String.splitOn({substr = "\n"}, jsonl) |> List.filter(line -> line != "");
+        Assert.assertTrue(String.endsWith({suffix = "\n"}, jsonl));
         Assert.assertTrue(List.length(lines) == 3);
         Assert.assertTrue(List.forAll(
             line -> String.startsWith({prefix = "{ "}, line) and String.endsWith({suffix = " }"}, line),
@@ -71,11 +71,7 @@ mod Round.TestRender {
         ))
 
     @Test
-    def testRenderEmptyInputProducesNoLaps(): Unit \ {Assert, IO} =
-        let out = Render.render(TestSupport.onRound(leMans(), Nil, () -> Summary.read(leMans())), Nil);
-        Assert.assertTrue(out#lapCount == 0);
-        Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, out#metadataJson));
-        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, out#metadataJson));
-        Assert.assertTrue(out#lapsJsonl == "")
+    def testRenderJsonlOfNoLapsIsEmpty(): Unit \ Assert =
+        Assert.assertTrue(Render.renderJsonl(Nil) == "")
 
 }

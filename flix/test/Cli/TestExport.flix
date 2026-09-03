@@ -4,7 +4,7 @@ mod Cli.TestExport {
     use Cli.Errors.CliError
     use Cli.FileTask
     use Cli.Export
-    use Round.Render.Rendered
+    use Cli.Export.Rendered
     use Round.TestSupport
     use Motorsport.Calendar.Entry
 
@@ -26,11 +26,18 @@ mod Cli.TestExport {
             case _                            => Assert.assertTrue(false)
         }
 
+    /// The count is of what was written, which is what the run reports; the two
+    /// bodies are what `Round.Render` was asked for.
     @Test
     def aLoadedRoundIsWrittenOut(): Unit \ {Assert, IO} =
         match readBack(fuji(), fuji()) {
-            case Ok(rendered) => Assert.assertTrue(rendered#lapCount == 3)
-            case Err(_)       => Assert.assertTrue(false)
+            case Ok(rendered) =>
+                Assert.assertTrue(rendered#lapCount == 3);
+                Assert.assertTrue(String.contains({substr = "\"6 Hours of Fuji\""}, rendered#metadataJson));
+                let lines = String.splitOn({substr = "\n"}, rendered#lapsJsonl)
+                    |> List.filter(line -> line != "");
+                Assert.assertTrue(List.length(lines) == 3)
+            case Err(_) => Assert.assertTrue(false)
         }
 
 }

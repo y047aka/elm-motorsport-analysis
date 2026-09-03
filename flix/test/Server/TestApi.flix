@@ -5,6 +5,7 @@ mod Server.TestApi {
     use Server.Api.Route
     use Round.Render
     use Round.Summary
+    use Motorsport.Metadata
     use Round.TestSupport
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
@@ -76,27 +77,28 @@ mod Server.TestApi {
         Assert.assertTrue(String.contains({substr = "\"laps\": \"/api/wec/2025/fuji_6h_laps.jsonl\""}, body));
         Assert.assertTrue(not String.contains({substr = "/static/"}, body))
 
-    /// The round the server answers with is the round the run would have
-    /// written, compared against `Round.Render`, which is what writes it.
+    /// The round the server answers with is the round the export would write,
+    /// compared against `Round.Render`, which is what either side renders it
+    /// with.
     @Test
     def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
         let laps = TestLapRow.sampleLaps();
         match served(laps) {
-            case (summary, lapsBody, rendered) =>
+            case (summary, lapsBody, metadata) =>
                 Assert.assertTrue(summary#status == 200);
-                Assert.assertTrue(summary#body == rendered#metadataJson);
+                Assert.assertTrue(summary#body == Render.renderMetadata(metadata));
                 Assert.assertTrue(lapsBody#status == 200);
-                Assert.assertTrue(lapsBody#body == rendered#lapsJsonl)
+                Assert.assertTrue(lapsBody#body == Render.renderJsonl(laps))
         }
 
-    def served(laps: List[RawLap]): (Response, Response, Render.Rendered) \ IO =
+    def served(laps: List[RawLap]): (Response, Response, Metadata.Metadata) \ IO =
         TestSupport.onRound(fuji(), laps, () ->
             forM(
                 metadata <- Summary.read(fuji())
             ) yield (
                 Api.respond(Route.Summary(2025, "fuji_6h")),
                 Api.respond(Route.Laps(2025, "fuji_6h")),
-                Render.render(metadata, laps)
+                metadata
             )
         )
 
