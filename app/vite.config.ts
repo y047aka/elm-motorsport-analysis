@@ -7,7 +7,7 @@ import {
   mkdirSync,
   statSync,
 } from "node:fs";
-import type { ServerResponse } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
 import { extname, join, resolve } from "node:path";
 
 const staticDir = resolve(import.meta.dirname, "static");
@@ -46,6 +46,12 @@ function serveExport(urlPath: string, res: ServerResponse): void {
   res.end("no API server, and nothing exported at this path");
 }
 
+// The headers the server's answer is made of. `Accept-Encoding` is not among
+// them on purpose: `fetch` decodes whatever it accepted, so asking for gzip
+// here would leave this hop holding a decoded body under a header saying it is
+// compressed.
+const forwarded = ["content-type", "etag", "cache-control"];
+
 // Forwarded by hand rather than by `server.proxy`: Vite answers a proxy error
 // with a 500 of its own, and a handler added to that proxy cannot get to the
 // response first.
@@ -56,17 +62,28 @@ function apiServer(): Plugin {
       server.middlewares.use("/api", async (req, res) => {
         const urlPath = "/api" + decodeURIComponent((req.url ?? "").split("?")[0]);
         try {
-          const answer = await fetch(apiOrigin + urlPath);
-          const type = answer.headers.get("content-type");
+          const answer = await fetch(apiOrigin + urlPath, {
+            headers: revalidating(req),
+          });
           res.statusCode = answer.status;
-          if (type) res.setHeader("Content-Type", type);
-          res.end(Buffer.from(await answer.arrayBuffer()));
+          for (const name of forwarded) {
+            const value = answer.headers.get(name);
+            if (value) res.setHeader(name, value);
+          }
+          // A 304 is the whole answer: the browser has the body already.
+          if (answer.status === 304) res.end();
+          else res.end(Buffer.from(await answer.arrayBuffer()));
         } catch {
           serveExport(urlPath, res);
         }
       });
     },
   };
+}
+
+function revalidating(req: IncomingMessage): Record<string, string> {
+  const tag = req.headers["if-none-match"];
+  return typeof tag === "string" ? { "If-None-Match": tag } : {};
 }
 
 // Serve (dev) and copy (build) the `static/` directory at `/static`, mirroring
