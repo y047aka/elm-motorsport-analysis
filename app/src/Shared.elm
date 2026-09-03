@@ -1,15 +1,15 @@
 module Shared exposing
-    ( Model, Race, RoundId
+    ( Model, Race, RoundId, Catalogue(..), Problem(..)
     , init, update, subscriptions
-    , race, roundId, isPlaying
+    , race, roundId, isPlaying, problem
     )
 
 {-| Application-wide state, preserved from the elm-pages version. The data is
 loaded at runtime via `Http`, so no `BackendTask` is involved.
 
-@docs Model, Race, RoundId
+@docs Model, Race, RoundId, Catalogue, Problem
 @docs init, update, subscriptions
-@docs race, roundId, isPlaying
+@docs race, roundId, isPlaying, problem
 
 -}
 
@@ -37,10 +37,29 @@ import Shared.Msg exposing (Msg(..))
 so a half-loaded one cannot be read as a loaded one.
 -}
 type alias Model =
-    { calendar : Calendar
+    { calendar : Catalogue
     , manufacturers : Maybe Manufacturers
     , round : Round
     }
+
+
+{-| The rounds there are, or the reason the app cannot say what they are. A
+failure here is the whole app's: it is the only thing that knows a round
+exists.
+-}
+type Catalogue
+    = Arriving
+    | Listed Calendar
+    | Missing Http.Error
+
+
+{-| Why a round the URL named is not being shown. A round that cannot arrive
+has to say so: left as `Loading`, it is a page that waits for ever.
+-}
+type Problem
+    = NotListed
+    | NoClassGrid
+    | LoadFailed Http.Error
 
 
 {-| `Waiting` is a URL that arrived before the calendar or the manufacturer
@@ -56,6 +75,7 @@ type Round
     | Waiting { season : String, event : String }
     | Loading RoundId Partial
     | Loaded RoundId Race
+    | Unavailable { season : String, event : String } Problem
 
 
 {-| Known as soon as the calendar resolves the URL, so the name can be shown
@@ -99,7 +119,7 @@ on, and a round reached by its URL still needs both.
 -}
 init : flags -> ( Model, Effect Msg )
 init _ =
-    ( { calendar = Calendar.empty, manufacturers = Nothing, round = NoRound }
+    ( { calendar = Arriving, manufacturers = Nothing, round = NoRound }
     , Effect.sendCmd <|
         Cmd.batch
             [ Http.get
@@ -129,6 +149,18 @@ roundId model =
 
         Loaded id _ ->
             Just id
+
+        _ ->
+            Nothing
+
+
+{-| Why nothing is being shown, when nothing is.
+-}
+problem : Model -> Maybe Problem
+problem model =
+    case model.round of
+        Unavailable _ reason ->
+            Just reason
 
         _ ->
             Nothing
@@ -173,10 +205,10 @@ update : Msg -> Model -> ( Model, Effect Msg )
 update msg m =
     case msg of
         CalendarLoaded (Ok calendar) ->
-            resumeWaitingRound { m | calendar = calendar }
+            resumeWaitingRound { m | calendar = Listed calendar }
 
-        CalendarLoaded (Err _) ->
-            ( m, Effect.none )
+        CalendarLoaded (Err error) ->
+            resumeWaitingRound { m | calendar = Missing error }
 
         ManufacturersLoaded result ->
             -- Unlike the calendar's, this failure does not hold the round
@@ -190,14 +222,14 @@ update msg m =
         JsonLoaded_Wec key (Ok summary) ->
             ( { m | round = arrived key (withSummary summary) m.round }, Effect.none )
 
-        JsonLoaded_Wec _ (Err _) ->
-            ( m, Effect.none )
+        JsonLoaded_Wec key (Err error) ->
+            ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         LapsLoaded_Wec key (Ok rawLaps) ->
             ( { m | round = arrived key (withLaps rawLaps) m.round }, Effect.none )
 
-        LapsLoaded_Wec _ (Err _) ->
-            ( m, Effect.none )
+        LapsLoaded_Wec key (Err error) ->
+            ( { m | round = didNotArrive key error m.round }, Effect.none )
 
         ReplayMsg replayMsg ->
             ( { m | round = mapRace (stepReplay replayMsg) m.round }, Effect.none )
@@ -210,43 +242,49 @@ resumeWaitingRound : Model -> ( Model, Effect Msg )
 resumeWaitingRound m =
     case ( m.round, m.manufacturers ) of
         ( Waiting params, Just manufacturers ) ->
-            case Calendar.findRound params m.calendar of
-                Nothing ->
+            case m.calendar of
+                Arriving ->
                     ( m, Effect.none )
 
-                Just ( season, round ) ->
-                    let
-                        id =
-                            { season = season.season, id = round.id, name = round.name }
-                    in
-                    ( { m | round = Loading id NothingYet }
-                    , case Era.fromSeason id.season of
-                        Just era ->
-                            Effect.sendCmd <|
-                                Cmd.batch
-                                    [ Http.get
-                                        { url = round.summary
-                                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers)
-                                        }
-                                    , Http.get
-                                        { url = round.laps
-                                        , expect =
-                                            Http.expectString
-                                                (LapsLoaded_Wec (keyOf id)
-                                                    << Result.andThen (WecLaps.fromJsonl >> Result.mapError Http.BadBody)
-                                                )
-                                        }
-                                    ]
+                Missing error ->
+                    ( { m | round = Unavailable params (LoadFailed error) }, Effect.none )
 
+                Listed calendar ->
+                    case Calendar.findRound params calendar of
                         Nothing ->
-                            -- No grid for this season, so no way to read its
-                            -- classes. The name is shown and nothing is asked
-                            -- for.
-                            Effect.none
-                    )
+                            ( { m | round = Unavailable params NotListed }, Effect.none )
+
+                        Just ( season, round ) ->
+                            askFor params manufacturers { season = season.season, id = round.id, name = round.name } round m
 
         _ ->
             ( m, Effect.none )
+
+
+askFor : { season : String, event : String } -> Manufacturers -> RoundId -> Calendar.Round -> Model -> ( Model, Effect Msg )
+askFor params manufacturers id round m =
+    case Era.fromSeason id.season of
+        Nothing ->
+            ( { m | round = Unavailable params NoClassGrid }, Effect.none )
+
+        Just era ->
+            ( { m | round = Loading id NothingYet }
+            , Effect.sendCmd <|
+                Cmd.batch
+                    [ Http.get
+                        { url = round.summary
+                        , expect = Http.expectJson (JsonLoaded_Wec (keyOf id)) (Wec.eventDecoder era manufacturers)
+                        }
+                    , Http.get
+                        { url = round.laps
+                        , expect =
+                            Http.expectString
+                                (LapsLoaded_Wec (keyOf id)
+                                    << Result.andThen (WecLaps.fromJsonl >> Result.mapError Http.BadBody)
+                                )
+                        }
+                    ]
+            )
 
 
 {-| Applies a file to the round that asked for it, and to no other. A response
@@ -275,6 +313,17 @@ withSummary summary id partial =
 
         _ ->
             Loading id (GotSummary summary)
+
+
+{-| The round the response was for, given up on. A response naming any other
+round is left over from one already navigated away from, and is dropped by
+`arrived` as a late success is.
+-}
+didNotArrive : { season : Int, id : String } -> Http.Error -> Round -> Round
+didNotArrive key error round =
+    arrived key
+        (\id _ -> Unavailable { season = String.fromInt id.season, event = id.id } (LoadFailed error))
+        round
 
 
 withLaps : List WecLaps.RawLap -> RoundId -> Partial -> Round

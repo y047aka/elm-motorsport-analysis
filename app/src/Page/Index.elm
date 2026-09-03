@@ -12,6 +12,7 @@ import Html exposing (Html, a, div, h1, h2, h3, header, main_, p, section, span,
 import Html.Attributes exposing (class)
 import Route
 import Shared
+import UI.Notice as Notice
 import UI.Shadcn.Badge as Badge
 import UI.Shadcn.Card as Card
 import View exposing (View)
@@ -30,7 +31,20 @@ view { calendar } =
             ]
             [ pageHeader
             , main_ [ class "mx-auto flex max-w-5xl flex-col gap-12 px-6 pb-20" ]
-                (List.indexedMap (\i season -> seasonSection { isLatest = i == 0 } season) calendar)
+                (case calendar of
+                    Shared.Listed seasons ->
+                        List.indexedMap (\i season -> seasonSection { isLatest = i == 0 } season) seasons
+
+                    Shared.Arriving ->
+                        []
+
+                    Shared.Missing error ->
+                        [ Notice.view
+                            { headline = "The race calendar could not be loaded."
+                            , detail = Notice.httpError error
+                            }
+                        ]
+                )
             ]
         ]
     }
