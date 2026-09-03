@@ -107,8 +107,10 @@ function staticAssets(): Plugin {
       // The one URL the app asks for before it knows anything: a bundle with no
       // server behind it -- the Tauri build, a static host -- answers it with
       // the export's own calendar, whose rounds point back into `/static/wec`.
+      const calendar = join(staticDir, "wec/index.json");
+      if (!existsSync(calendar)) return;
       mkdirSync(join(dist, "api/wec"), { recursive: true });
-      cpSync(join(staticDir, "wec/index.json"), join(dist, "api/wec/index.json"));
+      cpSync(calendar, join(dist, "api/wec/index.json"));
     },
   };
 }
