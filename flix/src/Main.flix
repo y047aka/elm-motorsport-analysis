@@ -16,13 +16,13 @@ def main(): Unit \ {Env, IO, Exit, Console} =
             Console.eprintln(Args.usage());
             1
         case Ok(Command.Serve(serve)) =>
-            runServer(serve#port, serve#postgres)
+            runServer(serve#port, serve#database)
         case Ok(Command.Convert(convert)) =>
-            onRoot(convert#root, convert#postgres, root -> loadAndExport(root, convert#exported))
+            onRoot(convert#root, convert#database, root -> loadAndExport(root, convert#exported))
         case Ok(Command.Load(load)) =>
-            onRoot(load#root, load#postgres, Load.runAll)
+            onRoot(load#root, load#database, Load.runAll)
         case Ok(Command.Export(export)) =>
-            onRoot(export#root, export#postgres, root -> Export.runAll(root, export#exported))
+            onRoot(export#root, export#database, root -> Export.runAll(root, export#exported))
     };
     Exit.exit(code)
 
@@ -36,13 +36,13 @@ def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Conso
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onRoot(root: String, postgres: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
+def onRoot(root: String, database: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
     match checkRoot(root) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
             1
         case Ok(()) =>
-            withDatabase(postgres, url ->
+            withDatabase(database, url ->
                 match Jdbc.connect(url) {
                     case Err(e) =>
                         Console.eprintln("Error: ${e}");
@@ -57,8 +57,8 @@ def onRoot(root: String, postgres: Option[String], stage: String -> Int32 \ {IO,
 
 /// The database is reached once per request, so the server starts before one is
 /// up and reports it per request.
-def runServer(port: Int32, postgres: Option[String]): Int32 \ {Env, IO, Console} =
-    withDatabase(postgres, url -> {
+def runServer(port: Int32, database: Option[String]): Int32 \ {Env, IO, Console} =
+    withDatabase(database, url -> {
         Console.println("Serving /api on port ${port}");
         match Server.serve(port, url) {
             case Ok(())  => 0
@@ -66,19 +66,19 @@ def runServer(port: Int32, postgres: Option[String]): Int32 \ {Env, IO, Console}
         }
     })
 
-def withDatabase(postgres: Option[String], f: String -> Int32 \ ef): Int32 \ ef + Env + Console =
-    match databaseUrl(postgres) {
+def withDatabase(database: Option[String], f: String -> Int32 \ ef): Int32 \ ef + Env + Console =
+    match databaseUrl(database) {
         case None =>
-            Console.eprintln("Error: no database. Pass --postgres <jdbc url> or set DATABASE_URL.");
+            Console.eprintln("Error: no database. Pass --database <jdbc url> or set DATABASE_URL.");
             1
         case Some(url) => f(url)
     }
 
-/// `--postgres` first, then `DATABASE_URL`: the flag points one run somewhere
+/// `--database` first, then `DATABASE_URL`: the flag points one run somewhere
 /// else, and the variable is how a shell that already has a database hands the
 /// same one to every run made in it.
-def databaseUrl(postgres: Option[String]): Option[String] \ Env =
-    match postgres {
+def databaseUrl(database: Option[String]): Option[String] \ Env =
+    match database {
         case Some(url) => Some(url)
         case None      => Env.getVar("DATABASE_URL")
     }

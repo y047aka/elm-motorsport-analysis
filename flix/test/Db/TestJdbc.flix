@@ -1,17 +1,15 @@
 mod Db.TestJdbc {
 
+    import java.io.File
+
     use Db.Jdbc
     use Db.LapRow
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
+    use Round.TestSupport
 
-    /// The database `nix run .#cli-test` brings up and names in `DATABASE_URL`.
-    /// A run that reaches no database fails these rather than skipping them:
-    /// the point of them is the half of the boundary no compiler sees.
     def connected(f: Unit -> Result[String, a] \ ef): Result[String, a] \ (ef - Db) + IO =
-        let url = Sys.Env.runWithIO(() -> Sys.Env.getVar("DATABASE_URL"))
-            |> Option.getWithDefault("");
-        match Jdbc.connect(url) {
+        match Jdbc.connect(TestSupport.url()) {
             case Err(e)   => Err(e)
             case Ok(conn) =>
                 let result = Jdbc.runWith(conn, f);
@@ -21,12 +19,13 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 'a', null::text, 42, null::int"));
+        let result = connected(() -> Db.fetch("select 'a', null, 42, null"));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select n from generate_series(3, 1, -1) as n"));
+        let result = connected(() -> Db.fetch(
+            "select n from (select 1 as n union select 2 union select 3) order by n desc"));
         Assert.assertTrue(result == Ok(
             (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
         ))
@@ -38,8 +37,6 @@ mod Db.TestJdbc {
         let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
         let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
-            discard Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
-            discard Db.execute("SET search_path TO cli_test");
             discard Db.prepare();
             let accepted = Db.insertLaps(rows);
             let refused  = Db.insertLaps(rows);
@@ -59,7 +56,74 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 1 where false"));
+        let result = connected(() -> Db.fetch("select 1 where 0"));
         Assert.assertTrue(result == Ok(Nil))
+
+    // --------------------------------------------------------- a file database
+
+    /// The tests above connect to an in-memory database, which is neither
+    /// created on a path nor journalled. What a run computes in is a file, so
+    /// the two things `connect` does to reach one are driven here.
+
+    /// A database of its own per test, under a directory that does not exist,
+    /// which is what a working copy's `.db` is on a first run.
+    def onFile(f: Unit -> Result[String, a] \ ef): (String, Result[String, a]) \ (ef - Db) + IO =
+        let stem = File.createTempFile("motorsport-test", "");
+        discard stem.delete();
+        let path = "${stem.getPath()}/motorsport.sqlite";
+        let result = match Jdbc.connect("jdbc:sqlite:${path}") {
+            case Err(e)   => Err(e)
+            case Ok(conn) =>
+                let value = Jdbc.runWith(conn, f);
+                Jdbc.close(conn);
+                value
+        };
+        (path, result)
+
+    def remove(path: String): Unit \ IO =
+        let file = new File(path);
+        discard file.delete();
+        match Object.toOption(file.getParentFile()) {
+            case Some(parent) => discard parent.delete()
+            case None         => ()
+        }
+
+    /// SQLite creates the file and not the directory holding it, so a URL
+    /// naming one that does not exist reaches no database at all.
+    @Test
+    def connectingMakesTheDirectoryTheFileNeeds(): Unit \ {Assert, IO} =
+        let (path, result) = onFile(() -> Db.fetch("select 1"));
+        Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil));
+        Assert.assertTrue(new File(path).exists());
+        remove(path)
+
+    /// The server answers on a pool and connects per request, so a read has to
+    /// run beside a writing run rather than behind it.
+    @Test
+    def aFileDatabaseIsJournalledForConcurrentReaders(): Unit \ {Assert, IO} =
+        let (path, result) = onFile(() -> Db.fetch("PRAGMA journal_mode"));
+        Assert.assertTrue(result == Ok((Some("wal") :: Nil) :: Nil));
+        remove(path)
+
+    /// Two connections at once, which an in-memory database cannot be: each
+    /// connection to one is a database of its own.
+    @Test
+    def aSecondConnectionReadsWhatTheFirstWrote(): Unit \ {Assert, IO} =
+        let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
+        let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
+        let (path, written) = onFile(() -> forM(
+            _        <- Db.prepare();
+            accepted <- Db.insertLaps(rows)
+        ) yield accepted);
+        let readBack = match Jdbc.connect("jdbc:sqlite:${path}") {
+            case Err(e)   => Err(e)
+            case Ok(conn) =>
+                let value = Jdbc.runWith(conn, () -> Db.fetch("SELECT COUNT(*) FROM laps"));
+                Jdbc.close(conn);
+                value
+        };
+        Assert.assertTrue(written == Ok(1));
+        Assert.assertTrue(readBack == Ok((Some("1") :: Nil) :: Nil));
+        remove(path)
 
 }

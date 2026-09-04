@@ -61,8 +61,8 @@ mod Server {
     /// A connection per request. `java.sql.Connection` is not thread-safe, and
     /// the requests are answered on a pool.
     ///
-    /// A connection a thrown request left behind is one PostgreSQL holds until
-    /// the process ends, so the close is outside the catch.
+    /// A connection a thrown request left behind holds a read on the database
+    /// until the process ends, so the close is outside the catch.
     def fromDatabase(databaseUrl: String, route: Route, exchange: HttpExchange): Response \ IO =
         match Jdbc.connect(databaseUrl) {
             case Err(cause) => { status = 503, contentType = "text/plain", body = cause }

@@ -22,16 +22,16 @@ mod Cli.Args {
     /// `exported` narrows the writing stage alone: a round left out of it is
     /// loaded like any other, and `/api` answers for it.
     pub enum Command {
-        case Convert({ root = String, postgres = Option[String], exported = Rounds })
-        case Load({ root = String, postgres = Option[String] })
-        case Export({ root = String, postgres = Option[String], exported = Rounds })
-        case Serve({ port = Int32, postgres = Option[String] })
+        case Convert({ root = String, database = Option[String], exported = Rounds })
+        case Load({ root = String, database = Option[String] })
+        case Export({ root = String, database = Option[String], exported = Rounds })
+        case Serve({ port = Int32, database = Option[String] })
     }
 
     def defaultPort(): Int32 = 8080
 
     enum Setting {
-        case Postgres(String)
+        case Database(String)
         case Load
         case Export
         case Serve
@@ -42,8 +42,8 @@ mod Cli.Args {
     def optionDescrs(): List[OptionDescr[Setting]] =
         {
             optionIds     = Nil,
-            optionNames   = "postgres" :: Nil,
-            argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Postgres(url)), "URL"),
+            optionNames   = "database" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Database(url)), "URL"),
             explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL)"
         } ::
         {
@@ -84,7 +84,7 @@ mod Cli.Args {
         ) yield command
 
     def toCommand(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Command] =
-        let postgres = postgresUrl(settings);
+        let database = databaseUrl(settings);
         if (serving(settings) and (loading(settings) or exporting(settings)))
             Err(ArgsError.ParseErrors("--serve is not a stage of a converting run" :: Nil))
         else if (serving(settings))
@@ -92,7 +92,7 @@ mod Cli.Args {
                 Err(ArgsError.ParseErrors("--export-only is not for --serve" :: Nil))
             else
                 match nonOptions {
-                    case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
+                    case Nil    => Ok(Command.Serve({ port = port(settings), database = database }))
                     case extras => Err(ArgsError.UnexpectedArguments(extras))
                 }
         else if (List.exists(isPort, settings))
@@ -104,9 +104,9 @@ mod Cli.Args {
             ) yield
                 // Naming both stages is naming the run they make up.
                 match (loading(settings), exporting(settings)) {
-                    case (true, false) => Command.Load({ root = root, postgres = postgres })
-                    case (false, true) => Command.Export({ root = root, postgres = postgres, exported = exported })
-                    case _             => Command.Convert({ root = root, postgres = postgres, exported = exported })
+                    case (true, false) => Command.Load({ root = root, database = database })
+                    case (false, true) => Command.Export({ root = root, database = database, exported = exported })
+                    case _             => Command.Convert({ root = root, database = database, exported = exported })
                 }
 
     /// `Every` unless a run named rounds: an option nobody passed is not a
@@ -175,10 +175,10 @@ mod Cli.Args {
             case _             => false
         })
 
-    /// The last `--postgres` wins, as a repeated option usually does.
-    def postgresUrl(settings: List[Setting]): Option[String] =
+    /// The last `--database` wins, as a repeated option usually does.
+    def databaseUrl(settings: List[Setting]): Option[String] =
         settings |> List.foldLeft((acc, setting) -> match setting {
-            case Setting.Postgres(url) => Some(url)
+            case Setting.Database(url) => Some(url)
             case _                     => acc
         }, None)
 
@@ -189,6 +189,6 @@ mod Cli.Args {
         }, defaultPort())
 
     pub def usage(): String =
-        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or cli-serve", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or serve-api", optionDescrs())
 
 }

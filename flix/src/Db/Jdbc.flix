@@ -7,7 +7,9 @@ mod Db.Jdbc {
     import java.sql.SQLException
     import java.sql.Types
 
-    import org.postgresql.Driver
+    import java.io.File
+
+    import org.sqlite.JDBC
 
     use Db.LapRow
     use Db.LapRow.LapRow
@@ -20,15 +22,41 @@ mod Db.Jdbc {
     /// is on the application class path. It is not on the one Flix runs with, so
     /// without `registerDriver` this reports that no driver matches the URL —
     /// at run time, from a program that compiled and whose `import` resolved.
+    ///
+    /// SQLite creates the database file and not the directory holding it, so a
+    /// URL naming one that does not exist reports that the file cannot be
+    /// opened.
     pub def connect(url: String): Result[String, Connection] \ IO =
         try {
-            DriverManager.registerDriver(new Driver());
+            DriverManager.registerDriver(new JDBC());
+            makeParentDirectory(url);
             let conn = DriverManager.getConnection(url);
+            pragmas(conn);
             conn.setAutoCommit(false);
             Ok(conn)
         } catch {
             case e: SQLException => Err("could not connect (caused by: ${e.getMessage()})")
         }
+
+    def makeParentDirectory(url: String): Unit \ IO =
+        match String.stripPrefix({substr = "jdbc:sqlite:"}, url) {
+            case Some(path) if not String.startsWith({prefix = ":"}, path) =>
+                match Object.toOption(new File(path).getParentFile()) {
+                    case Some(parent) => discard parent.mkdirs()
+                    case None         => ()
+                }
+            case _ => ()
+        }
+
+    /// The server answers on a pool of eight and connects per request, so a
+    /// read has to run beside a writing run rather than behind it. Set before
+    /// the first transaction opens: `journal_mode` cannot be changed inside
+    /// one.
+    def pragmas(conn: Connection): Unit \ IO =
+        let stmt = conn.createStatement();
+        discard stmt.execute("PRAGMA journal_mode = WAL");
+        discard stmt.execute("PRAGMA busy_timeout = 5000");
+        stmt.close()
 
     pub def close(conn: Connection): Unit \ IO =
         try {
@@ -117,7 +145,7 @@ mod Db.Jdbc {
                 case None    => pstmt.setNull(index, Types.INTEGER)
             }
             case Value.NullableIntArray(o) => match o {
-                case Some(xs) => pstmt.setString(index, LapRow.arrayLiteral(xs))
+                case Some(xs) => pstmt.setString(index, LapRow.jsonArray(xs))
                 case None     => pstmt.setNull(index, Types.VARCHAR)
             }
         }

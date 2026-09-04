@@ -24,15 +24,7 @@ mod Db.Schema {
 
     pub def insert(): String =
         "INSERT INTO laps (" + List.join(", ", columns()) + ") VALUES ("
-            + List.join(", ", placeholders()) + ")"
-
-    /// An array column takes an explicit cast. A bound string reaches the
-    /// server as `text`, which the column refuses, and the placeholder is the
-    /// only place left to say what it is.
-    def placeholders(): List[String] =
-        definitions() |> List.map(definition ->
-            if (String.endsWith({suffix = "int[]"}, definition)) "?::int[]" else "?"
-        )
+            + List.join(", ", List.map(_ -> "?", columns())) + ")"
 
     pub def anyRow(season: Int32, round: String): String =
         "SELECT 1 FROM laps WHERE " + scope(season, round) + " LIMIT 1"
@@ -60,7 +52,7 @@ mod Db.Schema {
         "lap_number int not null" ::
         "lap_time_ms int not null" ::
         "lap_improvement int not null" ::
-        "crossing_finish_line_in_pit boolean not null" ::
+        "crossing_finish_line_in_pit int not null" ::
         "s1_ms int" ::
         "s1_improvement int not null" ::
         "s2_ms int" ::
@@ -73,10 +65,11 @@ mod Db.Schema {
         "top_speed text not null" ::
         "pit_time_ms int" ::
         "flag_at_fl text not null" ::
-        // In `Motorsport.MiniSector.all()` order, so a subscript is a place
-        // on the circuit.
-        "mini_sector_time_ms int[]" ::
-        "mini_sector_elapsed_ms int[]" ::
+        // A JSON array of the fifteen of `Motorsport.MiniSector.all()` in track
+        // order, so a subscript is a place on the circuit. `json_each` is what
+        // a query reads one back with.
+        "mini_sector_time_ms text" ::
+        "mini_sector_elapsed_ms text" ::
         Nil
 
 }
