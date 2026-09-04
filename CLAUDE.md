@@ -421,7 +421,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   it, against the in-memory database `Round.TestSupport.url` names: a
   connection of its own per test, so what one loads is never the archive a
   working copy has. A test that reaches no database fails rather than skipping:
-  the boundary is the thing it is there to check.
+  the boundary is the thing it is there to check. What an in-memory database is
+  not is a file, so `Db.TestJdbc` drives one of those too, under a temporary
+  directory that does not exist yet — the directory `connect` has to make and
+  the journal mode it sets are reached no other way, and two connections at
+  once are not reached at all by a database each connection makes afresh.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
