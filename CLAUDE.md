@@ -424,8 +424,8 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
   2025's Le Mans because that is the round the export keeps; a test reaching
-  for another needs `.#serve-api` behind it. Local runs allow
-  a 0.1% pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
+  for another needs `.#serve-api` behind it. Local runs allow a 0.1%
+  pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
   diffs; CI is strict 0. Update snapshots locally, or trigger the
   workflow_dispatch in CI to auto-push to the branch.
 
