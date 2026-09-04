@@ -2,6 +2,8 @@ mod Cli.Args {
 
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
+    use Cli.FileTask.Rounds
+    use Motorsport.Calendar
 
     pub enum ArgsError with ToString {
         case MissingRoot
@@ -16,10 +18,13 @@ mod Cli.Args {
     /// there is no per-file input and nothing to redirect a single file's
     /// output to. Serving reads the rounds a run has already loaded, so it
     /// takes a database and no directory.
+    ///
+    /// `exported` narrows the writing stage alone: a round left out of it is
+    /// loaded like any other, and `/api` answers for it.
     pub enum Command {
-        case Convert({ root = String, postgres = Option[String] })
+        case Convert({ root = String, postgres = Option[String], exported = Rounds })
         case Load({ root = String, postgres = Option[String] })
-        case Export({ root = String, postgres = Option[String] })
+        case Export({ root = String, postgres = Option[String], exported = Rounds })
         case Serve({ port = Int32, postgres = Option[String] })
     }
 
@@ -31,6 +36,7 @@ mod Cli.Args {
         case Export
         case Serve
         case Port(Int32)
+        case ExportOnly(String)
     }
 
     def optionDescrs(): List[OptionDescr[Setting]] =
@@ -63,6 +69,12 @@ mod Cli.Args {
             optionNames   = "port" :: Nil,
             argDescriptor = ArgDescr.ReqArg(port -> Option.map(Setting.Port, Int32.fromString(port)), "PORT"),
             explanation   = "port to serve on (default ${defaultPort()})"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "export-only" :: Nil,
+            argDescriptor = ArgDescr.ReqArg(name -> Some(Setting.ExportOnly(name)), "SEASON/ID"),
+            explanation   = "write this round's files and no other,\nrepeated to name more than one"
         } :: Nil
 
     pub def parse(args: List[String]): Result[ArgsError, Command] =
@@ -76,22 +88,49 @@ mod Cli.Args {
         if (serving(settings) and (loading(settings) or exporting(settings)))
             Err(ArgsError.ParseErrors("--serve is not a stage of a converting run" :: Nil))
         else if (serving(settings))
-            match nonOptions {
-                case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
-                case extras => Err(ArgsError.UnexpectedArguments(extras))
-            }
+            if (not List.isEmpty(exportOnly(settings)))
+                Err(ArgsError.ParseErrors("--export-only is not for --serve" :: Nil))
+            else
+                match nonOptions {
+                    case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
+                    case extras => Err(ArgsError.UnexpectedArguments(extras))
+                }
         else if (List.exists(isPort, settings))
             Err(ArgsError.ParseErrors("--port is only for --serve" :: Nil))
         else
-            extractRoot(nonOptions) |> Result.map(root ->
-                let stage = { root = root, postgres = postgres };
+            forM(
+                root     <- extractRoot(nonOptions);
+                exported <- exportedRounds(settings)
+            ) yield
                 // Naming both stages is naming the run they make up.
                 match (loading(settings), exporting(settings)) {
-                    case (true, false) => Command.Load(stage)
-                    case (false, true) => Command.Export(stage)
-                    case _             => Command.Convert(stage)
+                    case (true, false) => Command.Load({ root = root, postgres = postgres })
+                    case (false, true) => Command.Export({ root = root, postgres = postgres, exported = exported })
+                    case _             => Command.Convert({ root = root, postgres = postgres, exported = exported })
                 }
-            )
+
+    /// `Every` unless a run named rounds: an option nobody passed is not a
+    /// selection of nothing.
+    def exportedRounds(settings: List[Setting]): Result[ArgsError, Rounds] =
+        let named = exportOnly(settings);
+        if (List.isEmpty(named))
+            Ok(Rounds.Every)
+        else
+            match List.filter(name -> Option.isEmpty(roundName(name)), named) {
+                case Nil     => Ok(Rounds.Only(List.filterMap(roundName, named)))
+                case unknown =>
+                    Err(ArgsError.ParseErrors(unknown |> List.map(name ->
+                        "--export-only names no round on the calendar: ${name}")))
+            }
+
+    def roundName(name: String): Option[(Int32, String)] =
+        match String.splitOn({substr = "/"}, name) {
+            case season :: id :: Nil =>
+                Int32.fromString(season)
+                    |> Option.flatMap(year -> Calendar.find(year, id))
+                    |> Option.map(entry -> (entry#season, entry#id))
+            case _ => None
+        }
 
     def getOptResult(args: List[String]): Result[ArgsError, {options = List[Setting], nonOptions = List[String]}] =
         match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, optionDescrs(), args) {
@@ -111,6 +150,12 @@ mod Cli.Args {
             case Setting.Port(_) => true
             case _               => false
         }
+
+    def exportOnly(settings: List[Setting]): List[String] =
+        settings |> List.filterMap(setting -> match setting {
+            case Setting.ExportOnly(name) => Some(name)
+            case _                        => None
+        })
 
     def loading(settings: List[Setting]): Bool =
         settings |> List.exists(setting -> match setting {

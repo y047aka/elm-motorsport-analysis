@@ -2,6 +2,7 @@ mod Cli.TestArgs {
 
     use Cli.Args
     use Cli.Args.Command
+    use Cli.FileTask.Rounds
 
     @Test
     def testParseNoArgs(): Unit \ Assert =
@@ -77,6 +78,65 @@ mod Cli.TestArgs {
     @Test
     def testPortWithoutServe(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--port" :: "9000" :: Nil)))
+
+    /// A run nobody narrowed writes every round out.
+    @Test
+    def testExportedRoundsDefaultToEvery(): Unit \ Assert =
+        match Args.parse("--export" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Export(export)) => Assert.assertTrue(export#exported == Rounds.Every)
+            case _                          => Assert.assertTrue(false)
+        }
+
+    /// The option is repeated to name a second round, as the rounds are named
+    /// one at a time and not as a list.
+    @Test
+    def testParseExportOnly(): Unit \ Assert =
+        let args = "--export" :: "--export-only" :: "2025/le_mans_24h"
+            :: "--export-only" :: "2024/fuji_6h" :: "../app/static/wec" :: Nil;
+        match Args.parse(args) {
+            case Ok(Command.Export(export)) =>
+                Assert.assertTrue(export#exported == Rounds.Only((2025, "le_mans_24h") :: (2024, "fuji_6h") :: Nil))
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// A converting run loads every round and writes the ones it was narrowed
+    /// to, which is what leaves `/api` answering for the rest.
+    @Test
+    def testAConvertingRunTakesExportOnly(): Unit \ Assert =
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Convert(convert)) =>
+                Assert.assertTrue(convert#exported == Rounds.Only((2025, "le_mans_24h") :: Nil))
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// A round id says nothing about which year ran it, so half a name is no
+    /// name, and neither is a name the calendar does not list.
+    @Test
+    def testExportOnlyNeedsARoundTheCalendarLists(): Unit \ Assert =
+        let rejected = name ->
+            Result.isErr(Args.parse("--export-only" :: name :: "../app/static/wec" :: Nil));
+        Assert.assertTrue(rejected("le_mans_24h"));
+        Assert.assertTrue(rejected("2025/"));
+        Assert.assertTrue(rejected("latest/le_mans_24h"));
+        Assert.assertTrue(rejected("2025/monza_6h"));
+        // Ran in 2025 and 2026, and not in 2024.
+        Assert.assertTrue(rejected("2024/spa_6h"))
+
+    /// Serving is not a stage of a converting run, so it has no writing to
+    /// narrow.
+    @Test
+    def testExportOnlyIsNotForServe(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "--export-only" :: "2025/le_mans_24h" :: Nil)))
+
+    /// The flake passes `--export-only` to every converting run, so a `--load`
+    /// forwarded to one arrives beside it. A load writes nothing to narrow:
+    /// the pair is redundant rather than wrong.
+    @Test
+    def testALoadTakesExportOnlyAndWritesNothingAnyway(): Unit \ Assert =
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "--load" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#root == "../app/static/wec")
+            case _                      => Assert.assertTrue(false)
+        }
 
     /// Serving reads what a run loaded, so there is no directory to give it.
     @Test

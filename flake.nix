@@ -176,16 +176,22 @@
 
         pgStopCmd = "pg_ctl -D flix/.pg -m fast stop";
 
+        # The one round the export is kept for. Every round is loaded and
+        # `/api` answers for all of them; this is the one whose files are
+        # written, so that what the renderers produce can be read without a
+        # server. Passed before "$@", so a run can name another round as well.
+        exportedRound = "--export-only 2025/le_mans_24h";
+
         # The CLI's one argument is the directory holding the season directories,
         # and it converts the rounds `Motorsport.Calendar` lists. Anything else
         # given to `nix run` is forwarded, which is how `--postgres <url>` is
         # reached.
-        cliRunCmd = "flix run -- ../app/static/wec \"$@\"";
+        cliRunCmd = "flix run -- ${exportedRound} ../app/static/wec \"$@\"";
 
         # The two stages of that run, taken singly: `--load` stops at the rows,
         # and `--export` writes the files out of rows already there.
         cliLoadCmd   = "flix run -- --load ../app/static/wec \"$@\"";
-        cliExportCmd = "flix run -- --export ../app/static/wec \"$@\"";
+        cliExportCmd = "flix run -- --export ${exportedRound} ../app/static/wec \"$@\"";
 
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
@@ -233,9 +239,9 @@
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixAppWithDb "flix-test" "flix test"}/bin/flix-test";                                                    meta.description = "Run the Flix project's tests"; };
-          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> PostgreSQL -> JSON/JSONL)"; };
+          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> PostgreSQL, and the kept round out to JSON/JSONL)"; };
           cli-load             = { type = "app"; program = "${mkFlixAppWithDb "cli-load"   cliLoadCmd}/bin/cli-load";                                                     meta.description = "Load the CSV into PostgreSQL, writing no files"; };
-          cli-export           = { type = "app"; program = "${mkFlixAppWithDb "cli-export" cliExportCmd}/bin/cli-export";                                                 meta.description = "Write the loaded rounds out as the export"; };
+          cli-export           = { type = "app"; program = "${mkFlixAppWithDb "cli-export" cliExportCmd}/bin/cli-export";                                                 meta.description = "Write the kept round out as the export"; };
           serve-api            = { type = "app"; program = "${mkFlixServerApp "serve-api" "--serve"}/bin/serve-api";                                                      meta.description = "Serve the loaded rounds over HTTP (/api)"; };
           pg-start             = { type = "app"; program = "${mkPgApp   "pg-start" pgStartCmd}/bin/pg-start";                                                     meta.description = "Start the local PostgreSQL and print its JDBC URL"; };
           pg-stop              = { type = "app"; program = "${mkPgApp   "pg-stop"  pgStopCmd}/bin/pg-stop";                                                       meta.description = "Stop the local PostgreSQL"; };

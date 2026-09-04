@@ -13,6 +13,12 @@ mod Cli.FileTask {
         entry      = Entry
     }
 
+    /// Which of the calendar's rounds a stage is for.
+    pub enum Rounds with Eq, ToString {
+        case Every
+        case Only(List[(Int32, String)])
+    }
+
     /// Every round the calendar holds, under `root`. A CSV no entry names is
     /// not here, so it is never read; `Cli.Load.Unlisted` reports those.
     pub def fromCalendar(root: String): List[FileTask] =
@@ -26,9 +32,22 @@ mod Cli.FileTask {
             }
         })
 
+    /// The tasks `rounds` names. Every name is a round `Cli.Args` has already
+    /// found on the calendar, so there is nothing here to fail.
+    pub def selected(root: String, rounds: Rounds): List[FileTask] =
+        match rounds {
+            case Rounds.Every       => fromCalendar(root)
+            case Rounds.Only(names) =>
+                fromCalendar(root) |> List.filter(task -> List.exists(name -> covers(name, task), names))
+        }
+
     /// How a round is named in the run's output. The display name would not say
     /// which of two seasons a line is about.
     pub def label(task: FileTask): String =
         "${task#entry#season}/${task#entry#id}"
+
+    def covers(name: (Int32, String), task: FileTask): Bool =
+        let (season, id) = name;
+        task#entry#season == season and task#entry#id == id
 
 }

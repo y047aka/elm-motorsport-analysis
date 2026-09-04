@@ -68,30 +68,40 @@ mod Server.Api {
             case Route.Calendar          => ok("application/json", calendar())
             case Route.Summary(year, id) => body("application/json", summary(year, id))
             case Route.Laps(year, id)    => body("application/jsonl", laps(year, id))
-            case Route.NotFound          => { status = 404, contentType = "text/plain", body = "not found" }
+            case Route.NotFound          => notFound("not found")
         }
 
     def ok(contentType: String, body: String): Response =
         { status = 200, contentType = contentType, body = body }
 
-    def body(contentType: String, result: Result[String, String]): Response =
+    def notFound(reason: String): Response =
+        { status = 404, contentType = "text/plain", body = reason }
+
+    def body(contentType: String, result: Result[String, Option[String]]): Response =
         match result {
-            case Ok(rendered) => ok(contentType, rendered)
-            case Err(cause)   => { status = 500, contentType = "text/plain", body = cause }
+            case Ok(Some(rendered)) => ok(contentType, rendered)
+            case Ok(None)           => notFound("round not loaded")
+            case Err(cause)         => { status = 500, contentType = "text/plain", body = cause }
         }
 
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
-    def summary(season: Int32, id: String): Result[String, String] \ Db =
-        entry(season, id)
-            |> Result.flatMap(Summary.read)
-            |> Result.map(Render.renderMetadata)
+    def summary(season: Int32, id: String): Result[String, Option[String]] \ Db =
+        answer(season, id, e -> Summary.read(e) |> Result.map(Render.renderMetadata))
 
-    def laps(season: Int32, id: String): Result[String, String] \ Db =
-        entry(season, id)
-            |> Result.flatMap(Laps.read)
-            |> Result.map(Render.renderJsonl)
+    def laps(season: Int32, id: String): Result[String, Option[String]] \ Db =
+        answer(season, id, e -> Laps.read(e) |> Result.map(Render.renderJsonl))
+
+    /// `None` is a round the calendar lists and no run has loaded. Rendered
+    /// out of the rows it would be a race that never ran, which is the one
+    /// thing they cannot say for themselves.
+    def answer(season: Int32, id: String, render: Entry -> Result[String, String] \ Db): Result[String, Option[String]] \ Db =
+        forM(
+            round    <- entry(season, id);
+            isLoaded <- Laps.loaded(round);
+            rendered <- if (isLoaded) Result.map(Some, render(round)) else Ok(None)
+        ) yield rendered
 
     def entry(season: Int32, id: String): Result[String, Entry] =
         Calendar.find(season, id)

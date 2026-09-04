@@ -102,10 +102,20 @@ mod Server.TestApi {
             )
         )
 
+    /// A round the calendar lists and the rows hold none of. Answered out of
+    /// them it would be a race that never ran.
     @Test
-    def aRoundWithNoRowsIsAnsweredWithNoLaps(): Unit \ {IO, Assert} =
-        let response = TestSupport.onRound(fuji(), Nil, () -> Ok(Api.respond(Route.Laps(2025, "imola_6h"))));
-        Assert.assertTrue(response#status == 200);
-        Assert.assertTrue(response#body == "")
+    def aRoundNoRunHasLoadedIsNotFound(): Unit \ {IO, Assert} =
+        match unloaded() {
+            case (summary, lapsBody) =>
+                Assert.assertTrue(summary#status == 404);
+                Assert.assertTrue(lapsBody#status == 404)
+        }
+
+    def unloaded(): (Response, Response) \ IO =
+        TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> Ok((
+            Api.respond(Route.Summary(2025, "imola_6h")),
+            Api.respond(Route.Laps(2025, "imola_6h"))
+        )))
 
 }

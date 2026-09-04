@@ -33,7 +33,8 @@ mod Cli.Export {
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
-    pub def runAll(root: String): Int32 \ {IO, Console, Db} =
+    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, Db} =
+        let tasks = FileTask.selected(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
                 case Ok(rendered) =>
@@ -46,7 +47,7 @@ mod Cli.Export {
                     { errors = acc#errors + 1 | acc }
             },
             { exported = 0, errors = 0 },
-            FileTask.fromCalendar(root)
+            tasks
         );
         let calendarErrors = writeCalendar(root);
         let errors = summary#errors + calendarErrors;
@@ -66,9 +67,10 @@ mod Cli.Export {
     /// a directory to write into.
     pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
         forM(
+            isLoaded <- Laps.loaded(task#entry) |> Result.mapErr(CliError.Database);
+            _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
-            rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database);
-            _        <- if (List.isEmpty(rawLaps)) Err(CliError.RoundNotLoaded) else Ok()
+            rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database)
         ) yield render(metadata, rawLaps)
 
     def render(metadata: Motorsport.Metadata.Metadata, rawLaps: List[Motorsport.Wec.RawLap]): Rendered =
@@ -88,6 +90,9 @@ mod Cli.Export {
     /// that wrote no round: the calendar is not made from the laps. It sits
     /// beside the season directories rather than inside one, because it spans
     /// all of them.
+    ///
+    /// Every round, whatever the run was asked to write: this is the list of
+    /// what there is, not of what was written.
     def writeCalendar(root: String): Int32 \ {IO, Console} =
         let path = "${root}/index.json";
         match Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))) {
