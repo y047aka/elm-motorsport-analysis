@@ -34,6 +34,9 @@ mod Db.Schema {
             if (String.endsWith({suffix = "int[]"}, definition)) "?::int[]" else "?"
         )
 
+    pub def anyRow(season: Int32, round: String): String =
+        "SELECT 1 FROM laps WHERE " + scope(season, round) + " LIMIT 1"
+
     pub def selectRound(season: Int32, round: String): String =
         "SELECT " + List.join(", ", columns())
             + " FROM laps WHERE " + scope(season, round)

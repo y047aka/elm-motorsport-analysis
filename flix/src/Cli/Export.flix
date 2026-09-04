@@ -75,9 +75,10 @@ mod Cli.Export {
     /// a directory to write into.
     pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
         forM(
+            isLoaded <- Laps.loaded(task#entry) |> Result.mapErr(CliError.Database);
+            _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
-            rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database);
-            _        <- if (List.isEmpty(rawLaps)) Err(CliError.RoundNotLoaded) else Ok()
+            rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database)
         ) yield render(metadata, rawLaps)
 
     def render(metadata: Motorsport.Metadata.Metadata, rawLaps: List[Motorsport.Wec.RawLap]): Rendered =
