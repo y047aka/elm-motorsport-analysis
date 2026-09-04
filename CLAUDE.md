@@ -335,6 +335,10 @@ are two lists no compiler sees together, which is what `Db.TestSchema` is for.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
+`/update-deps` does not reach it, so it is the one dependency raised by hand,
+against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the
+SQLite it carries with a build number after it, so the pin says which engine
+the queries run on: `3.53.4.0` is SQLite 3.53.4.
 
 ### Reading the race at a moment
 
