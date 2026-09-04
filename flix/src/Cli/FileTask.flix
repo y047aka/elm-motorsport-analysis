@@ -32,18 +32,13 @@ mod Cli.FileTask {
             }
         })
 
-    /// The tasks `rounds` names, or the names no round on the calendar answers
-    /// to. A name nothing matches is an error rather than an empty worklist:
-    /// the round it asks for does not exist.
-    pub def selected(root: String, rounds: Rounds): Result[List[String], List[FileTask]] =
+    /// The tasks `rounds` names. Every name is a round `Cli.Args` has already
+    /// found on the calendar, so there is nothing here to fail.
+    pub def selected(root: String, rounds: Rounds): List[FileTask] =
         match rounds {
-            case Rounds.Every       => Ok(fromCalendar(root))
+            case Rounds.Every       => fromCalendar(root)
             case Rounds.Only(names) =>
-                let tasks = fromCalendar(root);
-                match List.filter(name -> not List.exists(covers(name), tasks), names) {
-                    case Nil      => Ok(List.filter(task -> List.exists(name -> covers(name, task), names), tasks))
-                    case unlisted => Err(List.map(display, unlisted))
-                }
+                fromCalendar(root) |> List.filter(task -> List.exists(name -> covers(name, task), names))
         }
 
     /// How a round is named in the run's output. The display name would not say
@@ -54,9 +49,5 @@ mod Cli.FileTask {
     def covers(name: (Int32, String), task: FileTask): Bool =
         let (season, id) = name;
         task#entry#season == season and task#entry#id == id
-
-    def display(name: (Int32, String)): String =
-        let (season, id) = name;
-        "${season}/${id}"
 
 }

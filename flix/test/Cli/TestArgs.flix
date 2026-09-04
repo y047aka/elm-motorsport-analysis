@@ -110,18 +110,33 @@ mod Cli.TestArgs {
         }
 
     /// A round id says nothing about which year ran it, so half a name is no
-    /// name.
+    /// name, and neither is a name the calendar does not list.
     @Test
-    def testExportOnlyNeedsASeasonAndAnId(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "le_mans_24h" :: "../app/static/wec" :: Nil)));
-        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "2025/" :: "../app/static/wec" :: Nil)));
-        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "latest/le_mans_24h" :: "../app/static/wec" :: Nil)))
+    def testExportOnlyNeedsARoundTheCalendarLists(): Unit \ Assert =
+        let rejected = name ->
+            Result.isErr(Args.parse("--export-only" :: name :: "../app/static/wec" :: Nil));
+        Assert.assertTrue(rejected("le_mans_24h"));
+        Assert.assertTrue(rejected("2025/"));
+        Assert.assertTrue(rejected("latest/le_mans_24h"));
+        Assert.assertTrue(rejected("2025/monza_6h"));
+        // Ran in 2025 and 2026, and not in 2024.
+        Assert.assertTrue(rejected("2024/spa_6h"))
 
-    /// It narrows what is written, and those two write nothing.
+    /// Serving is not a stage of a converting run, so it has no writing to
+    /// narrow.
     @Test
-    def testExportOnlyIsForAWritingStage(): Unit \ Assert =
-        Assert.assertTrue(Result.isErr(Args.parse("--load" :: "--export-only" :: "2025/le_mans_24h" :: "../app/static/wec" :: Nil)));
+    def testExportOnlyIsNotForServe(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "--export-only" :: "2025/le_mans_24h" :: Nil)))
+
+    /// The flake passes `--export-only` to every converting run, so a `--load`
+    /// forwarded to one arrives beside it. A load writes nothing to narrow:
+    /// the pair is redundant rather than wrong.
+    @Test
+    def testALoadTakesExportOnlyAndWritesNothingAnyway(): Unit \ Assert =
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "--load" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Load(load)) => Assert.assertTrue(load#root == "../app/static/wec")
+            case _                      => Assert.assertTrue(false)
+        }
 
     /// Serving reads what a run loaded, so there is no directory to give it.
     @Test

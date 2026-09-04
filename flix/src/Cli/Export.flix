@@ -34,15 +34,7 @@ mod Cli.Export {
     pub def urlRoot(): String = "/static/wec"
 
     pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, Db} =
-        match FileTask.selected(root, rounds) {
-            case Err(unlisted) =>
-                unlisted |> List.forEach(name ->
-                    Console.eprintln("Calendar: ${name} is not on the calendar"));
-                1
-            case Ok(tasks) => runTasks(root, tasks)
-        }
-
-    def runTasks(root: String, tasks: List[FileTask.FileTask]): Int32 \ {IO, Console, Db} =
+        let tasks = FileTask.selected(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
                 case Ok(rendered) =>

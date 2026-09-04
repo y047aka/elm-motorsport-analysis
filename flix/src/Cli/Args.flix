@@ -3,6 +3,7 @@ mod Cli.Args {
     use Util.GetOpt.ArgDescr
     use Util.GetOpt.OptionDescr
     use Cli.FileTask.Rounds
+    use Motorsport.Calendar
 
     pub enum ArgsError with ToString {
         case MissingRoot
@@ -96,8 +97,6 @@ mod Cli.Args {
                 }
         else if (List.exists(isPort, settings))
             Err(ArgsError.ParseErrors("--port is only for --serve" :: Nil))
-        else if (loading(settings) and not exporting(settings) and not List.isEmpty(exportOnly(settings)))
-            Err(ArgsError.ParseErrors("--export-only is not for --load, which writes nothing" :: Nil))
         else
             forM(
                 root     <- extractRoot(nonOptions);
@@ -118,16 +117,18 @@ mod Cli.Args {
             Ok(Rounds.Every)
         else
             match List.filter(name -> Option.isEmpty(roundName(name)), named) {
-                case Nil       => Ok(Rounds.Only(List.filterMap(roundName, named)))
-                case unreadable =>
-                    Err(ArgsError.ParseErrors(unreadable |> List.map(name ->
-                        "--export-only expects <season>/<id>, not ${name}")))
+                case Nil     => Ok(Rounds.Only(List.filterMap(roundName, named)))
+                case unknown =>
+                    Err(ArgsError.ParseErrors(unknown |> List.map(name ->
+                        "--export-only names no round on the calendar: ${name}")))
             }
 
     def roundName(name: String): Option[(Int32, String)] =
         match String.splitOn({substr = "/"}, name) {
             case season :: id :: Nil =>
-                if (id == "") None else Int32.fromString(season) |> Option.map(year -> (year, id))
+                Int32.fromString(season)
+                    |> Option.flatMap(year -> Calendar.find(year, id))
+                    |> Option.map(entry -> (entry#season, entry#id))
             case _ => None
         }
 

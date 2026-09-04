@@ -29,33 +29,25 @@ mod Cli.TestFileTask {
             case _ => Assert.assertTrue(false)
         }
 
-    def labelsOf(rounds: Rounds): Result[List[String], List[String]] =
-        FileTask.selected("../app/static/wec", rounds)
-            |> Result.map(List.map(FileTask.label))
+    def labelsOf(rounds: Rounds): List[String] =
+        FileTask.selected("../app/static/wec", rounds) |> List.map(FileTask.label)
 
+    /// Every season, not only the one the calendar lists first.
     @Test
-    def testEveryIsTheWholeCalendar(): Unit \ Assert =
-        match labelsOf(Rounds.Every) {
-            case Ok(labels) => Assert.assertTrue(List.length(labels) == List.length(FileTask.fromCalendar("")))
-            case Err(_)     => Assert.assertTrue(false)
-        }
+    def testEveryIsEverySeason(): Unit \ Assert =
+        let labels = labelsOf(Rounds.Every);
+        Assert.assertTrue(List.memberOf("2026/imola_6h", labels));
+        Assert.assertTrue(List.memberOf("2025/qatar_1812km", labels));
+        Assert.assertTrue(List.memberOf("2024/bahrain_8h", labels))
 
-    /// Named rounds come back in the calendar's order rather than the order
-    /// they were asked for: the run reports what it wrote, season by season.
+    /// Named in one order and returned in the calendar's, so a run reports
+    /// what it wrote season by season rather than as it was asked.
     @Test
-    def testOnlyIsTheNamedRounds(): Unit \ Assert =
-        match labelsOf(Rounds.Only((2025, "le_mans_24h") :: (2024, "fuji_6h") :: Nil)) {
-            case Ok(labels) => Assert.assertTrue(labels == "2025/le_mans_24h" :: "2024/fuji_6h" :: Nil)
-            case Err(_)     => Assert.assertTrue(false)
-        }
-
-    /// The same id in a season that did not run it is not that round.
-    @Test
-    def testAnUnlistedRoundIsNotAnEmptyWorklist(): Unit \ Assert =
-        match labelsOf(Rounds.Only((2025, "le_mans_24h") :: (2024, "spa_6h") :: Nil)) {
-            case Ok(_)        => Assert.assertTrue(false)
-            case Err(unnamed) => Assert.assertTrue(unnamed == "2024/spa_6h" :: Nil)
-        }
+    def testOnlyIsTheNamedRoundsInTheCalendarsOrder(): Unit \ Assert =
+        Assert.assertTrue(
+            labelsOf(Rounds.Only((2024, "fuji_6h") :: (2025, "le_mans_24h") :: Nil))
+                == "2025/le_mans_24h" :: "2024/fuji_6h" :: Nil
+        )
 
     @Test
     def testTheLabelNamesTheRoundNotJustTheFile(): Unit \ Assert =
