@@ -30,10 +30,6 @@ mod Cli.Args {
 
     def defaultPort(): Int32 = 8080
 
-    /// Where a run that names none computes: a file under the working copy, so
-    /// that the rows a run left there are still there to be queried.
-    pub def defaultDatabase(): String = "jdbc:sqlite:.db/motorsport.sqlite"
-
     enum Setting {
         case Database(String)
         case Load
@@ -48,7 +44,7 @@ mod Cli.Args {
             optionIds     = Nil,
             optionNames   = "database" :: Nil,
             argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Database(url)), "URL"),
-            explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL, then ${defaultDatabase()})"
+            explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL)"
         } ::
         {
             optionIds     = Nil,

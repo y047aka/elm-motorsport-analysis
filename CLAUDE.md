@@ -67,13 +67,14 @@ files it would have replaced are left alone. `/api` answers such a round with a
 404 for the same reason, off the same reading: `Round.Laps.loaded` is where the
 two of them ask.
 
-Both stages compute in SQLite, and so does the server: `--database <jdbc url>`
-names one, `DATABASE_URL` says the same to every run made in a shell, and a run
-naming neither computes in `flix/.db/motorsport.sqlite`. The file is in the
-working copy rather than under /tmp, so what a run left there is still there to
-be queried. The integrity checks are read back out of the rows a round was just
-loaded into, and so is everything the export writes and `.#serve-api` answers
-with.
+Both stages compute in SQLite, and so does the server, so all three need one:
+`--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made
+in a shell, and the commands name `flix/.db/motorsport.sqlite` when neither
+does. One that reaches none does nothing rather than opening an empty database
+of its own. The file is in the working copy rather than under /tmp, so what a
+run left there is still there to be queried. The integrity checks are read back
+out of the rows a round was just loaded into, and so is everything the export
+writes and `.#serve-api` answers with.
 
 `/api` is how the app reads a round, and the export is a check on the two
 renderers rather than a second copy of the archive. The calendar is written

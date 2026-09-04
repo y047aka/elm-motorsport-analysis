@@ -96,6 +96,29 @@
             '';
           };
 
+        # Where the CLI and the server compute when the caller names nowhere
+        # else. The file is in the working copy rather than under /tmp, so the
+        # rows a run left there are still there to be queried; the path is
+        # relative to `flix`, which every command below changes to.
+        dbUrl = "jdbc:sqlite:.db/motorsport.sqlite";
+
+        # A caller who has already named a database is left alone, and
+        # `--database` beats the variable in `Main`, so a run can still name
+        # its own either way.
+        dbEnv = ''export DATABASE_URL="''${DATABASE_URL:-${dbUrl}}"'';
+
+        # The same as `mkFlixApp`, for the commands that need a database.
+        mkFlixAppWithDb = name: cmd:
+          pkgs.writeShellApplication {
+            inherit name;
+            runtimeInputs = [ flix ];
+            text = ''
+              ${dbEnv}
+              cd flix
+              ${cmd}
+            '';
+          };
+
         # The server's operating form is the jar: `flix run` takes the JVM down
         # with `main`, and the server's `main` does not return. Rebuilt when a
         # source is newer than it, as the deps-audit jar is.
@@ -108,6 +131,7 @@
             inherit name;
             runtimeInputs = [ flix pkgs.jdk21_headless ];
             text = ''
+              ${dbEnv}
               cd flix
               jar=artifact/flix.jar
               if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
@@ -180,9 +204,9 @@
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
-          cli-run              = { type = "app"; program = "${mkFlixApp "cli-run"  cliRunCmd}/bin/cli-run";                                                          meta.description = "Run the CLI (CSV -> SQLite, and the kept round out to JSON/JSONL)"; };
-          cli-load             = { type = "app"; program = "${mkFlixApp "cli-load"   cliLoadCmd}/bin/cli-load";                                                      meta.description = "Load the CSV into SQLite, writing no files"; };
-          cli-export           = { type = "app"; program = "${mkFlixApp "cli-export" cliExportCmd}/bin/cli-export";                                                  meta.description = "Write the kept round out as the export"; };
+          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                          meta.description = "Run the CLI (CSV -> SQLite, and the kept round out to JSON/JSONL)"; };
+          cli-load             = { type = "app"; program = "${mkFlixAppWithDb "cli-load"   cliLoadCmd}/bin/cli-load";                                                      meta.description = "Load the CSV into SQLite, writing no files"; };
+          cli-export           = { type = "app"; program = "${mkFlixAppWithDb "cli-export" cliExportCmd}/bin/cli-export";                                                  meta.description = "Write the kept round out as the export"; };
           serve-api            = { type = "app"; program = "${mkFlixServerApp "serve-api" "--serve"}/bin/serve-api";                                                      meta.description = "Serve the loaded rounds over HTTP (/api)"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };

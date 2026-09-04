@@ -34,42 +34,53 @@ def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Conso
     let exported = Export.runAll(root, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
+/// Both stages compute in a database, so one given none is one that cannot say
+/// what it found.
 def onRoot(root: String, database: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
     match checkRoot(root) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
             1
         case Ok(()) =>
-            let url = databaseUrl(database);
-            match Jdbc.connect(url) {
-                case Err(e) =>
-                    Console.eprintln("Error: ${e}");
-                    1
-                case Ok(conn) =>
-                    let code = Jdbc.runWith(conn, () -> stage(root));
-                    Jdbc.close(conn);
-                    code
-            }
+            withDatabase(database, url ->
+                match Jdbc.connect(url) {
+                    case Err(e) =>
+                        Console.eprintln("Error: ${e}");
+                        1
+                    case Ok(conn) =>
+                        let code = Jdbc.runWith(conn, () -> stage(root));
+                        Jdbc.close(conn);
+                        code
+                }
+            )
     }
 
 /// The database is reached once per request, so the server starts before one is
 /// up and reports it per request.
 def runServer(port: Int32, database: Option[String]): Int32 \ {Env, IO, Console} =
-    let url = databaseUrl(database);
-    Console.println("Serving /api on port ${port}");
-    match Server.serve(port, url) {
-        case Ok(())  => 0
-        case Err(e)  => Console.eprintln("Error: ${e}"); 1
+    withDatabase(database, url -> {
+        Console.println("Serving /api on port ${port}");
+        match Server.serve(port, url) {
+            case Ok(())  => 0
+            case Err(e)  => Console.eprintln("Error: ${e}"); 1
+        }
+    })
+
+def withDatabase(database: Option[String], f: String -> Int32 \ ef): Int32 \ ef + Env + Console =
+    match databaseUrl(database) {
+        case None =>
+            Console.eprintln("Error: no database. Pass --database <jdbc url> or set DATABASE_URL.");
+            1
+        case Some(url) => f(url)
     }
 
 /// `--database` first, then `DATABASE_URL`: the flag points one run somewhere
 /// else, and the variable is how a shell that already has a database hands the
 /// same one to every run made in it.
-def databaseUrl(database: Option[String]): String \ Env =
+def databaseUrl(database: Option[String]): Option[String] \ Env =
     match database {
-        case Some(url) => url
+        case Some(url) => Some(url)
         case None      => Env.getVar("DATABASE_URL")
-                            |> Option.getWithDefault(Args.defaultDatabase())
     }
 
 /// Checked once here rather than once per round, so a mistyped root reads as one
