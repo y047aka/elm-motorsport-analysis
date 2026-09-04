@@ -8,8 +8,6 @@ mod Db.TestJdbc {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    /// A run that reaches no database fails these rather than skipping them:
-    /// the point of them is the half of the boundary no compiler sees.
     def connected(f: Unit -> Result[String, a] \ ef): Result[String, a] \ (ef - Db) + IO =
         match Jdbc.connect(TestSupport.url()) {
             case Err(e)   => Err(e)

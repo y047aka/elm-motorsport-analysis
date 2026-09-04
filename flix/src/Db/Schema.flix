@@ -52,7 +52,7 @@ mod Db.Schema {
         "lap_number int not null" ::
         "lap_time_ms int not null" ::
         "lap_improvement int not null" ::
-        "crossing_finish_line_in_pit integer not null" ::
+        "crossing_finish_line_in_pit int not null" ::
         "s1_ms int" ::
         "s1_improvement int not null" ::
         "s2_ms int" ::

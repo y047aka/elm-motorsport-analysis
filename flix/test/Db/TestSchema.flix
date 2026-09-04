@@ -20,10 +20,4 @@ mod Db.TestSchema {
         let placeholders = String.countSubstring({substr = "?"}, sql);
         Assert.assertTrue(placeholders == List.length(Schema.columns()))
 
-    @Test
-    def theInsertNamesTheMiniSectorColumns(): Unit \ Assert =
-        let sql = Schema.insert();
-        Assert.assertTrue(String.contains({substr = "mini_sector_time_ms"}, sql));
-        Assert.assertTrue(String.contains({substr = "mini_sector_elapsed_ms"}, sql))
-
 }

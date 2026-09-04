@@ -155,12 +155,12 @@ mod Round.Summary {
                     s1   <- Row.optionalInt(0, row);
                     s2   <- Row.optionalInt(1, row);
                     s3   <- Row.optionalInt(2, row);
-                    mini <- Row.int(3, row)
+                    mini <- Row.bool(3, row)
                 ) yield (
                     Option.map(Util.Duration.fromMillis, s1),
                     Option.map(Util.Duration.fromMillis, s2),
                     Option.map(Util.Duration.fromMillis, s3),
-                    mini == 1
+                    mini
                 )
             case Nil => Err("the round's fastest sectors came back with no row")
         })
