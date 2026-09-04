@@ -1,0 +1,43 @@
+mod Cli.Load.TestUnlisted {
+
+    use Cli.FileTask
+    use Cli.Load.Unlisted
+
+    def tasks(root: String): List[FileTask.FileTask] = FileTask.fromCalendar(root)
+
+    /// A CSV every run is expected to find, spelled the way the walk returns it.
+    def listedCsv(): String = "../app/static/wec/2025/spa_6h.csv"
+
+    @Test
+    def testACsvOnTheCalendarIsNotReported(): Unit \ Assert =
+        let found = listedCsv() :: "../app/static/wec/2026/imola_6h.csv" :: Nil;
+        Assert.assertTrue(Unlisted.detect(tasks("../app/static/wec"), found) == Nil)
+
+    @Test
+    def testACsvNoRoundNamesIsReported(): Unit \ Assert =
+        let stray = "../app/static/wec/2025/monza_6h.csv";
+        let found = listedCsv() :: stray :: Nil;
+        Assert.assertTrue(Unlisted.detect(tasks("../app/static/wec"), found) == stray :: Nil)
+
+    /// 2024 ran no round at Imola, so a file that looks right in every way but
+    /// the year it is filed under is still not on the calendar.
+    @Test
+    def testARoundFiledUnderTheWrongSeasonIsReported(): Unit \ Assert =
+        let found = "../app/static/wec/2024/imola_6h.csv" :: Nil;
+        Assert.assertTrue(List.length(Unlisted.detect(tasks("../app/static/wec"), found)) == 1)
+
+    /// The half that used to be wrong: both sides name the same file and only
+    /// the root is spelled differently.
+    @Test
+    def testTheSpellingOfTheRootDoesNotMatter(): Unit \ Assert =
+        let found = listedCsv() :: Nil;
+        Assert.assertTrue(Unlisted.detect(tasks("../app/static/wec/"), found) == Nil);
+        Assert.assertTrue(Unlisted.detect(tasks("../app/static/./wec"), found) == Nil);
+        Assert.assertTrue(Unlisted.detect(tasks("/srv/app/static/wec"), found) == Nil)
+
+    @Test
+    def testAFileOutsideASeasonDirectoryIsReported(): Unit \ Assert =
+        let found = "../app/static/wec/spa_6h.csv" :: "../app/static/wec/2025/old/spa_6h.csv" :: Nil;
+        Assert.assertTrue(List.length(Unlisted.detect(tasks("../app/static/wec"), found)) == 2)
+
+}

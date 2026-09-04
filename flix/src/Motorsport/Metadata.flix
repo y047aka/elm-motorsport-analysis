@@ -41,7 +41,7 @@ mod Motorsport.Metadata {
     /// was made from, as `Basis` does for the grid order.
     ///
     /// `startedAt` is carried by the feed only as `HOUR - ELAPSED`, a
-    /// difference constant across the whole file -- `Cli.Stages.Validation`'s
+    /// difference constant across the whole file -- `Cli.Load.Validation`'s
     /// HourElapsedOffset rule is there to say so -- which is why one lap is
     /// enough to read it.
     ///

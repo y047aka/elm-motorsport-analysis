@@ -20,6 +20,6 @@ nix flake update
 
 ```bash
 nix run .#test
-nix run .#cli-test
+nix run .#flix-test
 nix run .#build
 ```

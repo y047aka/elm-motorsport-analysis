@@ -9,13 +9,17 @@ mod Cli.Args {
         case ParseErrors(List[String])
     }
 
-    /// Converting takes the directory holding the season directories, and where
-    /// the rows go. What to convert comes from `Motorsport.Calendar`, so there
-    /// is no per-file input and nothing to redirect a single file's output to.
-    /// Serving reads the rounds a run has already loaded, so it takes a database
-    /// and no directory.
+    /// Converting is the two stages one after the other: the CSV goes into the
+    /// rows, and the files are written out of them. `Load` and `Export` are the
+    /// same two taken singly. All three take the directory holding the season
+    /// directories, and what to convert comes from `Motorsport.Calendar`, so
+    /// there is no per-file input and nothing to redirect a single file's
+    /// output to. Serving reads the rounds a run has already loaded, so it
+    /// takes a database and no directory.
     pub enum Command {
         case Convert({ root = String, postgres = Option[String] })
+        case Load({ root = String, postgres = Option[String] })
+        case Export({ root = String, postgres = Option[String] })
         case Serve({ port = Int32, postgres = Option[String] })
     }
 
@@ -23,6 +27,8 @@ mod Cli.Args {
 
     enum Setting {
         case Postgres(String)
+        case Load
+        case Export
         case Serve
         case Port(Int32)
     }
@@ -33,6 +39,18 @@ mod Cli.Args {
             optionNames   = "postgres" :: Nil,
             argDescriptor = ArgDescr.ReqArg(url -> Some(Setting.Postgres(url)), "URL"),
             explanation   = "JDBC URL to compute the run in\n(defaults to DATABASE_URL)"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "load" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Load),
+            explanation   = "read the CSV into the rows without writing\nthe files"
+        } ::
+        {
+            optionIds     = Nil,
+            optionNames   = "export" :: Nil,
+            argDescriptor = ArgDescr.NoArg(Setting.Export),
+            explanation   = "write the files out of the rows without\nreading the CSV"
         } ::
         {
             optionIds     = Nil,
@@ -55,7 +73,9 @@ mod Cli.Args {
 
     def toCommand(settings: List[Setting], nonOptions: List[String]): Result[ArgsError, Command] =
         let postgres = postgresUrl(settings);
-        if (serving(settings))
+        if (serving(settings) and (loading(settings) or exporting(settings)))
+            Err(ArgsError.ParseErrors("--serve is not a stage of a converting run" :: Nil))
+        else if (serving(settings))
             match nonOptions {
                 case Nil    => Ok(Command.Serve({ port = port(settings), postgres = postgres }))
                 case extras => Err(ArgsError.UnexpectedArguments(extras))
@@ -63,8 +83,15 @@ mod Cli.Args {
         else if (List.exists(isPort, settings))
             Err(ArgsError.ParseErrors("--port is only for --serve" :: Nil))
         else
-            extractRoot(nonOptions)
-                |> Result.map(root -> Command.Convert({ root = root, postgres = postgres }))
+            extractRoot(nonOptions) |> Result.map(root ->
+                let stage = { root = root, postgres = postgres };
+                // Naming both stages is naming the run they make up.
+                match (loading(settings), exporting(settings)) {
+                    case (true, false) => Command.Load(stage)
+                    case (false, true) => Command.Export(stage)
+                    case _             => Command.Convert(stage)
+                }
+            )
 
     def getOptResult(args: List[String]): Result[ArgsError, {options = List[Setting], nonOptions = List[String]}] =
         match Util.GetOpt.getOpt(Util.GetOpt.ArgOrder.Permute, optionDescrs(), args) {
@@ -84,6 +111,18 @@ mod Cli.Args {
             case Setting.Port(_) => true
             case _               => false
         }
+
+    def loading(settings: List[Setting]): Bool =
+        settings |> List.exists(setting -> match setting {
+            case Setting.Load => true
+            case _            => false
+        })
+
+    def exporting(settings: List[Setting]): Bool =
+        settings |> List.exists(setting -> match setting {
+            case Setting.Export => true
+            case _              => false
+        })
 
     def serving(settings: List[Setting]): Bool =
         settings |> List.exists(setting -> match setting {
@@ -105,6 +144,6 @@ mod Cli.Args {
         }, defaultPort())
 
     pub def usage(): String =
-        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or cli-serve", optionDescrs())
 
 }

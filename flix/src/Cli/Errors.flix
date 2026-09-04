@@ -9,6 +9,7 @@ mod Cli.Errors {
         case File(FileError)
         case Csv({ path = String, message = String })
         case Database(String)
+        case RoundNotLoaded
     }
 
     instance ToString[CliError] {
@@ -19,6 +20,7 @@ mod Cli.Errors {
             case CliError.File(cause)          => "${cause}"
             case CliError.Csv(r)               => "Failed to decode ${r#path} (caused by: ${r#message})"
             case CliError.Database(cause)      => "Database error (caused by: ${cause})"
+            case CliError.RoundNotLoaded       => "No rows loaded. Convert the round before exporting it."
         }
     }
 

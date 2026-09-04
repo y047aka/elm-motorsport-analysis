@@ -12,7 +12,7 @@ import { extname, join, resolve } from "node:path";
 
 const staticDir = resolve(import.meta.dirname, "static");
 
-// Where `nix run .#cli-serve` listens.
+// Where `nix run .#serve-api` listens.
 const apiOrigin = "http://127.0.0.1:8080";
 
 const mimeTypes: Record<string, string> = {
@@ -33,7 +33,7 @@ function sendFile(res: ServerResponse, filePath: string): boolean {
   return true;
 }
 
-// What answers `/api` while no server is running. The rounds `cli-serve` reads
+// What answers `/api` while no server is running. The rounds `serve-api` reads
 // out of the database are the rounds `cli-run` exported under `static/wec`, and
 // one path is the other with its root replaced.
 function serveExport(urlPath: string, res: ServerResponse): void {
