@@ -33,7 +33,16 @@ mod Cli.Export {
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
-    pub def runAll(root: String): Int32 \ {IO, Console, Db} =
+    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, Db} =
+        match FileTask.selected(root, rounds) {
+            case Err(unlisted) =>
+                unlisted |> List.forEach(name ->
+                    Console.eprintln("Calendar: ${name} is not on the calendar"));
+                1
+            case Ok(tasks) => runTasks(root, tasks)
+        }
+
+    def runTasks(root: String, tasks: List[FileTask.FileTask]): Int32 \ {IO, Console, Db} =
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
                 case Ok(rendered) =>
@@ -46,7 +55,7 @@ mod Cli.Export {
                     { errors = acc#errors + 1 | acc }
             },
             { exported = 0, errors = 0 },
-            FileTask.fromCalendar(root)
+            tasks
         );
         let calendarErrors = writeCalendar(root);
         let errors = summary#errors + calendarErrors;
@@ -88,6 +97,9 @@ mod Cli.Export {
     /// that wrote no round: the calendar is not made from the laps. It sits
     /// beside the season directories rather than inside one, because it spans
     /// all of them.
+    ///
+    /// Every round, whatever the run was asked to write: this is the list of
+    /// what there is, not of what was written.
     def writeCalendar(root: String): Int32 \ {IO, Console} =
         let path = "${root}/index.json";
         match Files.write(path, Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))) {

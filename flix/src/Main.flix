@@ -18,20 +18,20 @@ def main(): Unit \ {Env, IO, Exit, Console} =
         case Ok(Command.Serve(serve)) =>
             runServer(serve#port, serve#postgres)
         case Ok(Command.Convert(convert)) =>
-            onRoot(convert#root, convert#postgres, loadAndExport)
+            onRoot(convert#root, convert#postgres, root -> loadAndExport(root, convert#exported))
         case Ok(Command.Load(load)) =>
             onRoot(load#root, load#postgres, Load.runAll)
         case Ok(Command.Export(export)) =>
-            onRoot(export#root, export#postgres, Export.runAll)
+            onRoot(export#root, export#postgres, root -> Export.runAll(root, export#exported))
     };
     Exit.exit(code)
 
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(root: String): Int32 \ {IO, Console, Db} =
+def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, Db} =
     let loaded = Load.runAll(root);
-    let exported = Export.runAll(root);
+    let exported = Export.runAll(root, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
 /// Both stages compute in a database, so one given none is one that cannot say

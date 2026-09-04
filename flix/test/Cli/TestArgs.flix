@@ -2,6 +2,7 @@ mod Cli.TestArgs {
 
     use Cli.Args
     use Cli.Args.Command
+    use Cli.FileTask.Rounds
 
     @Test
     def testParseNoArgs(): Unit \ Assert =
@@ -77,6 +78,50 @@ mod Cli.TestArgs {
     @Test
     def testPortWithoutServe(): Unit \ Assert =
         Assert.assertTrue(Result.isErr(Args.parse("../app/static/wec" :: "--port" :: "9000" :: Nil)))
+
+    /// A run nobody narrowed writes every round out.
+    @Test
+    def testExportedRoundsDefaultToEvery(): Unit \ Assert =
+        match Args.parse("--export" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Export(export)) => Assert.assertTrue(export#exported == Rounds.Every)
+            case _                          => Assert.assertTrue(false)
+        }
+
+    /// The option is repeated to name a second round, as the rounds are named
+    /// one at a time and not as a list.
+    @Test
+    def testParseExportOnly(): Unit \ Assert =
+        let args = "--export" :: "--export-only" :: "2025/le_mans_24h"
+            :: "--export-only" :: "2024/fuji_6h" :: "../app/static/wec" :: Nil;
+        match Args.parse(args) {
+            case Ok(Command.Export(export)) =>
+                Assert.assertTrue(export#exported == Rounds.Only((2025, "le_mans_24h") :: (2024, "fuji_6h") :: Nil))
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// A converting run loads every round and writes the ones it was narrowed
+    /// to, which is what leaves `/api` answering for the rest.
+    @Test
+    def testAConvertingRunTakesExportOnly(): Unit \ Assert =
+        match Args.parse("--export-only" :: "2025/le_mans_24h" :: "../app/static/wec" :: Nil) {
+            case Ok(Command.Convert(convert)) =>
+                Assert.assertTrue(convert#exported == Rounds.Only((2025, "le_mans_24h") :: Nil))
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// A round id says nothing about which year ran it, so half a name is no
+    /// name.
+    @Test
+    def testExportOnlyNeedsASeasonAndAnId(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "le_mans_24h" :: "../app/static/wec" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "2025/" :: "../app/static/wec" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("--export-only" :: "latest/le_mans_24h" :: "../app/static/wec" :: Nil)))
+
+    /// It narrows what is written, and those two write nothing.
+    @Test
+    def testExportOnlyIsForAWritingStage(): Unit \ Assert =
+        Assert.assertTrue(Result.isErr(Args.parse("--load" :: "--export-only" :: "2025/le_mans_24h" :: "../app/static/wec" :: Nil)));
+        Assert.assertTrue(Result.isErr(Args.parse("--serve" :: "--export-only" :: "2025/le_mans_24h" :: Nil)))
 
     /// Serving reads what a run loaded, so there is no directory to give it.
     @Test

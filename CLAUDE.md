@@ -31,7 +31,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
-| `nix run .#cli-run` | CSV→PostgreSQL→JSON/JSONL |
+| `nix run .#cli-run` | CSV→PostgreSQL, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
 | `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for both |
@@ -46,11 +46,17 @@ prefixes, and which one says what is being run rather than what is being built:
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
-`laps` table, and each round's summary `.json`, its laps `.jsonl` one lap per
-line, and `index.json` beside them are written back out of the rows. **A new
-round is added to `Motorsport.Calendar` first** — the run converts nothing the
-calendar does not list, reports any CSV no round names, and fails any round
-whose CSV is missing.
+`laps` table, and a round's summary `.json`, its laps `.jsonl` one lap per line,
+and `index.json` beside them are written back out of the rows. **A new round is
+added to `Motorsport.Calendar` first** — the run converts nothing the calendar
+does not list, reports any CSV no round names, and fails any round whose CSV is
+missing.
+
+Every round is loaded and one is written. `--export-only <season>/<id>` narrows
+the writing stage alone, the flake passes `2025/le_mans_24h`, and a name no
+round on the calendar answers to fails the run before anything is written. The
+rows are where a round is read from; the files are one round kept so that what
+the renderers produce can be read without a server.
 
 `.#cli-load` and `.#cli-export` are those two stages singly. The stage that
 writes reads none of the CSV, so the files are an image of the rows and of
@@ -67,13 +73,15 @@ nothing. The integrity checks are read back out of the rows a round was just
 loaded into, and so is everything the export writes and `.#serve-api` answers
 with.
 
-What the export writes is not a leftover of the run. A bundle of `dist` is a
-whole application on its own, with no JVM and no database behind it: the build
-writes the export's calendar to `dist/api/wec/index.json`, which is the one URL
-the app asks for before it knows anything, and the rounds it names sit under
-`/static/wec` beside it. That is what the Tauri build bundles and what the VRT
-runs against. `/api` is where the rows are read live, not what the app needs to
-run.
+`/api` is how the app reads a round, and the export is a check on the two
+renderers rather than a second copy of the archive. The calendar is written
+either way and lists every round there is, so `dist/api/wec/index.json` — the
+copy the build writes, and the one URL the app asks for before it knows
+anything — is reached only by a bundle with nothing listening on `/api`. Such a
+bundle opens the one round whose files are beside it and 404s on the rest,
+which is what the Tauri build now packages. A bundle behind a server never
+reaches that copy: the calendar it gets names `/api/wec` and every round
+opens.
 
 `.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
 the variable from; `.#pg-stop` takes it down. The data directory is in the
@@ -414,7 +422,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   about 350ms once and about 5ms per test after that.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
-  answers `/api` from `static/`, and those are the same bytes. Local runs allow
+  answers `/api` from `static/`, and those are the same bytes. It drives
+  2025's Le Mans because that is the round the export keeps; a test reaching
+  for another needs `.#serve-api` behind it. Local runs allow
   a 0.1% pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
   diffs; CI is strict 0. Update snapshots locally, or trigger the
   workflow_dispatch in CI to auto-push to the branch.

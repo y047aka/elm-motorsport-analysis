@@ -33,9 +33,10 @@ function sendFile(res: ServerResponse, filePath: string): boolean {
   return true;
 }
 
-// What answers `/api` while no server is running. The rounds `serve-api` reads
-// out of the database are the rounds `cli-run` exported under `static/wec`, and
-// one path is the other with its root replaced.
+// What answers `/api` while no server is running, out of the one round the
+// export keeps under `static/wec`: one path is the other with its root
+// replaced. Every other round is in the rows and nowhere else, so this answers
+// for it with the 502 below rather than with a race that never ran.
 function serveExport(urlPath: string, res: ServerResponse): void {
   const exported = urlPath.startsWith("/api/wec/")
     ? join(staticDir, "wec", urlPath.slice("/api/wec/".length))
@@ -102,9 +103,10 @@ function staticAssets(): Plugin {
       if (!existsSync(staticDir)) return;
       const dist = resolve(import.meta.dirname, "dist");
       cpSync(staticDir, join(dist, "static"), { recursive: true });
-      // The one URL the app asks for before it knows anything: a bundle with no
-      // server behind it -- the Tauri build, a static host -- answers it with
-      // the export's own calendar, whose rounds point back into `/static/wec`.
+      // The one URL the app asks for before it knows anything. A bundle behind
+      // a server never reaches this copy; one with none -- the Tauri build, a
+      // static host -- answers with the export's own calendar, which lists
+      // every round and has the files of only the one the export keeps.
       const calendar = join(staticDir, "wec/index.json");
       if (!existsSync(calendar)) return;
       mkdirSync(join(dist, "api/wec"), { recursive: true });
