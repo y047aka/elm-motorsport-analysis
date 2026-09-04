@@ -77,15 +77,14 @@ mod Round.Summary {
     /// a car's team mid-round would put that car on the grid twice.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
         Db.fetch(
-            "WITH c AS ("
-                + " SELECT DISTINCT ON (car_number)"
-                + " car_number, class, car_group, team, manufacturer, source_row AS first_seen"
-                + " FROM laps WHERE " + scope(entry)
-                + " ORDER BY car_number, source_row),"
-                + " l1 AS ("
-                + " SELECT DISTINCT ON (car_number) car_number, s1_ms, elapsed_ms"
+            "WITH c AS (SELECT * FROM ("
+                + " SELECT car_number, class, car_group, team, manufacturer,"
+                + " source_row AS first_seen, " + firstPerCar()
+                + " FROM laps WHERE " + scope(entry) + ") WHERE rn = 1),"
+                + " l1 AS (SELECT * FROM ("
+                + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
                 + " FROM laps WHERE " + scope(entry) + " AND lap_number = 1"
-                + " ORDER BY car_number, source_row)"
+                + ") WHERE rn = 1)"
                 + " SELECT c.car_number, c.class, c.car_group, c.team, c.manufacturer,"
                 + " l1.s1_ms, l1.elapsed_ms"
                 + " FROM c LEFT JOIN l1 ON l1.car_number = c.car_number"
@@ -116,6 +115,9 @@ mod Round.Summary {
             }
         ))
 
+    def firstPerCar(): String =
+        "ROW_NUMBER() OVER (PARTITION BY car_number ORDER BY source_row) AS rn"
+
     def driversOf(carNumber: String, drivers: List[(String, String)]): List[String] =
         drivers
             |> List.filter(pair -> match pair { case (car, _) => car == carNumber })
@@ -145,7 +147,7 @@ mod Round.Summary {
     def fastestSectors(entry: Entry): Result[String, (Option[Duration], Option[Duration], Option[Duration], Bool)] \ Db =
         Db.fetch(
             "SELECT MIN(s1_ms), MIN(s2_ms), MIN(s3_ms),"
-                + " COALESCE(BOOL_OR(mini_sector_time_ms IS NOT NULL), false)::int"
+                + " COALESCE(MAX(mini_sector_time_ms IS NOT NULL), 0)"
                 + " FROM laps WHERE " + scope(entry)
         ) |> Result.flatMap(rows -> match rows {
             case row :: _ =>
@@ -167,10 +169,10 @@ mod Round.Summary {
     /// of such a lap are not a lap of the circuit either.
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
         Db.fetch(
-            "SELECT ord::int, MIN(v) FROM laps,"
-                + " UNNEST(mini_sector_time_ms) WITH ORDINALITY u(v, ord)"
-                + " WHERE " + scope(entry) + " AND lap_time_ms <> 0 AND v IS NOT NULL"
-                + " GROUP BY ord ORDER BY ord"
+            "SELECT m.key + 1, MIN(m.value) FROM laps,"
+                + " json_each(laps.mini_sector_time_ms) m"
+                + " WHERE " + scope(entry) + " AND lap_time_ms <> 0 AND m.value IS NOT NULL"
+                + " GROUP BY m.key ORDER BY m.key"
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
                 position <- Row.int(0, row);

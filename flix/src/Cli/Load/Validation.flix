@@ -85,10 +85,10 @@ mod Cli.Load.Validation {
         Db.fetch(
             "SELECT car_number, lap_number, lap_time_ms,"
                 + " COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0),"
-                + " ARRAY_TO_STRING(ARRAY_REMOVE(ARRAY["
-                + "   CASE WHEN s1_ms IS NULL THEN 's1' END,"
-                + "   CASE WHEN s2_ms IS NULL THEN 's2' END,"
-                + "   CASE WHEN s3_ms IS NULL THEN 's3' END], NULL), ',')"
+                + " TRIM("
+                + "   CASE WHEN s1_ms IS NULL THEN 's1,' ELSE '' END ||"
+                + "   CASE WHEN s2_ms IS NULL THEN 's2,' ELSE '' END ||"
+                + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
                 + " FROM laps WHERE " + scope(entry)
                 + " AND COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0) <> lap_time_ms"
                 + " ORDER BY source_row"
@@ -104,7 +104,7 @@ mod Cli.Load.Validation {
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Db.fetch(
             "WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
-                + " (SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number))::int AS running,"
+                + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
                 + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
                 + " FROM laps WHERE " + scope(entry) + ")"
                 + " SELECT car_number, lap_number, running, elapsed_ms FROM c"
@@ -147,14 +147,14 @@ mod Cli.Load.Validation {
         Db.fetch(
             "WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
                 + " crossing_finish_line_in_pit, pit_time_ms,"
-                + " (SELECT COALESCE(SUM(t), 0) FROM UNNEST(mini_sector_time_ms) t)::int AS sum_ms,"
-                + " COALESCE((SELECT ARRAY_AGG(ord::int ORDER BY ord)"
-                + "  FROM UNNEST(mini_sector_time_ms) WITH ORDINALITY u(t, ord)"
-                + "  WHERE t IS NULL), '{}'::int[]) AS blanks"
+                + " (SELECT COALESCE(SUM(t.value), 0)"
+                + "  FROM json_each(laps.mini_sector_time_ms) t) AS sum_ms,"
+                + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
+                + "  FROM json_each(laps.mini_sector_time_ms) t"
+                + "  WHERE t.value IS NULL), '') AS blanks"
                 + " FROM laps WHERE " + scope(entry) + " AND mini_sector_time_ms IS NOT NULL)"
-                + " SELECT car_number, lap_number, source_row, lap_time_ms, sum_ms,"
-                + " ARRAY_TO_STRING(blanks, ',') FROM m"
-                + " WHERE NOT (crossing_finish_line_in_pit OR pit_time_ms IS NOT NULL)"
+                + " SELECT car_number, lap_number, source_row, lap_time_ms, sum_ms, blanks FROM m"
+                + " WHERE NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"
                 + " AND sum_ms <> lap_time_ms"
                 + trackLimitsExclusions()
                 + " ORDER BY source_row"
@@ -171,12 +171,14 @@ mod Cli.Load.Validation {
 
     def miniSectorMonotonicViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
         Db.fetch(
-            "WITH e AS (SELECT car_number, lap_number, source_row, ord, v,"
-                + " LAG(ord) OVER w AS prev_ord, LAG(v) OVER w AS prev_v"
-                + " FROM laps, UNNEST(mini_sector_elapsed_ms) WITH ORDINALITY u(v, ord)"
-                + " WHERE " + scope(entry) + " AND mini_sector_elapsed_ms IS NOT NULL AND v IS NOT NULL"
-                + " WINDOW w AS (PARTITION BY source_row ORDER BY ord))"
-                + " SELECT car_number, lap_number, source_row, prev_ord::int, prev_v, ord::int, v"
+            "WITH e AS (SELECT car_number, lap_number, source_row,"
+                + " x.key + 1 AS ord, x.value AS v,"
+                + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
+                + " FROM laps, json_each(laps.mini_sector_elapsed_ms) x"
+                + " WHERE " + scope(entry) + " AND mini_sector_elapsed_ms IS NOT NULL"
+                + " AND x.value IS NOT NULL"
+                + " WINDOW w AS (PARTITION BY source_row ORDER BY x.key))"
+                + " SELECT car_number, lap_number, source_row, prev_ord, prev_v, ord, v"
                 + " FROM e WHERE prev_v IS NOT NULL AND v <= prev_v ORDER BY source_row, ord"
         ) |> Result.flatMap(Result.traverse(row ->
             forM(
@@ -201,9 +203,9 @@ mod Cli.Load.Validation {
     def trackLimitsExclusions(): String =
         MiniSector.trackLimitsSignatures()
             |> List.map(signature ->
-                " AND blanks <> '{"
+                " AND blanks <> '"
                     + (signature |> List.map(id -> "${MiniSector.positionOf(id)}") |> List.join(","))
-                    + "}'::int[]"
+                    + "'"
             )
             |> List.join("")
 

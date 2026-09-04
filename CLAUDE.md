@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Motorsport race analysis and visualization app. CSV telemetry → CLI →
-PostgreSQL → HTTP or a JSON export → Elm visualization.
+SQLite → HTTP or a JSON export → Elm visualization.
 
 - **`/app`** — Elm SPA, bundled by Vite (Tailwind CSS 4 + shadcn/ui). The only npm
   project: it owns `package.json` and `pnpm-lock.yaml`, so pnpm runs as
@@ -9,7 +9,7 @@ PostgreSQL → HTTP or a JSON export → Elm visualization.
 - **`/package`** — reusable Elm library (motorsport domain models), reached
   through `elm.json`.
 - **`/flix`** — written in Flix, and two things rather than one: the CLI that
-  moves CSV through PostgreSQL into JSON/JSONL, and the server that answers
+  moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows.
 
 There is no manifest at the repository root; the flake is what ties the three
@@ -31,10 +31,9 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#review-app` / `.#review-package` | elm-review |
 | `nix run .#format` | elm-format |
 | `nix run .#flix-build` / `.#flix-test` | Build / test `/flix`, both the CLI and the server |
-| `nix run .#cli-run` | CSV→PostgreSQL, and the kept round out to JSON/JSONL |
+| `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
-| `nix run .#pg-start` / `.#pg-stop` | Local PostgreSQL for both |
 | `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
@@ -68,10 +67,11 @@ files it would have replaced are left alone. `/api` answers such a round with a
 404 for the same reason, off the same reading: `Round.Laps.loaded` is where the
 two of them ask.
 
-Both stages compute in PostgreSQL, so both need one: `--postgres <jdbc url>`
-names it, `DATABASE_URL` says the same to every run made in a shell, and the
-commands start the working copy's when neither does. One that reaches none does
-nothing. The integrity checks are read back out of the rows a round was just
+Both stages compute in SQLite, and so does the server: `--database <jdbc url>`
+names one, `DATABASE_URL` says the same to every run made in a shell, and a run
+naming neither computes in `flix/.db/motorsport.sqlite`. The file is in the
+working copy rather than under /tmp, so what a run left there is still there to
+be queried. The integrity checks are read back out of the rows a round was just
 loaded into, and so is everything the export writes and `.#serve-api` answers
 with.
 
@@ -85,11 +85,8 @@ which is what the Tauri build now packages. A bundle behind a server never
 reaches that copy: the calendar it gets names `/api/wec` and every round
 opens.
 
-`.#pg-start` brings up a PostgreSQL under `flix/.pg` and prints the URL to set
-the variable from; `.#pg-stop` takes it down. The data directory is in the
-working copy rather than under /tmp, so what a run left there is still there to
-be queried. Passing the flag instead goes through `nix run .#cli-run --
---postgres ...`, since the flake forwards what follows.
+Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
+flake forwards what follows.
 
 `.#serve-api` answers `/api` out of the rows a run loaded: `/api/health`,
 `/api/wec/index.json`, and a round's `/api/wec/<season>/<id>.json` and
@@ -139,8 +136,9 @@ takes a colour from its number.
 `Server` is `com.sun.net.httpserver` reached through Java interop: the
 handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
 returning from it would take the JVM with it. Requests are answered on a pool
-of eight, and each one connects to PostgreSQL of its own —
-`java.sql.Connection` is not thread-safe.
+of eight, and each one opens a connection of its own —
+`java.sql.Connection` is not thread-safe. `Db.Jdbc.connect` puts the database
+in WAL mode, so those reads run beside a writing run rather than behind it.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
 `Round`'s readers rather than restating them: `Server.Api.respond` runs under
@@ -294,17 +292,19 @@ describe can be read back as a `VIEW` over the table, and normalising them out
 would buy about 16% of its size in exchange for resolving ids on the way in.
 A column takes the type its Flix value already has — a `Duration` is the
 milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
-load parses nothing the decoder did not. Le Mans's mini-sectors are two `int[]`
-columns rather than thirty more: only one round in the archive has them. They
-hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a subscript
-is a place on the circuit and a null is a marker the feed left blank. That is the
-shape a query wants rather than the shape the JSON output has, which is the whole
+load parses nothing the decoder did not. Le Mans's mini-sectors are two JSON
+array columns rather than thirty more: only one round in the archive has them.
+They hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a
+subscript is a place on the circuit and a null is a marker the feed left blank.
+`json_each` is what a query reads one back with, one row per marker, keyed from
+zero where `Motorsport.MiniSector.positionOf` counts from one. That is the shape
+a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
 Three readers of the table. `Cli.Load.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
-in track order, which is what the `int[]` columns are for. `Round.Summary`
+in track order, which is what those columns are for. `Round.Summary`
 reads the round's summary the same way. `Round.Laps` reads a whole round back,
 `Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
 `Cli.Export` and `Server.Api` are both rendered from what it and
@@ -318,8 +318,7 @@ lap; they take the readings those decisions are made from rather than the laps
 they were counted out of, and neither imports `Motorsport.Wec` any more. The
 counting is what SQL is better at and what cost the most: reading a round's cars
 off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
-against 62 cars, and `GROUP BY` is not. A whole run of the archive takes 12s
-rather than 23s.
+against 62 cars, and `GROUP BY` is not.
 
 `source_row` carries the position the file listed the lap in, which nothing else
 in the table recovers. It is what makes the table an image of the CSV rather than
@@ -417,11 +416,11 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.
-- **The database** — `.#flix-test` brings up the working copy's PostgreSQL and
-  names it in `DATABASE_URL`, so a test can drive JDBC rather than a handler
-  standing in for it. A test that reaches no database fails rather than
-  skipping: the boundary is the thing it is there to check. Connecting costs
-  about 350ms once and about 5ms per test after that.
+- **The database** — a test drives JDBC rather than a handler standing in for
+  it, against the in-memory database `Round.TestSupport.url` names: a
+  connection of its own per test, so what one loads is never the archive a
+  working copy has. A test that reaches no database fails rather than skipping:
+  the boundary is the thing it is there to check.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives

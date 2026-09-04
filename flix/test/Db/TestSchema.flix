@@ -21,10 +21,8 @@ mod Db.TestSchema {
         Assert.assertTrue(placeholders == List.length(Schema.columns()))
 
     @Test
-    def theArrayColumnsAreTheOnesCast(): Unit \ Assert =
+    def theInsertNamesTheMiniSectorColumns(): Unit \ Assert =
         let sql = Schema.insert();
-        Assert.assertTrue(String.countSubstring({substr = "?::"}, sql) == 2);
-        Assert.assertTrue(String.countSubstring({substr = "?::int[]"}, sql) == 2);
         Assert.assertTrue(String.contains({substr = "mini_sector_time_ms"}, sql));
         Assert.assertTrue(String.contains({substr = "mini_sector_elapsed_ms"}, sql))
 

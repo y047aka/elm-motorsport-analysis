@@ -4,14 +4,12 @@ mod Db.TestJdbc {
     use Db.LapRow
     use Db.TestLapRow
     use Motorsport.Calendar.Entry
+    use Round.TestSupport
 
-    /// The database `nix run .#cli-test` brings up and names in `DATABASE_URL`.
     /// A run that reaches no database fails these rather than skipping them:
     /// the point of them is the half of the boundary no compiler sees.
     def connected(f: Unit -> Result[String, a] \ ef): Result[String, a] \ (ef - Db) + IO =
-        let url = Sys.Env.runWithIO(() -> Sys.Env.getVar("DATABASE_URL"))
-            |> Option.getWithDefault("");
-        match Jdbc.connect(url) {
+        match Jdbc.connect(TestSupport.url()) {
             case Err(e)   => Err(e)
             case Ok(conn) =>
                 let result = Jdbc.runWith(conn, f);
@@ -21,12 +19,13 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 'a', null::text, 42, null::int"));
+        let result = connected(() -> Db.fetch("select 'a', null, 42, null"));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select n from generate_series(3, 1, -1) as n"));
+        let result = connected(() -> Db.fetch(
+            "select n from (select 1 as n union select 2 union select 3) order by n desc"));
         Assert.assertTrue(result == Ok(
             (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
         ))
@@ -38,8 +37,6 @@ mod Db.TestJdbc {
         let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
         let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
-            discard Db.execute("CREATE SCHEMA IF NOT EXISTS cli_test");
-            discard Db.execute("SET search_path TO cli_test");
             discard Db.prepare();
             let accepted = Db.insertLaps(rows);
             let refused  = Db.insertLaps(rows);
@@ -59,7 +56,7 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 1 where false"));
+        let result = connected(() -> Db.fetch("select 1 where 0"));
         Assert.assertTrue(result == Ok(Nil))
 
 }

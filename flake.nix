@@ -96,28 +96,6 @@
             '';
           };
 
-        # The same, for the commands that need a database. A caller who has
-        # already said which one -- by the variable or by `--postgres` -- is
-        # left alone; anyone else gets the working copy's, started if it is
-        # not up.
-        mkFlixAppWithDb = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ flix pkgs.postgresql ];
-            text = ''
-              named=""
-              for arg in "$@"; do
-                case "$arg" in --postgres | --postgres=*) named=yes ;; esac
-              done
-              if [ -z "''${DATABASE_URL:-}" ] && [ -z "$named" ]; then
-              ${pgEnsure}
-                export DATABASE_URL="${pgUrl}"
-              fi
-              cd flix
-              ${cmd}
-            '';
-          };
-
         # The server's operating form is the jar: `flix run` takes the JVM down
         # with `main`, and the server's `main` does not return. Rebuilt when a
         # source is newer than it, as the deps-audit jar is.
@@ -128,16 +106,8 @@
         mkFlixServerApp = name: args:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ flix pkgs.jdk21_headless pkgs.postgresql ];
+            runtimeInputs = [ flix pkgs.jdk21_headless ];
             text = ''
-              named=""
-              for arg in "$@"; do
-                case "$arg" in --postgres | --postgres=*) named=yes ;; esac
-              done
-              if [ -z "''${DATABASE_URL:-}" ] && [ -z "$named" ]; then
-              '' + pgEnsure + ''
-                export DATABASE_URL="${pgUrl}"
-              fi
               cd flix
               jar=artifact/flix.jar
               if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
@@ -147,35 +117,6 @@
             '';
           };
 
-        # A PostgreSQL for the CLI and the server to compute in. The data
-        # directory sits in the working copy rather than under /tmp, so the rows
-        # a run left behind are still there to be queried, and
-        # `nix run .#pg-start` prints the URL for `DATABASE_URL` to be set from.
-        mkPgApp = name: cmd:
-          pkgs.writeShellApplication {
-            inherit name;
-            runtimeInputs = [ pkgs.postgresql ];
-            text = cmd;
-          };
-
-        pgUrl = "jdbc:postgresql://127.0.0.1:55433/motorsport?user=postgres";
-
-        pgEnsure = ''
-          data=flix/.pg
-          if [ ! -d "$data" ]; then
-            initdb -D "$data" -U postgres --auth=trust >/dev/null
-          fi
-          if ! pg_ctl -D "$data" status >/dev/null 2>&1; then
-            pg_ctl -D "$data" -l "$data/server.log" \
-              -o "-p 55433 -k /tmp -c listen_addresses=127.0.0.1" -w start >&2
-          fi
-          createdb -h 127.0.0.1 -p 55433 -U postgres motorsport 2>/dev/null || true
-        '';
-
-        pgStartCmd = pgEnsure + ''echo "${pgUrl}"'';
-
-        pgStopCmd = "pg_ctl -D flix/.pg -m fast stop";
-
         # The one round the export is kept for. Every round is loaded and
         # `/api` answers for all of them; this is the one whose files are
         # written, so that what the renderers produce can be read without a
@@ -184,7 +125,7 @@
 
         # The CLI's one argument is the directory holding the season directories,
         # and it converts the rounds `Motorsport.Calendar` lists. Anything else
-        # given to `nix run` is forwarded, which is how `--postgres <url>` is
+        # given to `nix run` is forwarded, which is how `--database <url>` is
         # reached.
         cliRunCmd = "flix run -- ${exportedRound} ../app/static/wec \"$@\"";
 
@@ -220,7 +161,7 @@
         # merits. It reads the credentials `gh auth login` wrote; nix supplies
         # the binary, not the login.
         devShells.default = pkgs.mkShell (playwrightEnv // {
-          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh postgresql ]
+          buildInputs = with pkgs; [ nodejs_26 pnpm rustc cargo rustfmt cargo-tauri playwright-test gh ]
             ++ [ flix ] ++ elmTools;
         });
 
@@ -238,13 +179,11 @@
           tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
           tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
-          flix-test            = { type = "app"; program = "${mkFlixAppWithDb "flix-test" "flix test"}/bin/flix-test";                                                    meta.description = "Run the Flix project's tests"; };
-          cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                         meta.description = "Run the CLI (CSV -> PostgreSQL, and the kept round out to JSON/JSONL)"; };
-          cli-load             = { type = "app"; program = "${mkFlixAppWithDb "cli-load"   cliLoadCmd}/bin/cli-load";                                                     meta.description = "Load the CSV into PostgreSQL, writing no files"; };
-          cli-export           = { type = "app"; program = "${mkFlixAppWithDb "cli-export" cliExportCmd}/bin/cli-export";                                                 meta.description = "Write the kept round out as the export"; };
+          flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
+          cli-run              = { type = "app"; program = "${mkFlixApp "cli-run"  cliRunCmd}/bin/cli-run";                                                          meta.description = "Run the CLI (CSV -> SQLite, and the kept round out to JSON/JSONL)"; };
+          cli-load             = { type = "app"; program = "${mkFlixApp "cli-load"   cliLoadCmd}/bin/cli-load";                                                      meta.description = "Load the CSV into SQLite, writing no files"; };
+          cli-export           = { type = "app"; program = "${mkFlixApp "cli-export" cliExportCmd}/bin/cli-export";                                                  meta.description = "Write the kept round out as the export"; };
           serve-api            = { type = "app"; program = "${mkFlixServerApp "serve-api" "--serve"}/bin/serve-api";                                                      meta.description = "Serve the loaded rounds over HTTP (/api)"; };
-          pg-start             = { type = "app"; program = "${mkPgApp   "pg-start" pgStartCmd}/bin/pg-start";                                                     meta.description = "Start the local PostgreSQL and print its JDBC URL"; };
-          pg-stop              = { type = "app"; program = "${mkPgApp   "pg-stop"  pgStopCmd}/bin/pg-stop";                                                       meta.description = "Stop the local PostgreSQL"; };
           deps-audit           = { type = "app"; program = "${depsAuditApp}/bin/deps-audit";                                                                          meta.description = "Audit helpers for the update-deps skill"; };
         };
       });

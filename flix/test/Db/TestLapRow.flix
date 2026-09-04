@@ -121,9 +121,9 @@ mod Db.TestLapRow {
         }
 
     @Test
-    def theArrayLiteralKeepsTheBlanksInPlace(): Unit \ Assert =
-        Assert.assertTrue(LapRow.arrayLiteral(Some(1) :: None :: Some(3) :: Nil) == "{1,NULL,3}");
-        Assert.assertTrue(LapRow.arrayLiteral(Nil) == "{}")
+    def theJsonArrayKeepsTheBlanksInPlace(): Unit \ Assert =
+        Assert.assertTrue(LapRow.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
+        Assert.assertTrue(LapRow.jsonArray(Nil) == "[]")
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
@@ -152,7 +152,7 @@ mod Db.TestLapRow {
     def cells(): List[Option[String]] =
         Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
         Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
-        Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("f") ::
+        Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("0") ::
         Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
         Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
         None :: Some("SF") :: None :: None :: Nil
@@ -169,7 +169,7 @@ mod Db.TestLapRow {
     def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
         let withMiniSectors = List.append(
             List.take(26, cells()),
-            Some("{20708,NULL}") :: Some("{20708,NULL}") :: Nil
+            Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
         match LapRow.fromRow(withMiniSectors) {
             case Err(_)  => Assert.assertTrue(false)

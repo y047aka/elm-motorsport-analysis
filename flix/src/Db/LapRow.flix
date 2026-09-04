@@ -109,13 +109,13 @@ mod Db.LapRow {
             reading(sector) |> Option.map(Duration.millis)
         ))
 
-    /// A PostgreSQL array literal, which is how the values reach a column the
-    /// driver would otherwise be told nothing about.
-    pub def arrayLiteral(values: List[Option[Int32]]): String =
-        "{" + (values |> List.map(v -> match v {
+    /// The text a mini-sector column holds, which `json_each` reads back as
+    /// one row per marker.
+    pub def jsonArray(values: List[Option[Int32]]): String =
+        "[" + (values |> List.map(v -> match v {
             case Some(n) => "${n}"
-            case None    => "NULL"
-        }) |> List.join(",")) + "}"
+            case None    => "null"
+        }) |> List.join(",")) + "]"
 
     /// In the order `Db.Schema.columns` names them.
     pub def values(row: LapRow): List[Value] =
