@@ -189,6 +189,6 @@ mod Cli.Args {
         }, defaultPort())
 
     pub def usage(): String =
-        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or cli-serve", optionDescrs())
+        Util.GetOpt.usageInfo("Usage: cli-run <dir holding the season directories>, or serve-api", optionDescrs())
 
 }
