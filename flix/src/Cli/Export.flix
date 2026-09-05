@@ -7,6 +7,7 @@ mod Cli.Export {
     use Cli.Errors.CliError
     use Cli.FileTask
     use Motorsport.Calendar
+    use Round.Index
     use Round.Laps
     use Round.Render
     use Round.Summary
@@ -70,13 +71,18 @@ mod Cli.Export {
             isLoaded <- Laps.loaded(task#entry) |> Result.mapErr(CliError.Database);
             _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
+            index    <- Index.read(task#entry) |> Result.mapErr(CliError.Database);
             rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database)
-        ) yield render(metadata, rawLaps)
+        ) yield render(metadata, index, rawLaps)
 
-    def render(metadata: Motorsport.Metadata.Metadata, rawLaps: List[Motorsport.Wec.RawLap]): Rendered =
+    def render(
+        metadata: Motorsport.Metadata.Metadata,
+        index: Motorsport.Index.Index,
+        rawLaps: List[Motorsport.Wec.RawLap]
+    ): Rendered =
         {
             lapCount     = List.length(rawLaps),
-            metadataJson = Render.renderMetadata(metadata),
+            metadataJson = Render.renderSummary(metadata, index),
             lapsJsonl    = Render.renderJsonl(rawLaps)
         }
 

@@ -1,6 +1,8 @@
 module Motorsport.ReplayTest exposing (suite)
 
 import Expect
+import Motorsport.BestTimes as BestTimes
+import Motorsport.Internal.ChangePoints as ChangePoints
 import Motorsport.Wec.Class as Class
 import Motorsport.Clock as Clock
 import Motorsport.Driver as Driver
@@ -8,6 +10,7 @@ import Motorsport.Instant as Instant
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
+import Motorsport.Race as Race
 import Motorsport.Replay as Replay
 import Motorsport.Status as Status exposing (Status)
 import Motorsport.Race.Snapshot as Snapshot
@@ -139,8 +142,24 @@ initialModel =
     Replay.fromCars
         { timeLimit = Instant.fromDuration 7200000
         , finishedAt = Instant.fromDuration 7300000
+        , index = index
         }
         [ retiringCar, survivingCar ]
+
+
+{-| The indices the round is read with, as `Round.Index` counts them out of the
+rows: both cars complete lap 1 at 100.000, and car "1" leads the two after that.
+-}
+index : Race.Index
+index =
+    { lapCompletions =
+        ChangePoints.fromList
+            [ ( Instant.fromDuration 100000, 1 )
+            , ( Instant.fromDuration 200000, 2 )
+            , ( Instant.fromDuration 300000, 3 )
+            ]
+    , bestTimeChanges = BestTimes.empty
+    }
 
 
 retiringCar : Car

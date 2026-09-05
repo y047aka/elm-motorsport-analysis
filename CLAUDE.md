@@ -154,15 +154,15 @@ a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the table, both halves of the trip:
-`Round.Summary` and `Round.Laps` take an `Entry` and the `Db` effect and read
-it; `Round.Render` takes what they returned, is pure, and turns it into the
-bytes that go out. None of the three knows whether a file or a request is
-waiting at the other end.
+`Round.Summary`, `Round.Index` and `Round.Laps` take an `Entry` and the `Db`
+effect and read it; `Round.Render` takes what they returned, is pure, and turns
+it into the bytes that go out. None of the four knows whether a file or a
+request is waiting at the other end.
 
 `Server.Api` decides nothing about a round, then, and renders none of one
 either: it makes the same calls `Cli.Export` makes, so what is served and what
 is written are the same bytes rather than two renderings that agree. An answer
-carrying the summary alone stops at `Round.Render.renderMetadata` rather than
+carrying the summary alone stops at `Round.Render.renderSummary` rather than
 reading a round's laps to throw them away, which is the one thing the two
 callers do differently.
 
@@ -280,8 +280,11 @@ the type exists; a record per car on top of it cost under 2% of the frame
 (`benchmark/PerFrameBenchmark.elm`), so nothing sits above it.
 
 Modules serving both sides sit directly under `Motorsport/` rather than in a
-subdirectory — `BestTimes` is built by `Race` and read back by `Race.Snapshot`,
+subdirectory — `BestTimes` is held by `Race` and read back by `Race.Snapshot`,
 and `Lap.Performance` rates a lap for either side, so neither owns them.
+Neither walks a lap of the race. Which lap took which record is counted in
+`Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
+does, so `Race.fromCars` is given a `Race.Index` rather than building one.
 
 ### The `laps` table
 
@@ -302,15 +305,21 @@ zero where `Motorsport.MiniSector.positionOf` counts from one. That is the shape
 a query wants rather than the shape the JSON output has, which is the whole
 reason they are not the object `Motorsport.Wec` writes.
 
-Three readers of the table. `Cli.Load.Validation` runs its five rules as
+Four readers of the table. `Cli.Load.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what those columns are for. `Round.Summary`
-reads the round's summary the same way. `Round.Laps` reads a whole round back,
+reads the round's summary the same way. `Round.Index` reads the two indices a
+race is read at a moment through — when the lap counter went up, and when each
+of the twenty records changed hands — which are a walk of every lap of the round
+each: a `GROUP BY` for the first, and for the second one window over every
+record's readings stacked into a single column. `Round.Laps` reads a whole round back,
 `Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
-`Cli.Export` and `Server.Api` are both rendered from what it and
-`Round.Summary` return, so the files written and the round served are the same
-bytes rather than two renderings that agree. Nothing renders a round from the
+`Cli.Export` and `Server.Api` are both rendered from what it,
+`Round.Summary` and `Round.Index` return, so the files written and the round
+served are the same bytes rather than two renderings that agree. The indices
+ride in the summary rather than in a file of their own, so a round is still two
+URLs. Nothing renders a round from the
 laps a CSV decoded to: `Cli.Load` sends the rows and stops there.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and

@@ -3,6 +3,7 @@ mod Server.TestApi {
     use Server.Api
     use Server.Api.Response
     use Server.Api.Route
+    use Round.Index
     use Round.Render
     use Round.Summary
     use Motorsport.Metadata
@@ -84,21 +85,23 @@ mod Server.TestApi {
     def aRoundIsTheRoundTheExportWouldHold(): Unit \ {IO, Assert} =
         let laps = TestLapRow.sampleLaps();
         match served(laps) {
-            case (summary, lapsBody, metadata) =>
+            case (summary, lapsBody, exported) =>
                 Assert.assertTrue(summary#status == 200);
-                Assert.assertTrue(summary#body == Render.renderMetadata(metadata));
+                Assert.assertTrue(summary#body == exported);
+                Assert.assertTrue(String.contains({substr = "\"index\""}, summary#body));
                 Assert.assertTrue(lapsBody#status == 200);
                 Assert.assertTrue(lapsBody#body == Render.renderJsonl(laps))
         }
 
-    def served(laps: List[RawLap]): (Response, Response, Metadata.Metadata) \ IO =
+    def served(laps: List[RawLap]): (Response, Response, String) \ IO =
         TestSupport.onRound(fuji(), laps, () ->
             forM(
-                metadata <- Summary.read(fuji())
+                metadata <- Summary.read(fuji());
+                index    <- Index.read(fuji())
             ) yield (
                 Api.respond(Route.Summary(2025, "fuji_6h")),
                 Api.respond(Route.Laps(2025, "fuji_6h")),
-                metadata
+                Render.renderSummary(metadata, index)
             )
         )
 

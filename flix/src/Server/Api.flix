@@ -2,6 +2,7 @@
 /// `Cli.Export` writes to a file, byte for byte.
 mod Server.Api {
 
+    use Round.Index
     use Round.Laps
     use Round.Render
     use Round.Summary
@@ -88,7 +89,10 @@ mod Server.Api {
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
     def summary(season: Int32, id: String): Result[String, Option[String]] \ Db =
-        answer(season, id, e -> Summary.read(e) |> Result.map(Render.renderMetadata))
+        answer(season, id, e -> forM(
+            metadata <- Summary.read(e);
+            index    <- Index.read(e)
+        ) yield Render.renderSummary(metadata, index))
 
     def laps(season: Int32, id: String): Result[String, Option[String]] \ Db =
         answer(season, id, e -> Laps.read(e) |> Result.map(Render.renderJsonl))

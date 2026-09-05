@@ -1,5 +1,5 @@
 module Motorsport.BestTimes exposing
-    ( Changes, empty, fromLaps
+    ( Changes, empty, changesDecoder
     , Snapshot, Holder
     , at, final, timeOf
     )
@@ -14,24 +14,28 @@ of the scale is drawn against. Each is a
 beaten, which is what keeps reading the baseline off a binary search rather than
 twenty passes over every lap of the race.
 
+Which lap took which record is counted where the laps are, in `Round.Index`, and
+arrives with the round's summary.
+
 The module sits beside [`Lap`](Motorsport-Lap) and [`Gap`](Motorsport-Gap)
 rather than under either side it serves, because both sides need it and neither
-owns it: [`Race`](Motorsport-Race) builds the records once and holds them, and
+owns it: [`Race`](Motorsport-Race) holds the records, and
 [`Race.Snapshot`](Motorsport-Race-Snapshot) reads them back at the clock.
 
-@docs Changes, empty, fromLaps
+@docs Changes, empty, changesDecoder
 @docs Snapshot, Holder
 @docs at, final, timeOf
 
 -}
 
-import Motorsport.Driver exposing (Driver)
-import Motorsport.Duration exposing (Duration)
+import Json.Decode as Decode exposing (Decoder, field)
+import Json.Decode.Pipeline exposing (required)
+import Motorsport.Driver as Driver exposing (Driver)
+import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
-import Motorsport.Lap exposing (Lap)
-import Motorsport.Sector as Sector exposing (BySector, Sector)
-import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector, LeMans2025MiniSector)
+import Motorsport.Sector as Sector exposing (BySector)
+import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 
 
 {-| Every moment one of the race's records changed hands, collected once.
@@ -73,8 +77,7 @@ type alias Snapshot =
 {-| One value per record: the shape `Changes` and `Snapshot` share.
 
 Everything this module does to the twenty records goes through `map`, so they
-are enumerated in exactly one place. Adding a record is two lines: what it
-holds, here, and how it is won, in `rules`.
+are enumerated in exactly one place.
 
 -}
 type alias ByRecord a =
@@ -94,29 +97,68 @@ map f records =
     }
 
 
-{-| No laps recorded yet. Read at any moment, every record comes back `Nothing`.
+{-| No records taken yet. Read at any moment, every record comes back
+`Nothing`.
 -}
 empty : Changes
 empty =
-    fromLaps []
+    { fastestLapTime = ChangePoints.empty
+    , slowestLapTime = ChangePoints.empty
+    , fastestSectors = Sector.initialize (\_ -> ChangePoints.empty)
+    , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+    }
 
 
-{-| Read the records off every lap of a race, however the laps arrive.
-
-Whose lap is whose does not decide anything: a record belongs to the race, and
-the only thing that settles which lap took it is when that lap was completed.
-The lap that took it is then credited with it -- see [`Holder`](#Holder).
-
+{-| Read the records as the round's summary spells them out.
 -}
-fromLaps : List Lap -> Changes
-fromLaps laps =
+changesDecoder : Decoder Changes
+changesDecoder =
+    Decode.map4 ByRecord
+        (field "fastestLapTime" holdersDecoder)
+        (field "slowestLapTime" holdersDecoder)
+        (field "sectors" (Decode.map3 BySector (field "s1" holdersDecoder) (field "s2" holdersDecoder) (field "s3" holdersDecoder)))
+        (field "miniSectors" miniSectorsDecoder)
+
+
+miniSectorsDecoder : Decoder (ByMiniSector (ChangePoints Holder))
+miniSectorsDecoder =
     let
-        -- In the order the laps were completed, which is the order the records
-        -- were set in.
-        inOrder =
-            List.sortBy (.elapsed >> Instant.toDuration) laps
+        miniSector key =
+            required key holdersDecoder
     in
-    map (\{ beats, timeFrom } -> improvements beats timeFrom inOrder) rules
+    Decode.succeed LeMans.ByMiniSector
+        |> miniSector "scl2"
+        |> miniSector "z4"
+        |> miniSector "ip1"
+        |> miniSector "z12"
+        |> miniSector "sclc"
+        |> miniSector "a7_1"
+        |> miniSector "ip2"
+        |> miniSector "a8_1"
+        |> miniSector "sclb"
+        |> miniSector "porin"
+        |> miniSector "porout"
+        |> miniSector "pitref"
+        |> miniSector "scl1"
+        |> miniSector "fordout"
+        |> miniSector "fl"
+
+
+holdersDecoder : Decoder (ChangePoints Holder)
+holdersDecoder =
+    Decode.map ChangePoints.fromList (Decode.list holderDecoder)
+
+
+holderDecoder : Decoder ( Instant, Holder )
+holderDecoder =
+    Decode.map2 Tuple.pair
+        (field "elapsed" Instant.decoder)
+        (Decode.map4 Holder
+            (field "time" Duration.decoder)
+            (field "carNumber" Decode.string)
+            (field "lap" Decode.int)
+            (field "driver" (Decode.map Driver.fromName Decode.string))
+        )
 
 
 {-| The records as they stood at a moment of the race: what a car crossing the
@@ -141,111 +183,3 @@ it.
 timeOf : Maybe Holder -> Maybe Duration
 timeOf =
     Maybe.map .time
-
-
-
--- WHAT EACH RECORD COMPETES FOR
-
-
-{-| What sets one record apart from another: which of a lap's times it is drawn
-from, and which way round a time has to be to beat the standing one.
--}
-type alias Rule =
-    { beats : Duration -> Duration -> Bool
-    , timeFrom : Lap -> Maybe Duration
-    }
-
-
-rules : ByRecord Rule
-rules =
-    { fastestLapTime = { beats = lessThan, timeFrom = .time }
-    , slowestLapTime = { beats = greaterThan, timeFrom = .time }
-    , fastestSectors =
-        Sector.initialize (\sector -> { beats = lessThan, timeFrom = sectorTime sector })
-    , fastestMiniSectors =
-        LeMans.initialize (\mini -> { beats = lessThan, timeFrom = miniSectorTime mini })
-    }
-
-
-{-| Walk the laps in the order they were completed, keeping the time each time
-`beats` says the standing one has been improved on.
-
-The `List.reverse` at the end is not cosmetic. The fold prepends, so without it
-the improvements would reach `ChangePoints.fromList` newest-first -- and since
-that sorts stably and reads the _last_ of any changes sharing a timestamp, two
-records set on the same instant would resolve to the earlier one.
-
--}
-improvements :
-    (Duration -> Duration -> Bool)
-    -> (Lap -> Maybe Duration)
-    -> List Lap
-    -> ChangePoints Holder
-improvements beats timeFrom laps =
-    laps
-        |> List.foldl
-            (\lap ( standing, collected ) ->
-                let
-                    setBy time =
-                        ( Just time, ( lap.elapsed, holderOf time lap ) :: collected )
-                in
-                case ( timeFrom lap, standing ) of
-                    ( Nothing, _ ) ->
-                        ( standing, collected )
-
-                    ( Just time, Nothing ) ->
-                        setBy time
-
-                    ( Just time, Just standingTime ) ->
-                        if beats time standingTime then
-                            setBy time
-
-                        else
-                            ( standing, collected )
-            )
-            ( Nothing, [] )
-        |> Tuple.second
-        |> List.reverse
-        |> ChangePoints.fromList
-
-
-holderOf : Duration -> Lap -> Holder
-holderOf time lap =
-    { time = time
-    , carNumber = lap.carNumber
-    , lap = lap.lap
-    , driver = lap.driver
-    }
-
-
-lessThan : Duration -> Duration -> Bool
-lessThan a b =
-    a < b
-
-
-greaterThan : Duration -> Duration -> Bool
-greaterThan a b =
-    a > b
-
-
-
--- WHAT COUNTS AS A TIME
-
-
-sectorTime : Sector -> Lap -> Maybe Duration
-sectorTime sector lap =
-    (Sector.get sector lap.sectors).time
-
-
-{-| Mini-sector times are only trusted on laps that have a lap time, matching
-what the whole-race calculation has always done.
--}
-miniSectorTime : LeMans2025MiniSector -> Lap -> Maybe Duration
-miniSectorTime mini lap =
-    case lap.time of
-        Just _ ->
-            lap.miniSectors
-                |> Maybe.andThen (LeMans.get mini >> .time)
-
-        Nothing ->
-            Nothing

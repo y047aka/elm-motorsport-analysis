@@ -35,9 +35,9 @@ type alias Model =
     }
 
 
-fromCars : { timeLimit : Instant, finishedAt : Instant } -> List Car -> Model
-fromCars { timeLimit, finishedAt } cars =
-    { race = Race.fromCars { timeLimit = timeLimit } cars
+fromCars : { timeLimit : Instant, finishedAt : Instant, index : Race.Index } -> List Car -> Model
+fromCars { timeLimit, finishedAt, index } cars =
+    { race = Race.fromCars { timeLimit = timeLimit, index = index } cars
     , playback = Clock.init { finishedAt = finishedAt }
     }
 

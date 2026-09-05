@@ -71,6 +71,21 @@ summaryJson =
               }
             ]
         }
+    , "index":
+        { "lapCompletions": [ { "lap": 1, "elapsed": "1:53.000" } ]
+        , "bestTimeChanges":
+            { "fastestLapTime":
+                [ { "elapsed": "1:53.000", "time": "1:53.000", "carNumber": "7", "lap": 1, "driver": "KOBAYASHI" } ]
+            , "slowestLapTime":
+                [ { "elapsed": "1:53.000", "time": "1:53.000", "carNumber": "7", "lap": 1, "driver": "KOBAYASHI" } ]
+            , "sectors": { "s1": [], "s2": [], "s3": [] }
+            , "miniSectors":
+                { "scl2": [], "z4": [], "ip1": [], "z12": [], "sclc": []
+                , "a7_1": [], "ip2": [], "a8_1": [], "sclb": [], "porin": []
+                , "porout": [], "pitref": [], "scl1": [], "fordout": [], "fl": []
+                }
+            }
+        }
     }
     """
 

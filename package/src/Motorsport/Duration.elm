@@ -1,6 +1,6 @@
 module Motorsport.Duration exposing
     ( Duration
-    , durationDecoder
+    , decoder
     , toString
     , fromString, fromStringWithDefault
     )
@@ -8,7 +8,7 @@ module Motorsport.Duration exposing
 {-|
 
 @docs Duration
-@docs durationDecoder
+@docs decoder
 @docs toString
 @docs fromString, fromStringWithDefault
 
@@ -25,9 +25,18 @@ type alias Duration =
 -- DECODER
 
 
-durationDecoder : Decoder Duration
-durationDecoder =
-    Decode.int
+decoder : Decoder Duration
+decoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case fromString str of
+                    Just duration ->
+                        Decode.succeed duration
+
+                    Nothing ->
+                        Decode.fail ("Expected a Duration, got \"" ++ str ++ "\"")
+            )
 
 
 {-|

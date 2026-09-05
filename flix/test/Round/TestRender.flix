@@ -1,5 +1,6 @@
 mod Round.TestRender {
 
+    use Round.Index
     use Round.Render
     use Round.Summary
     use Round.TestSupport
@@ -33,23 +34,36 @@ mod Round.TestRender {
             case Err(_) => unreachable!()
         }
 
-    def summaryOf(laps: List[RawLap]): Metadata.Metadata \ IO =
-        TestSupport.onRound(leMans(), laps, () -> Summary.read(leMans()))
+    def summaryOf(laps: List[RawLap]): String \ IO =
+        TestSupport.onRound(leMans(), laps, () -> forM(
+            metadata <- Summary.read(leMans());
+            index    <- Index.read(leMans())
+        ) yield Render.renderSummary(metadata, index))
 
     @Test
-    def testRenderMetadataRendersTheRoundsSummary(): Unit \ {Assert, IO} =
-        let json = Render.renderMetadata(summaryOf(sampleRawLaps()));
+    def testRenderSummaryRendersTheRoundsSummary(): Unit \ {Assert, IO} =
+        let json = summaryOf(sampleRawLaps());
         Assert.assertTrue(String.contains({substr = "\"24 Hours of Le Mans\""}, json));
         Assert.assertTrue(String.contains({substr = "\"startingGrid\""}, json));
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"7\""}, json));
         Assert.assertTrue(String.contains({substr = "\"carNumber\": \"12\""}, json))
 
+    /// The indices are written into the summary rather than beside it.
+    @Test
+    def testRenderSummaryCarriesTheIndices(): Unit \ {Assert, IO} =
+        let json = summaryOf(sampleRawLaps());
+        Assert.assertTrue(String.contains({substr = "\"index\""}, json));
+        Assert.assertTrue(String.contains({substr = "{ \"lap\": 1, \"elapsed\": \"1:33.291\" }"}, json));
+        Assert.assertTrue(String.contains({substr = "\"fastestLapTime\""}, json));
+        Assert.assertTrue(String.contains({substr = "\"miniSectors\""}, json))
+
     /// A round with no laps still has a summary, and it still renders.
     @Test
-    def testRenderMetadataOfARoundWithNoLaps(): Unit \ {Assert, IO} =
-        let json = Render.renderMetadata(summaryOf(Nil));
+    def testRenderSummaryOfARoundWithNoLaps(): Unit \ {Assert, IO} =
+        let json = summaryOf(Nil);
         Assert.assertTrue(String.contains({substr = "\"basis\": \"unknown\""}, json));
-        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, json))
+        Assert.assertTrue(String.contains({substr = "\"entries\": []"}, json));
+        Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json))
 
     @Test
     def testRenderJsonlRendersEveryLap(): Unit \ Assert =

@@ -1,9 +1,11 @@
 module Motorsport.RaceTest exposing (suite)
 
 import Expect
+import Motorsport.BestTimes as BestTimes
 import Motorsport.Wec.Class as Class
 import Motorsport.Driver as Driver
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Internal.ChangePoints as ChangePoints
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Manufacturer exposing (unknown)
 import Motorsport.Race as Race exposing (Race)
@@ -90,12 +92,13 @@ suite =
 
 -- FIXTURE
 -- Car 2 leads the first lap and then falls a long way back; car 1 goes on to
--- three laps. The lap counter should follow whoever is in front at the time.
+-- three laps, so the counter follows whoever is in front at the time: lap 1 at
+-- car 2's 90.000, then car 1's laps 2 and 3.
 
 
 race : Race
 race =
-    Race.fromCars { timeLimit = Instant.fromDuration 7200000 }
+    Race.fromCars { timeLimit = Instant.fromDuration 7200000, index = index }
         [ carWith "1"
             [ lapAt "1" 1 100000
             , lapAt "1" 2 200000
@@ -106,6 +109,21 @@ race =
             , lapAt "2" 2 7300000
             ]
         ]
+
+
+{-| The indices the round is read with, as `Round.Index` counts them out of the
+rows.
+-}
+index : Race.Index
+index =
+    { lapCompletions =
+        ChangePoints.fromList
+            [ ( instant 90000, 1 )
+            , ( instant 200000, 2 )
+            , ( instant 300000, 3 )
+            ]
+    , bestTimeChanges = BestTimes.empty
+    }
 
 
 carWith : CarNumber -> List Lap -> Car

@@ -17,6 +17,7 @@ import Motorsport.Chart.Tracker.Config exposing (MiniSectorShares(..), Share, Tr
 import Motorsport.Circuit.Direction exposing (Direction(..))
 import Motorsport.Driver as Driver exposing (Driver)
 import Motorsport.Instant as Instant exposing (Instant)
+import Motorsport.Race as Race
 import Motorsport.Race.Car as Car
 import Motorsport.Sector exposing (BySector)
 import Motorsport.Wec.Circuit.LeMans exposing (ByMiniSector)
@@ -48,6 +49,7 @@ type alias Event =
     , finishedAt : Instant
     , track : Track
     , startingGrid : StartingGrid
+    , index : Race.Index
     }
 
 
@@ -99,11 +101,12 @@ type alias StartingGridEntry =
 
 eventDecoder : Era -> Manufacturers -> Decoder Event
 eventDecoder era manufacturers =
-    Decode.map4 Event
+    Decode.map5 Event
         (field "race" (field "timeLimit" Instant.decoder))
         (field "race" (field "duration" Instant.decoder))
         (field "track" trackDecoder)
         (field "startingGrid" (startingGridDecoder era manufacturers))
+        (field "index" Race.indexDecoder)
 
 
 {-| Two keys the CLI leaves out when it has nothing to say, and `optional`

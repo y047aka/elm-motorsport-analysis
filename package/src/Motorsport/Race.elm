@@ -1,5 +1,6 @@
 module Motorsport.Race exposing
     ( Race
+    , Index, emptyIndex, indexDecoder
     , empty, fromCars
     , lapCountAt, elapsedAtLapCount, timeToFlagAt
     , statusAt
@@ -14,13 +15,14 @@ moment is derived from the two, in
 [`Race.Snapshot`](Motorsport-Race-Snapshot).
 
 @docs Race
+@docs Index, emptyIndex, indexDecoder
 @docs empty, fromCars
 @docs lapCountAt, elapsedAtLapCount, timeToFlagAt
 @docs statusAt
 
 -}
 
-import Dict
+import Json.Decode as Decode exposing (Decoder, field)
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -57,6 +59,44 @@ type alias Race =
     }
 
 
+{-| The two indices a round is read with rather than counted out of: when the
+lap counter went up, and when each of the twenty records changed hands. Both
+arrive with the round's summary, from `Round.Index`.
+-}
+type alias Index =
+    { lapCompletions : ChangePoints Int
+    , bestTimeChanges : BestTimes.Changes
+    }
+
+
+{-| The indices of a round that has not loaded yet.
+-}
+emptyIndex : Index
+emptyIndex =
+    { lapCompletions = ChangePoints.empty
+    , bestTimeChanges = BestTimes.empty
+    }
+
+
+{-| Read the indices as the round's summary spells them out.
+-}
+indexDecoder : Decoder Index
+indexDecoder =
+    Decode.map2 Index
+        (field "lapCompletions" lapCompletionsDecoder)
+        (field "bestTimeChanges" BestTimes.changesDecoder)
+
+
+lapCompletionsDecoder : Decoder (ChangePoints Int)
+lapCompletionsDecoder =
+    Decode.list
+        (Decode.map2 (\lap elapsed -> ( elapsed, lap ))
+            (field "lap" Decode.int)
+            (field "elapsed" Instant.decoder)
+        )
+        |> Decode.map ChangePoints.fromList
+
+
 {-| A race with no cars, to stand in for one that has not loaded yet.
 -}
 empty : Race
@@ -66,61 +106,32 @@ empty =
     , timeLimit = Instant.raceStart
     , timelineEvents = []
     , statusChanges = StatusChanges.empty
-    , lapCompletions = ChangePoints.empty
-    , bestTimeChanges = BestTimes.empty
+    , lapCompletions = emptyIndex.lapCompletions
+    , bestTimeChanges = emptyIndex.bestTimeChanges
     }
 
 
-{-| Read a race off its entry list, building every index once.
+{-| Read a race off its entry list and the indices that came with it.
 
 Lead changes are read from `Lap.position`, so cars that arrive without their
 per-lap positions assigned produce a timeline with no lead changes in it -- see
 [`TimelineEvent.fromCars`](Motorsport-Race-TimelineEvent#fromCars).
 
 -}
-fromCars : { timeLimit : Instant } -> List Car -> Race
-fromCars { timeLimit } cars =
+fromCars : { timeLimit : Instant, index : Index } -> List Car -> Race
+fromCars { timeLimit, index } cars =
     let
         timelineEvents =
             TimelineEvent.fromCars { timeLimit = timeLimit } cars
-
-        lapCompletions =
-            calcLapCompletions cars
     in
     { cars = cars
-    , lapTotal = ChangePoints.length lapCompletions
+    , lapTotal = ChangePoints.length index.lapCompletions
     , timeLimit = timeLimit
     , timelineEvents = timelineEvents
     , statusChanges = StatusChanges.fromTimelineEvents timelineEvents
-    , lapCompletions = lapCompletions
-    , bestTimeChanges = BestTimes.fromLaps (List.concatMap .laps cars)
+    , lapCompletions = index.lapCompletions
+    , bestTimeChanges = index.bestTimeChanges
     }
-
-
-{-| When the lap counter goes up, and to what.
-
-The counter reads the leading car's completed laps, so it goes up the moment the
-first car of the field crosses the line for a lap -- the earliest `elapsed` among
-every lap carrying that number.
-
--}
-calcLapCompletions : List Car -> ChangePoints Int
-calcLapCompletions cars =
-    cars
-        |> List.concatMap .laps
-        |> List.foldl
-            (\lap earliest ->
-                Dict.update lap.lap
-                    (Maybe.map (Instant.earlier lap.elapsed)
-                        >> Maybe.withDefault lap.elapsed
-                        >> Just
-                    )
-                    earliest
-            )
-            Dict.empty
-        |> Dict.toList
-        |> List.map (\( lapNumber, elapsed ) -> ( elapsed, lapNumber ))
-        |> ChangePoints.fromList
 
 
 {-| How many laps the leading car has completed at a moment of the race.

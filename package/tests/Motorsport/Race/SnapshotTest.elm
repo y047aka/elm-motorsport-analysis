@@ -10,6 +10,7 @@ import Motorsport.Driver as Driver
 import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Instant as Instant
+import Motorsport.Internal.ChangePoints as ChangePoints exposing (ChangePoints)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (PerformanceLevel(..), SegmentState(..))
 import Motorsport.Manufacturer as Manufacturer
@@ -250,6 +251,13 @@ suite =
                     |> Snapshot.bestTimes
                     |> (.fastestLapTime >> BestTimes.timeOf)
                     |> Expect.equal (Just 5000)
+        , -- The counter is `Race.lapCountAt`'s answer and tested there. What is
+          -- this module's is that the clock it is read at is the snapshot's own.
+          test "the lap counter reads where the clock is, not where the race ended" <|
+            \_ ->
+                [ 4999, 5000, 8999, 9000 ]
+                    |> List.map (snapshotAt >> Snapshot.lapCount)
+                    |> Expect.equal [ 0, 1, 1, 2 ]
         ]
 
 
@@ -263,8 +271,103 @@ suite =
 
 snapshotAt : Duration -> Snapshot
 snapshotAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart } [ carOne, carTwo ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
+
+
+{-| The indices the two-car field is read with, as `Round.Index` counts them out
+of the rows: car 2 leads both laps, so the counter goes up at 5.000 and 9.000,
+and car 2's opening lap takes every record at 5.000 where a later lap does not
+beat it. The wider field below only adds laps that end after anything here is
+read, so it is read with the same indices.
+-}
+fieldIndex : Race.Index
+fieldIndex =
+    { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 5000, 1 ), ( Instant.fromDuration 9000, 2 ) ]
+    , bestTimeChanges =
+        { fastestLapTime = changes [ { at = 5000, car = "2", lap = 1, time = 5000 }, { at = 9000, car = "2", lap = 2, time = 4000 } ]
+        , slowestLapTime = changes [ { at = 5000, car = "2", lap = 1, time = 5000 }, { at = 6000, car = "1", lap = 1, time = 6000 } ]
+        , fastestSectors =
+            { s1 = changes [ { at = 5000, car = "2", lap = 1, time = 1500 }, { at = 6000, car = "1", lap = 1, time = 1000 } ]
+            , s2 = changes [ { at = 5000, car = "2", lap = 1, time = 1500 } ]
+            , s3 = changes [ { at = 5000, car = "2", lap = 1, time = 2000 }, { at = 9000, car = "2", lap = 2, time = 1000 } ]
+            }
+        , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+        }
+    }
+
+
+{-| The indices of the one-car Le Mans round: its single lap ends at 15.000 and
+takes every record there is, the fifteen mini-sectors included.
+
+`leMansFieldMissing` drops a mini-sector's running total rather than its time,
+so it is read with these too.
+
+-}
+leMansIndex : Race.Index
+leMansIndex =
+    { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 15000, 1 ) ]
+    , bestTimeChanges =
+        { fastestLapTime = setBy "7" 15000 15000
+        , slowestLapTime = setBy "7" 15000 15000
+        , fastestSectors =
+            { s1 = setBy "7" 15000 3000
+            , s2 = setBy "7" 15000 4000
+            , s3 = setBy "7" 15000 8000
+            }
+        , fastestMiniSectors = LeMans.initialize (\_ -> setBy "7" 15000 1000)
+        }
+    }
+
+
+{-| The indices of the one-car round whose lap the source data did not time
+through `untimed`. A sector it has no time for takes no record.
+-}
+untimedSectorsIndex : List Sector -> Race.Index
+untimedSectorsIndex untimed =
+    { lapCompletions = ChangePoints.fromList [ ( Instant.fromDuration 6000, 1 ) ]
+    , bestTimeChanges =
+        { fastestLapTime = setBy "5" 6000 6000
+        , slowestLapTime = setBy "5" 6000 6000
+        , fastestSectors =
+            Sector.initialize
+                (\sector ->
+                    if List.member sector untimed then
+                        ChangePoints.empty
+
+                    else
+                        setBy "5" 6000 (Sector.get sector { s1 = 1000, s2 = 2000, s3 = 3000 })
+                )
+        , fastestMiniSectors = LeMans.initialize (\_ -> ChangePoints.empty)
+        }
+    }
+
+
+{-| A record one lap took and nothing beat, on the lap that car completed at
+`at`.
+-}
+setBy : String -> Duration -> Duration -> ChangePoints BestTimes.Holder
+setBy carNumber at time =
+    changes [ { at = at, car = carNumber, lap = 1, time = time } ]
+
+
+{-| One record's changes: `at` is the moment it changed hands and `time` what
+it then stood at.
+-}
+changes : List { at : Duration, car : String, lap : Int, time : Duration } -> ChangePoints BestTimes.Holder
+changes held =
+    held
+        |> List.map
+            (\change ->
+                ( Instant.fromDuration change.at
+                , { time = change.time
+                  , carNumber = change.car
+                  , lap = change.lap
+                  , driver = Driver.fromName ("Driver " ++ change.car)
+                  }
+                )
+            )
+        |> ChangePoints.fromList
 
 
 carAt : String -> Snapshot -> Maybe CarAt
@@ -339,7 +442,7 @@ the two-car fixture is, so the cars they share stand where they stand there.
 -}
 fieldWithTailenders : Snapshot
 fieldWithTailenders =
-    Race.fromCars { timeLimit = Instant.raceStart } [ carOne, carTwo, carThree, nonStarter ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = fieldIndex } [ carOne, carTwo, carThree, nonStarter ]
         |> Snapshot.at { elapsed = Instant.fromDuration 7000 }
 
 
@@ -361,7 +464,7 @@ thousand, and how far through it is the remainder.
 -}
 leMansFieldAt : Duration -> Snapshot
 leMansFieldAt elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart } [ leMansCar ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex } [ leMansCar ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
@@ -383,7 +486,7 @@ starts the next, so losing it loses both.
 -}
 leMansFieldMissing : LeMans2025MiniSector -> Duration -> Snapshot
 leMansFieldMissing missing elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart }
+    Race.fromCars { timeLimit = Instant.raceStart, index = leMansIndex }
         [ { leMansCar | laps = List.map (withoutRunningTotalFor missing) leMansCar.laps } ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
@@ -412,7 +515,7 @@ leaves blank rather than at zero. Its one lap runs from the start to 6.000.
 -}
 fieldWithUntimedSectors : List Sector -> Duration -> Snapshot
 fieldWithUntimedSectors untimed elapsed =
-    Race.fromCars { timeLimit = Instant.raceStart } [ carWithoutSectorTimes untimed ]
+    Race.fromCars { timeLimit = Instant.raceStart, index = untimedSectorsIndex untimed } [ carWithoutSectorTimes untimed ]
         |> Snapshot.at { elapsed = Instant.fromDuration elapsed }
 
 
