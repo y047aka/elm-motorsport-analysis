@@ -159,7 +159,7 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        match LapRow.fromRow(cells()) {
+        match Sql.decode(LapRow.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
                 Assert.assertTrue(LapRow.values(row) == LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
@@ -171,7 +171,7 @@ mod Db.TestLapRow {
             List.take(26, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
-        match LapRow.fromRow(withMiniSectors) {
+        match Sql.decode(LapRow.selection(), withMiniSectors) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }

@@ -7,7 +7,7 @@ mod Db.LapRow {
     use Motorsport.Wec.RawSector
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Db.Row
+    use Sql.Sel
     use Util.Duration
     use Util.HourClock
 
@@ -150,129 +150,48 @@ mod Db.LapRow {
         Nil
 
 
-    /// A row of the `SELECT` in `Db.Schema.selectRound`, whose columns are
-    /// `Db.Schema.columns` in order.
-    ///
-    /// Read in groups: a `forM` over all twenty-eight at once overflows the
-    /// type checker's own stack on a clean build (Flix 0.75.1), on a thread
-    /// whose size is the platform's default.
-    pub def fromRow(row: List[Option[String]]): Result[String, LapRow] =
-        forM(
-            round    <- roundColumns(row);
-            car      <- carColumns(row);
-            lap      <- lapColumns(row);
-            sectors  <- sectorColumns(row);
-            tail     <- tailColumns(row);
-            mini     <- miniSectorColumns(row)
-        ) yield {
-            season = round#season,
-            round = round#round,
-            sourceRow = round#sourceRow,
-            carNumber = car#carNumber,
-            class = car#class,
-            carGroup = car#carGroup,
-            team = car#team,
-            manufacturer = car#manufacturer,
-            driverNumber = car#driverNumber,
-            driverName = car#driverName,
-            lapNumber = lap#lapNumber,
-            lapTimeMs = lap#lapTimeMs,
-            lapImprovement = lap#lapImprovement,
-            crossingFinishLineInPit = lap#crossingFinishLineInPit,
-            s1Ms = sectors#s1Ms,
-            s1Improvement = sectors#s1Improvement,
-            s2Ms = sectors#s2Ms,
-            s2Improvement = sectors#s2Improvement,
-            s3Ms = sectors#s3Ms,
-            s3Improvement = sectors#s3Improvement,
-            kph = tail#kph,
-            elapsedMs = tail#elapsedMs,
-            hourMs = tail#hourMs,
-            topSpeed = tail#topSpeed,
-            pitTimeMs = tail#pitTimeMs,
-            flagAtFl = tail#flagAtFl,
-            miniSectorTimeMs = mini#times,
-            miniSectorElapsedMs = mini#elapsed
-        }
-
-    def roundColumns(row: List[Option[String]]): Result[String, {season = Int32, round = String, sourceRow = Int32}] =
-        forM(
-            season    <- Row.int(0, row);
-            round     <- Row.text(1, row);
-            sourceRow <- Row.int(2, row)
-        ) yield { season = season, round = round, sourceRow = sourceRow }
-
-    def carColumns(row: List[Option[String]]): Result[String, {carNumber = String, class = String, carGroup = String, team = String, manufacturer = String, driverNumber = Int32, driverName = String}] =
-        forM(
-            carNumber    <- Row.text(3, row);
-            class        <- Row.text(4, row);
-            carGroup     <- Row.text(5, row);
-            team         <- Row.text(6, row);
-            manufacturer <- Row.text(7, row);
-            driverNumber <- Row.int(8, row);
-            driverName   <- Row.text(9, row)
-        ) yield {
-            carNumber = carNumber,
-            class = class,
-            carGroup = carGroup,
-            team = team,
-            manufacturer = manufacturer,
-            driverNumber = driverNumber,
-            driverName = driverName
-        }
-
-    def lapColumns(row: List[Option[String]]): Result[String, {lapNumber = Int32, lapTimeMs = Int32, lapImprovement = Int32, crossingFinishLineInPit = Bool}] =
-        forM(
-            lapNumber               <- Row.int(10, row);
-            lapTimeMs               <- Row.int(11, row);
-            lapImprovement          <- Row.int(12, row);
-            crossingFinishLineInPit <- Row.bool(13, row)
-        ) yield {
-            lapNumber = lapNumber,
-            lapTimeMs = lapTimeMs,
-            lapImprovement = lapImprovement,
-            crossingFinishLineInPit = crossingFinishLineInPit
-        }
-
-    def sectorColumns(row: List[Option[String]]): Result[String, {s1Ms = Option[Int32], s1Improvement = Int32, s2Ms = Option[Int32], s2Improvement = Int32, s3Ms = Option[Int32], s3Improvement = Int32}] =
-        forM(
-            s1Ms          <- Row.optionalInt(14, row);
-            s1Improvement <- Row.int(15, row);
-            s2Ms          <- Row.optionalInt(16, row);
-            s2Improvement <- Row.int(17, row);
-            s3Ms          <- Row.optionalInt(18, row);
-            s3Improvement <- Row.int(19, row)
-        ) yield {
-            s1Ms = s1Ms,
-            s1Improvement = s1Improvement,
-            s2Ms = s2Ms,
-            s2Improvement = s2Improvement,
-            s3Ms = s3Ms,
-            s3Improvement = s3Improvement
-        }
-
-    def tailColumns(row: List[Option[String]]): Result[String, {kph = String, elapsedMs = Int32, hourMs = Int32, topSpeed = String, pitTimeMs = Option[Int32], flagAtFl = String}] =
-        forM(
-            kph       <- Row.text(20, row);
-            elapsedMs <- Row.int(21, row);
-            hourMs    <- Row.int(22, row);
-            topSpeed  <- Row.text(23, row);
-            pitTimeMs <- Row.optionalInt(24, row);
-            flagAtFl  <- Row.text(25, row)
-        ) yield {
-            kph = kph,
-            elapsedMs = elapsedMs,
-            hourMs = hourMs,
-            topSpeed = topSpeed,
-            pitTimeMs = pitTimeMs,
-            flagAtFl = flagAtFl
-        }
-
-    def miniSectorColumns(row: List[Option[String]]): Result[String, {times = Option[List[Option[Int32]]], elapsed = Option[List[Option[Int32]]]}] =
-        forM(
-            times   <- Row.optionalIntArray(26, row);
-            elapsed <- Row.optionalIntArray(27, row)
-        ) yield { times = times, elapsed = elapsed }
+    /// A round's laps as the table holds them, naming the columns
+    /// `Db.Schema.columns` names and in that order.
+    pub def selection(): Sel[LapRow] =
+        Sql.intoRow(season -> round -> sourceRow -> carNumber -> class -> carGroup -> team -> manufacturer -> driverNumber -> driverName -> lapNumber -> lapTimeMs -> lapImprovement -> crossingFinishLineInPit -> s1Ms -> s1Improvement -> s2Ms -> s2Improvement -> s3Ms -> s3Improvement -> kph -> elapsedMs -> hourMs -> topSpeed -> pitTimeMs -> flagAtFl -> times -> elapsed -> {
+            season = season, round = round, sourceRow = sourceRow, carNumber = carNumber,
+            class = class, carGroup = carGroup, team = team, manufacturer = manufacturer,
+            driverNumber = driverNumber, driverName = driverName, lapNumber = lapNumber,
+            lapTimeMs = lapTimeMs, lapImprovement = lapImprovement,
+            crossingFinishLineInPit = crossingFinishLineInPit,
+            s1Ms = s1Ms, s1Improvement = s1Improvement, s2Ms = s2Ms, s2Improvement = s2Improvement,
+            s3Ms = s3Ms, s3Improvement = s3Improvement, kph = kph, elapsedMs = elapsedMs,
+            hourMs = hourMs, topSpeed = topSpeed, pitTimeMs = pitTimeMs, flagAtFl = flagAtFl,
+            miniSectorTimeMs = times, miniSectorElapsedMs = elapsed
+        })
+            |> Sql.pipeline(Sql.int("season"))
+            |> Sql.pipeline(Sql.text("round"))
+            |> Sql.pipeline(Sql.int("source_row"))
+            |> Sql.pipeline(Sql.text("car_number"))
+            |> Sql.pipeline(Sql.text("class"))
+            |> Sql.pipeline(Sql.text("car_group"))
+            |> Sql.pipeline(Sql.text("team"))
+            |> Sql.pipeline(Sql.text("manufacturer"))
+            |> Sql.pipeline(Sql.int("driver_number"))
+            |> Sql.pipeline(Sql.text("driver_name"))
+            |> Sql.pipeline(Sql.int("lap_number"))
+            |> Sql.pipeline(Sql.int("lap_time_ms"))
+            |> Sql.pipeline(Sql.int("lap_improvement"))
+            |> Sql.pipeline(Sql.bool("crossing_finish_line_in_pit"))
+            |> Sql.pipeline(Sql.optionalInt("s1_ms"))
+            |> Sql.pipeline(Sql.int("s1_improvement"))
+            |> Sql.pipeline(Sql.optionalInt("s2_ms"))
+            |> Sql.pipeline(Sql.int("s2_improvement"))
+            |> Sql.pipeline(Sql.optionalInt("s3_ms"))
+            |> Sql.pipeline(Sql.int("s3_improvement"))
+            |> Sql.pipeline(Sql.text("kph"))
+            |> Sql.pipeline(Sql.int("elapsed_ms"))
+            |> Sql.pipeline(Sql.int("hour_ms"))
+            |> Sql.pipeline(Sql.text("top_speed"))
+            |> Sql.pipeline(Sql.optionalInt("pit_time_ms"))
+            |> Sql.pipeline(Sql.text("flag_at_fl"))
+            |> Sql.pipeline(Sql.optionalIntArray("mini_sector_time_ms"))
+            |> Sql.pipeline(Sql.optionalIntArray("mini_sector_elapsed_ms"))
 
     pub def toRawLap(row: LapRow): Result[String, RawLap] =
         forM(

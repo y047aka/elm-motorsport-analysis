@@ -14,6 +14,14 @@ mod Db.TestSchema {
         );
         Assert.assertTrue(List.length(Schema.columns()) == List.length(LapRow.values(row)))
 
+    /// The load names the columns and the reading names them again, and no
+    /// compiler sees the two lists together either.
+    @Test
+    def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
+        Assert.assertTrue(
+            Sql.clause(LapRow.selection()) == "SELECT " + List.join(", ", Schema.columns())
+        )
+
     @Test
     def theInsertBindsOnePlaceholderPerColumn(): Unit \ Assert =
         let sql = Schema.insert();

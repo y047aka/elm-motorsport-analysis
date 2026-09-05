@@ -5,8 +5,8 @@
 /// record is stays in `Motorsport.Index`.
 mod Round.Index {
 
-    use Db.Row
     use Db.Schema
+    use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Index
     use Motorsport.Index.Change
@@ -32,15 +32,12 @@ mod Round.Index {
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
-        Db.fetch(
-            "SELECT lap_number, MIN(elapsed_ms) FROM laps WHERE " + scope(entry)
-                + " GROUP BY lap_number ORDER BY lap_number"
-        ) |> Result.flatMap(Result.traverse(row ->
-            forM(
-                lap     <- Row.int(0, row);
-                elapsed <- Row.int(1, row)
-            ) yield (lap, Util.Duration.fromMillis(elapsed))
-        ))
+        Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
+            |> Sql.pipeline(Sql.int("lap_number"))
+            |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
+            |> Sql.selectAll(
+                "FROM laps WHERE " + scope(entry) + " GROUP BY lap_number ORDER BY lap_number"
+            )
 
     // ----------------------------------------------------------- best times
 
@@ -68,47 +65,51 @@ mod Round.Index {
                 |> Option.map(mini -> Record.FastestMiniSector(mini))
 
     def bestTimes(entry: Entry): Result[String, List[(Record, Change)]] \ Db =
-        Db.fetch(bestTimesQuery(entry)) |> Result.flatMap(Result.traverse(row ->
-            forM(
-                label     <- Row.int(0, row);
-                record    <- Row.expect("no record is labelled ${label}", recordOf(label));
-                elapsed   <- Row.int(1, row);
-                time      <- Row.int(2, row);
-                carNumber <- Row.text(3, row);
-                lap       <- Row.int(4, row);
-                driver    <- Row.text(5, row)
-            ) yield (record, {
-                elapsed   = Util.Duration.fromMillis(elapsed),
-                time      = Util.Duration.fromMillis(time),
-                carNumber = carNumber,
-                lap       = lap,
-                driver    = driver
-            })
-        ))
+        change()
+            |> Sql.selectAllWith(
+                readings(entry),
+                "FROM (" + standing() + ") WHERE prev IS NULL OR t * dir < prev"
+                    + " ORDER BY k, elapsed_ms, source_row"
+            )
+
+    def change(): Sel[(Record, Change)] =
+        Sql.intoRow(record -> elapsed -> time -> carNumber -> lap -> driver -> (record, {
+            elapsed   = Util.Duration.fromMillis(elapsed),
+            time      = Util.Duration.fromMillis(time),
+            carNumber = carNumber,
+            lap       = lap,
+            driver    = driver
+        }))
+            |> Sql.pipeline(Sql.int("k") |> Sql.andThen(label ->
+                recordOf(label) |> Option.toOk("no record is labelled ${label}")))
+            |> Sql.pipeline(Sql.int("elapsed_ms"))
+            |> Sql.pipeline(Sql.int("t"))
+            |> Sql.pipeline(Sql.text("car_number"))
+            |> Sql.pipeline(Sql.int("lap_number"))
+            |> Sql.pipeline(Sql.text("driver_name"))
 
     def changesOf(record: Record, changes: List[(Record, Change)]): List[Change] =
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
 
-    /// Every record's readings stacked into one column and walked once in the
-    /// order the laps were completed, keeping the rows that beat what stood
-    /// before them.
+    /// Every record's readings stacked into one column.
     ///
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
-    def bestTimesQuery(entry: Entry): String =
+    def readings(entry: Entry): String =
         let scalar = sources()
             |> List.mapWithIndex((label, source) -> match source {
                 case (_, direction, expression) => reading(entry, label, direction, expression)
             });
-        let readings = List.append(scalar, miniSectorReadings(entry) :: Nil);
-        "WITH v AS (" + List.join(" UNION ALL ", readings) + ")"
-            + " SELECT k, elapsed_ms, t, car_number, lap_number, driver_name FROM ("
-            + " SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_name, t, dir,"
+        let stacked = List.append(scalar, miniSectorReadings(entry) :: Nil);
+        "WITH v AS (" + List.join(" UNION ALL ", stacked) + ")"
+
+    /// Every reading with the record as it stood before it beside it, the
+    /// readings walked once in the order the laps were completed.
+    def standing(): String =
+        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_name, t, dir,"
             + " MIN(t * dir) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
-            + " FROM v WHERE t IS NOT NULL)"
-            + " WHERE prev IS NULL OR t * dir < prev"
-            + " ORDER BY k, elapsed_ms, source_row"
+            + " FROM v WHERE t IS NOT NULL"
 
     def reading(entry: Entry, label: Int32, direction: Int32, expression: String): String =
         "SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"

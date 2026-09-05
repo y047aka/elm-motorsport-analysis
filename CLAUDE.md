@@ -314,7 +314,7 @@ race is read at a moment through — when the lap counter went up, and when each
 of the twenty records changed hands — which are a walk of every lap of the round
 each: a `GROUP BY` for the first, and for the second one window over every
 record's readings stacked into a single column. `Round.Laps` reads a whole round back,
-`Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
+`Db.LapRow.selection` and `toRawLap` being the reverse of the load;
 `Cli.Export` and `Server.Api` are both rendered from what it,
 `Round.Summary` and `Round.Index` return, so the files written and the round
 served are the same bytes rather than two renderings that agree. The indices
@@ -341,6 +341,14 @@ send can be read back without a server: `Db.runRecording` keeps the statements
 and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
 only file that imports `java.sql`. `Db.Schema.columns` and `Db.LapRow.values`
 are two lists no compiler sees together, which is what `Db.TestSchema` is for.
+
+Every one of those readers builds its SELECT with `Sql`, the repository's own
+query builder. A `Sql.Sel` is one projection and the reading of it held in the
+same value — `Sql.intoRow` and `Sql.pipeline` compose them as
+`Util.Csv.Decode` composes a row of a CSV — so the clause is rendered from the
+readings rather than written beside them, and a column is named once. What the
+`Sel` does not cover is the query around it: a caller still writes its `FROM`
+onwards, and its common table expressions, as text.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.

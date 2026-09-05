@@ -14,8 +14,9 @@ mod Round.Laps {
 
     pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
         forM(
-            rows    <- Db.fetch(Schema.selectRound(entry#season, entry#id));
-            lapRows <- Result.traverse(LapRow.fromRow, rows);
+            lapRows <- LapRow.selection() |> Sql.selectAll(
+                "FROM laps WHERE " + Schema.scope(entry#season, entry#id) + " ORDER BY source_row"
+            );
             rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
         ) yield rawLaps
 
