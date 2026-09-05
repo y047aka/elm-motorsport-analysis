@@ -110,12 +110,11 @@ mod Sql.TestSel {
     /// binding values of its own binds them first.
     @Test
     def theClausesValuesComeBeforeTheRests(): Unit \ Assert =
-        let sel = Sql.optionalIntOf(Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil));
-        let statement = Sql.statement(
-            Sql.raw(""),
-            Sql.frag("FROM laps WHERE season = ?", Value.Integer(2025) :: Nil),
-            sel
-        );
+        let statement = Sql.rows(Sql.raw("laps"))
+            |> Sql.filter(Sql.eq(Sql.column("season"), Sql.i32(2025)))
+            |> Sql.map(Sql.optionalIntOf(
+                Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil)))
+            |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
             "SELECT (SELECT off FROM b WHERE k = ?) FROM laps WHERE season = ?",
             Value.Integer(7) :: Value.Integer(2025) :: Nil

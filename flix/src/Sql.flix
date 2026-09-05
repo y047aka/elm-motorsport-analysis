@@ -36,9 +36,6 @@ mod Sql {
             case Nil       => Err("the row ended before `${text}`")
         })
 
-    pub def optionalText(expr: String): Sel[Option[String]] =
-        cell(raw(expr), (_, c) -> Ok(c))
-
     pub def text(expr: String): Sel[String] =
         cell(raw(expr), (name, c) -> c |> Option.toOk("column `${name}` was null"))
 
@@ -53,7 +50,11 @@ mod Sql {
         })
 
     pub def int(expr: String): Sel[Int32] =
-        cell(raw(expr), (name, c) -> forM(
+        intOf(raw(expr))
+
+    /// As `int`, where the expression is one a query built.
+    pub def intOf(expr: Frag): Sel[Int32] =
+        cell(expr, (name, c) -> forM(
             cell  <- c |> Option.toOk("column `${name}` was null");
             value <- parseInt(name, cell)
         ) yield value)
@@ -105,12 +106,6 @@ mod Sql {
     pub def pipeline(sel: Sel[a], selFn: Sel[a -> b]): Sel[b] =
         map2((f, value) -> f(value), selFn, sel)
 
-    pub def map(transform: a -> b, sel: Sel[a]): Sel[b] =
-        let Sel.Sel(columns, decodeCells) = sel;
-        Sel.Sel(columns, cells ->
-            decodeCells(cells) |> Result.map(match (value, rest) -> (transform(value), rest))
-        )
-
     pub def map2(transform: (a, b) -> c, selA: Sel[a], selB: Sel[b]): Sel[c] =
         let Sel.Sel(columnsA, decodeA) = selA;
         let Sel.Sel(columnsB, decodeB) = selB;
@@ -145,32 +140,102 @@ mod Sql {
                 Err("the row carries ${List.length(rest)} more columns than the projection reads")
         )
 
-    /// `rest` is the query from `FROM` onwards. The projection comes last, so
-    /// a query ends in the runner that says whether it reads one row or all
-    /// of them.
-    pub def selectAll(rest: Frag, sel: Sel[a]): Result[String, List[a]] \ Db =
-        selectAllWith(raw(""), rest, sel)
+    /// The rows a query reads, before it says what to read of them.
+    pub enum Rows {
+        case Rows({
+            ctes = Frag,
+            source = Frag,
+            filters = List[Expr[Bool]],
+            grouped = List[Frag],
+            ordered = List[Frag],
+            limited = Option[Int32]
+        })
+    }
 
-    /// As `selectAll`, where common table expressions precede the SELECT.
-    pub def selectAllWith(ctes: Frag, rest: Frag, sel: Sel[a]): Result[String, List[a]] \ Db =
-        let Frag.Frag(sql, params) = statement(ctes, rest, sel);
-        Db.fetch(sql, params)
-            |> Result.flatMap(Result.traverse(row -> decode(sel, row)))
+    /// Rows and the reading of one.
+    pub enum Query[a] {
+        case Query(Rows, Sel[a])
+    }
+
+    /// `source` is what follows `FROM`: a table, a derived table, or tables
+    /// joined. It is not read as anything in particular, so what a reading of
+    /// it names is the caller's word.
+    pub def rows(source: Frag): Rows =
+        Rows.Rows({
+            ctes = raw(""),
+            source = source,
+            filters = Nil,
+            grouped = Nil,
+            ordered = Nil,
+            limited = None
+        })
+
+    /// The common table expressions the source is read through, `ctes`
+    /// carrying its own `WITH`.
+    pub def using(ctes: Frag, rows: Rows): Rows =
+        let Rows.Rows(r) = rows;
+        Rows.Rows({ ctes = ctes | r })
+
+    /// What is asked of the rows. Asked twice, both hold.
+    pub def filter(predicate: Expr[Bool], rows: Rows): Rows =
+        let Rows.Rows(r) = rows;
+        Rows.Rows({ filters = List.append(r#filters, predicate :: Nil) | r })
+
+    pub def groupBy(terms: List[Frag], rows: Rows): Rows =
+        let Rows.Rows(r) = rows;
+        Rows.Rows({ grouped = List.append(r#grouped, terms) | r })
+
+    pub def orderBy(terms: List[Frag], rows: Rows): Rows =
+        let Rows.Rows(r) = rows;
+        Rows.Rows({ ordered = List.append(r#ordered, terms) | r })
+
+    pub def limit(count: Int32, rows: Rows): Rows =
+        let Rows.Rows(r) = rows;
+        Rows.Rows({ limited = Some(count) | r })
+
+    /// What to read of each row.
+    pub def map(sel: Sel[a], rows: Rows): Query[a] =
+        Query.Query(rows, sel)
+
+    /// What the query is, which is settled without a database.
+    pub def toStatement(q: Query[a]): Frag =
+        let Query.Query(Rows.Rows(r), sel) = q;
+        frags(
+            r#ctes ::
+            clause(sel) ::
+            raw("FROM") ::
+            r#source ::
+            keyword("WHERE", " AND ", r#filters |> List.map(term)) ::
+            keyword("GROUP BY", ", ", r#grouped) ::
+            keyword("ORDER BY", ", ", r#ordered) ::
+            (match r#limited {
+                case Some(n) => raw("LIMIT ${n}")
+                case None    => raw("")
+            }) :: Nil
+        )
+
+    /// A clause is left out rather than written empty, since `GROUP BY` with
+    /// nothing after it is not a query.
+    def keyword(word: String, separator: String, terms: List[Frag]): Frag =
+        if (List.isEmpty(terms))
+            raw("")
+        else
+            frags(raw(word) :: joinFrags(separator, terms) :: Nil)
+
+    pub def selectAll(q: Query[a]): Result[String, List[a]] \ Db =
+        let Query.Query(_, sel) = q;
+        let Frag.Frag(sql, params) = toStatement(q);
+        Db.fetch(sql, params) |> Result.flatMap(Result.traverse(row -> decode(sel, row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
-    pub def selectOne(subject: String, rest: Frag, sel: Sel[a]): Result[String, a] \ Db =
-        selectOneWith(subject, raw(""), rest, sel)
-
-    pub def selectOneWith(subject: String, ctes: Frag, rest: Frag, sel: Sel[a]): Result[String, a] \ Db =
-        let Frag.Frag(sql, params) = statement(ctes, rest, sel);
+    pub def selectOne(subject: String, q: Query[a]): Result[String, a] \ Db =
+        let Query.Query(_, sel) = q;
+        let Frag.Frag(sql, params) = toStatement(q);
         Db.fetch(sql, params) |> Result.flatMap(rows -> match rows {
             case row :: _ => decode(sel, row)
             case Nil      => Err("${subject} came back with no row")
         })
-
-    pub def statement(ctes: Frag, rest: Frag, sel: Sel[a]): Frag =
-        frags(ctes :: clause(sel) :: rest :: Nil)
 
     ///
     /// ===== FRAGMENTS =====
@@ -190,7 +255,7 @@ mod Sql {
 
     /// A piece contributing no text still contributes its values: only the
     /// text is dropped, so that a separator does not fall either side of it.
-    pub def joinFrags(separator: String, pieces: List[Frag]): Frag =
+    def joinFrags(separator: String, pieces: List[Frag]): Frag =
         let sql = pieces
             |> List.map(piece -> { let Frag.Frag(text, _) = piece; text })
             |> List.filter(text -> not String.isEmpty(text))
@@ -214,8 +279,9 @@ mod Sql {
         case Expr(Frag)
     }
 
-    /// An expression named rather than drawn from a column, for the columns a
-    /// common table expression makes up. Its type is the caller's word.
+    /// An expression named rather than drawn from a column -- what a common
+    /// table expression makes up, and what no combinator here builds. Its type
+    /// is the caller's word.
     pub def column(name: String): Expr[a] =
         Expr.Expr(raw(name))
 
@@ -227,6 +293,7 @@ mod Sql {
 
     pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
     pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
+    pub def lte(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<=", left, right)
     pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
 
     /// The predicates, ANDed. None of them is `1 = 1`, which is what a query
@@ -234,18 +301,18 @@ mod Sql {
     pub def every(predicates: List[Expr[Bool]]): Expr[Bool] =
         match predicates {
             case Nil => Expr.Expr(raw("1 = 1"))
-            case _   => Expr.Expr(joinFrags(" AND ", predicates |> List.map(predicate)))
+            case _   => Expr.Expr(joinFrags(" AND ", predicates |> List.map(term)))
         }
 
-    pub def predicate(expr: Expr[a]): Frag =
+    pub def term(expr: Expr[a]): Frag =
         let Expr.Expr(fragment) = expr;
         fragment
 
     def binary(operator: String, left: Expr[a], right: Expr[a]): Expr[Bool] =
-        Expr.Expr(frags(predicate(left) :: raw(operator) :: predicate(right) :: Nil))
+        Expr.Expr(frags(term(left) :: raw(operator) :: term(right) :: Nil))
 
     def postfix(operator: String, expr: Expr[a]): Expr[Bool] =
-        Expr.Expr(frags(predicate(expr) :: raw(operator) :: Nil))
+        Expr.Expr(frags(term(expr) :: raw(operator) :: Nil))
 
     ///
     /// ===== TAGGED BRANCHES =====
@@ -299,7 +366,7 @@ mod Sql {
             case Branch.Many(many, sql) =>
                 frags(
                     raw("SELECT ${base} +") ::
-                    predicate(many#number) ::
+                    term(many#number) ::
                     raw("AS ${label},") ::
                     sql :: Nil
                 )

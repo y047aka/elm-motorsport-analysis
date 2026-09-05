@@ -2,6 +2,7 @@
 mod Round.Laps {
 
     use Db.LapRow
+    use Db.Laps.Columns
     use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
@@ -9,21 +10,22 @@ mod Round.Laps {
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
     pub def loaded(entry: Entry): Result[String, Bool] \ Db =
-        Sql.int("1")
-            |> Sql.selectAll(Sql.frags(
-                Sql.raw("FROM laps WHERE") :: scope(entry) :: Sql.raw("LIMIT 1") :: Nil
-            ))
-            |> Result.map(rows -> not List.isEmpty(rows))
+        laps(entry)
+            |> Sql.limit(1)
+            |> Sql.map(Sql.int("1"))
+            |> Sql.selectAll
+            |> Result.map(found -> not List.isEmpty(found))
 
     pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
         forM(
-            lapRows <- LapRow.selection() |> Sql.selectAll(Sql.frags(
-                Sql.raw("FROM laps WHERE") :: scope(entry) :: Sql.raw("ORDER BY source_row") :: Nil
-            ));
+            lapRows <- laps(entry)
+                |> Sql.orderBy(Columns.term(Columns.sourceRow()) :: Nil)
+                |> Sql.map(LapRow.selection())
+                |> Sql.selectAll;
             rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
         ) yield rawLaps
 
-    def scope(entry: Entry): Sql.Frag =
-        Sql.predicate(Schema.scope(entry#season, entry#id))
+    def laps(entry: Entry): Sql.Rows =
+        Sql.rows(Sql.raw("laps")) |> Sql.filter(Schema.scope(entry#season, entry#id))
 
 }

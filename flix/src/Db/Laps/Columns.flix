@@ -34,6 +34,11 @@ mod Db.Laps.Columns {
         let Column.Column(c) = column;
         Sql.column(c#name)
 
+    /// The column as a term a query groups or orders by, where its type says
+    /// nothing.
+    pub def term(column: Column[a]): Sql.Frag =
+        Sql.term(expr(column))
+
     // ---------------------------------------------------------- the columns
 
     pub def season(): Column[Int32] = integer("season", r -> r#season)

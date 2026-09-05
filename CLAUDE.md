@@ -373,8 +373,21 @@ it picks, handing back a reading of that number as the thing the arm was about.
 each and one arm of fifteen, and neither the arms nor the reading names a
 number.
 
-What none of these cover is the shape of the query around them: a caller still
-writes its `FROM` onwards, and its common table expressions, as text.
+A query is built rather than written: `Sql.rows` names what follows `FROM`, and
+`filter`, `groupBy`, `orderBy`, `limit` and `using` add to it in any order,
+`map` says what to read of a row and `selectAll` or `selectOne` runs it -- the
+shape Acadia's own queries have. The clauses come out in the order SQL wants
+them rather than the order they were asked for, a clause with nothing to say is
+left out, and `filter` asked twice asks both. `Sql.toStatement` is pure, so what
+a query is can be read back without a database.
+
+What the query does not reach is its source. There is no typed table for
+`Sql.rows` to take, so a derived table, a join or a `json_each` is named as
+text, and a column of one is `Sql.column`. `Round.Summary.carBuilds` is the
+case that would want a typed join, its `LEFT JOIN` lifting the right side's
+columns to `Option`, which needs a columns record per source that Flix will not
+give us generically. The window clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`,
+`WINDOW w AS` -- are text for the same reason.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.

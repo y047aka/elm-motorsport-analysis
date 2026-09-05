@@ -28,23 +28,26 @@ mod Round.Index {
     def scope(entry: Entry): Sql.Expr[Bool] =
         Schema.scope(entry#season, entry#id)
 
-    /// The round's rows, and whatever else is asked of them.
+    /// The round's rows as a fragment, for the arms that read them from
+    /// inside one of their own.
     def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.predicate(Sql.every(scope(entry) :: predicates))
+        Sql.term(Sql.every(scope(entry) :: predicates))
 
     // ------------------------------------------------------- lap completions
 
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
-        Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
-            |> Sql.pipeline(Sql.int("lap_number"))
-            |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
-            |> Sql.selectAll(Sql.frags(
-                Sql.raw("FROM laps WHERE") ::
-                where_(entry, Nil) ::
-                Sql.raw("GROUP BY lap_number ORDER BY lap_number") :: Nil
-            ))
+        Sql.rows(Sql.raw("laps"))
+            |> Sql.filter(scope(entry))
+            |> Sql.groupBy(Columns.term(Columns.lapNumber()) :: Nil)
+            |> Sql.orderBy(Columns.term(Columns.lapNumber()) :: Nil)
+            |> Sql.map(
+                Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
+                    |> Sql.pipeline(Sql.int("lap_number"))
+                    |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
+            )
+            |> Sql.selectAll
 
     // ----------------------------------------------------------- best times
 
@@ -60,12 +63,12 @@ mod Round.Index {
 
     def bestTimes(entry: Entry): Result[String, List[(Record, Change)]] \ Db =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
-        change(record)
-            |> Sql.selectAllWith(
-                Sql.frags(Sql.raw("WITH v AS (") :: readings :: Sql.raw(")") :: Nil),
-                Sql.raw("FROM (" + standing() + ") WHERE prev IS NULL OR t * dir < prev"
-                    + " ORDER BY k, elapsed_ms, source_row")
-            )
+        Sql.rows(Sql.raw("(" + standing() + ")"))
+            |> Sql.using(Sql.frags(Sql.raw("WITH v AS (") :: readings :: Sql.raw(")") :: Nil))
+            |> Sql.filter(Sql.column("prev IS NULL OR t * dir < prev"))
+            |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
+            |> Sql.map(change(record))
+            |> Sql.selectAll
 
     def change(record: Sel[Record]): Sel[(Record, Change)] =
         Sql.intoRow(rec -> elapsed -> time -> carNumber -> lap -> driver -> (rec, {
