@@ -146,9 +146,7 @@ mod Db.TestLapRow {
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
 
-    /// The cells a `SELECT` of `Db.Schema.columns` comes back as, so a
-    /// column read at the wrong index is a wrong field here rather than a
-    /// wrong lap in an answer.
+    /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
         Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
         Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
@@ -175,6 +173,14 @@ mod Db.TestLapRow {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
+
+    /// `Db.Laps.Columns.all` and `selection` are two ordered lists of the same
+    /// columns, and no compiler sees them together.
+    @Test
+    def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
+        Assert.assertTrue(
+            Sql.clause(LapRow.selection()) == "SELECT " + List.join(", ", Db.Schema.columns())
+        )
 
     /// What the reading gives back is what the writing was handed.
     @Test

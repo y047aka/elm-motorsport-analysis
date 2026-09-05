@@ -7,6 +7,7 @@ mod Db.LapRow {
     use Motorsport.Wec.RawSector
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
+    use Db.Laps.Columns
     use Sql.Sel
     use Util.Duration
     use Util.HourClock
@@ -117,38 +118,8 @@ mod Db.LapRow {
             case None    => "null"
         }) |> List.join(",")) + "]"
 
-    /// In the order `Db.Schema.columns` names them.
     pub def values(row: LapRow): List[Value] =
-        Value.Integer(row#season) ::
-        Value.Text(row#round) ::
-        Value.Integer(row#sourceRow) ::
-        Value.Text(row#carNumber) ::
-        Value.Text(row#class) ::
-        Value.Text(row#carGroup) ::
-        Value.Text(row#team) ::
-        Value.Text(row#manufacturer) ::
-        Value.Integer(row#driverNumber) ::
-        Value.Text(row#driverName) ::
-        Value.Integer(row#lapNumber) ::
-        Value.Integer(row#lapTimeMs) ::
-        Value.Integer(row#lapImprovement) ::
-        Value.Boolean(row#crossingFinishLineInPit) ::
-        Value.NullableInteger(row#s1Ms) ::
-        Value.Integer(row#s1Improvement) ::
-        Value.NullableInteger(row#s2Ms) ::
-        Value.Integer(row#s2Improvement) ::
-        Value.NullableInteger(row#s3Ms) ::
-        Value.Integer(row#s3Improvement) ::
-        Value.Text(row#kph) ::
-        Value.Integer(row#elapsedMs) ::
-        Value.Integer(row#hourMs) ::
-        Value.Text(row#topSpeed) ::
-        Value.NullableInteger(row#pitTimeMs) ::
-        Value.Text(row#flagAtFl) ::
-        Value.NullableIntArray(row#miniSectorTimeMs) ::
-        Value.NullableIntArray(row#miniSectorElapsedMs) ::
-        Nil
-
+        Columns.all() |> List.map(c -> (c#bind)(row))
 
     /// A round's laps as the table holds them, naming the columns
     /// `Db.Schema.columns` names and in that order.
@@ -164,34 +135,34 @@ mod Db.LapRow {
             hourMs = hourMs, topSpeed = topSpeed, pitTimeMs = pitTimeMs, flagAtFl = flagAtFl,
             miniSectorTimeMs = times, miniSectorElapsedMs = elapsed
         })
-            |> Sql.pipeline(Sql.int("season"))
-            |> Sql.pipeline(Sql.text("round"))
-            |> Sql.pipeline(Sql.int("source_row"))
-            |> Sql.pipeline(Sql.text("car_number"))
-            |> Sql.pipeline(Sql.text("class"))
-            |> Sql.pipeline(Sql.text("car_group"))
-            |> Sql.pipeline(Sql.text("team"))
-            |> Sql.pipeline(Sql.text("manufacturer"))
-            |> Sql.pipeline(Sql.int("driver_number"))
-            |> Sql.pipeline(Sql.text("driver_name"))
-            |> Sql.pipeline(Sql.int("lap_number"))
-            |> Sql.pipeline(Sql.int("lap_time_ms"))
-            |> Sql.pipeline(Sql.int("lap_improvement"))
-            |> Sql.pipeline(Sql.bool("crossing_finish_line_in_pit"))
-            |> Sql.pipeline(Sql.optionalInt("s1_ms"))
-            |> Sql.pipeline(Sql.int("s1_improvement"))
-            |> Sql.pipeline(Sql.optionalInt("s2_ms"))
-            |> Sql.pipeline(Sql.int("s2_improvement"))
-            |> Sql.pipeline(Sql.optionalInt("s3_ms"))
-            |> Sql.pipeline(Sql.int("s3_improvement"))
-            |> Sql.pipeline(Sql.text("kph"))
-            |> Sql.pipeline(Sql.int("elapsed_ms"))
-            |> Sql.pipeline(Sql.int("hour_ms"))
-            |> Sql.pipeline(Sql.text("top_speed"))
-            |> Sql.pipeline(Sql.optionalInt("pit_time_ms"))
-            |> Sql.pipeline(Sql.text("flag_at_fl"))
-            |> Sql.pipeline(Sql.optionalIntArray("mini_sector_time_ms"))
-            |> Sql.pipeline(Sql.optionalIntArray("mini_sector_elapsed_ms"))
+            |> Sql.pipeline(Columns.read(Columns.season()))
+            |> Sql.pipeline(Columns.read(Columns.round()))
+            |> Sql.pipeline(Columns.read(Columns.sourceRow()))
+            |> Sql.pipeline(Columns.read(Columns.carNumber()))
+            |> Sql.pipeline(Columns.read(Columns.carClass()))
+            |> Sql.pipeline(Columns.read(Columns.carGroup()))
+            |> Sql.pipeline(Columns.read(Columns.team()))
+            |> Sql.pipeline(Columns.read(Columns.manufacturer()))
+            |> Sql.pipeline(Columns.read(Columns.driverNumber()))
+            |> Sql.pipeline(Columns.read(Columns.driverName()))
+            |> Sql.pipeline(Columns.read(Columns.lapNumber()))
+            |> Sql.pipeline(Columns.read(Columns.lapTimeMs()))
+            |> Sql.pipeline(Columns.read(Columns.lapImprovement()))
+            |> Sql.pipeline(Columns.read(Columns.crossingFinishLineInPit()))
+            |> Sql.pipeline(Columns.read(Columns.s1Ms()))
+            |> Sql.pipeline(Columns.read(Columns.s1Improvement()))
+            |> Sql.pipeline(Columns.read(Columns.s2Ms()))
+            |> Sql.pipeline(Columns.read(Columns.s2Improvement()))
+            |> Sql.pipeline(Columns.read(Columns.s3Ms()))
+            |> Sql.pipeline(Columns.read(Columns.s3Improvement()))
+            |> Sql.pipeline(Columns.read(Columns.kph()))
+            |> Sql.pipeline(Columns.read(Columns.elapsedMs()))
+            |> Sql.pipeline(Columns.read(Columns.hourMs()))
+            |> Sql.pipeline(Columns.read(Columns.topSpeed()))
+            |> Sql.pipeline(Columns.read(Columns.pitTimeMs()))
+            |> Sql.pipeline(Columns.read(Columns.flagAtFl()))
+            |> Sql.pipeline(Columns.read(Columns.miniSectorTimeMs()))
+            |> Sql.pipeline(Columns.read(Columns.miniSectorElapsedMs()))
 
     pub def toRawLap(row: LapRow): Result[String, RawLap] =
         forM(

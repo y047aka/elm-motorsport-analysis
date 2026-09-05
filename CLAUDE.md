@@ -339,8 +339,12 @@ first showed them.
 `Db` is an effect, not a module of functions, so that what a round would
 send can be read back without a server: `Db.runRecording` keeps the statements
 and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
-only file that imports `java.sql`. `Db.Schema.columns` and `Db.LapRow.values`
-are two lists no compiler sees together, which is what `Db.TestSchema` is for.
+only file that imports `java.sql`. `Db.Laps.Columns` declares each column of
+the table once -- its name, the type it takes there, how a row binds it and how
+it reads back -- and `Db.Schema`'s DDL, that schema's insert and
+`Db.LapRow.values` are all views of that one list. What it does not reach is the
+ordering: `Columns.all` and `Db.LapRow.selection` name the same columns twice,
+which is the one pairing no compiler sees and `Db.TestLapRow` asserts.
 
 Every one of those readers builds its SELECT with `Sql`, the repository's own
 query builder. A `Sql.Sel` is one projection and the reading of it held in the
