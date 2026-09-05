@@ -1,13 +1,14 @@
 mod Db.Schema {
 
     use Db.Laps.Columns
-    use Db.Value
-    use Sql.Frag
 
     /// The rows of one round: every reading of the table is of a single round,
     /// and the pair is what names one.
-    pub def scope(season: Int32, round: String): Frag =
-        Sql.frag("season = ? AND round = ?", Value.Integer(season) :: Value.Text(round) :: Nil)
+    pub def scope(season: Int32, round: String): Sql.Expr[Bool] =
+        Sql.every(
+            Sql.eq(Columns.expr(Columns.season()), Sql.i32(season)) ::
+            Sql.eq(Columns.expr(Columns.round()), Sql.str(round)) :: Nil
+        )
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
     /// and which is therefore where the round's start time is written.

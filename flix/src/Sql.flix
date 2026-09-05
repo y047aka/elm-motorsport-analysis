@@ -184,12 +184,6 @@ mod Sql {
     pub def frag(sql: String, params: List[Value]): Frag =
         Frag.Frag(sql, params)
 
-    pub def i32(value: Int32): Frag =
-        Frag.Frag("?", Value.Integer(value) :: Nil)
-
-    pub def str(value: String): Frag =
-        Frag.Frag("?", Value.Text(value) :: Nil)
-
     /// The pieces in order, separated by a space where both sides have one.
     pub def frags(pieces: List[Frag]): Frag =
         joinFrags(" ", pieces)
@@ -207,5 +201,50 @@ mod Sql {
     pub def toSql(fragment: Frag): (String, List[Value]) =
         let Frag.Frag(sql, params) = fragment;
         (sql, params)
+
+    ///
+    /// ===== EXPRESSIONS =====
+    ///
+
+    /// A typed expression. The type is the one the SQL value has, carried so
+    /// that a comparison against a value of another type does not compile, and
+    /// so that `IS NULL` can be asked only of a column that takes one. What is
+    /// rendered is the fragment.
+    pub enum Expr[_a] {
+        case Expr(Frag)
+    }
+
+    /// An expression named rather than drawn from a column, for the columns a
+    /// common table expression makes up. Its type is the caller's word.
+    pub def column(name: String): Expr[a] =
+        Expr.Expr(raw(name))
+
+    pub def i32(value: Int32): Expr[Int32] =
+        Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
+
+    pub def str(value: String): Expr[String] =
+        Expr.Expr(Frag.Frag("?", Value.Text(value) :: Nil))
+
+    pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
+    pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
+    pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
+
+    /// The predicates, ANDed. None of them is `1 = 1`, which is what a query
+    /// with nothing to say about its rows would otherwise carry.
+    pub def every(predicates: List[Expr[Bool]]): Expr[Bool] =
+        match predicates {
+            case Nil => Expr.Expr(raw("1 = 1"))
+            case _   => Expr.Expr(joinFrags(" AND ", predicates |> List.map(predicate)))
+        }
+
+    pub def predicate(expr: Expr[a]): Frag =
+        let Expr.Expr(fragment) = expr;
+        fragment
+
+    def binary(operator: String, left: Expr[a], right: Expr[a]): Expr[Bool] =
+        Expr.Expr(frags(predicate(left) :: raw(operator) :: predicate(right) :: Nil))
+
+    def postfix(operator: String, expr: Expr[a]): Expr[Bool] =
+        Expr.Expr(frags(predicate(expr) :: raw(operator) :: Nil))
 
 }

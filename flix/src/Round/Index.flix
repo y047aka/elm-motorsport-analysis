@@ -5,6 +5,7 @@
 /// record is stays in `Motorsport.Index`.
 mod Round.Index {
 
+    use Db.Laps.Columns
     use Db.Schema
     use Sql.Sel
     use Motorsport.Calendar.Entry
@@ -24,8 +25,12 @@ mod Round.Index {
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
         }
 
-    def scope(entry: Entry): Sql.Frag =
+    def scope(entry: Entry): Sql.Expr[Bool] =
         Schema.scope(entry#season, entry#id)
+
+    /// The round's rows, and whatever else is asked of them.
+    def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
+        Sql.predicate(Sql.every(scope(entry) :: predicates))
 
     // ------------------------------------------------------- lap completions
 
@@ -37,7 +42,7 @@ mod Round.Index {
             |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
             |> Sql.selectAll(Sql.frags(
                 Sql.raw("FROM laps WHERE") ::
-                scope(entry) ::
+                where_(entry, Nil) ::
                 Sql.raw("GROUP BY lap_number ORDER BY lap_number") :: Nil
             ))
 
@@ -122,7 +127,7 @@ mod Round.Index {
             Sql.raw("SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
                 + " ${label} AS k, ${direction} AS dir, ${expression} AS t"
                 + " FROM laps WHERE") ::
-            scope(entry) :: Nil
+            where_(entry, Nil) :: Nil
         )
 
     def miniSectorReadings(entry: Entry): Sql.Frag =
@@ -131,8 +136,7 @@ mod Round.Index {
                 + " ${miniSectorBase()} + m.key, 1, m.value"
                 + " FROM laps, json_each(laps.mini_sector_time_ms) m"
                 + " WHERE") ::
-            scope(entry) ::
-            Sql.raw("AND lap_time_ms <> 0") :: Nil
+            where_(entry, Sql.ne(Columns.expr(Columns.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil
         )
 
 }

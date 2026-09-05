@@ -24,6 +24,6 @@ mod Round.Laps {
         ) yield rawLaps
 
     def scope(entry: Entry): Sql.Frag =
-        Schema.scope(entry#season, entry#id)
+        Sql.predicate(Schema.scope(entry#season, entry#id))
 
 }

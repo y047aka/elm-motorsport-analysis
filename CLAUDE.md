@@ -355,11 +355,20 @@ readings rather than written beside them, and a column is named once.
 A value a query compares against is bound rather than written into it: a
 `Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
 concatenating two pieces carries both, so a value cannot come to sit under
-another piece's placeholder. `Db.Schema.scope` is the one fragment the readers
-share, and it is where the season and the round's name are bound. What the
-`Sel` and the `Frag` do not cover is the shape of the query around them: a
-caller still writes its `FROM` onwards, and its common table expressions, as
-text.
+another piece's placeholder.
+
+What a query asks of its rows is a `Sql.Expr[Bool]`, built by comparing a
+`Db.Laps.Columns` column against a value of the type that column takes.
+`Db.Schema.scope` -- the pair naming a round, which every reading of the table
+is scoped by -- is one, and each reader ANDs its own onto it. The type is what
+carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
+asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
+column list already knows and no longer a thing to notice. A column a common
+table expression made up is `Sql.column`, named rather than drawn, and its type
+is the caller's word.
+
+What none of these cover is the shape of the query around them: a caller still
+writes its `FROM` onwards, and its common table expressions, as text.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.

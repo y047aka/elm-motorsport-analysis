@@ -29,6 +29,11 @@ mod Db.Laps.Columns {
         let Column.Column(c) = column;
         c#read
 
+    /// The column as a term of a comparison, in the type it takes.
+    pub def expr(column: Column[a]): Sql.Expr[a] =
+        let Column.Column(c) = column;
+        Sql.column(c#name)
+
     // ---------------------------------------------------------- the columns
 
     pub def season(): Column[Int32] = integer("season", r -> r#season)

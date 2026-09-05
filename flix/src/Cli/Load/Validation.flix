@@ -36,6 +36,7 @@
 ///     Le Mans 2025.
 mod Cli.Load.Validation {
 
+    use Db.Laps.Columns
     use Db.Schema
     use Sql.Sel
     use Motorsport.Calendar.Entry
@@ -95,9 +96,11 @@ mod Cli.Load.Validation {
             ))
             |> Sql.selectAll(Sql.frags(
                 Sql.raw("FROM laps WHERE") ::
-                scope(entry) ::
-                Sql.raw("AND COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0) <> lap_time_ms"
-                    + " ORDER BY source_row") :: Nil
+                where_(entry, Sql.ne(
+                    Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)"),
+                    Columns.expr(Columns.lapTimeMs())
+                ) :: Nil) ::
+                Sql.raw("ORDER BY source_row") :: Nil
             ))
 
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
@@ -112,7 +115,7 @@ mod Cli.Load.Validation {
                         + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
                         + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
                         + " FROM laps WHERE") ::
-                    scope(entry) ::
+                    where_(entry, Nil) ::
                     Sql.raw(")") :: Nil
                 ),
                 Sql.raw("FROM c WHERE running <> elapsed_ms ORDER BY first_seen, lap_number")
@@ -129,7 +132,7 @@ mod Cli.Load.Validation {
                         + Schema.hourOffset() + " AS off,"
                         + " FIRST_VALUE(" + Schema.hourOffset() + ") OVER (ORDER BY source_row) AS base"
                         + " FROM laps WHERE") ::
-                    scope(entry) ::
+                    where_(entry, Nil) ::
                     Sql.raw(")") :: Nil
                 ),
                 Sql.raw("FROM o WHERE off <> base ORDER BY source_row")
@@ -164,8 +167,8 @@ mod Cli.Load.Validation {
                         + "  FROM json_each(laps.mini_sector_time_ms) t"
                         + "  WHERE t.value IS NULL), '') AS blanks"
                         + " FROM laps WHERE") ::
-                    scope(entry) ::
-                    Sql.raw("AND mini_sector_time_ms IS NOT NULL)") :: Nil
+                    where_(entry, Sql.isNotNull(Columns.expr(Columns.miniSectorTimeMs())) :: Nil) ::
+                    Sql.raw(")") :: Nil
                 ),
                 Sql.raw("FROM m WHERE NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"
                     + " AND sum_ms <> lap_time_ms"
@@ -182,10 +185,10 @@ mod Cli.Load.Validation {
                         + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
                         + " FROM laps, json_each(laps.mini_sector_elapsed_ms) x"
                         + " WHERE") ::
-                    scope(entry) ::
-                    Sql.raw("AND mini_sector_elapsed_ms IS NOT NULL"
-                        + " AND x.value IS NOT NULL"
-                        + " WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
+                    where_(entry,
+                        Sql.isNotNull(Columns.expr(Columns.miniSectorElapsedMs())) ::
+                        Sql.isNotNull(Sql.column("x.value")) :: Nil) ::
+                    Sql.raw("WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
                 ),
                 Sql.raw("FROM e WHERE prev_v IS NOT NULL AND v <= prev_v ORDER BY source_row, ord")
             )
@@ -204,8 +207,12 @@ mod Cli.Load.Validation {
 
     // ------------------------------------------------------------------- sql
 
-    def scope(entry: Entry): Sql.Frag =
+    def scope(entry: Entry): Sql.Expr[Bool] =
         Schema.scope(entry#season, entry#id)
+
+    /// The round's rows, and whatever else the rule asks of them.
+    def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
+        Sql.predicate(Sql.every(scope(entry) :: predicates))
 
     /// Built from `Motorsport.MiniSector` rather than written out, so the
     /// signatures are named in one place and the positions follow track order.
