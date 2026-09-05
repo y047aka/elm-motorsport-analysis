@@ -477,6 +477,14 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **A clean build** — `flix build` and `flix test` are incremental, and CI is
   not: a compile that only fails from cold passes locally until `flix/build`
   is removed. `rm -rf flix/build` before believing a green run.
+- **The type checker's stack** — it recurses once per expression, and the
+  thread it runs on gets a smaller stack on Linux than on macOS, so a chain
+  deep enough compiles here and overflows in CI. `flix` is a jar, so the check
+  is to run it with the stack cut down: `java -Xss768k -jar <flix.jar> build`
+  from `flix/`. 768k is where the tree as it stands builds and 640k where it
+  does not, so a change that raises that number is the one to look at.
+  `Db.LapRow.selection` reads its twenty-eight columns in groups for this
+  reason and no other.
 - **The database** — a test drives JDBC rather than a handler standing in for
   it, against the in-memory database `Round.TestSupport.url` names: a
   connection of its own per test, so what one loads is never the archive a
