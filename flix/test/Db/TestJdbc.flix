@@ -121,22 +121,63 @@ mod Db.TestJdbc {
     /// Two connections at once, which an in-memory database cannot be: each
     /// connection to one is a database of its own.
     @Test
-    def aSecondConnectionReadsWhatTheFirstWrote(): Unit \ {Assert, IO} =
+    def aSecondConnectionReadsWhatTheFirstCommitted(): Unit \ {Assert, IO} =
+        let (path, written) = onFile(() -> Db.transact(() -> load()));
+        let readBack = counted(path);
+        Assert.assertTrue(written == Ok(1));
+        Assert.assertTrue(readBack == Ok((Some("1") :: Nil) :: Nil));
+        remove(path)
+
+    /// What a run that stopped partway left is what it started from: the
+    /// `DROP TABLE` a rebuild opens with is undone with the rows it did not
+    /// finish loading, so the table is not there to be read at all.
+    @Test
+    def whatWasNotCommittedIsNotThere(): Unit \ {Assert, IO} =
+        let (path, written) = onFile(() -> {
+            discard load();
+            Ok(())
+        });
+        Assert.assertTrue(written == Ok(()));
+        match counted(path) {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
+        };
+        remove(path)
+
+    /// A transaction that answers with an error takes back what it sent.
+    @Test
+    def aTransactionThatFailedTakesBackWhatItSent(): Unit \ {Assert, IO} =
+        let (path, written) = onFile(() -> Db.transact(refuse));
+        Assert.assertTrue(written == Err("the round was not what it should have been"));
+        match counted(path) {
+            case Ok(_)  => Assert.assertTrue(false)
+            case Err(_) => Assert.assertTrue(true)
+        };
+        remove(path)
+
+    /// A round loaded and then judged unfit, which is a transaction answering
+    /// with an error.
+    def refuse(): Result[String, Int32] \ Db =
+        match load() {
+            case Ok(_)  => Err("the round was not what it should have been")
+            case Err(e) => Err(e)
+        }
+
+    def load(): Result[String, Int32] \ Db =
         let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
-        let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
-        let (path, written) = onFile(() -> forM(
+        forM(
             _        <- Laps.create();
-            accepted <- Laps.insertRows(rows)
-        ) yield accepted);
-        let readBack = match Jdbc.connect("jdbc:sqlite:${path}") {
+            accepted <- Laps.insertRows(LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil))
+        ) yield accepted
+
+    /// From a connection of its own, so what it counts is what was committed.
+    def counted(path: String): Result[String, List[List[Option[String]]]] \ IO =
+        match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)
             case Ok(conn) =>
                 let value = Jdbc.runWith(conn, () -> Db.fetch("SELECT COUNT(*) FROM laps", Nil));
                 Jdbc.close(conn);
                 value
-        };
-        Assert.assertTrue(written == Ok(1));
-        Assert.assertTrue(readBack == Ok((Some("1") :: Nil) :: Nil));
-        remove(path)
+        }
 
 }

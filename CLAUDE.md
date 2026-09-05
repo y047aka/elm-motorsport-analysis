@@ -345,6 +345,21 @@ nothing of this application; `Db.Laps` and `Db.LapRow` are the whole of what
 the application tells them about itself, which is the same line Acadia draws
 between `Transaction`, `Rows` and a `Table`.
 
+Nothing a statement sends is kept until `Db.commit`, and `Db.transact` is where
+that is decided: it commits what its caller sent when the caller answers `Ok`
+and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the
+rebuild of the table is a single transaction -- the `DROP TABLE` it opens with
+lands only if the run reaches its end, and a run that is killed partway leaves
+the rounds it was rebuilding from. Measured on the archive: the same kill takes
+it from fourteen rounds to three without that boundary, and leaves all fourteen
+with it.
+
+A round the database refuses is still counted and reported rather than taking
+the run with it, so `Db.Jdbc`'s insert marks a savepoint and undoes its own
+batches against that: the rows go out a thousand at a time, and a refusal
+partway through has already sent some of them. A read commits nothing, and
+closing a connection rolls back the transaction it opened.
+
 `Db.Laps.columns` declares each column of
 the table once -- its name, the type it takes there, how a row binds it and how
 it reads back -- as one record, and `Db.Laps.all`, the DDL, the insert,

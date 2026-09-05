@@ -18,13 +18,21 @@ mod Cli.Load {
         errors    = Int32
     }
 
+    /// The table is dropped and rebuilt, so the run is one transaction: a run
+    /// that dies partway through leaves the rounds it was rebuilding from.
+    /// A round the database refused is reported and counted, and the rounds
+    /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, Db} =
-        match Laps.create() {
+        let rebuild = Db.transact(() -> match Laps.create() {
+            case Err(e) => Err(e)
+            case Ok(()) => Ok(convertRounds(root))
+        });
+        match rebuild {
             case Err(e) =>
                 Console.eprintln("Database: ${e}");
                 1
-            case Ok(()) =>
-                convertRounds(root)
+            case Ok(code) =>
+                code
         }
 
     /// The calendar is the worklist, so a run converts the rounds it holds and

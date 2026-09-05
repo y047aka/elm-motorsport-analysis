@@ -66,5 +66,30 @@ mod Db.TestDb {
             case _ => Assert.assertTrue(false)
         }
 
+    /// What the statements before it are kept by.
+    @Test
+    def aTransactionThatAnsweredCommitsAfterWhatItSent(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() ->
+            Db.transact(() -> Laps.insertRows(sampleRows())));
+        Assert.assertTrue(result == Ok(2));
+        match statements {
+            case Statement.InsertMany(_, _) :: Statement.Commit :: Nil => Assert.assertTrue(true)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// The error is the one the caller answered with, not the rollback's.
+    @Test
+    def aTransactionThatFailedRollsBackAndKeepsItsError(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() ->
+            Db.transact(() -> {
+                discard Laps.insertRows(sampleRows());
+                (Err("the round was not what it should have been"): Result[String, Int32])
+            }));
+        Assert.assertTrue(result == Err("the round was not what it should have been"));
+        match statements {
+            case Statement.InsertMany(_, _) :: Statement.Rollback :: Nil => Assert.assertTrue(true)
+            case _ => Assert.assertTrue(false)
+        }
+
 
 }
