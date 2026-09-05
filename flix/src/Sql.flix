@@ -1,17 +1,25 @@
-/// Building a SELECT out of the readings it is made of.
+/// Building the SQL this repository sends, out of the pieces it is made of.
 ///
-/// A `Sel` is one projection and the decoder that reads it back, held in the
-/// same value: the expressions that go into the SELECT clause and the reading
-/// of the cells they come back as cannot be added to singly. What a query
-/// projects is written as a `Project` -- a reading, or a tuple of them -- so
-/// the clause and the value it comes back as are the same value read twice.
+/// A `Frag` is a piece of a statement and the values its `?` placeholders bind.
+/// An `Expr` is one of those with the type its SQL value has. A `Sel` is one
+/// projection and the reading of the cells it comes back as held in the same
+/// value, so a clause is rendered from the readings rather than written beside
+/// them, and a column is named once.
 ///
-/// Unlike that decoder, this one stops at the first cell it cannot read: a
-/// reading consumes the cells before it, so past a failure there is no longer a
-/// position to report the next problem at.
+/// What a query projects is a `Project` -- a reading, a tuple of them, or
+/// whatever else is given an instance, as `Db.Laps` gives its columns one -- so
+/// the clause and the value that comes back are the one expression read twice.
+///
+/// A reading stops at the first cell it cannot read: it consumes the cells
+/// before it, so past a failure there is no longer a position to report the
+/// next problem at.
 mod Sql {
 
     use Db.Value
+
+    ///
+    /// ===== FRAGMENTS =====
+    ///
 
     /// A piece of a query and the values its `?` placeholders bind, kept
     /// together so that concatenating two pieces cannot put a value under the
@@ -20,15 +28,89 @@ mod Sql {
         case Frag(String, List[Value])
     }
 
+    /// A piece of a query binding nothing.
+    pub def raw(sql: String): Frag =
+        Frag.Frag(sql, Nil)
+
+    /// A piece of a query whose `?` placeholders bind `params`, left to right.
+    pub def frag(sql: String, params: List[Value]): Frag =
+        Frag.Frag(sql, params)
+
+    /// The pieces in order, separated by a space where both sides have one.
+    pub def frags(pieces: List[Frag]): Frag =
+        joinFrags(" ", pieces)
+
+    /// A piece contributing no text still contributes its values: only the
+    /// text is dropped, so that a separator does not fall either side of it.
+    def joinFrags(separator: String, pieces: List[Frag]): Frag =
+        let sql = pieces
+            |> List.map(piece -> { let Frag.Frag(text, _) = piece; text })
+            |> List.filter(text -> not String.isEmpty(text))
+            |> List.join(separator);
+        let params = pieces |> List.flatMap(piece -> { let Frag.Frag(_, values) = piece; values });
+        Frag.Frag(sql, params)
+
+    pub def toSql(fragment: Frag): (String, List[Value]) =
+        let Frag.Frag(sql, params) = fragment;
+        (sql, params)
+
+    ///
+    /// ===== EXPRESSIONS =====
+    ///
+
+    /// A typed expression. The type is the one the SQL value has, carried so
+    /// that a comparison against a value of another type does not compile, and
+    /// so that `IS NULL` can be asked only of a column that takes one. What is
+    /// rendered is the fragment.
+    pub enum Expr[_a] {
+        case Expr(Frag)
+    }
+
+    /// An expression named rather than drawn from a column -- what a common
+    /// table expression makes up, and what no combinator here builds. Its type
+    /// is the caller's word.
+    pub def column(name: String): Expr[a] =
+        Expr.Expr(raw(name))
+
+    pub def i32(value: Int32): Expr[Int32] =
+        Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
+
+    pub def str(value: String): Expr[String] =
+        Expr.Expr(Frag.Frag("?", Value.Text(value) :: Nil))
+
+    pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
+    pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
+    pub def lte(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<=", left, right)
+    pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
+
+    /// The predicates, ANDed. Nothing asked is `1 = 1` rather than an empty
+    /// fragment: this goes where a predicate is expected, and a caller ANDing
+    /// its own onto it would otherwise be left with `AND` beside nothing.
+    pub def every(predicates: List[Expr[Bool]]): Expr[Bool] =
+        match predicates {
+            case Nil => Expr.Expr(raw("1 = 1"))
+            case _   => Expr.Expr(joinFrags(" AND ", predicates |> List.map(term)))
+        }
+
+    pub def term(expr: Expr[a]): Frag =
+        let Expr.Expr(fragment) = expr;
+        fragment
+
+    def binary(operator: String, left: Expr[a], right: Expr[a]): Expr[Bool] =
+        Expr.Expr(frags(term(left) :: raw(operator) :: term(right) :: Nil))
+
+    def postfix(operator: String, expr: Expr[a]): Expr[Bool] =
+        Expr.Expr(frags(term(expr) :: raw(operator) :: Nil))
+
+    ///
+    /// ===== READINGS =====
+    ///
+
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
         case Sel(List[Frag], List[Option[String]] -> Result[String, (a, List[Option[String]])])
     }
-
-    ///
-    /// ===== READINGS =====
-    ///
 
     def cell(expr: Frag, read: String -> Option[String] -> Result[String, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
@@ -39,16 +121,6 @@ mod Sql {
 
     pub def text(expr: String): Sel[String] =
         cell(raw(expr), (name, c) -> c |> Option.toOk("column `${name}` was null"))
-
-    pub def optionalInt(expr: String): Sel[Option[Int32]] =
-        optionalIntOf(raw(expr))
-
-    /// As `optionalInt`, where the expression binds values of its own.
-    pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
-        cell(expr, (name, c) -> match c {
-            case None       => Ok(None)
-            case Some(cell) => parseInt(name, cell) |> Result.map(value -> Some(value))
-        })
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -71,6 +143,16 @@ mod Sql {
             }
         ) yield value)
 
+    pub def optionalInt(expr: String): Sel[Option[Int32]] =
+        optionalIntOf(raw(expr))
+
+    /// As `optionalInt`, where the expression binds values of its own.
+    pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
+        cell(expr, (name, c) -> match c {
+            case None       => Ok(None)
+            case Some(cell) => parseInt(name, cell) |> Result.map(value -> Some(value))
+        })
+
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
         cell(raw(expr), (name, c) -> match c {
@@ -92,8 +174,41 @@ mod Sql {
                 })
         }
 
+    pub def andThen(transform: a -> Result[String, b], sel: Sel[a]): Sel[b] =
+        let Sel.Sel(columns, decodeCells) = sel;
+        Sel.Sel(columns, cells ->
+            decodeCells(cells) |> Result.flatMap(match (value, rest) ->
+                transform(value) |> Result.map(converted -> (converted, rest))
+            )
+        )
+
+    def both(selA: Sel[a], selB: Sel[b]): Sel[(a, b)] =
+        let Sel.Sel(columnsA, decodeA) = selA;
+        let Sel.Sel(columnsB, decodeB) = selB;
+        Sel.Sel(columnsA ++ columnsB, cells ->
+            decodeA(cells) |> Result.flatMap(match (a, restA) ->
+                decodeB(restA) |> Result.map(match (b, restB) -> ((a, b), restB))
+            )
+        )
+
+    def selMap(transform: a -> b, sel: Sel[a]): Sel[b] =
+        andThen(value -> Ok(transform(value)), sel)
+
+    pub def clause(sel: Sel[a]): Frag =
+        let Sel.Sel(columns, _) = sel;
+        frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
+
+    pub def decode(sel: Sel[a], row: List[Option[String]]): Result[String, a] =
+        let Sel.Sel(_, decodeCells) = sel;
+        decodeCells(row) |> Result.flatMap(match (value, rest) ->
+            if (List.isEmpty(rest))
+                Ok(value)
+            else
+                Err("the row carries ${List.length(rest)} more columns than the projection reads")
+        )
+
     ///
-    /// ===== COMPOSING =====
+    /// ===== PROJECTIONS =====
     ///
 
     /// What a query may project: a reading, or a tuple of them. A tuple is
@@ -108,96 +223,6 @@ mod Sql {
     instance Project[Sel[a]] {
         type Out = a
         pub def sel(x: Sel[a]): Sel[a] = x
-    }
-
-    instance Project[(a, b)] with Project[a], Project[b] {
-        type Out = (Project.Out[a], Project.Out[b])
-        pub def sel(x: (a, b)): Sel[(Project.Out[a], Project.Out[b])] =
-            let (xa, xb) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            both(sa, sb)
-    }
-
-    instance Project[(a, b, c)] with Project[a], Project[b], Project[c] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c])
-        pub def sel(x: (a, b, c)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c])] =
-            let (xa, xb, xc) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            both(sa, both(sb, sc))
-                |> selMap(match (va, (vb, vc)) -> (va, vb, vc))
-    }
-
-    instance Project[(a, b, c, d)] with Project[a], Project[b], Project[c], Project[d] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])
-        pub def sel(x: (a, b, c, d)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])] =
-            let (xa, xb, xc, xd) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            let sd = Project.sel(xd);
-            both(sa, both(sb, both(sc, sd)))
-                |> selMap(match (va, (vb, (vc, vd))) -> (va, vb, vc, vd))
-    }
-
-    instance Project[(a, b, c, d, e)] with Project[a], Project[b], Project[c], Project[d], Project[e] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])
-        pub def sel(x: (a, b, c, d, e)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])] =
-            let (xa, xb, xc, xd, xe) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            let sd = Project.sel(xd);
-            let se = Project.sel(xe);
-            both(sa, both(sb, both(sc, both(sd, se))))
-                |> selMap(match (va, (vb, (vc, (vd, ve)))) -> (va, vb, vc, vd, ve))
-    }
-
-    instance Project[(a, b, c, d, e, f)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])
-        pub def sel(x: (a, b, c, d, e, f)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])] =
-            let (xa, xb, xc, xd, xe, xf) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            let sd = Project.sel(xd);
-            let se = Project.sel(xe);
-            let sf = Project.sel(xf);
-            both(sa, both(sb, both(sc, both(sd, both(se, sf)))))
-                |> selMap(match (va, (vb, (vc, (vd, (ve, vf))))) -> (va, vb, vc, vd, ve, vf))
-    }
-
-    instance Project[(a, b, c, d, e, f, g)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])
-        pub def sel(x: (a, b, c, d, e, f, g)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])] =
-            let (xa, xb, xc, xd, xe, xf, xg) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            let sd = Project.sel(xd);
-            let se = Project.sel(xe);
-            let sf = Project.sel(xf);
-            let sg = Project.sel(xg);
-            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, sg))))))
-                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, vg)))))) -> (va, vb, vc, vd, ve, vf, vg))
-    }
-
-    instance Project[(a, b, c, d, e, f, g, h)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g], Project[h] {
-        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])
-        pub def sel(x: (a, b, c, d, e, f, g, h)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])] =
-            let (xa, xb, xc, xd, xe, xf, xg, xh) = x;
-            let sa = Project.sel(xa);
-            let sb = Project.sel(xb);
-            let sc = Project.sel(xc);
-            let sd = Project.sel(xd);
-            let se = Project.sel(xe);
-            let sf = Project.sel(xf);
-            let sg = Project.sel(xg);
-            let sh = Project.sel(xh);
-            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, both(sg, sh)))))))
-                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, (vg, vh))))))) -> (va, vb, vc, vd, ve, vf, vg, vh))
     }
 
     /// A reading of the far side of a `LEFT JOIN`: nothing where the join
@@ -231,42 +256,9 @@ mod Sql {
     pub def field(pick: p, add: (r, Project.Out[p]) -> s, rest: Sel[r]): Sel[s] with Project[p] =
         both(rest, Project.sel(pick)) |> selMap(match (r, value) -> add(r, value))
 
-    def both(selA: Sel[a], selB: Sel[b]): Sel[(a, b)] =
-        let Sel.Sel(columnsA, decodeA) = selA;
-        let Sel.Sel(columnsB, decodeB) = selB;
-        Sel.Sel(columnsA ++ columnsB, cells ->
-            decodeA(cells) |> Result.flatMap(match (a, restA) ->
-                decodeB(restA) |> Result.map(match (b, restB) -> ((a, b), restB))
-            )
-        )
-
-    def selMap(transform: a -> b, sel: Sel[a]): Sel[b] =
-        andThen(value -> Ok(transform(value)), sel)
-
-    pub def andThen(transform: a -> Result[String, b], sel: Sel[a]): Sel[b] =
-        let Sel.Sel(columns, decodeCells) = sel;
-        Sel.Sel(columns, cells ->
-            decodeCells(cells) |> Result.flatMap(match (value, rest) ->
-                transform(value) |> Result.map(converted -> (converted, rest))
-            )
-        )
-
     ///
-    /// ===== RUNNING =====
+    /// ===== QUERIES =====
     ///
-
-    pub def clause(sel: Sel[a]): Frag =
-        let Sel.Sel(columns, _) = sel;
-        frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
-
-    pub def decode(sel: Sel[a], row: List[Option[String]]): Result[String, a] =
-        let Sel.Sel(_, decodeCells) = sel;
-        decodeCells(row) |> Result.flatMap(match (value, rest) ->
-            if (List.isEmpty(rest))
-                Ok(value)
-            else
-                Err("the row carries ${List.length(rest)} more columns than the projection reads")
-        )
 
     /// The clauses of a query, which every stage of building one carries.
     pub type alias Clauses = {
@@ -370,6 +362,10 @@ mod Sql {
         else
             frags(raw(word) :: joinFrags(separator, terms) :: Nil)
 
+    ///
+    /// ===== RUNNING =====
+    ///
+
     pub def selectAll(q: Query[a]): Result[String, List[a]] \ Db =
         let Query.Query(_, sel) = q;
         let Frag.Frag(sql, params) = toStatement(q);
@@ -428,83 +424,6 @@ mod Sql {
             + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
             + " VALUES (" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
         (statement, rows |> List.map(row -> columns |> List.map(c -> (c#bind)(row))))
-
-    ///
-    /// ===== FRAGMENTS =====
-    ///
-
-    /// A piece of a query binding nothing.
-    pub def raw(sql: String): Frag =
-        Frag.Frag(sql, Nil)
-
-    /// A piece of a query whose `?` placeholders bind `params`, left to right.
-    pub def frag(sql: String, params: List[Value]): Frag =
-        Frag.Frag(sql, params)
-
-    /// The pieces in order, separated by a space where both sides have one.
-    pub def frags(pieces: List[Frag]): Frag =
-        joinFrags(" ", pieces)
-
-    /// A piece contributing no text still contributes its values: only the
-    /// text is dropped, so that a separator does not fall either side of it.
-    def joinFrags(separator: String, pieces: List[Frag]): Frag =
-        let sql = pieces
-            |> List.map(piece -> { let Frag.Frag(text, _) = piece; text })
-            |> List.filter(text -> not String.isEmpty(text))
-            |> List.join(separator);
-        let params = pieces |> List.flatMap(piece -> { let Frag.Frag(_, values) = piece; values });
-        Frag.Frag(sql, params)
-
-    pub def toSql(fragment: Frag): (String, List[Value]) =
-        let Frag.Frag(sql, params) = fragment;
-        (sql, params)
-
-    ///
-    /// ===== EXPRESSIONS =====
-    ///
-
-    /// A typed expression. The type is the one the SQL value has, carried so
-    /// that a comparison against a value of another type does not compile, and
-    /// so that `IS NULL` can be asked only of a column that takes one. What is
-    /// rendered is the fragment.
-    pub enum Expr[_a] {
-        case Expr(Frag)
-    }
-
-    /// An expression named rather than drawn from a column -- what a common
-    /// table expression makes up, and what no combinator here builds. Its type
-    /// is the caller's word.
-    pub def column(name: String): Expr[a] =
-        Expr.Expr(raw(name))
-
-    pub def i32(value: Int32): Expr[Int32] =
-        Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
-
-    pub def str(value: String): Expr[String] =
-        Expr.Expr(Frag.Frag("?", Value.Text(value) :: Nil))
-
-    pub def eq(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("=", left, right)
-    pub def ne(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<>", left, right)
-    pub def lte(left: Expr[a], right: Expr[a]): Expr[Bool] = binary("<=", left, right)
-    pub def isNotNull(expr: Expr[Option[a]]): Expr[Bool] = postfix("IS NOT NULL", expr)
-
-    /// The predicates, ANDed. None of them is `1 = 1`, which is what a query
-    /// with nothing to say about its rows would otherwise carry.
-    pub def every(predicates: List[Expr[Bool]]): Expr[Bool] =
-        match predicates {
-            case Nil => Expr.Expr(raw("1 = 1"))
-            case _   => Expr.Expr(joinFrags(" AND ", predicates |> List.map(term)))
-        }
-
-    pub def term(expr: Expr[a]): Frag =
-        let Expr.Expr(fragment) = expr;
-        fragment
-
-    def binary(operator: String, left: Expr[a], right: Expr[a]): Expr[Bool] =
-        Expr.Expr(frags(term(left) :: raw(operator) :: term(right) :: Nil))
-
-    def postfix(operator: String, expr: Expr[a]): Expr[Bool] =
-        Expr.Expr(frags(term(expr) :: raw(operator) :: Nil))
 
     ///
     /// ===== TAGGED BRANCHES =====
@@ -576,5 +495,103 @@ mod Sql {
                     None
             )
             |> List.head
+
+    ///
+    /// ===== THE TUPLE PROJECTIONS =====
+    ///
+    /// One per arity, to eight. An instance head takes type variables, so
+    /// `(Sel[a], Sel[b])` cannot be one and each arity is written out; a
+    /// reading of more than eight columns is a record instead.
+    ///
+
+    instance Project[(a, b)] with Project[a], Project[b] {
+        type Out = (Project.Out[a], Project.Out[b])
+        pub def sel(x: (a, b)): Sel[(Project.Out[a], Project.Out[b])] =
+            let (xa, xb) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            both(sa, sb)
+    }
+
+    instance Project[(a, b, c)] with Project[a], Project[b], Project[c] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c])
+        pub def sel(x: (a, b, c)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c])] =
+            let (xa, xb, xc) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            both(sa, both(sb, sc))
+                |> selMap(match (va, (vb, vc)) -> (va, vb, vc))
+    }
+
+    instance Project[(a, b, c, d)] with Project[a], Project[b], Project[c], Project[d] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])
+        pub def sel(x: (a, b, c, d)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])] =
+            let (xa, xb, xc, xd) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            both(sa, both(sb, both(sc, sd)))
+                |> selMap(match (va, (vb, (vc, vd))) -> (va, vb, vc, vd))
+    }
+
+    instance Project[(a, b, c, d, e)] with Project[a], Project[b], Project[c], Project[d], Project[e] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])
+        pub def sel(x: (a, b, c, d, e)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])] =
+            let (xa, xb, xc, xd, xe) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            both(sa, both(sb, both(sc, both(sd, se))))
+                |> selMap(match (va, (vb, (vc, (vd, ve)))) -> (va, vb, vc, vd, ve))
+    }
+
+    instance Project[(a, b, c, d, e, f)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])
+        pub def sel(x: (a, b, c, d, e, f)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])] =
+            let (xa, xb, xc, xd, xe, xf) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            both(sa, both(sb, both(sc, both(sd, both(se, sf)))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, vf))))) -> (va, vb, vc, vd, ve, vf))
+    }
+
+    instance Project[(a, b, c, d, e, f, g)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])
+        pub def sel(x: (a, b, c, d, e, f, g)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])] =
+            let (xa, xb, xc, xd, xe, xf, xg) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            let sg = Project.sel(xg);
+            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, sg))))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, vg)))))) -> (va, vb, vc, vd, ve, vf, vg))
+    }
+
+    instance Project[(a, b, c, d, e, f, g, h)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g], Project[h] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])
+        pub def sel(x: (a, b, c, d, e, f, g, h)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])] =
+            let (xa, xb, xc, xd, xe, xf, xg, xh) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            let sg = Project.sel(xg);
+            let sh = Project.sel(xh);
+            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, both(sg, sh)))))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, (vg, vh))))))) -> (va, vb, vc, vd, ve, vf, vg, vh))
+    }
 
 }
