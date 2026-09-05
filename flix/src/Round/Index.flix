@@ -49,8 +49,7 @@ mod Round.Index {
     // ----------------------------------------------------------- best times
 
     /// What each record is drawn from, and which way round it is won: `1` keeps
-    /// the smallest reading, `-1` the largest. A record's place in this list is
-    /// the number the query labels its rows with, so the two cannot drift.
+    /// the smallest reading, `-1` the largest.
     def sources(): List[(Record, Int32, String)] =
         (Record.FastestLap, 1, "NULLIF(lap_time_ms, 0)") ::
         (Record.SlowestLap, -1, "NULLIF(lap_time_ms, 0)") ::
@@ -59,36 +58,24 @@ mod Round.Index {
         (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
         Nil
 
-    /// The fifteen mini-sectors are one branch, `json_each` numbering them from
-    /// zero as the labels carry on from `sources`.
-    def miniSectorBase(): Int32 =
-        List.length(sources())
-
-    def recordOf(label: Int32): Option[Record] =
-        if (label < miniSectorBase())
-            List.nth(label, sources()) |> Option.map(match (record, _, _) -> record)
-        else
-            MiniSector.atPosition(label - miniSectorBase() + 1)
-                |> Option.map(mini -> Record.FastestMiniSector(mini))
-
     def bestTimes(entry: Entry): Result[String, List[(Record, Change)]] \ Db =
-        change()
+        let (readings, record) = Sql.unionAllTagged("k", branches(entry));
+        change(record)
             |> Sql.selectAllWith(
-                readings(entry),
+                Sql.frags(Sql.raw("WITH v AS (") :: readings :: Sql.raw(")") :: Nil),
                 Sql.raw("FROM (" + standing() + ") WHERE prev IS NULL OR t * dir < prev"
                     + " ORDER BY k, elapsed_ms, source_row")
             )
 
-    def change(): Sel[(Record, Change)] =
-        Sql.intoRow(record -> elapsed -> time -> carNumber -> lap -> driver -> (record, {
+    def change(record: Sel[Record]): Sel[(Record, Change)] =
+        Sql.intoRow(rec -> elapsed -> time -> carNumber -> lap -> driver -> (rec, {
             elapsed   = Util.Duration.fromMillis(elapsed),
             time      = Util.Duration.fromMillis(time),
             carNumber = carNumber,
             lap       = lap,
             driver    = driver
         }))
-            |> Sql.pipeline(Sql.int("k") |> Sql.andThen(label ->
-                recordOf(label) |> Option.toOk("no record is labelled ${label}")))
+            |> Sql.pipeline(record)
             |> Sql.pipeline(Sql.int("elapsed_ms"))
             |> Sql.pipeline(Sql.int("t"))
             |> Sql.pipeline(Sql.text("car_number"))
@@ -98,20 +85,22 @@ mod Round.Index {
     def changesOf(record: Record, changes: List[(Record, Change)]): List[Change] =
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
 
-    /// Every record's readings stacked into one column.
-    ///
-    /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
-    /// of such a lap are not a lap of the circuit either.
-    def readings(entry: Entry): Sql.Frag =
-        let scalar = sources()
-            |> List.mapWithIndex((label, source) -> match source {
-                case (_, direction, expression) => reading(entry, label, direction, expression)
-            });
-        let stacked = List.append(scalar, miniSectorReadings(entry) :: Nil);
-        Sql.frags(
-            Sql.raw("WITH v AS (") ::
-            Sql.joinFrags(" UNION ALL ", stacked) ::
-            Sql.raw(")") :: Nil
+    def branches(entry: Entry): List[Sql.Branch[Record]] =
+        let scalar = sources() |> List.map(match (record, direction, expression) ->
+            Sql.Branch.One(record, reading(entry, direction, expression)));
+        List.append(scalar, miniSectorBranch(entry) :: Nil)
+
+    /// The fifteen mini-sectors are one arm, `json_each` numbering them from
+    /// zero where `Motorsport.MiniSector.positionOf` counts from one.
+    def miniSectorBranch(entry: Entry): Sql.Branch[Record] =
+        Sql.Branch.Many(
+            {
+                span   = List.length(MiniSector.all()),
+                number = Sql.column("m.key"),
+                tagOf  = key -> MiniSector.atPosition(key + 1)
+                    |> Option.map(mini -> Record.FastestMiniSector(mini))
+            },
+            miniSectorReadings(entry)
         )
 
     /// Every reading with the record as it stood before it beside it, the
@@ -122,18 +111,19 @@ mod Round.Index {
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
             + " FROM v WHERE t IS NOT NULL"
 
-    def reading(entry: Entry, label: Int32, direction: Int32, expression: String): Sql.Frag =
+    def reading(entry: Entry, direction: Int32, expression: String): Sql.Frag =
         Sql.frags(
-            Sql.raw("SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
-                + " ${label} AS k, ${direction} AS dir, ${expression} AS t"
+            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name,"
+                + " ${direction} AS dir, ${expression} AS t"
                 + " FROM laps WHERE") ::
             where_(entry, Nil) :: Nil
         )
 
+    /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
+    /// of such a lap are not a lap of the circuit either.
     def miniSectorReadings(entry: Entry): Sql.Frag =
         Sql.frags(
-            Sql.raw("SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
-                + " ${miniSectorBase()} + m.key, 1, m.value"
+            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name, 1, m.value"
                 + " FROM laps, json_each(laps.mini_sector_time_ms) m"
                 + " WHERE") ::
             where_(entry, Sql.ne(Columns.expr(Columns.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil

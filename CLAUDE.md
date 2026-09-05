@@ -367,6 +367,12 @@ column list already knows and no longer a thing to notice. A column a common
 table expression made up is `Sql.column`, named rather than drawn, and its type
 is the caller's word.
 
+`Sql.unionAllTagged` stacks arms of a `UNION ALL` and labels each with a number
+it picks, handing back a reading of that number as the thing the arm was about.
+`Round.Index` is the caller: its twenty records are five arms of one reading
+each and one arm of fifteen, and neither the arms nor the reading names a
+number.
+
 What none of these cover is the shape of the query around them: a caller still
 writes its `FROM` onwards, and its common table expressions, as text.
 

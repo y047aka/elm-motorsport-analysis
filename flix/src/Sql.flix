@@ -247,4 +247,75 @@ mod Sql {
     def postfix(operator: String, expr: Expr[a]): Expr[Bool] =
         Expr.Expr(frags(predicate(expr) :: raw(operator) :: Nil))
 
+    ///
+    /// ===== TAGGED BRANCHES =====
+    ///
+
+    /// One arm of a `UNION ALL`, and what its rows are about.
+    ///
+    /// The arm's fragment is the query from its first column onwards: the
+    /// label is prepended, so every arm carries it in the same place.
+    pub enum Branch[t] {
+        /// Every row of the arm is about the same thing.
+        case One(t, Frag)
+
+        /// The arm is about `span` things and says which per row, numbering
+        /// them from zero.
+        case Many({ span = Int32, number = Expr[Int32], tagOf = Int32 -> Option[t] }, Frag)
+    }
+
+    /// The arms stacked, each labelled with a number this picks, and a reading
+    /// of that number as the thing the arm was about. Neither the arm nor the
+    /// reading is written in terms of the number, so the two cannot disagree
+    /// about which arm it belongs to.
+    ///
+    /// `label` names the column the number is carried in, which the caller
+    /// orders and partitions by.
+    pub def unionAllTagged(label: String, branches: List[Branch[t]]): (Frag, Sel[t]) =
+        let numbered = number_(0, branches);
+        let rows = numbered
+            |> List.map(match (base, branch) -> arm(label, base, branch))
+            |> joinFrags(" UNION ALL ");
+        let tag = int(label) |> andThen(n ->
+            tagOf(numbered, n) |> Option.toOk("no arm answers to `${label}` ${n}"));
+        (rows, tag)
+
+    def number_(base: Int32, branches: List[Branch[t]]): List[(Int32, Branch[t])] =
+        match branches {
+            case Nil              => Nil
+            case branch :: rest   => (base, branch) :: number_(base + span(branch), rest)
+        }
+
+    def span(branch: Branch[t]): Int32 =
+        match branch {
+            case Branch.One(_, _)     => 1
+            case Branch.Many(many, _) => many#span
+        }
+
+    def arm(label: String, base: Int32, branch: Branch[t]): Frag =
+        match branch {
+            case Branch.One(_, sql) =>
+                frags(raw("SELECT ${base} AS ${label},") :: sql :: Nil)
+            case Branch.Many(many, sql) =>
+                frags(
+                    raw("SELECT ${base} +") ::
+                    predicate(many#number) ::
+                    raw("AS ${label},") ::
+                    sql :: Nil
+                )
+        }
+
+    def tagOf(numbered: List[(Int32, Branch[t])], n: Int32): Option[t] =
+        numbered
+            |> List.filterMap(match (base, branch) ->
+                if (n >= base and n < base + span(branch))
+                    match branch {
+                        case Branch.One(tag, _)   => Some(tag)
+                        case Branch.Many(many, _) => (many#tagOf)(n - base)
+                    }
+                else
+                    None
+            )
+            |> List.head
+
 }
