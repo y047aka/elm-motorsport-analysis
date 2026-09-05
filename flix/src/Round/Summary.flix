@@ -24,8 +24,11 @@ mod Round.Summary {
             builds <- cars(entry)
         ) yield Metadata.fromReadings(entry, race, shape, builds)
 
-    def scope(entry: Entry): String =
+    def scope(entry: Entry): Sql.Frag =
         Schema.scope(entry#season, entry#id)
+
+    def fromLaps(entry: Entry): Sql.Frag =
+        Sql.frags(Sql.raw("FROM laps WHERE") :: scope(entry) :: Nil)
 
     // ---------------------------------------------------------- particulars
 
@@ -35,13 +38,14 @@ mod Round.Summary {
             Util.Duration.fromMillis(Option.getWithDefault(0, duration)),
             Option.getWithDefault(0, lapTotal)
         ))
-            |> Sql.pipeline(Sql.optionalInt(
-                "(SELECT " + Schema.hourOffset() + " FROM laps WHERE " + scope(entry)
-                    + " ORDER BY source_row LIMIT 1)"
-            ))
+            |> Sql.pipeline(Sql.optionalIntOf(Sql.frags(
+                Sql.raw("(SELECT " + Schema.hourOffset() + " FROM laps WHERE") ::
+                scope(entry) ::
+                Sql.raw("ORDER BY source_row LIMIT 1)") :: Nil
+            )))
             |> Sql.pipeline(Sql.optionalInt("MAX(elapsed_ms)"))
             |> Sql.pipeline(Sql.optionalInt("MAX(lap_number)"))
-            |> Sql.selectOne("the round's particulars", "FROM laps WHERE " + scope(entry))
+            |> Sql.selectOne("the round's particulars", fromLaps(entry))
 
     // ----------------------------------------------------------------- cars
 
@@ -57,11 +61,12 @@ mod Round.Summary {
         Sql.intoRow(carNumber -> driverName -> (carNumber, driverName))
             |> Sql.pipeline(Sql.text("car_number"))
             |> Sql.pipeline(Sql.text("driver_name"))
-            |> Sql.selectAll(
-                "FROM (SELECT car_number, driver_name, MIN(source_row) AS first_seen"
-                    + " FROM laps WHERE " + scope(entry)
-                    + " GROUP BY car_number, driver_name) d ORDER BY first_seen"
-            )
+            |> Sql.selectAll(Sql.frags(
+                Sql.raw("FROM (SELECT car_number, driver_name, MIN(source_row) AS first_seen"
+                    + " FROM laps WHERE") ::
+                scope(entry) ::
+                Sql.raw("GROUP BY car_number, driver_name) d ORDER BY first_seen") :: Nil
+            ))
 
     /// A car is what the file first said it was. Grouping by the attributes
     /// instead would be a row per distinct combination, so a feed that changed
@@ -69,15 +74,19 @@ mod Round.Summary {
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
         carBuild(drivers)
             |> Sql.selectAllWith(
-                "WITH c AS (SELECT * FROM ("
-                    + " SELECT car_number, class, car_group, team, manufacturer,"
-                    + " source_row AS first_seen, " + firstPerCar()
-                    + " FROM laps WHERE " + scope(entry) + ") WHERE rn = 1),"
-                    + " l1 AS (SELECT * FROM ("
-                    + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
-                    + " FROM laps WHERE " + scope(entry) + " AND lap_number = 1"
-                    + ") WHERE rn = 1)",
-                "FROM c LEFT JOIN l1 ON l1.car_number = c.car_number ORDER BY c.first_seen"
+                Sql.frags(
+                    Sql.raw("WITH c AS (SELECT * FROM ("
+                        + " SELECT car_number, class, car_group, team, manufacturer,"
+                        + " source_row AS first_seen, " + firstPerCar()
+                        + " FROM laps WHERE") ::
+                    scope(entry) ::
+                    Sql.raw(") WHERE rn = 1), l1 AS (SELECT * FROM ("
+                        + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
+                        + " FROM laps WHERE") ::
+                    scope(entry) ::
+                    Sql.raw("AND lap_number = 1) WHERE rn = 1)") :: Nil
+                ),
+                Sql.raw("FROM c LEFT JOIN l1 ON l1.car_number = c.car_number ORDER BY c.first_seen")
             )
 
     def carBuild(drivers: List[(String, String)]): Sel[CarBuild] =
@@ -144,7 +153,7 @@ mod Round.Summary {
             |> Sql.pipeline(Sql.optionalInt("MIN(s2_ms)"))
             |> Sql.pipeline(Sql.optionalInt("MIN(s3_ms)"))
             |> Sql.pipeline(Sql.bool("COALESCE(MAX(mini_sector_time_ms IS NOT NULL), 0)"))
-            |> Sql.selectOne("the round's fastest sectors", "FROM laps WHERE " + scope(entry))
+            |> Sql.selectOne("the round's fastest sectors", fromLaps(entry))
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
@@ -152,11 +161,12 @@ mod Round.Summary {
         Sql.intoRow(position -> fastest -> (position, Util.Duration.fromMillis(fastest)))
             |> Sql.pipeline(Sql.int("m.key + 1"))
             |> Sql.pipeline(Sql.int("MIN(m.value)"))
-            |> Sql.selectAll(
-                "FROM laps, json_each(laps.mini_sector_time_ms) m"
-                    + " WHERE " + scope(entry) + " AND lap_time_ms <> 0 AND m.value IS NOT NULL"
-                    + " GROUP BY m.key ORDER BY m.key"
-            )
+            |> Sql.selectAll(Sql.frags(
+                Sql.raw("FROM laps, json_each(laps.mini_sector_time_ms) m WHERE") ::
+                scope(entry) ::
+                Sql.raw("AND lap_time_ms <> 0 AND m.value IS NOT NULL"
+                    + " GROUP BY m.key ORDER BY m.key") :: Nil
+            ))
             |> Result.map(List.toMap)
 
 }

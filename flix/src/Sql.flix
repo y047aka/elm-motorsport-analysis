@@ -10,56 +10,70 @@
 /// position to report the next problem at.
 mod Sql {
 
+    use Db.Value
+
+    /// A piece of a query and the values its `?` placeholders bind, kept
+    /// together so that concatenating two pieces cannot put a value under the
+    /// wrong placeholder.
+    pub enum Frag {
+        case Frag(String, List[Value])
+    }
+
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[String], List[Option[String]] -> Result[String, (a, List[Option[String]])])
+        case Sel(List[Frag], List[Option[String]] -> Result[String, (a, List[Option[String]])])
     }
 
     ///
     /// ===== READINGS =====
     ///
 
-    def cell(expr: String, read: Option[String] -> Result[String, a]): Sel[a] =
+    def cell(expr: Frag, read: String -> Option[String] -> Result[String, a]): Sel[a] =
+        let Frag.Frag(text, _) = expr;
         Sel.Sel(expr :: Nil, cells -> match cells {
-            case c :: rest => read(c) |> Result.map(value -> (value, rest))
-            case Nil       => Err("the row ended before `${expr}`")
+            case c :: rest => read(text, c) |> Result.map(value -> (value, rest))
+            case Nil       => Err("the row ended before `${text}`")
         })
 
     pub def optionalText(expr: String): Sel[Option[String]] =
-        cell(expr, c -> Ok(c))
+        cell(raw(expr), (_, c) -> Ok(c))
 
     pub def text(expr: String): Sel[String] =
-        cell(expr, c -> c |> Option.toOk("column `${expr}` was null"))
+        cell(raw(expr), (name, c) -> c |> Option.toOk("column `${name}` was null"))
 
     pub def optionalInt(expr: String): Sel[Option[Int32]] =
-        cell(expr, c -> match c {
+        optionalIntOf(raw(expr))
+
+    /// As `optionalInt`, where the expression binds values of its own.
+    pub def optionalIntOf(expr: Frag): Sel[Option[Int32]] =
+        cell(expr, (name, c) -> match c {
             case None       => Ok(None)
-            case Some(text) => parseInt(expr, text) |> Result.map(value -> Some(value))
+            case Some(cell) => parseInt(name, cell) |> Result.map(value -> Some(value))
         })
 
     pub def int(expr: String): Sel[Int32] =
-        cell(expr, c -> forM(
-            text  <- c |> Option.toOk("column `${expr}` was null");
-            value <- parseInt(expr, text)
+        cell(raw(expr), (name, c) -> forM(
+            cell  <- c |> Option.toOk("column `${name}` was null");
+            value <- parseInt(name, cell)
         ) yield value)
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
     pub def bool(expr: String): Sel[Bool] =
-        cell(expr, c -> forM(
-            text  <- c |> Option.toOk("column `${expr}` was null");
-            value <- match text {
+        cell(raw(expr), (name, c) -> forM(
+            cell  <- c |> Option.toOk("column `${name}` was null");
+            value <- match cell {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
-                case _   => Err("column `${expr}` is not a boolean: \"${text}\"")
+                case _   => Err("column `${name}` is not a boolean: \"${cell}\"")
             }
         ) yield value)
 
     /// A mini-sector column arrives as the JSON array it was written as.
     pub def optionalIntArray(expr: String): Sel[Option[List[Option[Int32]]]] =
-        cell(expr, c -> match c {
+        cell(raw(expr), (name, c) -> match c {
             case None       => Ok(None)
-            case Some(text) => parseIntArray(expr, text) |> Result.map(values -> Some(values))
+            case Some(cell) => parseIntArray(name, cell) |> Result.map(values -> Some(values))
         })
 
     def parseInt(expr: String, text: String): Result[String, Int32] =
@@ -118,9 +132,9 @@ mod Sql {
     /// ===== RUNNING =====
     ///
 
-    pub def clause(sel: Sel[a]): String =
+    pub def clause(sel: Sel[a]): Frag =
         let Sel.Sel(columns, _) = sel;
-        "SELECT " + List.join(", ", columns)
+        frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
 
     pub def decode(sel: Sel[a], row: List[Option[String]]): Result[String, a] =
         let Sel.Sel(_, decodeCells) = sel;
@@ -134,26 +148,64 @@ mod Sql {
     /// `rest` is the query from `FROM` onwards. The projection comes last, so
     /// a query ends in the runner that says whether it reads one row or all
     /// of them.
-    pub def selectAll(rest: String, sel: Sel[a]): Result[String, List[a]] \ Db =
-        selectAllWith("", rest, sel)
+    pub def selectAll(rest: Frag, sel: Sel[a]): Result[String, List[a]] \ Db =
+        selectAllWith(raw(""), rest, sel)
 
     /// As `selectAll`, where common table expressions precede the SELECT.
-    pub def selectAllWith(ctes: String, rest: String, sel: Sel[a]): Result[String, List[a]] \ Db =
-        Db.fetch(prefixed(ctes) + clause(sel) + " " + rest)
+    pub def selectAllWith(ctes: Frag, rest: Frag, sel: Sel[a]): Result[String, List[a]] \ Db =
+        let Frag.Frag(sql, params) = statement(ctes, rest, sel);
+        Db.fetch(sql, params)
             |> Result.flatMap(Result.traverse(row -> decode(sel, row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
-    pub def selectOne(subject: String, rest: String, sel: Sel[a]): Result[String, a] \ Db =
-        selectOneWith(subject, "", rest, sel)
+    pub def selectOne(subject: String, rest: Frag, sel: Sel[a]): Result[String, a] \ Db =
+        selectOneWith(subject, raw(""), rest, sel)
 
-    pub def selectOneWith(subject: String, ctes: String, rest: String, sel: Sel[a]): Result[String, a] \ Db =
-        Db.fetch(prefixed(ctes) + clause(sel) + " " + rest) |> Result.flatMap(rows -> match rows {
+    pub def selectOneWith(subject: String, ctes: Frag, rest: Frag, sel: Sel[a]): Result[String, a] \ Db =
+        let Frag.Frag(sql, params) = statement(ctes, rest, sel);
+        Db.fetch(sql, params) |> Result.flatMap(rows -> match rows {
             case row :: _ => decode(sel, row)
             case Nil      => Err("${subject} came back with no row")
         })
 
-    def prefixed(ctes: String): String =
-        if (String.isEmpty(ctes)) "" else ctes + " "
+    pub def statement(ctes: Frag, rest: Frag, sel: Sel[a]): Frag =
+        frags(ctes :: clause(sel) :: rest :: Nil)
+
+    ///
+    /// ===== FRAGMENTS =====
+    ///
+
+    /// A piece of a query binding nothing.
+    pub def raw(sql: String): Frag =
+        Frag.Frag(sql, Nil)
+
+    /// A piece of a query whose `?` placeholders bind `params`, left to right.
+    pub def frag(sql: String, params: List[Value]): Frag =
+        Frag.Frag(sql, params)
+
+    pub def i32(value: Int32): Frag =
+        Frag.Frag("?", Value.Integer(value) :: Nil)
+
+    pub def str(value: String): Frag =
+        Frag.Frag("?", Value.Text(value) :: Nil)
+
+    /// The pieces in order, separated by a space where both sides have one.
+    pub def frags(pieces: List[Frag]): Frag =
+        joinFrags(" ", pieces)
+
+    /// A piece contributing no text still contributes its values: only the
+    /// text is dropped, so that a separator does not fall either side of it.
+    pub def joinFrags(separator: String, pieces: List[Frag]): Frag =
+        let sql = pieces
+            |> List.map(piece -> { let Frag.Frag(text, _) = piece; text })
+            |> List.filter(text -> not String.isEmpty(text))
+            |> List.join(separator);
+        let params = pieces |> List.flatMap(piece -> { let Frag.Frag(_, values) = piece; values });
+        Frag.Frag(sql, params)
+
+    pub def toSql(fragment: Frag): (String, List[Value]) =
+        let Frag.Frag(sql, params) = fragment;
+        (sql, params)
 
 }

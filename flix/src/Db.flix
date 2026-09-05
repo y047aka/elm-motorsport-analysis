@@ -12,13 +12,30 @@ use Db.LapRow.LapRow
 pub eff Db {
     def execute(sql: String): Result[String, Unit]
     def insertLaps(rows: List[LapRow]): Result[String, Int32]
-    def fetch(sql: String): Result[String, List[List[Option[String]]]]
+    def fetch(sql: String, params: List[Db.Value]): Result[String, List[List[Option[String]]]]
 }
 
 mod Db {
 
     use Db.LapRow.LapRow
     use Db.Schema
+
+    /// A value bound to a `?`, in the type its column or comparison has.
+    pub enum Value with Eq, ToString {
+        case Text(String)
+        case Integer(Int32)
+        case Boolean(Bool)
+        case NullableInteger(Option[Int32])
+        case NullableIntArray(Option[List[Option[Int32]]])
+    }
+
+    /// The text a nullable-int-array column holds, which `json_each` reads
+    /// back as one row per element.
+    pub def jsonArray(values: List[Option[Int32]]): String =
+        "[" + (values |> List.map(v -> match v {
+            case Some(n) => "${n}"
+            case None    => "null"
+        }) |> List.join(",")) + "]"
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
@@ -32,7 +49,7 @@ mod Db {
     pub enum Statement {
         case Execute(String)
         case InsertLaps(List[LapRow])
-        case Fetch(String)
+        case Fetch(String, List[Value])
     }
 
     pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - Db) =
@@ -52,8 +69,8 @@ mod Db {
                 // Nothing was written, so there is nothing to read back: a
                 // caller that reads the round it sent needs a database, and
                 // is told so rather than handed an empty one.
-                def fetch(sql, k) = {
-                    record(log, Statement.Fetch(sql));
+                def fetch(sql, params, k) = {
+                    record(log, Statement.Fetch(sql, params));
                     k(Err("nothing was sent to a database, so nothing can be read back"))
                 }
             };

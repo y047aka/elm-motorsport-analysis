@@ -13,7 +13,7 @@ mod Db.Jdbc {
 
     use Db.LapRow
     use Db.LapRow.LapRow
-    use Db.LapRow.Value
+    use Db.Value
     use Db.Schema
 
     def batchSize(): Int32 = 1000
@@ -71,13 +71,14 @@ mod Db.Jdbc {
         } with handler Db {
             def execute(sql, k) = k(runStatement(conn, sql))
             def insertLaps(rows, k) = k(insertRows(conn, rows))
-            def fetch(sql, k) = k(runFetch(conn, sql))
+            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
         }
 
-    def runFetch(conn: Connection, sql: String): Result[String, List[List[Option[String]]]] \ IO =
+    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[String, List[List[Option[String]]]] \ IO =
         try {
-            let stmt = conn.createStatement();
-            let rs = stmt.executeQuery(sql);
+            let stmt = conn.prepareStatement(sql);
+            bind(stmt, params);
+            let rs = stmt.executeQuery();
             let width = rs.getMetaData().getColumnCount();
             let rows = readRows(rs, width, Nil);
             rs.close();
@@ -145,7 +146,7 @@ mod Db.Jdbc {
                 case None    => pstmt.setNull(index, Types.INTEGER)
             }
             case Value.NullableIntArray(o) => match o {
-                case Some(xs) => pstmt.setString(index, LapRow.jsonArray(xs))
+                case Some(xs) => pstmt.setString(index, Db.jsonArray(xs))
                 case None     => pstmt.setNull(index, Types.VARCHAR)
             }
         }

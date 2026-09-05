@@ -8,6 +8,7 @@ mod Db.LapRow {
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
     use Db.Laps.Columns
+    use Db.Value
     use Sql.Sel
     use Util.Duration
     use Util.HourClock
@@ -57,15 +58,6 @@ mod Db.LapRow {
         miniSectorElapsedMs = Option[List[Option[Int32]]]
     }
 
-    /// A bound value, in the type its column has.
-    pub enum Value with Eq, ToString {
-        case Text(String)
-        case Integer(Int32)
-        case Boolean(Bool)
-        case NullableInteger(Option[Int32])
-        case NullableIntArray(Option[List[Option[Int32]]])
-    }
-
     pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
         rawLaps
             |> List.zipWithIndex
@@ -109,14 +101,6 @@ mod Db.LapRow {
         rawLap#miniSectors |> Option.map(List.map(match (_, sector) ->
             reading(sector) |> Option.map(Duration.millis)
         ))
-
-    /// The text a mini-sector column holds, which `json_each` reads back as
-    /// one row per marker.
-    pub def jsonArray(values: List[Option[Int32]]): String =
-        "[" + (values |> List.map(v -> match v {
-            case Some(n) => "${n}"
-            case None    => "null"
-        }) |> List.join(",")) + "]"
 
     pub def values(row: LapRow): List[Value] =
         Columns.all() |> List.map(c -> (c#bind)(row))

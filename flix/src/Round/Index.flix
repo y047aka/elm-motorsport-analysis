@@ -24,7 +24,7 @@ mod Round.Index {
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
         }
 
-    def scope(entry: Entry): String =
+    def scope(entry: Entry): Sql.Frag =
         Schema.scope(entry#season, entry#id)
 
     // ------------------------------------------------------- lap completions
@@ -35,9 +35,11 @@ mod Round.Index {
         Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.pipeline(Sql.int("lap_number"))
             |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
-            |> Sql.selectAll(
-                "FROM laps WHERE " + scope(entry) + " GROUP BY lap_number ORDER BY lap_number"
-            )
+            |> Sql.selectAll(Sql.frags(
+                Sql.raw("FROM laps WHERE") ::
+                scope(entry) ::
+                Sql.raw("GROUP BY lap_number ORDER BY lap_number") :: Nil
+            ))
 
     // ----------------------------------------------------------- best times
 
@@ -68,8 +70,8 @@ mod Round.Index {
         change()
             |> Sql.selectAllWith(
                 readings(entry),
-                "FROM (" + standing() + ") WHERE prev IS NULL OR t * dir < prev"
-                    + " ORDER BY k, elapsed_ms, source_row"
+                Sql.raw("FROM (" + standing() + ") WHERE prev IS NULL OR t * dir < prev"
+                    + " ORDER BY k, elapsed_ms, source_row")
             )
 
     def change(): Sel[(Record, Change)] =
@@ -95,13 +97,17 @@ mod Round.Index {
     ///
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
-    def readings(entry: Entry): String =
+    def readings(entry: Entry): Sql.Frag =
         let scalar = sources()
             |> List.mapWithIndex((label, source) -> match source {
                 case (_, direction, expression) => reading(entry, label, direction, expression)
             });
         let stacked = List.append(scalar, miniSectorReadings(entry) :: Nil);
-        "WITH v AS (" + List.join(" UNION ALL ", stacked) + ")"
+        Sql.frags(
+            Sql.raw("WITH v AS (") ::
+            Sql.joinFrags(" UNION ALL ", stacked) ::
+            Sql.raw(")") :: Nil
+        )
 
     /// Every reading with the record as it stood before it beside it, the
     /// readings walked once in the order the laps were completed.
@@ -111,15 +117,22 @@ mod Round.Index {
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
             + " FROM v WHERE t IS NOT NULL"
 
-    def reading(entry: Entry, label: Int32, direction: Int32, expression: String): String =
-        "SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
-            + " ${label} AS k, ${direction} AS dir, ${expression} AS t"
-            + " FROM laps WHERE " + scope(entry)
+    def reading(entry: Entry, label: Int32, direction: Int32, expression: String): Sql.Frag =
+        Sql.frags(
+            Sql.raw("SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
+                + " ${label} AS k, ${direction} AS dir, ${expression} AS t"
+                + " FROM laps WHERE") ::
+            scope(entry) :: Nil
+        )
 
-    def miniSectorReadings(entry: Entry): String =
-        "SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
-            + " ${miniSectorBase()} + m.key, 1, m.value"
-            + " FROM laps, json_each(laps.mini_sector_time_ms) m"
-            + " WHERE " + scope(entry) + " AND lap_time_ms <> 0"
+    def miniSectorReadings(entry: Entry): Sql.Frag =
+        Sql.frags(
+            Sql.raw("SELECT elapsed_ms, source_row, car_number, lap_number, driver_name,"
+                + " ${miniSectorBase()} + m.key, 1, m.value"
+                + " FROM laps, json_each(laps.mini_sector_time_ms) m"
+                + " WHERE") ::
+            scope(entry) ::
+            Sql.raw("AND lap_time_ms <> 0") :: Nil
+        )
 
 }

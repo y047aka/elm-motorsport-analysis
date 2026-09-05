@@ -10,7 +10,7 @@
 mod Db.Laps.Columns {
 
     use Db.LapRow.LapRow
-    use Db.LapRow.Value
+    use Db.Value
     use Sql.Sel
 
     pub enum Column[a] {

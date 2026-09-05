@@ -1,5 +1,7 @@
 mod Db.TestJdbc {
 
+    use Db.Value
+
     import java.io.File
 
     use Db.Jdbc
@@ -19,16 +21,25 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 'a', null, 42, null"));
+        let result = connected(() -> Db.fetch("select 'a', null, 42, null", Nil));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
         let result = connected(() -> Db.fetch(
-            "select n from (select 1 as n union select 2 union select 3) order by n desc"));
+            "select n from (select 1 as n union select 2 union select 3) order by n desc", Nil));
         Assert.assertTrue(result == Ok(
             (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
         ))
+
+    /// A value reaches the database as a binding rather than as text, so a
+    /// round named with a quote in it is read rather than reported as a syntax
+    /// error.
+    @Test
+    def aFetchBindsItsParameters(): Unit \ {Assert, IO} =
+        let result = connected(() -> Db.fetch(
+            "select ?, ?", Value.Text("o'brien") :: Value.Integer(42) :: Nil));
+        Assert.assertTrue(result == Ok((Some("o'brien") :: Some("42") :: Nil) :: Nil))
 
     /// The load of a round is one statement, so a database that refuses it
     /// leaves none of the round's rows behind rather than some of them.
@@ -40,7 +51,7 @@ mod Db.TestJdbc {
             discard Db.prepare();
             let accepted = Db.insertLaps(rows);
             let refused  = Db.insertLaps(rows);
-            let counted  = Db.fetch("SELECT COUNT(*) FROM laps");
+            let counted  = Db.fetch("SELECT COUNT(*) FROM laps", Nil);
             Ok((accepted, refused, counted))
         });
         match outcome {
@@ -56,7 +67,7 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 1 where 0"));
+        let result = connected(() -> Db.fetch("select 1 where 0", Nil));
         Assert.assertTrue(result == Ok(Nil))
 
     // --------------------------------------------------------- a file database
@@ -92,7 +103,7 @@ mod Db.TestJdbc {
     /// naming one that does not exist reaches no database at all.
     @Test
     def connectingMakesTheDirectoryTheFileNeeds(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> Db.fetch("select 1"));
+        let (path, result) = onFile(() -> Db.fetch("select 1", Nil));
         Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil));
         Assert.assertTrue(new File(path).exists());
         remove(path)
@@ -101,7 +112,7 @@ mod Db.TestJdbc {
     /// run beside a writing run rather than behind it.
     @Test
     def aFileDatabaseIsJournalledForConcurrentReaders(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> Db.fetch("PRAGMA journal_mode"));
+        let (path, result) = onFile(() -> Db.fetch("PRAGMA journal_mode", Nil));
         Assert.assertTrue(result == Ok((Some("wal") :: Nil) :: Nil));
         remove(path)
 
@@ -118,7 +129,7 @@ mod Db.TestJdbc {
         let readBack = match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)
             case Ok(conn) =>
-                let value = Jdbc.runWith(conn, () -> Db.fetch("SELECT COUNT(*) FROM laps"));
+                let value = Jdbc.runWith(conn, () -> Db.fetch("SELECT COUNT(*) FROM laps", Nil));
                 Jdbc.close(conn);
                 value
         };

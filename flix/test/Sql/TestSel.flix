@@ -1,5 +1,6 @@
 mod Sql.TestSel {
 
+    use Db.Value
     use Sql.Sel
 
     def pair(): Sel[(String, Int32)] =
@@ -9,7 +10,7 @@ mod Sql.TestSel {
 
     @Test
     def theClauseFollowsTheOrderTheReadingsWerePipedIn(): Unit \ Assert =
-        Assert.assertTrue(Sql.clause(pair()) == "SELECT driver_name, lap_number")
+        Assert.assertTrue(Sql.toSql(Sql.clause(pair())) == ("SELECT driver_name, lap_number", Nil))
 
     @Test
     def aReadingTakesTheCellUnderItsOwnExpression(): Unit \ Assert =
@@ -23,7 +24,7 @@ mod Sql.TestSel {
         let sel = Sql.intoRow(p -> flag -> (p, flag))
             |> Sql.pipeline(pair())
             |> Sql.pipeline(Sql.text("flag_at_fl"));
-        Assert.assertTrue(Sql.clause(sel) == "SELECT driver_name, lap_number, flag_at_fl");
+        Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT driver_name, lap_number, flag_at_fl", Nil));
         Assert.assertTrue(
             Sql.decode(sel, Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil)
                 == Ok((("Will STEVENS", 7), "SF"))
@@ -71,7 +72,7 @@ mod Sql.TestSel {
     def andThenReadsAReadingFurther(): Unit \ Assert =
         let sel = Sql.int("k") |> Sql.andThen(label ->
             if (label == 0) Ok("fastest lap") else Err("no record is labelled ${label}"));
-        Assert.assertTrue(Sql.clause(sel) == "SELECT k");
+        Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT k", Nil));
         Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok("fastest lap"));
         Assert.assertTrue(Sql.decode(sel, Some("9") :: Nil) == Err("no record is labelled 9"))
 
@@ -87,5 +88,37 @@ mod Sql.TestSel {
         Assert.assertTrue(
             Sql.decode(pair(), Some("Will STEVENS") :: Nil) == Err("the row ended before `lap_number`")
         )
+
+    ///
+    /// ===== FRAGMENTS =====
+    ///
+
+    @Test
+    def concatenatingPiecesCarriesTheirValuesInOrder(): Unit \ Assert =
+        let frag = Sql.frags(
+            Sql.raw("FROM laps WHERE") ::
+            Sql.frag("season = ? AND round = ?", Value.Integer(2025) :: Value.Text("fuji_6h") :: Nil) ::
+            Sql.raw("AND lap_number = ?") ::
+            Sql.frag("", Value.Integer(1) :: Nil) :: Nil
+        );
+        Assert.assertTrue(Sql.toSql(frag) == (
+            "FROM laps WHERE season = ? AND round = ? AND lap_number = ?",
+            Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Nil
+        ))
+
+    /// The clause is rendered before the rest of the query, so a projection
+    /// binding values of its own binds them first.
+    @Test
+    def theClausesValuesComeBeforeTheRests(): Unit \ Assert =
+        let sel = Sql.optionalIntOf(Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil));
+        let statement = Sql.statement(
+            Sql.raw(""),
+            Sql.frag("FROM laps WHERE season = ?", Value.Integer(2025) :: Nil),
+            sel
+        );
+        Assert.assertTrue(Sql.toSql(statement) == (
+            "SELECT (SELECT off FROM b WHERE k = ?) FROM laps WHERE season = ?",
+            Value.Integer(7) :: Value.Integer(2025) :: Nil
+        ))
 
 }

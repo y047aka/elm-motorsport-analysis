@@ -93,11 +93,12 @@ mod Cli.Load.Validation {
                     + "   CASE WHEN s2_ms IS NULL THEN 's2,' ELSE '' END ||"
                     + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
             ))
-            |> Sql.selectAll(
-                "FROM laps WHERE " + scope(entry)
-                    + " AND COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0) <> lap_time_ms"
-                    + " ORDER BY source_row"
-            )
+            |> Sql.selectAll(Sql.frags(
+                Sql.raw("FROM laps WHERE") ::
+                scope(entry) ::
+                Sql.raw("AND COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0) <> lap_time_ms"
+                    + " ORDER BY source_row") :: Nil
+            ))
 
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Sql.intoRow(lap -> expected -> actual ->
@@ -106,11 +107,15 @@ mod Cli.Load.Validation {
             |> Sql.pipeline(Sql.int("running"))
             |> Sql.pipeline(Sql.int("elapsed_ms"))
             |> Sql.selectAllWith(
-                "WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
-                    + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
-                    + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
-                    + " FROM laps WHERE " + scope(entry) + ")",
-                "FROM c WHERE running <> elapsed_ms ORDER BY first_seen, lap_number"
+                Sql.frags(
+                    Sql.raw("WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
+                        + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
+                        + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
+                        + " FROM laps WHERE") ::
+                    scope(entry) ::
+                    Sql.raw(")") :: Nil
+                ),
+                Sql.raw("FROM c WHERE running <> elapsed_ms ORDER BY first_seen, lap_number")
             )
 
     def hourOffsetViolations(entry: Entry): Result[String, List[Violation]] \ Db =
@@ -119,10 +124,15 @@ mod Cli.Load.Validation {
             |> Sql.pipeline(Sql.int("base"))
             |> Sql.pipeline(Sql.int("off"))
             |> Sql.selectAllWith(
-                "WITH o AS (SELECT car_number, lap_number, source_row, " + Schema.hourOffset() + " AS off,"
-                    + " FIRST_VALUE(" + Schema.hourOffset() + ") OVER (ORDER BY source_row) AS base"
-                    + " FROM laps WHERE " + scope(entry) + ")",
-                "FROM o WHERE off <> base ORDER BY source_row"
+                Sql.frags(
+                    Sql.raw("WITH o AS (SELECT car_number, lap_number, source_row, "
+                        + Schema.hourOffset() + " AS off,"
+                        + " FIRST_VALUE(" + Schema.hourOffset() + ") OVER (ORDER BY source_row) AS base"
+                        + " FROM laps WHERE") ::
+                    scope(entry) ::
+                    Sql.raw(")") :: Nil
+                ),
+                Sql.raw("FROM o WHERE off <> base ORDER BY source_row")
             )
 
     /// A lap's two mini-sector rules are reported together, so they are read
@@ -145,31 +155,39 @@ mod Cli.Load.Validation {
             |> Sql.pipeline(Sql.int("sum_ms"))
             |> Sql.pipeline(Sql.text("blanks") |> Sql.andThen(positions))
             |> Sql.selectAllWith(
-                "WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
-                    + " crossing_finish_line_in_pit, pit_time_ms,"
-                    + " (SELECT COALESCE(SUM(t.value), 0)"
-                    + "  FROM json_each(laps.mini_sector_time_ms) t) AS sum_ms,"
-                    + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
-                    + "  FROM json_each(laps.mini_sector_time_ms) t"
-                    + "  WHERE t.value IS NULL), '') AS blanks"
-                    + " FROM laps WHERE " + scope(entry) + " AND mini_sector_time_ms IS NOT NULL)",
-                "FROM m WHERE NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"
+                Sql.frags(
+                    Sql.raw("WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
+                        + " crossing_finish_line_in_pit, pit_time_ms,"
+                        + " (SELECT COALESCE(SUM(t.value), 0)"
+                        + "  FROM json_each(laps.mini_sector_time_ms) t) AS sum_ms,"
+                        + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
+                        + "  FROM json_each(laps.mini_sector_time_ms) t"
+                        + "  WHERE t.value IS NULL), '') AS blanks"
+                        + " FROM laps WHERE") ::
+                    scope(entry) ::
+                    Sql.raw("AND mini_sector_time_ms IS NOT NULL)") :: Nil
+                ),
+                Sql.raw("FROM m WHERE NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"
                     + " AND sum_ms <> lap_time_ms"
                     + trackLimitsExclusions()
-                    + " ORDER BY source_row"
+                    + " ORDER BY source_row")
             )
 
     def miniSectorMonotonicViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
         monotonicBreak()
             |> Sql.selectAllWith(
-                "WITH e AS (SELECT car_number, lap_number, source_row,"
-                    + " x.key + 1 AS ord, x.value AS v,"
-                    + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
-                    + " FROM laps, json_each(laps.mini_sector_elapsed_ms) x"
-                    + " WHERE " + scope(entry) + " AND mini_sector_elapsed_ms IS NOT NULL"
-                    + " AND x.value IS NOT NULL"
-                    + " WINDOW w AS (PARTITION BY source_row ORDER BY x.key))",
-                "FROM e WHERE prev_v IS NOT NULL AND v <= prev_v ORDER BY source_row, ord"
+                Sql.frags(
+                    Sql.raw("WITH e AS (SELECT car_number, lap_number, source_row,"
+                        + " x.key + 1 AS ord, x.value AS v,"
+                        + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
+                        + " FROM laps, json_each(laps.mini_sector_elapsed_ms) x"
+                        + " WHERE") ::
+                    scope(entry) ::
+                    Sql.raw("AND mini_sector_elapsed_ms IS NOT NULL"
+                        + " AND x.value IS NOT NULL"
+                        + " WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
+                ),
+                Sql.raw("FROM e WHERE prev_v IS NOT NULL AND v <= prev_v ORDER BY source_row, ord")
             )
 
     def monotonicBreak(): Sel[(Int32, Int32, Violation)] =
@@ -186,7 +204,7 @@ mod Cli.Load.Validation {
 
     // ------------------------------------------------------------------- sql
 
-    def scope(entry: Entry): String =
+    def scope(entry: Entry): Sql.Frag =
         Schema.scope(entry#season, entry#id)
 
     /// Built from `Motorsport.MiniSector` rather than written out, so the

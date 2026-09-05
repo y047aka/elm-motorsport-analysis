@@ -1,6 +1,7 @@
 mod Db.TestDb {
 
     use Db.Statement
+    use Db.Value
     use Db.LapRow
     use Db.TestLapRow
 
@@ -37,13 +38,15 @@ mod Db.TestDb {
     /// with no violations and no cars in it.
     @Test
     def recordingCannotAnswerARead(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1"));
+        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
         match result {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)
         };
         match statements {
-            case Statement.Fetch(sql) :: Nil => Assert.assertTrue(sql == "SELECT 1")
+            case Statement.Fetch(sql, params) :: Nil =>
+                Assert.assertTrue(sql == "SELECT 1 WHERE ? = ?");
+                Assert.assertTrue(params == Value.Integer(1) :: Value.Integer(1) :: Nil)
             case _                           => Assert.assertTrue(false)
         }
 

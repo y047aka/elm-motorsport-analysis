@@ -1,7 +1,7 @@
 mod Db.TestLapRow {
 
     use Db.LapRow
-    use Db.LapRow.Value
+    use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
@@ -122,8 +122,8 @@ mod Db.TestLapRow {
 
     @Test
     def theJsonArrayKeepsTheBlanksInPlace(): Unit \ Assert =
-        Assert.assertTrue(LapRow.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
-        Assert.assertTrue(LapRow.jsonArray(Nil) == "[]")
+        Assert.assertTrue(Db.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
+        Assert.assertTrue(Db.jsonArray(Nil) == "[]")
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
@@ -179,7 +179,8 @@ mod Db.TestLapRow {
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.clause(LapRow.selection()) == "SELECT " + List.join(", ", Db.Schema.columns())
+            Sql.toSql(Sql.clause(LapRow.selection()))
+                == ("SELECT " + List.join(", ", Db.Schema.columns()), Nil)
         )
 
     /// What the reading gives back is what the writing was handed.

@@ -350,9 +350,16 @@ Every one of those readers builds its SELECT with `Sql`, the repository's own
 query builder. A `Sql.Sel` is one projection and the reading of it held in the
 same value — `Sql.intoRow` and `Sql.pipeline` compose them as
 `Util.Csv.Decode` composes a row of a CSV — so the clause is rendered from the
-readings rather than written beside them, and a column is named once. What the
-`Sel` does not cover is the query around it: a caller still writes its `FROM`
-onwards, and its common table expressions, as text.
+readings rather than written beside them, and a column is named once.
+
+A value a query compares against is bound rather than written into it: a
+`Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
+concatenating two pieces carries both, so a value cannot come to sit under
+another piece's placeholder. `Db.Schema.scope` is the one fragment the readers
+share, and it is where the season and the round's name are bound. What the
+`Sel` and the `Frag` do not cover is the shape of the query around them: a
+caller still writes its `FROM` onwards, and its common table expressions, as
+text.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
