@@ -202,9 +202,11 @@ mod Db.Laps {
         ) yield ()
 
     pub def insertRows(rows: List[LapRow]): Result[String, Int32] \ Db =
-        Db.insertMany(insert(), rows |> List.map(values))
+        let (statement, bound) = Sql.insertRows(table(), all(), rows);
+        Db.insertMany(statement, bound)
 
-    /// In the order `all` names them.
+    /// In the order `all` names them, which is the order the insert binds
+    /// them.
     pub def values(row: LapRow): List[Value] =
         all() |> List.map(c -> (c#bind)(row))
 
@@ -223,26 +225,18 @@ mod Db.Laps {
         "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
 
     pub def dropTable(): String =
-        "DROP TABLE IF EXISTS " + table()
+        Sql.dropTableIfExists(table())
 
     pub def createTable(): String =
-        "CREATE TABLE " + table() + " (\n"
-            + (definitions() |> List.map(d -> "  ${d}") |> List.join(",\n"))
-            + ",\n  PRIMARY KEY (" + named(primaryKey()) + ")"
-            + ",\n  UNIQUE (" + named(sourceKey()) + ")\n)"
-
-    pub def insert(): String =
-        "INSERT INTO " + table() + " (" + List.join(", ", columnNames()) + ") VALUES ("
-            + List.join(", ", List.map(_ -> "?", columnNames())) + ")"
-
-    def named(key: List[Bound]): String =
-        key |> List.map(c -> c#name) |> List.join(", ")
+        Sql.createTable(table(), all(),
+            Sql.Key.Primary(columnNamesOf(primaryKey())) ::
+            Sql.Key.Unique(columnNamesOf(sourceKey())) :: Nil)
 
     pub def columnNames(): List[String] =
-        all() |> List.map(c -> c#name)
+        columnNamesOf(all())
 
-    def definitions(): List[String] =
-        all() |> List.map(c -> "${c#name} ${c#sqlType}")
+    def columnNamesOf(these: List[Bound]): List[String] =
+        these |> List.map(c -> c#name)
 
     // -------------------------------------------------------- constructors
 

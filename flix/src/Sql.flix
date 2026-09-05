@@ -386,6 +386,50 @@ mod Sql {
         })
 
     ///
+    /// ===== STATEMENTS =====
+    ///
+
+    /// A key a table declares over columns of its own.
+    pub enum Key {
+        case Primary(List[String])
+        case Unique(List[String])
+    }
+
+    pub def dropTableIfExists(table: String): String =
+        "DROP TABLE IF EXISTS " + table
+
+    /// A column is its name and the type it takes in the table, so a table
+    /// that declares its columns has declared its schema. What a column binds
+    /// is not read here.
+    pub def createTable(table: String, columns: List[{name = String, sqlType = String | r}], keys: List[Key]): String =
+        let declared = List.append(
+            columns |> List.map(c -> "${c#name} ${c#sqlType}"),
+            keys |> List.map(keyText)
+        );
+        "CREATE TABLE " + table + " (\n"
+            + (declared |> List.map(d -> "  ${d}") |> List.join(",\n"))
+            + "\n)"
+
+    def keyText(key: Key): String =
+        match key {
+            case Key.Primary(names) => "PRIMARY KEY (" + List.join(", ", names) + ")"
+            case Key.Unique(names)  => "UNIQUE (" + List.join(", ", names) + ")"
+        }
+
+    /// The statement and the rows bound to it, both drawn from the columns in
+    /// the order they are given: a row cannot come to be bound in an order the
+    /// statement does not name, and there is a `?` for each value and no more.
+    pub def insertRows(
+        table: String,
+        columns: List[{name = String, bind = row -> Value | r}],
+        rows: List[row]
+    ): (String, List[List[Value]]) =
+        let statement = "INSERT INTO " + table
+            + " (" + (columns |> List.map(c -> c#name) |> List.join(", ")) + ")"
+            + " VALUES (" + (columns |> List.map(_ -> "?") |> List.join(", ")) + ")";
+        (statement, rows |> List.map(row -> columns |> List.map(c -> (c#bind)(row))))
+
+    ///
     /// ===== FRAGMENTS =====
     ///
 

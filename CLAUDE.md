@@ -430,6 +430,14 @@ them rather than the order they were asked for, a clause with nothing to say is
 left out, and `filter` asked twice asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
+So is what the load writes. `Sql.createTable` takes the columns and the keys
+over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
+and the rows -- and that last one hands back the statement and each row bound
+in the order the statement names its columns, both read off the one list, so a
+row cannot come to be bound in an order the statement does not name.
+`Db.Laps` declares; `Sql` renders. Neither the DDL nor the insert is written
+out in this repository any more.
+
 What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text
 has them, and a word about the wrong source fails where the query runs rather
