@@ -354,9 +354,12 @@ does not have, and a query reads `Columns.table` rather than spelling it.
 
 What it does not reach is the ordering: `Columns.all` and `Db.LapRow.selection`
 name the same columns twice, which is the one pairing no compiler sees and
-`Db.TestLapRow` asserts. `Sql` is one file because a Flix module cannot span
-them, and its own types would collide with the submodules it would otherwise
-be split into. Flix cannot read a record's fields, so the column list
+`Db.TestLapRow` asserts. `Sql` is one file. A Flix module cannot span two of them, so splitting it means
+submodules -- which its own types would not stand in the way of, a module and a
+type being free to share a name. What does is that Flix has no wildcard `use`:
+every call would grow a segment, or every caller a `use` line per name, which
+is what Acadia's `import Rows exposing (..)` saves it from paying for the same
+split. Flix cannot read a record's fields, so the column list
 restates each name that `Db.LapRow` already has; only the `bind` beside it is
 checked against the record. A column drawn from the list is the checked way to
 name one, and `Round.Index.lapCompletions` is the shape of that -- but a query
