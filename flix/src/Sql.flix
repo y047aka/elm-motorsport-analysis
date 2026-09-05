@@ -2,8 +2,9 @@
 ///
 /// A `Sel` is one projection and the decoder that reads it back, held in the
 /// same value: the expressions that go into the SELECT clause and the reading
-/// of the cells they come back as cannot be added to singly. `Sql.intoRow` and
-/// `Sql.pipeline` compose them as `Util.Csv.Decode` composes a row of a CSV.
+/// of the cells they come back as cannot be added to singly. What a query
+/// projects is written as a `Project` -- a reading, or a tuple of them -- so
+/// the clause and the value it comes back as are the same value read twice.
 ///
 /// Unlike that decoder, this one stops at the first cell it cannot read: a
 /// reading consumes the cells before it, so past a failure there is no longer a
@@ -95,25 +96,137 @@ mod Sql {
     /// ===== COMPOSING =====
     ///
 
-    /// Combine an arbitrary number of readings. Provide a curried function,
-    /// then supply each argument with `pipeline`.
+    /// What a query may project: a reading, or a tuple of them. A tuple is
+    /// read as the tuple of what its parts read, so the clause and the value
+    /// that comes back are two readings of the one expression the caller
+    /// wrote.
+    pub trait Project[t] {
+        type Out
+        pub def sel(x: t): Sel[Project.Out[t]]
+    }
+
+    instance Project[Sel[a]] {
+        type Out = a
+        pub def sel(x: Sel[a]): Sel[a] = x
+    }
+
+    instance Project[(a, b)] with Project[a], Project[b] {
+        type Out = (Project.Out[a], Project.Out[b])
+        pub def sel(x: (a, b)): Sel[(Project.Out[a], Project.Out[b])] =
+            let (xa, xb) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            both(sa, sb)
+    }
+
+    instance Project[(a, b, c)] with Project[a], Project[b], Project[c] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c])
+        pub def sel(x: (a, b, c)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c])] =
+            let (xa, xb, xc) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            both(sa, both(sb, sc))
+                |> selMap(match (va, (vb, vc)) -> (va, vb, vc))
+    }
+
+    instance Project[(a, b, c, d)] with Project[a], Project[b], Project[c], Project[d] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])
+        pub def sel(x: (a, b, c, d)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d])] =
+            let (xa, xb, xc, xd) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            both(sa, both(sb, both(sc, sd)))
+                |> selMap(match (va, (vb, (vc, vd))) -> (va, vb, vc, vd))
+    }
+
+    instance Project[(a, b, c, d, e)] with Project[a], Project[b], Project[c], Project[d], Project[e] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])
+        pub def sel(x: (a, b, c, d, e)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e])] =
+            let (xa, xb, xc, xd, xe) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            both(sa, both(sb, both(sc, both(sd, se))))
+                |> selMap(match (va, (vb, (vc, (vd, ve)))) -> (va, vb, vc, vd, ve))
+    }
+
+    instance Project[(a, b, c, d, e, f)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])
+        pub def sel(x: (a, b, c, d, e, f)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f])] =
+            let (xa, xb, xc, xd, xe, xf) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            both(sa, both(sb, both(sc, both(sd, both(se, sf)))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, vf))))) -> (va, vb, vc, vd, ve, vf))
+    }
+
+    instance Project[(a, b, c, d, e, f, g)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])
+        pub def sel(x: (a, b, c, d, e, f, g)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g])] =
+            let (xa, xb, xc, xd, xe, xf, xg) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            let sg = Project.sel(xg);
+            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, sg))))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, vg)))))) -> (va, vb, vc, vd, ve, vf, vg))
+    }
+
+    instance Project[(a, b, c, d, e, f, g, h)] with Project[a], Project[b], Project[c], Project[d], Project[e], Project[f], Project[g], Project[h] {
+        type Out = (Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])
+        pub def sel(x: (a, b, c, d, e, f, g, h)): Sel[(Project.Out[a], Project.Out[b], Project.Out[c], Project.Out[d], Project.Out[e], Project.Out[f], Project.Out[g], Project.Out[h])] =
+            let (xa, xb, xc, xd, xe, xf, xg, xh) = x;
+            let sa = Project.sel(xa);
+            let sb = Project.sel(xb);
+            let sc = Project.sel(xc);
+            let sd = Project.sel(xd);
+            let se = Project.sel(xe);
+            let sf = Project.sel(xf);
+            let sg = Project.sel(xg);
+            let sh = Project.sel(xh);
+            both(sa, both(sb, both(sc, both(sd, both(se, both(sf, both(sg, sh)))))))
+                |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, (vg, vh))))))) -> (va, vb, vc, vd, ve, vf, vg, vh))
+    }
+
+    /// A reading of a record, extended a field at a time: `add` names the
+    /// field the cell lands in, and a field left out is a record the type does
+    /// not answer to.
     ///
-    /// Named for `into`, which is a keyword.
-    pub def intoRow(f: a): Sel[a] =
-        Sel.Sel(Nil, cells -> Ok((f, cells)))
+    /// The same reading as a curried constructor with the readings piped into
+    /// it in turn takes the type checker deeper than the stack its thread is
+    /// given on Linux, which is smaller than on macOS: twenty-eight columns
+    /// compiles on a laptop and overflows in CI.
+    pub def record(empty: r): Sel[r] =
+        Sel.Sel(Nil, cells -> Ok((empty, cells)))
 
-    /// See `intoRow`.
-    pub def pipeline(sel: Sel[a], selFn: Sel[a -> b]): Sel[b] =
-        map2((f, value) -> f(value), selFn, sel)
+    /// See `record`. The column is picked as `map` picks one, so a reading
+    /// and a column of a declared table both go in.
+    pub def field(pick: p, add: (r, Project.Out[p]) -> s, rest: Sel[r]): Sel[s] with Project[p] =
+        both(rest, Project.sel(pick)) |> selMap(match (r, value) -> add(r, value))
 
-    pub def map2(transform: (a, b) -> c, selA: Sel[a], selB: Sel[b]): Sel[c] =
+    def both(selA: Sel[a], selB: Sel[b]): Sel[(a, b)] =
         let Sel.Sel(columnsA, decodeA) = selA;
         let Sel.Sel(columnsB, decodeB) = selB;
         Sel.Sel(columnsA ++ columnsB, cells ->
             decodeA(cells) |> Result.flatMap(match (a, restA) ->
-                decodeB(restA) |> Result.map(match (b, restB) -> (transform(a, b), restB))
+                decodeB(restA) |> Result.map(match (b, restB) -> ((a, b), restB))
             )
         )
+
+    def selMap(transform: a -> b, sel: Sel[a]): Sel[b] =
+        andThen(value -> Ok(transform(value)), sel)
 
     pub def andThen(transform: a -> Result[String, b], sel: Sel[a]): Sel[b] =
         let Sel.Sel(columns, decodeCells) = sel;
@@ -140,27 +253,37 @@ mod Sql {
                 Err("the row carries ${List.length(rest)} more columns than the projection reads")
         )
 
-    /// The rows a query reads, before it says what to read of them.
-    pub enum Rows {
-        case Rows({
-            ctes = List[Frag],
-            source = Frag,
-            filters = List[Expr[Bool]],
-            grouped = List[Frag],
-            ordered = List[Frag],
-            limited = Option[Int32]
-        })
+    /// The clauses of a query, which every stage of building one carries.
+    pub type alias Clauses = {
+        ctes = List[Frag],
+        source = Frag,
+        filters = List[Expr[Bool]],
+        grouped = List[Frag],
+        ordered = List[Frag],
+        limited = Option[Int32]
+    }
+
+    /// The rows a query reads, before it says what to read of them, and the
+    /// columns a projection picks from -- a record of them where the source
+    /// has one, `Unit` where it does not.
+    pub enum Rows[columns] {
+        case Rows(Clauses, columns)
     }
 
     /// Rows and the reading of one.
     pub enum Query[a] {
-        case Query(Rows, Sel[a])
+        case Query(Clauses, Sel[a])
     }
 
     /// `source` is what follows `FROM`: a table, a derived table, or tables
     /// joined. It is not read as anything in particular, so what a reading of
     /// it names is the caller's word.
-    pub def rows(source: Frag): Rows =
+    pub def rows(source: Frag): Rows[Unit] =
+        access(source, ())
+
+    /// As `rows`, where the source's columns are declared: `columns` is what
+    /// `map` hands the projection, so a column is named rather than spelled.
+    pub def access(source: Frag, columns: c): Rows[c] =
         Rows.Rows({
             ctes = Nil,
             source = source,
@@ -168,39 +291,48 @@ mod Sql {
             grouped = Nil,
             ordered = Nil,
             limited = None
-        })
+        }, columns)
 
     /// A common table expression the source is read through, named and
     /// defined but without its `WITH`, which the query writes once however
     /// many there are. Asked twice, both hold.
-    pub def using(cte: Frag, rows: Rows): Rows =
-        let Rows.Rows(r) = rows;
-        Rows.Rows({ ctes = List.append(r#ctes, cte :: Nil) | r })
+    pub def using(cte: Frag, rows: Rows[c]): Rows[c] =
+        let Rows.Rows(r, columns) = rows;
+        Rows.Rows({ ctes = List.append(r#ctes, cte :: Nil) | r }, columns)
 
     /// What is asked of the rows. Asked twice, both hold.
-    pub def filter(predicate: Expr[Bool], rows: Rows): Rows =
-        let Rows.Rows(r) = rows;
-        Rows.Rows({ filters = List.append(r#filters, predicate :: Nil) | r })
+    pub def filter(predicate: Expr[Bool], rows: Rows[c]): Rows[c] =
+        let Rows.Rows(r, columns) = rows;
+        Rows.Rows({ filters = List.append(r#filters, predicate :: Nil) | r }, columns)
 
-    pub def groupBy(terms: List[Frag], rows: Rows): Rows =
-        let Rows.Rows(r) = rows;
-        Rows.Rows({ grouped = List.append(r#grouped, terms) | r })
+    pub def groupBy(terms: List[Frag], rows: Rows[c]): Rows[c] =
+        let Rows.Rows(r, columns) = rows;
+        Rows.Rows({ grouped = List.append(r#grouped, terms) | r }, columns)
 
-    pub def orderBy(terms: List[Frag], rows: Rows): Rows =
-        let Rows.Rows(r) = rows;
-        Rows.Rows({ ordered = List.append(r#ordered, terms) | r })
+    pub def orderBy(terms: List[Frag], rows: Rows[c]): Rows[c] =
+        let Rows.Rows(r, columns) = rows;
+        Rows.Rows({ ordered = List.append(r#ordered, terms) | r }, columns)
 
-    pub def limit(count: Int32, rows: Rows): Rows =
-        let Rows.Rows(r) = rows;
-        Rows.Rows({ limited = Some(count) | r })
+    pub def limit(count: Int32, rows: Rows[c]): Rows[c] =
+        let Rows.Rows(r, columns) = rows;
+        Rows.Rows({ limited = Some(count) | r }, columns)
 
-    /// What to read of each row.
-    pub def map(sel: Sel[a], rows: Rows): Query[a] =
-        Query.Query(rows, sel)
+    /// What to read of each row, picked from the source's columns: a column,
+    /// or a tuple of columns and expressions. The clause and the value that
+    /// comes back are both read off what `project` returned.
+    pub def map(pick: c -> p, rows: Rows[c]): Query[Project.Out[p]] with Project[p] =
+        let Rows.Rows(r, columns) = rows;
+        Query.Query(r, Project.sel(pick(columns)))
+
+    /// What the row read means, which is the caller's own type rather than
+    /// the tuple the columns came back as.
+    pub def reading(transform: a -> b, q: Query[a]): Query[b] =
+        let Query.Query(r, sel) = q;
+        Query.Query(r, selMap(transform, sel))
 
     /// What the query is, which is settled without a database.
     pub def toStatement(q: Query[a]): Frag =
-        let Query.Query(Rows.Rows(r), sel) = q;
+        let Query.Query(r, sel) = q;
         frags(
             keyword("WITH", ", ", r#ctes) ::
             clause(sel) ::

@@ -6,7 +6,6 @@
 mod Round.Index {
 
     use Db.Laps
-    use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Index
     use Motorsport.Index.Change
@@ -37,15 +36,12 @@ mod Round.Index {
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
-        Sql.rows(Sql.raw(Laps.table()))
+        Laps.rows()
             |> Sql.filter(scope(entry))
-            |> Sql.groupBy(Laps.term(Laps.lapNumber()) :: Nil)
-            |> Sql.orderBy(Laps.term(Laps.lapNumber()) :: Nil)
-            |> Sql.map(
-                Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
-                    |> Sql.pipeline(Laps.read(Laps.lapNumber()))
-                    |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
-            )
+            |> Sql.groupBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.orderBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
+            |> Sql.reading(match (lap, elapsed) -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.selectAll
 
     // ----------------------------------------------------------- best times
@@ -66,23 +62,27 @@ mod Round.Index {
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
             |> Sql.filter(Sql.column("prev IS NULL OR t * dir < prev"))
             |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
-            |> Sql.map(change(record))
+            |> Sql.map(_ -> (
+                record,
+                Sql.int("elapsed_ms"),
+                Sql.int("t"),
+                Sql.text("car_number"),
+                Sql.int("lap_number"),
+                Sql.text("driver_name")
+            ))
+            |> Sql.reading(change)
             |> Sql.selectAll
 
-    def change(record: Sel[Record]): Sel[(Record, Change)] =
-        Sql.intoRow(rec -> elapsed -> time -> carNumber -> lap -> driver -> (rec, {
-            elapsed   = Util.Duration.fromMillis(elapsed),
-            time      = Util.Duration.fromMillis(time),
-            carNumber = carNumber,
-            lap       = lap,
-            driver    = driver
-        }))
-            |> Sql.pipeline(record)
-            |> Sql.pipeline(Sql.int("elapsed_ms"))
-            |> Sql.pipeline(Sql.int("t"))
-            |> Sql.pipeline(Sql.text("car_number"))
-            |> Sql.pipeline(Sql.int("lap_number"))
-            |> Sql.pipeline(Sql.text("driver_name"))
+    def change(row: (Record, Int32, Int32, String, Int32, String)): (Record, Change) =
+        match row {
+            case (record, elapsed, time, carNumber, lap, driver) => (record, {
+                elapsed   = Util.Duration.fromMillis(elapsed),
+                time      = Util.Duration.fromMillis(time),
+                carNumber = carNumber,
+                lap       = lap,
+                driver    = driver
+            })
+        }
 
     def changesOf(record: Record, changes: List[(Record, Change)]): List[Change] =
         changes |> List.filterMap(match (r, change) -> if (r == record) Some(change) else None)
@@ -129,7 +129,7 @@ mod Round.Index {
                 + " FROM " + Laps.table()
                 + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::
-            where_(entry, Sql.ne(Laps.expr(Laps.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil
+            where_(entry, Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
         )
 
 }

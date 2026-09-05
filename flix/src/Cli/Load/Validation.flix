@@ -82,33 +82,31 @@ mod Cli.Load.Validation {
     // ------------------------------------------------------------------ rules
 
     def sectorSumViolations(entry: Entry): Result[String, List[Violation]] \ Db =
-        Sql.rows(Sql.raw(Laps.table()))
+        Laps.rows()
             |> Sql.filter(scope(entry))
-            |> Sql.filter(Sql.ne(sectorSum(), Laps.expr(Laps.lapTimeMs())))
-            |> Sql.orderBy(Laps.term(Laps.sourceRow()) :: Nil)
-            |> Sql.map(sectorSumBreak())
+            |> Sql.filter(Sql.ne(sectorSum(), Laps.expr(Laps.columns()#lapTimeMs)))
+            |> Sql.orderBy(Laps.term(Laps.columns()#sourceRow) :: Nil)
+            |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.intOf(Sql.term(sectorSum())), blanks()))
+            |> Sql.reading(match (lap, lapTime, sum, blank) ->
+                Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blank)))
             |> Sql.selectAll
 
     /// The lap's mini-sector times, one row per marker, read off the row the
     /// enclosing query is on.
     def miniSectorTimes(): String =
-        "json_each(" + Laps.table() + "." + Laps.name(Laps.miniSectorTimeMs()) + ") t"
+        "json_each(" + Laps.table() + "." + Laps.name(Laps.columns()#miniSectorTimeMs) + ") t"
 
     def sectorSum(): Sql.Expr[Int32] =
         Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)")
 
-    def sectorSumBreak(): Sel[Violation] =
-        Sql.intoRow(lap -> lapTime -> sum -> blanks ->
-            Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blanks)))
-            |> Sql.pipeline(lapOf())
-            |> Sql.pipeline(Laps.read(Laps.lapTimeMs()))
-            |> Sql.pipeline(Sql.intOf(Sql.term(sectorSum())))
-            |> Sql.pipeline(Sql.text(
-                "TRIM("
-                    + "   CASE WHEN s1_ms IS NULL THEN 's1,' ELSE '' END ||"
-                    + "   CASE WHEN s2_ms IS NULL THEN 's2,' ELSE '' END ||"
-                    + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
-            ))
+    /// The sectors the feed left blank, named as the report names them.
+    def blanks(): Sel[String] =
+        Sql.text(
+            "TRIM("
+                + "   CASE WHEN s1_ms IS NULL THEN 's1,' ELSE '' END ||"
+                + "   CASE WHEN s2_ms IS NULL THEN 's2,' ELSE '' END ||"
+                + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
+        )
 
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Sql.rows(Sql.raw("c"))
@@ -122,13 +120,9 @@ mod Cli.Load.Validation {
             ))
             |> Sql.filter(Sql.ne(Sql.column("running"), Sql.column("elapsed_ms")))
             |> Sql.orderBy(Sql.raw("first_seen") :: Sql.raw("lap_number") :: Nil)
-            |> Sql.map(
-                Sql.intoRow(lap -> expected -> actual ->
-                    Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
-                    |> Sql.pipeline(lapOf())
-                    |> Sql.pipeline(Sql.int("running"))
-                    |> Sql.pipeline(Sql.int("elapsed_ms"))
-            )
+            |> Sql.map(_ -> (lapOf(), Sql.int("running"), Sql.int("elapsed_ms")))
+            |> Sql.reading(match (lap, expected, actual) ->
+                Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
             |> Sql.selectAll
 
     def hourOffsetViolations(entry: Entry): Result[String, List[Violation]] \ Db =
@@ -143,12 +137,9 @@ mod Cli.Load.Validation {
             ))
             |> Sql.filter(Sql.ne(Sql.column("off"), Sql.column("base")))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
-            |> Sql.map(
-                Sql.intoRow(lap -> base -> actual -> Violation.HourElapsedOffset(lap, base, actual))
-                    |> Sql.pipeline(lapOf())
-                    |> Sql.pipeline(Sql.int("base"))
-                    |> Sql.pipeline(Sql.int("off"))
-            )
+            |> Sql.map(_ -> (lapOf(), Sql.int("base"), Sql.int("off")))
+            |> Sql.reading(match (lap, base, actual) ->
+                Violation.HourElapsedOffset(lap, base, actual))
             |> Sql.selectAll
 
     /// A lap's two mini-sector rules are reported together, so they are read
@@ -173,24 +164,23 @@ mod Cli.Load.Validation {
                     + "  FROM " + miniSectorTimes()
                     + "  WHERE t.value IS NULL), '') AS blanks"
                     + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Sql.isNotNull(Laps.expr(Laps.miniSectorTimeMs())) :: Nil) ::
+                where_(entry, Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
                 Sql.raw(")") :: Nil
             ))
             |> Sql.filter(Sql.column("NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"))
             |> Sql.filter(Sql.ne(Sql.column("sum_ms"), Sql.column("lap_time_ms")))
             |> Sql.filter(Sql.every(trackLimitsExclusions()))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
-            |> Sql.map(sumBreak())
+            |> Sql.map(_ -> (
+                lapOf(),
+                Sql.int("source_row"),
+                Sql.int("lap_time_ms"),
+                Sql.int("sum_ms"),
+                Sql.text("blanks") |> Sql.andThen(positions)
+            ))
+            |> Sql.reading(match (lap, sourceRow, lapTime, sum, ids) ->
+                (sourceRow, 0, Violation.MiniSectorSum(lap, duration(lapTime), duration(sum), ids)))
             |> Sql.selectAll
-
-    def sumBreak(): Sel[(Int32, Int32, Violation)] =
-        Sql.intoRow(lap -> sourceRow -> lapTime -> sum -> ids ->
-            (sourceRow, 0, Violation.MiniSectorSum(lap, duration(lapTime), duration(sum), ids)))
-            |> Sql.pipeline(lapOf())
-            |> Sql.pipeline(Sql.int("source_row"))
-            |> Sql.pipeline(Sql.int("lap_time_ms"))
-            |> Sql.pipeline(Sql.int("sum_ms"))
-            |> Sql.pipeline(Sql.text("blanks") |> Sql.andThen(positions))
 
     def miniSectorMonotonicViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
         Sql.rows(Sql.raw("e"))
@@ -202,27 +192,26 @@ mod Cli.Load.Validation {
                     + ", json_each(" + Laps.table() + ".mini_sector_elapsed_ms) x"
                     + " WHERE") ::
                 where_(entry,
-                    Sql.isNotNull(Laps.expr(Laps.miniSectorElapsedMs())) ::
+                    Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorElapsedMs)) ::
                     Sql.isNotNull(Sql.column("x.value")) :: Nil) ::
                 Sql.raw("WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
             ))
             |> Sql.filter(Sql.isNotNull(Sql.column("prev_v")))
             |> Sql.filter(Sql.lte(Sql.column("v"), Sql.column("prev_v")))
             |> Sql.orderBy(Sql.raw("source_row") :: Sql.raw("ord") :: Nil)
-            |> Sql.map(monotonicBreak())
+            |> Sql.map(_ -> (
+                lapOf(),
+                Sql.int("source_row"),
+                Sql.int("prev_ord") |> Sql.andThen(miniSectorAt),
+                Sql.int("prev_v"),
+                Sql.int("ord"),
+                Sql.int("ord") |> Sql.andThen(miniSectorAt),
+                Sql.int("v")
+            ))
+            |> Sql.reading(match (lap, sourceRow, prevId, prevElapsed, ord, currId, elapsed) ->
+                (sourceRow, ord, Violation.MiniSectorElapsedMonotonic(
+                    lap, prevId, duration(prevElapsed), currId, duration(elapsed))))
             |> Sql.selectAll
-
-    def monotonicBreak(): Sel[(Int32, Int32, Violation)] =
-        Sql.intoRow(lap -> sourceRow -> prevId -> prevElapsed -> ord -> currId -> elapsed ->
-            (sourceRow, ord, Violation.MiniSectorElapsedMonotonic(
-                lap, prevId, duration(prevElapsed), currId, duration(elapsed))))
-            |> Sql.pipeline(lapOf())
-            |> Sql.pipeline(Sql.int("source_row"))
-            |> Sql.pipeline(Sql.int("prev_ord") |> Sql.andThen(miniSectorAt))
-            |> Sql.pipeline(Sql.int("prev_v"))
-            |> Sql.pipeline(Sql.int("ord"))
-            |> Sql.pipeline(Sql.int("ord") |> Sql.andThen(miniSectorAt))
-            |> Sql.pipeline(Sql.int("v"))
 
     // ------------------------------------------------------------------- sql
 
@@ -247,9 +236,9 @@ mod Cli.Load.Validation {
     // ---------------------------------------------------------------- decode
 
     def lapOf(): Sel[Lap] =
-        Sql.intoRow(carNumber -> lapNumber -> { carNumber = carNumber, lapNumber = lapNumber })
-            |> Sql.pipeline(Sql.text("car_number"))
-            |> Sql.pipeline(Sql.int("lap_number"))
+        Sql.record({})
+            |> Sql.field(Sql.text("car_number"), (row, value) -> { +carNumber = value | row })
+            |> Sql.field(Sql.int("lap_number"), (row, value) -> { +lapNumber = value | row })
 
     def duration(ms: Int32): Duration =
         Util.Duration.fromMillis(ms)

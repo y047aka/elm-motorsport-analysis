@@ -11,21 +11,21 @@ mod Round.Laps {
     pub def loaded(entry: Entry): Result[String, Bool] \ Db =
         laps(entry)
             |> Sql.limit(1)
-            |> Sql.map(Sql.int("1"))
+            |> Sql.map(_ -> Sql.int("1"))
             |> Sql.selectAll
             |> Result.map(found -> not List.isEmpty(found))
 
     pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
         forM(
             lapRows <- laps(entry)
-                |> Sql.orderBy(Laps.term(Laps.sourceRow()) :: Nil)
-                |> Sql.map(LapRow.selection())
+                |> Sql.orderBy(Laps.term(Laps.columns()#sourceRow) :: Nil)
+                |> Sql.map(_ -> LapRow.selection())
                 |> Sql.selectAll;
             rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
         ) yield rawLaps
 
-    def laps(entry: Entry): Sql.Rows =
-        Sql.rows(Sql.raw(Laps.table()))
+    def laps(entry: Entry): Sql.Rows[Laps.Columns] =
+        Laps.rows()
             |> Sql.filter(Laps.scope(entry#season, entry#id))
 
 }

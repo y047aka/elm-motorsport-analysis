@@ -35,6 +35,12 @@ mod Db.Laps {
         let Column.Column(c) = column;
         c#read
 
+    /// A column is one of the things a query may project.
+    instance Sql.Project[Column[a]] {
+        type Out = a
+        pub def sel(x: Column[a]): Sel[a] = Db.Laps.read(x)
+    }
+
     /// The column as a term of a comparison, in the type it takes.
     pub def expr(column: Column[a]): Sql.Expr[a] =
         let Column.Column(c) = column;
@@ -48,52 +54,95 @@ mod Db.Laps {
     /// The table these columns are of.
     pub def table(): String = "laps"
 
+    /// The table's rows, with its columns for a projection to pick from.
+    pub def rows(): Sql.Rows[Columns] =
+        rowsOf(Sql.raw(table()))
+
+    /// As `rows`, where the source is the table read alongside something of
+    /// its own -- `json_each` over one of its arrays, say. The columns are the
+    /// table's either way.
+    pub def rowsOf(source: Sql.Frag): Sql.Rows[Columns] =
+        Sql.access(source, columns())
+
     /// One lap of one car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound] =
-        bound(season()) :: bound(round()) :: bound(carNumber()) :: bound(lapNumber()) :: Nil
+        let c = columns();
+        bound(c#season) :: bound(c#round) :: bound(c#carNumber) :: bound(c#lapNumber) :: Nil
 
     /// The place the file listed a lap in, which a round has at most one lap
     /// at.
     pub def sourceKey(): List[Bound] =
-        bound(season()) :: bound(round()) :: bound(sourceRow()) :: Nil
+        let c = columns();
+        bound(c#season) :: bound(c#round) :: bound(c#sourceRow) :: Nil
 
     // ---------------------------------------------------------- the columns
 
-    pub def season(): Column[Int32] = integer("season", r -> r#season)
-    pub def round(): Column[String] = text("round", r -> r#round)
-    pub def sourceRow(): Column[Int32] = integer("source_row", r -> r#sourceRow)
-    pub def carNumber(): Column[String] = text("car_number", r -> r#carNumber)
-    pub def carClass(): Column[String] = text("class", r -> r#class)
-    pub def carGroup(): Column[String] = text("car_group", r -> r#carGroup)
-    pub def team(): Column[String] = text("team", r -> r#team)
-    pub def manufacturer(): Column[String] = text("manufacturer", r -> r#manufacturer)
-    pub def driverNumber(): Column[Int32] = integer("driver_number", r -> r#driverNumber)
-    pub def driverName(): Column[String] = text("driver_name", r -> r#driverName)
-    pub def lapNumber(): Column[Int32] = integer("lap_number", r -> r#lapNumber)
-    pub def lapTimeMs(): Column[Int32] = integer("lap_time_ms", r -> r#lapTimeMs)
-    pub def lapImprovement(): Column[Int32] = integer("lap_improvement", r -> r#lapImprovement)
-    pub def crossingFinishLineInPit(): Column[Bool] = boolean("crossing_finish_line_in_pit", r -> r#crossingFinishLineInPit)
-    pub def s1Ms(): Column[Option[Int32]] = nullableInteger("s1_ms", r -> r#s1Ms)
-    pub def s1Improvement(): Column[Int32] = integer("s1_improvement", r -> r#s1Improvement)
-    pub def s2Ms(): Column[Option[Int32]] = nullableInteger("s2_ms", r -> r#s2Ms)
-    pub def s2Improvement(): Column[Int32] = integer("s2_improvement", r -> r#s2Improvement)
-    pub def s3Ms(): Column[Option[Int32]] = nullableInteger("s3_ms", r -> r#s3Ms)
-    pub def s3Improvement(): Column[Int32] = integer("s3_improvement", r -> r#s3Improvement)
-    pub def kph(): Column[String] = text("kph", r -> r#kph)
-    pub def elapsedMs(): Column[Int32] = integer("elapsed_ms", r -> r#elapsedMs)
-    pub def hourMs(): Column[Int32] = integer("hour_ms", r -> r#hourMs)
-    pub def topSpeed(): Column[String] = text("top_speed", r -> r#topSpeed)
-    pub def pitTimeMs(): Column[Option[Int32]] = nullableInteger("pit_time_ms", r -> r#pitTimeMs)
-    pub def flagAtFl(): Column[String] = text("flag_at_fl", r -> r#flagAtFl)
+    /// What a projection picks from, and what every other view of the table
+    /// is built out of.
+    pub type alias Columns = {
+        season = Column[Int32],
+        round = Column[String],
+        sourceRow = Column[Int32],
+        carNumber = Column[String],
+        carClass = Column[String],
+        carGroup = Column[String],
+        team = Column[String],
+        manufacturer = Column[String],
+        driverNumber = Column[Int32],
+        driverName = Column[String],
+        lapNumber = Column[Int32],
+        lapTimeMs = Column[Int32],
+        lapImprovement = Column[Int32],
+        crossingFinishLineInPit = Column[Bool],
+        s1Ms = Column[Option[Int32]],
+        s1Improvement = Column[Int32],
+        s2Ms = Column[Option[Int32]],
+        s2Improvement = Column[Int32],
+        s3Ms = Column[Option[Int32]],
+        s3Improvement = Column[Int32],
+        kph = Column[String],
+        elapsedMs = Column[Int32],
+        hourMs = Column[Int32],
+        topSpeed = Column[String],
+        pitTimeMs = Column[Option[Int32]],
+        flagAtFl = Column[String],
+        miniSectorTimeMs = Column[Option[List[Option[Int32]]]],
+        miniSectorElapsedMs = Column[Option[List[Option[Int32]]]]
+    }
 
-    /// A JSON array of the fifteen of `Motorsport.MiniSector.all()` in track
-    /// order, so a subscript is a place on the circuit. `json_each` is what a
-    /// query reads one back with.
-    pub def miniSectorTimeMs(): Column[Option[List[Option[Int32]]]] =
-        nullableIntArray("mini_sector_time_ms", r -> r#miniSectorTimeMs)
-
-    pub def miniSectorElapsedMs(): Column[Option[List[Option[Int32]]]] =
-        nullableIntArray("mini_sector_elapsed_ms", r -> r#miniSectorElapsedMs)
+    /// The mini-sector pair is a JSON array of the fifteen of
+    /// `Motorsport.MiniSector.all()` in track order, so a subscript is a place
+    /// on the circuit; `json_each` is what a query reads one back with.
+    pub def columns(): Columns = {
+        season = integer("season", r -> r#season),
+        round = text("round", r -> r#round),
+        sourceRow = integer("source_row", r -> r#sourceRow),
+        carNumber = text("car_number", r -> r#carNumber),
+        carClass = text("class", r -> r#class),
+        carGroup = text("car_group", r -> r#carGroup),
+        team = text("team", r -> r#team),
+        manufacturer = text("manufacturer", r -> r#manufacturer),
+        driverNumber = integer("driver_number", r -> r#driverNumber),
+        driverName = text("driver_name", r -> r#driverName),
+        lapNumber = integer("lap_number", r -> r#lapNumber),
+        lapTimeMs = integer("lap_time_ms", r -> r#lapTimeMs),
+        lapImprovement = integer("lap_improvement", r -> r#lapImprovement),
+        crossingFinishLineInPit = boolean("crossing_finish_line_in_pit", r -> r#crossingFinishLineInPit),
+        s1Ms = nullableInteger("s1_ms", r -> r#s1Ms),
+        s1Improvement = integer("s1_improvement", r -> r#s1Improvement),
+        s2Ms = nullableInteger("s2_ms", r -> r#s2Ms),
+        s2Improvement = integer("s2_improvement", r -> r#s2Improvement),
+        s3Ms = nullableInteger("s3_ms", r -> r#s3Ms),
+        s3Improvement = integer("s3_improvement", r -> r#s3Improvement),
+        kph = text("kph", r -> r#kph),
+        elapsedMs = integer("elapsed_ms", r -> r#elapsedMs),
+        hourMs = integer("hour_ms", r -> r#hourMs),
+        topSpeed = text("top_speed", r -> r#topSpeed),
+        pitTimeMs = nullableInteger("pit_time_ms", r -> r#pitTimeMs),
+        flagAtFl = text("flag_at_fl", r -> r#flagAtFl),
+        miniSectorTimeMs = nullableIntArray("mini_sector_time_ms", r -> r#miniSectorTimeMs),
+        miniSectorElapsedMs = nullableIntArray("mini_sector_elapsed_ms", r -> r#miniSectorElapsedMs)
+    }
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.
@@ -101,34 +150,35 @@ mod Db.Laps {
     /// This and `Db.LapRow.selection` are two orderings of the same columns,
     /// and no compiler sees them together.
     pub def all(): List[Bound] =
-        bound(season()) ::
-        bound(round()) ::
-        bound(sourceRow()) ::
-        bound(carNumber()) ::
-        bound(carClass()) ::
-        bound(carGroup()) ::
-        bound(team()) ::
-        bound(manufacturer()) ::
-        bound(driverNumber()) ::
-        bound(driverName()) ::
-        bound(lapNumber()) ::
-        bound(lapTimeMs()) ::
-        bound(lapImprovement()) ::
-        bound(crossingFinishLineInPit()) ::
-        bound(s1Ms()) ::
-        bound(s1Improvement()) ::
-        bound(s2Ms()) ::
-        bound(s2Improvement()) ::
-        bound(s3Ms()) ::
-        bound(s3Improvement()) ::
-        bound(kph()) ::
-        bound(elapsedMs()) ::
-        bound(hourMs()) ::
-        bound(topSpeed()) ::
-        bound(pitTimeMs()) ::
-        bound(flagAtFl()) ::
-        bound(miniSectorTimeMs()) ::
-        bound(miniSectorElapsedMs()) ::
+        let c = columns();
+        bound(c#season) ::
+        bound(c#round) ::
+        bound(c#sourceRow) ::
+        bound(c#carNumber) ::
+        bound(c#carClass) ::
+        bound(c#carGroup) ::
+        bound(c#team) ::
+        bound(c#manufacturer) ::
+        bound(c#driverNumber) ::
+        bound(c#driverName) ::
+        bound(c#lapNumber) ::
+        bound(c#lapTimeMs) ::
+        bound(c#lapImprovement) ::
+        bound(c#crossingFinishLineInPit) ::
+        bound(c#s1Ms) ::
+        bound(c#s1Improvement) ::
+        bound(c#s2Ms) ::
+        bound(c#s2Improvement) ::
+        bound(c#s3Ms) ::
+        bound(c#s3Improvement) ::
+        bound(c#kph) ::
+        bound(c#elapsedMs) ::
+        bound(c#hourMs) ::
+        bound(c#topSpeed) ::
+        bound(c#pitTimeMs) ::
+        bound(c#flagAtFl) ::
+        bound(c#miniSectorTimeMs) ::
+        bound(c#miniSectorElapsedMs) ::
         Nil
 
     // --------------------------------------------------------------- schema
@@ -144,16 +194,17 @@ mod Db.Laps {
     pub def insertRows(rows: List[LapRow]): Result[String, Int32] \ Db =
         Db.insertMany(insert(), rows |> List.map(values))
 
-    /// In the order `columns` names them.
+    /// In the order `all` names them.
     pub def values(row: LapRow): List[Value] =
         all() |> List.map(c -> (c#bind)(row))
 
     /// The rows of one round: every reading of the table is of a single round,
     /// and the pair is what names one.
     pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
+        let c = columns();
         Sql.every(
-            Sql.eq(expr(season()), Sql.i32(inSeason)) ::
-            Sql.eq(expr(round()), Sql.str(named)) :: Nil
+            Sql.eq(expr(c#season), Sql.i32(inSeason)) ::
+            Sql.eq(expr(c#round), Sql.str(named)) :: Nil
         )
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
@@ -171,13 +222,13 @@ mod Db.Laps {
             + ",\n  UNIQUE (" + named(sourceKey()) + ")\n)"
 
     pub def insert(): String =
-        "INSERT INTO " + table() + " (" + List.join(", ", columns()) + ") VALUES ("
-            + List.join(", ", List.map(_ -> "?", columns())) + ")"
+        "INSERT INTO " + table() + " (" + List.join(", ", columnNames()) + ") VALUES ("
+            + List.join(", ", List.map(_ -> "?", columnNames())) + ")"
 
     def named(key: List[Bound]): String =
         key |> List.map(c -> c#name) |> List.join(", ")
 
-    pub def columns(): List[String] =
+    pub def columnNames(): List[String] =
         all() |> List.map(c -> c#name)
 
     def definitions(): List[String] =

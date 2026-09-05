@@ -4,12 +4,10 @@ mod Sql.TestSel {
     use Sql.Sel
 
     def pair(): Sel[(String, Int32)] =
-        Sql.intoRow(name -> lap -> (name, lap))
-            |> Sql.pipeline(Sql.text("driver_name"))
-            |> Sql.pipeline(Sql.int("lap_number"))
+        Sql.Project.sel((Sql.text("driver_name"), Sql.int("lap_number")))
 
     @Test
-    def theClauseFollowsTheOrderTheReadingsWerePipedIn(): Unit \ Assert =
+    def theClauseFollowsTheOrderTheProjectionNamesThem(): Unit \ Assert =
         Assert.assertTrue(Sql.toSql(Sql.clause(pair())) == ("SELECT driver_name, lap_number", Nil))
 
     @Test
@@ -18,12 +16,11 @@ mod Sql.TestSel {
             Sql.decode(pair(), Some("Will STEVENS") :: Some("7") :: Nil) == Ok(("Will STEVENS", 7))
         )
 
-    /// A `Sel` piped into another contributes its columns where it sits.
+    /// A reading of several is itself a reading, and contributes its columns
+    /// where it sits.
     @Test
     def aReadingMadeOfReadingsIsFlat(): Unit \ Assert =
-        let sel = Sql.intoRow(p -> flag -> (p, flag))
-            |> Sql.pipeline(pair())
-            |> Sql.pipeline(Sql.text("flag_at_fl"));
+        let sel = Sql.Project.sel((pair(), Sql.text("flag_at_fl")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT driver_name, lap_number, flag_at_fl", Nil));
         Assert.assertTrue(
             Sql.decode(sel, Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil)
@@ -112,7 +109,7 @@ mod Sql.TestSel {
     def theClausesValuesComeBeforeTheRests(): Unit \ Assert =
         let statement = Sql.rows(Sql.raw("laps"))
             |> Sql.filter(Sql.eq(Sql.column("season"), Sql.i32(2025)))
-            |> Sql.map(Sql.optionalIntOf(
+            |> Sql.map(_ -> Sql.optionalIntOf(
                 Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil)))
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (

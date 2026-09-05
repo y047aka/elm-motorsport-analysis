@@ -179,7 +179,7 @@ mod Db.TestLapRow {
     /// it declares the table.
     @Test
     def theKeysNameColumnsTheTableHas(): Unit \ Assert =
-        let declared = Db.Laps.columns();
+        let declared = Db.Laps.columnNames();
         let named = List.append(Laps.primaryKey(), Laps.sourceKey())
             |> List.map(c -> c#name);
         Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
@@ -188,13 +188,14 @@ mod Db.TestLapRow {
                 Db.Laps.createTable())
         )
 
-    /// `Db.Laps.Laps.all` and `selection` are two ordered lists of the same
-    /// columns, and no compiler sees them together.
+    /// The reading names every column the load bound, and in that order:
+    /// `Db.Laps.all` and `selection` are two orderings of the one declaration,
+    /// and no compiler sees them together.
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
             Sql.toSql(Sql.clause(LapRow.selection()))
-                == ("SELECT " + List.join(", ", Db.Laps.columns()), Nil)
+                == ("SELECT " + List.join(", ", Db.Laps.columnNames()), Nil)
         )
 
     /// What the reading gives back is what the writing was handed.

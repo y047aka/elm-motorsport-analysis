@@ -345,32 +345,43 @@ nothing of this application; `Db.Laps` and `Db.LapRow` are the whole of what
 the application tells them about itself, which is the same line Acadia draws
 between `Transaction`, `Rows` and a `Table`.
 
-`Db.Laps` declares each column of
+`Db.Laps.columns` declares each column of
 the table once -- its name, the type it takes there, how a row binds it and how
-it reads back -- and `Db.Schema`'s DDL, that schema's insert and
-`Db.Laps.values` are all views of that one list. The table's name and its two
-keys are declared there too, so the `CREATE TABLE` names no column the list
-does not have, and a query reads `Columns.table` rather than spelling it.
+it reads back -- as one record, and `Db.Laps.all`, the DDL, the insert,
+`Db.Laps.values` and what a projection picks from are all views of it. The table's name and its two keys are declared there too, so the
+`CREATE TABLE` names no column the record does not have, and a query reads
+`Db.Laps.table` rather than spelling it.
 
-What it does not reach is the ordering: `Columns.all` and `Db.LapRow.selection`
+What it does not reach is the ordering: `Db.Laps.all` and `Db.LapRow.selection`
 name the same columns twice, which is the one pairing no compiler sees and
 `Db.TestLapRow` asserts. `Sql` is one file. A Flix module cannot span two of them, so splitting it means
 submodules -- which its own types would not stand in the way of, a module and a
 type being free to share a name. What does is that Flix has no wildcard `use`:
 every call would grow a segment, or every caller a `use` line per name, which
 is what Acadia's `import Rows exposing (..)` saves it from paying for the same
-split. Flix cannot read a record's fields, so the column list
-restates each name that `Db.LapRow` already has; only the `bind` beside it is
-checked against the record. A column drawn from the list is the checked way to
-name one, and `Round.Index.lapCompletions` is the shape of that -- but a query
-reading from a common table expression cannot use it, since the expression's
-own `SELECT` is text and would not follow a rename.
+split. Flix cannot read a record's fields, so `all`
+restates each name the declaration already has; only the `bind` beside it is
+checked against `Db.LapRow`. A column drawn from the declaration is the checked
+way to name one, and `Round.Index.lapCompletions` is the shape of that -- but a
+query reading from a common table expression cannot use it, since the
+expression's own `SELECT` is text and would not follow a rename.
 
 Every one of those readers builds its SELECT with `Sql`, the repository's own
 query builder. A `Sql.Sel` is one projection and the reading of it held in the
-same value — `Sql.intoRow` and `Sql.pipeline` compose them as
-`Util.Csv.Decode` composes a row of a CSV — so the clause is rendered from the
-readings rather than written beside them, and a column is named once.
+same value, so the clause is rendered from the readings rather than written
+beside them, and a column is named once. What a query projects is a
+`Sql.Project` -- a column, a reading, or a tuple of them -- which is why
+`Sql.map` takes the columns and hands back what to read of them, as Acadia's
+`map` does; the tuple that comes back becomes the caller's own type through
+`Sql.reading`.
+
+A row of more than eight is a record instead, extended a field at a time with
+`Sql.record` and `Sql.field`, which is what `Db.LapRow.selection` is: each line
+names a column and the field its cell lands in, so the two cannot be paired
+wrongly, and a field left out is not a `LapRow`. A curried constructor with the
+readings piped into it in turn holds neither of those, and the type checker
+cannot afford it either: twenty-eight of those need a 2m stack where the record
+needs 512k.
 
 A value a query compares against is bound rather than written into it: a
 `Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
@@ -379,7 +390,7 @@ another piece's placeholder.
 
 What a query asks of its rows is a `Sql.Expr[Bool]`, built by comparing a
 `Db.Laps.Columns` column against a value of the type that column takes.
-`Db.Schema.scope` -- the pair naming a round, which every reading of the table
+`Db.Laps.scope` -- the pair naming a round, which every reading of the table
 is scoped by -- is one, and each reader ANDs its own onto it. The type is what
 carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
@@ -393,20 +404,23 @@ it picks, handing back a reading of that number as the thing the arm was about.
 each and one arm of fifteen, and neither the arms nor the reading names a
 number.
 
-A query is built rather than written: `Sql.rows` names what follows `FROM`, and
-`filter`, `groupBy`, `orderBy`, `limit` and `using` add to it in any order,
+A query is built rather than written: `Sql.rows` names what follows `FROM`
+(`Sql.access` where the caller says what columns it has, which is what
+`Db.Laps.rows` hands a reader), `filter`, `groupBy`, `orderBy`, `limit` and
+`using` add to it in any order,
 `map` says what to read of a row and `selectAll` or `selectOne` runs it -- the
 shape Acadia's own queries have. The clauses come out in the order SQL wants
 them rather than the order they were asked for, a clause with nothing to say is
 left out, and `filter` asked twice asks both. `Sql.toStatement` is pure, so what
 a query is can be read back without a database.
 
-What the query does not reach is its source. There is no typed table for
-`Sql.rows` to take, so a derived table, a join or a `json_each` is named as
-text, and a column of one is `Sql.column`. `Round.Summary.carBuilds` is the
-case that would want a typed join, its `LEFT JOIN` lifting the right side's
-columns to `Option`, which needs a columns record per source that Flix will not
-give us generically. The window clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`,
+What the query does not reach is its source. The source is text however it is
+named, so the columns `Sql.access` carries are the caller's word that the text
+has them: `Db.Laps.rowsOf` says so of a derived table selecting the table's own
+columns and of `json_each` beside it, and a source that has none is
+`Sql.column` as before. `Round.Summary.carBuilds` is the case that would want a
+typed join, its `LEFT JOIN` lifting the right side's columns to `Option`, which
+needs a columns record per source that Flix will not give us generically. The window clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`,
 `WINDOW w AS` -- are text for the same reason.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
@@ -503,8 +517,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   is to run it with the stack cut down: `java -Xss768k -jar <flix.jar> build`
   from `flix/`. 768k is where the tree as it stands builds and 640k where it
   does not, so a change that raises that number is the one to look at.
-  `Db.LapRow.selection` reads its twenty-eight columns in groups for this
-  reason and no other.
+  A reading of many columns is what comes closest: `Db.LapRow.selection` builds
+  its twenty-eight with `Sql.record` and `Sql.field` for this reason among
+  others, the curried form of the same reading needing a 2m stack.
 - **The database** — a test drives JDBC rather than a handler standing in for
   it, against the in-memory database `Round.TestSupport.url` names: a
   connection of its own per test, so what one loads is never the archive a

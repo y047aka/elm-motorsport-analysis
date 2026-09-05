@@ -5,7 +5,7 @@ mod Sql.TestExpr {
 
     @Test
     def aComparisonBindsTheValueItComparesAgainst(): Unit \ Assert =
-        let expr = Sql.eq(Laps.expr(Laps.lapNumber()), Sql.i32(1));
+        let expr = Sql.eq(Laps.expr(Laps.columns()#lapNumber), Sql.i32(1));
         Assert.assertTrue(
             Sql.toSql(Sql.term(expr)) == ("lap_number = ?", Value.Integer(1) :: Nil)
         )
@@ -13,7 +13,7 @@ mod Sql.TestExpr {
     /// `IS NULL` reads nothing, so it binds nothing.
     @Test
     def aNullTestNamesTheColumnAlone(): Unit \ Assert =
-        let expr = Sql.isNotNull(Laps.expr(Laps.miniSectorTimeMs()));
+        let expr = Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorTimeMs));
         Assert.assertTrue(
             Sql.toSql(Sql.term(expr)) == ("mini_sector_time_ms IS NOT NULL", Nil)
         )
@@ -21,9 +21,9 @@ mod Sql.TestExpr {
     @Test
     def predicatesAreAndedInTheOrderGiven(): Unit \ Assert =
         let expr = Sql.every(
-            Sql.eq(Laps.expr(Laps.season()), Sql.i32(2025)) ::
-            Sql.ne(Laps.expr(Laps.lapTimeMs()), Sql.i32(0)) ::
-            Sql.isNotNull(Laps.expr(Laps.s1Ms())) :: Nil
+            Sql.eq(Laps.expr(Laps.columns()#season), Sql.i32(2025)) ::
+            Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) ::
+            Sql.isNotNull(Laps.expr(Laps.columns()#s1Ms)) :: Nil
         );
         Assert.assertTrue(Sql.toSql(Sql.term(expr)) == (
             "season = ? AND lap_time_ms <> ? AND s1_ms IS NOT NULL",

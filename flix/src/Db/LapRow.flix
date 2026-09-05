@@ -101,124 +101,40 @@ mod Db.LapRow {
             reading(sector) |> Option.map(Duration.millis)
         ))
 
-    /// A round's laps as the table holds them, naming the columns
-    /// `Db.Laps.columns` names and in that order.
-    ///
-    /// Read in groups: a `pipeline` over all twenty-eight at once takes the
-    /// type checker deeper than the stack its thread is given on Linux, where
-    /// it is smaller than on macOS -- so a clean build fails in CI and passes
-    /// on the machine it was written on.
+    /// A round's laps as the table holds them, a field at a time: each line
+    /// names the column and the field its cell lands in, and a field left out
+    /// is not a `LapRow`.
     pub def selection(): Sel[LapRow] =
-        Sql.intoRow(round -> car -> lap -> sectors -> tail -> mini -> {
-            season = round#season,
-            round = round#round,
-            sourceRow = round#sourceRow,
-            carNumber = car#carNumber,
-            class = car#class,
-            carGroup = car#carGroup,
-            team = car#team,
-            manufacturer = car#manufacturer,
-            driverNumber = car#driverNumber,
-            driverName = car#driverName,
-            lapNumber = lap#lapNumber,
-            lapTimeMs = lap#lapTimeMs,
-            lapImprovement = lap#lapImprovement,
-            crossingFinishLineInPit = lap#crossingFinishLineInPit,
-            s1Ms = sectors#s1Ms,
-            s1Improvement = sectors#s1Improvement,
-            s2Ms = sectors#s2Ms,
-            s2Improvement = sectors#s2Improvement,
-            s3Ms = sectors#s3Ms,
-            s3Improvement = sectors#s3Improvement,
-            kph = tail#kph,
-            elapsedMs = tail#elapsedMs,
-            hourMs = tail#hourMs,
-            topSpeed = tail#topSpeed,
-            pitTimeMs = tail#pitTimeMs,
-            flagAtFl = tail#flagAtFl,
-            miniSectorTimeMs = mini#times,
-            miniSectorElapsedMs = mini#elapsed
-        })
-            |> Sql.pipeline(roundColumns())
-            |> Sql.pipeline(carColumns())
-            |> Sql.pipeline(lapColumns())
-            |> Sql.pipeline(sectorColumns())
-            |> Sql.pipeline(tailColumns())
-            |> Sql.pipeline(miniSectorColumns())
-
-    def roundColumns(): Sel[{season = Int32, round = String, sourceRow = Int32}] =
-        Sql.intoRow(season -> round -> sourceRow ->
-            { season = season, round = round, sourceRow = sourceRow })
-            |> Sql.pipeline(Laps.read(Laps.season()))
-            |> Sql.pipeline(Laps.read(Laps.round()))
-            |> Sql.pipeline(Laps.read(Laps.sourceRow()))
-
-    def carColumns(): Sel[{carNumber = String, class = String, carGroup = String, team = String, manufacturer = String, driverNumber = Int32, driverName = String}] =
-        Sql.intoRow(carNumber -> class -> carGroup -> team -> manufacturer -> driverNumber -> driverName -> {
-            carNumber = carNumber,
-            class = class,
-            carGroup = carGroup,
-            team = team,
-            manufacturer = manufacturer,
-            driverNumber = driverNumber,
-            driverName = driverName
-        })
-            |> Sql.pipeline(Laps.read(Laps.carNumber()))
-            |> Sql.pipeline(Laps.read(Laps.carClass()))
-            |> Sql.pipeline(Laps.read(Laps.carGroup()))
-            |> Sql.pipeline(Laps.read(Laps.team()))
-            |> Sql.pipeline(Laps.read(Laps.manufacturer()))
-            |> Sql.pipeline(Laps.read(Laps.driverNumber()))
-            |> Sql.pipeline(Laps.read(Laps.driverName()))
-
-    def lapColumns(): Sel[{lapNumber = Int32, lapTimeMs = Int32, lapImprovement = Int32, crossingFinishLineInPit = Bool}] =
-        Sql.intoRow(lapNumber -> lapTimeMs -> lapImprovement -> crossingFinishLineInPit -> {
-            lapNumber = lapNumber,
-            lapTimeMs = lapTimeMs,
-            lapImprovement = lapImprovement,
-            crossingFinishLineInPit = crossingFinishLineInPit
-        })
-            |> Sql.pipeline(Laps.read(Laps.lapNumber()))
-            |> Sql.pipeline(Laps.read(Laps.lapTimeMs()))
-            |> Sql.pipeline(Laps.read(Laps.lapImprovement()))
-            |> Sql.pipeline(Laps.read(Laps.crossingFinishLineInPit()))
-
-    def sectorColumns(): Sel[{s1Ms = Option[Int32], s1Improvement = Int32, s2Ms = Option[Int32], s2Improvement = Int32, s3Ms = Option[Int32], s3Improvement = Int32}] =
-        Sql.intoRow(s1Ms -> s1Improvement -> s2Ms -> s2Improvement -> s3Ms -> s3Improvement -> {
-            s1Ms = s1Ms,
-            s1Improvement = s1Improvement,
-            s2Ms = s2Ms,
-            s2Improvement = s2Improvement,
-            s3Ms = s3Ms,
-            s3Improvement = s3Improvement
-        })
-            |> Sql.pipeline(Laps.read(Laps.s1Ms()))
-            |> Sql.pipeline(Laps.read(Laps.s1Improvement()))
-            |> Sql.pipeline(Laps.read(Laps.s2Ms()))
-            |> Sql.pipeline(Laps.read(Laps.s2Improvement()))
-            |> Sql.pipeline(Laps.read(Laps.s3Ms()))
-            |> Sql.pipeline(Laps.read(Laps.s3Improvement()))
-
-    def tailColumns(): Sel[{kph = String, elapsedMs = Int32, hourMs = Int32, topSpeed = String, pitTimeMs = Option[Int32], flagAtFl = String}] =
-        Sql.intoRow(kph -> elapsedMs -> hourMs -> topSpeed -> pitTimeMs -> flagAtFl -> {
-            kph = kph,
-            elapsedMs = elapsedMs,
-            hourMs = hourMs,
-            topSpeed = topSpeed,
-            pitTimeMs = pitTimeMs,
-            flagAtFl = flagAtFl
-        })
-            |> Sql.pipeline(Laps.read(Laps.kph()))
-            |> Sql.pipeline(Laps.read(Laps.elapsedMs()))
-            |> Sql.pipeline(Laps.read(Laps.hourMs()))
-            |> Sql.pipeline(Laps.read(Laps.topSpeed()))
-            |> Sql.pipeline(Laps.read(Laps.pitTimeMs()))
-            |> Sql.pipeline(Laps.read(Laps.flagAtFl()))
-
-    def miniSectorColumns(): Sel[{times = Option[List[Option[Int32]]], elapsed = Option[List[Option[Int32]]]}] =
-        Sql.intoRow(times -> elapsed -> { times = times, elapsed = elapsed })
-            |> Sql.pipeline(Laps.read(Laps.miniSectorTimeMs()))
-            |> Sql.pipeline(Laps.read(Laps.miniSectorElapsedMs()))
+        let c = Laps.columns();
+        Sql.record({})
+            |> Sql.field(c#season, (row, value) -> { +season = value | row })
+            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
+            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
+            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
+            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
+            |> Sql.field(c#team, (row, value) -> { +team = value | row })
+            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
+            |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
+            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
+            |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
+            |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
+            |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
+            |> Sql.field(c#crossingFinishLineInPit, (row, value) -> { +crossingFinishLineInPit = value | row })
+            |> Sql.field(c#s1Ms, (row, value) -> { +s1Ms = value | row })
+            |> Sql.field(c#s1Improvement, (row, value) -> { +s1Improvement = value | row })
+            |> Sql.field(c#s2Ms, (row, value) -> { +s2Ms = value | row })
+            |> Sql.field(c#s2Improvement, (row, value) -> { +s2Improvement = value | row })
+            |> Sql.field(c#s3Ms, (row, value) -> { +s3Ms = value | row })
+            |> Sql.field(c#s3Improvement, (row, value) -> { +s3Improvement = value | row })
+            |> Sql.field(c#kph, (row, value) -> { +kph = value | row })
+            |> Sql.field(c#elapsedMs, (row, value) -> { +elapsedMs = value | row })
+            |> Sql.field(c#hourMs, (row, value) -> { +hourMs = value | row })
+            |> Sql.field(c#topSpeed, (row, value) -> { +topSpeed = value | row })
+            |> Sql.field(c#pitTimeMs, (row, value) -> { +pitTimeMs = value | row })
+            |> Sql.field(c#flagAtFl, (row, value) -> { +flagAtFl = value | row })
+            |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
+            |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
 
     pub def toRawLap(row: LapRow): Result[String, RawLap] =
         forM(
