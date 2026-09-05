@@ -26,6 +26,7 @@ mod Round.Laps {
         ) yield rawLaps
 
     def laps(entry: Entry): Sql.Rows =
-        Sql.rows(Sql.raw("laps")) |> Sql.filter(Schema.scope(entry#season, entry#id))
+        Sql.rows(Sql.raw(Columns.table()))
+            |> Sql.filter(Schema.scope(entry#season, entry#id))
 
 }

@@ -143,7 +143,7 @@ mod Sql {
     /// The rows a query reads, before it says what to read of them.
     pub enum Rows {
         case Rows({
-            ctes = Frag,
+            ctes = List[Frag],
             source = Frag,
             filters = List[Expr[Bool]],
             grouped = List[Frag],
@@ -162,7 +162,7 @@ mod Sql {
     /// it names is the caller's word.
     pub def rows(source: Frag): Rows =
         Rows.Rows({
-            ctes = raw(""),
+            ctes = Nil,
             source = source,
             filters = Nil,
             grouped = Nil,
@@ -170,11 +170,12 @@ mod Sql {
             limited = None
         })
 
-    /// The common table expressions the source is read through, `ctes`
-    /// carrying its own `WITH`.
-    pub def using(ctes: Frag, rows: Rows): Rows =
+    /// A common table expression the source is read through, named and
+    /// defined but without its `WITH`, which the query writes once however
+    /// many there are. Asked twice, both hold.
+    pub def using(cte: Frag, rows: Rows): Rows =
         let Rows.Rows(r) = rows;
-        Rows.Rows({ ctes = ctes | r })
+        Rows.Rows({ ctes = List.append(r#ctes, cte :: Nil) | r })
 
     /// What is asked of the rows. Asked twice, both hold.
     pub def filter(predicate: Expr[Bool], rows: Rows): Rows =
@@ -201,7 +202,7 @@ mod Sql {
     pub def toStatement(q: Query[a]): Frag =
         let Query.Query(Rows.Rows(r), sel) = q;
         frags(
-            r#ctes ::
+            keyword("WITH", ", ", r#ctes) ::
             clause(sel) ::
             raw("FROM") ::
             r#source ::

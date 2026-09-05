@@ -83,12 +83,17 @@ mod Cli.Load.Validation {
     // ------------------------------------------------------------------ rules
 
     def sectorSumViolations(entry: Entry): Result[String, List[Violation]] \ Db =
-        Sql.rows(Sql.raw("laps"))
+        Sql.rows(Sql.raw(Columns.table()))
             |> Sql.filter(scope(entry))
             |> Sql.filter(Sql.ne(sectorSum(), Columns.expr(Columns.lapTimeMs())))
             |> Sql.orderBy(Columns.term(Columns.sourceRow()) :: Nil)
             |> Sql.map(sectorSumBreak())
             |> Sql.selectAll
+
+    /// The lap's mini-sector times, one row per marker, read off the row the
+    /// enclosing query is on.
+    def miniSectorTimes(): String =
+        "json_each(" + Columns.table() + "." + Columns.name(Columns.miniSectorTimeMs()) + ") t"
 
     def sectorSum(): Sql.Expr[Int32] =
         Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)")
@@ -97,7 +102,7 @@ mod Cli.Load.Validation {
         Sql.intoRow(lap -> lapTime -> sum -> blanks ->
             Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blanks)))
             |> Sql.pipeline(lapOf())
-            |> Sql.pipeline(Sql.int("lap_time_ms"))
+            |> Sql.pipeline(Columns.read(Columns.lapTimeMs()))
             |> Sql.pipeline(Sql.intOf(Sql.term(sectorSum())))
             |> Sql.pipeline(Sql.text(
                 "TRIM("
@@ -109,10 +114,10 @@ mod Cli.Load.Validation {
     def elapsedDriftViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Sql.rows(Sql.raw("c"))
             |> Sql.using(Sql.frags(
-                Sql.raw("WITH c AS (SELECT car_number, lap_number, elapsed_ms,"
+                Sql.raw("c AS (SELECT car_number, lap_number, elapsed_ms,"
                     + " SUM(lap_time_ms) OVER (PARTITION BY car_number ORDER BY lap_number) AS running,"
                     + " MIN(source_row) OVER (PARTITION BY car_number) AS first_seen"
-                    + " FROM laps WHERE") ::
+                    + " FROM " + Columns.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw(")") :: Nil
             ))
@@ -130,10 +135,10 @@ mod Cli.Load.Validation {
     def hourOffsetViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Sql.rows(Sql.raw("o"))
             |> Sql.using(Sql.frags(
-                Sql.raw("WITH o AS (SELECT car_number, lap_number, source_row, "
+                Sql.raw("o AS (SELECT car_number, lap_number, source_row, "
                     + Schema.hourOffset() + " AS off,"
                     + " FIRST_VALUE(" + Schema.hourOffset() + ") OVER (ORDER BY source_row) AS base"
-                    + " FROM laps WHERE") ::
+                    + " FROM " + Columns.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw(")") :: Nil
             ))
@@ -161,14 +166,14 @@ mod Cli.Load.Validation {
     def miniSectorSumViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
         Sql.rows(Sql.raw("m"))
             |> Sql.using(Sql.frags(
-                Sql.raw("WITH m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
+                Sql.raw("m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
                     + " crossing_finish_line_in_pit, pit_time_ms,"
                     + " (SELECT COALESCE(SUM(t.value), 0)"
-                    + "  FROM json_each(laps.mini_sector_time_ms) t) AS sum_ms,"
+                    + "  FROM " + miniSectorTimes() + ") AS sum_ms,"
                     + " COALESCE((SELECT GROUP_CONCAT(t.key + 1, ',' ORDER BY t.key)"
-                    + "  FROM json_each(laps.mini_sector_time_ms) t"
+                    + "  FROM " + miniSectorTimes()
                     + "  WHERE t.value IS NULL), '') AS blanks"
-                    + " FROM laps WHERE") ::
+                    + " FROM " + Columns.table() + " WHERE") ::
                 where_(entry, Sql.isNotNull(Columns.expr(Columns.miniSectorTimeMs())) :: Nil) ::
                 Sql.raw(")") :: Nil
             ))
@@ -191,10 +196,11 @@ mod Cli.Load.Validation {
     def miniSectorMonotonicViolations(entry: Entry): Result[String, List[(Int32, Int32, Violation)]] \ Db =
         Sql.rows(Sql.raw("e"))
             |> Sql.using(Sql.frags(
-                Sql.raw("WITH e AS (SELECT car_number, lap_number, source_row,"
+                Sql.raw("e AS (SELECT car_number, lap_number, source_row,"
                     + " x.key + 1 AS ord, x.value AS v,"
                     + " LAG(x.key + 1) OVER w AS prev_ord, LAG(x.value) OVER w AS prev_v"
-                    + " FROM laps, json_each(laps.mini_sector_elapsed_ms) x"
+                    + " FROM " + Columns.table()
+                    + ", json_each(" + Columns.table() + ".mini_sector_elapsed_ms) x"
                     + " WHERE") ::
                 where_(entry,
                     Sql.isNotNull(Columns.expr(Columns.miniSectorElapsedMs())) ::

@@ -25,6 +25,10 @@ mod Db.Laps.Columns {
         let Column.Column(c) = column;
         { name = c#name, sqlType = c#sqlType, bind = c#bind }
 
+    pub def name(column: Column[a]): String =
+        let Column.Column(c) = column;
+        c#name
+
     pub def read(column: Column[a]): Sel[a] =
         let Column.Column(c) = column;
         c#read
@@ -38,6 +42,18 @@ mod Db.Laps.Columns {
     /// nothing.
     pub def term(column: Column[a]): Sql.Frag =
         Sql.term(expr(column))
+
+    /// The table these columns are of.
+    pub def table(): String = "laps"
+
+    /// One lap of one car of one round, which is what a row is at most one of.
+    pub def primaryKey(): List[Bound] =
+        bound(season()) :: bound(round()) :: bound(carNumber()) :: bound(lapNumber()) :: Nil
+
+    /// The place the file listed a lap in, which a round has at most one lap
+    /// at.
+    pub def sourceKey(): List[Bound] =
+        bound(season()) :: bound(round()) :: bound(sourceRow()) :: Nil
 
     // ---------------------------------------------------------- the columns
 

@@ -1,6 +1,7 @@
 mod Db.TestLapRow {
 
     use Db.LapRow
+    use Db.Laps.Columns
     use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -173,6 +174,19 @@ mod Db.TestLapRow {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
+
+    /// The table's keys name columns, and the schema names them again where
+    /// it declares the table.
+    @Test
+    def theKeysNameColumnsTheTableHas(): Unit \ Assert =
+        let declared = Db.Schema.columns();
+        let named = List.append(Columns.primaryKey(), Columns.sourceKey())
+            |> List.map(c -> c#name);
+        Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
+        Assert.assertTrue(
+            String.contains({substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
+                Db.Schema.createTable())
+        )
 
     /// `Db.Laps.Columns.all` and `selection` are two ordered lists of the same
     /// columns, and no compiler sees them together.

@@ -43,19 +43,23 @@ mod Sql.TestQuery {
         ))
 
     /// The common table expressions come before the SELECT, and so do the
-    /// values they bind.
+    /// values they bind. The query writes the `WITH` once however many there
+    /// are, so a second one is added rather than replacing the first.
     @Test
-    def theCommonTableExpressionsValuesComeFirst(): Unit \ Assert =
-        let statement = Sql.rows(Sql.raw("c"))
-            |> Sql.using(Sql.frag("WITH c AS (SELECT 1 FROM laps WHERE round = ?)",
+    def theCommonTableExpressionsAreJoinedAndTheirValuesComeFirst(): Unit \ Assert =
+        let statement = Sql.rows(Sql.raw("c JOIN d ON d.n = c.n"))
+            |> Sql.using(Sql.frag("c AS (SELECT 1 AS n FROM laps WHERE round = ?)",
                 Value.Text("le_mans_24h") :: Nil))
+            |> Sql.using(Sql.frag("d AS (SELECT 2 AS n FROM laps WHERE round = ?)",
+                Value.Text("fuji_6h") :: Nil))
             |> Sql.filter(Sql.eq(Sql.column("season"), Sql.i32(2025)))
             |> Sql.map(lapNumbers())
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
-            "WITH c AS (SELECT 1 FROM laps WHERE round = ?)"
-                + " SELECT lap_number FROM c WHERE season = ?",
-            Value.Text("le_mans_24h") :: Value.Integer(2025) :: Nil
+            "WITH c AS (SELECT 1 AS n FROM laps WHERE round = ?),"
+                + " d AS (SELECT 2 AS n FROM laps WHERE round = ?)"
+                + " SELECT lap_number FROM c JOIN d ON d.n = c.n WHERE season = ?",
+            Value.Text("le_mans_24h") :: Value.Text("fuji_6h") :: Value.Integer(2025) :: Nil
         ))
 
 }

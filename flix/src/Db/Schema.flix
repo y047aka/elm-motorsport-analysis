@@ -16,17 +16,20 @@ mod Db.Schema {
         "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
 
     pub def dropTable(): String =
-        "DROP TABLE IF EXISTS laps"
+        "DROP TABLE IF EXISTS " + Columns.table()
 
     pub def createTable(): String =
-        "CREATE TABLE laps (\n"
+        "CREATE TABLE " + Columns.table() + " (\n"
             + (definitions() |> List.map(d -> "  ${d}") |> List.join(",\n"))
-            + ",\n  PRIMARY KEY (season, round, car_number, lap_number)"
-            + ",\n  UNIQUE (season, round, source_row)\n)"
+            + ",\n  PRIMARY KEY (" + named(Columns.primaryKey()) + ")"
+            + ",\n  UNIQUE (" + named(Columns.sourceKey()) + ")\n)"
 
     pub def insert(): String =
-        "INSERT INTO laps (" + List.join(", ", columns()) + ") VALUES ("
+        "INSERT INTO " + Columns.table() + " (" + List.join(", ", columns()) + ") VALUES ("
             + List.join(", ", List.map(_ -> "?", columns())) + ")"
+
+    def named(key: List[Columns.Bound]): String =
+        key |> List.map(c -> c#name) |> List.join(", ")
 
     pub def columns(): List[String] =
         Columns.all() |> List.map(c -> c#name)

@@ -38,13 +38,13 @@ mod Round.Index {
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
-        Sql.rows(Sql.raw("laps"))
+        Sql.rows(Sql.raw(Columns.table()))
             |> Sql.filter(scope(entry))
             |> Sql.groupBy(Columns.term(Columns.lapNumber()) :: Nil)
             |> Sql.orderBy(Columns.term(Columns.lapNumber()) :: Nil)
             |> Sql.map(
                 Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
-                    |> Sql.pipeline(Sql.int("lap_number"))
+                    |> Sql.pipeline(Columns.read(Columns.lapNumber()))
                     |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
             )
             |> Sql.selectAll
@@ -64,7 +64,7 @@ mod Round.Index {
     def bestTimes(entry: Entry): Result[String, List[(Record, Change)]] \ Db =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
-            |> Sql.using(Sql.frags(Sql.raw("WITH v AS (") :: readings :: Sql.raw(")") :: Nil))
+            |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
             |> Sql.filter(Sql.column("prev IS NULL OR t * dir < prev"))
             |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
             |> Sql.map(change(record))
@@ -118,7 +118,7 @@ mod Round.Index {
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name,"
                 + " ${direction} AS dir, ${expression} AS t"
-                + " FROM laps WHERE") ::
+                + " FROM " + Columns.table() + " WHERE") ::
             where_(entry, Nil) :: Nil
         )
 
@@ -127,7 +127,8 @@ mod Round.Index {
     def miniSectorReadings(entry: Entry): Sql.Frag =
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name, 1, m.value"
-                + " FROM laps, json_each(laps.mini_sector_time_ms) m"
+                + " FROM " + Columns.table()
+                + ", json_each(" + Columns.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::
             where_(entry, Sql.ne(Columns.expr(Columns.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil
         )
