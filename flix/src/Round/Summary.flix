@@ -91,7 +91,15 @@ mod Round.Summary {
     /// instead would be a row per distinct combination, so a feed that changed
     /// a car's team mid-round would put that car on the grid twice.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
-        Sql.rows(Sql.raw("c LEFT JOIN l1 ON l1.car_number = c.car_number"))
+        let grid = gridColumns();
+        let lap1 = lap1Columns();
+        Sql.access(
+                Sql.frags(
+                    Sql.raw("c LEFT JOIN l1 ON") ::
+                    Sql.term(Sql.eq(Laps.expr(lap1#carNumber), Laps.expr(grid#carNumber))) :: Nil
+                ),
+                { grid = grid, lap1 = lap1 }
+            )
             |> Sql.using(Sql.frags(
                 Sql.raw("c AS (SELECT * FROM ("
                     + " SELECT car_number, class, car_group, team, manufacturer,"
@@ -108,17 +116,46 @@ mod Round.Summary {
                 Sql.raw(") WHERE rn = 1)") :: Nil
             ))
             |> Sql.orderBy(Sql.raw("c.first_seen") :: Nil)
-            |> Sql.map(_ -> (
-                Sql.text("c.car_number"),
-                Sql.text("c.class"),
-                Sql.text("c.car_group"),
-                Sql.text("c.team"),
-                Sql.text("c.manufacturer"),
-                Sql.optionalInt("l1.s1_ms"),
-                Sql.optionalInt("l1.elapsed_ms")
+            |> Sql.map(t -> (
+                t#grid#carNumber,
+                t#grid#class,
+                t#grid#carGroup,
+                t#grid#team,
+                t#grid#manufacturer,
+                t#lap1#s1Ms,
+                Sql.orNull(t#lap1#elapsedMs)
             ))
             |> Sql.reading(row -> carBuild(drivers, row))
             |> Sql.selectAll
+
+    /// The columns the two common table expressions select, under the names
+    /// the join gives them. Each is a column of `laps`, so what it reads back
+    /// as is the type the table gives it -- and `elapsed_ms`, which the table
+    /// has of every lap, is read through `Sql.orNull` because the join is the
+    /// one place a car can have no lap 1.
+    def gridColumns(): {
+        carNumber = Laps.Column[String],
+        class = Laps.Column[String],
+        carGroup = Laps.Column[String],
+        team = Laps.Column[String],
+        manufacturer = Laps.Column[String]
+    } =
+        let c = Laps.columns();
+        {
+            carNumber    = Laps.qualified("c", c#carNumber),
+            class        = Laps.qualified("c", c#carClass),
+            carGroup     = Laps.qualified("c", c#carGroup),
+            team         = Laps.qualified("c", c#team),
+            manufacturer = Laps.qualified("c", c#manufacturer)
+        }
+
+    def lap1Columns(): { carNumber = Laps.Column[String], s1Ms = Laps.Column[Option[Int32]], elapsedMs = Laps.Column[Int32] } =
+        let c = Laps.columns();
+        {
+            carNumber = Laps.qualified("l1", c#carNumber),
+            s1Ms      = Laps.qualified("l1", c#s1Ms),
+            elapsedMs = Laps.qualified("l1", c#elapsedMs)
+        }
 
     def carBuild(
         drivers: List[(String, String)],

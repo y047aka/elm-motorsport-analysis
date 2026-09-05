@@ -439,11 +439,16 @@ that cannot be wrong -- the table itself, and the table read alongside a
 columns it selects, which is what `Round.Summary.driverNames` does with two of
 them. A source that has none is `Sql.column` as before.
 
-`Round.Summary.carBuilds` is the case that would want a typed join, its
-`LEFT JOIN` lifting the right side's columns to `Option`, which needs a columns
-record per source that Flix will not give us generically. The window clauses --
-`ROW_NUMBER`, `LAG`, `FIRST_VALUE`, `WINDOW w AS` -- are text for the same
-reason.
+`Round.Summary.carBuilds` joins two of those, and what its sides have is said
+the same way: `Db.Laps.qualified` is a column of the table under the name a
+source gives it, so `c.car_number` and `l1.elapsed_ms` are the table's columns
+read and compared as that source's, and the join's `ON` is a comparison of two
+of them rather than text. What a `LEFT JOIN` does to the far side is
+`Sql.orNull`, which reads a null cell as nothing rather than as a reading that
+failed -- needed for a column the table has of every row, and not for one that
+is null in its own right. The records naming each side are still written out,
+Flix having no way to carry the twenty-eight through a rename. The window
+clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`, `WINDOW w AS` -- are text.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.

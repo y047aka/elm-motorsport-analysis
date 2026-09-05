@@ -200,6 +200,21 @@ mod Sql {
                 |> selMap(match (va, (vb, (vc, (vd, (ve, (vf, (vg, vh))))))) -> (va, vb, vc, vd, ve, vf, vg, vh))
     }
 
+    /// A reading of the far side of a `LEFT JOIN`: nothing where the join
+    /// found no row, which is every cell the reading takes coming back null.
+    /// A column that is null in its own right reads as nothing either way, so
+    /// this is for the ones that are not.
+    pub def orNull(pick: p): Sel[Option[Project.Out[p]]] with Project[p] =
+        let Sel.Sel(columns, decodeCells) = Project.sel(pick);
+        let width = List.length(columns);
+        Sel.Sel(columns, cells ->
+            if (width > 0 and List.length(cells) >= width
+                    and List.take(width, cells) |> List.forAll(Option.isEmpty))
+                Ok((None, List.drop(width, cells)))
+            else
+                decodeCells(cells) |> Result.map(match (value, rest) -> (Some(value), rest))
+        )
+
     /// A reading of a record, extended a field at a time: `add` names the
     /// field the cell lands in, and a field left out is a record the type does
     /// not answer to.

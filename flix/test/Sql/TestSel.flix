@@ -73,6 +73,25 @@ mod Sql.TestSel {
         Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok("fastest lap"));
         Assert.assertTrue(Sql.decode(sel, Some("9") :: Nil) == Err("no record is labelled 9"))
 
+    /// The far side of a `LEFT JOIN`: a null cell is the row the join did not
+    /// find rather than a reading that failed.
+    @Test
+    def aReadingOfTheFarSideOfAJoinTakesANullAsNothing(): Unit \ Assert =
+        let sel = Sql.orNull(Sql.int("l1.elapsed_ms"));
+        Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT l1.elapsed_ms", Nil));
+        Assert.assertTrue(Sql.decode(sel, None :: Nil) == Ok(None));
+        Assert.assertTrue(Sql.decode(sel, Some("95365") :: Nil) == Ok(Some(95365)))
+
+    /// It takes the cells its reading would have taken, whichever way it
+    /// answers, so the readings beside it are still on their own.
+    @Test
+    def aReadingOfTheFarSideTakesItsOwnCellsEitherWay(): Unit \ Assert =
+        let sel = Sql.Project.sel((Sql.orNull(Sql.int("l1.elapsed_ms")), Sql.text("c.car_number")));
+        Assert.assertTrue(Sql.decode(sel, None :: Some("12") :: Nil) == Ok((None, "12")));
+        Assert.assertTrue(
+            Sql.decode(sel, Some("95365") :: Some("12") :: Nil) == Ok((Some(95365), "12"))
+        )
+
     @Test
     def aRowLongerThanTheProjectionIsAnError(): Unit \ Assert =
         Assert.assertTrue(

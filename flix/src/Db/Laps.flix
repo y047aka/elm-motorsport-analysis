@@ -15,8 +15,10 @@ mod Db.Laps {
     use Db.Value
     use Sql.Sel
 
+    /// The reading is of a name rather than of this column's, so a column
+    /// read from another source is this one under that source's name.
     pub enum Column[a] {
-        case Column({ name = String, sqlType = String, bind = LapRow -> Value, read = Sel[a] })
+        case Column({ name = String, sqlType = String, bind = LapRow -> Value, reading = String -> Sel[a] })
     }
 
     /// A column with its reading forgotten. The twenty-eight do not share a
@@ -33,7 +35,14 @@ mod Db.Laps {
 
     pub def read(column: Column[a]): Sel[a] =
         let Column.Column(c) = column;
-        c#read
+        (c#reading)(c#name)
+
+    /// The column as the named source has it, which is what a join names its
+    /// sides' columns by. It reads and compares as `source.name`; what it
+    /// binds is the table's, and no query asks that of it.
+    pub def qualified(source: String, column: Column[a]): Column[a] =
+        let Column.Column(c) = column;
+        Column.Column({ name = source + "." + c#name | c })
 
     /// A column is one of the things a query may project.
     instance Sql.Project[Column[a]] {
@@ -237,22 +246,22 @@ mod Db.Laps {
 
     // -------------------------------------------------------- constructors
 
-    def column(name: String, sqlType: String, bind: LapRow -> Value, read: Sel[a]): Column[a] =
-        Column.Column({ name = name, sqlType = sqlType, bind = bind, read = read })
+    def column(name: String, sqlType: String, bind: LapRow -> Value, reading: String -> Sel[a]): Column[a] =
+        Column.Column({ name = name, sqlType = sqlType, bind = bind, reading = reading })
 
     def integer(name: String, get: LapRow -> Int32): Column[Int32] =
-        column(name, "int not null", r -> Value.Integer(get(r)), Sql.int(name))
+        column(name, "int not null", r -> Value.Integer(get(r)), Sql.int)
 
     def text(name: String, get: LapRow -> String): Column[String] =
-        column(name, "text not null", r -> Value.Text(get(r)), Sql.text(name))
+        column(name, "text not null", r -> Value.Text(get(r)), Sql.text)
 
     def boolean(name: String, get: LapRow -> Bool): Column[Bool] =
-        column(name, "int not null", r -> Value.Boolean(get(r)), Sql.bool(name))
+        column(name, "int not null", r -> Value.Boolean(get(r)), Sql.bool)
 
     def nullableInteger(name: String, get: LapRow -> Option[Int32]): Column[Option[Int32]] =
-        column(name, "int", r -> Value.NullableInteger(get(r)), Sql.optionalInt(name))
+        column(name, "int", r -> Value.NullableInteger(get(r)), Sql.optionalInt)
 
     def nullableIntArray(name: String, get: LapRow -> Option[List[Option[Int32]]]): Column[Option[List[Option[Int32]]]] =
-        column(name, "text", r -> Value.NullableIntArray(get(r)), Sql.optionalIntArray(name))
+        column(name, "text", r -> Value.NullableIntArray(get(r)), Sql.optionalIntArray)
 
 }

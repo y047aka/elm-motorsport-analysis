@@ -34,6 +34,21 @@ mod Sql.TestExpr {
     def nothingAskedOfTheRowsHoldsOfEveryRow(): Unit \ Assert =
         Assert.assertTrue(Sql.toSql(Sql.term(Sql.every(Nil))) == ("1 = 1", Nil))
 
+    /// A join names its sides' columns by the source they came from, and the
+    /// column is the table's either way -- the same reading, under that name.
+    @Test
+    def aQualifiedColumnIsTheOneTheSourceHas(): Unit \ Assert =
+        let lap1 = Laps.qualified("l1", Laps.columns()#carNumber);
+        Assert.assertTrue(Laps.name(lap1) == "l1.car_number");
+        Assert.assertTrue(
+            Sql.toSql(Sql.term(Sql.eq(Laps.expr(lap1), Sql.str("12"))))
+                == ("l1.car_number = ?", Value.Text("12") :: Nil)
+        );
+        Assert.assertTrue(
+            Sql.toSql(Sql.clause(Laps.read(lap1))) == ("SELECT l1.car_number", Nil)
+        );
+        Assert.assertTrue(Sql.decode(Laps.read(lap1), Some("12") :: Nil) == Ok("12"))
+
     /// The pair that names a round, which every reading of the table is
     /// scoped by.
     @Test
