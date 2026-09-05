@@ -319,7 +319,7 @@ mod Sql {
 
     /// What to read of each row, picked from the source's columns: a column,
     /// or a tuple of columns and expressions. The clause and the value that
-    /// comes back are both read off what `project` returned.
+    /// comes back are both read off what `pick` returned.
     pub def map(pick: c -> p, rows: Rows[c]): Query[Project.Out[p]] with Project[p] =
         let Rows.Rows(r, columns) = rows;
         Query.Query(r, Project.sel(pick(columns)))

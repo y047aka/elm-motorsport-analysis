@@ -56,13 +56,14 @@ mod Db.Laps {
 
     /// The table's rows, with its columns for a projection to pick from.
     pub def rows(): Sql.Rows[Columns] =
-        rowsOf(Sql.raw(table()))
+        Sql.access(Sql.raw(table()), columns())
 
-    /// As `rows`, where the source is the table read alongside something of
-    /// its own -- `json_each` over one of its arrays, say. The columns are the
-    /// table's either way.
-    pub def rowsOf(source: Sql.Frag): Sql.Rows[Columns] =
-        Sql.access(source, columns())
+    /// As `rows`, read alongside something of the table's own -- `json_each`
+    /// over one of its arrays, say. The table is the source either way, so all
+    /// of its columns are there; a source that is not the table takes
+    /// `Sql.access` and says for itself which of them it has.
+    pub def rowsBeside(companion: Sql.Frag): Sql.Rows[Columns] =
+        Sql.access(Sql.frags(Sql.raw(table() + ",") :: companion :: Nil), columns())
 
     /// One lap of one car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound] =

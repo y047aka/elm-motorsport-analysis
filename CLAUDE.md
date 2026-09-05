@@ -375,13 +375,14 @@ beside them, and a column is named once. What a query projects is a
 `map` does; the tuple that comes back becomes the caller's own type through
 `Sql.reading`.
 
-A row of more than eight is a record instead, extended a field at a time with
-`Sql.record` and `Sql.field`, which is what `Db.LapRow.selection` is: each line
+A row read as a record rather than a tuple is `Sql.record` extended a field at
+a time with `Sql.field`, which is what `Db.LapRow.selection` is: each line
 names a column and the field its cell lands in, so the two cannot be paired
-wrongly, and a field left out is not a `LapRow`. A curried constructor with the
-readings piped into it in turn holds neither of those, and the type checker
-cannot afford it either: twenty-eight of those need a 2m stack where the record
-needs 512k.
+wrongly, a field left out is not a `LapRow`, and a field named twice does not
+typecheck. It is also the only form a row of more than eight has, an instance
+head being written per arity. A curried constructor with the readings piped
+into it in turn holds none of that, and the type checker cannot afford it
+either: twenty-eight of those need a 2m stack where the record needs 512k.
 
 A value a query compares against is bound rather than written into it: a
 `Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
@@ -416,12 +417,18 @@ a query is can be read back without a database.
 
 What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text
-has them: `Db.Laps.rowsOf` says so of a derived table selecting the table's own
-columns and of `json_each` beside it, and a source that has none is
-`Sql.column` as before. `Round.Summary.carBuilds` is the case that would want a
-typed join, its `LEFT JOIN` lifting the right side's columns to `Option`, which
-needs a columns record per source that Flix will not give us generically. The window clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`,
-`WINDOW w AS` -- are text for the same reason.
+has them, and a word about the wrong source fails where the query runs rather
+than where it is built. `Db.Laps.rows` and `Db.Laps.rowsBeside` are the two
+that cannot be wrong -- the table itself, and the table read alongside a
+`json_each` of its own -- so a derived table calls `Sql.access` and names the
+columns it selects, which is what `Round.Summary.driverNames` does with two of
+them. A source that has none is `Sql.column` as before.
+
+`Round.Summary.carBuilds` is the case that would want a typed join, its
+`LEFT JOIN` lifting the right side's columns to `Option`, which needs a columns
+record per source that Flix will not give us generically. The window clauses --
+`ROW_NUMBER`, `LAG`, `FIRST_VALUE`, `WINDOW w AS` -- are text for the same
+reason.
 
 The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
 into the gitignored `lib/` by `flix build` — CI needs nothing added for it.

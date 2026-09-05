@@ -73,14 +73,18 @@ mod Round.Summary {
     /// `(car number, driver name)` in the order the file first showed each
     /// pair, which is the order a car's drivers are listed in.
     def driverNames(entry: Entry): Result[String, List[(String, String)]] \ Db =
-        Laps.rowsOf(Sql.frags(
-                Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
-                    + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Nil) ::
-                Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
-            ))
+        let c = Laps.columns();
+        Sql.access(
+                Sql.frags(
+                    Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
+                        + " FROM " + Laps.table() + " WHERE") ::
+                    where_(entry, Nil) ::
+                    Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
+                ),
+                { carNumber = c#carNumber, driverName = c#driverName }
+            )
             |> Sql.orderBy(Sql.raw("first_seen") :: Nil)
-            |> Sql.map(c -> (c#carNumber, c#driverName))
+            |> Sql.map(d -> (d#carNumber, d#driverName))
             |> Sql.selectAll
 
     /// A car is what the file first said it was. Grouping by the attributes
@@ -188,8 +192,7 @@ mod Round.Summary {
         Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0))
 
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
-        Laps.rowsOf(Sql.raw(Laps.table()
-                + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
+        Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
             |> Sql.filter(scope(entry))
             |> Sql.filter(recorded())
             |> Sql.filter(Sql.isNotNull(Sql.column("m.value")))
