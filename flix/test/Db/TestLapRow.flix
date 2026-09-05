@@ -1,7 +1,7 @@
 mod Db.TestLapRow {
 
     use Db.LapRow
-    use Db.Laps.Columns
+    use Db.Laps
     use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
@@ -142,7 +142,7 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        let values = LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
+        let values = Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
         Assert.assertTrue(List.take(4, values)
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
@@ -161,7 +161,7 @@ mod Db.TestLapRow {
         match Sql.decode(LapRow.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
-                Assert.assertTrue(LapRow.values(row) == LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
+                Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
         }
 
     @Test
@@ -179,22 +179,22 @@ mod Db.TestLapRow {
     /// it declares the table.
     @Test
     def theKeysNameColumnsTheTableHas(): Unit \ Assert =
-        let declared = Db.Schema.columns();
-        let named = List.append(Columns.primaryKey(), Columns.sourceKey())
+        let declared = Db.Laps.columns();
+        let named = List.append(Laps.primaryKey(), Laps.sourceKey())
             |> List.map(c -> c#name);
         Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
         Assert.assertTrue(
             String.contains({substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
-                Db.Schema.createTable())
+                Db.Laps.createTable())
         )
 
-    /// `Db.Laps.Columns.all` and `selection` are two ordered lists of the same
+    /// `Db.Laps.Laps.all` and `selection` are two ordered lists of the same
     /// columns, and no compiler sees them together.
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
             Sql.toSql(Sql.clause(LapRow.selection()))
-                == ("SELECT " + List.join(", ", Db.Schema.columns()), Nil)
+                == ("SELECT " + List.join(", ", Db.Laps.columns()), Nil)
         )
 
     /// What the reading gives back is what the writing was handed.

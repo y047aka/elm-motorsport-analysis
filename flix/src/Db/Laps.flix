@@ -1,4 +1,6 @@
-/// The columns of `laps`, each declared once.
+/// The `laps` table -- its name, its columns, its keys, and the schema and
+/// statements they make -- which is the whole of what this application tells
+/// `Db` and `Sql` about itself.
 ///
 /// A column's name, the type it takes in the table, how a row binds it and how
 /// it reads back are one value. The schema the load creates, the values it
@@ -7,7 +9,7 @@
 /// The type a column takes is the constructor's rather than a field of its
 /// own: a `Bool` is stored as the 1 or 0 the driver binds it as, and a column
 /// taking an `Option` is the nullable one.
-mod Db.Laps.Columns {
+mod Db.Laps {
 
     use Db.LapRow.LapRow
     use Db.Value
@@ -128,6 +130,58 @@ mod Db.Laps.Columns {
         bound(miniSectorTimeMs()) ::
         bound(miniSectorElapsedMs()) ::
         Nil
+
+    // --------------------------------------------------------------- schema
+
+    /// Belongs before the first round: a schema this database will not take
+    /// would otherwise be reported once per round, in the same words.
+    pub def create(): Result[String, Unit] \ Db =
+        forM(
+            _ <- Db.execute(dropTable());
+            _ <- Db.execute(createTable())
+        ) yield ()
+
+    pub def insertRows(rows: List[LapRow]): Result[String, Int32] \ Db =
+        Db.insertMany(insert(), rows |> List.map(values))
+
+    /// In the order `columns` names them.
+    pub def values(row: LapRow): List[Value] =
+        all() |> List.map(c -> (c#bind)(row))
+
+    /// The rows of one round: every reading of the table is of a single round,
+    /// and the pair is what names one.
+    pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
+        Sql.every(
+            Sql.eq(expr(season()), Sql.i32(inSeason)) ::
+            Sql.eq(expr(round()), Sql.str(named)) :: Nil
+        )
+
+    /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
+    /// and which is therefore where the round's start time is written.
+    pub def hourOffset(): String =
+        "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
+
+    pub def dropTable(): String =
+        "DROP TABLE IF EXISTS " + table()
+
+    pub def createTable(): String =
+        "CREATE TABLE " + table() + " (\n"
+            + (definitions() |> List.map(d -> "  ${d}") |> List.join(",\n"))
+            + ",\n  PRIMARY KEY (" + named(primaryKey()) + ")"
+            + ",\n  UNIQUE (" + named(sourceKey()) + ")\n)"
+
+    pub def insert(): String =
+        "INSERT INTO " + table() + " (" + List.join(", ", columns()) + ") VALUES ("
+            + List.join(", ", List.map(_ -> "?", columns())) + ")"
+
+    def named(key: List[Bound]): String =
+        key |> List.map(c -> c#name) |> List.join(", ")
+
+    pub def columns(): List[String] =
+        all() |> List.map(c -> c#name)
+
+    def definitions(): List[String] =
+        all() |> List.map(c -> "${c#name} ${c#sqlType}")
 
     // -------------------------------------------------------- constructors
 

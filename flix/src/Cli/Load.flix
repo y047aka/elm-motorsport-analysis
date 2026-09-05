@@ -1,5 +1,7 @@
 mod Cli.Load {
 
+    use Db.Laps
+
     use Sys.Console
     use Util.Files
     use Db.LapRow
@@ -17,7 +19,7 @@ mod Cli.Load {
     }
 
     pub def runAll(root: String): Int32 \ {IO, Console, Db} =
-        match Db.prepare() {
+        match Laps.create() {
             case Err(e) =>
                 Console.eprintln("Database: ${e}");
                 1
@@ -71,7 +73,7 @@ mod Cli.Load {
 
     def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Int32] \ Db =
         rawLaps ->
-            Db.insertLaps(LapRow.fromRawLaps(task#entry, rawLaps))
+            Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
                 |> Result.mapErr(CliError.Database)
 
     def reportViolations(task: FileTask.FileTask): Int32 -> Result[CliError, Int32] \ {Console, Db} =

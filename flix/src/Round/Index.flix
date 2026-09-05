@@ -5,8 +5,7 @@
 /// record is stays in `Motorsport.Index`.
 mod Round.Index {
 
-    use Db.Laps.Columns
-    use Db.Schema
+    use Db.Laps
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Index
@@ -26,7 +25,7 @@ mod Round.Index {
         }
 
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Schema.scope(entry#season, entry#id)
+        Laps.scope(entry#season, entry#id)
 
     /// The round's rows as a fragment, for the arms that read them from
     /// inside one of their own.
@@ -38,13 +37,13 @@ mod Round.Index {
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
-        Sql.rows(Sql.raw(Columns.table()))
+        Sql.rows(Sql.raw(Laps.table()))
             |> Sql.filter(scope(entry))
-            |> Sql.groupBy(Columns.term(Columns.lapNumber()) :: Nil)
-            |> Sql.orderBy(Columns.term(Columns.lapNumber()) :: Nil)
+            |> Sql.groupBy(Laps.term(Laps.lapNumber()) :: Nil)
+            |> Sql.orderBy(Laps.term(Laps.lapNumber()) :: Nil)
             |> Sql.map(
                 Sql.intoRow(lap -> elapsed -> (lap, Util.Duration.fromMillis(elapsed)))
-                    |> Sql.pipeline(Columns.read(Columns.lapNumber()))
+                    |> Sql.pipeline(Laps.read(Laps.lapNumber()))
                     |> Sql.pipeline(Sql.int("MIN(elapsed_ms)"))
             )
             |> Sql.selectAll
@@ -118,7 +117,7 @@ mod Round.Index {
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name,"
                 + " ${direction} AS dir, ${expression} AS t"
-                + " FROM " + Columns.table() + " WHERE") ::
+                + " FROM " + Laps.table() + " WHERE") ::
             where_(entry, Nil) :: Nil
         )
 
@@ -127,10 +126,10 @@ mod Round.Index {
     def miniSectorReadings(entry: Entry): Sql.Frag =
         Sql.frags(
             Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name, 1, m.value"
-                + " FROM " + Columns.table()
-                + ", json_each(" + Columns.table() + ".mini_sector_time_ms) m"
+                + " FROM " + Laps.table()
+                + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::
-            where_(entry, Sql.ne(Columns.expr(Columns.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil
+            where_(entry, Sql.ne(Laps.expr(Laps.lapTimeMs()), Sql.i32(0)) :: Nil) :: Nil
         )
 
 }

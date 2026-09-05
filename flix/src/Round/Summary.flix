@@ -4,8 +4,7 @@
 /// decisions stays in `Motorsport`: this reads, and hands over.
 mod Round.Summary {
 
-    use Db.Laps.Columns
-    use Db.Schema
+    use Db.Laps
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Car.Car
@@ -26,11 +25,11 @@ mod Round.Summary {
         ) yield Metadata.fromReadings(entry, race, shape, builds)
 
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Schema.scope(entry#season, entry#id)
+        Laps.scope(entry#season, entry#id)
 
     /// The round's rows.
     def laps(entry: Entry): Sql.Rows =
-        Sql.rows(Sql.raw(Columns.table())) |> Sql.filter(scope(entry))
+        Sql.rows(Sql.raw(Laps.table())) |> Sql.filter(scope(entry))
 
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
@@ -51,8 +50,8 @@ mod Round.Summary {
             Option.getWithDefault(0, lapTotal)
         ))
             |> Sql.pipeline(Sql.optionalIntOf(Sql.frags(
-                Sql.raw("(SELECT " + Schema.hourOffset()
-                    + " FROM " + Columns.table() + " WHERE") ::
+                Sql.raw("(SELECT " + Laps.hourOffset()
+                    + " FROM " + Laps.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw("ORDER BY source_row LIMIT 1)") :: Nil
             )))
@@ -72,7 +71,7 @@ mod Round.Summary {
     def driverNames(entry: Entry): Result[String, List[(String, String)]] \ Db =
         Sql.rows(Sql.frags(
                 Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
-                    + " FROM " + Columns.table() + " WHERE") ::
+                    + " FROM " + Laps.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
             ))
@@ -93,15 +92,15 @@ mod Round.Summary {
                 Sql.raw("c AS (SELECT * FROM ("
                     + " SELECT car_number, class, car_group, team, manufacturer,"
                     + " source_row AS first_seen, " + firstPerCar()
-                    + " FROM " + Columns.table() + " WHERE") ::
+                    + " FROM " + Laps.table() + " WHERE") ::
                 where_(entry, Nil) ::
                 Sql.raw(") WHERE rn = 1)") :: Nil
             ))
             |> Sql.using(Sql.frags(
                 Sql.raw("l1 AS (SELECT * FROM ("
                     + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
-                    + " FROM " + Columns.table() + " WHERE") ::
-                where_(entry, Sql.eq(Columns.expr(Columns.lapNumber()), Sql.i32(1)) :: Nil) ::
+                    + " FROM " + Laps.table() + " WHERE") ::
+                where_(entry, Sql.eq(Laps.expr(Laps.lapNumber()), Sql.i32(1)) :: Nil) ::
                 Sql.raw(") WHERE rn = 1)") :: Nil
             ))
             |> Sql.orderBy(Sql.raw("c.first_seen") :: Nil)
@@ -181,11 +180,11 @@ mod Round.Summary {
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
     def recorded(): Sql.Expr[Bool] =
-        Sql.ne(Columns.expr(Columns.lapTimeMs()), Sql.i32(0))
+        Sql.ne(Laps.expr(Laps.lapTimeMs()), Sql.i32(0))
 
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
-        Sql.rows(Sql.raw(Columns.table()
-                + ", json_each(" + Columns.table() + ".mini_sector_time_ms) m"))
+        Sql.rows(Sql.raw(Laps.table()
+                + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
             |> Sql.filter(scope(entry))
             |> Sql.filter(recorded())
             |> Sql.filter(Sql.isNotNull(Sql.column("m.value")))

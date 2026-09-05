@@ -1,5 +1,7 @@
 mod Db.TestJdbc {
 
+    use Db.Laps
+
     use Db.Value
 
     import java.io.File
@@ -48,9 +50,9 @@ mod Db.TestJdbc {
         let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
         let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
-            discard Db.prepare();
-            let accepted = Db.insertLaps(rows);
-            let refused  = Db.insertLaps(rows);
+            discard Laps.create();
+            let accepted = Laps.insertRows(rows);
+            let refused  = Laps.insertRows(rows);
             let counted  = Db.fetch("SELECT COUNT(*) FROM laps", Nil);
             Ok((accepted, refused, counted))
         });
@@ -123,8 +125,8 @@ mod Db.TestJdbc {
         let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
         let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
         let (path, written) = onFile(() -> forM(
-            _        <- Db.prepare();
-            accepted <- Db.insertLaps(rows)
+            _        <- Laps.create();
+            accepted <- Laps.insertRows(rows)
         ) yield accepted);
         let readBack = match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)

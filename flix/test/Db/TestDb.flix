@@ -1,5 +1,6 @@
 mod Db.TestDb {
 
+    use Db.Laps
     use Db.Statement
     use Db.Value
     use Db.LapRow
@@ -12,8 +13,8 @@ mod Db.TestDb {
         )
 
     @Test
-    def prepareDropsTheTableBeforeCreatingIt(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.prepare());
+    def creatingDropsTheTableFirst(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() -> Laps.create());
         Assert.assertTrue(result == Ok());
         match statements {
             case Statement.Execute(first) :: Statement.Execute(second) :: Nil =>
@@ -24,12 +25,15 @@ mod Db.TestDb {
 
     @Test
     def theRowsReachTheBoundary(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.insertLaps(sampleRows()));
+        let (result, statements) = Db.runRecording(() -> Laps.insertRows(sampleRows()));
         Assert.assertTrue(result == Ok(2));
         match statements {
-            case Statement.InsertLaps(rows) :: Nil =>
+            case Statement.InsertMany(sql, rows) :: Nil =>
+                Assert.assertTrue(String.startsWith({prefix = "INSERT INTO laps"}, sql));
                 Assert.assertTrue(List.length(rows) == 2);
-                Assert.assertTrue(List.forAll(row -> row#round == "fuji_6h", rows))
+                Assert.assertTrue(
+                    List.forAll(row -> List.memberOf(Value.Text("fuji_6h"), row), rows)
+                )
             case _ => Assert.assertTrue(false)
         }
 
@@ -53,11 +57,11 @@ mod Db.TestDb {
     @Test
     def theStatementsAreKeptInTheOrderTheyWereSent(): Unit \ Assert =
         let (_, statements) = Db.runRecording(() -> {
-            discard Db.prepare();
-            Db.insertLaps(sampleRows())
+            discard Laps.create();
+            Laps.insertRows(sampleRows())
         });
         match statements {
-            case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertLaps(_) :: Nil =>
+            case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertMany(_, _) :: Nil =>
                 Assert.assertTrue(true)
             case _ => Assert.assertTrue(false)
         }

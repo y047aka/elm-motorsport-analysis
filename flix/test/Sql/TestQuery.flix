@@ -1,11 +1,11 @@
 mod Sql.TestQuery {
 
-    use Db.Laps.Columns
+    use Db.Laps
     use Db.Value
 
     def laps(): Sql.Rows =
         Sql.rows(Sql.raw("laps"))
-            |> Sql.filter(Sql.eq(Columns.expr(Columns.season()), Sql.i32(2025)))
+            |> Sql.filter(Sql.eq(Laps.expr(Laps.season()), Sql.i32(2025)))
 
     def lapNumbers(): Sql.Sel[Int32] =
         Sql.int("lap_number")
@@ -13,8 +13,8 @@ mod Sql.TestQuery {
     @Test
     def theClausesFollowTheOrderSqlWantsThemRatherThanTheOrderTheyWereAsked(): Unit \ Assert =
         let statement = laps()
-            |> Sql.orderBy(Columns.term(Columns.sourceRow()) :: Nil)
-            |> Sql.groupBy(Columns.term(Columns.lapNumber()) :: Nil)
+            |> Sql.orderBy(Laps.term(Laps.sourceRow()) :: Nil)
+            |> Sql.groupBy(Laps.term(Laps.lapNumber()) :: Nil)
             |> Sql.map(lapNumbers())
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
@@ -33,7 +33,7 @@ mod Sql.TestQuery {
     @Test
     def askingTwiceAsksBoth(): Unit \ Assert =
         let statement = laps()
-            |> Sql.filter(Sql.isNotNull(Columns.expr(Columns.s1Ms())))
+            |> Sql.filter(Sql.isNotNull(Laps.expr(Laps.s1Ms())))
             |> Sql.limit(1)
             |> Sql.map(lapNumbers())
             |> Sql.toStatement;

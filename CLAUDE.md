@@ -339,16 +339,24 @@ first showed them.
 `Db` is an effect, not a module of functions, so that what a round would
 send can be read back without a server: `Db.runRecording` keeps the statements
 and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
-only file that imports `java.sql`. `Db.Laps.Columns` declares each column of
+only file that imports `java.sql`. The effect names no table and no column, so
+`Db`, `Db.Jdbc` and `Sql` are together a database and a query language and
+nothing of this application; `Db.Laps` and `Db.LapRow` are the whole of what
+the application tells them about itself, which is the same line Acadia draws
+between `Transaction`, `Rows` and a `Table`.
+
+`Db.Laps` declares each column of
 the table once -- its name, the type it takes there, how a row binds it and how
 it reads back -- and `Db.Schema`'s DDL, that schema's insert and
-`Db.LapRow.values` are all views of that one list. The table's name and its two
+`Db.Laps.values` are all views of that one list. The table's name and its two
 keys are declared there too, so the `CREATE TABLE` names no column the list
 does not have, and a query reads `Columns.table` rather than spelling it.
 
 What it does not reach is the ordering: `Columns.all` and `Db.LapRow.selection`
 name the same columns twice, which is the one pairing no compiler sees and
-`Db.TestLapRow` asserts. Flix cannot read a record's fields, so the column list
+`Db.TestLapRow` asserts. `Sql` is one file because a Flix module cannot span
+them, and its own types would collide with the submodules it would otherwise
+be split into. Flix cannot read a record's fields, so the column list
 restates each name that `Db.LapRow` already has; only the `bind` beside it is
 checked against the record. A column drawn from the list is the checked way to
 name one, and `Round.Index.lapCompletions` is the shape of that -- but a query

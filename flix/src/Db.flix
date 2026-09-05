@@ -1,24 +1,21 @@
-use Db.LapRow.LapRow
-
-/// Every write the run makes to a database.
+/// Reaching a database, and nothing about what is in one: the effect names no
+/// table and no column, so `Db.Jdbc` and `Db.runRecording` are the whole of
+/// what a statement can be sent through.
 ///
-/// `insertLaps` answers with the number of rows the database took rather
-/// than with the number it was handed, so the run reports what was accepted
-/// beside what it decoded.
+/// `insertMany` binds each row to one statement and answers with the number
+/// the database took rather than the number it was handed, so the run reports
+/// what was accepted beside what it decoded.
 ///
 /// `fetch` answers with every cell as text, `None` where the column was
 /// null. The server has the types and the caller knows what it asked for,
 /// so nothing is gained by carrying them across in between.
 pub eff Db {
     def execute(sql: String): Result[String, Unit]
-    def insertLaps(rows: List[LapRow]): Result[String, Int32]
+    def insertMany(sql: String, rows: List[List[Db.Value]]): Result[String, Int32]
     def fetch(sql: String, params: List[Db.Value]): Result[String, List[List[Option[String]]]]
 }
 
 mod Db {
-
-    use Db.LapRow.LapRow
-    use Db.Schema
 
     /// A value bound to a `?`, in the type its column or comparison has.
     pub enum Value with Eq, ToString {
@@ -37,18 +34,10 @@ mod Db {
             case None    => "null"
         }) |> List.join(",")) + "]"
 
-    /// Belongs before the first round: a schema this database will not take
-    /// would otherwise be reported once per round, in the same words.
-    pub def prepare(): Result[String, Unit] \ Db =
-        forM(
-            _ <- Db.execute(Schema.dropTable());
-            _ <- Db.execute(Schema.createTable())
-        ) yield ()
-
     /// What `runRecording` keeps.
     pub enum Statement {
         case Execute(String)
-        case InsertLaps(List[LapRow])
+        case InsertMany(String, List[List[Value]])
         case Fetch(String, List[Value])
     }
 
@@ -62,8 +51,8 @@ mod Db {
                     record(log, Statement.Execute(sql));
                     k(Ok())
                 }
-                def insertLaps(rows, k) = {
-                    record(log, Statement.InsertLaps(rows));
+                def insertMany(sql, rows, k) = {
+                    record(log, Statement.InsertMany(sql, rows));
                     k(Ok(List.length(rows)))
                 }
                 // Nothing was written, so there is nothing to read back: a

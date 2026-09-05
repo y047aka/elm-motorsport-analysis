@@ -11,10 +11,7 @@ mod Db.Jdbc {
 
     import org.sqlite.JDBC
 
-    use Db.LapRow
-    use Db.LapRow.LapRow
     use Db.Value
-    use Db.Schema
 
     def batchSize(): Int32 = 1000
 
@@ -70,7 +67,7 @@ mod Db.Jdbc {
             f()
         } with handler Db {
             def execute(sql, k) = k(runStatement(conn, sql))
-            def insertLaps(rows, k) = k(insertRows(conn, rows))
+            def insertMany(sql, rows, k) = k(insertRows(conn, sql, rows))
             def fetch(sql, params, k) = k(runFetch(conn, sql, params))
         }
 
@@ -116,11 +113,11 @@ mod Db.Jdbc {
             case e: SQLException => rollback(conn); Err("${e.getMessage()}")
         }
 
-    def insertRows(conn: Connection, rows: List[LapRow]): Result[String, Int32] \ IO =
+    def insertRows(conn: Connection, sql: String, rows: List[List[Value]]): Result[String, Int32] \ IO =
         try {
-            let pstmt = conn.prepareStatement(Schema.insert());
+            let pstmt = conn.prepareStatement(sql);
             let count = List.foldLeft((sent, row) -> {
-                bind(pstmt, LapRow.values(row));
+                bind(pstmt, row);
                 pstmt.addBatch();
                 if (Int32.remainder(sent + 1, batchSize()) == 0) discard pstmt.executeBatch() else ();
                 sent + 1

@@ -2,8 +2,7 @@
 mod Round.Laps {
 
     use Db.LapRow
-    use Db.Laps.Columns
-    use Db.Schema
+    use Db.Laps
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
 
@@ -19,14 +18,14 @@ mod Round.Laps {
     pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
         forM(
             lapRows <- laps(entry)
-                |> Sql.orderBy(Columns.term(Columns.sourceRow()) :: Nil)
+                |> Sql.orderBy(Laps.term(Laps.sourceRow()) :: Nil)
                 |> Sql.map(LapRow.selection())
                 |> Sql.selectAll;
             rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
         ) yield rawLaps
 
     def laps(entry: Entry): Sql.Rows =
-        Sql.rows(Sql.raw(Columns.table()))
-            |> Sql.filter(Schema.scope(entry#season, entry#id))
+        Sql.rows(Sql.raw(Laps.table()))
+            |> Sql.filter(Laps.scope(entry#season, entry#id))
 
 }
