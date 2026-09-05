@@ -1,6 +1,8 @@
 mod Db.TestDb {
 
+    use Db.Laps
     use Db.Statement
+    use Db.Value
     use Db.LapRow
     use Db.TestLapRow
 
@@ -11,8 +13,8 @@ mod Db.TestDb {
         )
 
     @Test
-    def prepareDropsTheTableBeforeCreatingIt(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.prepare());
+    def creatingDropsTheTableFirst(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() -> Laps.create());
         Assert.assertTrue(result == Ok());
         match statements {
             case Statement.Execute(first) :: Statement.Execute(second) :: Nil =>
@@ -23,12 +25,15 @@ mod Db.TestDb {
 
     @Test
     def theRowsReachTheBoundary(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.insertLaps(sampleRows()));
+        let (result, statements) = Db.runRecording(() -> Laps.insertRows(sampleRows()));
         Assert.assertTrue(result == Ok(2));
         match statements {
-            case Statement.InsertLaps(rows) :: Nil =>
+            case Statement.InsertMany(sql, rows) :: Nil =>
+                Assert.assertTrue(String.startsWith({prefix = "INSERT INTO laps"}, sql));
                 Assert.assertTrue(List.length(rows) == 2);
-                Assert.assertTrue(List.forAll(row -> row#round == "fuji_6h", rows))
+                Assert.assertTrue(
+                    List.forAll(row -> List.memberOf(Value.Text("fuji_6h"), row), rows)
+                )
             case _ => Assert.assertTrue(false)
         }
 
@@ -37,25 +42,52 @@ mod Db.TestDb {
     /// with no violations and no cars in it.
     @Test
     def recordingCannotAnswerARead(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1"));
+        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
         match result {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)
         };
         match statements {
-            case Statement.Fetch(sql) :: Nil => Assert.assertTrue(sql == "SELECT 1")
+            case Statement.Fetch(sql, params) :: Nil =>
+                Assert.assertTrue(sql == "SELECT 1 WHERE ? = ?");
+                Assert.assertTrue(params == Value.Integer(1) :: Value.Integer(1) :: Nil)
             case _                           => Assert.assertTrue(false)
         }
 
     @Test
     def theStatementsAreKeptInTheOrderTheyWereSent(): Unit \ Assert =
         let (_, statements) = Db.runRecording(() -> {
-            discard Db.prepare();
-            Db.insertLaps(sampleRows())
+            discard Laps.create();
+            Laps.insertRows(sampleRows())
         });
         match statements {
-            case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertLaps(_) :: Nil =>
+            case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertMany(_, _) :: Nil =>
                 Assert.assertTrue(true)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// What the statements before it are kept by.
+    @Test
+    def aTransactionThatAnsweredCommitsAfterWhatItSent(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() ->
+            Db.transact(() -> Laps.insertRows(sampleRows())));
+        Assert.assertTrue(result == Ok(2));
+        match statements {
+            case Statement.InsertMany(_, _) :: Statement.Commit :: Nil => Assert.assertTrue(true)
+            case _ => Assert.assertTrue(false)
+        }
+
+    /// The error is the one the caller answered with, not the rollback's.
+    @Test
+    def aTransactionThatFailedRollsBackAndKeepsItsError(): Unit \ Assert =
+        let (result, statements) = Db.runRecording(() ->
+            Db.transact(() -> {
+                discard Laps.insertRows(sampleRows());
+                (Err("the round was not what it should have been"): Result[String, Int32])
+            }));
+        Assert.assertTrue(result == Err("the round was not what it should have been"));
+        match statements {
+            case Statement.InsertMany(_, _) :: Statement.Rollback :: Nil => Assert.assertTrue(true)
             case _ => Assert.assertTrue(false)
         }
 

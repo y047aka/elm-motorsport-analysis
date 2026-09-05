@@ -4,6 +4,7 @@ mod Db.Jdbc {
     import java.sql.DriverManager
     import java.sql.PreparedStatement
     import java.sql.ResultSet
+    import java.sql.Savepoint
     import java.sql.SQLException
     import java.sql.Types
 
@@ -11,10 +12,7 @@ mod Db.Jdbc {
 
     import org.sqlite.JDBC
 
-    use Db.LapRow
-    use Db.LapRow.LapRow
-    use Db.LapRow.Value
-    use Db.Schema
+    use Db.Value
 
     def batchSize(): Int32 = 1000
 
@@ -70,22 +68,24 @@ mod Db.Jdbc {
             f()
         } with handler Db {
             def execute(sql, k) = k(runStatement(conn, sql))
-            def insertLaps(rows, k) = k(insertRows(conn, rows))
-            def fetch(sql, k) = k(runFetch(conn, sql))
+            def insertMany(sql, rows, k) = k(insertRows(conn, sql, rows))
+            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
+            def commit(k) = k(endTransaction(conn, c -> c.commit()))
+            def rollback(k) = k(endTransaction(conn, c -> c.rollback()))
         }
 
-    def runFetch(conn: Connection, sql: String): Result[String, List[List[Option[String]]]] \ IO =
+    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[String, List[List[Option[String]]]] \ IO =
         try {
-            let stmt = conn.createStatement();
-            let rs = stmt.executeQuery(sql);
+            let stmt = conn.prepareStatement(sql);
+            bind(stmt, params);
+            let rs = stmt.executeQuery();
             let width = rs.getMetaData().getColumnCount();
             let rows = readRows(rs, width, Nil);
             rs.close();
             stmt.close();
-            conn.commit();
             Ok(rows)
         } catch {
-            case e: SQLException => rollback(conn); Err("${e.getMessage()}")
+            case e: SQLException => Err("${e.getMessage()}")
         }
 
     def readRows(rs: ResultSet, width: Int32, acc: List[List[Option[String]]]): List[List[Option[String]]] \ IO =
@@ -109,27 +109,58 @@ mod Db.Jdbc {
             let stmt = conn.createStatement();
             discard stmt.executeUpdate(sql);
             stmt.close();
-            conn.commit();
             Ok()
         } catch {
-            case e: SQLException => rollback(conn); Err("${e.getMessage()}")
+            case e: SQLException => Err("${e.getMessage()}")
         }
 
-    def insertRows(conn: Connection, rows: List[LapRow]): Result[String, Int32] \ IO =
+    /// The rows go out in batches, so a refusal partway through has already
+    /// sent some of them. They are undone against a savepoint rather than by
+    /// rolling the transaction back: what a run loaded before this call is
+    /// still to be committed.
+    def insertRows(conn: Connection, sql: String, rows: List[List[Value]]): Result[String, Int32] \ IO =
+        match savepoint(conn) {
+            case Err(e) => Err(e)
+            case Ok(mark) =>
+                let outcome = try {
+                    let pstmt = conn.prepareStatement(sql);
+                    let count = List.foldLeft((sent, row) -> {
+                        bind(pstmt, row);
+                        pstmt.addBatch();
+                        if (Int32.remainder(sent + 1, batchSize()) == 0) discard pstmt.executeBatch() else ();
+                        sent + 1
+                    }, 0, rows);
+                    discard pstmt.executeBatch();
+                    pstmt.close();
+                    Ok(count)
+                } catch {
+                    case e: SQLException => Err("${e.getMessage()}")
+                };
+                match outcome {
+                    case Ok(count) => release(conn, mark); Ok(count)
+                    case Err(e)    => undo(conn, mark); Err(e)
+                }
+        }
+
+    def savepoint(conn: Connection): Result[String, Savepoint] \ IO =
         try {
-            let pstmt = conn.prepareStatement(Schema.insert());
-            let count = List.foldLeft((sent, row) -> {
-                bind(pstmt, LapRow.values(row));
-                pstmt.addBatch();
-                if (Int32.remainder(sent + 1, batchSize()) == 0) discard pstmt.executeBatch() else ();
-                sent + 1
-            }, 0, rows);
-            discard pstmt.executeBatch();
-            pstmt.close();
-            conn.commit();
-            Ok(count)
+            Ok(conn.setSavepoint())
         } catch {
-            case e: SQLException => rollback(conn); Err("${e.getMessage()}")
+            case e: SQLException => Err("${e.getMessage()}")
+        }
+
+    def release(conn: Connection, mark: Savepoint): Unit \ IO =
+        try {
+            conn.releaseSavepoint(mark)
+        } catch {
+            case _e: SQLException => ()
+        }
+
+    def undo(conn: Connection, mark: Savepoint): Unit \ IO =
+        try {
+            conn.rollback(mark)
+        } catch {
+            case _e: SQLException => ()
         }
 
     def bind(pstmt: PreparedStatement, values: List[Value]): Unit \ IO =
@@ -145,16 +176,17 @@ mod Db.Jdbc {
                 case None    => pstmt.setNull(index, Types.INTEGER)
             }
             case Value.NullableIntArray(o) => match o {
-                case Some(xs) => pstmt.setString(index, LapRow.jsonArray(xs))
+                case Some(xs) => pstmt.setString(index, Db.jsonArray(xs))
                 case None     => pstmt.setNull(index, Types.VARCHAR)
             }
         }
 
-    def rollback(conn: Connection): Unit \ IO =
+    def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[String, Unit] \ IO =
         try {
-            conn.rollback()
+            end(conn);
+            Ok()
         } catch {
-            case _e: SQLException => ()
+            case e: SQLException => Err("${e.getMessage()}")
         }
 
 }

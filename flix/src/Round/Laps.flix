@@ -2,21 +2,30 @@
 mod Round.Laps {
 
     use Db.LapRow
-    use Db.Schema
+    use Db.Laps
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
     pub def loaded(entry: Entry): Result[String, Bool] \ Db =
-        Db.fetch(Schema.anyRow(entry#season, entry#id))
-            |> Result.map(rows -> not List.isEmpty(rows))
+        laps(entry)
+            |> Sql.limit(1)
+            |> Sql.map(_ -> Sql.int("1"))
+            |> Sql.selectAll
+            |> Result.map(found -> not List.isEmpty(found))
 
     pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
         forM(
-            rows    <- Db.fetch(Schema.selectRound(entry#season, entry#id));
-            lapRows <- Result.traverse(LapRow.fromRow, rows);
+            lapRows <- laps(entry)
+                |> Sql.orderBy(Laps.term(Laps.columns()#sourceRow) :: Nil)
+                |> Sql.map(_ -> LapRow.selection())
+                |> Sql.selectAll;
             rawLaps <- Result.traverse(LapRow.toRawLap, lapRows)
         ) yield rawLaps
+
+    def laps(entry: Entry): Sql.Rows[Laps.Columns] =
+        Laps.rows()
+            |> Sql.filter(Laps.scope(entry#season, entry#id))
 
 }

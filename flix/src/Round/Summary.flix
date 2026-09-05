@@ -4,8 +4,8 @@
 /// decisions stays in `Motorsport`: this reads, and hands over.
 mod Round.Summary {
 
-    use Db.Row
-    use Db.Schema
+    use Db.Laps
+    use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Car.Car
     use Motorsport.Events
@@ -24,30 +24,43 @@ mod Round.Summary {
             builds <- cars(entry)
         ) yield Metadata.fromReadings(entry, race, shape, builds)
 
-    def scope(entry: Entry): String =
-        Schema.scope(entry#season, entry#id)
+    def scope(entry: Entry): Sql.Expr[Bool] =
+        Laps.scope(entry#season, entry#id)
+
+    /// The round's rows.
+    def laps(entry: Entry): Sql.Rows[Laps.Columns] =
+        Laps.rows() |> Sql.filter(scope(entry))
+
+    /// The round's rows as a fragment, for the queries reading them from
+    /// inside one of their own.
+    def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
+        Sql.term(Sql.every(scope(entry) :: predicates))
 
     // ---------------------------------------------------------- particulars
 
     def particulars(entry: Entry): Result[String, Metadata.Particulars] \ Db =
-        Db.fetch(
-            "SELECT MAX(elapsed_ms), MAX(lap_number),"
-                + " (SELECT " + Schema.hourOffset() + " FROM laps WHERE " + scope(entry)
-                + " ORDER BY source_row LIMIT 1)"
-                + " FROM laps WHERE " + scope(entry)
-        ) |> Result.flatMap(rows -> match rows {
-            case row :: _ =>
-                forM(
-                    duration  <- Row.optionalInt(0, row);
-                    lapTotal  <- Row.optionalInt(1, row);
-                    startedAt <- Row.optionalInt(2, row)
-                ) yield Metadata.particulars(
-                    Option.map(ms -> Hour.Hour(ms), startedAt),
-                    Util.Duration.fromMillis(Option.getWithDefault(0, duration)),
-                    Option.getWithDefault(0, lapTotal)
-                )
-            case Nil => Err("the round's particulars came back with no row")
-        })
+        laps(entry)
+            |> Sql.map(_ -> (
+                startedAt(entry),
+                Sql.optionalInt("MAX(elapsed_ms)"),
+                Sql.optionalInt("MAX(lap_number)")
+            ))
+            |> Sql.reading(match (started, duration, lapTotal) -> Metadata.particulars(
+                Option.map(ms -> Hour.Hour(ms), started),
+                Util.Duration.fromMillis(Option.getWithDefault(0, duration)),
+                Option.getWithDefault(0, lapTotal)
+            ))
+            |> Sql.selectOne("the round's particulars")
+
+    /// The round's start time, which is the offset the file's first lap
+    /// carries.
+    def startedAt(entry: Entry): Sel[Option[Int32]] =
+        Sql.optionalIntOf(Sql.frags(
+            Sql.raw("(SELECT " + Laps.hourOffset()
+                + " FROM " + Laps.table() + " WHERE") ::
+            where_(entry, Nil) ::
+            Sql.raw("ORDER BY source_row LIMIT 1)") :: Nil
+        ))
 
     // ----------------------------------------------------------------- cars
 
@@ -60,45 +73,96 @@ mod Round.Summary {
     /// `(car number, driver name)` in the order the file first showed each
     /// pair, which is the order a car's drivers are listed in.
     def driverNames(entry: Entry): Result[String, List[(String, String)]] \ Db =
-        Db.fetch(
-            "SELECT car_number, driver_name FROM ("
-                + " SELECT car_number, driver_name, MIN(source_row) AS first_seen"
-                + " FROM laps WHERE " + scope(entry)
-                + " GROUP BY car_number, driver_name) d ORDER BY first_seen"
-        ) |> Result.flatMap(Result.traverse(row ->
-            forM(
-                carNumber  <- Row.text(0, row);
-                driverName <- Row.text(1, row)
-            ) yield (carNumber, driverName)
-        ))
+        let c = Laps.columns();
+        Sql.access(
+                Sql.frags(
+                    Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
+                        + " FROM " + Laps.table() + " WHERE") ::
+                    where_(entry, Nil) ::
+                    Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
+                ),
+                { carNumber = c#carNumber, driverName = c#driverName }
+            )
+            |> Sql.orderBy(Sql.raw("first_seen") :: Nil)
+            |> Sql.map(d -> (d#carNumber, d#driverName))
+            |> Sql.selectAll
 
     /// A car is what the file first said it was. Grouping by the attributes
     /// instead would be a row per distinct combination, so a feed that changed
     /// a car's team mid-round would put that car on the grid twice.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
-        Db.fetch(
-            "WITH c AS (SELECT * FROM ("
-                + " SELECT car_number, class, car_group, team, manufacturer,"
-                + " source_row AS first_seen, " + firstPerCar()
-                + " FROM laps WHERE " + scope(entry) + ") WHERE rn = 1),"
-                + " l1 AS (SELECT * FROM ("
-                + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
-                + " FROM laps WHERE " + scope(entry) + " AND lap_number = 1"
-                + ") WHERE rn = 1)"
-                + " SELECT c.car_number, c.class, c.car_group, c.team, c.manufacturer,"
-                + " l1.s1_ms, l1.elapsed_ms"
-                + " FROM c LEFT JOIN l1 ON l1.car_number = c.car_number"
-                + " ORDER BY c.first_seen"
-        ) |> Result.flatMap(Result.traverse(row ->
-            forM(
-                carNumber    <- Row.text(0, row);
-                class        <- Row.text(1, row);
-                group        <- Row.text(2, row);
-                team         <- Row.text(3, row);
-                manufacturer <- Row.text(4, row);
-                lap1S1       <- Row.optionalInt(5, row);
-                lap1Elapsed  <- Row.optionalInt(6, row)
-            ) yield {
+        let grid = gridColumns();
+        let lap1 = lap1Columns();
+        Sql.access(
+                Sql.frags(
+                    Sql.raw("c LEFT JOIN l1 ON") ::
+                    Sql.term(Sql.eq(Laps.expr(lap1#carNumber), Laps.expr(grid#carNumber))) :: Nil
+                ),
+                { grid = grid, lap1 = lap1 }
+            )
+            |> Sql.using(Sql.frags(
+                Sql.raw("c AS (SELECT * FROM ("
+                    + " SELECT car_number, class, car_group, team, manufacturer,"
+                    + " source_row AS first_seen, " + firstPerCar()
+                    + " FROM " + Laps.table() + " WHERE") ::
+                where_(entry, Nil) ::
+                Sql.raw(") WHERE rn = 1)") :: Nil
+            ))
+            |> Sql.using(Sql.frags(
+                Sql.raw("l1 AS (SELECT * FROM ("
+                    + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
+                    + " FROM " + Laps.table() + " WHERE") ::
+                where_(entry, Sql.eq(Laps.expr(Laps.columns()#lapNumber), Sql.i32(1)) :: Nil) ::
+                Sql.raw(") WHERE rn = 1)") :: Nil
+            ))
+            |> Sql.orderBy(Sql.raw("c.first_seen") :: Nil)
+            |> Sql.map(t -> (
+                t#grid#carNumber,
+                t#grid#class,
+                t#grid#carGroup,
+                t#grid#team,
+                t#grid#manufacturer,
+                t#lap1#s1Ms,
+                Sql.orNull(t#lap1#elapsedMs)
+            ))
+            |> Sql.reading(row -> carBuild(drivers, row))
+            |> Sql.selectAll
+
+    /// The columns the two common table expressions select, under the names
+    /// the join gives them. Each is a column of `laps`, so what it reads back
+    /// as is the type the table gives it -- and `elapsed_ms`, which the table
+    /// has of every lap, is read through `Sql.orNull` because the join is the
+    /// one place a car can have no lap 1.
+    def gridColumns(): {
+        carNumber = Laps.Column[String],
+        class = Laps.Column[String],
+        carGroup = Laps.Column[String],
+        team = Laps.Column[String],
+        manufacturer = Laps.Column[String]
+    } =
+        let c = Laps.columns();
+        {
+            carNumber    = Laps.qualified("c", c#carNumber),
+            class        = Laps.qualified("c", c#carClass),
+            carGroup     = Laps.qualified("c", c#carGroup),
+            team         = Laps.qualified("c", c#team),
+            manufacturer = Laps.qualified("c", c#manufacturer)
+        }
+
+    def lap1Columns(): { carNumber = Laps.Column[String], s1Ms = Laps.Column[Option[Int32]], elapsedMs = Laps.Column[Int32] } =
+        let c = Laps.columns();
+        {
+            carNumber = Laps.qualified("l1", c#carNumber),
+            s1Ms      = Laps.qualified("l1", c#s1Ms),
+            elapsedMs = Laps.qualified("l1", c#elapsedMs)
+        }
+
+    def carBuild(
+        drivers: List[(String, String)],
+        row: (String, String, String, String, String, Option[Int32], Option[Int32])
+    ): CarBuild =
+        match row {
+            case (carNumber, class, group, team, manufacturer, lap1S1, lap1Elapsed) =>
                 let car: Car = {
                     carNumber    = carNumber,
                     drivers      = driversOf(carNumber, drivers),
@@ -112,8 +176,7 @@ mod Round.Summary {
                     lap1S1      = Option.map(Util.Duration.fromMillis, lap1S1),
                     lap1Elapsed = Option.map(Util.Duration.fromMillis, lap1Elapsed)
                 }
-            }
-        ))
+        }
 
     def firstPerCar(): String =
         "ROW_NUMBER() OVER (PARTITION BY car_number ORDER BY source_row) AS rn"
@@ -145,39 +208,37 @@ mod Round.Summary {
         }
 
     def fastestSectors(entry: Entry): Result[String, (Option[Duration], Option[Duration], Option[Duration], Bool)] \ Db =
-        Db.fetch(
-            "SELECT MIN(s1_ms), MIN(s2_ms), MIN(s3_ms),"
-                + " COALESCE(MAX(mini_sector_time_ms IS NOT NULL), 0)"
-                + " FROM laps WHERE " + scope(entry)
-        ) |> Result.flatMap(rows -> match rows {
-            case row :: _ =>
-                forM(
-                    s1   <- Row.optionalInt(0, row);
-                    s2   <- Row.optionalInt(1, row);
-                    s3   <- Row.optionalInt(2, row);
-                    mini <- Row.bool(3, row)
-                ) yield (
-                    Option.map(Util.Duration.fromMillis, s1),
-                    Option.map(Util.Duration.fromMillis, s2),
-                    Option.map(Util.Duration.fromMillis, s3),
-                    mini
-                )
-            case Nil => Err("the round's fastest sectors came back with no row")
-        })
+        laps(entry)
+            |> Sql.map(_ -> (
+                Sql.optionalInt("MIN(s1_ms)"),
+                Sql.optionalInt("MIN(s2_ms)"),
+                Sql.optionalInt("MIN(s3_ms)"),
+                Sql.bool("COALESCE(MAX(mini_sector_time_ms IS NOT NULL), 0)")
+            ))
+            |> Sql.reading(match (s1, s2, s3, mini) -> (
+                Option.map(Util.Duration.fromMillis, s1),
+                Option.map(Util.Duration.fromMillis, s2),
+                Option.map(Util.Duration.fromMillis, s3),
+                mini
+            ))
+            |> Sql.selectOne("the round's fastest sectors")
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
+    def recorded(): Sql.Expr[Bool] =
+        Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0))
+
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
-        Db.fetch(
-            "SELECT m.key + 1, MIN(m.value) FROM laps,"
-                + " json_each(laps.mini_sector_time_ms) m"
-                + " WHERE " + scope(entry) + " AND lap_time_ms <> 0 AND m.value IS NOT NULL"
-                + " GROUP BY m.key ORDER BY m.key"
-        ) |> Result.flatMap(Result.traverse(row ->
-            forM(
-                position <- Row.int(0, row);
-                fastest  <- Row.int(1, row)
-            ) yield (position, Util.Duration.fromMillis(fastest))
-        )) |> Result.map(List.toMap)
+        Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
+            |> Sql.filter(scope(entry))
+            |> Sql.filter(recorded())
+            |> Sql.filter(Sql.isNotNull(Sql.column("m.value")))
+            |> Sql.groupBy(Sql.raw("m.key") :: Nil)
+            |> Sql.orderBy(Sql.raw("m.key") :: Nil)
+            |> Sql.map(_ -> (Sql.int("m.key + 1"), Sql.int("MIN(m.value)")))
+            |> Sql.reading(match (position, fastest) ->
+                (position, Util.Duration.fromMillis(fastest)))
+            |> Sql.selectAll
+            |> Result.map(List.toMap)
 
 }

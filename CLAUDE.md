@@ -10,7 +10,9 @@ SQLite → HTTP or a JSON export → Elm visualization.
   through `elm.json`.
 - **`/flix`** — written in Flix, and two things rather than one: the CLI that
   moves CSV through SQLite into JSON/JSONL, and the server that answers
-  `/api` out of the same rows.
+  `/api` out of the same rows. `flix/README.md` describes it — the server,
+  the `laps` table, and the `Db` and `Sql` those two are reached through —
+  and is the thing to read before changing anything under `/flix`.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -132,49 +134,6 @@ by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
 takes a colour from its number.
 
-### The server
-
-`Server` is `com.sun.net.httpserver` reached through Java interop: the
-handler is an anonymous `HttpHandler`, and `main` blocks on a latch because
-returning from it would take the JVM with it. Requests are answered on a pool
-of eight, and each one opens a connection of its own —
-`java.sql.Connection` is not thread-safe. `Db.Jdbc.connect` puts the database
-in WAL mode, so those reads run beside a writing run rather than behind it.
-
-A Flix effect handler runs inside a request, which is why the endpoints reuse
-`Round`'s readers rather than restating them: `Server.Api.respond` runs under
-`Db.Jdbc.runWith` and calls `Round.Summary.read` unchanged. A route that reads
-nothing is answered before connecting at all, through `Db.runRecording`: the
-calendar is `Motorsport.Calendar` rather than a count of the rows, so a
-database that is down stops a round being opened and not the app being used.
-
-An answer is tagged and compressed: a round is the same bytes until a run
-loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
-a 304, and a body goes out gzipped where the request accepts it — Le Mans's
-laps are 24MB, and 3.4MB on the wire.
-
-`Round` is one round on its way out of the table, both halves of the trip:
-`Round.Summary`, `Round.Index` and `Round.Laps` take an `Entry` and the `Db`
-effect and read it; `Round.Render` takes what they returned, is pure, and turns
-it into the bytes that go out. None of the four knows whether a file or a
-request is waiting at the other end.
-
-`Server.Api` decides nothing about a round, then, and renders none of one
-either: it makes the same calls `Cli.Export` makes, so what is served and what
-is written are the same bytes rather than two renderings that agree. An answer
-carrying the summary alone stops at `Round.Render.renderSummary` rather than
-reading a round's laps to throw them away, which is the one thing the two
-callers do differently.
-
-The root is the one thing that differs, and it is asserted rather than
-assumed: `Server.TestApi` compares the served calendar against `Manifest`
-rendered with `Cli.Export`'s root, because the dev server's fallback and a
-bundle's own calendar are built on one path being the other with
-`/static/wec` and `/api/wec` swapped, and neither would notice that failing.
-`Manifest.toJson` is the rendering either root goes through, and it is the
-only module of that name: `Cli.Export.urlRoot` and `Server.Api.urlRoot` are
-what the two sides hand it.
-
 ### The shadcn components
 
 `app/src/shadcn/ui/` is vendored from shadcn's **`base-nova`** registry — Base
@@ -286,69 +245,6 @@ Neither walks a lap of the race. Which lap took which record is counted in
 `Round.Index` and arrives with the round's summary, as `Race.lapCompletions`
 does, so `Race.fromCars` is given a `Race.Index` rather than building one.
 
-### The `laps` table
-
-The run loads every round it converts into one flat `laps` table, dropped and
-rebuilt each time as the JSON files are rewritten each time. Flat is
-a decision, not an omission: `class`, `team` and `manufacturer` never vary within
-a `(season, round, car_number)` across the whole archive, so the 579 entries they
-describe can be read back as a `VIEW` over the table, and normalising them out
-would buy about 16% of its size in exchange for resolving ids on the way in.
-A column takes the type its Flix value already has — a `Duration` is the
-milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
-load parses nothing the decoder did not. Le Mans's mini-sectors are two JSON
-array columns rather than thirty more: only one round in the archive has them.
-They hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a
-subscript is a place on the circuit and a null is a marker the feed left blank.
-`json_each` is what a query reads one back with, one row per marker, keyed from
-zero where `Motorsport.MiniSector.positionOf` counts from one. That is the shape
-a query wants rather than the shape the JSON output has, which is the whole
-reason they are not the object `Motorsport.Wec` writes.
-
-Four readers of the table. `Cli.Load.Validation` runs its five rules as
-SQL over the round just loaded, leaving only the message formatting in Flix:
-three are a comparison per row, and the two that walk a lap need the mini-sectors
-in track order, which is what those columns are for. `Round.Summary`
-reads the round's summary the same way. `Round.Index` reads the two indices a
-race is read at a moment through — when the lap counter went up, and when each
-of the twenty records changed hands — which are a walk of every lap of the round
-each: a `GROUP BY` for the first, and for the second one window over every
-record's readings stacked into a single column. `Round.Laps` reads a whole round back,
-`Db.LapRow.fromRow` and `toRawLap` being the reverse of the load;
-`Cli.Export` and `Server.Api` are both rendered from what it,
-`Round.Summary` and `Round.Index` return, so the files written and the round
-served are the same bytes rather than two renderings that agree. The indices
-ride in the summary rather than in a file of their own, so a round is still two
-URLs. Nothing renders a round from the
-laps a CSV decoded to: `Cli.Load` sends the rows and stops there.
-
-What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
-`Motorsport.Track` still choose the grid's basis, break its ties, and divide the
-lap; they take the readings those decisions are made from rather than the laps
-they were counted out of, and neither imports `Motorsport.Wec` any more. The
-counting is what SQL is better at and what cost the most: reading a round's cars
-off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
-against 62 cars, and `GROUP BY` is not.
-
-`source_row` carries the position the file listed the lap in, which nothing else
-in the table recovers. It is what makes the table an image of the CSV rather than
-a set of it, and every reading that would move off Flix needs it: the validator's
-baseline is the file's first row, and a car's drivers are in the order the file
-first showed them.
-
-`Db` is an effect, not a module of functions, so that what a round would
-send can be read back without a server: `Db.runRecording` keeps the statements
-and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
-only file that imports `java.sql`. `Db.Schema.columns` and `Db.LapRow.values`
-are two lists no compiler sees together, which is what `Db.TestSchema` is for.
-
-The JDBC driver arrives through `[mvn-dependencies]` in `flix.toml`, resolved
-into the gitignored `lib/` by `flix build` — CI needs nothing added for it.
-`/update-deps` does not reach it, so it is the one dependency raised by hand,
-against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the
-SQLite it carries with a build number after it, so the pin says which engine
-the queries run on: `3.53.4.0` is SQLite 3.53.4.
-
 ### Reading the race at a moment
 
 Nothing in a `Race` moves; a clock is applied to it to get what is true then.
@@ -367,6 +263,12 @@ keeps them apart at the call site. A module handing out only the frozen form may
 name it for what it holds instead (`LapHistory`); one holding both names them for
 the difference (`BestTimes.Changes` spans the race, `BestTimes.Snapshot` is one
 moment of it).
+
+### The Flix side
+
+`flix/README.md` is the other half of the trip: the server that answers `/api`,
+the `laps` table it reads a round out of, and the `Db` effect and `Sql` query
+builder the two stages reach it through.
 
 ## Comments and documentation
 
@@ -422,23 +324,9 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
   page directly, and reads the values Elm can send out of the wrapper sources
   rather than repeating them, so a constructor added without a matching
   variant in the vendored component fails here instead of shipping unstyled.
-- **Where a test lives** — `test/Motorsport/` drives the domain's decisions
-  given the readings they are made from (the grid's basis and its tie-breaks,
-  how the lap divides) and needs no database; `test/Round/` and
-  `test/Server/TestApi.flix` drive the reading, and need one. A subject with
-  both has a file in each, named for the module it drives.
-- **A clean build** — `flix build` and `flix test` are incremental, and CI is
-  not: a compile that only fails from cold passes locally until `flix/build`
-  is removed. `rm -rf flix/build` before believing a green run.
-- **The database** — a test drives JDBC rather than a handler standing in for
-  it, against the in-memory database `Round.TestSupport.url` names: a
-  connection of its own per test, so what one loads is never the archive a
-  working copy has. A test that reaches no database fails rather than skipping:
-  the boundary is the thing it is there to check. What an in-memory database is
-  not is a file, so `Db.TestJdbc` drives one of those too, under a temporary
-  directory that does not exist yet — the directory `connect` has to make and
-  the journal mode it sets are reached no other way, and two connections at
-  once are not reached at all by a database each connection makes afresh.
+- **Flix** — `flix/README.md` holds the rest: where a test lives, what a clean
+  build is worth, the stack the type checker gets, and the database a test
+  reaches.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives

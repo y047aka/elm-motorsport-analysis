@@ -1,7 +1,8 @@
 mod Db.TestLapRow {
 
     use Db.LapRow
-    use Db.LapRow.Value
+    use Db.Laps
+    use Db.Value
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
@@ -122,8 +123,8 @@ mod Db.TestLapRow {
 
     @Test
     def theJsonArrayKeepsTheBlanksInPlace(): Unit \ Assert =
-        Assert.assertTrue(LapRow.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
-        Assert.assertTrue(LapRow.jsonArray(Nil) == "[]")
+        Assert.assertTrue(Db.jsonArray(Some(1) :: None :: Some(3) :: Nil) == "[1,null,3]");
+        Assert.assertTrue(Db.jsonArray(Nil) == "[]")
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
@@ -141,14 +142,12 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        let values = LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
+        let values = Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
         Assert.assertTrue(List.take(4, values)
             == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
 
-    /// The cells a `SELECT` of `Db.Schema.columns` comes back as, so a
-    /// column read at the wrong index is a wrong field here rather than a
-    /// wrong lap in an answer.
+    /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
         Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
         Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
@@ -159,10 +158,10 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        match LapRow.fromRow(cells()) {
+        match Sql.decode(LapRow.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
-                Assert.assertTrue(LapRow.values(row) == LapRow.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
+                Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
         }
 
     @Test
@@ -171,10 +170,33 @@ mod Db.TestLapRow {
             List.take(26, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
-        match LapRow.fromRow(withMiniSectors) {
+        match Sql.decode(LapRow.selection(), withMiniSectors) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
+
+    /// The table's keys name columns, and the schema names them again where
+    /// it declares the table.
+    @Test
+    def theKeysNameColumnsTheTableHas(): Unit \ Assert =
+        let declared = Db.Laps.columnNames();
+        let named = List.append(Laps.primaryKey(), Laps.sourceKey())
+            |> List.map(c -> c#name);
+        Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
+        Assert.assertTrue(
+            String.contains({substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
+                Db.Laps.createTable())
+        )
+
+    /// The reading names every column the load bound, and in that order:
+    /// `Db.Laps.all` and `selection` are two orderings of the one declaration,
+    /// and no compiler sees them together.
+    @Test
+    def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
+        Assert.assertTrue(
+            Sql.toSql(Sql.clause(LapRow.selection()))
+                == ("SELECT " + List.join(", ", Db.Laps.columnNames()), Nil)
+        )
 
     /// What the reading gives back is what the writing was handed.
     @Test

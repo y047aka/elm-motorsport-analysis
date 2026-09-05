@@ -7,7 +7,8 @@ mod Db.LapRow {
     use Motorsport.Wec.RawSector
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Db.Row
+    use Db.Laps
+    use Sql.Sel
     use Util.Duration
     use Util.HourClock
 
@@ -56,15 +57,6 @@ mod Db.LapRow {
         miniSectorElapsedMs = Option[List[Option[Int32]]]
     }
 
-    /// A bound value, in the type its column has.
-    pub enum Value with Eq, ToString {
-        case Text(String)
-        case Integer(Int32)
-        case Boolean(Bool)
-        case NullableInteger(Option[Int32])
-        case NullableIntArray(Option[List[Option[Int32]]])
-    }
-
     pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
         rawLaps
             |> List.zipWithIndex
@@ -109,170 +101,40 @@ mod Db.LapRow {
             reading(sector) |> Option.map(Duration.millis)
         ))
 
-    /// The text a mini-sector column holds, which `json_each` reads back as
-    /// one row per marker.
-    pub def jsonArray(values: List[Option[Int32]]): String =
-        "[" + (values |> List.map(v -> match v {
-            case Some(n) => "${n}"
-            case None    => "null"
-        }) |> List.join(",")) + "]"
-
-    /// In the order `Db.Schema.columns` names them.
-    pub def values(row: LapRow): List[Value] =
-        Value.Integer(row#season) ::
-        Value.Text(row#round) ::
-        Value.Integer(row#sourceRow) ::
-        Value.Text(row#carNumber) ::
-        Value.Text(row#class) ::
-        Value.Text(row#carGroup) ::
-        Value.Text(row#team) ::
-        Value.Text(row#manufacturer) ::
-        Value.Integer(row#driverNumber) ::
-        Value.Text(row#driverName) ::
-        Value.Integer(row#lapNumber) ::
-        Value.Integer(row#lapTimeMs) ::
-        Value.Integer(row#lapImprovement) ::
-        Value.Boolean(row#crossingFinishLineInPit) ::
-        Value.NullableInteger(row#s1Ms) ::
-        Value.Integer(row#s1Improvement) ::
-        Value.NullableInteger(row#s2Ms) ::
-        Value.Integer(row#s2Improvement) ::
-        Value.NullableInteger(row#s3Ms) ::
-        Value.Integer(row#s3Improvement) ::
-        Value.Text(row#kph) ::
-        Value.Integer(row#elapsedMs) ::
-        Value.Integer(row#hourMs) ::
-        Value.Text(row#topSpeed) ::
-        Value.NullableInteger(row#pitTimeMs) ::
-        Value.Text(row#flagAtFl) ::
-        Value.NullableIntArray(row#miniSectorTimeMs) ::
-        Value.NullableIntArray(row#miniSectorElapsedMs) ::
-        Nil
-
-
-    /// A row of the `SELECT` in `Db.Schema.selectRound`, whose columns are
-    /// `Db.Schema.columns` in order.
-    ///
-    /// Read in groups: a `forM` over all twenty-eight at once overflows the
-    /// type checker's own stack on a clean build (Flix 0.75.1), on a thread
-    /// whose size is the platform's default.
-    pub def fromRow(row: List[Option[String]]): Result[String, LapRow] =
-        forM(
-            round    <- roundColumns(row);
-            car      <- carColumns(row);
-            lap      <- lapColumns(row);
-            sectors  <- sectorColumns(row);
-            tail     <- tailColumns(row);
-            mini     <- miniSectorColumns(row)
-        ) yield {
-            season = round#season,
-            round = round#round,
-            sourceRow = round#sourceRow,
-            carNumber = car#carNumber,
-            class = car#class,
-            carGroup = car#carGroup,
-            team = car#team,
-            manufacturer = car#manufacturer,
-            driverNumber = car#driverNumber,
-            driverName = car#driverName,
-            lapNumber = lap#lapNumber,
-            lapTimeMs = lap#lapTimeMs,
-            lapImprovement = lap#lapImprovement,
-            crossingFinishLineInPit = lap#crossingFinishLineInPit,
-            s1Ms = sectors#s1Ms,
-            s1Improvement = sectors#s1Improvement,
-            s2Ms = sectors#s2Ms,
-            s2Improvement = sectors#s2Improvement,
-            s3Ms = sectors#s3Ms,
-            s3Improvement = sectors#s3Improvement,
-            kph = tail#kph,
-            elapsedMs = tail#elapsedMs,
-            hourMs = tail#hourMs,
-            topSpeed = tail#topSpeed,
-            pitTimeMs = tail#pitTimeMs,
-            flagAtFl = tail#flagAtFl,
-            miniSectorTimeMs = mini#times,
-            miniSectorElapsedMs = mini#elapsed
-        }
-
-    def roundColumns(row: List[Option[String]]): Result[String, {season = Int32, round = String, sourceRow = Int32}] =
-        forM(
-            season    <- Row.int(0, row);
-            round     <- Row.text(1, row);
-            sourceRow <- Row.int(2, row)
-        ) yield { season = season, round = round, sourceRow = sourceRow }
-
-    def carColumns(row: List[Option[String]]): Result[String, {carNumber = String, class = String, carGroup = String, team = String, manufacturer = String, driverNumber = Int32, driverName = String}] =
-        forM(
-            carNumber    <- Row.text(3, row);
-            class        <- Row.text(4, row);
-            carGroup     <- Row.text(5, row);
-            team         <- Row.text(6, row);
-            manufacturer <- Row.text(7, row);
-            driverNumber <- Row.int(8, row);
-            driverName   <- Row.text(9, row)
-        ) yield {
-            carNumber = carNumber,
-            class = class,
-            carGroup = carGroup,
-            team = team,
-            manufacturer = manufacturer,
-            driverNumber = driverNumber,
-            driverName = driverName
-        }
-
-    def lapColumns(row: List[Option[String]]): Result[String, {lapNumber = Int32, lapTimeMs = Int32, lapImprovement = Int32, crossingFinishLineInPit = Bool}] =
-        forM(
-            lapNumber               <- Row.int(10, row);
-            lapTimeMs               <- Row.int(11, row);
-            lapImprovement          <- Row.int(12, row);
-            crossingFinishLineInPit <- Row.bool(13, row)
-        ) yield {
-            lapNumber = lapNumber,
-            lapTimeMs = lapTimeMs,
-            lapImprovement = lapImprovement,
-            crossingFinishLineInPit = crossingFinishLineInPit
-        }
-
-    def sectorColumns(row: List[Option[String]]): Result[String, {s1Ms = Option[Int32], s1Improvement = Int32, s2Ms = Option[Int32], s2Improvement = Int32, s3Ms = Option[Int32], s3Improvement = Int32}] =
-        forM(
-            s1Ms          <- Row.optionalInt(14, row);
-            s1Improvement <- Row.int(15, row);
-            s2Ms          <- Row.optionalInt(16, row);
-            s2Improvement <- Row.int(17, row);
-            s3Ms          <- Row.optionalInt(18, row);
-            s3Improvement <- Row.int(19, row)
-        ) yield {
-            s1Ms = s1Ms,
-            s1Improvement = s1Improvement,
-            s2Ms = s2Ms,
-            s2Improvement = s2Improvement,
-            s3Ms = s3Ms,
-            s3Improvement = s3Improvement
-        }
-
-    def tailColumns(row: List[Option[String]]): Result[String, {kph = String, elapsedMs = Int32, hourMs = Int32, topSpeed = String, pitTimeMs = Option[Int32], flagAtFl = String}] =
-        forM(
-            kph       <- Row.text(20, row);
-            elapsedMs <- Row.int(21, row);
-            hourMs    <- Row.int(22, row);
-            topSpeed  <- Row.text(23, row);
-            pitTimeMs <- Row.optionalInt(24, row);
-            flagAtFl  <- Row.text(25, row)
-        ) yield {
-            kph = kph,
-            elapsedMs = elapsedMs,
-            hourMs = hourMs,
-            topSpeed = topSpeed,
-            pitTimeMs = pitTimeMs,
-            flagAtFl = flagAtFl
-        }
-
-    def miniSectorColumns(row: List[Option[String]]): Result[String, {times = Option[List[Option[Int32]]], elapsed = Option[List[Option[Int32]]]}] =
-        forM(
-            times   <- Row.optionalIntArray(26, row);
-            elapsed <- Row.optionalIntArray(27, row)
-        ) yield { times = times, elapsed = elapsed }
+    /// A round's laps as the table holds them, a field at a time: each line
+    /// names the column and the field its cell lands in, and a field left out
+    /// is not a `LapRow`.
+    pub def selection(): Sel[LapRow] =
+        let c = Laps.columns();
+        Sql.record({})
+            |> Sql.field(c#season, (row, value) -> { +season = value | row })
+            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
+            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
+            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
+            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
+            |> Sql.field(c#team, (row, value) -> { +team = value | row })
+            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
+            |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
+            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
+            |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
+            |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
+            |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
+            |> Sql.field(c#crossingFinishLineInPit, (row, value) -> { +crossingFinishLineInPit = value | row })
+            |> Sql.field(c#s1Ms, (row, value) -> { +s1Ms = value | row })
+            |> Sql.field(c#s1Improvement, (row, value) -> { +s1Improvement = value | row })
+            |> Sql.field(c#s2Ms, (row, value) -> { +s2Ms = value | row })
+            |> Sql.field(c#s2Improvement, (row, value) -> { +s2Improvement = value | row })
+            |> Sql.field(c#s3Ms, (row, value) -> { +s3Ms = value | row })
+            |> Sql.field(c#s3Improvement, (row, value) -> { +s3Improvement = value | row })
+            |> Sql.field(c#kph, (row, value) -> { +kph = value | row })
+            |> Sql.field(c#elapsedMs, (row, value) -> { +elapsedMs = value | row })
+            |> Sql.field(c#hourMs, (row, value) -> { +hourMs = value | row })
+            |> Sql.field(c#topSpeed, (row, value) -> { +topSpeed = value | row })
+            |> Sql.field(c#pitTimeMs, (row, value) -> { +pitTimeMs = value | row })
+            |> Sql.field(c#flagAtFl, (row, value) -> { +flagAtFl = value | row })
+            |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
+            |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
 
     pub def toRawLap(row: LapRow): Result[String, RawLap] =
         forM(
