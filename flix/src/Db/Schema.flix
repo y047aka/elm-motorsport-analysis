@@ -1,4 +1,4 @@
-/// A table declared as its columns, which is what `Db.Laps` and `Db.Entries`
+/// A table declared as its columns, which is what `Db.Laps` and `Db.Cars`
 /// each are one of: a column's name, the type it takes there, how a row binds
 /// it and how it reads back are one value, and the schema a load creates, the
 /// values it binds and the reading it comes back through are three views of

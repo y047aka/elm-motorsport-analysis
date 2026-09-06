@@ -66,8 +66,9 @@ change to a renderer costs no decoding. **A round no run has loaded fails the
 export** rather than being written out as a race that never ran — the rows read
 back as one, which is the one thing they cannot say for themselves — and the
 files it would have replaced are left alone. `/api` answers such a round with a
-404 for the same reason, off the same reading: `Round.Laps.loaded` is where the
-two of them ask.
+404 for the same reason, off the same reading: `Round.loaded` is where the two
+of them ask, and it asks both tables — a round with laps and no cars is half in
+the database rather than loaded.
 
 Both stages compute in SQLite, and so does the server, so all three need one:
 `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made

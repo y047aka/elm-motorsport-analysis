@@ -68,7 +68,7 @@ mod Cli.Export {
     /// a directory to write into.
     pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
         forM(
-            isLoaded <- Laps.loaded(task#entry) |> Result.mapErr(CliError.Database);
+            isLoaded <- Round.loaded(task#entry) |> Result.mapErr(CliError.Database);
             _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
             metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
             index    <- Index.read(task#entry) |> Result.mapErr(CliError.Database);

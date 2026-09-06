@@ -65,6 +65,40 @@ mod Db.TestCarRow {
             String.contains({substr = "PRIMARY KEY (season, round, car_number)"}, Cars.createTable())
         )
 
+    /// A file that describes one car two ways: car 12 is Hertz Team JOTA on
+    /// its first lap and AF Corse on its second.
+    def contradicting(): List[Motorsport.Wec.RawLap] =
+        match TestLapRow.sampleLaps() {
+            case first :: second :: rest =>
+                first :: { car = { team = "AF Corse" | second#car } | second } :: rest
+            case laps => laps
+        }
+
+    @Test
+    def aCarKeepsWhatTheFileFirstSaidItWas(): Unit \ Assert =
+        match CarRow.fromRawLaps(fuji(), contradicting()) {
+            case row :: _ => Assert.assertTrue(row#team == "Hertz Team JOTA")
+            case Nil      => Assert.assertTrue(false)
+        }
+
+    /// The second description reaches no column, so the load says it or
+    /// nothing does.
+    @Test
+    def whatTheTableDropsIsReported(): Unit \ Assert =
+        match CarRow.disagreements(contradicting()) {
+            case d :: Nil =>
+                Assert.assertTrue(d#carNumber == "12");
+                Assert.assertTrue(d#lapNumber == 2);
+                Assert.assertTrue(d#field == "team");
+                Assert.assertTrue(d#kept == "Hertz Team JOTA");
+                Assert.assertTrue(d#found == "AF Corse")
+            case _ => Assert.assertTrue(false)
+        }
+
+    @Test
+    def aFileThatAgreesWithItselfReportsNothing(): Unit \ Assert =
+        Assert.assertTrue(List.isEmpty(CarRow.disagreements(TestLapRow.sampleLaps())))
+
     /// What the reading gives back is what the writing was handed.
     @Test
     def aRowMakesTheCarItWasMadeFrom(): Unit \ Assert =

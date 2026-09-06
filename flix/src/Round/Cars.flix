@@ -6,6 +6,15 @@ mod Round.Cars {
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawCar
 
+    /// Whether a run has loaded the round's cars, asked rather than read back.
+    pub def loaded(entry: Entry): Result[String, Bool] \ Db =
+        Cars.rows()
+            |> Sql.filter(Cars.scope(entry#season, entry#id))
+            |> Sql.limit(1)
+            |> Sql.map(_ -> Sql.int("1"))
+            |> Sql.selectAll
+            |> Result.map(found -> not List.isEmpty(found))
+
     /// Keyed by car number, which is the whole of what a lap carries of its
     /// car.
     pub def read(entry: Entry): Result[String, Map[String, RawCar]] \ Db =

@@ -125,8 +125,8 @@ mod Db.LapRow {
             |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
             |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
 
-    /// The car is the round's entry rather than the lap's: `laps` holds the
-    /// number and `entries` what the number was.
+    /// The car is the round's rather than the lap's: `laps` holds the number
+    /// and `cars` what the number was.
     pub def toRawLap(car: RawCar, row: LapRow): Result[String, RawLap] =
         forM(
             lapImprovement <- improvement("LAP_IMPROVEMENT", row#lapImprovement);

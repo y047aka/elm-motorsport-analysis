@@ -33,7 +33,10 @@ laps are 24MB, and 3.4MB on the wire.
 `Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
 and the `Db` effect and read it; `Round.Render` takes what they returned, is
 pure, and turns it into the bytes that go out. None of the five knows whether a
-file or a request is waiting at the other end.
+file or a request is waiting at the other end. `Round.loaded` is what both
+callers ask first, and it asks both tables: laps without cars is a round half
+in the database, and answered off the laps alone it would be a race whose grid
+was empty.
 
 `Server.Api` decides nothing about a round, then, and renders none of one
 either: it makes the same calls `Cli.Export` makes, so what is served and what
@@ -66,6 +69,15 @@ is also all the JSONL writes out, so the four columns are no longer read back
 Where the file first mentioned a car is not in `cars`: it is `MIN(source_row)`
 over the round's laps, which is what `Round.Summary` orders the grid by. What
 `cars` holds is what the file said, and nothing counted off it.
+
+What one row per car cannot hold is a file that describes one car two ways.
+`Db.CarRow` keeps the first mention and the second reaches no column, so
+`Db.CarRow.disagreements` is read before the insert and `Cli.Load` prints what
+it found: said there or nowhere, since no query over the tables can find it
+afterwards. It has not happened within a round in the archive; between rounds it
+has, which is why `cars` is keyed by round and not by season -- 2026's Le Mans
+file spells a manufacturer `Mercedes-AMG` where the season's other rounds spell
+it `Mercedes`.
 
 Everything else stays as it was. A column takes the type its Flix value already
 has -- a `Duration` is the milliseconds it holds, `kph` and `topSpeed` stay the

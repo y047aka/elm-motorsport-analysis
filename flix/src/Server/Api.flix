@@ -103,7 +103,7 @@ mod Server.Api {
     def answer(season: Int32, id: String, render: Entry -> Result[String, String] \ Db): Result[String, Option[String]] \ Db =
         forM(
             round    <- entry(season, id);
-            isLoaded <- Laps.loaded(round);
+            isLoaded <- Round.loaded(round);
             rendered <- if (isLoaded) Result.map(Some, render(round)) else Ok(None)
         ) yield rendered
 
