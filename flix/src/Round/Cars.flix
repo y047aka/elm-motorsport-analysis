@@ -7,7 +7,7 @@ mod Round.Cars {
     use Motorsport.Wec.RawCar
 
     /// Whether a run has loaded the round's cars, asked rather than read back.
-    pub def loaded(entry: Entry): Result[String, Bool] \ DbRead =
+    pub def loaded(entry: Entry): Result[Db.Error, Bool] \ DbRead =
         Cars.rows()
             |> Sql.filter(c -> Cars.scope(c, entry#season, entry#id))
             |> Sql.limit(1)
@@ -17,7 +17,7 @@ mod Round.Cars {
 
     /// Keyed by car number, which is the whole of what a lap carries of its
     /// car.
-    pub def read(entry: Entry): Result[String, Map[String, RawCar]] \ DbRead =
+    pub def read(entry: Entry): Result[Db.Error, Map[String, RawCar]] \ DbRead =
         Cars.rows()
             |> Sql.filter(c -> Cars.scope(c, entry#season, entry#id))
             |> Sql.map(_ -> Cars.selection())

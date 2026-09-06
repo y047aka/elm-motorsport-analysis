@@ -75,10 +75,10 @@ mod Db.Cars {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Result[String, Unit] \ DbWrite =
+    pub def create(): Result[Db.Error, Unit] \ DbWrite =
         Schema.recreate(table(), all(), keys())
 
-    pub def insertRows(rows: List[CarRow]): Result[String, Int32] \ DbWrite =
+    pub def insertRows(rows: List[CarRow]): Result[Db.Error, Int32] \ DbWrite =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: CarRow): List[Value] =

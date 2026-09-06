@@ -56,6 +56,12 @@ mod Server.TestApi {
         Assert.assertTrue(Api.needsDatabase(Route.Summary(2025, "fuji_6h")));
         Assert.assertTrue(Api.needsDatabase(Route.Laps(2025, "fuji_6h")))
 
+    /// The round is the calendar's; what is missing is the database.
+    @Test
+    def aRoundWithNoDatabaseBehindItIsA503(): Unit \ Assert =
+        Assert.assertTrue(offline(Route.Summary(2025, "fuji_6h"))#status == 503);
+        Assert.assertTrue(offline(Route.Laps(2025, "fuji_6h"))#status == 503)
+
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)

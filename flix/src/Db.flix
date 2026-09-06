@@ -6,7 +6,7 @@
 /// null. The server has the types and the caller knows what it asked for,
 /// so nothing is gained by carrying them across in between.
 pub eff DbRead {
-    def fetch(sql: String, params: List[Db.Value]): Result[String, List[List[Option[String]]]]
+    def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, List[List[Option[String]]]]
 }
 
 /// `insertMany` binds each row to one statement and answers with the number
@@ -16,16 +16,47 @@ pub eff DbRead {
 /// Nothing a statement sends is kept until `commit`, which is what `Db.transact`
 /// is for: a caller that sends and never commits has sent nothing.
 pub eff DbWrite {
-    def execute(sql: String): Result[String, Unit]
-    def insertMany(sql: String, rows: List[List[Db.Value]]): Result[String, Int32]
-    def commit(): Result[String, Unit]
-    def rollback(): Result[String, Unit]
+    def execute(sql: String): Result[Db.Error, Unit]
+    def insertMany(sql: String, rows: List[List[Db.Value]]): Result[Db.Error, Int32]
+    def commit(): Result[Db.Error, Unit]
+    def rollback(): Result[Db.Error, Unit]
 }
 
 /// Both halves, for a caller that does reach the database either way.
 pub type alias Db = {DbRead, DbWrite}
 
 mod Db {
+
+    /// What did not happen, rather than the sentence saying so, which is
+    /// `ToString`'s.
+    pub enum Error with Eq {
+        /// No database was reached at all.
+        case Unreachable(String)
+
+        /// The database refused what it was sent, in the words the driver
+        /// used.
+        case Refused(String)
+
+        /// A cell came back that the reading could not read.
+        case Unread(String)
+
+        /// A query that had to answer with a row answered with none.
+        case NoRow(String)
+
+        /// The rows came back whole and do not describe a round: a car with
+        /// laps and no row in `cars` is the one this is for.
+        case Incomplete(String)
+    }
+
+    instance ToString[Error] {
+        pub def toString(e: Error): String = match e {
+            case Error.Unreachable(cause)  => "no database (${cause})"
+            case Error.Refused(cause)      => cause
+            case Error.Unread(detail)      => detail
+            case Error.NoRow(subject)      => "${subject} came back with no row"
+            case Error.Incomplete(detail)  => detail
+        }
+    }
 
     /// A value bound to a `?`, in the type its column or comparison has.
     pub enum Value with Eq, ToString {
@@ -50,7 +81,7 @@ mod Db {
     /// A run that dies before answering commits nothing, which is what makes a
     /// rebuild of the table safe to interrupt: the `DROP TABLE` it starts with
     /// is undone with the rows it did not finish loading.
-    pub def transact(f: Unit -> Result[String, a] \ ef): Result[String, a] \ ef + DbWrite =
+    pub def transact(f: Unit -> Result[Error, a] \ ef): Result[Error, a] \ ef + DbWrite =
         match f() {
             case Ok(value) => DbWrite.commit() |> Result.map(_ -> value)
             case Err(e)    => discard DbWrite.rollback(); Err(e)
@@ -95,7 +126,7 @@ mod Db {
                 // is told so rather than handed an empty one.
                 def fetch(sql, params, k) = {
                     record(log, Statement.Fetch(sql, params));
-                    k(Err("nothing was sent to a database, so nothing can be read back"))
+                    k(Err(Error.Unreachable("nothing was sent, so nothing can be read back")))
                 }
             };
             (result, List.reverse(Ref.get(log)))

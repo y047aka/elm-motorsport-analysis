@@ -149,6 +149,17 @@ subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller
 taking either as an argument is written for the half it uses, which is what
 `Main.onRoot` is polymorphic over and what `Round.TestSupport.onRound` takes.
 
+What a failure is is a `Db.Error` rather than a sentence, and which of the
+five says where the fix is: `Unreachable` is no database reached at all,
+`Refused` is what the driver said no to in its own words, `Unread` is a cell
+the reading could not read, `NoRow` is a query that had to answer with one and
+did not, and `Incomplete` is rows that came back whole and do not describe a
+round -- a car with laps and no row in `cars`. The sentence is `ToString`'s, so
+the wording is in one place and the kind is what a caller reads. `Server.Api`
+is the one that does: a request that reached no database is answered 503 and
+anything else 500, which is the difference between a round that cannot be
+served now and one that cannot be served.
+
 Nothing a statement sends is kept until `DbWrite.commit`, and `Db.transact` is where
 that is decided: it commits what its caller sent when the caller answers `Ok`
 and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the

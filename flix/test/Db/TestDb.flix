@@ -83,9 +83,9 @@ mod Db.TestDb {
         let (result, statements) = Db.runRecording(() ->
             Db.transact(() -> {
                 discard Laps.insertRows(sampleRows());
-                (Err("the round was not what it should have been"): Result[String, Int32])
+                (Err(Db.Error.Incomplete("the round was not what it should have been")): Result[Db.Error, Int32])
             }));
-        Assert.assertTrue(result == Err("the round was not what it should have been"));
+        Assert.assertTrue(result == Err(Db.Error.Incomplete("the round was not what it should have been")));
         match statements {
             case Statement.InsertMany(_, _) :: Statement.Rollback :: Nil => Assert.assertTrue(true)
             case _ => Assert.assertTrue(false)

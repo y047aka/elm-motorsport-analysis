@@ -12,6 +12,7 @@ mod Db.Jdbc {
 
     import org.sqlite.JDBC
 
+    use Db.Error
     use Db.Value
 
     def batchSize(): Int32 = 1000
@@ -24,7 +25,7 @@ mod Db.Jdbc {
     /// SQLite creates the database file and not the directory holding it, so a
     /// URL naming one that does not exist reports that the file cannot be
     /// opened.
-    pub def connect(url: String): Result[String, Connection] \ IO =
+    pub def connect(url: String): Result[Error, Connection] \ IO =
         try {
             DriverManager.registerDriver(new JDBC());
             makeParentDirectory(url);
@@ -33,7 +34,7 @@ mod Db.Jdbc {
             conn.setAutoCommit(false);
             Ok(conn)
         } catch {
-            case e: SQLException => Err("could not connect (caused by: ${e.getMessage()})")
+            case e: SQLException => Err(Error.Unreachable("${e.getMessage()}"))
         }
 
     def makeParentDirectory(url: String): Unit \ IO =
@@ -89,7 +90,7 @@ mod Db.Jdbc {
             def rollback(k) = k(endTransaction(conn, c -> c.rollback()))
         }
 
-    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[String, List[List[Option[String]]]] \ IO =
+    def runFetch(conn: Connection, sql: String, params: List[Value]): Result[Error, List[List[Option[String]]]] \ IO =
         try {
             let stmt = conn.prepareStatement(sql);
             bind(stmt, params);
@@ -100,7 +101,7 @@ mod Db.Jdbc {
             stmt.close();
             Ok(rows)
         } catch {
-            case e: SQLException => Err("${e.getMessage()}")
+            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
         }
 
     def readRows(rs: ResultSet, width: Int32, acc: List[List[Option[String]]]): List[List[Option[String]]] \ IO =
@@ -119,21 +120,21 @@ mod Db.Jdbc {
         let value = rs.getString(index);
         if (rs.wasNull()) None else Some(value)
 
-    def runStatement(conn: Connection, sql: String): Result[String, Unit] \ IO =
+    def runStatement(conn: Connection, sql: String): Result[Error, Unit] \ IO =
         try {
             let stmt = conn.createStatement();
             discard stmt.executeUpdate(sql);
             stmt.close();
             Ok()
         } catch {
-            case e: SQLException => Err("${e.getMessage()}")
+            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
         }
 
     /// The rows go out in batches, so a refusal partway through has already
     /// sent some of them. They are undone against a savepoint rather than by
     /// rolling the transaction back: what a run loaded before this call is
     /// still to be committed.
-    def insertRows(conn: Connection, sql: String, rows: List[List[Value]]): Result[String, Int32] \ IO =
+    def insertRows(conn: Connection, sql: String, rows: List[List[Value]]): Result[Error, Int32] \ IO =
         match savepoint(conn) {
             case Err(e) => Err(e)
             case Ok(mark) =>
@@ -149,7 +150,7 @@ mod Db.Jdbc {
                     pstmt.close();
                     Ok(count)
                 } catch {
-                    case e: SQLException => Err("${e.getMessage()}")
+                    case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
                 };
                 match outcome {
                     case Ok(count) => release(conn, mark); Ok(count)
@@ -157,11 +158,11 @@ mod Db.Jdbc {
                 }
         }
 
-    def savepoint(conn: Connection): Result[String, Savepoint] \ IO =
+    def savepoint(conn: Connection): Result[Error, Savepoint] \ IO =
         try {
             Ok(conn.setSavepoint())
         } catch {
-            case e: SQLException => Err("${e.getMessage()}")
+            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
         }
 
     def release(conn: Connection, mark: Savepoint): Unit \ IO =
@@ -196,12 +197,12 @@ mod Db.Jdbc {
             }
         }
 
-    def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[String, Unit] \ IO =
+    def endTransaction(conn: Connection, end: Connection -> Unit \ IO): Result[Error, Unit] \ IO =
         try {
             end(conn);
             Ok()
         } catch {
-            case e: SQLException => Err("${e.getMessage()}")
+            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
         }
 
 }

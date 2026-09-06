@@ -12,14 +12,14 @@ mod Round.Laps {
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
-    pub def loaded(entry: Entry): Result[String, Bool] \ DbRead =
+    pub def loaded(entry: Entry): Result[Db.Error, Bool] \ DbRead =
         laps(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
             |> Sql.selectAll
             |> Result.map(found -> not List.isEmpty(found))
 
-    pub def read(entry: Entry): Result[String, List[RawLap]] \ DbRead =
+    pub def read(entry: Entry): Result[Db.Error, List[RawLap]] \ DbRead =
         forM(
             cars    <- Cars.read(entry);
             lapRows <- laps(entry)
@@ -31,11 +31,11 @@ mod Round.Laps {
 
     /// A car with laps and no row in `cars` is a round loaded by halves, which
     /// is the one thing a lap cannot say for itself.
-    def rawLap(cars: Map[String, RawCar]): LapRow -> Result[String, RawLap] =
+    def rawLap(cars: Map[String, RawCar]): LapRow -> Result[Db.Error, RawLap] =
         row ->
             Map.get(row#carNumber, cars)
-                |> Option.toOk("car ${row#carNumber} has laps but is not one of the round's cars")
-                |> Result.flatMap(car -> LapRow.toRawLap(car, row))
+                |> Option.toOk(Db.Error.Incomplete("car ${row#carNumber} has laps but is not one of the round's cars"))
+                |> Result.flatMap(car -> LapRow.toRawLap(car, row) |> Result.mapErr(Db.Error.Unread))
 
     def laps(entry: Entry): Sql.Rows[Laps.Columns] =
         Laps.rows()

@@ -46,7 +46,7 @@ mod Cli.Load {
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
-    def createTables(): Result[String, Unit] \ DbWrite =
+    def createTables(): Result[Db.Error, Unit] \ DbWrite =
         forM(
             _ <- Cars.create();
             _ <- Laps.create()

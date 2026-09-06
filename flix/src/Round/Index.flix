@@ -15,7 +15,7 @@ mod Round.Index {
     use Motorsport.Sector.Sector
     use Util.Duration.Duration
 
-    pub def read(entry: Entry): Result[String, Index.Index] \ DbRead =
+    pub def read(entry: Entry): Result[Db.Error, Index.Index] \ DbRead =
         forM(
             completions <- lapCompletions(entry);
             changes     <- bestTimes(entry)
@@ -36,7 +36,7 @@ mod Round.Index {
 
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
-    def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ DbRead =
+    def lapCompletions(entry: Entry): Result[Db.Error, List[(Int32, Duration)]] \ DbRead =
         Laps.rows()
             |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
             |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
@@ -57,7 +57,7 @@ mod Round.Index {
         (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
         Nil
 
-    def bestTimes(entry: Entry): Result[String, List[(Record, Change)]] \ DbRead =
+    def bestTimes(entry: Entry): Result[Db.Error, List[(Record, Change)]] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))

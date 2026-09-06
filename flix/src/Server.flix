@@ -65,7 +65,7 @@ mod Server {
     /// until the process ends, so the close is outside the catch.
     def fromDatabase(databaseUrl: String, route: Route, exchange: HttpExchange): Response \ IO =
         match Jdbc.connect(databaseUrl) {
-            case Err(cause) => { status = 503, contentType = "text/plain", body = cause }
+            case Err(cause) => { status = 503, contentType = "text/plain", body = "${cause}" }
             case Ok(conn)   =>
                 let answered = try {
                     Jdbc.runReading(conn, () -> Api.respond(route))

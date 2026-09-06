@@ -78,37 +78,45 @@ mod Server.Api {
     def notFound(reason: String): Response =
         { status = 404, contentType = "text/plain", body = reason }
 
-    def body(contentType: String, result: Result[String, Option[String]]): Response =
+    def body(contentType: String, result: Result[Db.Error, Option[String]]): Response =
         match result {
             case Ok(Some(rendered)) => ok(contentType, rendered)
             case Ok(None)           => notFound("round not loaded")
-            case Err(cause)         => { status = 500, contentType = "text/plain", body = cause }
+            case Err(cause)         => failed(cause)
         }
+
+    /// 503 rather than 500 where no database was reached: the round can be
+    /// served, and not now.
+    def failed(cause: Db.Error): Response =
+        let status = match cause {
+            case Db.Error.Unreachable(_) => 503
+            case _                       => 500
+        };
+        { status = status, contentType = "text/plain", body = "${cause}" }
 
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
-    def summary(season: Int32, id: String): Result[String, Option[String]] \ DbRead =
+    def summary(season: Int32, id: String): Result[Db.Error, Option[String]] \ DbRead =
         answer(season, id, e -> forM(
             metadata <- Summary.read(e);
             index    <- Index.read(e)
         ) yield Render.renderSummary(metadata, index))
 
-    def laps(season: Int32, id: String): Result[String, Option[String]] \ DbRead =
+    def laps(season: Int32, id: String): Result[Db.Error, Option[String]] \ DbRead =
         answer(season, id, e -> Laps.read(e) |> Result.map(Render.renderJsonl))
 
-    /// `None` is a round the calendar lists and no run has loaded. Rendered
-    /// out of the rows it would be a race that never ran, which is the one
-    /// thing they cannot say for themselves.
-    def answer(season: Int32, id: String, render: Entry -> Result[String, String] \ DbRead): Result[String, Option[String]] \ DbRead =
-        forM(
-            round    <- entry(season, id);
-            isLoaded <- Round.loaded(round);
-            rendered <- if (isLoaded) Result.map(Some, render(round)) else Ok(None)
-        ) yield rendered
-
-    def entry(season: Int32, id: String): Result[String, Entry] =
-        Calendar.find(season, id)
-            |> Option.toOk("no round ${id} in ${season}")
+    /// `None` is a round no answer is served for: one the calendar does not
+    /// list, and one it lists that no run has loaded. Rendered out of the rows
+    /// the second would be a race that never ran, which is the one thing they
+    /// cannot say for themselves.
+    def answer(season: Int32, id: String, render: Entry -> Result[Db.Error, String] \ DbRead): Result[Db.Error, Option[String]] \ DbRead =
+        match Calendar.find(season, id) {
+            case None        => Ok(None)
+            case Some(round) => forM(
+                isLoaded <- Round.loaded(round);
+                rendered <- if (isLoaded) Result.map(Some, render(round)) else Ok(None)
+            ) yield rendered
+        }
 
 }

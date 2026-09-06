@@ -12,7 +12,7 @@ mod Db.TestJdbc {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    def connected(f: Unit -> Result[String, a] \ ef): Result[String, a] \ (ef - Db) + IO =
+    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - Db) + IO =
         match Jdbc.connect(TestSupport.url()) {
             case Err(e)   => Err(e)
             case Ok(conn) =>
@@ -92,7 +92,7 @@ mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Unit -> Result[String, a] \ ef): (String, Result[String, a]) \ (ef - Db) + IO =
+    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - Db) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
@@ -160,7 +160,7 @@ mod Db.TestJdbc {
     @Test
     def aTransactionThatFailedTakesBackWhatItSent(): Unit \ {Assert, IO} =
         let (path, written) = onFile(() -> Db.transact(refuse));
-        Assert.assertTrue(written == Err("the round was not what it should have been"));
+        Assert.assertTrue(written == Err(Db.Error.Incomplete("the round was not what it should have been")));
         match counted(path) {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)
@@ -169,13 +169,13 @@ mod Db.TestJdbc {
 
     /// A round loaded and then judged unfit, which is a transaction answering
     /// with an error.
-    def refuse(): Result[String, Int32] \ DbWrite =
+    def refuse(): Result[Db.Error, Int32] \ DbWrite =
         match load() {
-            case Ok(_)  => Err("the round was not what it should have been")
+            case Ok(_)  => Err(Db.Error.Incomplete("the round was not what it should have been"))
             case Err(e) => Err(e)
         }
 
-    def load(): Result[String, Int32] \ DbWrite =
+    def load(): Result[Db.Error, Int32] \ DbWrite =
         let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
         forM(
             _        <- Laps.create();
@@ -183,7 +183,7 @@ mod Db.TestJdbc {
         ) yield accepted
 
     /// From a connection of its own, so what it counts is what was committed.
-    def counted(path: String): Result[String, List[List[Option[String]]]] \ IO =
+    def counted(path: String): Result[Db.Error, List[List[Option[String]]]] \ IO =
         match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)
             case Ok(conn) =>

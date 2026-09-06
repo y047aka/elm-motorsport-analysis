@@ -164,10 +164,10 @@ mod Db.Laps {
 
     // --------------------------------------------------------------- schema
 
-    pub def create(): Result[String, Unit] \ DbWrite =
+    pub def create(): Result[Db.Error, Unit] \ DbWrite =
         Schema.recreate(table(), all(), keys())
 
-    pub def insertRows(rows: List[LapRow]): Result[String, Int32] \ DbWrite =
+    pub def insertRows(rows: List[LapRow]): Result[Db.Error, Int32] \ DbWrite =
         Schema.insertRows(table(), all(), rows)
 
     pub def values(row: LapRow): List[Value] =
