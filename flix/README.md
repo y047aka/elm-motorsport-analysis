@@ -131,7 +131,8 @@ first showed them, and so is the grid.
 Reaching a database is an effect rather than a module of functions, so that
 what a round would send can be read back without a server: `Db.runRecording`
 keeps the statements and answers a read with the error that nothing was sent,
-and `Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
+`Db.runFailing` answers every statement with one error the caller chose, and
+`Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
 table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
 query language and nothing of this application; `Db.Laps`, `Db.Cars` and the
 two row types beside them are the whole of what the application tells them
@@ -369,3 +370,11 @@ paying for the same split.
   directory that does not exist yet — the directory `connect` has to make and
   the journal mode it sets are reached no other way, and two connections at
   once are not reached at all by a database each connection makes afresh.
+
+  What no database is asked for is what a caller does about a failure, since
+  that is decided off the kind rather than off any row: `Db.runFailing` is a
+  database that answers with the one it was given, and `Server.TestApi` is
+  where a `Busy` becomes a 503 and a `Refused` a 500 with the driver's words
+  kept out of the body. The two halves of that are otherwise only met apart --
+  `Db.Jdbc.classify` reads the code, and a round read over a real database
+  never fails.

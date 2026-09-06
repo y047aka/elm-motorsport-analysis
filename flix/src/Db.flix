@@ -191,6 +191,22 @@ mod Db {
             (result, List.reverse(Ref.get(log)))
         }
 
+    /// A database that answers every statement with the same failure, for a
+    /// caller whose subject is what it does about one.
+    pub def runFailing(error: Error, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) =
+        run {
+            run {
+                f()
+            } with handler SqlWrite {
+                def execute(_sql, k) = k(Err(error))
+                def insertMany(_sql, _rows, k) = k(Err(error))
+                def commit(k) = k(Err(error))
+                def rollback(k) = k(Err(error))
+            }
+        } with handler SqlRead {
+            def fetch(_sql, _params, k) = k(Err(error))
+        }
+
     def record(log: Ref[List[Statement], r], statement: Statement): Unit \ r =
         Ref.put(statement :: Ref.get(log), log)
 
