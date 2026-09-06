@@ -108,16 +108,11 @@ mod Server.TestApi {
         }
 
     def served(laps: List[RawLap]): (Response, Response, String) \ IO =
-        TestSupport.onRound(fuji(), laps, () ->
-            forM(
-                metadata <- Summary.read(fuji());
-                index    <- Index.read(fuji())
-            ) yield (
-                Api.respond(Route.Summary(2025, "fuji_6h")),
-                Api.respond(Route.Laps(2025, "fuji_6h")),
-                Render.renderSummary(metadata, index)
-            )
-        )
+        TestSupport.onRound(fuji(), laps, () -> (
+            Api.respond(Route.Summary(2025, "fuji_6h")),
+            Api.respond(Route.Laps(2025, "fuji_6h")),
+            Render.renderSummary(Summary.read(fuji()), Index.read(fuji()))
+        ))
 
     /// A round the calendar lists and the rows hold none of. Answered out of
     /// them it would be a race that never ran.
@@ -130,9 +125,9 @@ mod Server.TestApi {
         }
 
     def unloaded(): (Response, Response) \ IO =
-        TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> Ok((
+        TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> (
             Api.respond(Route.Summary(2025, "imola_6h")),
             Api.respond(Route.Laps(2025, "imola_6h"))
-        )))
+        ))
 
 }

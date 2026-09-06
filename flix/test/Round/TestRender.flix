@@ -35,10 +35,8 @@ mod Round.TestRender {
         }
 
     def summaryOf(laps: List[RawLap]): String \ IO =
-        TestSupport.onRound(leMans(), laps, () -> forM(
-            metadata <- Summary.read(leMans());
-            index    <- Index.read(leMans())
-        ) yield Render.renderSummary(metadata, index))
+        TestSupport.onRound(leMans(), laps, () ->
+            Render.renderSummary(Summary.read(leMans()), Index.read(leMans())))
 
     @Test
     def testRenderSummaryRendersTheRoundsSummary(): Unit \ {Assert, IO} =

@@ -126,28 +126,45 @@ a set of it, and every reading that would move off Flix needs it: the validator'
 baseline is the file's first row, a car's drivers are in the order the file
 first showed them, and so is the grid.
 
-## `DbRead` and `DbWrite`, the effects
+## `SqlRead`, `SqlWrite` and `DbErr`
 
 Reaching a database is an effect rather than a module of functions, so that
 what a round would send can be read back without a server: `Db.runRecording`
 keeps the statements and answers a read with the error that nothing was sent,
-and `Db.Jdbc` is the only file that imports `java.sql`. Neither effect names a
-table or a column, so `DbRead`, `DbWrite`, `Db.Jdbc` and `Sql` are together a
-database and a query language and nothing of this application; `Db.Laps`,
-`Db.Cars` and the two row types beside them are the whole of what the
-application tells them about itself, which is the same line Acadia draws
-between `Transaction`, `Rows` and a `Table`.
+and `Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
+table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
+query language and nothing of this application; `Db.Laps`, `Db.Cars` and the
+two row types beside them are the whole of what the application tells them
+about itself, which is the same line Acadia draws between `Transaction`, `Rows`
+and a `Table`.
 
-They are two rather than one because the sides of this repository are two:
-`Round`'s readers, `Server.Api` and `Cli.Export` are `\ DbRead` and would not
-compile with a statement that changes the database in them, and `Db.Laps`,
-`Db.Cars` and `Cli.Load.load` are `\ DbWrite`. `Cli.Load` is where both meet,
-and `Db` is the alias naming the pair. The handlers are split the same way, so
+Reading and writing are two effects because the sides of this repository are
+two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
+statement that changes the database in them, and `Db.Laps`, `Db.Cars` and
+`Cli.Load.load` are the other half. The handlers are split the same way, so
 what the type says of the server the connection says too: `Db.Jdbc.runReading`
-installs the read alone, and a write reaches no handler through it. Flix has no
-subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller
-taking either as an argument is written for the half it uses, which is what
-`Main.onRoot` is polymorphic over and what `Round.TestSupport.onRound` takes.
+installs the read alone, and a write reaches no handler through it.
+
+`DbErr` is the third, and it is what a reader does not carry a `Result` for.
+Its one operation does not return, so `Round.Summary.read` answers with a
+`Metadata` rather than with whether it could read one, and the failure travels
+by itself to the boundary that asked -- `Db.runWithError`, which is where a
+value comes back. Three of those: a round of the export, a request, and the
+run's own transaction. Everything between them is written as though the
+database always answers.
+
+What a signature says is the alias rather than the effect: `\ DbRead` is
+`{SqlRead, DbErr}`, `\ DbWrite` is `{SqlWrite, DbErr}`, and `\ Db` is all
+three. Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db`
+one -- so a caller taking one as an argument is written for the half it uses,
+which is what `Main.onRoot` is polymorphic over and what
+`Round.TestSupport.onRound` takes.
+
+The two statement effects answer with a `Result` even so, and that is not a
+choice: a Flix handler body is evaluated outside the `run` it belongs to, so a
+failure raised inside `Db.Jdbc`'s handler would pass every handler its caller
+had installed. `Db.orRaise` is where the value becomes a `DbErr`, in the
+caller's own context. sqlfx found the same thing and answers it the same way.
 
 What a failure is is a `Db.Error` rather than a sentence, and which of the six
 says where the fix is: `Unreachable` is no database reached at all, `Refused` is
@@ -167,9 +184,10 @@ that sentence and not the database's: a failure names tables and files in its
 own words, so those ride in the response's `cause`, which `Server.send` logs
 and does not send.
 
-Nothing a statement sends is kept until `DbWrite.commit`, and `Db.transact` is where
-that is decided: it commits what its caller sent when the caller answers `Ok`
-and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the
+Nothing a statement sends is kept until `SqlWrite.commit`, and `Db.transact` is
+where that is decided: it commits what its caller sent when the caller returns,
+and rolls it back when a `DbErr` ended it instead -- which it then raises
+again, the rollback being what it did about it rather than what it answers. `Cli.Load.runAll` is the one caller, so the
 rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens
 with land only if the run reaches its end, and a run that is killed partway leaves
 the rounds it was rebuilding from. Measured on the archive: the same kill takes

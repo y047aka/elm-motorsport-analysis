@@ -14,8 +14,7 @@ mod Db.TestDb {
 
     @Test
     def creatingDropsTheTableFirst(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Laps.create());
-        Assert.assertTrue(result == Ok());
+        let (_, statements) = Db.runRecording(() -> Db.runWithError(Laps.create));
         match statements {
             case Statement.Execute(first) :: Statement.Execute(second) :: Nil =>
                 Assert.assertTrue(String.startsWith({prefix = "DROP TABLE"}, first));
@@ -25,7 +24,7 @@ mod Db.TestDb {
 
     @Test
     def theRowsReachTheBoundary(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Laps.insertRows(sampleRows()));
+        let (result, statements) = Db.runRecording(() -> Db.runWithError(() -> Laps.insertRows(sampleRows())));
         Assert.assertTrue(result == Ok(2));
         match statements {
             case Statement.InsertMany(sql, rows) :: Nil =>
@@ -42,7 +41,7 @@ mod Db.TestDb {
     /// with no violations and no cars in it.
     @Test
     def recordingCannotAnswerARead(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> DbRead.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
+        let (result, statements) = Db.runRecording(() -> SqlRead.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
         match result {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)
@@ -56,10 +55,10 @@ mod Db.TestDb {
 
     @Test
     def theStatementsAreKeptInTheOrderTheyWereSent(): Unit \ Assert =
-        let (_, statements) = Db.runRecording(() -> {
-            discard Laps.create();
+        let (_, statements) = Db.runRecording(() -> Db.runWithError(() -> {
+            Laps.create();
             Laps.insertRows(sampleRows())
-        });
+        }));
         match statements {
             case Statement.Execute(_) :: Statement.Execute(_) :: Statement.InsertMany(_, _) :: Nil =>
                 Assert.assertTrue(true)
@@ -70,7 +69,7 @@ mod Db.TestDb {
     @Test
     def aTransactionThatAnsweredCommitsAfterWhatItSent(): Unit \ Assert =
         let (result, statements) = Db.runRecording(() ->
-            Db.transact(() -> Laps.insertRows(sampleRows())));
+            Db.runWithError(() -> Db.transact(() -> Laps.insertRows(sampleRows()))));
         Assert.assertTrue(result == Ok(2));
         match statements {
             case Statement.InsertMany(_, _) :: Statement.Commit :: Nil => Assert.assertTrue(true)
@@ -80,11 +79,11 @@ mod Db.TestDb {
     /// The error is the one the caller answered with, not the rollback's.
     @Test
     def aTransactionThatFailedRollsBackAndKeepsItsError(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() ->
+        let (result, statements) = Db.runRecording(() -> Db.runWithError(() ->
             Db.transact(() -> {
                 discard Laps.insertRows(sampleRows());
-                (Err(Db.Error.Incomplete("the round was not what it should have been")): Result[Db.Error, Int32])
-            }));
+                (DbErr.fail(Db.Error.Incomplete("the round was not what it should have been")): Int32)
+            })));
         Assert.assertTrue(result == Err(Db.Error.Incomplete("the round was not what it should have been")));
         match statements {
             case Statement.InsertMany(_, _) :: Statement.Rollback :: Nil => Assert.assertTrue(true)

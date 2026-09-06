@@ -69,20 +69,19 @@ mod Cli.Load.Validation {
         case MiniSectorElapsedMonotonic(Lap, MiniSectorId, Duration, MiniSectorId, Duration)
     }
 
-    pub def validate(entry: Entry): Result[Db.Error, List[String]] \ DbRead =
-        detect(entry) |> Result.map(List.map(formatViolation(entry#id)))
+    pub def validate(entry: Entry): List[String] \ DbRead =
+        detect(entry) |> List.map(formatViolation(entry#id))
 
-    pub def detect(entry: Entry): Result[Db.Error, List[Violation]] \ DbRead =
-        forM(
-            sectorSum <- sectorSumViolations(entry);
-            drift     <- elapsedDriftViolations(entry);
-            hour      <- hourOffsetViolations(entry);
-            mini      <- miniSectorViolations(entry)
-        ) yield List.append(sectorSum, List.append(drift, List.append(hour, mini)))
+    pub def detect(entry: Entry): List[Violation] \ DbRead =
+        let sectorSum = sectorSumViolations(entry);
+        let drift = elapsedDriftViolations(entry);
+        let hour = hourOffsetViolations(entry);
+        let mini = miniSectorViolations(entry);
+        List.append(sectorSum, List.append(drift, List.append(hour, mini)))
 
     // ------------------------------------------------------------------ rules
 
-    def sectorSumViolations(entry: Entry): Result[Db.Error, List[Violation]] \ DbRead =
+    def sectorSumViolations(entry: Entry): List[Violation] \ DbRead =
         Laps.rows()
             |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
             |> Sql.filter(c -> Sql.ne(sectorSum(), Schema.expr(c#lapTimeMs)))
@@ -109,7 +108,7 @@ mod Cli.Load.Validation {
                 + "   CASE WHEN s3_ms IS NULL THEN 's3,' ELSE '' END, ',')"
         )
 
-    def elapsedDriftViolations(entry: Entry): Result[Db.Error, List[Violation]] \ DbRead =
+    def elapsedDriftViolations(entry: Entry): List[Violation] \ DbRead =
         Sql.rows(Sql.raw("c"))
             |> Sql.using(Sql.frags(
                 Sql.raw("c AS (SELECT car_number, lap_number, elapsed_ms,"
@@ -126,7 +125,7 @@ mod Cli.Load.Validation {
                 Violation.ElapsedDrift(lap, duration(expected), duration(actual)))
             |> Sql.selectAll
 
-    def hourOffsetViolations(entry: Entry): Result[Db.Error, List[Violation]] \ DbRead =
+    def hourOffsetViolations(entry: Entry): List[Violation] \ DbRead =
         Sql.rows(Sql.raw("o"))
             |> Sql.using(Sql.frags(
                 Sql.raw("o AS (SELECT car_number, lap_number, source_row, "
@@ -145,16 +144,14 @@ mod Cli.Load.Validation {
 
     /// A lap's two mini-sector rules are reported together, so they are read
     /// back tagged with the row they came from and merged on it.
-    def miniSectorViolations(entry: Entry): Result[Db.Error, List[Violation]] \ DbRead =
-        forM(
-            sums <- miniSectorSumViolations(entry);
-            mono <- miniSectorMonotonicViolations(entry)
-        ) yield
-            List.append(sums, mono)
-                |> List.sortBy(entry2 -> match entry2 { case (sourceRow, ord, _) => (sourceRow, ord) })
-                |> List.map(entry2 -> match entry2 { case (_, _, violation) => violation })
+    def miniSectorViolations(entry: Entry): List[Violation] \ DbRead =
+        let sums = miniSectorSumViolations(entry);
+        let mono = miniSectorMonotonicViolations(entry);
+        List.append(sums, mono)
+            |> List.sortBy(entry2 -> match entry2 { case (sourceRow, ord, _) => (sourceRow, ord) })
+            |> List.map(entry2 -> match entry2 { case (_, _, violation) => violation })
 
-    def miniSectorSumViolations(entry: Entry): Result[Db.Error, List[(Int32, Int32, Violation)]] \ DbRead =
+    def miniSectorSumViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
         Sql.rows(Sql.raw("m"))
             |> Sql.using(Sql.frags(
                 Sql.raw("m AS (SELECT car_number, lap_number, source_row, lap_time_ms,"
@@ -183,7 +180,7 @@ mod Cli.Load.Validation {
                 (sourceRow, 0, Violation.MiniSectorSum(lap, duration(lapTime), duration(sum), ids)))
             |> Sql.selectAll
 
-    def miniSectorMonotonicViolations(entry: Entry): Result[Db.Error, List[(Int32, Int32, Violation)]] \ DbRead =
+    def miniSectorMonotonicViolations(entry: Entry): List[(Int32, Int32, Violation)] \ DbRead =
         Sql.rows(Sql.raw("e"))
             |> Sql.using(Sql.frags(
                 Sql.raw("e AS (SELECT car_number, lap_number, source_row,"

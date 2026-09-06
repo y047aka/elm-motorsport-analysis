@@ -78,26 +78,26 @@ mod Db.Jdbc {
             case _e: SQLException => ()
         }
 
-    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - Db) + IO =
+    pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) + IO =
         run {
             runWriting(conn, f)
-        } with handler DbRead {
+        } with handler SqlRead {
             def fetch(sql, params, k) = k(runFetch(conn, sql, params))
         }
 
     /// The connection as a read alone, which is what the server answers a
     /// request through.
-    pub def runReading(conn: Connection, f: Unit -> a \ ef): a \ (ef - DbRead) + IO =
+    pub def runReading(conn: Connection, f: Unit -> a \ ef): a \ (ef - SqlRead) + IO =
         run {
             f()
-        } with handler DbRead {
+        } with handler SqlRead {
             def fetch(sql, params, k) = k(runFetch(conn, sql, params))
         }
 
-    pub def runWriting(conn: Connection, f: Unit -> a \ ef): a \ (ef - DbWrite) + IO =
+    pub def runWriting(conn: Connection, f: Unit -> a \ ef): a \ (ef - SqlWrite) + IO =
         run {
             f()
-        } with handler DbWrite {
+        } with handler SqlWrite {
             def execute(sql, k) = k(runStatement(conn, sql))
             def insertMany(sql, rows, k) = k(insertRows(conn, sql, rows))
             def commit(k) = k(endTransaction(conn, c -> c.commit()))

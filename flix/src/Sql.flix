@@ -370,20 +370,22 @@ mod Sql {
     /// ===== RUNNING =====
     ///
 
-    pub def selectAll(q: Query[a]): Result[Error, List[a]] \ DbRead =
+    pub def selectAll(q: Query[a]): List[a] \ DbRead =
         let Query.Query(_, sel) = q;
-        let Frag.Frag(sql, params) = toStatement(q);
-        DbRead.fetch(sql, params) |> Result.flatMap(Result.traverse(row -> decode(sel, row)))
+        fetched(q) |> List.map(row -> Db.orRaise(decode(sel, row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
-    pub def selectOne(subject: String, q: Query[a]): Result[Error, a] \ DbRead =
+    pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
         let Query.Query(_, sel) = q;
+        match fetched(q) {
+            case row :: _ => Db.orRaise(decode(sel, row))
+            case Nil      => DbErr.fail(Error.NoRow(subject))
+        }
+
+    def fetched(q: Query[a]): List[List[Option[String]]] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        DbRead.fetch(sql, params) |> Result.flatMap(rows -> match rows {
-            case row :: _ => decode(sel, row)
-            case Nil      => Err(Error.NoRow(subject))
-        })
+        SqlRead.fetch(sql, params) |> Db.orRaise
 
     ///
     /// ===== STATEMENTS =====

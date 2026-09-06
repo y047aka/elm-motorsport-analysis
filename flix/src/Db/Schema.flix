@@ -97,15 +97,13 @@ mod Db.Schema {
         table: String,
         columns: List[Bound[r]],
         keys: List[Sql.Key[Bound[r]]]
-    ): Result[Db.Error, Unit] \ DbWrite =
-        forM(
-            _ <- DbWrite.execute(Sql.dropTableIfExists(table));
-            _ <- DbWrite.execute(Sql.createTable(table, columns, keys))
-        ) yield ()
+    ): Unit \ DbWrite =
+        Db.orRaise(SqlWrite.execute(Sql.dropTableIfExists(table)));
+        Db.orRaise(SqlWrite.execute(Sql.createTable(table, columns, keys)))
 
-    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Result[Db.Error, Int32] \ DbWrite =
+    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);
-        DbWrite.insertMany(statement, bound_)
+        SqlWrite.insertMany(statement, bound_) |> Db.orRaise
 
     /// In the order the columns are named, which is the order the insert binds
     /// them.

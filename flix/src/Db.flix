@@ -5,7 +5,7 @@
 /// `fetch` answers with every cell as text, `None` where the column was
 /// null. The server has the types and the caller knows what it asked for,
 /// so nothing is gained by carrying them across in between.
-pub eff DbRead {
+pub eff SqlRead {
     def fetch(sql: String, params: List[Db.Value]): Result[Db.Error, List[List[Option[String]]]]
 }
 
@@ -15,15 +15,29 @@ pub eff DbRead {
 ///
 /// Nothing a statement sends is kept until `commit`, which is what `Db.transact`
 /// is for: a caller that sends and never commits has sent nothing.
-pub eff DbWrite {
+pub eff SqlWrite {
     def execute(sql: String): Result[Db.Error, Unit]
     def insertMany(sql: String, rows: List[List[Db.Value]]): Result[Db.Error, Int32]
     def commit(): Result[Db.Error, Unit]
     def rollback(): Result[Db.Error, Unit]
 }
 
-/// Both halves, for a caller that does reach the database either way.
-pub type alias Db = {DbRead, DbWrite}
+/// What ends the reading it happened in. `fail` does not return, so a
+/// function reaching the database answers with what it read and not with
+/// whether it could: the failure travels to `Db.runWithError` on its own.
+///
+/// The two effects above answer with a `Result` because a Flix handler body is
+/// evaluated outside the `run` it belongs to, so a failure raised in one would
+/// pass every handler the caller had installed. `Db.orRaise` is where the
+/// value becomes this, in the caller's own context.
+pub eff DbErr {
+    def fail(error: Db.Error): Void
+}
+
+/// What a signature says, which is the pair of a statement and its failing.
+pub type alias DbRead = {SqlRead, DbErr}
+pub type alias DbWrite = {SqlWrite, DbErr}
+pub type alias Db = {SqlRead, SqlWrite, DbErr}
 
 mod Db {
 
@@ -80,16 +94,33 @@ mod Db {
             case None    => "null"
         }) |> List.join(",")) + "]"
 
+    /// The value, or the failure that ended the reading.
+    pub def runWithError(f: Unit -> a \ ef): Result[Error, a] \ (ef - DbErr) =
+        run {
+            Ok(f())
+        } with handler DbErr {
+            def fail(error, _k) = Err(error)
+        }
+
+    /// What a statement answered, as the value it read or as a failure of the
+    /// caller's own.
+    pub def orRaise(result: Result[Error, a]): a \ DbErr =
+        match result {
+            case Ok(value) => value
+            case Err(e)    => DbErr.fail(e)
+        }
+
     /// The statements `f` sends, kept or discarded together: they land when it
-    /// answers `Ok` and are undone when it does not.
+    /// returns and are undone when a failure ends it, which is then raised
+    /// again.
     ///
     /// A run that dies before answering commits nothing, which is what makes a
     /// rebuild of the table safe to interrupt: the `DROP TABLE` it starts with
     /// is undone with the rows it did not finish loading.
-    pub def transact(f: Unit -> Result[Error, a] \ ef): Result[Error, a] \ ef + DbWrite =
-        match f() {
-            case Ok(value) => DbWrite.commit() |> Result.map(_ -> value)
-            case Err(e)    => discard DbWrite.rollback(); Err(e)
+    pub def transact(f: Unit -> a \ ef): a \ (ef - DbErr) + DbWrite =
+        match runWithError(f) {
+            case Ok(value) => orRaise(SqlWrite.commit()); value
+            case Err(e)    => discard SqlWrite.rollback(); DbErr.fail(e)
         }
 
     /// What `runRecording` keeps.
@@ -101,13 +132,13 @@ mod Db {
         case Rollback
     }
 
-    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - Db) =
+    pub def runRecording(f: Unit -> a \ ef): (a, List[Statement]) \ (ef - {SqlRead, SqlWrite}) =
         region rc {
             let log = Ref.fresh(rc, (Nil: List[Statement]));
             let result = run {
                 run {
                     f()
-                } with handler DbWrite {
+                } with handler SqlWrite {
                     def execute(sql, k) = {
                         record(log, Statement.Execute(sql));
                         k(Ok())
@@ -125,7 +156,7 @@ mod Db {
                         k(Ok())
                     }
                 }
-            } with handler DbRead {
+            } with handler SqlRead {
                 // Nothing was written, so there is nothing to read back: a
                 // caller that reads the round it sent needs a database, and
                 // is told so rather than handed an empty one.
