@@ -43,7 +43,7 @@ view snapshot =
 carRow : CarAt -> Html msg
 carRow item =
     li
-        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr_24px] items-center gap-2 text-left [word-break:break-word]" ]
+        [ class "relative w-full p-0.5 grid grid-cols-[20px_auto_1fr] items-center gap-2 text-left [word-break:break-word]" ]
         (carRowContent item)
 
 
@@ -55,7 +55,7 @@ carRowContent item =
         [ text (Driver.toSurname item.currentDriver) ]
     , if item.status == Status.InPit then
         div
-            [ class "w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold" ]
+            [ class "absolute right-1 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full border border-white-500 flex items-center justify-center text-white text-[9px] font-bold bg-card" ]
             [ text "P" ]
 
       else
