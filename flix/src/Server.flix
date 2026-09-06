@@ -44,14 +44,14 @@ mod Server {
         let response = try {
             respond(databaseUrl, exchange)
         } catch {
-            case e: Throwable => failed(exchange, e)
+            case e: Throwable => failed(e)
         };
         send(exchange, response)
 
     def respond(databaseUrl: String, exchange: HttpExchange): Response \ IO =
         let route = Api.route(exchange.getRequestURI().getPath());
         if (Api.needsDatabase(route))
-            fromDatabase(databaseUrl, route, exchange)
+            fromDatabase(databaseUrl, route)
         else
             // Nothing is sent, so there is nothing for the recording to hold.
             match Db.runRecording(() -> Api.respond(route)) {
@@ -63,27 +63,31 @@ mod Server {
     ///
     /// A connection a thrown request left behind holds a read on the database
     /// until the process ends, so the close is outside the catch.
-    def fromDatabase(databaseUrl: String, route: Route, exchange: HttpExchange): Response \ IO =
+    def fromDatabase(databaseUrl: String, route: Route): Response \ IO =
         match Jdbc.connect(databaseUrl) {
-            case Err(cause) => { status = 503, contentType = "text/plain", body = "${cause}" }
+            case Err(cause) => { status = 503, contentType = "text/plain", body = "the database could not be reached", cause = Some("${cause}") }
             case Ok(conn)   =>
                 let answered = try {
                     Jdbc.runReading(conn, () -> Api.respond(route))
                 } catch {
-                    case e: Throwable => failed(exchange, e)
+                    case e: Throwable => failed(e)
                 };
                 Jdbc.close(conn);
                 answered
         }
 
-    def failed(exchange: HttpExchange, e: Throwable): Response \ IO =
-        Sys.Console.runWithIO(() ->
-            Sys.Console.eprintln("500 ${exchange.getRequestURI().getPath()}: ${e.toString()}"));
-        { status = 500, contentType = "text/plain", body = "the request could not be answered" }
+    def failed(e: Throwable): Response \ IO =
+        { status = 500, contentType = "text/plain",
+          body = "the request could not be answered", cause = Some(e.toString()) }
 
     /// A round is the same bytes until a run loads it again, which is what
     /// makes a tag over the body it is answered with enough.
+    /// The cause is logged here rather than where it was made: `Server.Api`
+    /// answers without reaching `IO`.
     def send(exchange: HttpExchange, response: Response): Unit \ IO =
+        Option.forEach(cause -> Sys.Console.runWithIO(() ->
+            Sys.Console.eprintln("${response#status} ${exchange.getRequestURI().getPath()}: ${cause}")
+        ), response#cause);
         try {
             let bytes = response#body.getBytes(StandardCharsets.UTF_8);
             let headers = exchange.getResponseHeaders();

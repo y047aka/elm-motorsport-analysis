@@ -62,6 +62,14 @@ mod Server.TestApi {
         Assert.assertTrue(offline(Route.Summary(2025, "fuji_6h"))#status == 503);
         Assert.assertTrue(offline(Route.Laps(2025, "fuji_6h"))#status == 503)
 
+    /// The database's own words name tables and files, so they are kept for
+    /// the log and the caller is told what it can do about it.
+    @Test
+    def aFailureIsAnsweredWithoutTheDatabasesWords(): Unit \ Assert =
+        let answered = offline(Route.Summary(2025, "fuji_6h"));
+        Assert.assertTrue(answered#body == "the database could not be reached");
+        Assert.assertTrue(answered#cause == Some("no database (nothing was sent, so nothing can be read back)"))
+
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)

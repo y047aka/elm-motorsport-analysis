@@ -26,6 +26,17 @@ mod Db.TestJdbc {
         let result = connected(() -> DbRead.fetch("select 'a', null, 42, null", Nil));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
 
+    /// The driver's codes, read without a database: the extended ones carry
+    /// the primary code in their low byte, so `SQLITE_BUSY_SNAPSHOT` is a
+    /// lock like `SQLITE_BUSY` is.
+    @Test
+    def aLockIsTheOneRefusalThatSaysTryAgain(): Unit \ Assert =
+        Assert.assertTrue(Jdbc.classify(5, "locked") == Db.Error.Busy("locked"));
+        Assert.assertTrue(Jdbc.classify(6, "locked") == Db.Error.Busy("locked"));
+        Assert.assertTrue(Jdbc.classify(517, "locked") == Db.Error.Busy("locked"));
+        Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
+        Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
+
     /// The connection the server answers through.
     @Test
     def aReadingConnectionAnswersAFetch(): Unit \ {Assert, IO} =

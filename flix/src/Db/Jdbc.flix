@@ -17,6 +17,20 @@ mod Db.Jdbc {
 
     def batchSize(): Int32 = 1000
 
+    /// What a refusal was. SQLite answers a lock it waited out with
+    /// `SQLITE_BUSY`, and its extended codes carry the primary one in their
+    /// low byte -- `SQLITE_BUSY_SNAPSHOT` is 517, which is 5.
+    pub def classify(code: Int32, message: String): Error =
+        match Int32.remainder(code, 256) {
+            case 5 => Error.Busy(message)
+            case 6 => Error.Busy(message)
+            case _ => Error.Refused(message)
+        }
+
+    def refusal(e: SQLException): Error \ IO =
+        let code: Int32 = e.getErrorCode();
+        classify(code, "${e.getMessage()}")
+
     /// The driver registers itself through `META-INF/services` when the JDBC jar
     /// is on the application class path. It is not on the one Flix runs with, so
     /// without `registerDriver` this reports that no driver matches the URL —
@@ -101,7 +115,7 @@ mod Db.Jdbc {
             stmt.close();
             Ok(rows)
         } catch {
-            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
+            case e: SQLException => Err(refusal(e))
         }
 
     def readRows(rs: ResultSet, width: Int32, acc: List[List[Option[String]]]): List[List[Option[String]]] \ IO =
@@ -127,7 +141,7 @@ mod Db.Jdbc {
             stmt.close();
             Ok()
         } catch {
-            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
+            case e: SQLException => Err(refusal(e))
         }
 
     /// The rows go out in batches, so a refusal partway through has already
@@ -150,7 +164,7 @@ mod Db.Jdbc {
                     pstmt.close();
                     Ok(count)
                 } catch {
-                    case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
+                    case e: SQLException => Err(refusal(e))
                 };
                 match outcome {
                     case Ok(count) => release(conn, mark); Ok(count)
@@ -162,7 +176,7 @@ mod Db.Jdbc {
         try {
             Ok(conn.setSavepoint())
         } catch {
-            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
+            case e: SQLException => Err(refusal(e))
         }
 
     def release(conn: Connection, mark: Savepoint): Unit \ IO =
@@ -202,7 +216,7 @@ mod Db.Jdbc {
             end(conn);
             Ok()
         } catch {
-            case e: SQLException => Err(Error.Refused("${e.getMessage()}"))
+            case e: SQLException => Err(refusal(e))
         }
 
 }

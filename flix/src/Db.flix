@@ -37,6 +37,10 @@ mod Db {
         /// used.
         case Refused(String)
 
+        /// A lock the database waited out rather than got: the one refusal
+        /// that says the same statement may go through next time.
+        case Busy(String)
+
         /// A cell came back that the reading could not read.
         case Unread(String)
 
@@ -52,6 +56,7 @@ mod Db {
         pub def toString(e: Error): String = match e {
             case Error.Unreachable(cause)  => "no database (${cause})"
             case Error.Refused(cause)      => cause
+            case Error.Busy(cause)         => cause
             case Error.Unread(detail)      => detail
             case Error.NoRow(subject)      => "${subject} came back with no row"
             case Error.Incomplete(detail)  => detail

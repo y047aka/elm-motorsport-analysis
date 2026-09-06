@@ -11,10 +11,14 @@ mod Server.Api {
     use Motorsport.Wec
     use Util.Json.Encode.Extra
 
+    /// `cause` is what went wrong, for the log rather than for the answer: a
+    /// failure says what it says in the database's words, which name tables
+    /// and files the caller was not offered.
     pub type alias Response = {
         status = Int32,
         contentType = String,
-        body = String
+        body = String,
+        cause = Option[String]
     }
 
     pub enum Route with Eq, ToString {
@@ -73,10 +77,10 @@ mod Server.Api {
         }
 
     def ok(contentType: String, body: String): Response =
-        { status = 200, contentType = contentType, body = body }
+        { status = 200, contentType = contentType, body = body, cause = None }
 
     def notFound(reason: String): Response =
-        { status = 404, contentType = "text/plain", body = reason }
+        { status = 404, contentType = "text/plain", body = reason, cause = None }
 
     def body(contentType: String, result: Result[Db.Error, Option[String]]): Response =
         match result {
@@ -85,14 +89,15 @@ mod Server.Api {
             case Err(cause)         => failed(cause)
         }
 
-    /// 503 rather than 500 where no database was reached: the round can be
-    /// served, and not now.
+    /// 503 rather than 500 where the database was not reached or was busy:
+    /// the round can be served, and not now.
     def failed(cause: Db.Error): Response =
-        let status = match cause {
-            case Db.Error.Unreachable(_) => 503
-            case _                       => 500
+        let (status, reason) = match cause {
+            case Db.Error.Unreachable(_) => (503, "the database could not be reached")
+            case Db.Error.Busy(_)        => (503, "the database is busy")
+            case _                       => (500, "the round could not be read")
         };
-        { status = status, contentType = "text/plain", body = "${cause}" }
+        { status = status, contentType = "text/plain", body = reason, cause = Some("${cause}") }
 
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
