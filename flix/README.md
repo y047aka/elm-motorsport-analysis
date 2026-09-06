@@ -166,6 +166,12 @@ failure raised inside `Db.Jdbc`'s handler would pass every handler its caller
 had installed. `Db.orRaise` is where the value becomes a `DbErr`, in the
 caller's own context. sqlfx found the same thing and answers it the same way.
 
+So nothing outside `Db` calls an operation: `Db.fetch`, `Db.execute` and
+`Db.insertMany` are the same statements with that step already taken, and they
+are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
+one -- a database opened, worked in, and closed however that went, which is
+what a run, a test and the server each did for themselves before.
+
 What a failure is is a `Db.Error` rather than a sentence, and which of the six
 says where the fix is: `Unreachable` is no database reached at all, `Refused` is
 what the driver said no to in its own words, `Busy` is the one refusal that may
@@ -184,8 +190,8 @@ that sentence and not the database's: a failure names tables and files in its
 own words, so those ride in the response's `cause`, which `Server.send` logs
 and does not send.
 
-Nothing a statement sends is kept until `SqlWrite.commit`, and `Db.transact` is
-where that is decided: it commits what its caller sent when the caller returns,
+Nothing a statement sends is kept until a commit, and `Db.transact` is the only
+sender of one -- where that is decided: it commits what its caller sent when the caller returns,
 and rolls it back when a `DbErr` ended it instead -- which it then raises
 again, the rollback being what it did about it rather than what it answers. `Cli.Load.runAll` is the one caller, so the
 rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens

@@ -110,6 +110,29 @@ mod Db {
             case Err(e)    => DbErr.fail(e)
         }
 
+    // ------------------------------------------------------- the statements
+
+    /// What a caller sends rather than the operations themselves, which no
+    /// module outside this one calls: the failure a handler answered with
+    /// becomes a `DbErr` here, where the caller's own handlers are installed.
+
+    pub def fetch(sql: String, params: List[Value]): List[List[Option[String]]] \ DbRead =
+        SqlRead.fetch(sql, params) |> orRaise
+
+    pub def execute(sql: String): Unit \ DbWrite =
+        SqlWrite.execute(sql) |> orRaise
+
+    pub def insertMany(sql: String, rows: List[List[Value]]): Int32 \ DbWrite =
+        SqlWrite.insertMany(sql, rows) |> orRaise
+
+    def commit(): Unit \ DbWrite =
+        SqlWrite.commit() |> orRaise
+
+    /// What `transact` takes back with, which says nothing the failure it is
+    /// undoing does not.
+    def rollback(): Unit \ SqlWrite =
+        discard SqlWrite.rollback()
+
     /// The statements `f` sends, kept or discarded together: they land when it
     /// returns and are undone when a failure ends it, which is then raised
     /// again.
@@ -119,8 +142,8 @@ mod Db {
     /// is undone with the rows it did not finish loading.
     pub def transact(f: Unit -> a \ ef): a \ (ef - DbErr) + DbWrite =
         match runWithError(f) {
-            case Ok(value) => orRaise(SqlWrite.commit()); value
-            case Err(e)    => discard SqlWrite.rollback(); DbErr.fail(e)
+            case Ok(value) => commit(); value
+            case Err(e)    => rollback(); DbErr.fail(e)
         }
 
     /// What `runRecording` keeps.

@@ -12,13 +12,10 @@ mod Db.TestJdbc {
     use Motorsport.Calendar.Entry
     use Round.TestSupport
 
-    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - {SqlRead, SqlWrite}) + IO =
-        match Jdbc.connect(TestSupport.url()) {
-            case Err(e)   => Err(e)
-            case Ok(conn) =>
-                let result = Jdbc.runWith(conn, f);
-                Jdbc.close(conn);
-                result
+    def connected(f: Unit -> Result[Db.Error, a] \ ef): Result[Db.Error, a] \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+        match Db.runWithError(() -> Jdbc.withConnection(TestSupport.url(), f)) {
+            case Ok(result) => result
+            case Err(e)     => Err(e)
         }
 
     @Test
@@ -102,16 +99,13 @@ mod Db.TestJdbc {
 
     /// A database of its own per test, under a directory that does not exist,
     /// which is what a working copy's `.db` is on a first run.
-    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - {SqlRead, SqlWrite}) + IO =
+    def onFile(f: Unit -> Result[Db.Error, a] \ ef): (String, Result[Db.Error, a]) \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
         let stem = File.createTempFile("motorsport-test", "");
         discard stem.delete();
         let path = "${stem.getPath()}/motorsport.sqlite";
-        let result = match Jdbc.connect("jdbc:sqlite:${path}") {
-            case Err(e)   => Err(e)
-            case Ok(conn) =>
-                let value = Jdbc.runWith(conn, f);
-                Jdbc.close(conn);
-                value
+        let result = match Db.runWithError(() -> Jdbc.withConnection("jdbc:sqlite:${path}", f)) {
+            case Ok(value) => value
+            case Err(e)    => Err(e)
         };
         (path, result)
 

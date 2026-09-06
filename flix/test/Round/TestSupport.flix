@@ -24,21 +24,16 @@ mod Round.TestSupport {
         onRows(entry, laps, false, read)
 
     def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
-        match Jdbc.connect(url()) {
-            case Err(cause) => bug!("no database (${cause})")
-            case Ok(conn) =>
-                let result = Jdbc.runWith(conn, () -> Db.runWithError(() -> {
-                    Cars.create();
-                    Laps.create();
-                    if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(entry, laps)) else ();
-                    discard Laps.insertRows(LapRow.fromRawLaps(entry, laps));
-                    read()
-                }));
-                Jdbc.close(conn);
-                match result {
-                    case Ok(value)  => value
-                    case Err(cause) => bug!("${cause}")
-                }
+        let outcome = Db.runWithError(() -> Jdbc.withConnection(url(), () -> {
+            Cars.create();
+            Laps.create();
+            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(entry, laps)) else ();
+            discard Laps.insertRows(LapRow.fromRawLaps(entry, laps));
+            read()
+        }));
+        match outcome {
+            case Ok(value)  => value
+            case Err(cause) => bug!("${cause}")
         }
 
 }

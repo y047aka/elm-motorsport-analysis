@@ -385,7 +385,7 @@ mod Sql {
 
     def fetched(q: Query[a]): List[List[Option[String]]] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        SqlRead.fetch(sql, params) |> Db.orRaise
+        Db.fetch(sql, params)
 
     ///
     /// ===== STATEMENTS =====

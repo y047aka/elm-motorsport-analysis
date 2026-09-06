@@ -78,6 +78,14 @@ mod Db.Jdbc {
             case _e: SQLException => ()
         }
 
+    /// A database opened, read or written, and closed however that went --
+    /// which is the whole of what a run or a test does with one.
+    pub def withConnection(url: String, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO + DbErr =
+        let conn = Db.orRaise(connect(url));
+        let outcome = Db.runWithError(() -> runWith(conn, f));
+        close(conn);
+        Db.orRaise(outcome)
+
     pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite}) + IO =
         run {
             runWriting(conn, f)

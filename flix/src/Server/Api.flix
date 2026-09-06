@@ -91,7 +91,10 @@ mod Server.Api {
 
     /// 503 rather than 500 where the database was not reached or was busy:
     /// the round can be served, and not now.
-    def failed(cause: Db.Error): Response =
+    ///
+    /// `pub` reaches `Server`, which answers a connection it could not open
+    /// with the same words rather than its own.
+    pub def failed(cause: Db.Error): Response =
         let (status, reason) = match cause {
             case Db.Error.Unreachable(_) => (503, "the database could not be reached")
             case Db.Error.Busy(_)        => (503, "the database is busy")
