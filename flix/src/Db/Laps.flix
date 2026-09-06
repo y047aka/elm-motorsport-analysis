@@ -141,8 +141,6 @@ mod Db.Laps {
     pub def values(row: LapRow): List[Value] =
         Schema.values(all(), row)
 
-    /// The rows of one round: every reading of the table is of a single round,
-    /// and the pair is what names one.
     /// Taken of the columns a query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them.
     pub def scope(c: Columns, inSeason: Int32, named: String): Sql.Expr[Bool] =

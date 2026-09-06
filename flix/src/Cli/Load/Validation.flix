@@ -216,9 +216,6 @@ mod Cli.Load.Validation {
 
     // ------------------------------------------------------------------- sql
 
-    /// The round, as a fragment rather than as a predicate of a query the
-    /// builder owns: the rules below read the rows from inside a common table
-    /// expression, which is text.
     def scope(entry: Entry): Sql.Expr[Bool] =
         Laps.scope(Laps.columns(), entry#season, entry#id)
 

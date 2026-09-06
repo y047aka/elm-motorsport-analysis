@@ -24,8 +24,6 @@ mod Round.Index {
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
         }
 
-    /// The round, as a fragment rather than as a predicate of a query the
-    /// builder owns: the arms below are text.
     def scope(entry: Entry): Sql.Expr[Bool] =
         Laps.scope(Laps.columns(), entry#season, entry#id)
 

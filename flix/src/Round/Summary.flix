@@ -29,9 +29,6 @@ mod Round.Summary {
             builds <- cars(entry)
         ) yield Metadata.fromReadings(entry, race, shape, builds)
 
-    /// The round, as a fragment rather than as a predicate of a query the
-    /// builder owns: the queries below read the rows from inside a common
-    /// table expression, which is text.
     def scope(entry: Entry): Sql.Expr[Bool] =
         Laps.scope(Laps.columns(), entry#season, entry#id)
 
