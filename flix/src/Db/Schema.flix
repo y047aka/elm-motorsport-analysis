@@ -93,7 +93,11 @@ mod Db.Schema {
 
     // ------------------------------------------------------------ the table
 
-    pub def recreate(table: String, columns: List[Bound[r]], keys: List[Sql.Key]): Result[String, Unit] \ Db =
+    pub def recreate(
+        table: String,
+        columns: List[Bound[r]],
+        keys: List[Sql.Key[Bound[r]]]
+    ): Result[String, Unit] \ Db =
         forM(
             _ <- Db.execute(Sql.dropTableIfExists(table));
             _ <- Db.execute(Sql.createTable(table, columns, keys))

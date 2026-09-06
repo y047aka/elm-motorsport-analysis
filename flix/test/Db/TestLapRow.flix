@@ -174,10 +174,12 @@ mod Db.TestLapRow {
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
 
-    /// The table's keys name columns, and the schema names them again where
-    /// it declares the table.
+    /// A key is declared columns rather than their names, so the type is what
+    /// says it names ones the table has. What the type cannot say is that
+    /// `all` lists them: that ordering is restated by hand, and a column left
+    /// out of it would be a key over one the `CREATE TABLE` never declares.
     @Test
-    def theKeysNameColumnsTheTableHas(): Unit \ Assert =
+    def theKeysNameColumnsTheTableDeclares(): Unit \ Assert =
         let declared = Db.Laps.columnNames();
         let named = List.append(Laps.primaryKey(), Laps.sourceKey())
             |> List.map(c -> c#name);

@@ -57,8 +57,10 @@ mod Db.TestCarRow {
                 == ("SELECT " + List.join(", ", Cars.columnNames()), Nil)
         )
 
+    /// See `Db.TestLapRow`: the type says the key is declared columns, and
+    /// this says `all` lists them.
     @Test
-    def theKeyNamesColumnsTheTableHas(): Unit \ Assert =
+    def theKeyNamesColumnsTheTableDeclares(): Unit \ Assert =
         let declared = Cars.columnNames();
         Assert.assertTrue(Cars.primaryKey() |> List.forAll(c -> List.memberOf(c#name, declared)));
         Assert.assertTrue(

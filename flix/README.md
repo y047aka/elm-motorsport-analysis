@@ -245,9 +245,13 @@ So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
 and the rows -- and that last one hands back the statement and each row bound
 in the order the statement names its columns, both read off the one list, so a
-row cannot come to be bound in an order the statement does not name.
-`Db.Schema` declares; `Sql` renders. Neither the DDL nor the insert is written
-out in this repository any more.
+row cannot come to be bound in an order the statement does not name. A
+`Sql.Key` is declared columns rather than their names, as Acadia's
+`primary = .id` is the field rather than a string, so a key over a column the
+table has not declared does not typecheck. What it does not reach is `all`:
+that ordering is restated by hand, and `Db.TestLapRow` is what says the key's
+columns are in it. `Db.Schema` declares; `Sql` renders. Neither the DDL nor
+the insert is written out in this repository any more.
 
 What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text

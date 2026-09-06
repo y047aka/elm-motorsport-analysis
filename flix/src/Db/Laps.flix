@@ -156,9 +156,8 @@ mod Db.Laps {
     pub def createTable(): String =
         Sql.createTable(table(), all(), keys())
 
-    def keys(): List[Sql.Key] =
-        Sql.Key.Primary(Schema.columnNames(primaryKey())) ::
-        Sql.Key.Unique(Schema.columnNames(sourceKey())) :: Nil
+    def keys(): List[Sql.Key[Bound[LapRow]]] =
+        Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(sourceKey()) :: Nil
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())

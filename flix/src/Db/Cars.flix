@@ -77,8 +77,8 @@ mod Db.Cars {
     pub def createTable(): String =
         Sql.createTable(table(), all(), keys())
 
-    def keys(): List[Sql.Key] =
-        Sql.Key.Primary(Schema.columnNames(primaryKey())) :: Nil
+    def keys(): List[Sql.Key[Bound[CarRow]]] =
+        Sql.Key.Primary(primaryKey()) :: Nil
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())
