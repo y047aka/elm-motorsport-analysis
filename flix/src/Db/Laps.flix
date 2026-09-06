@@ -9,6 +9,7 @@ mod Db.Laps {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
+    use Sql.Sel
 
     /// The table these columns are of.
     pub def table(): String = "laps"
@@ -96,6 +97,37 @@ mod Db.Laps {
         miniSectorTimeMs = Schema.nullableIntArray("mini_sector_time_ms", r -> r#miniSectorTimeMs),
         miniSectorElapsedMs = Schema.nullableIntArray("mini_sector_elapsed_ms", r -> r#miniSectorElapsedMs)
     }
+
+    /// A round's laps as the table holds them, a field at a time: each line
+    /// names the column and the field its cell lands in, and a field left out
+    /// is not a `LapRow`.
+    pub def selection(): Sel[LapRow] =
+        let c = columns();
+        Sql.record({})
+            |> Sql.field(c#season, (row, value) -> { +season = value | row })
+            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
+            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
+            |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
+            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
+            |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
+            |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
+            |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
+            |> Sql.field(c#crossingFinishLineInPit, (row, value) -> { +crossingFinishLineInPit = value | row })
+            |> Sql.field(c#s1Ms, (row, value) -> { +s1Ms = value | row })
+            |> Sql.field(c#s1Improvement, (row, value) -> { +s1Improvement = value | row })
+            |> Sql.field(c#s2Ms, (row, value) -> { +s2Ms = value | row })
+            |> Sql.field(c#s2Improvement, (row, value) -> { +s2Improvement = value | row })
+            |> Sql.field(c#s3Ms, (row, value) -> { +s3Ms = value | row })
+            |> Sql.field(c#s3Improvement, (row, value) -> { +s3Improvement = value | row })
+            |> Sql.field(c#kph, (row, value) -> { +kph = value | row })
+            |> Sql.field(c#elapsedMs, (row, value) -> { +elapsedMs = value | row })
+            |> Sql.field(c#hourMs, (row, value) -> { +hourMs = value | row })
+            |> Sql.field(c#topSpeed, (row, value) -> { +topSpeed = value | row })
+            |> Sql.field(c#pitTimeMs, (row, value) -> { +pitTimeMs = value | row })
+            |> Sql.field(c#flagAtFl, (row, value) -> { +flagAtFl = value | row })
+            |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
+            |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.

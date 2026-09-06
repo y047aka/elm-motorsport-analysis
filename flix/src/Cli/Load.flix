@@ -90,30 +90,33 @@ mod Cli.Load {
     def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, Db} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
+            |> Result.flatMap(reportCarDisagreements(task))
             |> Result.flatMap(load(task))
             |> Result.flatMap(reportViolations(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ {Console, Db} =
+    /// `Db.CarRow` keeps a car's first description and the second reaches no
+    /// column, so a file that describes one car two ways is said here or
+    /// nowhere. It is a reading of the file rather than of the rows, which is
+    /// why it is a stage of its own before the one that sends them.
+    def reportCarDisagreements(task: FileTask.FileTask): List[RawLap] -> Result[CliError, List[RawLap]] \ Console =
         rawLaps -> {
-            reportCarDisagreements(task, rawLaps);
+            CarRow.disagreements(rawLaps)
+                |> List.forEach(d -> Console.eprintln(
+                    "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
+                        + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
+            Ok(rawLaps)
+        }
+
+    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ Db =
+        rawLaps ->
             let loaded = forM(
                 cars <- Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
                 laps <- Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
             ) yield { cars = cars, laps = laps };
             loaded |> Result.mapErr(CliError.Database)
-        }
-
-    /// `Db.CarRow` keeps a car's first description and the second reaches no
-    /// column, so a file that describes one car two ways is said here or
-    /// nowhere.
-    def reportCarDisagreements(task: FileTask.FileTask, rawLaps: List[RawLap]): Unit \ Console =
-        CarRow.disagreements(rawLaps)
-            |> List.forEach(d -> Console.eprintln(
-                "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
-                    + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""))
 
     def reportViolations(task: FileTask.FileTask): Loaded -> Result[CliError, Loaded] \ {Console, Db} =
         loaded ->

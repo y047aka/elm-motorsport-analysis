@@ -9,6 +9,7 @@ mod Db.Cars {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
+    use Sql.Sel
 
     pub def table(): String = "cars"
 
@@ -41,6 +42,20 @@ mod Db.Cars {
         team = Schema.text("team", r -> r#team),
         manufacturer = Schema.text("manufacturer", r -> r#manufacturer)
     }
+
+    /// A round's cars as the table holds them, a field at a time: each line
+    /// names the column and the field its cell lands in, and a field left out
+    /// is not a `CarRow`.
+    pub def selection(): Sel[CarRow] =
+        let c = columns();
+        Sql.record({})
+            |> Sql.field(c#season, (row, value) -> { +season = value | row })
+            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
+            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
+            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
+            |> Sql.field(c#team, (row, value) -> { +team = value | row })
+            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.

@@ -20,7 +20,7 @@ mod Round.Cars {
     pub def read(entry: Entry): Result[String, Map[String, RawCar]] \ Db =
         Cars.rows()
             |> Sql.filter(c -> Cars.scope(c, entry#season, entry#id))
-            |> Sql.map(_ -> CarRow.selection())
+            |> Sql.map(_ -> Cars.selection())
             |> Sql.selectAll
             |> Result.map(rows -> rows
                 |> List.map(row -> (row#carNumber, CarRow.toRawCar(row)))

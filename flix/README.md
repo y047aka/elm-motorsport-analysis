@@ -100,7 +100,8 @@ race is read at a moment through -- when the lap counter went up, and when each
 of the twenty records changed hands -- which are a walk of every lap of the round
 each: a `GROUP BY` for the first, and for the second one window over every
 record's readings stacked into a single column. `Round.Laps` reads a whole round
-back, `Db.LapRow.selection` and `toRawLap` being the reverse of the load, and
+back, `Db.Laps.selection` and `Db.LapRow.toRawLap` being the reverse of the
+load, and
 `Round.Cars` hands it the round's cars keyed by number -- read once each rather
 than once a lap, which is the reading the split bought. A car with laps and no
 row in `cars` is a round loaded by halves, and is said so rather than written out
@@ -170,12 +171,15 @@ and its keys are declared there too, so the `CREATE TABLE` names no column the
 declaration does not have, and a query reads `Db.Laps.table` rather than
 spelling it.
 
-What it does not reach is the ordering: `all` and the row's `selection` name the
-same columns twice, which is the one pairing no compiler sees and
-`Db.TestLapRow` and `Db.TestCarRow` assert. Flix cannot read a record's fields,
-so `all` restates each name the declaration already has; only the `bind` beside
-it is checked against the row type. A column drawn from the declaration is the
-checked way to name one, and `Round.Index.lapCompletions` is the shape of that
+What it does not reach is the ordering: `all` and `selection` name the same
+columns twice, which is the one pairing no compiler sees and `Db.TestLapRow`
+and `Db.TestCarRow` assert. Both are declared here rather than beside the row
+they build, so the two orderings are read in one file; `Db.LapRow` and
+`Db.CarRow` are the feed's side of the trip and name neither `Db` nor `Sql`.
+Flix cannot read a record's fields, so `all` restates each name the
+declaration already has; only the `bind` beside it is checked against the row
+type. A column drawn from the declaration is the checked way to name one, and
+`Round.Index.lapCompletions` is the shape of that
 -- but a query reading from a common table expression cannot use it, since the
 expression's own `SELECT` is text and would not follow a rename.
 
@@ -192,7 +196,7 @@ a column is named once. What a query projects is a
 `Sql.reading`.
 
 A row read as a record rather than a tuple is `Sql.record` extended a field at
-a time with `Sql.field`, which is what `Db.LapRow.selection` is: each line
+a time with `Sql.field`, which is what `Db.Laps.selection` is: each line
 names a column and the field its cell lands in, so the two cannot be paired
 wrongly, a field left out is not a `LapRow`, and a field named twice does not
 typecheck. It is also the only form a row of more than eight has, an instance
@@ -300,7 +304,7 @@ paying for the same split.
   lambda, a record literal and a pipeline apiece: stubbing it out takes the
   build under 576k. Splitting `cars` out of `laps` did not move the number, a
   reading of many columns being the runner-up rather than the ceiling, and it
-  is one of the reasons `Db.LapRow.selection` is a record extended a field at
+  is one of the reasons `Db.Laps.selection` is a record extended a field at
   a time.
 - **The database** — a test drives JDBC rather than a handler standing in for
   it, against the in-memory database `Round.TestSupport.url` names: a

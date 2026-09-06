@@ -53,7 +53,7 @@ mod Db.TestCarRow {
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.toSql(Sql.clause(CarRow.selection()))
+            Sql.toSql(Sql.clause(Cars.selection()))
                 == ("SELECT " + List.join(", ", Cars.columnNames()), Nil)
         )
 

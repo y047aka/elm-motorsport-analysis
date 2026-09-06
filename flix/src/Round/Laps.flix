@@ -24,7 +24,7 @@ mod Round.Laps {
             cars    <- Cars.read(entry);
             lapRows <- laps(entry)
                 |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
-                |> Sql.map(_ -> LapRow.selection())
+                |> Sql.map(_ -> Laps.selection())
                 |> Sql.selectAll;
             rawLaps <- Result.traverse(rawLap(cars), lapRows)
         ) yield rawLaps

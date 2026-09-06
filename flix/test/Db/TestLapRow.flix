@@ -157,7 +157,7 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        match Sql.decode(LapRow.selection(), cells()) {
+        match Sql.decode(Laps.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
                 Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
@@ -169,7 +169,7 @@ mod Db.TestLapRow {
             List.take(22, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
-        match Sql.decode(LapRow.selection(), withMiniSectors) {
+        match Sql.decode(Laps.selection(), withMiniSectors) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
@@ -195,7 +195,7 @@ mod Db.TestLapRow {
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.toSql(Sql.clause(LapRow.selection()))
+            Sql.toSql(Sql.clause(Laps.selection()))
                 == ("SELECT " + List.join(", ", Db.Laps.columnNames()), Nil)
         )
 

@@ -1,10 +1,8 @@
 mod Db.CarRow {
 
-    use Db.Cars
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
-    use Sql.Sel
 
     /// One car of one round, which is what the feed repeats on every lap that
     /// car ran: no round in the archive names a car twice, so the file's first
@@ -111,19 +109,5 @@ mod Db.CarRow {
             team         = row#team,
             manufacturer = row#manufacturer
         }
-
-    /// A round's cars as the table holds them, a field at a time: each line
-    /// names the column and the field its cell lands in, and a field left out
-    /// is not a `CarRow`.
-    pub def selection(): Sel[CarRow] =
-        let c = Cars.columns();
-        Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
-            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
-            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#team, (row, value) -> { +team = value | row })
-            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
 
 }
