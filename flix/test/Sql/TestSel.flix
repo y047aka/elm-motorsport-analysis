@@ -31,14 +31,14 @@ mod Sql.TestSel {
     def aNullUnderANonOptionalReadingNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), Some("Will STEVENS") :: None :: Nil)
-                == Err("column `lap_number` was null")
+                == Err(Db.Error.Unread("column `lap_number` was null"))
         )
 
     @Test
     def aCellThatIsNotANumberNamesTheExpression(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), Some("Will STEVENS") :: Some("7.5") :: Nil)
-                == Err("column `lap_number` is not a number: \"7.5\"")
+                == Err(Db.Error.Unread("column `lap_number` is not a number: \"7.5\""))
         )
 
     @Test
@@ -62,16 +62,16 @@ mod Sql.TestSel {
         Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok(false));
         Assert.assertTrue(
             Sql.decode(sel, Some("true") :: Nil)
-                == Err("column `crossing_finish_line_in_pit` is not a boolean: \"true\"")
+                == Err(Db.Error.Unread("column `crossing_finish_line_in_pit` is not a boolean: \"true\""))
         )
 
     @Test
     def andThenReadsAReadingFurther(): Unit \ Assert =
         let sel = Sql.int("k") |> Sql.andThen(label ->
-            if (label == 0) Ok("fastest lap") else Err("no record is labelled ${label}"));
+            if (label == 0) Ok("fastest lap") else Err(Db.Error.Unread("no record is labelled ${label}")));
         Assert.assertTrue(Sql.toSql(Sql.clause(sel)) == ("SELECT k", Nil));
         Assert.assertTrue(Sql.decode(sel, Some("0") :: Nil) == Ok("fastest lap"));
-        Assert.assertTrue(Sql.decode(sel, Some("9") :: Nil) == Err("no record is labelled 9"))
+        Assert.assertTrue(Sql.decode(sel, Some("9") :: Nil) == Err(Db.Error.Unread("no record is labelled 9")))
 
     /// The far side of a `LEFT JOIN`: a null cell is the row the join did not
     /// find rather than a reading that failed.
@@ -96,13 +96,13 @@ mod Sql.TestSel {
     def aRowLongerThanTheProjectionIsAnError(): Unit \ Assert =
         Assert.assertTrue(
             Sql.decode(pair(), Some("Will STEVENS") :: Some("7") :: Some("SF") :: Nil)
-                == Err("the row carries 1 more columns than the projection reads")
+                == Err(Db.Error.Unread("the row carries 1 more columns than the projection reads"))
         )
 
     @Test
     def aRowShorterThanTheProjectionNamesWhereItEnded(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.decode(pair(), Some("Will STEVENS") :: Nil) == Err("the row ended before `lap_number`")
+            Sql.decode(pair(), Some("Will STEVENS") :: Nil) == Err(Db.Error.Unread("the row ended before `lap_number`"))
         )
 
     ///

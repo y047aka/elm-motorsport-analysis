@@ -15,30 +15,25 @@ mod Round.TestSupport {
     /// archive a working copy has.
     pub def url(): String = "jdbc:sqlite::memory:"
 
-    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ Db): a \ IO =
+    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
         onRows(entry, laps, true, read)
 
     /// As `onRound`, with the round's cars left out: what a round only half in
     /// the database reads as.
-    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ Db): a \ IO =
+    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
         onRows(entry, laps, false, read)
 
-    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> Result[String, a] \ Db): a \ IO =
-        match Jdbc.connect(url()) {
-            case Err(cause) => bug!("no database (${cause})")
-            case Ok(conn) =>
-                let result = Jdbc.runWith(conn, () -> forM(
-                    _     <- Cars.create();
-                    _     <- Laps.create();
-                    _     <- if (withCars) Cars.insertRows(CarRow.fromRawLaps(entry, laps)) else Ok(0);
-                    _     <- Laps.insertRows(LapRow.fromRawLaps(entry, laps));
-                    value <- read()
-                ) yield value);
-                Jdbc.close(conn);
-                match result {
-                    case Ok(value)  => value
-                    case Err(cause) => bug!(cause)
-                }
+    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
+        let outcome = Db.runWithError(() -> Jdbc.withConnection(url(), () -> {
+            Cars.create();
+            Laps.create();
+            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(entry, laps)) else ();
+            discard Laps.insertRows(LapRow.fromRawLaps(entry, laps));
+            read()
+        }));
+        match outcome {
+            case Ok(value)  => value
+            case Err(cause) => bug!("${cause}")
         }
 
 }

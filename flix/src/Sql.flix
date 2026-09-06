@@ -15,6 +15,7 @@
 /// next problem at.
 mod Sql {
 
+    use Db.Error
     use Db.Value
 
     ///
@@ -109,18 +110,18 @@ mod Sql {
     /// The expressions of the SELECT clause, and a reading of the cells they
     /// come back as which answers with what is left of the row.
     pub enum Sel[a] {
-        case Sel(List[Frag], List[Option[String]] -> Result[String, (a, List[Option[String]])])
+        case Sel(List[Frag], List[Option[String]] -> Result[Error, (a, List[Option[String]])])
     }
 
-    def cell(expr: Frag, read: String -> Option[String] -> Result[String, a]): Sel[a] =
+    def cell(expr: Frag, read: String -> Option[String] -> Result[Error, a]): Sel[a] =
         let Frag.Frag(text, _) = expr;
         Sel.Sel(expr :: Nil, cells -> match cells {
             case c :: rest => read(text, c) |> Result.map(value -> (value, rest))
-            case Nil       => Err("the row ended before `${text}`")
+            case Nil       => Err(Error.Unread("the row ended before `${text}`"))
         })
 
     pub def text(expr: String): Sel[String] =
-        cell(raw(expr), (name, c) -> c |> Option.toOk("column `${name}` was null"))
+        cell(raw(expr), (name, c) -> c |> Option.toOk(Error.Unread("column `${name}` was null")))
 
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
@@ -128,18 +129,18 @@ mod Sql {
     /// As `int`, where the expression is one a query built.
     pub def intOf(expr: Frag): Sel[Int32] =
         cell(expr, (name, c) -> forM(
-            cell  <- c |> Option.toOk("column `${name}` was null");
+            cell  <- c |> Option.toOk(Error.Unread("column `${name}` was null"));
             value <- parseInt(name, cell)
         ) yield value)
 
     /// A truth value is stored as the 1 or 0 the driver bound it as.
     pub def bool(expr: String): Sel[Bool] =
         cell(raw(expr), (name, c) -> forM(
-            cell  <- c |> Option.toOk("column `${name}` was null");
+            cell  <- c |> Option.toOk(Error.Unread("column `${name}` was null"));
             value <- match cell {
                 case "1" => Ok(true)
                 case "0" => Ok(false)
-                case _   => Err("column `${name}` is not a boolean: \"${cell}\"")
+                case _   => Err(Error.Unread("column `${name}` is not a boolean: \"${cell}\""))
             }
         ) yield value)
 
@@ -160,12 +161,12 @@ mod Sql {
             case Some(cell) => parseIntArray(name, cell) |> Result.map(values -> Some(values))
         })
 
-    def parseInt(expr: String, text: String): Result[String, Int32] =
-        Int32.fromString(text) |> Option.toOk("column `${expr}` is not a number: \"${text}\"")
+    def parseInt(expr: String, text: String): Result[Error, Int32] =
+        Int32.fromString(text) |> Option.toOk(Error.Unread("column `${expr}` is not a number: \"${text}\""))
 
-    def parseIntArray(expr: String, text: String): Result[String, List[Option[Int32]]] =
+    def parseIntArray(expr: String, text: String): Result[Error, List[Option[Int32]]] =
         match String.stripPrefix({substr = "["}, text) |> Option.flatMap(String.stripSuffix({substr = "]"})) {
-            case None       => Err("column `${expr}` is not a JSON array: \"${text}\"")
+            case None       => Err(Error.Unread("column `${expr}` is not a JSON array: \"${text}\""))
             case Some("")   => Ok(Nil)
             case Some(body) =>
                 String.splitOn({substr = ","}, body) |> Result.traverse(element -> match element {
@@ -174,7 +175,7 @@ mod Sql {
                 })
         }
 
-    pub def andThen(transform: a -> Result[String, b], sel: Sel[a]): Sel[b] =
+    pub def andThen(transform: a -> Result[Error, b], sel: Sel[a]): Sel[b] =
         let Sel.Sel(columns, decodeCells) = sel;
         Sel.Sel(columns, cells ->
             decodeCells(cells) |> Result.flatMap(match (value, rest) ->
@@ -198,13 +199,13 @@ mod Sql {
         let Sel.Sel(columns, _) = sel;
         frags(raw("SELECT") :: joinFrags(", ", columns) :: Nil)
 
-    pub def decode(sel: Sel[a], row: List[Option[String]]): Result[String, a] =
+    pub def decode(sel: Sel[a], row: List[Option[String]]): Result[Error, a] =
         let Sel.Sel(_, decodeCells) = sel;
         decodeCells(row) |> Result.flatMap(match (value, rest) ->
             if (List.isEmpty(rest))
                 Ok(value)
             else
-                Err("the row carries ${List.length(rest)} more columns than the projection reads")
+                Err(Error.Unread("the row carries ${List.length(rest)} more columns than the projection reads"))
         )
 
     ///
@@ -369,20 +370,22 @@ mod Sql {
     /// ===== RUNNING =====
     ///
 
-    pub def selectAll(q: Query[a]): Result[String, List[a]] \ Db =
+    pub def selectAll(q: Query[a]): List[a] \ DbRead =
         let Query.Query(_, sel) = q;
-        let Frag.Frag(sql, params) = toStatement(q);
-        Db.fetch(sql, params) |> Result.flatMap(Result.traverse(row -> decode(sel, row)))
+        fetched(q) |> List.map(row -> Db.orRaise(decode(sel, row)))
 
     /// A query answering with one row, `subject` naming what came back with
     /// none. Named for `select`, which is a keyword.
-    pub def selectOne(subject: String, q: Query[a]): Result[String, a] \ Db =
+    pub def selectOne(subject: String, q: Query[a]): a \ DbRead =
         let Query.Query(_, sel) = q;
+        match fetched(q) {
+            case row :: _ => Db.orRaise(decode(sel, row))
+            case Nil      => DbErr.fail(Error.NoRow(subject))
+        }
+
+    def fetched(q: Query[a]): List[List[Option[String]]] \ DbRead =
         let Frag.Frag(sql, params) = toStatement(q);
-        Db.fetch(sql, params) |> Result.flatMap(rows -> match rows {
-            case row :: _ => decode(sel, row)
-            case Nil      => Err("${subject} came back with no row")
-        })
+        Db.fetch(sql, params)
 
     ///
     /// ===== STATEMENTS =====
@@ -467,7 +470,7 @@ mod Sql {
             |> List.map(match (base, branch) -> arm(label, base, branch))
             |> joinFrags(" UNION ALL ");
         let tag = int(label) |> andThen(n ->
-            tagOf(numbered, n) |> Option.toOk("no arm answers to `${label}` ${n}"));
+            tagOf(numbered, n) |> Option.toOk(Error.Unread("no arm answers to `${label}` ${n}")));
         (rows, tag)
 
     def number_(base: Int32, branches: List[Branch[t]]): List[(Int32, Branch[t])] =

@@ -8,7 +8,7 @@ mod Cli.Errors {
         case EmptyFile(String)
         case File(FileError)
         case Csv({ path = String, message = String })
-        case Database(String)
+        case Database(Db.Error)
         case RoundNotLoaded
     }
 

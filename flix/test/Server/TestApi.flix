@@ -56,6 +56,41 @@ mod Server.TestApi {
         Assert.assertTrue(Api.needsDatabase(Route.Summary(2025, "fuji_6h")));
         Assert.assertTrue(Api.needsDatabase(Route.Laps(2025, "fuji_6h")))
 
+    /// A database that answers, and answers with a failure. `offline` is the
+    /// other kind -- nothing behind the request at all.
+    def failing(error: Db.Error, route: Route): Response =
+        Db.runFailing(error, () -> Api.respond(route))
+
+    /// A lock the database waited out is the same answer as one that could not
+    /// be reached: the request is the caller's to make again.
+    @Test
+    def aLockedDatabaseIsA503(): Unit \ Assert =
+        Assert.assertTrue(
+            failing(Db.Error.Busy("database is locked"), Route.Summary(2025, "fuji_6h"))#status == 503)
+
+    /// A statement the database refused is the round's fault and not the
+    /// request's, and what it was refused for is the log's.
+    @Test
+    def aRefusedQueryIsA500WithoutTheDatabasesWords(): Unit \ Assert =
+        let answered = failing(Db.Error.Refused("no such table: laps"), Route.Laps(2025, "fuji_6h"));
+        Assert.assertTrue(answered#status == 500);
+        Assert.assertTrue(answered#body == "the round could not be read");
+        Assert.assertTrue(answered#cause == Some("no such table: laps"))
+
+    /// The round is the calendar's; what is missing is the database.
+    @Test
+    def aRoundWithNoDatabaseBehindItIsA503(): Unit \ Assert =
+        Assert.assertTrue(offline(Route.Summary(2025, "fuji_6h"))#status == 503);
+        Assert.assertTrue(offline(Route.Laps(2025, "fuji_6h"))#status == 503)
+
+    /// The database's own words name tables and files, so they are kept for
+    /// the log and the caller is told what it can do about it.
+    @Test
+    def aFailureIsAnsweredWithoutTheDatabasesWords(): Unit \ Assert =
+        let answered = offline(Route.Summary(2025, "fuji_6h"));
+        Assert.assertTrue(answered#body == "the database could not be reached");
+        Assert.assertTrue(answered#cause == Some("no database (nothing was sent, so nothing can be read back)"))
+
     @Test
     def notFoundIsAnsweredWithA404(): Unit \ Assert =
         Assert.assertTrue(offline(Route.NotFound)#status == 404)
@@ -94,16 +129,11 @@ mod Server.TestApi {
         }
 
     def served(laps: List[RawLap]): (Response, Response, String) \ IO =
-        TestSupport.onRound(fuji(), laps, () ->
-            forM(
-                metadata <- Summary.read(fuji());
-                index    <- Index.read(fuji())
-            ) yield (
-                Api.respond(Route.Summary(2025, "fuji_6h")),
-                Api.respond(Route.Laps(2025, "fuji_6h")),
-                Render.renderSummary(metadata, index)
-            )
-        )
+        TestSupport.onRound(fuji(), laps, () -> (
+            Api.respond(Route.Summary(2025, "fuji_6h")),
+            Api.respond(Route.Laps(2025, "fuji_6h")),
+            Render.renderSummary(Summary.read(fuji()), Index.read(fuji()))
+        ))
 
     /// A round the calendar lists and the rows hold none of. Answered out of
     /// them it would be a race that never ran.
@@ -116,9 +146,9 @@ mod Server.TestApi {
         }
 
     def unloaded(): (Response, Response) \ IO =
-        TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> Ok((
+        TestSupport.onRound(fuji(), TestLapRow.sampleLaps(), () -> (
             Api.respond(Route.Summary(2025, "imola_6h")),
             Api.respond(Route.Laps(2025, "imola_6h"))
-        )))
+        ))
 
 }

@@ -17,7 +17,7 @@ mod Cli.TestExport {
         { inputPath = "", outputPath = "", lapsPath = "", entry = entry }
 
     def readBack(loaded: Entry, wanted: Entry): Result[CliError, Rendered] \ IO =
-        TestSupport.onRound(loaded, TestLapRow.sampleLaps(), () -> Ok(Export.read(task(wanted))))
+        TestSupport.onRound(loaded, TestLapRow.sampleLaps(), () -> Export.read(task(wanted)))
 
     @Test
     def aRoundNoRunHasLoadedIsNotWrittenOut(): Unit \ {Assert, IO} =

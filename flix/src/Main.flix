@@ -29,28 +29,25 @@ def main(): Unit \ {Env, IO, Exit, Console} =
 /// A round that failed to load has no rows, so the export fails it too and
 /// leaves the files it would have replaced alone. The rounds beside it are
 /// written either way.
-def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, Db} =
+def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Console, SqlRead, SqlWrite} =
     let loaded = Load.runAll(root);
     let exported = Export.runAll(root, rounds);
     if (loaded == 0 and exported == 0) 0 else 1
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onRoot(root: String, database: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
+def onRoot(root: String, database: Option[String], stage: String -> Int32 \ ef): Int32 \ (ef - {SqlRead, SqlWrite, DbErr}) + Env + IO + Console =
     match checkRoot(root) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");
             1
         case Ok(()) =>
             withDatabase(database, url ->
-                match Jdbc.connect(url) {
-                    case Err(e) =>
+                match Db.runWithError(() -> Jdbc.withConnection(url, () -> stage(root))) {
+                    case Ok(code) => code
+                    case Err(e)   =>
                         Console.eprintln("Error: ${e}");
                         1
-                    case Ok(conn) =>
-                        let code = Jdbc.runWith(conn, () -> stage(root));
-                        Jdbc.close(conn);
-                        code
                 }
             )
     }

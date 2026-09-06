@@ -19,7 +19,7 @@ in WAL mode, so those reads run beside a writing run rather than behind it.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
 `Round`'s readers rather than restating them: `Server.Api.respond` runs under
-`Db.Jdbc.runWith` and calls `Round.Summary.read` unchanged. A route that reads
+`Db.Jdbc.runReading` and calls `Round.Summary.read` unchanged. A route that reads
 nothing is answered before connecting at all, through `Db.runRecording`: the
 calendar is `Motorsport.Calendar` rather than a count of the rows, so a
 database that is down stops a round being opened and not the app being used.
@@ -31,7 +31,7 @@ laps are 24MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the tables, both halves of the trip:
 `Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
-and the `Db` effect and read it; `Round.Render` takes what they returned, is
+and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
 pure, and turns it into the bytes that go out. None of the five knows whether a
 file or a request is waiting at the other end. `Round.loaded` is what both
 callers ask first, and it asks both tables: laps without cars is a round half
@@ -126,20 +126,75 @@ a set of it, and every reading that would move off Flix needs it: the validator'
 baseline is the file's first row, a car's drivers are in the order the file
 first showed them, and so is the grid.
 
-## `Db`, the effect
+## `SqlRead`, `SqlWrite` and `DbErr`
 
-`Db` is an effect, not a module of functions, so that what a round would
-send can be read back without a server: `Db.runRecording` keeps the statements
-and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
-only file that imports `java.sql`. The effect names no table and no column, so
-`Db`, `Db.Jdbc` and `Sql` are together a database and a query language and
-nothing of this application; `Db.Laps`, `Db.Cars` and the two row types beside
-them are the whole of what the application tells them about itself, which is
-the same line Acadia draws between `Transaction`, `Rows` and a `Table`.
+Reaching a database is an effect rather than a module of functions, so that
+what a round would send can be read back without a server: `Db.runRecording`
+keeps the statements and answers a read with the error that nothing was sent,
+`Db.runFailing` answers every statement with one error the caller chose, and
+`Db.Jdbc` is the only file that imports `java.sql`. No effect here names a
+table or a column, so they, `Db.Jdbc` and `Sql` are together a database and a
+query language and nothing of this application; `Db.Laps`, `Db.Cars` and the
+two row types beside them are the whole of what the application tells them
+about itself, which is the same line Acadia draws between `Transaction`, `Rows`
+and a `Table`.
 
-Nothing a statement sends is kept until `Db.commit`, and `Db.transact` is where
-that is decided: it commits what its caller sent when the caller answers `Ok`
-and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the
+Reading and writing are two effects because the sides of this repository are
+two: `Round`'s readers, `Server.Api` and `Cli.Export` would not compile with a
+statement that changes the database in them, and `Db.Laps`, `Db.Cars` and
+`Cli.Load.load` are the other half. The handlers are split the same way, so
+what the type says of the server the connection says too: `Db.Jdbc.runReading`
+installs the read alone, and a write reaches no handler through it.
+
+`DbErr` is the third, and it is what a reader does not carry a `Result` for.
+Its one operation does not return, so `Round.Summary.read` answers with a
+`Metadata` rather than with whether it could read one, and the failure travels
+by itself to the boundary that asked -- `Db.runWithError`, which is where a
+value comes back. Three of those: a round of the export, a request, and the
+run's own transaction. Everything between them is written as though the
+database always answers.
+
+What a signature says is the alias rather than the effect: `\ DbRead` is
+`{SqlRead, DbErr}`, `\ DbWrite` is `{SqlWrite, DbErr}`, and `\ Db` is all
+three. Flix has no subeffecting here -- a `\ DbRead` function is not a `\ Db`
+one -- so a caller taking one as an argument is written for the half it uses,
+which is what `Main.onRoot` is polymorphic over and what
+`Round.TestSupport.onRound` takes.
+
+The two statement effects answer with a `Result` even so, and that is not a
+choice: a Flix handler body is evaluated outside the `run` it belongs to, so a
+failure raised inside `Db.Jdbc`'s handler would pass every handler its caller
+had installed. `Db.orRaise` is where the value becomes a `DbErr`, in the
+caller's own context. sqlfx found the same thing and answers it the same way.
+
+So nothing outside `Db` calls an operation: `Db.fetch`, `Db.execute` and
+`Db.insertMany` are the same statements with that step already taken, and they
+are what `Sql` and `Db.Schema` reach. `Db.Jdbc.withConnection` is the other
+one -- a database opened, worked in, and closed however that went, which is
+what a run, a test and the server each did for themselves before.
+
+What a failure is is a `Db.Error` rather than a sentence, and which of the six
+says where the fix is: `Unreachable` is no database reached at all, `Refused` is
+what the driver said no to in its own words, `Busy` is the one refusal that may
+go through next time -- a lock SQLite waited out rather than got, which
+`Db.Jdbc.classify` reads off the driver's code and is tested without a
+database -- `Unread` is a cell the reading could not read, `NoRow` is a query
+that had to answer with one and did not, and `Incomplete` is rows that came back
+whole and do not describe a round: a car with laps and no row in `cars`. The
+sentence is `ToString`'s, so the wording is in one place and the kind is what a
+caller reads.
+
+`Server.Api` is the one that reads it. `Unreachable` and `Busy` are answered
+503 and everything else 500, which is the difference between a round that
+cannot be served now and one that cannot be served. What the answer carries is
+that sentence and not the database's: a failure names tables and files in its
+own words, so those ride in the response's `cause`, which `Server.send` logs
+and does not send.
+
+Nothing a statement sends is kept until a commit, and `Db.transact` is the only
+sender of one -- where that is decided: it commits what its caller sent when the caller returns,
+and rolls it back when a `DbErr` ended it instead -- which it then raises
+again, the rollback being what it did about it rather than what it answers. `Cli.Load.runAll` is the one caller, so the
 rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens
 with land only if the run reaches its end, and a run that is killed partway leaves
 the rounds it was rebuilding from. Measured on the archive: the same kill takes
@@ -315,3 +370,11 @@ paying for the same split.
   directory that does not exist yet — the directory `connect` has to make and
   the journal mode it sets are reached no other way, and two connections at
   once are not reached at all by a database each connection makes afresh.
+
+  What no database is asked for is what a caller does about a failure, since
+  that is decided off the kind rather than off any row: `Db.runFailing` is a
+  database that answers with the one it was given, and `Server.TestApi` is
+  where a `Busy` becomes a 503 and a `Refused` a 500 with the driver's words
+  kept out of the body. The two halves of that are otherwise only met apart --
+  `Db.Jdbc.classify` reads the code, and a round read over a real database
+  never fails.

@@ -31,11 +31,11 @@ mod Cli.Load {
     /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
-    pub def runAll(root: String): Int32 \ {IO, Console, Db} =
-        let rebuild = Db.transact(() -> match createTables() {
-            case Err(e) => Err(e)
-            case Ok(()) => Ok(convertRounds(root))
-        });
+    pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+        let rebuild = Db.runWithError(() -> Db.transact(() -> {
+            createTables();
+            convertRounds(root)
+        }));
         match rebuild {
             case Err(e) =>
                 Console.eprintln("Database: ${e}");
@@ -46,17 +46,15 @@ mod Cli.Load {
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
-    def createTables(): Result[String, Unit] \ Db =
-        forM(
-            _ <- Cars.create();
-            _ <- Laps.create()
-        ) yield ()
+    def createTables(): Unit \ DbWrite =
+        Cars.create();
+        Laps.create()
 
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String): Int32 \ {IO, Console, Db} =
+    def convertRounds(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
@@ -87,12 +85,13 @@ mod Cli.Load {
                     )
         }
 
-    def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, Db} =
+    def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, SqlRead, SqlWrite} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
             |> Result.flatMap(reportCarDisagreements(task))
-            |> Result.flatMap(load(task))
-            |> Result.flatMap(reportViolations(task))
+            |> Result.flatMap(rawLaps ->
+                Db.runWithError(() -> reportViolations(task, load(task, rawLaps)))
+                    |> Result.mapErr(CliError.Database))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
@@ -110,21 +109,13 @@ mod Cli.Load {
             Ok(rawLaps)
         }
 
-    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ Db =
-        rawLaps ->
-            let loaded = forM(
-                cars <- Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
-                laps <- Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
-            ) yield { cars = cars, laps = laps };
-            loaded |> Result.mapErr(CliError.Database)
+    def load(task: FileTask.FileTask, rawLaps: List[RawLap]): Loaded \ DbWrite =
+        let cars = Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
+        let laps = Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps));
+        { cars = cars, laps = laps }
 
-    def reportViolations(task: FileTask.FileTask): Loaded -> Result[CliError, Loaded] \ {Console, Db} =
-        loaded ->
-            Validation.validate(task#entry)
-                |> Result.mapErr(CliError.Database)
-                |> Result.map(messages -> {
-                    messages |> List.forEach(Console.eprintln);
-                    loaded
-                })
+    def reportViolations(task: FileTask.FileTask, loaded: Loaded): Loaded \ {Console, DbRead} =
+        Validation.validate(task#entry) |> List.forEach(Console.eprintln);
+        loaded
 
 }

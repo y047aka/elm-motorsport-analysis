@@ -11,8 +11,8 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/flix`** — written in Flix, and two things rather than one: the CLI that
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
-  the `laps` and `cars` tables, and the `Db` and `Sql` those two are reached
-  through — and is the thing to read before changing anything under `/flix`.
+  the `laps` and `cars` tables, and the `SqlRead` / `SqlWrite` / `DbErr`
+  effects and `Sql` those two are reached through — and is the thing to read before changing anything under `/flix`.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -103,6 +103,11 @@ dependencies out of what it writes, so the JDBC driver is named on the class
 path beside the jar rather than bundled in it.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
+
+`flix` (Claude skill) carries what the compiler does rather than what the code
+is: the errors this tree has actually produced, what each one meant, and how a
+change is verified cold and against CI's smaller stack. Reach for it before
+diagnosing a Flix build failure by reading code.
 
 ## Architecture
 
@@ -268,8 +273,9 @@ moment of it).
 ### The Flix side
 
 `flix/README.md` is the other half of the trip: the server that answers `/api`,
-the `laps` and `cars` tables it reads a round out of, and the `Db` effect and
-`Sql` query builder the two stages reach it through.
+the `laps` and `cars` tables it reads a round out of, and the `SqlRead` /
+`SqlWrite` / `DbErr` effects and `Sql` query builder the two stages reach it
+through.
 
 ## Comments and documentation
 

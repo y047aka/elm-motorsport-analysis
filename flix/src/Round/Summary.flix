@@ -22,12 +22,10 @@ mod Round.Summary {
     use Util.Duration.Duration
     use Util.HourClock.Hour
 
-    pub def read(entry: Entry): Result[String, Metadata.Metadata] \ Db =
-        forM(
-            race   <- particulars(entry);
-            shape  <- track(entry);
-            builds <- cars(entry)
-        ) yield Metadata.fromReadings(entry, race, shape, builds)
+    pub def read(entry: Entry): Metadata.Metadata \ DbRead =
+        let race = particulars(entry);
+        let shape = track(entry);
+        Metadata.fromReadings(entry, race, shape, cars(entry))
 
     def scope(entry: Entry): Sql.Expr[Bool] =
         Laps.scope(Laps.columns(), entry#season, entry#id)
@@ -43,7 +41,7 @@ mod Round.Summary {
 
     // ---------------------------------------------------------- particulars
 
-    def particulars(entry: Entry): Result[String, Metadata.Particulars] \ Db =
+    def particulars(entry: Entry): Metadata.Particulars \ DbRead =
         laps(entry)
             |> Sql.map(_ -> (
                 startedAt(entry),
@@ -69,15 +67,12 @@ mod Round.Summary {
 
     // ----------------------------------------------------------------- cars
 
-    def cars(entry: Entry): Result[String, List[CarBuild]] \ Db =
-        forM(
-            drivers <- driverNames(entry);
-            builds  <- carBuilds(entry, drivers)
-        ) yield builds
+    def cars(entry: Entry): List[CarBuild] \ DbRead =
+        carBuilds(entry, driverNames(entry))
 
     /// `(car number, driver name)` in the order the file first showed each
     /// pair, which is the order a car's drivers are listed in.
-    def driverNames(entry: Entry): Result[String, List[(String, String)]] \ Db =
+    def driverNames(entry: Entry): List[(String, String)] \ DbRead =
         let c = Laps.columns();
         Sql.access(
                 Sql.frags(
@@ -94,7 +89,7 @@ mod Round.Summary {
 
     /// A car is what `cars` says it was; where the file first mentioned it is
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.
-    def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
+    def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead =
         let car = carColumns();
         let lap1 = lap1Columns();
         Sql.access(
@@ -197,11 +192,10 @@ mod Round.Summary {
 
     // ---------------------------------------------------------------- track
 
-    def track(entry: Entry): Result[String, Track.Track] \ Db =
-        forM(
-            sectors <- fastestSectors(entry);
-            mini    <- fastestMiniSectors(entry)
-        ) yield match sectors {
+    def track(entry: Entry): Track.Track \ DbRead =
+        let sectors = fastestSectors(entry);
+        let mini = fastestMiniSectors(entry);
+        match sectors {
             case (s1, s2, s3, measuresMiniSectors) =>
                 let sectorTime = sector -> match sector {
                     case Sector.S1 => s1
@@ -216,7 +210,7 @@ mod Round.Summary {
                 Track.fromFastest(Events.direction(entry#id), sectorTime, miniSectorTime)
         }
 
-    def fastestSectors(entry: Entry): Result[String, (Option[Duration], Option[Duration], Option[Duration], Bool)] \ Db =
+    def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead =
         laps(entry)
             |> Sql.map(_ -> (
                 Sql.optionalInt("MIN(s1_ms)"),
@@ -237,7 +231,7 @@ mod Round.Summary {
     def recorded(c: Laps.Columns): Sql.Expr[Bool] =
         Sql.ne(Schema.expr(c#lapTimeMs), Sql.i32(0))
 
-    def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
+    def fastestMiniSectors(entry: Entry): Map[Int32, Duration] \ DbRead =
         Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
             |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
             |> Sql.filter(recorded)
@@ -248,6 +242,6 @@ mod Round.Summary {
             |> Sql.reading(match (position, fastest) ->
                 (position, Util.Duration.fromMillis(fastest)))
             |> Sql.selectAll
-            |> Result.map(List.toMap)
+            |> List.toMap
 
 }

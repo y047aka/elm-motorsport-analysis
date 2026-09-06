@@ -34,7 +34,7 @@ mod Cli.Export {
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
-    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, Db} =
+    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, SqlRead} =
         let tasks = FileTask.selected(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
@@ -55,10 +55,13 @@ mod Cli.Export {
         Console.println("Export completed: ${summary#exported} exported, ${errors} errors");
         if (errors == 0) 0 else 1
 
-    def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, Db} =
-        read(task) |> Result.flatMap(rendered ->
-            writeRound(task, rendered) |> Result.map(_ -> rendered)
-        )
+    def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, SqlRead} =
+        match Db.runWithError(() -> read(task)) {
+            case Err(cause)  => Err(CliError.Database(cause))
+            case Ok(outcome) => outcome |> Result.flatMap(rendered ->
+                writeRound(task, rendered) |> Result.map(_ -> rendered)
+            )
+        }
 
     /// A round the rows hold none of reads as a race that never ran rather than
     /// as a failure, and written out it would replace the round's files with an
@@ -66,14 +69,11 @@ mod Cli.Export {
     ///
     /// `pub` reaches no further than `Cli.TestExport`, which drives it without
     /// a directory to write into.
-    pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
-        forM(
-            isLoaded <- Round.loaded(task#entry) |> Result.mapErr(CliError.Database);
-            _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
-            metadata <- Summary.read(task#entry) |> Result.mapErr(CliError.Database);
-            index    <- Index.read(task#entry) |> Result.mapErr(CliError.Database);
-            rawLaps  <- Laps.read(task#entry) |> Result.mapErr(CliError.Database)
-        ) yield render(metadata, index, rawLaps)
+    pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ DbRead =
+        if (not Round.loaded(task#entry))
+            Err(CliError.RoundNotLoaded)
+        else
+            Ok(render(Summary.read(task#entry), Index.read(task#entry), Laps.read(task#entry)))
 
     def render(
         metadata: Motorsport.Metadata.Metadata,

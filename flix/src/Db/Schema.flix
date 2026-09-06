@@ -97,13 +97,11 @@ mod Db.Schema {
         table: String,
         columns: List[Bound[r]],
         keys: List[Sql.Key[Bound[r]]]
-    ): Result[String, Unit] \ Db =
-        forM(
-            _ <- Db.execute(Sql.dropTableIfExists(table));
-            _ <- Db.execute(Sql.createTable(table, columns, keys))
-        ) yield ()
+    ): Unit \ DbWrite =
+        Db.execute(Sql.dropTableIfExists(table));
+        Db.execute(Sql.createTable(table, columns, keys))
 
-    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Result[String, Int32] \ Db =
+    pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);
         Db.insertMany(statement, bound_)
 
