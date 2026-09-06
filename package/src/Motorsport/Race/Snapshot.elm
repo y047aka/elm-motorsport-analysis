@@ -22,6 +22,7 @@ each work them out again -- that sharing is the whole reason the type exists.
 -}
 
 import Dict
+import List.Extra
 import Motorsport.BestTimes as BestTimes
 import Motorsport.Driver exposing (Driver)
 import Motorsport.Duration exposing (Duration)
@@ -29,7 +30,6 @@ import Motorsport.Gap as Gap exposing (Gap)
 import Motorsport.Instant as Instant exposing (Instant)
 import Motorsport.Lap as Lap exposing (Lap)
 import Motorsport.Lap.Performance as Performance exposing (MiniSectorPerformance, PerformanceLevel, RatedTime, SectorPerformance, SegmentState)
-import Motorsport.Ordering as Ordering exposing (ByPosition)
 import Motorsport.Race as Race exposing (Race)
 import Motorsport.Race.Car as Car exposing (Car, CarNumber)
 import Motorsport.Race.LapHistory as LapHistory exposing (LapHistory)
@@ -37,7 +37,6 @@ import Motorsport.Sector as Sector exposing (BySector)
 import Motorsport.Status exposing (Status)
 import Motorsport.Wec.Circuit.LeMans as LeMans exposing (ByMiniSector)
 import Motorsport.Wec.Class as Class exposing (Class)
-import SortedList exposing (SortedList)
 
 
 {-| Every car of the race as it stands at one moment, in running order.
@@ -46,14 +45,9 @@ type Snapshot
     = Snapshot
         { elapsed : Instant
         , lapCount : Int
-        , cars : SortedList ByPosition CarAt
+        , cars : List CarAt
         , bestTimes : BestTimes.Snapshot
         , lapHistory : LapHistory
-
-        -- Plain lists here (already position-sorted by construction, see
-        -- groupByClass): consumers of toClassList only ever render these cars,
-        -- never re-sort them, so the phantom-typed SortedList guarantee isn't
-        -- worth the extra unwrapping at each call site.
         , carsByClass : List ( Class, List CarAt )
         }
 
@@ -184,7 +178,7 @@ at clock race =
         sampled =
             race.cars
                 |> List.filterMap (sampleCar clock race)
-                |> Ordering.runningOrder clock
+                |> List.sortWith (\a b -> Lap.compareAt clock a.currentLap b.currentLap)
 
         cars =
             placeInField sampled
@@ -198,7 +192,7 @@ at clock race =
                     )
 
         sortedCars =
-            Ordering.byPosition (.standing >> .position) cars
+            List.sortBy (.standing >> .position) cars
     in
     Snapshot
         { elapsed = clock.elapsed
@@ -275,18 +269,18 @@ currentMiniSectorStates { reached, lapIsOver } rated =
     LeMans.map2 stateOf (LeMans.initialize identity) rated
 
 
-groupByClass : SortedList ByPosition CarAt -> List ( Class, List CarAt )
+groupByClass : List CarAt -> List ( Class, List CarAt )
 groupByClass sortedCars =
     sortedCars
-        |> SortedList.gatherEqualsBy (.metadata >> .class)
-        |> List.map (\( first, rest ) -> ( first.metadata.class, first :: SortedList.toList rest ))
+        |> List.Extra.gatherEqualsBy (.metadata >> .class)
+        |> List.map (\( first, rest ) -> ( first.metadata.class, first :: rest ))
 
 
 {-| The cars in running order, the leader first.
 -}
 toList : Snapshot -> List CarAt
 toList (Snapshot s) =
-    SortedList.toList s.cars
+    s.cars
 
 
 {-| The cars grouped by the class they race in, each group in running order.
@@ -305,7 +299,7 @@ data occasionally has -- give the one running ahead.
 -}
 get : CarNumber -> Snapshot -> Maybe CarAt
 get carNumber (Snapshot s) =
-    SortedList.toList s.cars
+    s.cars
         |> List.filter (\car -> car.metadata.carNumber == carNumber)
         |> List.head
 
@@ -326,7 +320,7 @@ inClass class (Snapshot s) =
 -}
 leader : Snapshot -> Maybe CarAt
 leader (Snapshot s) =
-    SortedList.head s.cars
+    List.head s.cars
 
 
 {-| How many laps the leader has completed at this moment.
