@@ -127,7 +127,7 @@ mod Sql.TestSel {
     @Test
     def theClausesValuesComeBeforeTheRests(): Unit \ Assert =
         let statement = Sql.rows(Sql.raw("laps"))
-            |> Sql.filter(Sql.eq(Sql.column("season"), Sql.i32(2025)))
+            |> Sql.filter(_ -> Sql.eq(Sql.column("season"), Sql.i32(2025)))
             |> Sql.map(_ -> Sql.optionalIntOf(
                 Sql.frag("(SELECT off FROM b WHERE k = ?)", Value.Integer(7) :: Nil)))
             |> Sql.toStatement;

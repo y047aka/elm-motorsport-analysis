@@ -37,6 +37,7 @@
 mod Cli.Load.Validation {
 
     use Db.Laps
+    use Db.Schema
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
@@ -83,9 +84,9 @@ mod Cli.Load.Validation {
 
     def sectorSumViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Laps.rows()
-            |> Sql.filter(scope(entry))
-            |> Sql.filter(Sql.ne(sectorSum(), Laps.expr(Laps.columns()#lapTimeMs)))
-            |> Sql.orderBy(Laps.term(Laps.columns()#sourceRow) :: Nil)
+            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+            |> Sql.filter(c -> Sql.ne(sectorSum(), Schema.expr(c#lapTimeMs)))
+            |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
             |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.intOf(Sql.term(sectorSum())), blanks()))
             |> Sql.reading(match (lap, lapTime, sum, blank) ->
                 Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blank)))
@@ -94,7 +95,7 @@ mod Cli.Load.Validation {
     /// The lap's mini-sector times, one row per marker, read off the row the
     /// enclosing query is on.
     def miniSectorTimes(): String =
-        "json_each(" + Laps.table() + "." + Laps.name(Laps.columns()#miniSectorTimeMs) + ") t"
+        "json_each(" + Laps.table() + "." + Schema.name(Laps.columns()#miniSectorTimeMs) + ") t"
 
     def sectorSum(): Sql.Expr[Int32] =
         Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)")
@@ -118,7 +119,7 @@ mod Cli.Load.Validation {
                 where_(entry, Nil) ::
                 Sql.raw(")") :: Nil
             ))
-            |> Sql.filter(Sql.ne(Sql.column("running"), Sql.column("elapsed_ms")))
+            |> Sql.filter(_ -> Sql.ne(Sql.column("running"), Sql.column("elapsed_ms")))
             |> Sql.orderBy(Sql.raw("first_seen") :: Sql.raw("lap_number") :: Nil)
             |> Sql.map(_ -> (lapOf(), Sql.int("running"), Sql.int("elapsed_ms")))
             |> Sql.reading(match (lap, expected, actual) ->
@@ -135,7 +136,7 @@ mod Cli.Load.Validation {
                 where_(entry, Nil) ::
                 Sql.raw(")") :: Nil
             ))
-            |> Sql.filter(Sql.ne(Sql.column("off"), Sql.column("base")))
+            |> Sql.filter(_ -> Sql.ne(Sql.column("off"), Sql.column("base")))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
             |> Sql.map(_ -> (lapOf(), Sql.int("base"), Sql.int("off")))
             |> Sql.reading(match (lap, base, actual) ->
@@ -164,12 +165,12 @@ mod Cli.Load.Validation {
                     + "  FROM " + miniSectorTimes()
                     + "  WHERE t.value IS NULL), '') AS blanks"
                     + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
+                where_(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
                 Sql.raw(")") :: Nil
             ))
-            |> Sql.filter(Sql.column("NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"))
-            |> Sql.filter(Sql.ne(Sql.column("sum_ms"), Sql.column("lap_time_ms")))
-            |> Sql.filter(Sql.every(trackLimitsExclusions()))
+            |> Sql.filter(_ -> Sql.column("NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"))
+            |> Sql.filter(_ -> Sql.ne(Sql.column("sum_ms"), Sql.column("lap_time_ms")))
+            |> Sql.filter(_ -> Sql.every(trackLimitsExclusions()))
             |> Sql.orderBy(Sql.raw("source_row") :: Nil)
             |> Sql.map(_ -> (
                 lapOf(),
@@ -192,12 +193,12 @@ mod Cli.Load.Validation {
                     + ", json_each(" + Laps.table() + ".mini_sector_elapsed_ms) x"
                     + " WHERE") ::
                 where_(entry,
-                    Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorElapsedMs)) ::
+                    Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorElapsedMs)) ::
                     Sql.isNotNull(Sql.column("x.value")) :: Nil) ::
                 Sql.raw("WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
             ))
-            |> Sql.filter(Sql.isNotNull(Sql.column("prev_v")))
-            |> Sql.filter(Sql.lte(Sql.column("v"), Sql.column("prev_v")))
+            |> Sql.filter(_ -> Sql.isNotNull(Sql.column("prev_v")))
+            |> Sql.filter(_ -> Sql.lte(Sql.column("v"), Sql.column("prev_v")))
             |> Sql.orderBy(Sql.raw("source_row") :: Sql.raw("ord") :: Nil)
             |> Sql.map(_ -> (
                 lapOf(),
@@ -216,7 +217,7 @@ mod Cli.Load.Validation {
     // ------------------------------------------------------------------- sql
 
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(entry#season, entry#id)
+        Laps.scope(Laps.columns(), entry#season, entry#id)
 
     /// The round's rows as a fragment, for the rules reading them from inside
     /// a common table expression of their own.

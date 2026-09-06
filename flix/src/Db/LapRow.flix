@@ -2,13 +2,12 @@ mod Db.LapRow {
 
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
+    use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
     use Motorsport.Wec.RawMiniSector
     use Motorsport.Wec.RawSector
     use Motorsport.MiniSector
     use Motorsport.MiniSector.MiniSectorId
-    use Db.Laps
-    use Sql.Sel
     use Util.Duration
     use Util.HourClock
 
@@ -31,10 +30,6 @@ mod Db.LapRow {
         round = String,
         sourceRow = Int32,
         carNumber = String,
-        class = String,
-        carGroup = String,
-        team = String,
-        manufacturer = String,
         driverNumber = Int32,
         driverName = String,
         lapNumber = Int32,
@@ -70,10 +65,6 @@ mod Db.LapRow {
             round = entry#id,
             sourceRow = sourceRow,
             carNumber = rawLap#car#carNumber,
-            class = rawLap#car#class,
-            carGroup = rawLap#car#group,
-            team = rawLap#car#team,
-            manufacturer = rawLap#car#manufacturer,
             driverNumber = rawLap#driver#number,
             driverName = rawLap#driver#name,
             lapNumber = rawLap#lapNumber,
@@ -101,42 +92,9 @@ mod Db.LapRow {
             reading(sector) |> Option.map(Duration.millis)
         ))
 
-    /// A round's laps as the table holds them, a field at a time: each line
-    /// names the column and the field its cell lands in, and a field left out
-    /// is not a `LapRow`.
-    pub def selection(): Sel[LapRow] =
-        let c = Laps.columns();
-        Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
-            |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
-            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
-            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#team, (row, value) -> { +team = value | row })
-            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
-            |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
-            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
-            |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
-            |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
-            |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
-            |> Sql.field(c#crossingFinishLineInPit, (row, value) -> { +crossingFinishLineInPit = value | row })
-            |> Sql.field(c#s1Ms, (row, value) -> { +s1Ms = value | row })
-            |> Sql.field(c#s1Improvement, (row, value) -> { +s1Improvement = value | row })
-            |> Sql.field(c#s2Ms, (row, value) -> { +s2Ms = value | row })
-            |> Sql.field(c#s2Improvement, (row, value) -> { +s2Improvement = value | row })
-            |> Sql.field(c#s3Ms, (row, value) -> { +s3Ms = value | row })
-            |> Sql.field(c#s3Improvement, (row, value) -> { +s3Improvement = value | row })
-            |> Sql.field(c#kph, (row, value) -> { +kph = value | row })
-            |> Sql.field(c#elapsedMs, (row, value) -> { +elapsedMs = value | row })
-            |> Sql.field(c#hourMs, (row, value) -> { +hourMs = value | row })
-            |> Sql.field(c#topSpeed, (row, value) -> { +topSpeed = value | row })
-            |> Sql.field(c#pitTimeMs, (row, value) -> { +pitTimeMs = value | row })
-            |> Sql.field(c#flagAtFl, (row, value) -> { +flagAtFl = value | row })
-            |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
-            |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
-
-    pub def toRawLap(row: LapRow): Result[String, RawLap] =
+    /// The car is the round's rather than the lap's: `laps` holds the number
+    /// and `cars` what the number was.
+    pub def toRawLap(car: RawCar, row: LapRow): Result[String, RawLap] =
         forM(
             lapImprovement <- improvement("LAP_IMPROVEMENT", row#lapImprovement);
             s1Improvement  <- improvement("S1_IMPROVEMENT", row#s1Improvement);
@@ -144,13 +102,7 @@ mod Db.LapRow {
             s3Improvement  <- improvement("S3_IMPROVEMENT", row#s3Improvement);
             flagAtFl       <- flag(row#flagAtFl)
         ) yield {
-            car = {
-                carNumber    = row#carNumber,
-                class        = row#class,
-                group        = row#carGroup,
-                team         = row#team,
-                manufacturer = row#manufacturer
-            },
+            car = car,
             driver = { number = row#driverNumber, name = row#driverName },
             lapNumber = row#lapNumber,
             lapTime = Duration.fromMillis(row#lapTimeMs),

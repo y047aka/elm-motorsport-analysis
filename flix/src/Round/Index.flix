@@ -6,6 +6,7 @@
 mod Round.Index {
 
     use Db.Laps
+    use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.Index
     use Motorsport.Index.Change
@@ -24,7 +25,7 @@ mod Round.Index {
         }
 
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(entry#season, entry#id)
+        Laps.scope(Laps.columns(), entry#season, entry#id)
 
     /// The round's rows as a fragment, for the arms that read them from
     /// inside one of their own.
@@ -37,9 +38,9 @@ mod Round.Index {
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
         Laps.rows()
-            |> Sql.filter(scope(entry))
-            |> Sql.groupBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
-            |> Sql.orderBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+            |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
             |> Sql.reading(match (lap, elapsed) -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.selectAll
@@ -60,7 +61,7 @@ mod Round.Index {
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
-            |> Sql.filter(Sql.column("prev IS NULL OR t * dir < prev"))
+            |> Sql.filter(_ -> Sql.column("prev IS NULL OR t * dir < prev"))
             |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
             |> Sql.map(_ -> (
                 record,
@@ -129,7 +130,7 @@ mod Round.Index {
                 + " FROM " + Laps.table()
                 + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::
-            where_(entry, Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
+            where_(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
         )
 
 }

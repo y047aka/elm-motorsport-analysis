@@ -307,10 +307,13 @@ mod Sql {
         let Rows.Rows(r, columns) = rows;
         Rows.Rows({ ctes = List.append(r#ctes, cte :: Nil) | r }, columns)
 
-    /// What is asked of the rows. Asked twice, both hold.
-    pub def filter(predicate: Expr[Bool], rows: Rows[c]): Rows[c] =
+    /// What is asked of the rows, asked of the columns the source declared:
+    /// a predicate is built from what `map` would be handed, so a column of
+    /// another source is not one this query can be scoped by. Asked twice,
+    /// both hold.
+    pub def filter(predicate: c -> Expr[Bool], rows: Rows[c]): Rows[c] =
         let Rows.Rows(r, columns) = rows;
-        Rows.Rows({ filters = List.append(r#filters, predicate :: Nil) | r }, columns)
+        Rows.Rows({ filters = List.append(r#filters, predicate(columns) :: Nil) | r }, columns)
 
     pub def groupBy(terms: List[Frag], rows: Rows[c]): Rows[c] =
         let Rows.Rows(r, columns) = rows;
@@ -385,10 +388,12 @@ mod Sql {
     /// ===== STATEMENTS =====
     ///
 
-    /// A key a table declares over columns of its own.
-    pub enum Key {
-        case Primary(List[String])
-        case Unique(List[String])
+    /// A key a table declares over columns of its own -- the columns
+    /// themselves rather than their names, so a key cannot name one the table
+    /// has not declared.
+    pub enum Key[c] {
+        case Primary(List[c])
+        case Unique(List[c])
     }
 
     pub def dropTableIfExists(table: String): String =
@@ -397,7 +402,11 @@ mod Sql {
     /// A column is its name and the type it takes in the table, so a table
     /// that declares its columns has declared its schema. What a column binds
     /// is not read here.
-    pub def createTable(table: String, columns: List[{name = String, sqlType = String | r}], keys: List[Key]): String =
+    pub def createTable(
+        table: String,
+        columns: List[{name = String, sqlType = String | r}],
+        keys: List[Key[{name = String, sqlType = String | r}]]
+    ): String =
         let declared = List.append(
             columns |> List.map(c -> "${c#name} ${c#sqlType}"),
             keys |> List.map(keyText)
@@ -406,11 +415,14 @@ mod Sql {
             + (declared |> List.map(d -> "  ${d}") |> List.join(",\n"))
             + "\n)"
 
-    def keyText(key: Key): String =
+    def keyText(key: Key[{name = String | r}]): String =
         match key {
-            case Key.Primary(names) => "PRIMARY KEY (" + List.join(", ", names) + ")"
-            case Key.Unique(names)  => "UNIQUE (" + List.join(", ", names) + ")"
+            case Key.Primary(over) => "PRIMARY KEY (" + names(over) + ")"
+            case Key.Unique(over)  => "UNIQUE (" + names(over) + ")"
         }
+
+    def names(over: List[{name = String | r}]): String =
+        over |> List.map(c -> c#name) |> List.join(", ")
 
     /// The statement and the rows bound to it, both drawn from the columns in
     /// the order they are given: a row cannot come to be bound in an order the

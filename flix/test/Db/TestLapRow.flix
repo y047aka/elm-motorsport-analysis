@@ -149,8 +149,7 @@ mod Db.TestLapRow {
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
-        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
-        Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
+        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("1") ::
         Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("0") ::
         Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
         Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
@@ -158,7 +157,7 @@ mod Db.TestLapRow {
 
     @Test
     def theRowIsReadInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        match Sql.decode(LapRow.selection(), cells()) {
+        match Sql.decode(Laps.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
                 Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
@@ -167,18 +166,20 @@ mod Db.TestLapRow {
     @Test
     def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
         let withMiniSectors = List.append(
-            List.take(26, cells()),
+            List.take(22, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
-        match Sql.decode(LapRow.selection(), withMiniSectors) {
+        match Sql.decode(Laps.selection(), withMiniSectors) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) => Assert.assertTrue(row#miniSectorTimeMs == Some(Some(20708) :: None :: Nil))
         }
 
-    /// The table's keys name columns, and the schema names them again where
-    /// it declares the table.
+    /// A key is declared columns rather than their names, so the type is what
+    /// says it names ones the table has. What the type cannot say is that
+    /// `all` lists them: that ordering is restated by hand, and a column left
+    /// out of it would be a key over one the `CREATE TABLE` never declares.
     @Test
-    def theKeysNameColumnsTheTableHas(): Unit \ Assert =
+    def theKeysNameColumnsTheTableDeclares(): Unit \ Assert =
         let declared = Db.Laps.columnNames();
         let named = List.append(Laps.primaryKey(), Laps.sourceKey())
             |> List.map(c -> c#name);
@@ -194,7 +195,7 @@ mod Db.TestLapRow {
     @Test
     def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
         Assert.assertTrue(
-            Sql.toSql(Sql.clause(LapRow.selection()))
+            Sql.toSql(Sql.clause(Laps.selection()))
                 == ("SELECT " + List.join(", ", Db.Laps.columnNames()), Nil)
         )
 
@@ -203,7 +204,7 @@ mod Db.TestLapRow {
     def aRowMakesTheLapItWasMadeFrom(): Unit \ Assert =
         let rendered = lap -> Util.Json.Encode.Extra.renderOnOneLine(Wec.toJson(lap));
         let roundTrip = lap ->
-            LapRow.toRawLap(LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
+            LapRow.toRawLap(lap#car, LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
         Assert.assertTrue(roundTrip(plainLap()) == Ok(rendered(plainLap())));
         Assert.assertTrue(roundTrip(pitLap()) == Ok(rendered(pitLap())));
         Assert.assertTrue(roundTrip(miniSectorLap()) == Ok(rendered(miniSectorLap())))

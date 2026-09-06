@@ -11,8 +11,8 @@ SQLite → HTTP or a JSON export → Elm visualization.
 - **`/flix`** — written in Flix, and two things rather than one: the CLI that
   moves CSV through SQLite into JSON/JSONL, and the server that answers
   `/api` out of the same rows. `flix/README.md` describes it — the server,
-  the `laps` table, and the `Db` and `Sql` those two are reached through —
-  and is the thing to read before changing anything under `/flix`.
+  the `laps` and `cars` tables, and the `Db` and `Sql` those two are reached
+  through — and is the thing to read before changing anything under `/flix`.
 
 There is no manifest at the repository root; the flake is what ties the three
 together.
@@ -47,11 +47,11 @@ prefixes, and which one says what is being run rather than what is being built:
 
 `.#cli-run` takes the directory holding the season directories and converts
 every round `Motorsport.Calendar` lists, in two stages: the CSV goes into the
-`laps` table, and a round's summary `.json`, its laps `.jsonl` one lap per line,
-and `index.json` beside them are written back out of the rows. **A new round is
-added to `Motorsport.Calendar` first** — the run converts nothing the calendar
-does not list, reports any CSV no round names, and fails any round whose CSV is
-missing.
+`laps` and `cars` tables, and a round's summary `.json`, its laps `.jsonl` one
+lap per line, and `index.json` beside them are written back out of the rows.
+**A new round is added to `Motorsport.Calendar` first** — the run converts
+nothing the calendar does not list, reports any CSV no round names, and fails
+any round whose CSV is missing.
 
 Every round is loaded and one is written. `--export-only <season>/<id>` narrows
 the writing stage alone, the flake passes `2025/le_mans_24h`, and a name no
@@ -66,8 +66,9 @@ change to a renderer costs no decoding. **A round no run has loaded fails the
 export** rather than being written out as a race that never ran — the rows read
 back as one, which is the one thing they cannot say for themselves — and the
 files it would have replaced are left alone. `/api` answers such a round with a
-404 for the same reason, off the same reading: `Round.Laps.loaded` is where the
-two of them ask.
+404 for the same reason, off the same reading: `Round.loaded` is where the two
+of them ask, and it asks both tables — a round with laps and no cars is half in
+the database rather than loaded.
 
 Both stages compute in SQLite, and so does the server, so all three need one:
 `--database <jdbc url>` names it, `DATABASE_URL` says the same to every run made
@@ -267,8 +268,8 @@ moment of it).
 ### The Flix side
 
 `flix/README.md` is the other half of the trip: the server that answers `/api`,
-the `laps` table it reads a round out of, and the `Db` effect and `Sql` query
-builder the two stages reach it through.
+the `laps` and `cars` tables it reads a round out of, and the `Db` effect and
+`Sql` query builder the two stages reach it through.
 
 ## Comments and documentation
 

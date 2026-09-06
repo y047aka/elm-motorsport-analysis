@@ -29,11 +29,14 @@ loads it again, so a 200 carries a CRC32 `ETag` that a reload revalidates into
 a 304, and a body goes out gzipped where the request accepts it — Le Mans's
 laps are 24MB, and 3.4MB on the wire.
 
-`Round` is one round on its way out of the table, both halves of the trip:
-`Round.Summary`, `Round.Index` and `Round.Laps` take an `Entry` and the `Db`
-effect and read it; `Round.Render` takes what they returned, is pure, and turns
-it into the bytes that go out. None of the four knows whether a file or a
-request is waiting at the other end.
+`Round` is one round on its way out of the tables, both halves of the trip:
+`Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
+and the `Db` effect and read it; `Round.Render` takes what they returned, is
+pure, and turns it into the bytes that go out. None of the five knows whether a
+file or a request is waiting at the other end. `Round.loaded` is what both
+callers ask first, and it asks both tables: laps without cars is a round half
+in the database, and answered off the laps alone it would be a race whose grid
+was empty.
 
 `Server.Api` decides nothing about a round, then, and renders none of one
 either: it makes the same calls `Cli.Export` makes, so what is served and what
@@ -51,41 +54,63 @@ bundle's own calendar are built on one path being the other with
 only module of that name: `Cli.Export.urlRoot` and `Server.Api.urlRoot` are
 what the two sides hand it.
 
-## The `laps` table
+## The `laps` and `cars` tables
 
-The run loads every round it converts into one flat `laps` table, dropped and
-rebuilt each time as the JSON files are rewritten each time. Flat is
-a decision, not an omission: `class`, `team` and `manufacturer` never vary within
-a `(season, round, car_number)` across the whole archive, so the 579 entries they
-describe can be read back as a `VIEW` over the table, and normalising them out
-would buy about 16% of its size in exchange for resolving ids on the way in.
-A column takes the type its Flix value already has — a `Duration` is the
-milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave — so the
-load parses nothing the decoder did not. Le Mans's mini-sectors are two JSON
-array columns rather than thirty more: only one round in the archive has them.
-They hold the fifteen of `Motorsport.MiniSector.all()` in track order, so a
-subscript is a place on the circuit and a null is a marker the feed left blank.
-`json_each` is what a query reads one back with, one row per marker, keyed from
-zero where `Motorsport.MiniSector.positionOf` counts from one. That is the shape
-a query wants rather than the shape the JSON output has, which is the whole
-reason they are not the object `Motorsport.Wec` writes.
+The run loads every round it converts into two tables, dropped and rebuilt each
+time as the JSON files are rewritten each time. `laps` is one lap of one car;
+`cars` is one car of one round, holding the `class`, `car_group`, `team` and
+`manufacturer` the feed repeats on every lap that car ran. The archive is what
+says they can be: no `(season, round, car_number)` in its 130,017 laps is
+described two ways, and the 579 cars they name are 4.7MB of the 26.7MB the one
+flat table took. A lap carries the number and nothing else about its car, which
+is also all the JSONL writes out, so the four columns are no longer read back
+20,182 times a round to be dropped.
 
-Four readers of the table. `Cli.Load.Validation` runs its five rules as
+Where the file first mentioned a car is not in `cars`: it is `MIN(source_row)`
+over the round's laps, which is what `Round.Summary` orders the grid by. What
+`cars` holds is what the file said, and nothing counted off it.
+
+What one row per car cannot hold is a file that describes one car two ways.
+`Db.CarRow` keeps the first mention and the second reaches no column, so
+`Db.CarRow.disagreements` is read before the insert and `Cli.Load` prints what
+it found: said there or nowhere, since no query over the tables can find it
+afterwards. It has not happened within a round in the archive; between rounds it
+has, which is why `cars` is keyed by round and not by season -- 2026's Le Mans
+file spells a manufacturer `Mercedes-AMG` where the season's other rounds spell
+it `Mercedes`.
+
+Everything else stays as it was. A column takes the type its Flix value already
+has -- a `Duration` is the milliseconds it holds, `kph` and `topSpeed` stay the
+text the feed gave -- so the load parses nothing the decoder did not. Le Mans's
+mini-sectors are two JSON array columns rather than thirty more: only one round
+in the archive has them. They hold the fifteen of `Motorsport.MiniSector.all()`
+in track order, so a subscript is a place on the circuit and a null is a marker
+the feed left blank. `json_each` is what a query reads one back with, one row
+per marker, keyed from zero where `Motorsport.MiniSector.positionOf` counts from
+one. That is the shape a query wants rather than the shape the JSON output has,
+which is the whole reason they are not the object `Motorsport.Wec` writes.
+
+Five readers of the tables. `Cli.Load.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what those columns are for. `Round.Summary`
-reads the round's summary the same way. `Round.Index` reads the two indices a
-race is read at a moment through — when the lap counter went up, and when each
-of the twenty records changed hands — which are a walk of every lap of the round
+reads the round's summary the same way, joining `cars` to the laps its grid order
+and its first lap come from. `Round.Index` reads the two indices a
+race is read at a moment through -- when the lap counter went up, and when each
+of the twenty records changed hands -- which are a walk of every lap of the round
 each: a `GROUP BY` for the first, and for the second one window over every
-record's readings stacked into a single column. `Round.Laps` reads a whole round back,
-`Db.LapRow.selection` and `toRawLap` being the reverse of the load;
-`Cli.Export` and `Server.Api` are both rendered from what it,
-`Round.Summary` and `Round.Index` return, so the files written and the round
-served are the same bytes rather than two renderings that agree. The indices
-ride in the summary rather than in a file of their own, so a round is still two
-URLs. Nothing renders a round from the
-laps a CSV decoded to: `Cli.Load` sends the rows and stops there.
+record's readings stacked into a single column. `Round.Laps` reads a whole round
+back, `Db.Laps.selection` and `Db.LapRow.toRawLap` being the reverse of the
+load, and
+`Round.Cars` hands it the round's cars keyed by number -- read once each rather
+than once a lap, which is the reading the split bought. A car with laps and no
+row in `cars` is a round loaded by halves, and is said so rather than written out
+as a car with no name. `Cli.Export` and `Server.Api` are both rendered from what
+those readers return, so the files written and the round served are the same
+bytes rather than two renderings that agree. The indices ride in the summary
+rather than in a file of their own, so a round is still two URLs. Nothing renders
+a round from the laps a CSV decoded to: `Cli.Load` sends the rows and stops
+there.
 
 What moved into SQL is the counting, not the deciding. `Motorsport.Metadata` and
 `Motorsport.Track` still choose the grid's basis, break its ties, and divide the
@@ -96,10 +121,10 @@ off its laps was `O(laps x cars)` in Flix, which for one Le Mans is 20,182 laps
 against 62 cars, and `GROUP BY` is not.
 
 `source_row` carries the position the file listed the lap in, which nothing else
-in the table recovers. It is what makes the table an image of the CSV rather than
+in the tables recovers. It is what makes `laps` an image of the CSV rather than
 a set of it, and every reading that would move off Flix needs it: the validator's
-baseline is the file's first row, and a car's drivers are in the order the file
-first showed them.
+baseline is the file's first row, a car's drivers are in the order the file
+first showed them, and so is the grid.
 
 ## `Db`, the effect
 
@@ -108,15 +133,15 @@ send can be read back without a server: `Db.runRecording` keeps the statements
 and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
 only file that imports `java.sql`. The effect names no table and no column, so
 `Db`, `Db.Jdbc` and `Sql` are together a database and a query language and
-nothing of this application; `Db.Laps` and `Db.LapRow` are the whole of what
-the application tells them about itself, which is the same line Acadia draws
-between `Transaction`, `Rows` and a `Table`.
+nothing of this application; `Db.Laps`, `Db.Cars` and the two row types beside
+them are the whole of what the application tells them about itself, which is
+the same line Acadia draws between `Transaction`, `Rows` and a `Table`.
 
 Nothing a statement sends is kept until `Db.commit`, and `Db.transact` is where
 that is decided: it commits what its caller sent when the caller answers `Ok`
 and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the
-rebuild of the table is a single transaction -- the `DROP TABLE` it opens with
-lands only if the run reaches its end, and a run that is killed partway leaves
+rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens
+with land only if the run reaches its end, and a run that is killed partway leaves
 the rounds it was rebuilding from. Measured on the archive: the same kill takes
 it from fourteen rounds to three without that boundary, and leaves all fourteen
 with it.
@@ -134,23 +159,29 @@ against `org.xerial:sqlite-jdbc`'s `maven-metadata.xml`. Its version is the
 SQLite it carries with a build number after it, so the pin says which engine
 the queries run on: `3.53.4.0` is SQLite 3.53.4.
 
-## `Db.Laps`, the declaration
+## `Db.Schema`, and the two declarations
 
-`Db.Laps.columns` declares each column of the table once -- its name, the type
-it takes there, how a row binds it and how it reads back -- as one record, and
-`Db.Laps.all`, the DDL, the insert, `Db.Laps.values` and what a projection
-picks from are all views of it. The table's name and its two keys are declared
-there too, so the `CREATE TABLE` names no column the record does not have, and
-a query reads `Db.Laps.table` rather than spelling it.
+`Db.Schema` is a table declared as its columns, and `Db.Laps` and `Db.Cars` are
+each one such declaration: a column's name, the type it takes there, how a row
+binds it and how it reads back are one record, and a table's `all`, its DDL,
+its insert, its `values` and what a projection picks from are all views of it.
+A `Column` carries the row type it binds as well as the type it reads back, so
+a column of one table cannot be bound from a row of the other. The table's name
+and its keys are declared there too, so the `CREATE TABLE` names no column the
+declaration does not have, and a query reads `Db.Laps.table` rather than
+spelling it.
 
-What it does not reach is the ordering: `Db.Laps.all` and
-`Db.LapRow.selection` name the same columns twice, which is the one pairing no
-compiler sees and `Db.TestLapRow` asserts. Flix cannot read a record's fields,
-so `all` restates each name the declaration already has; only the `bind`
-beside it is checked against `Db.LapRow`. A column drawn from the declaration
-is the checked way to name one, and `Round.Index.lapCompletions` is the shape
-of that -- but a query reading from a common table expression cannot use it,
-since the expression's own `SELECT` is text and would not follow a rename.
+What it does not reach is the ordering: `all` and `selection` name the same
+columns twice, which is the one pairing no compiler sees and `Db.TestLapRow`
+and `Db.TestCarRow` assert. Both are declared here rather than beside the row
+they build, so the two orderings are read in one file; `Db.LapRow` and
+`Db.CarRow` are the feed's side of the trip and name neither `Db` nor `Sql`.
+Flix cannot read a record's fields, so `all` restates each name the
+declaration already has; only the `bind` beside it is checked against the row
+type. A column drawn from the declaration is the checked way to name one, and
+`Round.Index.lapCompletions` is the shape of that
+-- but a query reading from a common table expression cannot use it, since the
+expression's own `SELECT` is text and would not follow a rename.
 
 ## `Sql`, the query language
 
@@ -165,24 +196,34 @@ a column is named once. What a query projects is a
 `Sql.reading`.
 
 A row read as a record rather than a tuple is `Sql.record` extended a field at
-a time with `Sql.field`, which is what `Db.LapRow.selection` is: each line
+a time with `Sql.field`, which is what `Db.Laps.selection` is: each line
 names a column and the field its cell lands in, so the two cannot be paired
 wrongly, a field left out is not a `LapRow`, and a field named twice does not
 typecheck. It is also the only form a row of more than eight has, an instance
 head being written per arity. A curried constructor with the readings piped
 into it in turn holds none of that, and the type checker cannot afford it
-either: twenty-eight of those need a 2m stack where the record needs 512k.
+either: two dozen of those need a 2m stack where the record needs 512k.
 
 A value a query compares against is bound rather than written into it: a
 `Sql.Frag` is a piece of SQL and the values its `?` placeholders take, and
 concatenating two pieces carries both, so a value cannot come to sit under
 another piece's placeholder.
 
-What a query asks of its rows is a `Sql.Expr[Bool]`, built by comparing a
-`Db.Laps.Columns` column against a value of the type that column takes.
-`Db.Laps.scope` -- the pair naming a round, which every reading of the table
-is scoped by -- is one, and each reader ANDs its own onto it. The type is what
-carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
+What a query asks of its rows is a `Sql.Expr[Bool]`, and `filter` takes it of
+the columns the source declared rather than on its own: the predicate is a
+function of what `map` would be handed, as Acadia's `filter` is of the row, so
+a column of another source is not one this query can be scoped by.
+`Db.Laps.scope` and `Db.Cars.scope` -- the pair naming a round, which every
+reading of either table is scoped by -- take those columns, and a reader ANDs
+its own onto them. Both tables carry `season` and `round` alike, so a scope
+built from the wrong one would bind to whichever side of a join happened to
+have them, and to the wrong side without a word where only one does; the two
+records do not unify, so it does not compile. What a query builds itself
+cannot reach a `WHERE` written into a common table expression, which is text
+and takes the table's own columns. Both name the table they are of, and a
+source that renames it says so itself: `Schema.scopeOf`, and what
+`Round.Summary.carBuilds` hands its `c`. The type is what carries
+nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
 column list already knows and no longer a thing to notice. A column a common
 table expression made up is `Sql.column`, named rather than drawn, and its type
@@ -208,9 +249,13 @@ So is what the load writes. `Sql.createTable` takes the columns and the keys
 over them, `Sql.dropTableIfExists` the table, and `Sql.insertRows` the columns
 and the rows -- and that last one hands back the statement and each row bound
 in the order the statement names its columns, both read off the one list, so a
-row cannot come to be bound in an order the statement does not name.
-`Db.Laps` declares; `Sql` renders. Neither the DDL nor the insert is written
-out in this repository any more.
+row cannot come to be bound in an order the statement does not name. A
+`Sql.Key` is declared columns rather than their names, as Acadia's
+`primary = .id` is the field rather than a string, so a key over a column the
+table has not declared does not typecheck. What it does not reach is `all`:
+that ordering is restated by hand, and `Db.TestLapRow` is what says the key's
+columns are in it. `Db.Schema` declares; `Sql` renders. Neither the DDL nor
+the insert is written out in this repository any more.
 
 What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text
@@ -221,15 +266,15 @@ that cannot be wrong -- the table itself, and the table read alongside a
 columns it selects, which is what `Round.Summary.driverNames` does with two of
 them. A source that has none is `Sql.column` as before.
 
-`Round.Summary.carBuilds` joins two of those, and what its sides have is said
-the same way: `Db.Laps.qualified` is a column of the table under the name a
-source gives it, so `c.car_number` and `l1.elapsed_ms` are the table's columns
-read and compared as that source's, and the join's `ON` is a comparison of two
-of them rather than text. What a `LEFT JOIN` does to the far side is
+`Round.Summary.carBuilds` joins `cars` to two of those, and what its sides have
+is said the same way: `Db.Schema.qualified` is a column of a table under the
+name a source gives it, so `c.car_number` and `l1.elapsed_ms` are declared
+columns read and compared as that source's, and the join's `ON` is a comparison
+of two of them rather than text. What a `LEFT JOIN` does to the far side is
 `Sql.orNull`, which reads a null cell as nothing rather than as a reading that
 failed -- needed for a column the table has of every row, and not for one that
 is null in its own right. The records naming each side are still written out,
-Flix having no way to carry the twenty-eight through a rename. The window
+Flix having no way to carry a table's columns through a rename. The window
 clauses -- `ROW_NUMBER`, `LAG`, `FIRST_VALUE`, `WINDOW w AS` -- are text.
 
 `Sql` is one file. A Flix module cannot span two of them, so splitting it
@@ -252,11 +297,15 @@ paying for the same split.
 - **The type checker's stack** — it recurses once per expression, and the
   thread it runs on gets a smaller stack on Linux than on macOS, so a chain
   deep enough compiles here and overflows in CI. `flix` is a jar, so the check
-  is to run it with the stack cut down: `java -Xss768k -jar <flix.jar> build`
-  from `flix/`. 768k is where the tree as it stands builds and 640k where it
-  does not, so a change that raises that number is the one to look at. A
-  reading of many columns is what comes closest, which is one of the reasons
-  `Db.LapRow.selection` is a record extended a field at a time.
+  is to run it with the stack cut down: `java -Xss704k -jar <flix.jar> build`
+  from `flix/`. 704k is where the tree as it stands builds and 672k where it
+  does not, so a change that raises that number is the one to look at. What
+  sets it is `Motorsport.Wec.decoder`, whose sixteen fields are a curried
+  lambda, a record literal and a pipeline apiece: stubbing it out takes the
+  build under 576k. Splitting `cars` out of `laps` did not move the number, a
+  reading of many columns being the runner-up rather than the ceiling, and it
+  is one of the reasons `Db.Laps.selection` is a record extended a field at
+  a time.
 - **The database** — a test drives JDBC rather than a handler standing in for
   it, against the in-memory database `Round.TestSupport.url` names: a
   connection of its own per test, so what one loads is never the archive a

@@ -1,9 +1,11 @@
 mod Cli.Load {
 
+    use Db.Cars
     use Db.Laps
 
     use Sys.Console
     use Util.Files
+    use Db.CarRow
     use Db.LapRow
     use Cli.Errors.CliError
     use Cli.FileTask
@@ -18,12 +20,19 @@ mod Cli.Load {
         errors    = Int32
     }
 
-    /// The table is dropped and rebuilt, so the run is one transaction: a run
-    /// that dies partway through leaves the rounds it was rebuilding from.
+    /// What the round put in each table, which is what the database took
+    /// rather than what the file decoded to.
+    type alias Loaded = {
+        cars = Int32,
+        laps = Int32
+    }
+
+    /// The tables are dropped and rebuilt, so the run is one transaction: a
+    /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, Db} =
-        let rebuild = Db.transact(() -> match Laps.create() {
+        let rebuild = Db.transact(() -> match createTables() {
             case Err(e) => Err(e)
             case Ok(()) => Ok(convertRounds(root))
         });
@@ -35,6 +44,14 @@ mod Cli.Load {
                 code
         }
 
+    /// Belongs before the first round: a schema this database will not take
+    /// would otherwise be reported once per round, in the same words.
+    def createTables(): Result[String, Unit] \ Db =
+        forM(
+            _ <- Cars.create();
+            _ <- Laps.create()
+        ) yield ()
+
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
@@ -43,8 +60,8 @@ mod Cli.Load {
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
             (acc, task) -> match processFile(task) {
-                case Ok(loadedRows) =>
-                    Console.println("${FileTask.label(task)}: Rows -> ${loadedRows} loaded");
+                case Ok(loaded) =>
+                    Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps, ${loaded#cars} cars loaded");
                     { processed = acc#processed + 1 | acc }
                 case Err(e) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
@@ -70,27 +87,44 @@ mod Cli.Load {
                     )
         }
 
-    def processFile(task: FileTask.FileTask): Result[CliError, Int32] \ {IO, Console, Db} =
+    def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, Db} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
+            |> Result.flatMap(reportCarDisagreements(task))
             |> Result.flatMap(load(task))
             |> Result.flatMap(reportViolations(task))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Int32] \ Db =
-        rawLaps ->
-            Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
-                |> Result.mapErr(CliError.Database)
+    /// `Db.CarRow` keeps a car's first description and the second reaches no
+    /// column, so a file that describes one car two ways is said here or
+    /// nowhere. It is a reading of the file rather than of the rows, which is
+    /// why it is a stage of its own before the one that sends them.
+    def reportCarDisagreements(task: FileTask.FileTask): List[RawLap] -> Result[CliError, List[RawLap]] \ Console =
+        rawLaps -> {
+            CarRow.disagreements(rawLaps)
+                |> List.forEach(d -> Console.eprintln(
+                    "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
+                        + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
+            Ok(rawLaps)
+        }
 
-    def reportViolations(task: FileTask.FileTask): Int32 -> Result[CliError, Int32] \ {Console, Db} =
-        loadedRows ->
+    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ Db =
+        rawLaps ->
+            let loaded = forM(
+                cars <- Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
+                laps <- Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
+            ) yield { cars = cars, laps = laps };
+            loaded |> Result.mapErr(CliError.Database)
+
+    def reportViolations(task: FileTask.FileTask): Loaded -> Result[CliError, Loaded] \ {Console, Db} =
+        loaded ->
             Validation.validate(task#entry)
                 |> Result.mapErr(CliError.Database)
                 |> Result.map(messages -> {
                     messages |> List.forEach(Console.eprintln);
-                    loadedRows
+                    loaded
                 })
 
 }
