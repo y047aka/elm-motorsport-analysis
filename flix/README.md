@@ -378,3 +378,43 @@ paying for the same split.
   kept out of the body. The two halves of that are otherwise only met apart --
   `Db.Jdbc.classify` reads the code, and a round read over a real database
   never fails.
+
+## What sqlfx does and this does not
+
+[sqlfx](https://github.com/ababup1192/sqlfx) is a Flix database library for
+PostgreSQL, written over the same months as this and arriving at the same base:
+`SqlRead` and `SqlWrite` split apart, `DbRead` and `DbWrite` as the aliases
+over them, a failure carried as an effect and turned into a value once at a
+boundary, statements answering with a `Result` for the reason above, and
+handlers swapped to run the same code without a database. Where it goes the
+other way is the SQL itself, which it writes rather than builds: raw statements
+in `.q` files, checked against a migration's DDL and turned into typed
+functions by a generator. Its author's account of it is
+[the article](https://zenn.dev/ababup1192/articles/0c29f21fe1ab8f).
+
+Three things it has that are not here, none of them adopted, none of them
+resting on which way the SQL is written:
+
+- **A marker on raw SQL.** `Sql.raw`, `Sql.column` and a reading of a written
+  expression are the holes in what the builder checks, and a function reaching
+  through one says nothing about it -- `Round.Index` is written almost entirely
+  through them. sqlfx gives a raw statement an effect of its own, `RawSql`,
+  which travels to whoever allows it, so how far unchecked SQL reaches is a
+  question the type checker answers rather than a grep.
+- **A read handler answering with rows.** `Db.runRecording` answers a read with
+  the error that nothing was sent, so a reading is driven either over a real
+  database or, as `Sql.TestSel` does, by handing a row to the reading alone. A
+  handler taking the rows to answer with would put a query and its reading under
+  one test without a database.
+- **A refusal that says whether to send it again.** `Db.Error.Busy` is that
+  refusal and nothing re-sends what it refused: the server answers 503 and the
+  caller is told. sqlfx keeps its transient failures in an effect of their own
+  and retries a transaction against it. One run writing to one file makes the
+  case thin here -- but the kind is already read for the status code, and a
+  retry would be read off the same place.
+
+The rest of it is PostgreSQL's, and does not carry: sqlstate read down to the
+constraint name, a generator turning a DDL's named constraints into an enum a
+`match` must cover, a connection pool, forward-only migrations. A single file
+rebuilt from CSV each run has no use for the last two, and SQLite's driver does
+not answer the first.
