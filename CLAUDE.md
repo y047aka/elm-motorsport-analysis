@@ -104,6 +104,11 @@ path beside the jar rather than bundled in it.
 
 `/update-deps [npm|elm|rust|nix]` (Claude skill) audits and updates dependencies.
 
+`flix` (Claude skill) carries what the compiler does rather than what the code
+is: the errors this tree has actually produced, what each one meant, and how a
+change is verified cold and against CI's smaller stack. Reach for it before
+diagnosing a Flix build failure by reading code.
+
 ## Architecture
 
 **`/app/src/`** — hand-written multi-page SPA on `Browser.application`
