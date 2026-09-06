@@ -106,7 +106,8 @@ mod Round.Summary {
                 ),
                 { car = car, lap1 = lap1 }
             )
-            |> Sql.filter(Schema.scope(car#season, car#round, entry#season, entry#id))
+            |> Sql.filter(Schema.scopeOf("c", Cars.columns()#season, Cars.columns()#round,
+                entry#season, entry#id))
             |> Sql.using(Sql.frags(
                 Sql.raw("f AS (SELECT car_number, MIN(source_row) AS first_seen"
                     + " FROM " + Laps.table() + " WHERE") ::
@@ -135,8 +136,6 @@ mod Round.Summary {
 
     /// The round's cars under the name the join gives that side.
     def carColumns(): {
-        season = Column[CarRow, Int32],
-        round = Column[CarRow, String],
         carNumber = Column[CarRow, String],
         class = Column[CarRow, String],
         carGroup = Column[CarRow, String],
@@ -145,8 +144,6 @@ mod Round.Summary {
     } =
         let c = Cars.columns();
         {
-            season       = Schema.qualified("c", c#season),
-            round        = Schema.qualified("c", c#round),
             carNumber    = Schema.qualified("c", c#carNumber),
             class        = Schema.qualified("c", c#carClass),
             carGroup     = Schema.qualified("c", c#carGroup),

@@ -71,7 +71,7 @@ mod Db.Cars {
 
     pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
         let c = columns();
-        Schema.scope(c#season, c#round, inSeason, named)
+        Schema.scopeOf(table(), c#season, c#round, inSeason, named)
 
     pub def createTable(): String =
         Sql.createTable(table(), all(), keys())

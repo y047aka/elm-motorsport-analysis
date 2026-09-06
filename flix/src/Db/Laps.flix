@@ -145,7 +145,7 @@ mod Db.Laps {
     /// and the pair is what names one.
     pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
         let c = columns();
-        Schema.scope(c#season, c#round, inSeason, named)
+        Schema.scopeOf(table(), c#season, c#round, inSeason, named)
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
     /// and which is therefore where the round's start time is written.

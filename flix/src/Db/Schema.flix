@@ -62,17 +62,23 @@ mod Db.Schema {
     pub def columnNames(these: List[Bound[r]]): List[String] =
         these |> List.map(c -> c#name)
 
-    /// The rows of one round, which every reading of either table is scoped
-    /// by.
-    pub def scope(
+    /// The rows of one round as the named source has them, which every
+    /// reading of either table is scoped by.
+    ///
+    /// Both tables carry `season` and `round`, so a scope over bare column
+    /// names binds to whichever side of a join happens to have them -- to the
+    /// wrong side silently where only one does. Naming the source makes that
+    /// a query the database refuses instead.
+    pub def scopeOf(
+        source: String,
         season: Column[r, Int32],
         round: Column[r, String],
         inSeason: Int32,
         named: String
     ): Sql.Expr[Bool] =
         Sql.every(
-            Sql.eq(expr(season), Sql.i32(inSeason)) ::
-            Sql.eq(expr(round), Sql.str(named)) :: Nil
+            Sql.eq(expr(qualified(source, season)), Sql.i32(inSeason)) ::
+            Sql.eq(expr(qualified(source, round)), Sql.str(named)) :: Nil
         )
 
     // ------------------------------------------------------------ the table

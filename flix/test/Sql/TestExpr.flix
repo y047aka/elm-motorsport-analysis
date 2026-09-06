@@ -1,5 +1,6 @@
 mod Sql.TestExpr {
 
+    use Db.Cars
     use Db.Laps
     use Db.Schema
     use Db.Value
@@ -50,13 +51,30 @@ mod Sql.TestExpr {
         );
         Assert.assertTrue(Sql.decode(Schema.read(lap1), Some("12") :: Nil) == Ok("12"))
 
-    /// The pair that names a round, which every reading of the table is
-    /// scoped by.
+    /// The pair that names a round, which every reading of either table is
+    /// scoped by. Both tables have `season` and `round`, so the scope names
+    /// the source it means: bare, it would bind to whichever side of a join
+    /// happened to carry them.
     @Test
-    def theScopeBindsTheSeasonAndTheRoundsName(): Unit \ Assert =
+    def theScopeBindsTheSeasonAndTheRoundsNameOfTheTableItIsOf(): Unit \ Assert =
         Assert.assertTrue(Sql.toSql(Sql.term(Laps.scope(2025, "le_mans_24h"))) == (
-            "season = ? AND round = ?",
+            "laps.season = ? AND laps.round = ?",
+            Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
+        ));
+        Assert.assertTrue(Sql.toSql(Sql.term(Cars.scope(2025, "le_mans_24h"))) == (
+            "cars.season = ? AND cars.round = ?",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ))
+
+    /// A source that renames the table names itself, which is what a join's
+    /// side is.
+    @Test
+    def aScopeOfARenamedSourceNamesTheRename(): Unit \ Assert =
+        let c = Cars.columns();
+        Assert.assertTrue(
+            Sql.toSql(Sql.term(Schema.scopeOf("c", c#season, c#round, 2025, "le_mans_24h")))
+                == ("c.season = ? AND c.round = ?",
+                    Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil)
+        )
 
 }

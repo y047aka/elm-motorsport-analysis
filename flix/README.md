@@ -209,8 +209,12 @@ What a query asks of its rows is a `Sql.Expr[Bool]`, built by comparing a
 declared column against a value of the type that column takes.
 `Db.Laps.scope` and `Db.Cars.scope` -- the pair naming a round, which every
 reading of either table is scoped by -- are one each, and a reader ANDs its own
-onto them. The type is what
-carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
+onto them. Both name the table they are of: the two tables carry `season` and
+`round` alike, so a scope over bare names would bind to whichever side of a
+join happened to have them, and to the wrong side without a word where only
+one does. A source that renames the table says so itself, which is
+`Schema.scopeOf` and what `Round.Summary.carBuilds` hands its `c`. The type is
+what carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
 column list already knows and no longer a thing to notice. A column a common
 table expression made up is `Sql.column`, named rather than drawn, and its type
