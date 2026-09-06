@@ -1,6 +1,6 @@
 module Motorsport.Widget.Leaderboard exposing
     ( stringColumn, intColumn, floatColumn
-    , Model, initialSort
+    , Model, init
     , Msg, update
     , customColumn, veryCustomColumn
     , sectorTimeColumn, bestTimeColumn
@@ -25,7 +25,7 @@ module Motorsport.Widget.Leaderboard exposing
 
 # Model
 
-@docs Model, initialSort
+@docs Model, init
 
 
 # Update
@@ -50,10 +50,9 @@ module Motorsport.Widget.Leaderboard exposing
 
 -}
 
-import Compare
 import DataView
-import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
-import Html exposing (Html, div, img, text)
+import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..), SortingOption(..))
+import Html exposing (Html, div, img, span, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -66,7 +65,7 @@ import Motorsport.Manufacturer exposing (Manufacturer)
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, CurrentSectorStates, Snapshot)
 import Motorsport.Sector as Sector
 import Motorsport.Status as Status exposing (Status)
-import Motorsport.Wec.Class as Class exposing (Class)
+import Motorsport.Wec.Class exposing (Class)
 
 
 
@@ -77,9 +76,9 @@ type alias Model =
     DataView.Model
 
 
-initialSort : String -> Model
-initialSort key =
-    DataView.init key options
+init : Model
+init =
+    DataView.init "" options
 
 
 options : Options
@@ -87,10 +86,19 @@ options =
     DataView.Options.defaultOptions
         |> (\options_ ->
                 { options_
-                    | selecting = NoSelecting
+                    | sorting = NoSorting
+                    , selecting = NoSelecting
                     , pagination = NoPagination
                 }
            )
+
+
+{-| The `sorter` every column carries. Sorting is off in `options`, so this is
+never consulted; it only fills the field `DataView.Column` requires.
+-}
+noSorter : data -> data -> Order
+noSorter _ _ =
+    EQ
 
 
 
@@ -236,22 +244,20 @@ floatColumn =
 customColumn :
     { label : String
     , getter : data -> String
-    , sorter : data -> data -> Order
     }
     -> Column data msg
-customColumn =
-    DataView.customColumn
+customColumn { label, getter } =
+    DataView.customColumn { label = label, getter = getter, sorter = noSorter }
 
 
 {-| -}
 veryCustomColumn :
     { label : String
     , getter : data -> Html msg
-    , sorter : data -> data -> Order
     }
     -> Column data msg
-veryCustomColumn =
-    DataView.veryCustomColumn
+veryCustomColumn { label, getter } =
+    DataView.veryCustomColumn { label = label, getter = getter, sorter = noSorter }
 
 
 {-| A full-height block for one sector of a lap, coloured by how that sector
@@ -291,13 +297,7 @@ sectorTimeColumn { label, getter } =
                         []
                 )
             >> Maybe.withDefault (text "")
-    , sorter =
-        Compare.by
-            (getter
-                >> Maybe.andThen Performance.ratedOf
-                >> Maybe.map .time
-                >> Maybe.withDefault 0
-            )
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
@@ -307,35 +307,33 @@ bestTimeColumn { getter } =
     DataView.customColumn
         { label = "Best"
         , getter = getter >> Maybe.map (.time >> Duration.toString) >> Maybe.withDefault "-"
-        , sorter = Compare.by (getter >> Maybe.map .time >> Maybe.withDefault 0)
+        , sorter = noSorter
         }
 
 
 histogramColumn :
     { getter : data -> List Lap
-    , sorter : data -> data -> Order
     , bestTimes : { a | fastestLapTime : Maybe Holder, slowestLapTime : Maybe Holder }
     , coefficient : Float
     }
     -> Column data msg
-histogramColumn { getter, sorter, bestTimes, coefficient } =
+histogramColumn { getter, bestTimes, coefficient } =
     { name = "Histogram"
     , view = getter >> Lazy.lazy3 Histogram.view bestTimes coefficient
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
 
 performanceColumn :
     { getter : data -> List Lap
-    , sorter : data -> data -> Order
     , bestTimes : { a | fastestLapTime : Maybe Holder }
     }
     -> Column data msg
-performanceColumn { getter, sorter, bestTimes } =
+performanceColumn { getter, bestTimes } =
     { name = "Performance"
     , view = getter >> performanceHistory bestTimes
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
@@ -344,7 +342,7 @@ carNumberColumn_Wec : { getter : data -> { a | carNumber : String, class : Class
 carNumberColumn_Wec { getter } =
     { name = "#"
     , view = getter >> Lazy.lazy viewCarNumberColumn_Wec
-    , sorter = \a b -> Class.compare (getter a).class (getter b).class
+    , sorter = noSorter
     , filter = \data query -> getter data |> .carNumber |> String.startsWith query
     }
 
@@ -375,7 +373,7 @@ driverAndTeamColumn_Wec : { getter : data -> { a | metadata : { b | drivers : Li
 driverAndTeamColumn_Wec { getter } =
     { name = "Team / Driver"
     , view = getter >> Lazy.lazy viewDriverAndTeamColumn_Wec
-    , sorter = Compare.by (getter >> .metadata >> .team)
+    , sorter = noSorter
     , filter = \data query -> getter data |> (.metadata >> .team) |> String.startsWith query
     }
 
@@ -421,13 +419,12 @@ currentLapColumn_Wec :
                         , sectorStates : CurrentSectorStates
                     }
             }
-    , sorter : data -> data -> Order
     }
     -> Column data msg
-currentLapColumn_Wec { getter, sorter } =
+currentLapColumn_Wec { getter } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy viewCurrentLapColumn_Wec
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
@@ -475,14 +472,13 @@ currentLapColumn_LeMans24h :
                         , miniSectors : Snapshot.MiniSectorReading
                     }
             }
-    , sorter : data -> data -> Order
     , bestTimes : { b | fastestLapTime : Maybe Holder }
     }
     -> Column data msg
-currentLapColumn_LeMans24h { getter, sorter, bestTimes } =
+currentLapColumn_LeMans24h { getter, bestTimes } =
     { name = "Current Lap"
     , view = getter >> Lazy.lazy2 viewCurrentLapColumn_LeMans24h bestTimes
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
@@ -537,13 +533,12 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
 
 lastLapColumn_Wec :
     { getter : data -> Snapshot.LastLap
-    , sorter : data -> data -> Order
     }
     -> Column data msg
-lastLapColumn_Wec { getter, sorter } =
+lastLapColumn_Wec { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_Wec
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 
@@ -583,13 +578,12 @@ viewLastLapColumn_Wec lastLap =
 
 lastLapColumn_LeMans24h :
     { getter : data -> Snapshot.LastLap
-    , sorter : data -> data -> Order
     }
     -> Column data msg
-lastLapColumn_LeMans24h { getter, sorter } =
+lastLapColumn_LeMans24h { getter } =
     { name = "Last Lap"
     , view = getter >> Lazy.lazy viewLastLapColumn_LeMans24h
-    , sorter = sorter
+    , sorter = noSorter
     , filter = \_ _ -> True
     }
 

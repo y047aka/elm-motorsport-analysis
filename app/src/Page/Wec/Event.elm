@@ -8,7 +8,6 @@ plain TEA. Route parameters are passed into `init` by `Main`.
 -}
 
 import Browser.Events
-import Compare
 import DataView
 import DataView.Options exposing (PaginationOption(..), SelectingOption(..))
 import Effect exposing (Effect)
@@ -16,12 +15,11 @@ import Html exposing (Html, a, button, div, main_, nav, text)
 import Html.Attributes as Attributes exposing (attribute)
 import Html.Events exposing (onClick)
 import Motorsport.Chart.Tracker as TrackerChart
-import Motorsport.Duration exposing (Duration)
 import Motorsport.Gap as Gap
 import Motorsport.Race.Snapshot as Snapshot exposing (CarAt, Snapshot)
 import Motorsport.Replay as Replay
 import Motorsport.Widget.Compare as CompareWidget
-import Motorsport.Widget.Leaderboard as Leaderboard exposing (initialSort)
+import Motorsport.Widget.Leaderboard as Leaderboard
 import Motorsport.Widget.LiveStandings as LiveStandingsWidget
 import Motorsport.Widget.SelectedCarsStrip as SelectedCarsStrip
 import Route
@@ -61,7 +59,7 @@ type Mode
 init : { season : String, event : String } -> ( Model, Effect Msg )
 init params =
     ( { mode = Default
-      , leaderboardState = initialSort "Position"
+      , leaderboardState = Leaderboard.init
       , eventsState =
             DataView.init "Time"
                 (DataView.Options.defaultOptions
@@ -329,34 +327,16 @@ leaderboardConfig =
         , Leaderboard.customColumn
             { label = "Gap"
             , getter = .standing >> .gapToLeader >> Gap.toString
-            , sorter = Compare.by (.standing >> .position)
             }
         , Leaderboard.customColumn
             { label = "Interval"
             , getter = .standing >> .intervalToAhead >> Gap.toString
-            , sorter = Compare.by (.standing >> .position)
             }
-        , Leaderboard.currentLapColumn_Wec
-            { getter = identity
-            , sorter = Compare.by (.currentLap >> .elapsed)
-            }
-        , Leaderboard.lastLapColumn_Wec
-            { getter = .lastLap
-            , sorter = Compare.by (.lastLap >> lastLapTime)
-            }
+        , Leaderboard.currentLapColumn_Wec { getter = identity }
+        , Leaderboard.lastLapColumn_Wec { getter = .lastLap }
         , Leaderboard.bestTimeColumn { getter = .bestLap }
         ]
     }
-
-
-lastLapTime : Snapshot.LastLap -> Duration
-lastLapTime lastLap =
-    case lastLap of
-        Snapshot.Completed { rated } ->
-            rated |> Maybe.map .time |> Maybe.withDefault 0
-
-        Snapshot.NoLapYet ->
-            0
 
 
 standingsPopoverId : String
