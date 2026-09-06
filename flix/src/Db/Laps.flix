@@ -143,8 +143,9 @@ mod Db.Laps {
 
     /// The rows of one round: every reading of the table is of a single round,
     /// and the pair is what names one.
-    pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
-        let c = columns();
+    /// Taken of the columns a query was handed rather than of this table's
+    /// own, so a reading of another source cannot be scoped by them.
+    pub def scope(c: Columns, inSeason: Int32, named: String): Sql.Expr[Bool] =
         Schema.scopeOf(table(), c#season, c#round, inSeason, named)
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file

@@ -39,6 +39,6 @@ mod Round.Laps {
 
     def laps(entry: Entry): Sql.Rows[Laps.Columns] =
         Laps.rows()
-            |> Sql.filter(Laps.scope(entry#season, entry#id))
+            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
 
 }

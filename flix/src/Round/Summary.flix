@@ -29,12 +29,15 @@ mod Round.Summary {
             builds <- cars(entry)
         ) yield Metadata.fromReadings(entry, race, shape, builds)
 
+    /// The round, as a fragment rather than as a predicate of a query the
+    /// builder owns: the queries below read the rows from inside a common
+    /// table expression, which is text.
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(entry#season, entry#id)
+        Laps.scope(Laps.columns(), entry#season, entry#id)
 
     /// The round's rows.
     def laps(entry: Entry): Sql.Rows[Laps.Columns] =
-        Laps.rows() |> Sql.filter(scope(entry))
+        Laps.rows() |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
 
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
@@ -106,8 +109,7 @@ mod Round.Summary {
                 ),
                 { car = car, lap1 = lap1 }
             )
-            |> Sql.filter(Schema.scopeOf("c", Cars.columns()#season, Cars.columns()#round,
-                entry#season, entry#id))
+            |> Sql.filter(t -> Schema.scope(t#car#season, t#car#round, entry#season, entry#id))
             |> Sql.using(Sql.frags(
                 Sql.raw("f AS (SELECT car_number, MIN(source_row) AS first_seen"
                     + " FROM " + Laps.table() + " WHERE") ::
@@ -136,6 +138,8 @@ mod Round.Summary {
 
     /// The round's cars under the name the join gives that side.
     def carColumns(): {
+        season = Column[CarRow, Int32],
+        round = Column[CarRow, String],
         carNumber = Column[CarRow, String],
         class = Column[CarRow, String],
         carGroup = Column[CarRow, String],
@@ -144,6 +148,8 @@ mod Round.Summary {
     } =
         let c = Cars.columns();
         {
+            season       = Schema.qualified("c", c#season),
+            round        = Schema.qualified("c", c#round),
             carNumber    = Schema.qualified("c", c#carNumber),
             class        = Schema.qualified("c", c#carClass),
             carGroup     = Schema.qualified("c", c#carGroup),
@@ -231,14 +237,14 @@ mod Round.Summary {
 
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
-    def recorded(): Sql.Expr[Bool] =
-        Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0))
+    def recorded(c: Laps.Columns): Sql.Expr[Bool] =
+        Sql.ne(Schema.expr(c#lapTimeMs), Sql.i32(0))
 
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
         Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
-            |> Sql.filter(scope(entry))
-            |> Sql.filter(recorded())
-            |> Sql.filter(Sql.isNotNull(Sql.column("m.value")))
+            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+            |> Sql.filter(recorded)
+            |> Sql.filter(_ -> Sql.isNotNull(Sql.column("m.value")))
             |> Sql.groupBy(Sql.raw("m.key") :: Nil)
             |> Sql.orderBy(Sql.raw("m.key") :: Nil)
             |> Sql.map(_ -> (Sql.int("m.key + 1"), Sql.int("MIN(m.value)")))

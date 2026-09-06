@@ -205,16 +205,21 @@ A value a query compares against is bound rather than written into it: a
 concatenating two pieces carries both, so a value cannot come to sit under
 another piece's placeholder.
 
-What a query asks of its rows is a `Sql.Expr[Bool]`, built by comparing a
-declared column against a value of the type that column takes.
+What a query asks of its rows is a `Sql.Expr[Bool]`, and `filter` takes it of
+the columns the source declared rather than on its own: the predicate is a
+function of what `map` would be handed, as Acadia's `filter` is of the row, so
+a column of another source is not one this query can be scoped by.
 `Db.Laps.scope` and `Db.Cars.scope` -- the pair naming a round, which every
-reading of either table is scoped by -- are one each, and a reader ANDs its own
-onto them. Both name the table they are of: the two tables carry `season` and
-`round` alike, so a scope over bare names would bind to whichever side of a
-join happened to have them, and to the wrong side without a word where only
-one does. A source that renames the table says so itself, which is
-`Schema.scopeOf` and what `Round.Summary.carBuilds` hands its `c`. The type is
-what carries nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
+reading of either table is scoped by -- take those columns, and a reader ANDs
+its own onto them. Both tables carry `season` and `round` alike, so a scope
+built from the wrong one would bind to whichever side of a join happened to
+have them, and to the wrong side without a word where only one does; the two
+records do not unify, so it does not compile. What a query builds itself
+cannot reach a `WHERE` written into a common table expression, which is text
+and takes the table's own columns. Both name the table they are of, and a
+source that renames it says so itself: `Schema.scopeOf`, and what
+`Round.Summary.carBuilds` hands its `c`. The type is what carries
+nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
 column list already knows and no longer a thing to notice. A column a common
 table expression made up is `Sql.column`, named rather than drawn, and its type

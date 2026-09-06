@@ -24,8 +24,10 @@ mod Round.Index {
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
         }
 
+    /// The round, as a fragment rather than as a predicate of a query the
+    /// builder owns: the arms below are text.
     def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(entry#season, entry#id)
+        Laps.scope(Laps.columns(), entry#season, entry#id)
 
     /// The round's rows as a fragment, for the arms that read them from
     /// inside one of their own.
@@ -38,7 +40,7 @@ mod Round.Index {
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
         Laps.rows()
-            |> Sql.filter(scope(entry))
+            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
             |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
@@ -61,7 +63,7 @@ mod Round.Index {
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
-            |> Sql.filter(Sql.column("prev IS NULL OR t * dir < prev"))
+            |> Sql.filter(_ -> Sql.column("prev IS NULL OR t * dir < prev"))
             |> Sql.orderBy(Sql.raw("k") :: Sql.raw("elapsed_ms") :: Sql.raw("source_row") :: Nil)
             |> Sql.map(_ -> (
                 record,

@@ -69,8 +69,9 @@ mod Db.Cars {
     pub def values(row: CarRow): List[Value] =
         Schema.values(all(), row)
 
-    pub def scope(inSeason: Int32, named: String): Sql.Expr[Bool] =
-        let c = columns();
+    /// Taken of the columns a query was handed rather than of this table's
+    /// own, so a reading of another source cannot be scoped by them.
+    pub def scope(c: Columns, inSeason: Int32, named: String): Sql.Expr[Bool] =
         Schema.scopeOf(table(), c#season, c#round, inSeason, named)
 
     pub def createTable(): String =

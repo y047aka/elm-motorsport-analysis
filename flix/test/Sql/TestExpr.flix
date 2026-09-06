@@ -57,11 +57,11 @@ mod Sql.TestExpr {
     /// happened to carry them.
     @Test
     def theScopeBindsTheSeasonAndTheRoundsNameOfTheTableItIsOf(): Unit \ Assert =
-        Assert.assertTrue(Sql.toSql(Sql.term(Laps.scope(2025, "le_mans_24h"))) == (
+        Assert.assertTrue(Sql.toSql(Sql.term(Laps.scope(Laps.columns(), 2025, "le_mans_24h"))) == (
             "laps.season = ? AND laps.round = ?",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ));
-        Assert.assertTrue(Sql.toSql(Sql.term(Cars.scope(2025, "le_mans_24h"))) == (
+        Assert.assertTrue(Sql.toSql(Sql.term(Cars.scope(Cars.columns(), 2025, "le_mans_24h"))) == (
             "cars.season = ? AND cars.round = ?",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ))

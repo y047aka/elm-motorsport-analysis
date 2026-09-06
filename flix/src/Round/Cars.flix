@@ -9,7 +9,7 @@ mod Round.Cars {
     /// Whether a run has loaded the round's cars, asked rather than read back.
     pub def loaded(entry: Entry): Result[String, Bool] \ Db =
         Cars.rows()
-            |> Sql.filter(Cars.scope(entry#season, entry#id))
+            |> Sql.filter(c -> Cars.scope(c, entry#season, entry#id))
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
             |> Sql.selectAll
@@ -19,7 +19,7 @@ mod Round.Cars {
     /// car.
     pub def read(entry: Entry): Result[String, Map[String, RawCar]] \ Db =
         Cars.rows()
-            |> Sql.filter(Cars.scope(entry#season, entry#id))
+            |> Sql.filter(c -> Cars.scope(c, entry#season, entry#id))
             |> Sql.map(_ -> CarRow.selection())
             |> Sql.selectAll
             |> Result.map(rows -> rows

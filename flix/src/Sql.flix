@@ -307,10 +307,13 @@ mod Sql {
         let Rows.Rows(r, columns) = rows;
         Rows.Rows({ ctes = List.append(r#ctes, cte :: Nil) | r }, columns)
 
-    /// What is asked of the rows. Asked twice, both hold.
-    pub def filter(predicate: Expr[Bool], rows: Rows[c]): Rows[c] =
+    /// What is asked of the rows, asked of the columns the source declared:
+    /// a predicate is built from what `map` would be handed, so a column of
+    /// another source is not one this query can be scoped by. Asked twice,
+    /// both hold.
+    pub def filter(predicate: c -> Expr[Bool], rows: Rows[c]): Rows[c] =
         let Rows.Rows(r, columns) = rows;
-        Rows.Rows({ filters = List.append(r#filters, predicate :: Nil) | r }, columns)
+        Rows.Rows({ filters = List.append(r#filters, predicate(columns) :: Nil) | r }, columns)
 
     pub def groupBy(terms: List[Frag], rows: Rows[c]): Rows[c] =
         let Rows.Rows(r, columns) = rows;
