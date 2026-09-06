@@ -19,7 +19,7 @@ in WAL mode, so those reads run beside a writing run rather than behind it.
 
 A Flix effect handler runs inside a request, which is why the endpoints reuse
 `Round`'s readers rather than restating them: `Server.Api.respond` runs under
-`Db.Jdbc.runWith` and calls `Round.Summary.read` unchanged. A route that reads
+`Db.Jdbc.runReading` and calls `Round.Summary.read` unchanged. A route that reads
 nothing is answered before connecting at all, through `Db.runRecording`: the
 calendar is `Motorsport.Calendar` rather than a count of the rows, so a
 database that is down stops a round being opened and not the app being used.
@@ -31,7 +31,7 @@ laps are 24MB, and 3.4MB on the wire.
 
 `Round` is one round on its way out of the tables, both halves of the trip:
 `Round.Summary`, `Round.Index`, `Round.Laps` and `Round.Cars` take an `Entry`
-and the `Db` effect and read it; `Round.Render` takes what they returned, is
+and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
 pure, and turns it into the bytes that go out. None of the five knows whether a
 file or a request is waiting at the other end. `Round.loaded` is what both
 callers ask first, and it asks both tables: laps without cars is a round half
@@ -126,18 +126,30 @@ a set of it, and every reading that would move off Flix needs it: the validator'
 baseline is the file's first row, a car's drivers are in the order the file
 first showed them, and so is the grid.
 
-## `Db`, the effect
+## `DbRead` and `DbWrite`, the effects
 
-`Db` is an effect, not a module of functions, so that what a round would
-send can be read back without a server: `Db.runRecording` keeps the statements
-and answers a read with the error that nothing was sent, and `Db.Jdbc` is the
-only file that imports `java.sql`. The effect names no table and no column, so
-`Db`, `Db.Jdbc` and `Sql` are together a database and a query language and
-nothing of this application; `Db.Laps`, `Db.Cars` and the two row types beside
-them are the whole of what the application tells them about itself, which is
-the same line Acadia draws between `Transaction`, `Rows` and a `Table`.
+Reaching a database is an effect rather than a module of functions, so that
+what a round would send can be read back without a server: `Db.runRecording`
+keeps the statements and answers a read with the error that nothing was sent,
+and `Db.Jdbc` is the only file that imports `java.sql`. Neither effect names a
+table or a column, so `DbRead`, `DbWrite`, `Db.Jdbc` and `Sql` are together a
+database and a query language and nothing of this application; `Db.Laps`,
+`Db.Cars` and the two row types beside them are the whole of what the
+application tells them about itself, which is the same line Acadia draws
+between `Transaction`, `Rows` and a `Table`.
 
-Nothing a statement sends is kept until `Db.commit`, and `Db.transact` is where
+They are two rather than one because the sides of this repository are two:
+`Round`'s readers, `Server.Api` and `Cli.Export` are `\ DbRead` and would not
+compile with a statement that changes the database in them, and `Db.Laps`,
+`Db.Cars` and `Cli.Load.load` are `\ DbWrite`. `Cli.Load` is where both meet,
+and `Db` is the alias naming the pair. The handlers are split the same way, so
+what the type says of the server the connection says too: `Db.Jdbc.runReading`
+installs the read alone, and a write reaches no handler through it. Flix has no
+subeffecting here -- a `\ DbRead` function is not a `\ Db` one -- so a caller
+taking either as an argument is written for the half it uses, which is what
+`Main.onRoot` is polymorphic over and what `Round.TestSupport.onRound` takes.
+
+Nothing a statement sends is kept until `DbWrite.commit`, and `Db.transact` is where
 that is decided: it commits what its caller sent when the caller answers `Ok`
 and rolls it back when it does not. `Cli.Load.runAll` is the one caller, so the
 rebuild of both tables is a single transaction -- the two `DROP TABLE`s it opens

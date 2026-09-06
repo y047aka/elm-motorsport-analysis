@@ -68,7 +68,7 @@ mod Server {
             case Err(cause) => { status = 503, contentType = "text/plain", body = cause }
             case Ok(conn)   =>
                 let answered = try {
-                    Jdbc.runWith(conn, () -> Api.respond(route))
+                    Jdbc.runReading(conn, () -> Api.respond(route))
                 } catch {
                     case e: Throwable => failed(exchange, e)
                 };

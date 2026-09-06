@@ -42,7 +42,7 @@ mod Db.TestDb {
     /// with no violations and no cars in it.
     @Test
     def recordingCannotAnswerARead(): Unit \ Assert =
-        let (result, statements) = Db.runRecording(() -> Db.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
+        let (result, statements) = Db.runRecording(() -> DbRead.fetch("SELECT 1 WHERE ? = ?", Value.Integer(1) :: Value.Integer(1) :: Nil));
         match result {
             case Ok(_)  => Assert.assertTrue(false)
             case Err(_) => Assert.assertTrue(true)

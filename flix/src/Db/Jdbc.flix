@@ -65,11 +65,26 @@ mod Db.Jdbc {
 
     pub def runWith(conn: Connection, f: Unit -> a \ ef): a \ (ef - Db) + IO =
         run {
+            runWriting(conn, f)
+        } with handler DbRead {
+            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
+        }
+
+    /// The connection as a read alone, which is what the server answers a
+    /// request through.
+    pub def runReading(conn: Connection, f: Unit -> a \ ef): a \ (ef - DbRead) + IO =
+        run {
             f()
-        } with handler Db {
+        } with handler DbRead {
+            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
+        }
+
+    pub def runWriting(conn: Connection, f: Unit -> a \ ef): a \ (ef - DbWrite) + IO =
+        run {
+            f()
+        } with handler DbWrite {
             def execute(sql, k) = k(runStatement(conn, sql))
             def insertMany(sql, rows, k) = k(insertRows(conn, sql, rows))
-            def fetch(sql, params, k) = k(runFetch(conn, sql, params))
             def commit(k) = k(endTransaction(conn, c -> c.commit()))
             def rollback(k) = k(endTransaction(conn, c -> c.rollback()))
         }

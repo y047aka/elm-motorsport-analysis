@@ -23,12 +23,24 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchReadsBackTextAndNulls(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 'a', null, 42, null", Nil));
+        let result = connected(() -> DbRead.fetch("select 'a', null, 42, null", Nil));
         Assert.assertTrue(result == Ok((Some("a") :: None :: Some("42") :: None :: Nil) :: Nil))
+
+    /// The connection the server answers through.
+    @Test
+    def aReadingConnectionAnswersAFetch(): Unit \ {Assert, IO} =
+        let result = match Jdbc.connect(TestSupport.url()) {
+            case Err(e)   => Err(e)
+            case Ok(conn) =>
+                let value = Jdbc.runReading(conn, () -> DbRead.fetch("select 1", Nil));
+                Jdbc.close(conn);
+                value
+        };
+        Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil))
 
     @Test
     def aFetchReadsEveryRowInTheOrderAsked(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch(
+        let result = connected(() -> DbRead.fetch(
             "select n from (select 1 as n union select 2 union select 3) order by n desc", Nil));
         Assert.assertTrue(result == Ok(
             (Some("3") :: Nil) :: (Some("2") :: Nil) :: (Some("1") :: Nil) :: Nil
@@ -39,7 +51,7 @@ mod Db.TestJdbc {
     /// error.
     @Test
     def aFetchBindsItsParameters(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch(
+        let result = connected(() -> DbRead.fetch(
             "select ?, ?", Value.Text("o'brien") :: Value.Integer(42) :: Nil));
         Assert.assertTrue(result == Ok((Some("o'brien") :: Some("42") :: Nil) :: Nil))
 
@@ -53,7 +65,7 @@ mod Db.TestJdbc {
             discard Laps.create();
             let accepted = Laps.insertRows(rows);
             let refused  = Laps.insertRows(rows);
-            let counted  = Db.fetch("SELECT COUNT(*) FROM laps", Nil);
+            let counted  = DbRead.fetch("SELECT COUNT(*) FROM laps", Nil);
             Ok((accepted, refused, counted))
         });
         match outcome {
@@ -69,7 +81,7 @@ mod Db.TestJdbc {
 
     @Test
     def aFetchWithNoRowsIsEmptyRatherThanAnError(): Unit \ {Assert, IO} =
-        let result = connected(() -> Db.fetch("select 1 where 0", Nil));
+        let result = connected(() -> DbRead.fetch("select 1 where 0", Nil));
         Assert.assertTrue(result == Ok(Nil))
 
     // --------------------------------------------------------- a file database
@@ -105,7 +117,7 @@ mod Db.TestJdbc {
     /// naming one that does not exist reaches no database at all.
     @Test
     def connectingMakesTheDirectoryTheFileNeeds(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> Db.fetch("select 1", Nil));
+        let (path, result) = onFile(() -> DbRead.fetch("select 1", Nil));
         Assert.assertTrue(result == Ok((Some("1") :: Nil) :: Nil));
         Assert.assertTrue(new File(path).exists());
         remove(path)
@@ -114,7 +126,7 @@ mod Db.TestJdbc {
     /// run beside a writing run rather than behind it.
     @Test
     def aFileDatabaseIsJournalledForConcurrentReaders(): Unit \ {Assert, IO} =
-        let (path, result) = onFile(() -> Db.fetch("PRAGMA journal_mode", Nil));
+        let (path, result) = onFile(() -> DbRead.fetch("PRAGMA journal_mode", Nil));
         Assert.assertTrue(result == Ok((Some("wal") :: Nil) :: Nil));
         remove(path)
 
@@ -157,13 +169,13 @@ mod Db.TestJdbc {
 
     /// A round loaded and then judged unfit, which is a transaction answering
     /// with an error.
-    def refuse(): Result[String, Int32] \ Db =
+    def refuse(): Result[String, Int32] \ DbWrite =
         match load() {
             case Ok(_)  => Err("the round was not what it should have been")
             case Err(e) => Err(e)
         }
 
-    def load(): Result[String, Int32] \ Db =
+    def load(): Result[String, Int32] \ DbWrite =
         let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
         forM(
             _        <- Laps.create();
@@ -175,7 +187,7 @@ mod Db.TestJdbc {
         match Jdbc.connect("jdbc:sqlite:${path}") {
             case Err(e)   => Err(e)
             case Ok(conn) =>
-                let value = Jdbc.runWith(conn, () -> Db.fetch("SELECT COUNT(*) FROM laps", Nil));
+                let value = Jdbc.runWith(conn, () -> DbRead.fetch("SELECT COUNT(*) FROM laps", Nil));
                 Jdbc.close(conn);
                 value
         }

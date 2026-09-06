@@ -12,14 +12,14 @@ mod Round.Laps {
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
-    pub def loaded(entry: Entry): Result[String, Bool] \ Db =
+    pub def loaded(entry: Entry): Result[String, Bool] \ DbRead =
         laps(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
             |> Sql.selectAll
             |> Result.map(found -> not List.isEmpty(found))
 
-    pub def read(entry: Entry): Result[String, List[RawLap]] \ Db =
+    pub def read(entry: Entry): Result[String, List[RawLap]] \ DbRead =
         forM(
             cars    <- Cars.read(entry);
             lapRows <- laps(entry)

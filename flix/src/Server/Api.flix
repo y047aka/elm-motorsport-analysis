@@ -63,7 +63,7 @@ mod Server.Api {
             case _                   => false
         }
 
-    pub def respond(route: Route): Response \ Db =
+    pub def respond(route: Route): Response \ DbRead =
         match route {
             case Route.Health            => ok("text/plain", "ok")
             case Route.Calendar          => ok("application/json", calendar())
@@ -88,19 +88,19 @@ mod Server.Api {
     def calendar(): String =
         Extra.render(Manifest.toJson(urlRoot(), Calendar.seasons()))
 
-    def summary(season: Int32, id: String): Result[String, Option[String]] \ Db =
+    def summary(season: Int32, id: String): Result[String, Option[String]] \ DbRead =
         answer(season, id, e -> forM(
             metadata <- Summary.read(e);
             index    <- Index.read(e)
         ) yield Render.renderSummary(metadata, index))
 
-    def laps(season: Int32, id: String): Result[String, Option[String]] \ Db =
+    def laps(season: Int32, id: String): Result[String, Option[String]] \ DbRead =
         answer(season, id, e -> Laps.read(e) |> Result.map(Render.renderJsonl))
 
     /// `None` is a round the calendar lists and no run has loaded. Rendered
     /// out of the rows it would be a race that never ran, which is the one
     /// thing they cannot say for themselves.
-    def answer(season: Int32, id: String, render: Entry -> Result[String, String] \ Db): Result[String, Option[String]] \ Db =
+    def answer(season: Int32, id: String, render: Entry -> Result[String, String] \ DbRead): Result[String, Option[String]] \ DbRead =
         forM(
             round    <- entry(season, id);
             isLoaded <- Round.loaded(round);

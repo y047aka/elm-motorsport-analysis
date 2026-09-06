@@ -36,7 +36,7 @@ def loadAndExport(root: String, rounds: Cli.FileTask.Rounds): Int32 \ {IO, Conso
 
 /// Both stages compute in a database, so one given none is one that cannot say
 /// what it found.
-def onRoot(root: String, database: Option[String], stage: String -> Int32 \ {IO, Console, Db}): Int32 \ {Env, IO, Console} =
+def onRoot(root: String, database: Option[String], stage: String -> Int32 \ ef): Int32 \ (ef - Db) + Env + IO + Console =
     match checkRoot(root) {
         case Err(e) =>
             Console.eprintln("Error: ${e}");

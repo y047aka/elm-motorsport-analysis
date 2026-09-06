@@ -46,7 +46,7 @@ mod Cli.Load {
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
-    def createTables(): Result[String, Unit] \ Db =
+    def createTables(): Result[String, Unit] \ DbWrite =
         forM(
             _ <- Cars.create();
             _ <- Laps.create()
@@ -110,7 +110,7 @@ mod Cli.Load {
             Ok(rawLaps)
         }
 
-    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ Db =
+    def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Loaded] \ DbWrite =
         rawLaps ->
             let loaded = forM(
                 cars <- Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
@@ -118,7 +118,7 @@ mod Cli.Load {
             ) yield { cars = cars, laps = laps };
             loaded |> Result.mapErr(CliError.Database)
 
-    def reportViolations(task: FileTask.FileTask): Loaded -> Result[CliError, Loaded] \ {Console, Db} =
+    def reportViolations(task: FileTask.FileTask): Loaded -> Result[CliError, Loaded] \ {Console, DbRead} =
         loaded ->
             Validation.validate(task#entry)
                 |> Result.mapErr(CliError.Database)

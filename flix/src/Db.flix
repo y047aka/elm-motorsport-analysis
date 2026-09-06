@@ -1,24 +1,29 @@
-/// Reaching a database, and nothing about what is in one: the effect names no
+/// Reaching a database, and nothing about what is in one: the effects name no
 /// table and no column, so `Db.Jdbc` and `Db.runRecording` are the whole of
 /// what a statement can be sent through.
-///
-/// `insertMany` binds each row to one statement and answers with the number
-/// the database took rather than the number it was handed, so the run reports
-/// what was accepted beside what it decoded.
 ///
 /// `fetch` answers with every cell as text, `None` where the column was
 /// null. The server has the types and the caller knows what it asked for,
 /// so nothing is gained by carrying them across in between.
+pub eff DbRead {
+    def fetch(sql: String, params: List[Db.Value]): Result[String, List[List[Option[String]]]]
+}
+
+/// `insertMany` binds each row to one statement and answers with the number
+/// the database took rather than the number it was handed, so the run reports
+/// what was accepted beside what it decoded.
 ///
 /// Nothing a statement sends is kept until `commit`, which is what `Db.transact`
 /// is for: a caller that sends and never commits has sent nothing.
-pub eff Db {
+pub eff DbWrite {
     def execute(sql: String): Result[String, Unit]
     def insertMany(sql: String, rows: List[List[Db.Value]]): Result[String, Int32]
-    def fetch(sql: String, params: List[Db.Value]): Result[String, List[List[Option[String]]]]
     def commit(): Result[String, Unit]
     def rollback(): Result[String, Unit]
 }
+
+/// Both halves, for a caller that does reach the database either way.
+pub type alias Db = {DbRead, DbWrite}
 
 mod Db {
 
@@ -45,10 +50,10 @@ mod Db {
     /// A run that dies before answering commits nothing, which is what makes a
     /// rebuild of the table safe to interrupt: the `DROP TABLE` it starts with
     /// is undone with the rows it did not finish loading.
-    pub def transact(f: Unit -> Result[String, a] \ ef): Result[String, a] \ ef + Db =
+    pub def transact(f: Unit -> Result[String, a] \ ef): Result[String, a] \ ef + DbWrite =
         match f() {
-            case Ok(value) => Db.commit() |> Result.map(_ -> value)
-            case Err(e)    => discard Db.rollback(); Err(e)
+            case Ok(value) => DbWrite.commit() |> Result.map(_ -> value)
+            case Err(e)    => discard DbWrite.rollback(); Err(e)
         }
 
     /// What `runRecording` keeps.
@@ -64,30 +69,33 @@ mod Db {
         region rc {
             let log = Ref.fresh(rc, (Nil: List[Statement]));
             let result = run {
-                f()
-            } with handler Db {
-                def execute(sql, k) = {
-                    record(log, Statement.Execute(sql));
-                    k(Ok())
+                run {
+                    f()
+                } with handler DbWrite {
+                    def execute(sql, k) = {
+                        record(log, Statement.Execute(sql));
+                        k(Ok())
+                    }
+                    def insertMany(sql, rows, k) = {
+                        record(log, Statement.InsertMany(sql, rows));
+                        k(Ok(List.length(rows)))
+                    }
+                    def commit(k) = {
+                        record(log, Statement.Commit);
+                        k(Ok())
+                    }
+                    def rollback(k) = {
+                        record(log, Statement.Rollback);
+                        k(Ok())
+                    }
                 }
-                def insertMany(sql, rows, k) = {
-                    record(log, Statement.InsertMany(sql, rows));
-                    k(Ok(List.length(rows)))
-                }
+            } with handler DbRead {
                 // Nothing was written, so there is nothing to read back: a
                 // caller that reads the round it sent needs a database, and
                 // is told so rather than handed an empty one.
                 def fetch(sql, params, k) = {
                     record(log, Statement.Fetch(sql, params));
                     k(Err("nothing was sent to a database, so nothing can be read back"))
-                }
-                def commit(k) = {
-                    record(log, Statement.Commit);
-                    k(Ok())
-                }
-                def rollback(k) = {
-                    record(log, Statement.Rollback);
-                    k(Ok())
                 }
             };
             (result, List.reverse(Ref.get(log)))

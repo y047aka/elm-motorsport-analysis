@@ -15,15 +15,15 @@ mod Round.TestSupport {
     /// archive a working copy has.
     pub def url(): String = "jdbc:sqlite::memory:"
 
-    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ Db): a \ IO =
+    pub def onRound(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ DbRead): a \ IO =
         onRows(entry, laps, true, read)
 
     /// As `onRound`, with the round's cars left out: what a round only half in
     /// the database reads as.
-    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ Db): a \ IO =
+    pub def onLapsAlone(entry: Entry, laps: List[RawLap], read: Unit -> Result[String, a] \ DbRead): a \ IO =
         onRows(entry, laps, false, read)
 
-    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> Result[String, a] \ Db): a \ IO =
+    def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> Result[String, a] \ DbRead): a \ IO =
         match Jdbc.connect(url()) {
             case Err(cause) => bug!("no database (${cause})")
             case Ok(conn) =>

@@ -34,7 +34,7 @@ mod Cli.Export {
     /// different ways.
     pub def urlRoot(): String = "/static/wec"
 
-    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, Db} =
+    pub def runAll(root: String, rounds: FileTask.Rounds): Int32 \ {IO, Console, DbRead} =
         let tasks = FileTask.selected(root, rounds);
         let summary = List.foldLeft(
             (acc, task) -> match exportRound(task) {
@@ -55,7 +55,7 @@ mod Cli.Export {
         Console.println("Export completed: ${summary#exported} exported, ${errors} errors");
         if (errors == 0) 0 else 1
 
-    def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, Db} =
+    def exportRound(task: FileTask.FileTask): Result[CliError, Rendered] \ {IO, DbRead} =
         read(task) |> Result.flatMap(rendered ->
             writeRound(task, rendered) |> Result.map(_ -> rendered)
         )
@@ -66,7 +66,7 @@ mod Cli.Export {
     ///
     /// `pub` reaches no further than `Cli.TestExport`, which drives it without
     /// a directory to write into.
-    pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ Db =
+    pub def read(task: FileTask.FileTask): Result[CliError, Rendered] \ DbRead =
         forM(
             isLoaded <- Round.loaded(task#entry) |> Result.mapErr(CliError.Database);
             _        <- if (isLoaded) Ok() else Err(CliError.RoundNotLoaded);
