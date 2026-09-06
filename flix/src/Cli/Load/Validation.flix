@@ -37,6 +37,7 @@
 mod Cli.Load.Validation {
 
     use Db.Laps
+    use Db.Schema
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.MiniSector
@@ -84,8 +85,8 @@ mod Cli.Load.Validation {
     def sectorSumViolations(entry: Entry): Result[String, List[Violation]] \ Db =
         Laps.rows()
             |> Sql.filter(scope(entry))
-            |> Sql.filter(Sql.ne(sectorSum(), Laps.expr(Laps.columns()#lapTimeMs)))
-            |> Sql.orderBy(Laps.term(Laps.columns()#sourceRow) :: Nil)
+            |> Sql.filter(Sql.ne(sectorSum(), Schema.expr(Laps.columns()#lapTimeMs)))
+            |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
             |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.intOf(Sql.term(sectorSum())), blanks()))
             |> Sql.reading(match (lap, lapTime, sum, blank) ->
                 Violation.SectorSum(lap, duration(lapTime), duration(sum), splitLabels(blank)))
@@ -94,7 +95,7 @@ mod Cli.Load.Validation {
     /// The lap's mini-sector times, one row per marker, read off the row the
     /// enclosing query is on.
     def miniSectorTimes(): String =
-        "json_each(" + Laps.table() + "." + Laps.name(Laps.columns()#miniSectorTimeMs) + ") t"
+        "json_each(" + Laps.table() + "." + Schema.name(Laps.columns()#miniSectorTimeMs) + ") t"
 
     def sectorSum(): Sql.Expr[Int32] =
         Sql.column("COALESCE(s1_ms,0) + COALESCE(s2_ms,0) + COALESCE(s3_ms,0)")
@@ -164,7 +165,7 @@ mod Cli.Load.Validation {
                     + "  FROM " + miniSectorTimes()
                     + "  WHERE t.value IS NULL), '') AS blanks"
                     + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
+                where_(entry, Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorTimeMs)) :: Nil) ::
                 Sql.raw(")") :: Nil
             ))
             |> Sql.filter(Sql.column("NOT (crossing_finish_line_in_pit = 1 OR pit_time_ms IS NOT NULL)"))
@@ -192,7 +193,7 @@ mod Cli.Load.Validation {
                     + ", json_each(" + Laps.table() + ".mini_sector_elapsed_ms) x"
                     + " WHERE") ::
                 where_(entry,
-                    Sql.isNotNull(Laps.expr(Laps.columns()#miniSectorElapsedMs)) ::
+                    Sql.isNotNull(Schema.expr(Laps.columns()#miniSectorElapsedMs)) ::
                     Sql.isNotNull(Sql.column("x.value")) :: Nil) ::
                 Sql.raw("WINDOW w AS (PARTITION BY source_row ORDER BY x.key))") :: Nil
             ))

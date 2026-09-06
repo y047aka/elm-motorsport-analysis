@@ -149,8 +149,7 @@ mod Db.TestLapRow {
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
-        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("HYPERCAR") ::
-        Some("H") :: Some("Hertz Team JOTA") :: Some("Porsche") :: Some("1") ::
+        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("1") ::
         Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("0") ::
         Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
         Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
@@ -167,7 +166,7 @@ mod Db.TestLapRow {
     @Test
     def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
         let withMiniSectors = List.append(
-            List.take(26, cells()),
+            List.take(22, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
         match Sql.decode(LapRow.selection(), withMiniSectors) {
@@ -203,7 +202,7 @@ mod Db.TestLapRow {
     def aRowMakesTheLapItWasMadeFrom(): Unit \ Assert =
         let rendered = lap -> Util.Json.Encode.Extra.renderOnOneLine(Wec.toJson(lap));
         let roundTrip = lap ->
-            LapRow.toRawLap(LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
+            LapRow.toRawLap(lap#car, LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
         Assert.assertTrue(roundTrip(plainLap()) == Ok(rendered(plainLap())));
         Assert.assertTrue(roundTrip(pitLap()) == Ok(rendered(pitLap())));
         Assert.assertTrue(roundTrip(miniSectorLap()) == Ok(rendered(miniSectorLap())))

@@ -1,9 +1,11 @@
 mod Cli.Load {
 
+    use Db.Cars
     use Db.Laps
 
     use Sys.Console
     use Util.Files
+    use Db.CarRow
     use Db.LapRow
     use Cli.Errors.CliError
     use Cli.FileTask
@@ -18,12 +20,12 @@ mod Cli.Load {
         errors    = Int32
     }
 
-    /// The table is dropped and rebuilt, so the run is one transaction: a run
-    /// that dies partway through leaves the rounds it was rebuilding from.
+    /// The tables are dropped and rebuilt, so the run is one transaction: a
+    /// run that dies partway through leaves the rounds it was rebuilding from.
     /// A round the database refused is reported and counted, and the rounds
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, Db} =
-        let rebuild = Db.transact(() -> match Laps.create() {
+        let rebuild = Db.transact(() -> match createTables() {
             case Err(e) => Err(e)
             case Ok(()) => Ok(convertRounds(root))
         });
@@ -34,6 +36,14 @@ mod Cli.Load {
             case Ok(code) =>
                 code
         }
+
+    /// Belongs before the first round: a schema this database will not take
+    /// would otherwise be reported once per round, in the same words.
+    def createTables(): Result[String, Unit] \ Db =
+        forM(
+            _ <- Cars.create();
+            _ <- Laps.create()
+        ) yield ()
 
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
@@ -81,8 +91,11 @@ mod Cli.Load {
 
     def load(task: FileTask.FileTask): List[RawLap] -> Result[CliError, Int32] \ Db =
         rawLaps ->
-            Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
-                |> Result.mapErr(CliError.Database)
+            let loaded = forM(
+                _          <- Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
+                loadedRows <- Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps))
+            ) yield loadedRows;
+            loaded |> Result.mapErr(CliError.Database)
 
     def reportViolations(task: FileTask.FileTask): Int32 -> Result[CliError, Int32] \ {Console, Db} =
         loadedRows ->

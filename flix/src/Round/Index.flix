@@ -6,6 +6,7 @@
 mod Round.Index {
 
     use Db.Laps
+    use Db.Schema
     use Motorsport.Calendar.Entry
     use Motorsport.Index
     use Motorsport.Index.Change
@@ -38,8 +39,8 @@ mod Round.Index {
     def lapCompletions(entry: Entry): Result[String, List[(Int32, Duration)]] \ Db =
         Laps.rows()
             |> Sql.filter(scope(entry))
-            |> Sql.groupBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
-            |> Sql.orderBy(Laps.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
+            |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))
             |> Sql.reading(match (lap, elapsed) -> (lap, Util.Duration.fromMillis(elapsed)))
             |> Sql.selectAll
@@ -129,7 +130,7 @@ mod Round.Index {
                 + " FROM " + Laps.table()
                 + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::
-            where_(entry, Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
+            where_(entry, Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0)) :: Nil) :: Nil
         )
 
 }

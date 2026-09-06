@@ -2,6 +2,7 @@ mod Db.LapRow {
 
     use Motorsport.Calendar.Entry
     use Motorsport.Wec
+    use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
     use Motorsport.Wec.RawMiniSector
     use Motorsport.Wec.RawSector
@@ -31,10 +32,6 @@ mod Db.LapRow {
         round = String,
         sourceRow = Int32,
         carNumber = String,
-        class = String,
-        carGroup = String,
-        team = String,
-        manufacturer = String,
         driverNumber = Int32,
         driverName = String,
         lapNumber = Int32,
@@ -70,10 +67,6 @@ mod Db.LapRow {
             round = entry#id,
             sourceRow = sourceRow,
             carNumber = rawLap#car#carNumber,
-            class = rawLap#car#class,
-            carGroup = rawLap#car#group,
-            team = rawLap#car#team,
-            manufacturer = rawLap#car#manufacturer,
             driverNumber = rawLap#driver#number,
             driverName = rawLap#driver#name,
             lapNumber = rawLap#lapNumber,
@@ -111,10 +104,6 @@ mod Db.LapRow {
             |> Sql.field(c#round, (row, value) -> { +round = value | row })
             |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
-            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#team, (row, value) -> { +team = value | row })
-            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
             |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
             |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
             |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
@@ -136,7 +125,9 @@ mod Db.LapRow {
             |> Sql.field(c#miniSectorTimeMs, (row, value) -> { +miniSectorTimeMs = value | row })
             |> Sql.field(c#miniSectorElapsedMs, (row, value) -> { +miniSectorElapsedMs = value | row })
 
-    pub def toRawLap(row: LapRow): Result[String, RawLap] =
+    /// The car is the round's entry rather than the lap's: `laps` holds the
+    /// number and `entries` what the number was.
+    pub def toRawLap(car: RawCar, row: LapRow): Result[String, RawLap] =
         forM(
             lapImprovement <- improvement("LAP_IMPROVEMENT", row#lapImprovement);
             s1Improvement  <- improvement("S1_IMPROVEMENT", row#s1Improvement);
@@ -144,13 +135,7 @@ mod Db.LapRow {
             s3Improvement  <- improvement("S3_IMPROVEMENT", row#s3Improvement);
             flagAtFl       <- flag(row#flagAtFl)
         ) yield {
-            car = {
-                carNumber    = row#carNumber,
-                class        = row#class,
-                group        = row#carGroup,
-                team         = row#team,
-                manufacturer = row#manufacturer
-            },
+            car = car,
             driver = { number = row#driverNumber, name = row#driverName },
             lapNumber = row#lapNumber,
             lapTime = Duration.fromMillis(row#lapTimeMs),

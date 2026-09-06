@@ -4,7 +4,12 @@
 /// decisions stays in `Motorsport`: this reads, and hands over.
 mod Round.Summary {
 
+    use Db.CarRow.CarRow
+    use Db.Cars
+    use Db.LapRow.LapRow
     use Db.Laps
+    use Db.Schema
+    use Db.Schema.Column
     use Sql.Sel
     use Motorsport.Calendar.Entry
     use Motorsport.Car.Car
@@ -87,74 +92,78 @@ mod Round.Summary {
             |> Sql.map(d -> (d#carNumber, d#driverName))
             |> Sql.selectAll
 
-    /// A car is what the file first said it was. Grouping by the attributes
-    /// instead would be a row per distinct combination, so a feed that changed
-    /// a car's team mid-round would put that car on the grid twice.
+    /// A car is what `cars` says it was; where the file first mentioned it is
+    /// the laps', and is the order the grid keeps where no lap 1 reorders it.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): Result[String, List[CarBuild]] \ Db =
-        let grid = gridColumns();
+        let car = carColumns();
         let lap1 = lap1Columns();
         Sql.access(
                 Sql.frags(
-                    Sql.raw("c LEFT JOIN l1 ON") ::
-                    Sql.term(Sql.eq(Laps.expr(lap1#carNumber), Laps.expr(grid#carNumber))) :: Nil
+                    Sql.raw(Cars.table() + " c JOIN f ON") ::
+                    Sql.term(Sql.eq(Sql.column("f.car_number"), Schema.expr(car#carNumber))) ::
+                    Sql.raw("LEFT JOIN l1 ON") ::
+                    Sql.term(Sql.eq(Schema.expr(lap1#carNumber), Schema.expr(car#carNumber))) :: Nil
                 ),
-                { grid = grid, lap1 = lap1 }
+                { car = car, lap1 = lap1 }
             )
+            |> Sql.filter(Schema.scope(car#season, car#round, entry#season, entry#id))
             |> Sql.using(Sql.frags(
-                Sql.raw("c AS (SELECT * FROM ("
-                    + " SELECT car_number, class, car_group, team, manufacturer,"
-                    + " source_row AS first_seen, " + firstPerCar()
+                Sql.raw("f AS (SELECT car_number, MIN(source_row) AS first_seen"
                     + " FROM " + Laps.table() + " WHERE") ::
                 where_(entry, Nil) ::
-                Sql.raw(") WHERE rn = 1)") :: Nil
+                Sql.raw("GROUP BY car_number)") :: Nil
             ))
             |> Sql.using(Sql.frags(
                 Sql.raw("l1 AS (SELECT * FROM ("
                     + " SELECT car_number, s1_ms, elapsed_ms, " + firstPerCar()
                     + " FROM " + Laps.table() + " WHERE") ::
-                where_(entry, Sql.eq(Laps.expr(Laps.columns()#lapNumber), Sql.i32(1)) :: Nil) ::
+                where_(entry, Sql.eq(Schema.expr(Laps.columns()#lapNumber), Sql.i32(1)) :: Nil) ::
                 Sql.raw(") WHERE rn = 1)") :: Nil
             ))
-            |> Sql.orderBy(Sql.raw("c.first_seen") :: Nil)
+            |> Sql.orderBy(Sql.raw("f.first_seen") :: Nil)
             |> Sql.map(t -> (
-                t#grid#carNumber,
-                t#grid#class,
-                t#grid#carGroup,
-                t#grid#team,
-                t#grid#manufacturer,
+                t#car#carNumber,
+                t#car#class,
+                t#car#carGroup,
+                t#car#team,
+                t#car#manufacturer,
                 t#lap1#s1Ms,
                 Sql.orNull(t#lap1#elapsedMs)
             ))
             |> Sql.reading(row -> carBuild(drivers, row))
             |> Sql.selectAll
 
-    /// The columns the two common table expressions select, under the names
-    /// the join gives them. Each is a column of `laps`, so what it reads back
-    /// as is the type the table gives it -- and `elapsed_ms`, which the table
-    /// has of every lap, is read through `Sql.orNull` because the join is the
-    /// one place a car can have no lap 1.
-    def gridColumns(): {
-        carNumber = Laps.Column[String],
-        class = Laps.Column[String],
-        carGroup = Laps.Column[String],
-        team = Laps.Column[String],
-        manufacturer = Laps.Column[String]
+    /// The round's cars under the name the join gives that side.
+    def carColumns(): {
+        season = Column[CarRow, Int32],
+        round = Column[CarRow, String],
+        carNumber = Column[CarRow, String],
+        class = Column[CarRow, String],
+        carGroup = Column[CarRow, String],
+        team = Column[CarRow, String],
+        manufacturer = Column[CarRow, String]
     } =
-        let c = Laps.columns();
+        let c = Cars.columns();
         {
-            carNumber    = Laps.qualified("c", c#carNumber),
-            class        = Laps.qualified("c", c#carClass),
-            carGroup     = Laps.qualified("c", c#carGroup),
-            team         = Laps.qualified("c", c#team),
-            manufacturer = Laps.qualified("c", c#manufacturer)
+            season       = Schema.qualified("c", c#season),
+            round        = Schema.qualified("c", c#round),
+            carNumber    = Schema.qualified("c", c#carNumber),
+            class        = Schema.qualified("c", c#carClass),
+            carGroup     = Schema.qualified("c", c#carGroup),
+            team         = Schema.qualified("c", c#team),
+            manufacturer = Schema.qualified("c", c#manufacturer)
         }
 
-    def lap1Columns(): { carNumber = Laps.Column[String], s1Ms = Laps.Column[Option[Int32]], elapsedMs = Laps.Column[Int32] } =
+    /// Each is a column of `laps`, so what it reads back as is the type the
+    /// table gives it -- and `elapsed_ms`, which the table has of every lap, is
+    /// read through `Sql.orNull` because the join is the one place a car can
+    /// have no lap 1.
+    def lap1Columns(): { carNumber = Column[LapRow, String], s1Ms = Column[LapRow, Option[Int32]], elapsedMs = Column[LapRow, Int32] } =
         let c = Laps.columns();
         {
-            carNumber = Laps.qualified("l1", c#carNumber),
-            s1Ms      = Laps.qualified("l1", c#s1Ms),
-            elapsedMs = Laps.qualified("l1", c#elapsedMs)
+            carNumber = Schema.qualified("l1", c#carNumber),
+            s1Ms      = Schema.qualified("l1", c#s1Ms),
+            elapsedMs = Schema.qualified("l1", c#elapsedMs)
         }
 
     def carBuild(
@@ -226,7 +235,7 @@ mod Round.Summary {
     /// The feed writes a lap it did not record as `0.000`, and the mini-sectors
     /// of such a lap are not a lap of the circuit either.
     def recorded(): Sql.Expr[Bool] =
-        Sql.ne(Laps.expr(Laps.columns()#lapTimeMs), Sql.i32(0))
+        Sql.ne(Schema.expr(Laps.columns()#lapTimeMs), Sql.i32(0))
 
     def fastestMiniSectors(entry: Entry): Result[String, Map[Int32, Duration]] \ Db =
         Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
