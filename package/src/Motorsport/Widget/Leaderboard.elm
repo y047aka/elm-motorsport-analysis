@@ -8,7 +8,7 @@ module Motorsport.Widget.Leaderboard exposing
     , carNumberColumn_Wec
     , driverAndTeamColumn_Wec
     , currentLapColumn_Wec, currentLapColumn_LeMans24h
-    , lastLapColumn, lastLapColumn_Wec, lastLapColumn_LeMans24h
+    , lastLapColumn_Wec, lastLapColumn_LeMans24h
     , viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
     , viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
     , viewLastLapColumn_Wec, viewLastLapColumn_LeMans24h
@@ -42,7 +42,7 @@ module Motorsport.Widget.Leaderboard exposing
 @docs carNumberColumn_Wec
 @docs driverAndTeamColumn_Wec
 @docs currentLapColumn_Wec, currentLapColumn_LeMans24h
-@docs lastLapColumn, lastLapColumn_Wec, lastLapColumn_LeMans24h
+@docs lastLapColumn_Wec, lastLapColumn_LeMans24h
 
 @docs viewCarNumberColumn_Wec, viewDriverAndTeamColumn_Wec
 @docs viewCurrentLapColumn_Wec, viewCurrentLapColumn_LeMans24h
@@ -53,7 +53,7 @@ module Motorsport.Widget.Leaderboard exposing
 import Compare
 import DataView
 import DataView.Options exposing (Options, PaginationOption(..), SelectingOption(..))
-import Html exposing (Html, div, img, span, text)
+import Html exposing (Html, div, img, text)
 import Html.Attributes exposing (alt, class, src, style)
 import Html.Lazy as Lazy
 import Motorsport.BestTimes as BestTimes exposing (Holder)
@@ -406,27 +406,6 @@ viewDriverAndTeamColumn_Wec { metadata, currentDriver } =
                 )
                 metadata.drivers
         ]
-
-
-lastLapColumn :
-    { getter : data -> Maybe RatedTime
-    , sorter : data -> data -> Order
-    }
-    -> Column data msg
-lastLapColumn { getter, sorter } =
-    { name = "Last Lap"
-    , view =
-        getter
-            >> Maybe.map
-                (\{ time, performance } ->
-                    span
-                        [ style "color" (colorOfPerformanceText performance) ]
-                        [ text (Duration.toString time) ]
-                )
-            >> Maybe.withDefault (text "-")
-    , sorter = sorter
-    , filter = \_ _ -> True
-    }
 
 
 currentLapColumn_Wec :

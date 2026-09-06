@@ -23,11 +23,11 @@ tests =
         [ describe "reading the round's summary"
             [ test "a record is the time it stands at, and the lap that set it" <|
                 \_ ->
-                    finalHolderOf .fastestLapTime
+                    holderAtEnd .fastestLapTime
                         |> Expect.equal (Just ( "2", 2, 4000 ))
             , test "each sector's records land in its own field" <|
                 \_ ->
-                    finalSectors
+                    sectorsAtEnd
                         |> Expect.equal [ Just 1000, Just 1500, Just 1000 ]
             , test "and so do each mini-sector's, all fifteen in track order" <|
                 \_ ->
@@ -35,11 +35,11 @@ tests =
                     -- track order, so a pair swapped between fields shows up as
                     -- a time in the wrong place rather than as a decode that
                     -- fails.
-                    finalMiniSectors
+                    miniSectorsAtEnd
                         |> Expect.equal (List.range 1 15 |> List.map (\n -> Just (n * 100)))
             , test "a record no lap took is not a record standing at zero" <|
                 \_ ->
-                    BestTimes.final BestTimes.empty
+                    atEnd BestTimes.empty
                         |> .fastestLapTime
                         |> Expect.equal Nothing
             , test "a summary missing a record is a summary of the wrong shape" <|
@@ -60,10 +60,6 @@ tests =
                 \_ ->
                     timeAt 4999 .fastestLapTime
                         |> Expect.equal Nothing
-            , test "`final` reads the record the race ended on, whatever the clock says" <|
-                \_ ->
-                    finalTime .fastestLapTime
-                        |> Expect.equal (Just 4000)
             , test "who holds a record moves with the record" <|
                 \_ ->
                     [ 4999, 5000, 6000, 9000 ]
@@ -82,9 +78,12 @@ tests =
 -- HELPERS
 
 
-finalTime : (Snapshot -> Maybe Holder) -> Maybe Duration
-finalTime pick =
-    BestTimes.timeOf (pick (BestTimes.final changes))
+{-| The fixture's last change lands at 9.000, so a clock there reads every
+record as the round left it.
+-}
+atEnd : Changes -> Snapshot
+atEnd =
+    BestTimes.at { elapsed = Instant.fromDuration 9000 }
 
 
 timeAt : Duration -> (Snapshot -> Maybe Holder) -> Maybe Duration
@@ -92,24 +91,24 @@ timeAt elapsed pick =
     BestTimes.timeOf (pick (BestTimes.at { elapsed = Instant.fromDuration elapsed } changes))
 
 
-finalHolderOf : (Snapshot -> Maybe Holder) -> Maybe ( String, Int, Duration )
-finalHolderOf pick =
-    BestTimes.final changes
+holderAtEnd : (Snapshot -> Maybe Holder) -> Maybe ( String, Int, Duration )
+holderAtEnd pick =
+    atEnd changes
         |> pick
         |> Maybe.map (\held -> ( held.carNumber, held.lap, held.time ))
 
 
-finalSectors : List (Maybe Duration)
-finalSectors =
-    BestTimes.final changes
+sectorsAtEnd : List (Maybe Duration)
+sectorsAtEnd =
+    atEnd changes
         |> .fastestSectors
         |> Sector.values
         |> List.map BestTimes.timeOf
 
 
-finalMiniSectors : List (Maybe Duration)
-finalMiniSectors =
-    BestTimes.final changes
+miniSectorsAtEnd : List (Maybe Duration)
+miniSectorsAtEnd =
+    atEnd changes
         |> .fastestMiniSectors
         |> LeMans.values
         |> List.map BestTimes.timeOf

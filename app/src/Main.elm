@@ -10,7 +10,6 @@ import Browser.Navigation as Nav
 import Effect exposing (Effect)
 import Html
 import Json.Decode as Decode
-import Page.Debug
 import Page.Index
 import Page.Wec.Event
 import Route exposing (Route)
@@ -46,7 +45,6 @@ type alias Model =
 
 type Page
     = IndexPage
-    | DebugPage Page.Debug.Model
     | WecEventPage Page.Wec.Event.Model
     | NotFoundPage
 
@@ -78,10 +76,6 @@ initPage maybeRoute =
         Just Route.Index ->
             ( IndexPage, Cmd.none )
 
-        Just Route.Debug ->
-            Page.Debug.init
-                |> Tuple.mapBoth DebugPage (toPageCmd DebugMsg)
-
         Just (Route.WecEvent params) ->
             Page.Wec.Event.init params
                 |> Tuple.mapBoth WecEventPage (toPageCmd WecEventMsg)
@@ -102,7 +96,6 @@ type Msg
     = ClickedLink Browser.UrlRequest
     | ChangedUrl Url
     | SharedMsg Shared.Msg.Msg
-    | DebugMsg Page.Debug.Msg
     | WecEventMsg Page.Wec.Event.Msg
 
 
@@ -133,10 +126,6 @@ update msg model =
             , effect
                 |> Effect.toCmd { fromPageMsg = SharedMsg, fromSharedMsg = SharedMsg }
             )
-
-        ( DebugMsg pageMsg, DebugPage pageModel ) ->
-            Page.Debug.update pageMsg pageModel
-                |> updatePage model DebugPage DebugMsg
 
         ( WecEventMsg pageMsg, WecEventPage pageModel ) ->
             Page.Wec.Event.update pageMsg pageModel
@@ -190,10 +179,6 @@ viewPage model =
     case model.page of
         IndexPage ->
             Page.Index.view model.shared
-
-        DebugPage pageModel ->
-            Page.Debug.view model.shared pageModel
-                |> View.map DebugMsg
 
         WecEventPage pageModel ->
             Page.Wec.Event.view model.shared pageModel

@@ -1,7 +1,7 @@
 module Motorsport.BestTimes exposing
     ( Changes, empty, changesDecoder
     , Snapshot, Holder
-    , at, final, timeOf
+    , at, timeOf
     )
 
 {-| When each of the race's best times was set, what they stand at, and who set
@@ -24,7 +24,7 @@ owns it: [`Race`](Motorsport-Race) holds the records, and
 
 @docs Changes, empty, changesDecoder
 @docs Snapshot, Holder
-@docs at, final, timeOf
+@docs at, timeOf
 
 -}
 
@@ -65,9 +65,8 @@ type alias Holder =
 {-| The records held still at one moment of the race -- the baseline a widget
 rates times against, and the laps that set them.
 
-Read mid-race via [`at`](#at) these are only the best times _so far_; only
-[`final`](#final)'s answer is the race's actual best times. `Nothing` is a
-record no lap has taken yet.
+Read via [`at`](#at) these are the best times as they stood at that moment,
+not as the race left them. `Nothing` is a record no lap has taken yet.
 
 -}
 type alias Snapshot =
@@ -167,14 +166,6 @@ line then was rated against.
 at : { elapsed : Instant } -> Changes -> Snapshot
 at clock =
     map (ChangePoints.valueAt clock.elapsed)
-
-
-{-| The records as the race left them, without having to name a time past the
-end of it.
--}
-final : Changes -> Snapshot
-final =
-    map ChangePoints.last
 
 
 {-| One record as a plain time, for callers that want the number and not who set

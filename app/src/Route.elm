@@ -16,7 +16,6 @@ import Url.Parser as Parser exposing ((</>), Parser, s, string, top)
 {-| -}
 type Route
     = Index
-    | Debug
     | WecEvent { season : String, event : String }
 
 
@@ -24,7 +23,6 @@ parser : Parser (Route -> a) a
 parser =
     Parser.oneOf
         [ Parser.map Index top
-        , Parser.map Debug (s "debug")
         , Parser.map (\season event -> WecEvent { season = season, event = event })
             (s "wec" </> string </> string)
         ]
@@ -44,9 +42,6 @@ toString route =
     case route of
         Index ->
             "/"
-
-        Debug ->
-            "/debug"
 
         WecEvent { season, event } ->
             "/wec/" ++ season ++ "/" ++ event

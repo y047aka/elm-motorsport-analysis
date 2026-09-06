@@ -41,16 +41,6 @@ suite =
                         |> ChangePoints.valueAt (instant 2000)
                         |> Expect.equal (Just "a")
             ]
-        , describe "last"
-            [ test "gives the value in force once every change has happened" <|
-                \_ ->
-                    ChangePoints.last index
-                        |> Expect.equal (ChangePoints.valueAt (instant 9999999) index)
-            , test "an empty index has no last value" <|
-                \_ ->
-                    ChangePoints.last ChangePoints.empty
-                        |> Expect.equal Nothing
-            ]
         , describe "countUpTo"
             [ test "counts the changes at or before the clock" <|
                 \_ ->

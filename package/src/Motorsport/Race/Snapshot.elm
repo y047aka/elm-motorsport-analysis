@@ -172,9 +172,7 @@ type alias CurrentMiniSectorStates =
 
 Every number is read at the same clock, the records included: a time is rated
 against the record as it stood then, not as it ends up. Right after the data
-loads the clock sits at the start, so nothing holds a record yet -- a page that
-wants the race's final records asks
-[`BestTimes.final`](Motorsport-BestTimes#final) instead.
+loads the clock sits at the start, so nothing holds a record yet.
 
 -}
 at : { elapsed : Instant } -> Race -> Snapshot
