@@ -363,23 +363,60 @@ CSV と JSONL を目視で突合して検証できる。この利点を、DB 側
 
 依存関係は表の順に走る。
 
-**Phase A — モデルを変えない**
+**Phase A — モデルを変えない（実施済み）**
 
-| PR | 内容 | 効果 |
+| PR | 内容 | 実測 |
 |---|---|---|
-| A-1 | `WITHOUT ROWID` を `laps` / `cars` に | −3.7MB (16%)。`Sql.createTable` に 1 語 |
-| A-2 | `position` を SQL の `ROW_NUMBER` で出し、`assignPositions` を削除 | Elm から 780 万回の再構築が消える（SQL 33ms）。JSONL に加算的な 1 フィールド |
-| A-3 | 未読列の扱いを決める（DB に残す / 落とす）。落とすなら `kph`/`top_speed` の数値化も | 落とす場合 −1.8MB。判断が主 |
+| A-1 | `WITHOUT ROWID` を `laps` / `cars` に | 23.23 → 19.52MB（−16.0%）。`Sql.Storage` をテーブルの宣言に足した |
+| A-2 | `position` を SQL の `ROW_NUMBER` で出し、`assignPositions` を削除 | 旧 Elm アルゴリズムと 20,182 ラップ全件一致。JSONL に加算的な 1 フィールド |
+| A-3 | 未読列の扱いを決める | 全列を残す・TEXT のまま。上の Tier 1 に理由を記載。コード変更なし |
 
-**Phase B — 同一性の層**
+**Phase B — 同一性の層（実施済み）**
 
-| PR | 内容 | 効果 |
+| PR | 内容 | 実測 |
 |---|---|---|
-| B-1 | `rounds` テーブル + `round_id` FK + `loaded_at`、`cars` → `entries`、`laps` を `entry_id` キーに | −3.25MB。`Round.loaded` が不変条件になる。`Db.Schema.scopeOf` 周辺の書き換えを伴う |
-| B-2 | `drivers` + `entry_drivers`、`laps.driver_name` 削除（export は join して従来どおり書き出す） | −2.7MB。ドライバー横断クエリが可能になる |
-| B-3 | `manufacturers` + `canonical_id`、`teams`。色・ロゴの置き場を先に決める | Mercedes/Mercedes-AMG 解決、FK で `manufacturers.json` を検証 |
-| B-4 | `hour_offset_ms` を生成列に | raw SQL が 1 つ減る |
+| B-1 | `rounds` テーブル + `round_id`、`laps` / `cars` から `season`+`round` を削除 | 19.52 → 16.27MB（−16.6%）。`Db.Schema.scope` / `scopeOf` が消えた |
+| B-2 | `drivers` + `car_drivers`、`laps.driver_name` 削除 | 16.27 → 14.29MB（−12.2%）。308 ドライバー / 1,674 シート |
+| B-3 | `manufacturers` + `canonical_id`、`teams`、`Db.Numbering` の抽出 | 14.29 → 14.30MB。サイズではなく同一性のための変更 |
+| B-4 | `hour_offset_ms` を生成列に | `Db.Schema.Computed`。raw SQL が 1 つ減り、ストレージ増は 0（VIRTUAL） |
 
+**累計 23.23 → 14.30MB（−38.4%）。全 14 ラウンドの export はどの段階でもバイト単位で不変。**
+
+### 計画から変えた点
+
+- **B-1 の `loaded_at` は入れなかった。** フラグは「run がここまで来た」を意味し、
+  `Round.loaded` が問うている「両テーブルが行を持っている」とは別物である。行数から
+  立てれば一致させられるが、それは行の派生値をもう一つ持つことになり、手で行を消せば
+  黙って嘘になる。2 本の `LIMIT 1` は数マイクロ秒なので、プローブのまま残した。
+- **B-1 の `cars` → `entries` / `laps.entry_id` はやめた。** 計測した 3.25MB は
+  `season`+`round` → `round_id` の分であって `entry_id` の分ではない（第 2 節の
+  s0–s6 を参照）。`car_number` を id に替えると、車番を報告するすべての読み手が
+  join を必要とする一方、得るものは測っていない小額である。参照整合性の方は複合
+  外部キー `(round_id, car_number)` で取れるので、`entry_id` を持ち出す必要はない。
+- **B-3 は当初「FK で `manufacturers.json` を検証」と書いたが、それは実現していない。**
+  色とロゴをアプリ側に残す判断（Tier 2）を採ったので、DB は
+  `app/static/manufacturers.json` を知らず、検証もできない。下の申し送りを参照。
+
+### 申し送り
+
+- **`manufacturers.json` に無いメーカー表記が 4 つある。**
+  `Isotta Fraschini` / `Lamborghini` / `Mercedes-AMG` / `Oreca`。CLAUDE.md が警告している
+  とおり、これらの車はビルドを壊さず「番号から生成した色」で描かれている。
+  `manufacturers` テーブルができたので、突合は 1 クエリで済む。`Mercedes-AMG` は
+  `canonical_id` が `Mercedes` を指しているので、JSON 側にエイリアス行を足すか、
+  アプリが正規名を引くようにすれば解決する。残る 3 つは単純に未登録である。
+- **外部キーは宣言していない（`PRAGMA foreign_keys` も既定の off のまま）。**
+  有効にすると 2 つ手当てが要る。ひとつは `DROP TABLE` の順序 —— いまは各テーブルが
+  自分で drop→create するので、参照される側が先に消える。もうひとつは
+  `Round.TestSupport.onLapsAlone`、つまり「cars の無い laps」という
+  `Db.Error.Incomplete` の唯一のフィクスチャで、FK を有効にすると構築できなくなる。
+  読み取り時の検出を書き込み時の制約に移す価値はあるが、その 2 つを同時に書き換える
+  必要がある。
+- **Elm はこの環境でコンパイルできなかった。** `package.elm-lang.org` が
+  ネットワークポリシーで遮断されており、`elm make` / `elm-test` が動かない。
+  A-2 の Elm 差分（`Data/Wec/Laps.elm`、`package/tests/`）は elm-format による
+  構文検証と目視レビューのみで、型検査は CI 任せである。Flix 側は cold build /
+  406 tests / スタック 704k / 全 14 ラウンドの実走で検証済み。
 **Phase C — 独立した最終工程（ワイヤ形式）**
 
 | PR | 内容 | 効果 |
