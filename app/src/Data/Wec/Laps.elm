@@ -16,7 +16,6 @@ import Dict exposing (Dict)
 import Json.Decode as Decode exposing (Decoder, int, string)
 import Json.Decode.Extra
 import Json.Decode.Pipeline exposing (optional, required)
-import List.Extra
 import Motorsport.Driver as Driver
 import Motorsport.Duration as Duration exposing (Duration)
 import Motorsport.Instant as Instant exposing (Instant)
@@ -30,6 +29,7 @@ type alias RawLap =
     { carNumber : String
     , driverName : String
     , lapNumber : Int
+    , position : Int
     , lapTime : Duration
     , sectors : BySector (Maybe Duration)
     , miniSectors : Maybe (ByMiniSector RawMiniSector)
@@ -82,6 +82,7 @@ rawLapDecoder =
         |> required "carNumber" string
         |> required "driverName" string
         |> required "lapNumber" int
+        |> required "position" int
         |> required "lap" (Decode.field "time" durationDecoder)
         |> required "sectors" sectorsDecoder
         |> optional "miniSectors" (Decode.map Just miniSectorsDecoder) Nothing
@@ -167,8 +168,7 @@ optionalDurationDecoder =
 {-| Attach raw laps to cars.
 
 Per car: groups raws by `carNumber`, sorts by `lapNumber`, and accumulates
-best lap / sector times. Then assigns 0-based per-lap positions across all
-cars by sorting `elapsed` ascending for each lap number.
+best lap / sector times.
 
 -}
 attach : List RawLap -> List Car -> List Car
@@ -189,7 +189,6 @@ attach rawLaps cars =
                             |> Maybe.withDefault []
                 }
             )
-        |> assignPositions
 
 
 groupBy : (a -> comparable) -> List a -> Dict comparable (List a)
@@ -273,7 +272,7 @@ accumulate raw ( bests, acc ) =
             { carNumber = raw.carNumber
             , driver = Driver.fromName raw.driverName
             , lap = raw.lapNumber
-            , position = Nothing
+            , position = Just raw.position
 
             -- The zero stops here: the CLI writes an unrecorded lap time out as
             -- `0.000` either way, where a blank sector cell stays blank and has
@@ -304,63 +303,3 @@ accumulate raw ( bests, acc ) =
             }
     in
     ( newBests, lap :: acc )
-
-
-
--- POSITIONS
--- `Lap.position` is not in the source data; it is worked out here. Two things
--- downstream depend on it having been: the position-progression chart, and the
--- lead changes in `Motorsport.Race.TimelineEvent`. Both go quiet rather than
--- fail if it is skipped.
-
-
-assignPositions : List Car -> List Car
-assignPositions cars =
-    let
-        maxLap =
-            cars
-                |> List.concatMap .laps
-                |> List.map .lap
-                |> List.maximum
-                |> Maybe.withDefault 0
-    in
-    List.foldl assignPositionsForLap cars (List.range 1 maxLap)
-
-
-assignPositionsForLap : Int -> List Car -> List Car
-assignPositionsForLap lapNum cars =
-    let
-        positionByIdx : Dict Int Int
-        positionByIdx =
-            cars
-                |> List.indexedMap
-                    (\idx car ->
-                        List.Extra.find (\l -> l.lap == lapNum) car.laps
-                            |> Maybe.map (\lap -> ( idx, Instant.toDuration lap.elapsed ))
-                    )
-                |> List.filterMap identity
-                |> List.sortBy Tuple.second
-                |> List.indexedMap (\pos ( idx, _ ) -> ( idx, pos ))
-                |> Dict.fromList
-    in
-    cars
-        |> List.indexedMap
-            (\idx car ->
-                case Dict.get idx positionByIdx of
-                    Just position ->
-                        { car
-                            | laps =
-                                car.laps
-                                    |> List.map
-                                        (\lap ->
-                                            if lap.lap == lapNum then
-                                                { lap | position = Just position }
-
-                                            else
-                                                lap
-                                        )
-                        }
-
-                    Nothing ->
-                        car
-            )

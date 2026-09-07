@@ -100,10 +100,9 @@ type alias Leader =
 
 {-| A `TookLead` each time the car at the front of the field changes hands.
 
-The lead is read off `Lap.position`, which the loader -- not the source data --
-assigns per lap by order of crossing the line, so a change is only ever seen at
-a lap boundary. Whoever leads the opening lap has taken it from nobody, so the
-first leader is not an event.
+The lead is read off `Lap.position`, which is the field's order at that lap, so
+a change is only ever seen at a lap boundary. Whoever leads the opening lap has
+taken it from nobody, so the first leader is not an event.
 
 -}
 leadChangeEvents : List Car -> List TimelineEvent
@@ -140,7 +139,7 @@ leadChangeEvents cars =
             )
 
 
-{-| `Lap.position` counts from zero; see `Data.Wec.Laps.assignPositions`.
+{-| `Lap.position` counts from zero.
 -}
 leadPosition : Int
 leadPosition =

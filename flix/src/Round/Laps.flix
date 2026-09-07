@@ -19,13 +19,34 @@ mod Round.Laps {
             |> Sql.selectAll;
         not List.isEmpty(found)
 
-    pub def read(entry: Entry): List[RawLap] \ DbRead =
+    /// One lap on its way out, and where its car stood in the field as it
+    /// crossed the line. The place is counted over the round's rows rather
+    /// than held by any one of them, so it rides beside the lap: a `RawLap` is
+    /// what the feed said, and the feed does not say this.
+    pub type alias Placed = {
+        lap = RawLap,
+        position = Int32
+    }
+
+    pub def read(entry: Entry): List[Placed] \ DbRead =
         let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
-            |> Sql.map(_ -> Laps.selection())
+            |> Sql.map(_ -> (Laps.selection(), Sql.int(placeInField())))
             |> Sql.selectAll
-            |> List.map(rawLap(cars))
+            |> List.map(placed(cars))
+
+    /// Counted from nought, which is what `Motorsport.Race.TimelineEvent`
+    /// reads the lead off. A window runs over the rows the round was scoped
+    /// to, so the field is this round's and not the table's. Ties on the clock
+    /// are broken by the file's order, which no two rows share.
+    def placeInField(): String =
+        "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
+
+    def placed(cars: Map[String, RawCar]): ((LapRow, Int32)) -> Placed \ DbErr =
+        row -> match row {
+            case (lap, position) => { lap = rawLap(cars)(lap), position = position }
+        }
 
     /// A car with laps and no row in `cars` is a round loaded by halves, which
     /// is the one thing a lap cannot say for itself.

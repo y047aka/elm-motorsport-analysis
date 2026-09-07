@@ -78,12 +78,12 @@ mod Cli.Export {
     def render(
         metadata: Motorsport.Metadata.Metadata,
         index: Motorsport.Index.Index,
-        rawLaps: List[Motorsport.Wec.RawLap]
+        laps: List[Laps.Placed]
     ): Rendered =
         {
-            lapCount     = List.length(rawLaps),
+            lapCount     = List.length(laps),
             metadataJson = Render.renderSummary(metadata, index),
-            lapsJsonl    = Render.renderJsonl(rawLaps)
+            lapsJsonl    = Render.renderJsonl(laps)
         }
 
     def writeRound(task: FileTask.FileTask, rendered: Rendered): Result[CliError, Unit] \ IO =

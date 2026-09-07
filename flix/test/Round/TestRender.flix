@@ -1,6 +1,7 @@
 mod Round.TestRender {
 
     use Round.Index
+    use Round.Laps
     use Round.Render
     use Round.Summary
     use Round.TestSupport
@@ -38,6 +39,12 @@ mod Round.TestRender {
         TestSupport.onRound(leMans(), laps, () ->
             Render.renderSummary(Summary.read(leMans()), Index.read(leMans())))
 
+    /// Read back rather than rendered from the laps in hand: a lap's place in
+    /// the field is counted over the round's rows, so the reader is the only
+    /// thing that has one.
+    def jsonlOf(laps: List[RawLap]): String \ IO =
+        TestSupport.onRound(leMans(), laps, () -> Render.renderJsonl(Laps.read(leMans())))
+
     @Test
     def testRenderSummaryRendersTheRoundsSummary(): Unit \ {Assert, IO} =
         let json = summaryOf(sampleRawLaps());
@@ -64,16 +71,27 @@ mod Round.TestRender {
         Assert.assertTrue(String.contains({substr = "\"lapCompletions\": []"}, json))
 
     @Test
-    def testRenderJsonlRendersEveryLap(): Unit \ Assert =
-        let jsonl = Render.renderJsonl(sampleRawLaps());
+    def testRenderJsonlRendersEveryLap(): Unit \ {Assert, IO} =
+        let jsonl = jsonlOf(sampleRawLaps());
         Assert.assertTrue(String.contains({substr = "\"lapNumber\": 1"}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Will STEVENS\""}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Kamui KOBAYASHI\""}, jsonl));
         Assert.assertTrue(String.contains({substr = "\"driverName\": \"Robin FRIJNS\""}, jsonl))
 
+    /// Car 7 crossed the line first on lap 1 and car 12 second; car 12 had
+    /// lap 2 to itself.
     @Test
-    def testEveryLapIsOneLine(): Unit \ Assert =
-        let jsonl = Render.renderJsonl(sampleRawLaps());
+    def testRenderJsonlCarriesTheFieldsOrder(): Unit \ {Assert, IO} =
+        let lines = jsonlOf(sampleRawLaps()) |> String.splitOn({substr = "\n"});
+        let placeOf = car -> lines
+            |> List.filter(line -> String.contains({substr = "\"carNumber\": \"${car}\""}, line))
+            |> List.map(line -> String.contains({substr = "\"position\": 0"}, line));
+        Assert.assertTrue(placeOf("7") == true :: Nil);
+        Assert.assertTrue(placeOf("12") == false :: true :: Nil)
+
+    @Test
+    def testEveryLapIsOneLine(): Unit \ {Assert, IO} =
+        let jsonl = jsonlOf(sampleRawLaps());
         let lines = String.splitOn({substr = "\n"}, jsonl) |> List.filter(line -> line != "");
         Assert.assertTrue(String.endsWith({suffix = "\n"}, jsonl));
         Assert.assertTrue(List.length(lines) == 3);
@@ -83,7 +101,7 @@ mod Round.TestRender {
         ))
 
     @Test
-    def testRenderJsonlOfNoLapsIsEmpty(): Unit \ Assert =
-        Assert.assertTrue(Render.renderJsonl(Nil) == "")
+    def testRenderJsonlOfNoLapsIsEmpty(): Unit \ {Assert, IO} =
+        Assert.assertTrue(jsonlOf(Nil) == "")
 
 }
