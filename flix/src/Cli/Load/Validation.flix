@@ -82,8 +82,7 @@ mod Cli.Load.Validation {
     // ------------------------------------------------------------------ rules
 
     def sectorSumViolations(entry: Entry): List[Violation] \ DbRead =
-        Laps.rows()
-            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+        Laps.rows(entry)
             |> Sql.filter(c -> Sql.ne(sectorSum(), Schema.expr(c#lapTimeMs)))
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
             |> Sql.map(c -> (lapOf(), c#lapTimeMs, Sql.intOf(Sql.term(sectorSum())), blanks()))
@@ -213,13 +212,10 @@ mod Cli.Load.Validation {
 
     // ------------------------------------------------------------------- sql
 
-    def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(Laps.columns(), entry#season, entry#id)
-
     /// The round's rows as a fragment, for the rules reading them from inside
     /// a common table expression of their own.
     def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.term(Sql.every(scope(entry) :: predicates))
+        Sql.term(Sql.every(Laps.inRound(entry) :: predicates))
 
     /// Built from `Motorsport.MiniSector` rather than written out, so the
     /// signatures are named in one place and the positions follow track order.

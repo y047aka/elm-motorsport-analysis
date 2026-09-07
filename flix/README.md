@@ -268,16 +268,21 @@ What a query asks of its rows is a `Sql.Expr[Bool]`, and `filter` takes it of
 the columns the source declared rather than on its own: the predicate is a
 function of what `map` would be handed, as Acadia's `filter` is of the row, so
 a column of another source is not one this query can be scoped by.
-`Db.Laps.scope` and `Db.Cars.scope` -- the pair naming a round, which every
-reading of either table is scoped by -- take those columns, and a reader ANDs
-its own onto them. Both tables carry `season` and `round` alike, so a scope
-built from the wrong one would bind to whichever side of a join happened to
-have them, and to the wrong side without a word where only one does; the two
-records do not unify, so it does not compile. What a query builds itself
-cannot reach a `WHERE` written into a common table expression, which is text
-and takes the table's own columns. Both name the table they are of, and a
-source that renames it says so itself: `Schema.scopeOf`, and what
-`Round.Summary.carBuilds` hands its `c`. The type is what carries
+The pair naming a round is what every reading of either table is scoped by,
+and it is applied where the rows come from rather than by the reader:
+`Db.Laps.rows` and `Db.Cars.rows` take the round and hand back rows already
+filtered by it, so rows of a table at large are not something either module
+hands out and a reader cannot forget the scope. A reader ANDs its own onto
+them. Both tables carry `season` and `round` alike, so a scope built from the
+wrong one would bind to whichever side of a join happened to have them, and to
+the wrong side without a word where only one does; the two records do not
+unify, so it does not compile. What a query builds itself cannot reach a
+`WHERE` written into a common table expression, which is text and takes the
+table's own columns: `Db.Laps.inRound` is the same predicate had on its own,
+for the queries in `Round.Index`, `Round.Summary` and `Cli.Load.Validation`
+that write one. Both name the table they are of, and a source that renames it
+says so itself: `Schema.scopeOf`, and what `Round.Summary.carBuilds` hands its
+`c`. The type is what carries
 nullability: `Sql.isNotNull` asks for an `Expr[Option[_]]`, so it can be
 asked of `mini_sector_time_ms` and not of `lap_time_ms`, which is a reading the
 column list already knows and no longer a thing to notice. A column a common
@@ -316,8 +321,8 @@ What the query does not reach is its source. The source is text however it is
 named, so the columns `Sql.access` carries are the caller's word that the text
 has them, and a word about the wrong source fails where the query runs rather
 than where it is built. `Db.Laps.rows` and `Db.Laps.rowsBeside` are the two
-that cannot be wrong -- the table itself, and the table read alongside a
-`json_each` of its own -- so a derived table calls `Sql.access` and names the
+that cannot be wrong -- the round's rows of the table itself, and of the table
+read alongside a `json_each` of its own -- so a derived table calls `Sql.access` and names the
 columns it selects, which is what `Round.Summary.driverNames` does with two of
 them. A source that has none is `Sql.column` as before.
 

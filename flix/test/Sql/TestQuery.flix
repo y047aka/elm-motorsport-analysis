@@ -5,7 +5,7 @@ mod Sql.TestQuery {
     use Db.Value
 
     def laps(): Sql.Rows[Laps.Columns] =
-        Laps.rows()
+        Sql.access(Sql.raw("laps"), Laps.columns())
             |> Sql.filter(c -> Sql.eq(Schema.expr(c#season), Sql.i32(2025)))
 
     def lapNumbers(): Sql.Sel[Int32] =

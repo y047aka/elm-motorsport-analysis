@@ -27,22 +27,15 @@ mod Round.Summary {
         let shape = track(entry);
         Metadata.fromReadings(entry, race, shape, cars(entry))
 
-    def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(Laps.columns(), entry#season, entry#id)
-
-    /// The round's rows.
-    def laps(entry: Entry): Sql.Rows[Laps.Columns] =
-        Laps.rows() |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
-
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
     def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.term(Sql.every(scope(entry) :: predicates))
+        Sql.term(Sql.every(Laps.inRound(entry) :: predicates))
 
     // ---------------------------------------------------------- particulars
 
     def particulars(entry: Entry): Metadata.Particulars \ DbRead =
-        laps(entry)
+        Laps.rows(entry)
             |> Sql.map(_ -> (
                 startedAt(entry),
                 Sql.optionalInt("MAX(elapsed_ms)"),
@@ -211,7 +204,7 @@ mod Round.Summary {
         }
 
     def fastestSectors(entry: Entry): (Option[Duration], Option[Duration], Option[Duration], Bool) \ DbRead =
-        laps(entry)
+        Laps.rows(entry)
             |> Sql.map(_ -> (
                 Sql.optionalInt("MIN(s1_ms)"),
                 Sql.optionalInt("MIN(s2_ms)"),
@@ -232,8 +225,7 @@ mod Round.Summary {
         Sql.ne(Schema.expr(c#lapTimeMs), Sql.i32(0))
 
     def fastestMiniSectors(entry: Entry): Map[Int32, Duration] \ DbRead =
-        Laps.rowsBeside(Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
-            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+        Laps.rowsBeside(entry, Sql.raw("json_each(" + Laps.table() + ".mini_sector_time_ms) m"))
             |> Sql.filter(recorded)
             |> Sql.filter(_ -> Sql.isNotNull(Sql.column("m.value")))
             |> Sql.groupBy(Sql.raw("m.key") :: Nil)

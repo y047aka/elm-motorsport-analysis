@@ -23,21 +23,17 @@ mod Round.Index {
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
         }
 
-    def scope(entry: Entry): Sql.Expr[Bool] =
-        Laps.scope(Laps.columns(), entry#season, entry#id)
-
     /// The round's rows as a fragment, for the arms that read them from
     /// inside one of their own.
     def where_(entry: Entry, predicates: List[Sql.Expr[Bool]]): Sql.Frag =
-        Sql.term(Sql.every(scope(entry) :: predicates))
+        Sql.term(Sql.every(Laps.inRound(entry) :: predicates))
 
     // ------------------------------------------------------- lap completions
 
     /// The counter reads the leading car's completed laps, so it goes up the
     /// moment the first car of the field crosses the line for a lap.
     def lapCompletions(entry: Entry): List[(Int32, Duration)] \ DbRead =
-        Laps.rows()
-            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
+        Laps.rows(entry)
             |> Sql.groupBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.orderBy(Schema.term(Laps.columns()#lapNumber) :: Nil)
             |> Sql.map(c -> (c#lapNumber, Sql.int("MIN(elapsed_ms)")))

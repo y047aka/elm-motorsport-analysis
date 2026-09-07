@@ -9,21 +9,27 @@ mod Db.Laps {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
+    use Motorsport.Calendar.Entry
     use Sql.Sel
 
     /// The table these columns are of.
     pub def table(): String = "laps"
 
-    /// The table's rows, with its columns for a projection to pick from.
-    pub def rows(): Sql.Rows[Columns] =
-        Sql.access(Sql.raw(table()), columns())
+    /// The round's rows, with its columns for a projection to pick from.
+    ///
+    /// The pair naming the round is applied here rather than left to the
+    /// caller: every reading of this table is of one round, and rows of the
+    /// table at large are not something this module hands out.
+    pub def rows(entry: Entry): Sql.Rows[Columns] =
+        Sql.access(Sql.raw(table()), columns()) |> scoped(entry)
 
     /// As `rows`, read alongside something of the table's own -- `json_each`
     /// over one of its arrays, say. The table is the source either way, so all
     /// of its columns are there; a source that is not the table takes
     /// `Sql.access` and says for itself which of them it has.
-    pub def rowsBeside(companion: Sql.Frag): Sql.Rows[Columns] =
+    pub def rowsBeside(entry: Entry, companion: Sql.Frag): Sql.Rows[Columns] =
         Sql.access(Sql.frags(Sql.raw(table() + ",") :: companion :: Nil), columns())
+            |> scoped(entry)
 
     /// One lap of one car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[LapRow]] =
@@ -173,10 +179,19 @@ mod Db.Laps {
     pub def values(row: LapRow): List[Value] =
         Schema.values(all(), row)
 
-    /// Taken of the columns a query was handed rather than of this table's
+    /// The round's rows as a predicate, for a query reading them from inside
+    /// one of its own: a common table expression's source is text, so it
+    /// declares no columns for `rows` to scope.
+    pub def inRound(entry: Entry): Sql.Expr[Bool] =
+        scope(columns(), entry)
+
+    /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them.
-    pub def scope(c: Columns, inSeason: Int32, named: String): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, inSeason, named)
+    def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
+        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
+
+    def scoped(entry: Entry, rows: Sql.Rows[Columns]): Sql.Rows[Columns] =
+        rows |> Sql.filter(c -> scope(c, entry))
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
     /// and which is therefore where the round's start time is written.

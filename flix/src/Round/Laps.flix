@@ -13,7 +13,7 @@ mod Round.Laps {
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
     pub def loaded(entry: Entry): Bool \ DbRead =
-        let found = laps(entry)
+        let found = Laps.rows(entry)
             |> Sql.limit(1)
             |> Sql.map(_ -> Sql.int("1"))
             |> Sql.selectAll;
@@ -21,7 +21,7 @@ mod Round.Laps {
 
     pub def read(entry: Entry): List[RawLap] \ DbRead =
         let cars = Cars.read(entry);
-        laps(entry)
+        Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
             |> Sql.map(_ -> Laps.selection())
             |> Sql.selectAll
@@ -38,9 +38,5 @@ mod Round.Laps {
                     |> Result.mapErr(Db.Error.Unread)
                     |> Db.orRaise
             }
-
-    def laps(entry: Entry): Sql.Rows[Laps.Columns] =
-        Laps.rows()
-            |> Sql.filter(c -> Laps.scope(c, entry#season, entry#id))
 
 }

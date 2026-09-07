@@ -9,12 +9,16 @@ mod Db.Cars {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
+    use Motorsport.Calendar.Entry
     use Sql.Sel
 
     pub def table(): String = "cars"
 
-    pub def rows(): Sql.Rows[Columns] =
+    /// The round's rows. As `Db.Laps.rows`, the pair naming the round is
+    /// applied here rather than left to the caller.
+    pub def rows(entry: Entry): Sql.Rows[Columns] =
         Sql.access(Sql.raw(table()), columns())
+            |> Sql.filter(c -> scope(c, entry))
 
     /// One car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[CarRow]] =
@@ -84,10 +88,10 @@ mod Db.Cars {
     pub def values(row: CarRow): List[Value] =
         Schema.values(all(), row)
 
-    /// Taken of the columns a query was handed rather than of this table's
+    /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them.
-    pub def scope(c: Columns, inSeason: Int32, named: String): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, inSeason, named)
+    def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
+        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
 
     pub def createTable(): String =
         Sql.createTable(table(), all(), keys())

@@ -4,6 +4,7 @@ mod Sql.TestExpr {
     use Db.Laps
     use Db.Schema
     use Db.Value
+    use Motorsport.Calendar.Entry
 
     @Test
     def aComparisonBindsTheValueItComparesAgainst(): Unit \ Assert =
@@ -51,18 +52,31 @@ mod Sql.TestExpr {
         );
         Assert.assertTrue(Sql.decode(Schema.read(lap1), Some("12") :: Nil) == Ok("12"))
 
+    def leMans(): Entry = { season = 2025, id = "le_mans_24h", date = "2025-06-14" }
+
     /// The pair that names a round, which every reading of either table is
     /// scoped by. Both tables have `season` and `round`, so the scope names
     /// the source it means: bare, it would bind to whichever side of a join
     /// happened to carry them.
     @Test
-    def theScopeBindsTheSeasonAndTheRoundsNameOfTheTableItIsOf(): Unit \ Assert =
-        Assert.assertTrue(Sql.toSql(Sql.term(Laps.scope(Laps.columns(), 2025, "le_mans_24h"))) == (
-            "laps.season = ? AND laps.round = ?",
+    def theRowsAreScopedToTheSeasonAndTheRoundsNameOfTheTableTheyAreOf(): Unit \ Assert =
+        let lapNumbers = Laps.rows(leMans()) |> Sql.map(c -> c#lapNumber) |> Sql.toStatement;
+        Assert.assertTrue(Sql.toSql(lapNumbers) == (
+            "SELECT lap_number FROM laps WHERE laps.season = ? AND laps.round = ?",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ));
-        Assert.assertTrue(Sql.toSql(Sql.term(Cars.scope(Cars.columns(), 2025, "le_mans_24h"))) == (
-            "cars.season = ? AND cars.round = ?",
+        let carNumbers = Cars.rows(leMans()) |> Sql.map(c -> c#carNumber) |> Sql.toStatement;
+        Assert.assertTrue(Sql.toSql(carNumbers) == (
+            "SELECT car_number FROM cars WHERE cars.season = ? AND cars.round = ?",
+            Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
+        ))
+
+    /// A query reading the round's rows from inside a common table expression
+    /// of its own has a source that is text, so it takes the predicate.
+    @Test
+    def theScopeIsAlsoHadAsAPredicate(): Unit \ Assert =
+        Assert.assertTrue(Sql.toSql(Sql.term(Laps.inRound(leMans()))) == (
+            "laps.season = ? AND laps.round = ?",
             Value.Integer(2025) :: Value.Text("le_mans_24h") :: Nil
         ))
 
