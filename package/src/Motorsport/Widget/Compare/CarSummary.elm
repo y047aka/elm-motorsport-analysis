@@ -33,38 +33,17 @@ carSummary item =
             [ class "grid gap-y-0.5" ]
             [ div [ class "text-[14px]" ]
                 [ text item.metadata.team ]
-            , driverList item
+            , currentDriverName item
             ]
         , statusBadge item.status
         ]
 
 
-{-| As in the leaderboard, emphasizes the driver currently at the wheel and dims
-the others.
--}
-driverList : CarAt -> Html msg
-driverList item =
-    let
-        isCurrentDriver driver =
-            Driver.isSame driver item.currentDriver
-    in
+currentDriverName : CarAt -> Html msg
+currentDriverName item =
     div
-        [ class "flex flex-wrap gap-x-2 gap-y-0.5 text-[11px]" ]
-        (List.map
-            (\driver ->
-                div
-                    [ class
-                        (if isCurrentDriver driver then
-                            "opacity-100"
-
-                         else
-                            "opacity-40"
-                        )
-                    ]
-                    [ text (Driver.toFullName driver) ]
-            )
-            item.metadata.drivers
-        )
+        [ class "text-[11px]" ]
+        [ text (Driver.toFullName item.currentDriver) ]
 
 
 statusBadge : Status -> Html msg
