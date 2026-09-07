@@ -3,10 +3,12 @@ mod Cli.Load {
     use Db.CarDrivers
     use Db.Cars
     use Db.Drivers
-    use Db.Drivers.Numbering
+    use Db.Numbering.Numbering
     use Db.Laps
+    use Db.Manufacturers
     use Db.Rounds
     use Db.Rounds.RoundRow
+    use Db.Teams
 
     use Sys.Console
     use Util.Files
@@ -23,7 +25,22 @@ mod Cli.Load {
     type alias RunSummary = {
         processed = Int32,
         errors    = Int32,
-        drivers   = Numbering
+        numbered  = Numbered
+    }
+
+    /// What the run has numbered so far. The three are carried between rounds
+    /// for one reason: a name turns up in several of them, and the pass that
+    /// writes a round cannot read back what no later pass has written.
+    type alias Numbered = {
+        drivers       = Numbering,
+        teams         = Numbering,
+        manufacturers = Numbering
+    }
+
+    def nothingNumbered(): Numbered = {
+        drivers       = Db.Numbering.none(),
+        teams         = Db.Numbering.none(),
+        manufacturers = Db.Numbering.none()
     }
 
     /// What the round put in each table, which is what the database took
@@ -32,6 +49,13 @@ mod Cli.Load {
         cars = Int32,
         seats = Int32,
         laps = Int32
+    }
+
+    /// The rows a round adds to the tables keyed by a name.
+    type alias Added = {
+        drivers       = List[Db.Drivers.DriverRow],
+        teams         = List[Db.Teams.TeamRow],
+        manufacturers = List[Db.Manufacturers.ManufacturerRow]
     }
 
     /// The tables are dropped and rebuilt, so the run is one transaction: a
@@ -61,6 +85,8 @@ mod Cli.Load {
     def createTables(): List[RoundRow] \ DbWrite =
         let rounds = Rounds.create(Motorsport.Calendar.entries());
         Drivers.create();
+        Teams.create();
+        Manufacturers.create();
         CarDrivers.create();
         Cars.create();
         Laps.create();
@@ -73,16 +99,16 @@ mod Cli.Load {
     def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
-            (acc, task) -> match processFile(rounds, acc#drivers, task) {
-                case (Ok(loaded), drivers) =>
+            (acc, task) -> match processFile(rounds, acc#numbered, task) {
+                case (Ok(loaded), numbered) =>
                     Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps,"
                         + " ${loaded#cars} cars, ${loaded#seats} seats loaded");
-                    { processed = acc#processed + 1, drivers = drivers | acc }
-                case (Err(e), drivers) =>
+                    { processed = acc#processed + 1, numbered = numbered | acc }
+                case (Err(e), numbered) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
-                    { errors = acc#errors + 1, drivers = drivers | acc }
+                    { errors = acc#errors + 1, numbered = numbered | acc }
             },
-            { processed = 0, errors = 0, drivers = Drivers.noneNumbered() },
+            { processed = 0, errors = 0, numbered = nothingNumbered() },
             tasks
         );
         reportUnlistedCsvFiles(root, tasks);
@@ -107,15 +133,29 @@ mod Cli.Load {
     /// numbers it took would be a name written twice under one id.
     def processFile(
         rounds: List[RoundRow],
-        numbering: Numbering,
+        numbering: Numbered,
         task: FileTask.FileTask
-    ): (Result[CliError, Loaded], Numbering) \ {IO, Console, SqlRead, SqlWrite} =
+    ): (Result[CliError, Loaded], Numbered) \ {IO, Console, SqlRead, SqlWrite} =
         match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
             case Err(e) => (Err(e), numbering)
             case Ok(rawLaps) =>
                 reportDisagreements(task, rawLaps);
                 let seats = CarDrivers.seats(rawLaps);
-                let (numbered, added) = Drivers.add(numbering, seats |> List.map(s -> s#name));
+                let cars = CarRow.firstMentions(rawLaps);
+                let (drivers, addedDrivers) =
+                    Drivers.add(numbering#drivers, seats |> List.map(s -> s#name));
+                let (teams, addedTeams) =
+                    Teams.add(numbering#teams, cars |> List.map(c -> c#team));
+                let (manufacturers, addedManufacturers) =
+                    Manufacturers.add(numbering#manufacturers, cars |> List.map(c -> c#manufacturer));
+                let numbered = {
+                    drivers = drivers, teams = teams, manufacturers = manufacturers
+                };
+                let added = {
+                    drivers = addedDrivers,
+                    teams = addedTeams,
+                    manufacturers = addedManufacturers
+                };
                 let outcome = Db.runWithError(() ->
                         reportViolations(task, load(rounds, numbered, added, seats, task, rawLaps)))
                     |> Result.mapErr(CliError.Database);
@@ -145,8 +185,8 @@ mod Cli.Load {
     /// same run did not number is the same fault a step later.
     def load(
         rounds: List[RoundRow],
-        numbering: Numbering,
-        added: List[Drivers.DriverRow],
+        numbering: Numbered,
+        added: Added,
         seats: List[CarDrivers.Seat],
         task: FileTask.FileTask,
         rawLaps: List[RawLap]
@@ -155,15 +195,21 @@ mod Cli.Load {
             case None => DbErr.fail(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
             case Some(roundId) =>
-                discard Drivers.insertRows(added);
-                match CarDrivers.fromSeats(roundId, numbering, seats) {
-                    case None => DbErr.fail(Db.Error.Incomplete(
-                        "round ${FileTask.label(task)} names a driver the run did not number"))
-                    case Some(seatRows) =>
-                        let seatCount = CarDrivers.insertRows(seatRows);
-                        let cars = Cars.insertRows(CarRow.fromRawLaps(roundId, rawLaps));
+                discard Drivers.insertRows(added#drivers);
+                discard Teams.insertRows(added#teams);
+                discard Manufacturers.insertRows(added#manufacturers);
+                let seatRows = CarDrivers.fromSeats(roundId, numbering#drivers, seats);
+                let carRows = CarRow.fromRawLaps(
+                    roundId, numbering#teams, numbering#manufacturers, rawLaps);
+                match (seatRows, carRows) {
+                    case (Some(theSeats), Some(theCars)) =>
+                        let seatCount = CarDrivers.insertRows(theSeats);
+                        let cars = Cars.insertRows(theCars);
                         let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
                         { cars = cars, seats = seatCount, laps = laps }
+                    case _ => DbErr.fail(Db.Error.Incomplete(
+                        "round ${FileTask.label(task)} names a driver, a team or a"
+                            + " manufacturer the run did not number"))
                 }
         }
 

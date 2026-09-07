@@ -1,5 +1,7 @@
 mod Db.CarRow {
 
+    use Db.Numbering
+    use Db.Numbering.Numbering
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
 
@@ -11,18 +13,30 @@ mod Db.CarRow {
         carNumber = String,
         class = String,
         carGroup = String,
-        team = String,
-        manufacturer = String
+        teamId = Int32,
+        manufacturerId = Int32
     }
 
     /// The cars the round's laps name, in the order the file first mentioned
     /// each. A car the file later contradicts itself about keeps what it was
     /// first said to be, which is the same reading the starting grid is
     /// ordered by, and `disagreements` is where the contradiction is said.
-    pub def fromRawLaps(roundId: Int32, rawLaps: List[RawLap]): List[CarRow] =
-        firstMentions(rawLaps) |> List.map(car -> fromRawCar(roundId, car))
+    /// A name the run did not number is a load that read the file twice and
+    /// differently, which is the one thing these rows cannot be built from.
+    pub def fromRawLaps(
+        roundId: Int32,
+        teams: Numbering,
+        manufacturers: Numbering,
+        rawLaps: List[RawLap]
+    ): Option[List[CarRow]] =
+        firstMentions(rawLaps)
+            |> List.map(car -> fromRawCar(roundId, teams, manufacturers, car))
+            |> List.sequence
 
-    def firstMentions(rawLaps: List[RawLap]): List[RawCar] =
+    /// The cars the round names, each as the file first described it. `pub`
+    /// reaches the load, which numbers the teams and manufacturers off them
+    /// before the rows that name those ids are built.
+    pub def firstMentions(rawLaps: List[RawLap]): List[RawCar] =
         let gathered = List.foldLeft((acc, rawLap) -> {
             let number = rawLap#car#carNumber;
             if (Set.memberOf(number, acc#seen))
@@ -88,23 +102,32 @@ mod Db.CarRow {
             ("manufacturer", kept#manufacturer, found#manufacturer) :: Nil;
         fields |> List.filter(match (_, was, now) -> was != now)
 
-    pub def fromRawCar(roundId: Int32, car: RawCar): CarRow =
-        {
+    pub def fromRawCar(
+        roundId: Int32,
+        teams: Numbering,
+        manufacturers: Numbering,
+        car: RawCar
+    ): Option[CarRow] =
+        forM(
+            teamId <- Numbering.idIn(teams, car#team);
+            manufacturerId <- Numbering.idIn(manufacturers, car#manufacturer)
+        ) yield {
             roundId = roundId,
             carNumber = car#carNumber,
             class = car#class,
             carGroup = car#group,
-            team = car#team,
-            manufacturer = car#manufacturer
+            teamId = teamId,
+            manufacturerId = manufacturerId
         }
 
-    pub def toRawCar(row: CarRow): RawCar =
+    /// The team and the manufacturer are the tables', the rest the row's.
+    pub def toRawCar(team: String, manufacturer: String, row: CarRow): RawCar =
         {
             carNumber    = row#carNumber,
             class        = row#class,
             group        = row#carGroup,
-            team         = row#team,
-            manufacturer = row#manufacturer
+            team         = team,
+            manufacturer = manufacturer
         }
 
 }

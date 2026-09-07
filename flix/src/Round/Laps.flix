@@ -30,7 +30,7 @@ mod Round.Laps {
     }
 
     pub def read(entry: Entry): List[Placed] \ DbRead =
-        let cars = Cars.read(entry);
+        let cars = Cars.read(entry, Round.Names.read());
         let seats = Drivers.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)

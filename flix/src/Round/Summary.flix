@@ -26,7 +26,7 @@ mod Round.Summary {
     pub def read(entry: Entry): Metadata.Metadata \ DbRead =
         let race = particulars(entry);
         let shape = track(entry);
-        Metadata.fromReadings(entry, race, shape, cars(entry))
+        Metadata.fromReadings(entry, race, shape, cars(entry, Round.Names.read()))
 
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
@@ -61,8 +61,8 @@ mod Round.Summary {
 
     // ----------------------------------------------------------------- cars
 
-    def cars(entry: Entry): List[CarBuild] \ DbRead =
-        carBuilds(entry, driverNames(entry, Round.Drivers.read(entry)))
+    def cars(entry: Entry, names: Round.Names.Names): List[CarBuild] \ DbRead =
+        carBuilds(entry, names, driverNames(entry, Round.Drivers.read(entry)))
 
     /// `(car number, driver name)` in the order the file first showed each
     /// seat, which is the order a car's drivers are listed in. The order is
@@ -90,7 +90,11 @@ mod Round.Summary {
 
     /// A car is what `cars` says it was; where the file first mentioned it is
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.
-    def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead =
+    def carBuilds(
+        entry: Entry,
+        names: Round.Names.Names,
+        drivers: List[(String, String)]
+    ): List[CarBuild] \ DbRead =
         let car = carColumns();
         let lap1 = lap1Columns();
         Sql.access(
@@ -121,13 +125,13 @@ mod Round.Summary {
                 t#car#carNumber,
                 t#car#class,
                 t#car#carGroup,
-                t#car#team,
-                t#car#manufacturer,
+                t#car#teamId,
+                t#car#manufacturerId,
                 t#lap1#s1Ms,
                 Sql.orNull(t#lap1#elapsedMs)
             ))
-            |> Sql.reading(row -> carBuild(drivers, row))
             |> Sql.selectAll
+            |> List.map(row -> carBuild(names, drivers, row))
 
     /// The round's cars under the name the join gives that side.
     def carColumns(): {
@@ -135,17 +139,17 @@ mod Round.Summary {
         carNumber = Column[CarRow, String],
         class = Column[CarRow, String],
         carGroup = Column[CarRow, String],
-        team = Column[CarRow, String],
-        manufacturer = Column[CarRow, String]
+        teamId = Column[CarRow, Int32],
+        manufacturerId = Column[CarRow, Int32]
     } =
         let c = Cars.columns();
         {
-            roundId      = Schema.qualified("c", c#roundId),
-            carNumber    = Schema.qualified("c", c#carNumber),
-            class        = Schema.qualified("c", c#carClass),
-            carGroup     = Schema.qualified("c", c#carGroup),
-            team         = Schema.qualified("c", c#team),
-            manufacturer = Schema.qualified("c", c#manufacturer)
+            roundId        = Schema.qualified("c", c#roundId),
+            carNumber      = Schema.qualified("c", c#carNumber),
+            class          = Schema.qualified("c", c#carClass),
+            carGroup       = Schema.qualified("c", c#carGroup),
+            teamId         = Schema.qualified("c", c#teamId),
+            manufacturerId = Schema.qualified("c", c#manufacturerId)
         }
 
     /// Each is a column of `laps`, so what it reads back as is the type the
@@ -161,18 +165,19 @@ mod Round.Summary {
         }
 
     def carBuild(
+        names: Round.Names.Names,
         drivers: List[(String, String)],
-        row: (String, String, String, String, String, Option[Int32], Option[Int32])
-    ): CarBuild =
+        row: (String, String, String, Int32, Int32, Option[Int32], Option[Int32])
+    ): CarBuild \ DbErr =
         match row {
-            case (carNumber, class, group, team, manufacturer, lap1S1, lap1Elapsed) =>
+            case (carNumber, class, group, teamId, manufacturerId, lap1S1, lap1Elapsed) =>
                 let car: Car = {
                     carNumber    = carNumber,
                     drivers      = driversOf(carNumber, drivers),
                     class        = class,
                     group        = group,
-                    team         = team,
-                    manufacturer = manufacturer
+                    team         = Round.Names.nameOf(names#teams, "team", teamId),
+                    manufacturer = Round.Names.nameOf(names#manufacturers, "manufacturer", manufacturerId)
                 };
                 {
                     car         = car,

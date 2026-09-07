@@ -4,6 +4,8 @@
 /// well as the value. 308 of them are named on 130,017 laps.
 mod Db.Drivers {
 
+    use Db.Numbering
+    use Db.Numbering.Numbering
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
@@ -17,28 +19,16 @@ mod Db.Drivers {
         name = String
     }
 
-    /// The names a run has numbered so far. A run walks the rounds one at a
-    /// time and a driver turns up in several, so what numbers them is carried
-    /// between rounds rather than read back between them.
-    pub type alias Numbering = Map[String, Int32]
-
-    pub def noneNumbered(): Numbering = Map.empty()
-
     /// The names this round adds, numbered after the ones already there, in
     /// the order the round first mentions each.
     pub def add(numbering: Numbering, names: List[String]): (Numbering, List[DriverRow]) =
-        List.foldLeft((acc, name) -> {
-            let (known, added) = acc;
-            if (Map.memberOf(name, known))
-                acc
-            else
-                let row = { driverId = Map.size(known) + 1, name = name };
-                (Map.insert(name, row#driverId, known), row :: added)
-        }, (numbering, Nil), names)
-            |> match (known, added) -> (known, List.reverse(added))
+        let (numbered, added) = Numbering.add(numbering, names);
+        (numbered, added |> List.map(match (id, name) -> { driverId = id, name = name }))
+
+    pub def noneNumbered(): Numbering = Numbering.none()
 
     pub def idIn(numbering: Numbering, name: String): Option[Int32] =
-        Map.get(name, numbering)
+        Numbering.idIn(numbering, name)
 
     pub def rows(): Sql.Rows[Columns] =
         Sql.access(Sql.raw(table()), columns())
