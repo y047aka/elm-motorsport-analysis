@@ -445,7 +445,7 @@ viewCurrentLapColumn_Wec { status, currentLap } =
         lapTime { time, performance } =
             div
                 [ class "text-center", style "color" (colorOfPerformanceText performance) ]
-                [ text (Duration.toString time) ]
+                [ text (Duration.toStringToSeconds time) ]
     in
     if Status.hasRetired status then
         div [ class "text-center" ] [ text "Retired" ]
@@ -509,7 +509,7 @@ viewCurrentLapColumn_LeMans24h bestTimes { status, bestLap, currentLap } =
             in
             div
                 [ class "text-center", style "color" (colorOfPerformanceText status_) ]
-                [ text (Duration.toString time) ]
+                [ text (Duration.toStringToSeconds time) ]
     in
     if Status.hasRetired status then
         div [ class "text-center" ] [ text "Retired" ]
