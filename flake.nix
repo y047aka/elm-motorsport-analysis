@@ -134,8 +134,14 @@
               ${dbEnv}
               cd flix
               jar=artifact/flix.jar
-              if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
+              # The marker, not the jar: an interrupted `build-jar` leaves a jar
+              # with no central directory in it, and one newer than every source
+              # it was made from, which reads as built and runs as a missing
+              # `Main` until the file is removed by hand.
+              if [ ! -f "$jar.ok" ] || [ -n "$(find src flix.toml -newer "$jar.ok" 2>/dev/null)" ]; then
+                rm -f "$jar" "$jar.ok"
                 flix build-jar >&2
+                touch "$jar.ok"
               fi
               java -cp "$jar:$(find lib -name '*.jar' | tr '\n' ':')" Main ${args} "$@"
             '';
@@ -161,8 +167,9 @@
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
-        # relative to the cwd. Rebuilds the jar when sources changed; cargo
-        # is needed by the rust-major-audit subcommand.
+        # relative to the cwd. Rebuilds the jar when a source is newer than the
+        # marker a finished build leaves, as `mkFlixServerApp` does; cargo is
+        # needed by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
@@ -170,8 +177,10 @@
             root=$(git rev-parse --show-toplevel)
             dir=$root/.claude/skills/update-deps/scripts-flix
             jar=$dir/artifact/scripts-flix.jar
-            if [ ! -f "$jar" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+            if [ ! -f "$jar.ok" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar.ok" 2>/dev/null)" ]; then
+              rm -f "$jar" "$jar.ok"
               (cd "$dir" && flix build-jar) >&2
+              touch "$jar.ok"
             fi
             java -jar "$jar" "$@"
           '';
