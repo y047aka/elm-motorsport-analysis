@@ -104,11 +104,16 @@ mod Round.TestSummary {
             case _ => Assert.assertTrue(false)
         }
 
+    /// The seat the feed names is what a driver is keyed by, so a car's second
+    /// driver is its second seat rather than a second name in the first.
+    def inSeat(number: Int32, lap: RawLap): RawLap =
+        { driver = { number = number | lap#driver } | lap }
+
     @Test
     def testDriversAccumulatedInCsvOrder(): Unit \ {Assert, IO} =
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
-            mkLap("12", 2, "3:07.610", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
+            inSeat(2, mkLap("12", 2, "3:07.610", "FRIJNS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             Nil;
         let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {
@@ -122,7 +127,7 @@ mod Round.TestSummary {
         let laps =
             mkLap("12", 1, "1:35.365", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
             mkLap("12", 2, "3:07.610", "STEVENS", "HYPERCAR", "H", "Hertz", "Porsche") ::
-            mkLap("12", 3, "4:50.000", "FRIJNS",  "HYPERCAR", "H", "Hertz", "Porsche") ::
+            inSeat(2, mkLap("12", 3, "4:50.000", "FRIJNS", "HYPERCAR", "H", "Hertz", "Porsche")) ::
             Nil;
         let meta = metadata(leMans(), laps);
         match meta#startingGrid#entries {

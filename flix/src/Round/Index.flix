@@ -17,7 +17,7 @@ mod Round.Index {
 
     pub def read(entry: Entry): Index.Index \ DbRead =
         let completions = lapCompletions(entry);
-        let changes = bestTimes(entry);
+        let changes = bestTimes(entry, Round.Drivers.read(entry));
         {
             lapCompletions = completions,
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
@@ -52,7 +52,10 @@ mod Round.Index {
         (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
         Nil
 
-    def bestTimes(entry: Entry): List[(Record, Change)] \ DbRead =
+    def bestTimes(
+        entry: Entry,
+        seats: Map[(String, Int32), String]
+    ): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
@@ -64,19 +67,19 @@ mod Round.Index {
                 Sql.int("t"),
                 Sql.text("car_number"),
                 Sql.int("lap_number"),
-                Sql.text("driver_name")
+                Sql.int("driver_number")
             ))
-            |> Sql.reading(change)
             |> Sql.selectAll
+            |> List.map(change(seats))
 
-    def change(row: (Record, Int32, Int32, String, Int32, String)): (Record, Change) =
-        match row {
-            case (record, elapsed, time, carNumber, lap, driver) => (record, {
+    def change(seats: Map[(String, Int32), String]): ((Record, Int32, Int32, String, Int32, Int32)) -> (Record, Change) \ DbErr =
+        row -> match row {
+            case (record, elapsed, time, carNumber, lap, driverNumber) => (record, {
                 elapsed   = Util.Duration.fromMillis(elapsed),
                 time      = Util.Duration.fromMillis(time),
                 carNumber = carNumber,
                 lap       = lap,
-                driver    = driver
+                driver    = Round.Drivers.nameOf(seats, carNumber, driverNumber)
             })
         }
 
@@ -104,14 +107,14 @@ mod Round.Index {
     /// Every reading with the record as it stood before it beside it, the
     /// readings walked once in the order the laps were completed.
     def standing(): String =
-        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_name, t, dir,"
+        "SELECT k, elapsed_ms, source_row, car_number, lap_number, driver_number, t, dir,"
             + " MIN(t * dir) OVER (PARTITION BY k ORDER BY elapsed_ms, source_row"
             + " ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING) AS prev"
             + " FROM v WHERE t IS NOT NULL"
 
     def reading(entry: Entry, direction: Int32, expression: String): Sql.Frag =
         Sql.frags(
-            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name,"
+            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number,"
                 + " ${direction} AS dir, ${expression} AS t"
                 + " FROM " + Laps.table() + " WHERE") ::
             where_(entry, Nil) :: Nil
@@ -121,7 +124,7 @@ mod Round.Index {
     /// of such a lap are not a lap of the circuit either.
     def miniSectorReadings(entry: Entry): Sql.Frag =
         Sql.frags(
-            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_name, 1, m.value"
+            Sql.raw("elapsed_ms, source_row, car_number, lap_number, driver_number, 1, m.value"
                 + " FROM " + Laps.table()
                 + ", json_each(" + Laps.table() + ".mini_sector_time_ms) m"
                 + " WHERE") ::

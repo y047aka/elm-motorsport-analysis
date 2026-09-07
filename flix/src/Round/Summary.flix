@@ -62,24 +62,31 @@ mod Round.Summary {
     // ----------------------------------------------------------------- cars
 
     def cars(entry: Entry): List[CarBuild] \ DbRead =
-        carBuilds(entry, driverNames(entry))
+        carBuilds(entry, driverNames(entry, Round.Drivers.read(entry)))
 
     /// `(car number, driver name)` in the order the file first showed each
-    /// pair, which is the order a car's drivers are listed in.
-    def driverNames(entry: Entry): List[(String, String)] \ DbRead =
+    /// seat, which is the order a car's drivers are listed in. The order is
+    /// the laps' and the name is `car_drivers`', so the reading is of the one
+    /// and the naming of the other.
+    def driverNames(
+        entry: Entry,
+        seats: Map[(String, Int32), String]
+    ): List[(String, String)] \ DbRead =
         let c = Laps.columns();
         Sql.access(
                 Sql.frags(
-                    Sql.raw("(SELECT car_number, driver_name, MIN(source_row) AS first_seen"
+                    Sql.raw("(SELECT car_number, driver_number, MIN(source_row) AS first_seen"
                         + " FROM " + Laps.table() + " WHERE") ::
                     where_(entry, Nil) ::
-                    Sql.raw("GROUP BY car_number, driver_name) d") :: Nil
+                    Sql.raw("GROUP BY car_number, driver_number) d") :: Nil
                 ),
-                { carNumber = c#carNumber, driverName = c#driverName }
+                { carNumber = c#carNumber, driverNumber = c#driverNumber }
             )
             |> Sql.orderBy(Sql.raw("first_seen") :: Nil)
-            |> Sql.map(d -> (d#carNumber, d#driverName))
+            |> Sql.map(d -> (d#carNumber, d#driverNumber))
             |> Sql.selectAll
+            |> List.map(match (carNumber, driverNumber) ->
+                (carNumber, Round.Drivers.nameOf(seats, carNumber, driverNumber)))
 
     /// A car is what `cars` says it was; where the file first mentioned it is
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.

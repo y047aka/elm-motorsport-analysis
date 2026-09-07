@@ -1,7 +1,8 @@
 /// The `laps` table -- its name, its columns, its keys, and the schema and
-/// statements they make. A lap carries its car's number and nothing else about
-/// it: `Db.Cars` holds the class, group, team and manufacturer, which no round
-/// in the archive varies within a car.
+/// statements they make. A lap carries its car's number and the seat that ran
+/// it, and nothing else about either: `Db.Cars` holds the class, group, team
+/// and manufacturer, and `Db.CarDrivers` the seat's driver, none of which a
+/// round in the archive varies within a car.
 mod Db.Laps {
 
     use Db.LapRow.LapRow
@@ -52,7 +53,6 @@ mod Db.Laps {
         sourceRow = Column[LapRow, Int32],
         carNumber = Column[LapRow, String],
         driverNumber = Column[LapRow, Int32],
-        driverName = Column[LapRow, String],
         lapNumber = Column[LapRow, Int32],
         lapTimeMs = Column[LapRow, Int32],
         lapImprovement = Column[LapRow, Int32],
@@ -81,7 +81,6 @@ mod Db.Laps {
         sourceRow = Schema.integer("source_row", r -> r#sourceRow),
         carNumber = Schema.text("car_number", r -> r#carNumber),
         driverNumber = Schema.integer("driver_number", r -> r#driverNumber),
-        driverName = Schema.text("driver_name", r -> r#driverName),
         lapNumber = Schema.integer("lap_number", r -> r#lapNumber),
         lapTimeMs = Schema.integer("lap_time_ms", r -> r#lapTimeMs),
         lapImprovement = Schema.integer("lap_improvement", r -> r#lapImprovement),
@@ -112,7 +111,6 @@ mod Db.Laps {
             |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
             |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
-            |> Sql.field(c#driverName, (row, value) -> { +driverName = value | row })
             |> Sql.field(c#lapNumber, (row, value) -> { +lapNumber = value | row })
             |> Sql.field(c#lapTimeMs, (row, value) -> { +lapTimeMs = value | row })
             |> Sql.field(c#lapImprovement, (row, value) -> { +lapImprovement = value | row })
@@ -143,7 +141,6 @@ mod Db.Laps {
         Schema.bound(c#sourceRow) ::
         Schema.bound(c#carNumber) ::
         Schema.bound(c#driverNumber) ::
-        Schema.bound(c#driverName) ::
         Schema.bound(c#lapNumber) ::
         Schema.bound(c#lapTimeMs) ::
         Schema.bound(c#lapImprovement) ::

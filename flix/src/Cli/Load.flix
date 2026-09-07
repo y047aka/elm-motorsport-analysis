@@ -1,6 +1,9 @@
 mod Cli.Load {
 
+    use Db.CarDrivers
     use Db.Cars
+    use Db.Drivers
+    use Db.Drivers.Numbering
     use Db.Laps
     use Db.Rounds
     use Db.Rounds.RoundRow
@@ -19,13 +22,15 @@ mod Cli.Load {
 
     type alias RunSummary = {
         processed = Int32,
-        errors    = Int32
+        errors    = Int32,
+        drivers   = Numbering
     }
 
     /// What the round put in each table, which is what the database took
     /// rather than what the file decoded to.
     type alias Loaded = {
         cars = Int32,
+        seats = Int32,
         laps = Int32
     }
 
@@ -55,6 +60,8 @@ mod Cli.Load {
     /// load has nothing to look it up with until the table is written.
     def createTables(): List[RoundRow] \ DbWrite =
         let rounds = Rounds.create(Motorsport.Calendar.entries());
+        Drivers.create();
+        CarDrivers.create();
         Cars.create();
         Laps.create();
         rounds
@@ -66,15 +73,16 @@ mod Cli.Load {
     def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
-            (acc, task) -> match processFile(rounds, task) {
-                case Ok(loaded) =>
-                    Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps, ${loaded#cars} cars loaded");
-                    { processed = acc#processed + 1 | acc }
-                case Err(e) =>
+            (acc, task) -> match processFile(rounds, acc#drivers, task) {
+                case (Ok(loaded), drivers) =>
+                    Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps,"
+                        + " ${loaded#cars} cars, ${loaded#seats} seats loaded");
+                    { processed = acc#processed + 1, drivers = drivers | acc }
+                case (Err(e), drivers) =>
                     Console.eprintln("${FileTask.label(task)}: ${e}");
-                    { errors = acc#errors + 1 | acc }
+                    { errors = acc#errors + 1, drivers = drivers | acc }
             },
-            { processed = 0, errors = 0 },
+            { processed = 0, errors = 0, drivers = Drivers.noneNumbered() },
             tasks
         );
         reportUnlistedCsvFiles(root, tasks);
@@ -94,40 +102,69 @@ mod Cli.Load {
                     )
         }
 
-    def processFile(rounds: List[RoundRow], task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, SqlRead, SqlWrite} =
-        CsvInput.read(task#inputPath)
-            |> Result.flatMap(decode(task))
-            |> Result.flatMap(reportCarDisagreements(task))
-            |> Result.flatMap(rawLaps ->
-                Db.runWithError(() -> reportViolations(task, load(rounds, task, rawLaps)))
-                    |> Result.mapErr(CliError.Database))
+    /// The numbering comes back whether the round loaded or not: a round that
+    /// failed partway may already have sent its driver rows, and reusing the
+    /// numbers it took would be a name written twice under one id.
+    def processFile(
+        rounds: List[RoundRow],
+        numbering: Numbering,
+        task: FileTask.FileTask
+    ): (Result[CliError, Loaded], Numbering) \ {IO, Console, SqlRead, SqlWrite} =
+        match CsvInput.read(task#inputPath) |> Result.flatMap(decode(task)) {
+            case Err(e) => (Err(e), numbering)
+            case Ok(rawLaps) =>
+                reportDisagreements(task, rawLaps);
+                let seats = CarDrivers.seats(rawLaps);
+                let (numbered, added) = Drivers.add(numbering, seats |> List.map(s -> s#name));
+                let outcome = Db.runWithError(() ->
+                        reportViolations(task, load(rounds, numbered, added, seats, task, rawLaps)))
+                    |> Result.mapErr(CliError.Database);
+                (outcome, numbered)
+        }
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
         content -> CsvDecode.decode(task#inputPath, content)
 
-    /// `Db.CarRow` keeps a car's first description and the second reaches no
-    /// column, so a file that describes one car two ways is said here or
-    /// nowhere. It is a reading of the file rather than of the rows, which is
-    /// why it is a stage of its own before the one that sends them.
-    def reportCarDisagreements(task: FileTask.FileTask): List[RawLap] -> Result[CliError, List[RawLap]] \ Console =
-        rawLaps -> {
-            CarRow.disagreements(rawLaps)
-                |> List.forEach(d -> Console.eprintln(
-                    "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
-                        + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
-            Ok(rawLaps)
-        }
+    /// `Db.CarRow` and `Db.CarDrivers` each keep a first mention and the
+    /// second reaches no column, so a file that describes one car -- or names
+    /// one seat -- two ways is said here or nowhere. It is a reading of the
+    /// file rather than of the rows, which is why it comes before the stage
+    /// that sends them.
+    def reportDisagreements(task: FileTask.FileTask, rawLaps: List[RawLap]): Unit \ Console =
+        CarRow.disagreements(rawLaps)
+            |> List.forEach(d -> Console.eprintln(
+                "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] car-description: "
+                    + "${d#field} kept=\"${d#kept}\" found=\"${d#found}\""));
+        CarDrivers.disagreements(rawLaps)
+            |> List.forEach(d -> Console.eprintln(
+                "${task#entry#id}: [car ${d#carNumber} #${d#lapNumber}] seat-${d#driverNumber}: "
+                    + "kept=\"${d#kept}\" found=\"${d#found}\""))
 
     /// The worklist and `rounds` are both the calendar, so a task with no row
-    /// is a run that wrote the two from different lists.
-    def load(rounds: List[RoundRow], task: FileTask.FileTask, rawLaps: List[RawLap]): Loaded \ DbWrite =
+    /// is a run that wrote the two from different lists; a seat whose name the
+    /// same run did not number is the same fault a step later.
+    def load(
+        rounds: List[RoundRow],
+        numbering: Numbering,
+        added: List[Drivers.DriverRow],
+        seats: List[CarDrivers.Seat],
+        task: FileTask.FileTask,
+        rawLaps: List[RawLap]
+    ): Loaded \ DbWrite =
         match Rounds.idIn(rounds, task#entry) {
             case None => DbErr.fail(Db.Error.Incomplete(
                 "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
             case Some(roundId) =>
-                let cars = Cars.insertRows(CarRow.fromRawLaps(roundId, rawLaps));
-                let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
-                { cars = cars, laps = laps }
+                discard Drivers.insertRows(added);
+                match CarDrivers.fromSeats(roundId, numbering, seats) {
+                    case None => DbErr.fail(Db.Error.Incomplete(
+                        "round ${FileTask.label(task)} names a driver the run did not number"))
+                    case Some(seatRows) =>
+                        let seatCount = CarDrivers.insertRows(seatRows);
+                        let cars = Cars.insertRows(CarRow.fromRawLaps(roundId, rawLaps));
+                        let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
+                        { cars = cars, seats = seatCount, laps = laps }
+                }
         }
 
     def reportViolations(task: FileTask.FileTask, loaded: Loaded): Loaded \ {Console, DbRead} =

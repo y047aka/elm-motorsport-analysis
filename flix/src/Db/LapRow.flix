@@ -29,7 +29,6 @@ mod Db.LapRow {
         sourceRow = Int32,
         carNumber = String,
         driverNumber = Int32,
-        driverName = String,
         lapNumber = Int32,
         lapTimeMs = Int32,
         lapImprovement = Int32,
@@ -63,7 +62,6 @@ mod Db.LapRow {
             sourceRow = sourceRow,
             carNumber = rawLap#car#carNumber,
             driverNumber = rawLap#driver#number,
-            driverName = rawLap#driver#name,
             lapNumber = rawLap#lapNumber,
             lapTimeMs = Duration.millis(rawLap#lapTime),
             lapImprovement = Wec.improvementToInt(rawLap#lapImprovement),
@@ -89,9 +87,10 @@ mod Db.LapRow {
             reading(sector) |> Option.map(Duration.millis)
         ))
 
-    /// The car is the round's rather than the lap's: `laps` holds the number
-    /// and `cars` what the number was.
-    pub def toRawLap(car: RawCar, row: LapRow): Result[String, RawLap] =
+    /// The car and the driver are the round's rather than the lap's: `laps`
+    /// holds the car's number and the seat, and `cars` and `car_drivers` what
+    /// each of those was.
+    pub def toRawLap(car: RawCar, driverName: String, row: LapRow): Result[String, RawLap] =
         forM(
             lapImprovement <- improvement("LAP_IMPROVEMENT", row#lapImprovement);
             s1Improvement  <- improvement("S1_IMPROVEMENT", row#s1Improvement);
@@ -100,7 +99,7 @@ mod Db.LapRow {
             flagAtFl       <- flag(row#flagAtFl)
         ) yield {
             car = car,
-            driver = { number = row#driverNumber, name = row#driverName },
+            driver = { number = row#driverNumber, name = driverName },
             lapNumber = row#lapNumber,
             lapTime = Duration.fromMillis(row#lapTimeMs),
             lapImprovement = lapImprovement,
