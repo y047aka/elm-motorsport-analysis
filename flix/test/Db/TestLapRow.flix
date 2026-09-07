@@ -188,6 +188,22 @@ mod Db.TestLapRow {
                 Db.Laps.createTable())
         )
 
+    /// The database makes this one, so no row binds it: it is declared with
+    /// the expression that makes it and is not in the ordering the insert
+    /// follows.
+    @Test
+    def theOffsetIsAColumnTheDatabaseMakes(): Unit \ Assert =
+        let name = Db.Schema.nameOf(Laps.hourOffsetMs());
+        Assert.assertTrue(String.contains(
+            {substr = "${name} int GENERATED ALWAYS AS"},
+            Db.Laps.createTable()
+        ));
+        Assert.assertTrue(String.contains({substr = ") VIRTUAL,"}, Db.Laps.createTable()));
+        Assert.assertTrue(not List.memberOf(name, Db.Laps.columnNames()));
+        Assert.assertTrue(
+            Sql.toSql(Sql.clause(Db.Schema.readOf(Laps.hourOffsetMs()))) == ("SELECT ${name}", Nil)
+        )
+
     /// A table whose rows are its primary key's tree, which SQLite takes
     /// only from a table that declares one.
     @Test

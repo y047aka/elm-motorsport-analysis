@@ -24,6 +24,52 @@ mod Db.Schema {
     /// type, so this is what an ordered list of them can hold.
     pub type alias Bound[r] = { name = String, sqlType = String, bind = r -> Value }
 
+    /// A column as the schema declares it, which is all a `CREATE TABLE` needs
+    /// and all a computed column has.
+    pub type alias Declared = { name = String, sqlType = String }
+
+    /// A column the database computes from the others: declared with the
+    /// expression that makes it, read like any other, and bound by nothing.
+    /// That last is why it is not a `Column` -- there is no row to bind it
+    /// from, and so no way for it to reach a table's `all`, which is the
+    /// ordering the insert follows.
+    pub enum Computed[a] {
+        case Computed({ name = String, sqlType = String, reading = String -> Sel[a] })
+    }
+
+    /// `VIRTUAL` rather than `STORED`: the expression is arithmetic over two
+    /// columns of the same row, so the rows are no larger for having it.
+    pub def computedInteger(name: String, expression: String): Computed[Int32] =
+        Computed.Computed({
+            name = name,
+            sqlType = "int GENERATED ALWAYS AS (${expression}) VIRTUAL",
+            reading = Sql.int
+        })
+
+    pub def declaredOf(computed: Computed[a]): Declared =
+        let Computed.Computed(c) = computed;
+        { name = c#name, sqlType = c#sqlType }
+
+    pub def nameOf(computed: Computed[a]): String =
+        let Computed.Computed(c) = computed;
+        c#name
+
+    pub def readOf(computed: Computed[a]): Sel[a] =
+        let Computed.Computed(c) = computed;
+        (c#reading)(c#name)
+
+    pub def exprOf(computed: Computed[a]): Sql.Expr[a] =
+        Sql.column(nameOf(computed))
+
+    /// A computed column is one of the things a query may project.
+    instance Sql.Project[Computed[a]] {
+        type Out = a
+        pub def sel(x: Computed[a]): Sel[a] = Db.Schema.readOf(x)
+    }
+
+    def declare(column: Bound[r]): Declared =
+        { name = column#name, sqlType = column#sqlType }
+
     pub def bound(column: Column[r, a]): Bound[r] =
         let Column.Column(c) = column;
         { name = c#name, sqlType = c#sqlType, bind = c#bind }
@@ -67,11 +113,29 @@ mod Db.Schema {
     pub def recreate(
         table: String,
         columns: List[Bound[r]],
+        computed: List[Declared],
         keys: List[Sql.Key[Bound[r]]],
         storage: Sql.Storage
     ): Unit \ DbWrite =
         Db.execute(Sql.dropTableIfExists(table));
-        Db.execute(Sql.createTable(table, columns, keys, storage))
+        Db.execute(createTable(table, columns, computed, keys, storage))
+
+    /// The columns a row binds, then the ones the database makes: a computed
+    /// column is declared like any other and is not in the ordering the insert
+    /// follows, so this is the one place the two lists meet.
+    pub def createTable(
+        table: String,
+        columns: List[Bound[r]],
+        computed: List[Declared],
+        keys: List[Sql.Key[Bound[r]]],
+        storage: Sql.Storage
+    ): String =
+        Sql.createTable(
+            table,
+            List.append(columns |> List.map(declare), computed),
+            keys |> List.map(Sql.mapKey(declare)),
+            storage
+        )
 
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);

@@ -413,6 +413,15 @@ mod Sql {
         case WithoutRowid
     }
 
+    /// The key over the columns as another view of them has them -- the
+    /// schema's, where a column is its name and the type it takes and a
+    /// computed one is too.
+    pub def mapKey(f: c -> d \ ef, key: Key[c]): Key[d] \ ef =
+        match key {
+            case Key.Primary(over) => Key.Primary(List.map(f, over))
+            case Key.Unique(over)  => Key.Unique(List.map(f, over))
+        }
+
     pub def dropTableIfExists(table: String): String =
         "DROP TABLE IF EXISTS " + table
 

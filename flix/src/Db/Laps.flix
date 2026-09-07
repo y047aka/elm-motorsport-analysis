@@ -164,7 +164,7 @@ mod Db.Laps {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys(), storage())
+        Schema.recreate(table(), all(), computed(), keys(), storage())
 
     pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -188,12 +188,23 @@ mod Db.Laps {
         rows |> Sql.filter(c -> scope(c, entry))
 
     /// `(hour - elapsed) mod 24h`, which the feed holds constant across a file
-    /// and which is therefore where the round's start time is written.
-    pub def hourOffset(): String =
-        "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
+    /// and which is therefore where the round's start time is written. The
+    /// database makes it, so a query compares it as a column of the type it
+    /// has rather than pasting the arithmetic in twice.
+    pub def hourOffsetMs(): Schema.Computed[Int32] =
+        Schema.computedInteger(
+            "hour_offset_ms",
+            "((${Schema.name(columns()#hourMs)} - ${Schema.name(columns()#elapsedMs)})"
+                + " % 86400000 + 86400000) % 86400000"
+        )
+
+    /// What the database makes rather than what a row binds, and so what `all`
+    /// does not have.
+    pub def computed(): List[Schema.Declared] =
+        Schema.declaredOf(hourOffsetMs()) :: Nil
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys(), storage())
+        Schema.createTable(table(), all(), computed(), keys(), storage())
 
     def keys(): List[Sql.Key[Bound[LapRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(sourceKey()) :: Nil

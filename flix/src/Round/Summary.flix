@@ -53,7 +53,7 @@ mod Round.Summary {
     /// carries.
     def startedAt(entry: Entry): Sel[Option[Int32]] =
         Sql.optionalIntOf(Sql.frags(
-            Sql.raw("(SELECT " + Laps.hourOffset()
+            Sql.raw("(SELECT ${Schema.nameOf(Laps.hourOffsetMs())}"
                 + " FROM " + Laps.table() + " WHERE") ::
             where_(entry, Nil) ::
             Sql.raw("ORDER BY source_row LIMIT 1)") :: Nil

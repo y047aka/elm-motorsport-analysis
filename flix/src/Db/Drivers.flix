@@ -66,7 +66,7 @@ mod Db.Drivers {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys(), storage())
+        Schema.recreate(table(), all(), Nil, keys(), storage())
 
     pub def insertRows(rows_: List[DriverRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
@@ -75,7 +75,7 @@ mod Db.Drivers {
         Schema.values(all(), row)
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys(), storage())
+        Schema.createTable(table(), all(), Nil, keys(), storage())
 
     def keys(): List[Sql.Key[Bound[DriverRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(nameKey()) :: Nil

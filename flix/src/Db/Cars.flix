@@ -78,7 +78,7 @@ mod Db.Cars {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys(), storage())
+        Schema.recreate(table(), all(), Nil, keys(), storage())
 
     pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -92,7 +92,7 @@ mod Db.Cars {
         Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys(), storage())
+        Schema.createTable(table(), all(), Nil, keys(), storage())
 
     def keys(): List[Sql.Key[Bound[CarRow]]] =
         Sql.Key.Primary(primaryKey()) :: Nil

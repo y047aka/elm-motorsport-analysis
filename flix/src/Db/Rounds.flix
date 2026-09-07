@@ -106,7 +106,7 @@ mod Db.Rounds {
     /// run, and one made-up round for a test -- since an id means nothing
     /// outside the database it was written into.
     pub def create(entries: List[Entry]): List[RoundRow] \ DbWrite =
-        Schema.recreate(table(), all(), keys(), storage());
+        Schema.recreate(table(), all(), Nil, keys(), storage());
         let rows_ = rowsFor(entries);
         discard insertRows(rows_);
         rows_
@@ -138,7 +138,7 @@ mod Db.Rounds {
             |> Option.map(r -> r#roundId)
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys(), storage())
+        Schema.createTable(table(), all(), Nil, keys(), storage())
 
     def keys(): List[Sql.Key[Bound[RoundRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(namedKey()) :: Nil
