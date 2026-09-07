@@ -67,8 +67,7 @@ mod Db.TestJdbc {
     /// leaves none of the round's rows behind rather than some of them.
     @Test
     def aRefusedLoadLeavesWhatWasThereAlone(): Unit \ {Assert, IO} =
-        let entry: Entry = { season = 2025, id = "test_refused", date = "2025-01-01" };
-        let rows = LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil);
+        let rows = LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil);
         let outcome = connected(() -> {
             let accepted = Db.runWithError(() -> { Laps.create(); Laps.insertRows(rows) });
             let refused  = Db.runWithError(() -> Laps.insertRows(rows));
@@ -175,9 +174,8 @@ mod Db.TestJdbc {
         DbErr.fail(Db.Error.Incomplete("the round was not what it should have been"))
 
     def load(): Int32 \ DbWrite =
-        let entry: Entry = { season = 2025, id = "test_shared", date = "2025-01-01" };
         Laps.create();
-        Laps.insertRows(LapRow.fromRawLaps(entry, TestLapRow.sampleLap() :: Nil))
+        Laps.insertRows(LapRow.fromRawLaps(1, TestLapRow.sampleLap() :: Nil))
 
     /// From a connection of its own, so what it counts is what was committed.
     def counted(path: String): Result[Db.Error, List[List[Option[String]]]] \ IO =

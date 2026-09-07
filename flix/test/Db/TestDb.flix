@@ -6,11 +6,10 @@ mod Db.TestDb {
     use Db.LapRow
     use Db.TestLapRow
 
+    def roundId(): Int32 = 7
+
     def sampleRows(): List[LapRow.LapRow] =
-        LapRow.fromRawLaps(
-            { season = 2025, id = "fuji_6h", date = "2025-09-28" },
-            TestLapRow.sampleLap() :: TestLapRow.sampleLap() :: Nil
-        )
+        LapRow.fromRawLaps(roundId(), TestLapRow.sampleLap() :: TestLapRow.sampleLap() :: Nil)
 
     @Test
     def creatingDropsTheTableFirst(): Unit \ Assert =
@@ -31,7 +30,7 @@ mod Db.TestDb {
                 Assert.assertTrue(String.startsWith({prefix = "INSERT INTO laps"}, sql));
                 Assert.assertTrue(List.length(rows) == 2);
                 Assert.assertTrue(
-                    List.forAll(row -> List.memberOf(Value.Text("fuji_6h"), row), rows)
+                    List.forAll(row -> List.head(row) == Some(Value.Integer(roundId())), rows)
                 )
             case _ => Assert.assertTrue(false)
         }

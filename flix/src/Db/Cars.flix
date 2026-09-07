@@ -5,6 +5,7 @@
 mod Db.Cars {
 
     use Db.CarRow.CarRow
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
@@ -23,13 +24,12 @@ mod Db.Cars {
     /// One car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[CarRow]] =
         let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) :: Schema.bound(c#carNumber) :: Nil
+        Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Nil
 
     // ---------------------------------------------------------- the columns
 
     pub type alias Columns = {
-        season = Column[CarRow, Int32],
-        round = Column[CarRow, String],
+        roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
         carClass = Column[CarRow, String],
         carGroup = Column[CarRow, String],
@@ -38,8 +38,7 @@ mod Db.Cars {
     }
 
     pub def columns(): Columns = {
-        season = Schema.integer("season", r -> r#season),
-        round = Schema.text("round", r -> r#round),
+        roundId = Schema.integer("round_id", r -> r#roundId),
         carNumber = Schema.text("car_number", r -> r#carNumber),
         carClass = Schema.text("class", r -> r#class),
         carGroup = Schema.text("car_group", r -> r#carGroup),
@@ -53,8 +52,7 @@ mod Db.Cars {
     pub def selection(): Sel[CarRow] =
         let c = columns();
         Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
             |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
             |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
@@ -68,8 +66,7 @@ mod Db.Cars {
     /// and no compiler sees them together.
     pub def all(): List[Bound[CarRow]] =
         let c = columns();
-        Schema.bound(c#season) ::
-        Schema.bound(c#round) ::
+        Schema.bound(c#roundId) ::
         Schema.bound(c#carNumber) ::
         Schema.bound(c#carClass) ::
         Schema.bound(c#carGroup) ::
@@ -91,7 +88,7 @@ mod Db.Cars {
     /// Taken of the columns the query was handed rather than of this table's
     /// own, so a reading of another source cannot be scoped by them.
     def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
+        Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
     pub def createTable(): String =
         Sql.createTable(table(), all(), keys(), storage())

@@ -1,6 +1,5 @@
 mod Db.CarRow {
 
-    use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
 
@@ -8,8 +7,7 @@ mod Db.CarRow {
     /// car ran: no round in the archive names a car twice, so the file's first
     /// mention of one is the whole of what it says about it.
     pub type alias CarRow = {
-        season = Int32,
-        round = String,
+        roundId = Int32,
         carNumber = String,
         class = String,
         carGroup = String,
@@ -21,8 +19,8 @@ mod Db.CarRow {
     /// each. A car the file later contradicts itself about keeps what it was
     /// first said to be, which is the same reading the starting grid is
     /// ordered by, and `disagreements` is where the contradiction is said.
-    pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[CarRow] =
-        firstMentions(rawLaps) |> List.map(car -> fromRawCar(entry, car))
+    pub def fromRawLaps(roundId: Int32, rawLaps: List[RawLap]): List[CarRow] =
+        firstMentions(rawLaps) |> List.map(car -> fromRawCar(roundId, car))
 
     def firstMentions(rawLaps: List[RawLap]): List[RawCar] =
         let gathered = List.foldLeft((acc, rawLap) -> {
@@ -90,10 +88,9 @@ mod Db.CarRow {
             ("manufacturer", kept#manufacturer, found#manufacturer) :: Nil;
         fields |> List.filter(match (_, was, now) -> was != now)
 
-    pub def fromRawCar(entry: Entry, car: RawCar): CarRow =
+    pub def fromRawCar(roundId: Int32, car: RawCar): CarRow =
         {
-            season = entry#season,
-            round = entry#id,
+            roundId = roundId,
             carNumber = car#carNumber,
             class = car#class,
             carGroup = car#group,

@@ -8,6 +8,7 @@ mod Round.Summary {
     use Db.Cars
     use Db.LapRow.LapRow
     use Db.Laps
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Column
     use Sql.Sel
@@ -94,7 +95,7 @@ mod Round.Summary {
                 ),
                 { car = car, lap1 = lap1 }
             )
-            |> Sql.filter(t -> Schema.scope(t#car#season, t#car#round, entry#season, entry#id))
+            |> Sql.filter(t -> Rounds.scope(t#car#roundId, entry))
             |> Sql.using(Sql.frags(
                 Sql.raw("f AS (SELECT car_number, MIN(source_row) AS first_seen"
                     + " FROM " + Laps.table() + " WHERE") ::
@@ -123,8 +124,7 @@ mod Round.Summary {
 
     /// The round's cars under the name the join gives that side.
     def carColumns(): {
-        season = Column[CarRow, Int32],
-        round = Column[CarRow, String],
+        roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
         class = Column[CarRow, String],
         carGroup = Column[CarRow, String],
@@ -133,8 +133,7 @@ mod Round.Summary {
     } =
         let c = Cars.columns();
         {
-            season       = Schema.qualified("c", c#season),
-            round        = Schema.qualified("c", c#round),
+            roundId      = Schema.qualified("c", c#roundId),
             carNumber    = Schema.qualified("c", c#carNumber),
             class        = Schema.qualified("c", c#carClass),
             carGroup     = Schema.qualified("c", c#carGroup),

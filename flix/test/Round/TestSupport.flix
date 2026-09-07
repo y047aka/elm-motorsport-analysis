@@ -4,6 +4,7 @@ mod Round.TestSupport {
 
     use Db.Cars
     use Db.Laps
+    use Db.Rounds
 
     use Db.CarRow
     use Db.Jdbc
@@ -25,10 +26,15 @@ mod Round.TestSupport {
 
     def onRows(entry: Entry, laps: List[RawLap], withCars: Bool, read: Unit -> a \ ef): a \ (ef - {SqlRead, SqlWrite, DbErr}) + IO =
         let outcome = Db.runWithError(() -> Jdbc.withConnection(url(), () -> {
+            let rounds = Rounds.create(entry :: Nil);
             Cars.create();
             Laps.create();
-            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(entry, laps)) else ();
-            discard Laps.insertRows(LapRow.fromRawLaps(entry, laps));
+            let roundId = match Rounds.idIn(rounds, entry) {
+                case Some(id) => id
+                case None     => bug!("the round just written has no row")
+            };
+            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(roundId, laps)) else ();
+            discard Laps.insertRows(LapRow.fromRawLaps(roundId, laps));
             read()
         }));
         match outcome {

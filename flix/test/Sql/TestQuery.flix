@@ -6,7 +6,7 @@ mod Sql.TestQuery {
 
     def laps(): Sql.Rows[Laps.Columns] =
         Sql.access(Sql.raw("laps"), Laps.columns())
-            |> Sql.filter(c -> Sql.eq(Schema.expr(c#season), Sql.i32(2025)))
+            |> Sql.filter(c -> Sql.eq(Schema.expr(c#roundId), Sql.i32(3)))
 
     def lapNumbers(): Sql.Sel[Int32] =
         Sql.int("lap_number")
@@ -19,9 +19,9 @@ mod Sql.TestQuery {
             |> Sql.map(c -> c#lapNumber)
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
-            "SELECT lap_number FROM laps WHERE season = ?"
+            "SELECT lap_number FROM laps WHERE round_id = ?"
                 + " GROUP BY lap_number ORDER BY source_row",
-            Value.Integer(2025) :: Nil
+            Value.Integer(3) :: Nil
         ))
 
     /// A clause with nothing to say is left out, since `WHERE` with nothing
@@ -39,8 +39,8 @@ mod Sql.TestQuery {
             |> Sql.map(_ -> lapNumbers())
             |> Sql.toStatement;
         Assert.assertTrue(Sql.toSql(statement) == (
-            "SELECT lap_number FROM laps WHERE season = ? AND s1_ms IS NOT NULL LIMIT 1",
-            Value.Integer(2025) :: Nil
+            "SELECT lap_number FROM laps WHERE round_id = ? AND s1_ms IS NOT NULL LIMIT 1",
+            Value.Integer(3) :: Nil
         ))
 
     /// The common table expressions come before the SELECT, and so do the

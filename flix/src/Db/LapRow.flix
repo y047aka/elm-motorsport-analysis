@@ -1,6 +1,5 @@
 mod Db.LapRow {
 
-    use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
@@ -26,8 +25,7 @@ mod Db.LapRow {
     /// baseline and by `Motorsport.Metadata` for a car's drivers, and no other
     /// column here can be sorted on to recover it.
     pub type alias LapRow = {
-        season = Int32,
-        round = String,
+        roundId = Int32,
         sourceRow = Int32,
         carNumber = String,
         driverNumber = Int32,
@@ -52,17 +50,16 @@ mod Db.LapRow {
         miniSectorElapsedMs = Option[List[Option[Int32]]]
     }
 
-    pub def fromRawLaps(entry: Entry, rawLaps: List[RawLap]): List[LapRow] =
+    pub def fromRawLaps(roundId: Int32, rawLaps: List[RawLap]): List[LapRow] =
         rawLaps
             |> List.zipWithIndex
             |> List.map(pair -> match pair {
-                case (index, rawLap) => fromRawLap(entry, index + 1, rawLap)
+                case (index, rawLap) => fromRawLap(roundId, index + 1, rawLap)
             })
 
-    pub def fromRawLap(entry: Entry, sourceRow: Int32, rawLap: RawLap): LapRow =
+    pub def fromRawLap(roundId: Int32, sourceRow: Int32, rawLap: RawLap): LapRow =
         {
-            season = entry#season,
-            round = entry#id,
+            roundId = roundId,
             sourceRow = sourceRow,
             carNumber = rawLap#car#carNumber,
             driverNumber = rawLap#driver#number,

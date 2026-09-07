@@ -4,25 +4,23 @@ mod Db.TestCarRow {
     use Db.Cars
     use Db.TestLapRow
     use Db.Value
-    use Motorsport.Calendar.Entry
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    /// The id a run gave the round; see `Db.TestLapRow`.
+    def fujiId(): Int32 = 7
 
     /// Two laps of car 12 and one of car 7, in that order.
     def rows(): List[CarRow.CarRow] =
-        CarRow.fromRawLaps(fuji(), TestLapRow.sampleLaps())
+        CarRow.fromRawLaps(fujiId(), TestLapRow.sampleLaps())
 
     @Test
     def aCarIsOneRowHoweverManyLapsItRan(): Unit \ Assert =
         Assert.assertTrue(List.map(r -> r#carNumber, rows()) == "12" :: "7" :: Nil)
 
     @Test
-    def theRoundIsTheCalendarEntryAndNotTheFeed(): Unit \ Assert =
+    def theRoundIsTheOneTheLoadNamedAndNotTheFeed(): Unit \ Assert =
         match rows() {
-            case row :: _ =>
-                Assert.assertTrue(row#season == 2025);
-                Assert.assertTrue(row#round == "fuji_6h")
-            case Nil => Assert.assertTrue(false)
+            case row :: _ => Assert.assertTrue(row#roundId == fujiId())
+            case Nil      => Assert.assertTrue(false)
         }
 
     @Test
@@ -41,7 +39,7 @@ mod Db.TestCarRow {
         match rows() {
             case row :: _ =>
                 Assert.assertTrue(Cars.values(row)
-                    == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Text("12") ::
+                    == Value.Integer(7) :: Value.Text("12") ::
                        Value.Text("HYPERCAR") :: Value.Text("H") ::
                        Value.Text("Hertz Team JOTA") :: Value.Text("Porsche") :: Nil)
             case Nil => Assert.assertTrue(false)
@@ -64,7 +62,7 @@ mod Db.TestCarRow {
         let declared = Cars.columnNames();
         Assert.assertTrue(Cars.primaryKey() |> List.forAll(c -> List.memberOf(c#name, declared)));
         Assert.assertTrue(
-            String.contains({substr = "PRIMARY KEY (season, round, car_number)"}, Cars.createTable())
+            String.contains({substr = "PRIMARY KEY (round_id, car_number)"}, Cars.createTable())
         )
 
     /// See `Db.TestLapRow`.
@@ -85,7 +83,7 @@ mod Db.TestCarRow {
 
     @Test
     def aCarKeepsWhatTheFileFirstSaidItWas(): Unit \ Assert =
-        match CarRow.fromRawLaps(fuji(), contradicting()) {
+        match CarRow.fromRawLaps(fujiId(), contradicting()) {
             case row :: _ => Assert.assertTrue(row#team == "Hertz Team JOTA")
             case Nil      => Assert.assertTrue(false)
         }
@@ -113,7 +111,7 @@ mod Db.TestCarRow {
     def aRowMakesTheCarItWasMadeFrom(): Unit \ Assert =
         match rows() {
             case row :: _ =>
-                Assert.assertTrue(Cars.values(CarRow.fromRawCar(fuji(), CarRow.toRawCar(row)))
+                Assert.assertTrue(Cars.values(CarRow.fromRawCar(fujiId(), CarRow.toRawCar(row)))
                     == Cars.values(row))
             case Nil => Assert.assertTrue(false)
         }

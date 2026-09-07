@@ -5,6 +5,7 @@
 mod Db.Laps {
 
     use Db.LapRow.LapRow
+    use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
@@ -34,22 +35,20 @@ mod Db.Laps {
     /// One lap of one car of one round, which is what a row is at most one of.
     pub def primaryKey(): List[Bound[LapRow]] =
         let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) ::
-        Schema.bound(c#carNumber) :: Schema.bound(c#lapNumber) :: Nil
+        Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Schema.bound(c#lapNumber) :: Nil
 
     /// The place the file listed a lap in, which a round has at most one lap
     /// at.
     pub def sourceKey(): List[Bound[LapRow]] =
         let c = columns();
-        Schema.bound(c#season) :: Schema.bound(c#round) :: Schema.bound(c#sourceRow) :: Nil
+        Schema.bound(c#roundId) :: Schema.bound(c#sourceRow) :: Nil
 
     // ---------------------------------------------------------- the columns
 
     /// What a projection picks from, and what every other view of the table
     /// is built out of.
     pub type alias Columns = {
-        season = Column[LapRow, Int32],
-        round = Column[LapRow, String],
+        roundId = Column[LapRow, Int32],
         sourceRow = Column[LapRow, Int32],
         carNumber = Column[LapRow, String],
         driverNumber = Column[LapRow, Int32],
@@ -78,8 +77,7 @@ mod Db.Laps {
     /// `Motorsport.MiniSector.all()` in track order, so a subscript is a place
     /// on the circuit; `json_each` is what a query reads one back with.
     pub def columns(): Columns = {
-        season = Schema.integer("season", r -> r#season),
-        round = Schema.text("round", r -> r#round),
+        roundId = Schema.integer("round_id", r -> r#roundId),
         sourceRow = Schema.integer("source_row", r -> r#sourceRow),
         carNumber = Schema.text("car_number", r -> r#carNumber),
         driverNumber = Schema.integer("driver_number", r -> r#driverNumber),
@@ -110,8 +108,7 @@ mod Db.Laps {
     pub def selection(): Sel[LapRow] =
         let c = columns();
         Sql.record({})
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#round, (row, value) -> { +round = value | row })
+            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
             |> Sql.field(c#sourceRow, (row, value) -> { +sourceRow = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
             |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
@@ -142,8 +139,7 @@ mod Db.Laps {
     /// and no compiler sees them together.
     pub def all(): List[Bound[LapRow]] =
         let c = columns();
-        Schema.bound(c#season) ::
-        Schema.bound(c#round) ::
+        Schema.bound(c#roundId) ::
         Schema.bound(c#sourceRow) ::
         Schema.bound(c#carNumber) ::
         Schema.bound(c#driverNumber) ::
@@ -186,9 +182,10 @@ mod Db.Laps {
         scope(columns(), entry)
 
     /// Taken of the columns the query was handed rather than of this table's
-    /// own, so a reading of another source cannot be scoped by them.
+    /// own, so a reading of another source cannot be scoped by them. Named for
+    /// the table, since a join's other side has a `round_id` too.
     def scope(c: Columns, entry: Entry): Sql.Expr[Bool] =
-        Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
+        Rounds.scope(Schema.qualified(table(), c#roundId), entry)
 
     def scoped(entry: Entry, rows: Sql.Rows[Columns]): Sql.Rows[Columns] =
         rows |> Sql.filter(c -> scope(c, entry))

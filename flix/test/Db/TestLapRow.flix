@@ -3,13 +3,14 @@ mod Db.TestLapRow {
     use Db.LapRow
     use Db.Laps
     use Db.Value
-    use Motorsport.Calendar.Entry
     use Motorsport.Wec
     use Motorsport.Wec.RawLap
     use Util.Csv.Decode
     use Util.Csv.Decode.FieldNames
 
-    def fuji(): Entry = { season = 2025, id = "fuji_6h", date = "2025-09-28" }
+    /// The id a run gave the round, which is all a row carries of it: the
+    /// name it goes by is `rounds`'.
+    def fujiId(): Int32 = 7
 
     def header(): String =
         "NUMBER;DRIVER_NUMBER;LAP_NUMBER;LAP_TIME;LAP_IMPROVEMENT;CROSSING_FINISH_LINE_IN_PIT;S1;S1_IMPROVEMENT;S2;S2_IMPROVEMENT;S3;S3_IMPROVEMENT;KPH;ELAPSED;HOUR;S1_LARGE;S2_LARGE;S3_LARGE;TOP_SPEED;DRIVER_NAME;PIT_TIME;CLASS;GROUP;TEAM;MANUFACTURER;FLAG_AT_FL;S1_SECONDS;S2_SECONDS;S3_SECONDS"
@@ -59,14 +60,12 @@ mod Db.TestLapRow {
         }
 
     @Test
-    def theRoundIsTheCalendarEntryAndNotTheFeed(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
-        Assert.assertTrue(row#season == 2025);
-        Assert.assertTrue(row#round == "fuji_6h")
+    def theRoundIsTheOneTheLoadNamedAndNotTheFeed(): Unit \ Assert =
+        Assert.assertTrue(LapRow.fromRawLap(fujiId(), 1, plainLap())#roundId == fujiId())
 
     @Test
     def durationsBecomeMilliseconds(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, plainLap());
         Assert.assertTrue(row#lapTimeMs == 95365);
         Assert.assertTrue(row#elapsedMs == 95365);
         Assert.assertTrue(row#s1Ms == Some(23155));
@@ -75,42 +74,42 @@ mod Db.TestLapRow {
 
     @Test
     def theHourBecomesMillisecondsSinceMidnight(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, plainLap());
         Assert.assertTrue(row#hourMs == 39720000)
 
     @Test
     def flagsAndImprovementsKeepTheEncodingTheJsonUses(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, plainLap());
         Assert.assertTrue(row#flagAtFl == "SF");
         Assert.assertTrue(row#lapImprovement == 0);
         Assert.assertTrue(row#s3Improvement == 2)
 
     @Test
     def speedsStayTheTextTheFeedGave(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, plainLap());
         Assert.assertTrue(row#kph == "160.7");
         Assert.assertTrue(row#topSpeed == "310.5")
 
     @Test
     def whatTheFeedLeftBlankIsAbsent(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, plainLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, plainLap());
         Assert.assertTrue(row#pitTimeMs == None);
         Assert.assertTrue(row#miniSectorTimeMs == None);
         Assert.assertTrue(row#miniSectorElapsedMs == None);
-        let pit = LapRow.fromRawLap(fuji(), 2, pitLap());
+        let pit = LapRow.fromRawLap(fujiId(), 2, pitLap());
         Assert.assertTrue(pit#pitTimeMs == Some(65500));
         Assert.assertTrue(pit#topSpeed == "")
 
     @Test
     def theBoxColumnBecomesABoolean(): Unit \ Assert =
-        Assert.assertTrue(not LapRow.fromRawLap(fuji(), 1, plainLap())#crossingFinishLineInPit);
-        Assert.assertTrue(LapRow.fromRawLap(fuji(), 2, pitLap())#crossingFinishLineInPit)
+        Assert.assertTrue(not LapRow.fromRawLap(fujiId(), 1, plainLap())#crossingFinishLineInPit);
+        Assert.assertTrue(LapRow.fromRawLap(fujiId(), 2, pitLap())#crossingFinishLineInPit)
 
     /// A place in either list is a place on the circuit, so the fifteen are
     /// all there and a marker the feed left blank keeps its place as a blank.
     @Test
     def miniSectorsBecomeMillisecondsInTrackOrder(): Unit \ Assert =
-        let row = LapRow.fromRawLap(fuji(), 1, miniSectorLap());
+        let row = LapRow.fromRawLap(fujiId(), 1, miniSectorLap());
         match (row#miniSectorTimeMs, row#miniSectorElapsedMs) {
             case (Some(times), Some(elapsed)) =>
                 Assert.assertTrue(List.length(times) == 15);
@@ -128,7 +127,7 @@ mod Db.TestLapRow {
 
     @Test
     def everyLapOfTheRoundBecomesARow(): Unit \ Assert =
-        let rows = LapRow.fromRawLaps(fuji(), plainLap() :: pitLap() :: Nil);
+        let rows = LapRow.fromRawLaps(fujiId(), plainLap() :: pitLap() :: Nil);
         Assert.assertTrue(List.length(rows) == 2);
         Assert.assertTrue(List.map(r -> r#lapNumber, rows) == 1 :: 2 :: Nil)
 
@@ -136,20 +135,20 @@ mod Db.TestLapRow {
     /// company as soon as a second one is interleaved with it.
     @Test
     def theRowsAreNumberedByWhereTheFileListedThem(): Unit \ Assert =
-        let rows = LapRow.fromRawLaps(fuji(), pitLap() :: plainLap() :: pitLap() :: Nil);
+        let rows = LapRow.fromRawLaps(fujiId(), pitLap() :: plainLap() :: pitLap() :: Nil);
         Assert.assertTrue(List.map(r -> r#sourceRow, rows) == 1 :: 2 :: 3 :: Nil);
         Assert.assertTrue(List.map(r -> r#lapNumber, rows) == 2 :: 1 :: 2 :: Nil)
 
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
-        let values = Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap()));
-        Assert.assertTrue(List.take(4, values)
-            == Value.Integer(2025) :: Value.Text("fuji_6h") :: Value.Integer(1) :: Value.Text("12") :: Nil);
+        let values = Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap()));
+        Assert.assertTrue(List.take(3, values)
+            == Value.Integer(7) :: Value.Integer(1) :: Value.Text("12") :: Nil);
         Assert.assertTrue(List.last(values) == Some(Value.NullableIntArray(None)))
 
     /// The cells the reading comes back as.
     def cells(): List[Option[String]] =
-        Some("2025") :: Some("fuji_6h") :: Some("1") :: Some("12") :: Some("1") ::
+        Some("7") :: Some("1") :: Some("12") :: Some("1") ::
         Some("Will STEVENS") :: Some("1") :: Some("95365") :: Some("0") :: Some("0") ::
         Some("23155") :: Some("0") :: Some("29928") :: Some("0") :: Some("42282") ::
         Some("2") :: Some("160.7") :: Some("95365") :: Some("39720000") :: Some("310.5") ::
@@ -160,13 +159,13 @@ mod Db.TestLapRow {
         match Sql.decode(Laps.selection(), cells()) {
             case Err(_)  => Assert.assertTrue(false)
             case Ok(row) =>
-                Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fuji(), 1, plainLap())))
+                Assert.assertTrue(Laps.values(row) == Laps.values(LapRow.fromRawLap(fujiId(), 1, plainLap())))
         }
 
     @Test
     def anArrayCellKeepsTheBlanksInPlace(): Unit \ Assert =
         let withMiniSectors = List.append(
-            List.take(22, cells()),
+            List.take(21, cells()),
             Some("[20708,null]") :: Some("[20708,null]") :: Nil
         );
         match Sql.decode(Laps.selection(), withMiniSectors) {
@@ -185,7 +184,7 @@ mod Db.TestLapRow {
             |> List.map(c -> c#name);
         Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
         Assert.assertTrue(
-            String.contains({substr = "PRIMARY KEY (season, round, car_number, lap_number)"},
+            String.contains({substr = "PRIMARY KEY (round_id, car_number, lap_number)"},
                 Db.Laps.createTable())
         )
 
@@ -212,7 +211,7 @@ mod Db.TestLapRow {
     def aRowMakesTheLapItWasMadeFrom(): Unit \ Assert =
         let rendered = lap -> Util.Json.Encode.Extra.renderOnOneLine(Wec.toJson(lap));
         let roundTrip = lap ->
-            LapRow.toRawLap(lap#car, LapRow.fromRawLap(fuji(), 1, lap)) |> Result.map(rendered);
+            LapRow.toRawLap(lap#car, LapRow.fromRawLap(fujiId(), 1, lap)) |> Result.map(rendered);
         Assert.assertTrue(roundTrip(plainLap()) == Ok(rendered(plainLap())));
         Assert.assertTrue(roundTrip(pitLap()) == Ok(rendered(pitLap())));
         Assert.assertTrue(roundTrip(miniSectorLap()) == Ok(rendered(miniSectorLap())))

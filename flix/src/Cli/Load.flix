@@ -2,6 +2,8 @@ mod Cli.Load {
 
     use Db.Cars
     use Db.Laps
+    use Db.Rounds
+    use Db.Rounds.RoundRow
 
     use Sys.Console
     use Util.Files
@@ -33,8 +35,8 @@ mod Cli.Load {
     /// beside it are still committed.
     pub def runAll(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let rebuild = Db.runWithError(() -> Db.transact(() -> {
-            createTables();
-            convertRounds(root)
+            let rounds = createTables();
+            convertRounds(root, rounds)
         }));
         match rebuild {
             case Err(e) =>
@@ -46,18 +48,25 @@ mod Cli.Load {
 
     /// Belongs before the first round: a schema this database will not take
     /// would otherwise be reported once per round, in the same words.
-    def createTables(): Unit \ DbWrite =
+    ///
+    /// `rounds` is written here rather than per round, since what the other
+    /// two carry of a round is an id out of it. The rows come back because
+    /// that id is read off them: the reader looks it up in the table, and the
+    /// load has nothing to look it up with until the table is written.
+    def createTables(): List[RoundRow] \ DbWrite =
+        let rounds = Rounds.create(Motorsport.Calendar.entries());
         Cars.create();
-        Laps.create()
+        Laps.create();
+        rounds
 
     /// The calendar is the worklist, so a run converts the rounds it holds and
     /// nothing else. Two ways that can be wrong, and both are said out loud: a
     /// round with no CSV fails the run, and a CSV no round names is reported and
     /// left alone.
-    def convertRounds(root: String): Int32 \ {IO, Console, SqlRead, SqlWrite} =
+    def convertRounds(root: String, rounds: List[RoundRow]): Int32 \ {IO, Console, SqlRead, SqlWrite} =
         let tasks = FileTask.fromCalendar(root);
         let summary = List.foldLeft(
-            (acc, task) -> match processFile(task) {
+            (acc, task) -> match processFile(rounds, task) {
                 case Ok(loaded) =>
                     Console.println("${FileTask.label(task)}: Rows -> ${loaded#laps} laps, ${loaded#cars} cars loaded");
                     { processed = acc#processed + 1 | acc }
@@ -85,12 +94,12 @@ mod Cli.Load {
                     )
         }
 
-    def processFile(task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, SqlRead, SqlWrite} =
+    def processFile(rounds: List[RoundRow], task: FileTask.FileTask): Result[CliError, Loaded] \ {IO, Console, SqlRead, SqlWrite} =
         CsvInput.read(task#inputPath)
             |> Result.flatMap(decode(task))
             |> Result.flatMap(reportCarDisagreements(task))
             |> Result.flatMap(rawLaps ->
-                Db.runWithError(() -> reportViolations(task, load(task, rawLaps)))
+                Db.runWithError(() -> reportViolations(task, load(rounds, task, rawLaps)))
                     |> Result.mapErr(CliError.Database))
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
@@ -109,10 +118,17 @@ mod Cli.Load {
             Ok(rawLaps)
         }
 
-    def load(task: FileTask.FileTask, rawLaps: List[RawLap]): Loaded \ DbWrite =
-        let cars = Cars.insertRows(CarRow.fromRawLaps(task#entry, rawLaps));
-        let laps = Laps.insertRows(LapRow.fromRawLaps(task#entry, rawLaps));
-        { cars = cars, laps = laps }
+    /// The worklist and `rounds` are both the calendar, so a task with no row
+    /// is a run that wrote the two from different lists.
+    def load(rounds: List[RoundRow], task: FileTask.FileTask, rawLaps: List[RawLap]): Loaded \ DbWrite =
+        match Rounds.idIn(rounds, task#entry) {
+            case None => DbErr.fail(Db.Error.Incomplete(
+                "round ${FileTask.label(task)} has no row in ${Rounds.table()}"))
+            case Some(roundId) =>
+                let cars = Cars.insertRows(CarRow.fromRawLaps(roundId, rawLaps));
+                let laps = Laps.insertRows(LapRow.fromRawLaps(roundId, rawLaps));
+                { cars = cars, laps = laps }
+        }
 
     def reportViolations(task: FileTask.FileTask, loaded: Loaded): Loaded \ {Console, DbRead} =
         Validation.validate(task#entry) |> List.forEach(Console.eprintln);

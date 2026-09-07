@@ -71,7 +71,12 @@ mod Sql {
     /// table expression makes up, and what no combinator here builds. Its type
     /// is the caller's word.
     pub def column(name: String): Expr[a] =
-        Expr.Expr(raw(name))
+        written(raw(name))
+
+    /// An expression the caller wrote out, values and all -- a scalar subquery,
+    /// say. As `column`, its type is the caller's word.
+    pub def written(fragment: Frag): Expr[a] =
+        Expr.Expr(fragment)
 
     pub def i32(value: Int32): Expr[Int32] =
         Expr.Expr(Frag.Frag("?", Value.Integer(value) :: Nil))
