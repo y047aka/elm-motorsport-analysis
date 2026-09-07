@@ -66,13 +66,16 @@
         # beforeDevCommand=`pnpm run start` from app/).
         # Targets macOS, which uses the OS-provided WebView (no extra system deps).
         # Targeting Linux would additionally need pkg-config + webkitgtk_4_1/libsoup_3/gtk3.
-        mkTauriApp = name: cmd:
+        # `before` runs from the repository root, which is where the build
+        # writes the rounds it is about to bundle.
+        mkTauriApp = name: before: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri ]
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri flix ]
               ++ elmTools
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
             text = ''
+              ${before}
               cd app
               ${cmd}
             '';
@@ -153,6 +156,15 @@
         # server. Passed before "$@", so a run can name another round as well.
         exportedRound = "--export-only 2025/le_mans_24h";
 
+        # What `.#tauri-build` runs first, and the one place every round is
+        # written: a bundle answers out of the files beside it, so a round left
+        # unwritten is a round it cannot open. Converts rather than exports,
+        # since a checkout has the CSV and an empty database.
+        exportEveryRound = ''
+          ${dbEnv}
+          (cd flix && flix run -- ../app/static/wec)
+        '';
+
         # The CLI's one argument is the directory holding the season directories,
         # and it converts the rounds `Motorsport.Calendar` lists. Anything else
         # given to `nix run` is forwarded, which is how `--database <url>` is
@@ -209,8 +221,8 @@
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
-          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
-          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
+          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
+          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
           cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                          meta.description = "Run the CLI (CSV -> SQLite, and the kept round out to JSON/JSONL)"; };
