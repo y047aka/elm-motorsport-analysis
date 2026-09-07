@@ -51,7 +51,7 @@ carRowContent : CarAt -> List (Html msg)
 carRowContent item =
     [ div [ class "text-center text-xs" ] [ text (String.fromInt item.standing.position) ]
     , CarNumberBadge.viewRow item.metadata
-    , div [ class "text-xs opacity-70" ]
+    , div [ class "text-xs" ]
         [ text (Driver.toSurname item.currentDriver) ]
     , if item.status == Status.InPit then
         div
