@@ -171,7 +171,7 @@ mod Db.Laps {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys())
+        Schema.recreate(table(), all(), keys(), storage())
 
     pub def insertRows(rows: List[LapRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -199,10 +199,14 @@ mod Db.Laps {
         "((hour_ms - elapsed_ms) % 86400000 + 86400000) % 86400000"
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys())
+        Sql.createTable(table(), all(), keys(), storage())
 
     def keys(): List[Sql.Key[Bound[LapRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(sourceKey()) :: Nil
+
+    /// Nothing reaches a row of this table but through a key of it, so the
+    /// rows are the primary key's tree rather than a second one under it.
+    def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())

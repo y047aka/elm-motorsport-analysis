@@ -80,7 +80,7 @@ mod Db.Cars {
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), keys())
+        Schema.recreate(table(), all(), keys(), storage())
 
     pub def insertRows(rows: List[CarRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows)
@@ -94,10 +94,13 @@ mod Db.Cars {
         Schema.scopeOf(table(), c#season, c#round, entry#season, entry#id)
 
     pub def createTable(): String =
-        Sql.createTable(table(), all(), keys())
+        Sql.createTable(table(), all(), keys(), storage())
 
     def keys(): List[Sql.Key[Bound[CarRow]]] =
         Sql.Key.Primary(primaryKey()) :: Nil
+
+    /// As `Db.Laps`: the rows are the primary key's tree.
+    def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =
         Schema.columnNames(all())

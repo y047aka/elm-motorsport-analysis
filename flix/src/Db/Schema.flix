@@ -96,10 +96,11 @@ mod Db.Schema {
     pub def recreate(
         table: String,
         columns: List[Bound[r]],
-        keys: List[Sql.Key[Bound[r]]]
+        keys: List[Sql.Key[Bound[r]]],
+        storage: Sql.Storage
     ): Unit \ DbWrite =
         Db.execute(Sql.dropTableIfExists(table));
-        Db.execute(Sql.createTable(table, columns, keys))
+        Db.execute(Sql.createTable(table, columns, keys, storage))
 
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);

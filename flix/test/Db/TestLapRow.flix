@@ -189,6 +189,14 @@ mod Db.TestLapRow {
                 Db.Laps.createTable())
         )
 
+    /// A table whose rows are its primary key's tree, which SQLite takes
+    /// only from a table that declares one.
+    @Test
+    def theRowsAreTheKeysTree(): Unit \ Assert =
+        let ddl = Db.Laps.createTable();
+        Assert.assertTrue(String.endsWith({suffix = ") WITHOUT ROWID"}, ddl));
+        Assert.assertTrue(String.contains({substr = "PRIMARY KEY"}, ddl))
+
     /// The reading names every column the load bound, and in that order:
     /// `Db.Laps.all` and `selection` are two orderings of the one declaration,
     /// and no compiler sees them together.

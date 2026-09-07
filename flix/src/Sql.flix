@@ -399,6 +399,15 @@ mod Sql {
         case Unique(List[c])
     }
 
+    /// Where a table's rows live. SQLite's default keeps them in a tree of an
+    /// integer of its own and a declared primary key in a second tree over
+    /// them; `WithoutRowid` keeps them in the primary key's own tree, and so
+    /// needs the table to declare one.
+    pub enum Storage {
+        case Rowid
+        case WithoutRowid
+    }
+
     pub def dropTableIfExists(table: String): String =
         "DROP TABLE IF EXISTS " + table
 
@@ -408,7 +417,8 @@ mod Sql {
     pub def createTable(
         table: String,
         columns: List[{name = String, sqlType = String | r}],
-        keys: List[Key[{name = String, sqlType = String | r}]]
+        keys: List[Key[{name = String, sqlType = String | r}]],
+        storage: Storage
     ): String =
         let declared = List.append(
             columns |> List.map(c -> "${c#name} ${c#sqlType}"),
@@ -416,7 +426,13 @@ mod Sql {
         );
         "CREATE TABLE " + table + " (\n"
             + (declared |> List.map(d -> "  ${d}") |> List.join(",\n"))
-            + "\n)"
+            + "\n)" + storageText(storage)
+
+    def storageText(storage: Storage): String =
+        match storage {
+            case Storage.Rowid        => ""
+            case Storage.WithoutRowid => " WITHOUT ROWID"
+        }
 
     def keyText(key: Key[{name = String | r}]): String =
         match key {

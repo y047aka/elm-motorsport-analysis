@@ -67,6 +67,13 @@ mod Db.TestCarRow {
             String.contains({substr = "PRIMARY KEY (season, round, car_number)"}, Cars.createTable())
         )
 
+    /// See `Db.TestLapRow`.
+    @Test
+    def theRowsAreTheKeysTree(): Unit \ Assert =
+        let ddl = Cars.createTable();
+        Assert.assertTrue(String.endsWith({suffix = ") WITHOUT ROWID"}, ddl));
+        Assert.assertTrue(String.contains({substr = "PRIMARY KEY"}, ddl))
+
     /// A file that describes one car two ways: car 12 is Hertz Team JOTA on
     /// its first lap and AF Corse on its second.
     def contradicting(): List[Motorsport.Wec.RawLap] =
