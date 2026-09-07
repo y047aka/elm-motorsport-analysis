@@ -84,10 +84,12 @@ renderers rather than a second copy of the archive. The calendar is written
 either way and lists every round there is, so `dist/api/wec/index.json` — the
 copy the build writes, and the one URL the app asks for before it knows
 anything — is reached only by a bundle with nothing listening on `/api`. Such a
-bundle opens the one round whose files are beside it and 404s on the rest,
-which is what the Tauri build now packages. A bundle behind a server never
-reaches that copy: the calendar it gets names `/api/wec` and every round
-opens.
+bundle opens the one round whose files are beside it and fails on the rest,
+which is what the Tauri build now packages. What that failure is depends on who
+serves the bundle: Tauri's asset resolver answers a path it does not know with
+`index.html`, so a round with no files decodes HTML rather than reading a 404.
+A bundle behind a server never reaches that copy: the calendar it gets names
+`/api/wec` and every round opens.
 
 Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
 flake forwards what follows.
