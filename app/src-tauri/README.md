@@ -20,7 +20,10 @@ git-ignored.
 
 ## Notes
 
-- The frontend loads unchanged: `/static/**` assets resolve same-origin under
-  `tauri://localhost`, so no extra CSP or permissions are required.
+- A bundle serves its assets over http on port 1430 rather than from
+  `tauri://localhost`, which Elm cannot read as a location; a dev build opens
+  the Vite server instead. `src/lib.rs` has the rest.
+- The frontend loads unchanged: `/static/**` assets resolve same-origin with
+  the page, so no extra CSP or permissions are required.
 - Icons are placeholders — replace before distribution.
 - `"csp": null` in `tauri.conf.json` should be tightened before release.

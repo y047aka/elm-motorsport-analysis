@@ -36,7 +36,7 @@ All commands run through the Nix flake; `nix flake show` lists everything.
 | `nix run .#cli-run` | CSV→SQLite, and the kept round out to JSON/JSONL |
 | `nix run .#cli-load` / `.#cli-export` | Either stage of that run on its own |
 | `nix run .#serve-api` | Serve the loaded rounds over HTTP (`/api`, port 8080) |
-| `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`) |
+| `nix run .#tauri-dev` / `.#tauri-build` | Tauri v2 native app (`app/src-tauri`); the build writes every round out first |
 | `nix run .#deps-audit` | Dependency audit helper for `/update-deps` |
 
 Prefer these over invoking `pnpm` / `cargo` / `flix` directly — the flake pins
@@ -53,11 +53,17 @@ lap per line, and `index.json` beside them are written back out of the rows.
 nothing the calendar does not list, reports any CSV no round names, and fails
 any round whose CSV is missing.
 
-Every round is loaded and one is written. `--export-only <season>/<id>` narrows
-the writing stage alone, the flake passes `2025/le_mans_24h`, and a name no
-round on the calendar answers to fails the run before anything is written. The
-rows are where a round is read from; the files are one round kept so that what
-the renderers produce can be read without a server.
+Every round is loaded and every round is written. `--export-only <season>/<id>`
+narrows the writing stage alone, repeated to name more than one, and a name no
+round on the calendar answers to fails the run before anything is written.
+
+**A checkout holds the CSV, the calendar and one round's files.** 2025's Le
+Mans is kept, so the VRT and a dev server work with nothing run first. The
+other thirteen are 44MB the rows already say, so they are ignored rather than
+committed, and `.#tauri-build` is the one command that writes them — a bundle
+carries the files it opens, and nothing else needs all of them at once. A round
+left unwritten is quiet: the dev server answers `/api` for it with a 502, and a
+Tauri bundle hands back its own `index.html`.
 
 `.#cli-load` and `.#cli-export` are those two stages singly. The stage that
 writes reads none of the CSV, so the files are an image of the rows and of
@@ -79,14 +85,17 @@ run left there is still there to be queried. The integrity checks are read back
 out of the rows a round was just loaded into, and so is everything the export
 writes and `.#serve-api` answers with.
 
-`/api` is how the app reads a round, and the export is a check on the two
-renderers rather than a second copy of the archive. The calendar is written
-either way and lists every round there is, so `dist/api/wec/index.json` — the
-copy the build writes, and the one URL the app asks for before it knows
-anything — is reached only by a bundle with nothing listening on `/api`. Such a
-bundle opens the one round whose files are beside it and 404s on the rest,
-which is what the Tauri build now packages. A bundle behind a server never
-reaches that copy: the calendar it gets names `/api/wec` and every round
+`/api` is how the app reads a round, and the export is the same archive written
+out to files. The calendar is written either way and lists every round there
+is, so `dist/api/wec/index.json` — the copy the build writes, and the one URL
+the app asks for before it knows anything — is reached only by a bundle with
+nothing listening on `/api`. Such a bundle opens whichever rounds were written
+before it was built, which is why `.#tauri-build` converts every one of them
+first: all fourteen come to 69MB of files and 3MiB in the `.app`, since Tauri
+compresses what it embeds. A round the run did not write fails there rather than 404ing —
+Tauri's asset resolver answers a path it does not know with `index.html`, so it
+decodes HTML. A bundle behind a server
+never reaches that copy: the calendar it gets names `/api/wec` and every round
 opens.
 
 Passing the flag goes through `nix run .#cli-run -- --database ...`, since the
@@ -337,7 +346,7 @@ Nothing is lost by cutting. The reasoning is what the commit message is for.
 - **VRT** (`/app/tests/`) — runs against the export rather than the server, so
   it needs nothing set up: with nothing listening on 8080 the dev server
   answers `/api` from `static/`, and those are the same bytes. It drives
-  2025's Le Mans because that is the round the export keeps; a test reaching
+  2025's Le Mans because that is the round a checkout keeps; a test reaching
   for another needs `.#serve-api` behind it. Local runs allow a 0.1%
   pixel-ratio tolerance (`maxDiffPixelRatio: 0.001`) for cross-platform
   diffs; CI is strict 0. Update snapshots locally, or trigger the

@@ -66,13 +66,16 @@
         # beforeDevCommand=`pnpm run start` from app/).
         # Targets macOS, which uses the OS-provided WebView (no extra system deps).
         # Targeting Linux would additionally need pkg-config + webkitgtk_4_1/libsoup_3/gtk3.
-        mkTauriApp = name: cmd:
+        # `before` runs from the repository root, which is where the build
+        # writes the rounds it is about to bundle.
+        mkTauriApp = name: before: cmd:
           pkgs.writeShellApplication {
             inherit name;
-            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri ]
+            runtimeInputs = [ pkgs.nodejs_26 pkgs.pnpm pkgs.cargo pkgs.rustc pkgs.cargo-tauri flix ]
               ++ elmTools
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [ pkgs.libiconv ];
             text = ''
+              ${before}
               cd app
               ${cmd}
             '';
@@ -134,8 +137,14 @@
               ${dbEnv}
               cd flix
               jar=artifact/flix.jar
-              if [ ! -f "$jar" ] || [ -n "$(find src flix.toml -newer "$jar" 2>/dev/null)" ]; then
+              # The marker, not the jar: an interrupted `build-jar` leaves a jar
+              # with no central directory in it, and one newer than every source
+              # it was made from, which reads as built and runs as a missing
+              # `Main` until the file is removed by hand.
+              if [ ! -f "$jar.ok" ] || [ -n "$(find src flix.toml -newer "$jar.ok" 2>/dev/null)" ]; then
+                rm -f "$jar" "$jar.ok"
                 flix build-jar >&2
+                touch "$jar.ok"
               fi
               java -cp "$jar:$(find lib -name '*.jar' | tr '\n' ':')" Main ${args} "$@"
             '';
@@ -146,6 +155,15 @@
         # written, so that what the renderers produce can be read without a
         # server. Passed before "$@", so a run can name another round as well.
         exportedRound = "--export-only 2025/le_mans_24h";
+
+        # What `.#tauri-build` runs first, and the one place every round is
+        # written: a bundle answers out of the files beside it, so a round left
+        # unwritten is a round it cannot open. Converts rather than exports,
+        # since a checkout has the CSV and an empty database.
+        exportEveryRound = ''
+          ${dbEnv}
+          (cd flix && flix run -- ../app/static/wec)
+        '';
 
         # The CLI's one argument is the directory holding the season directories,
         # and it converts the rounds `Motorsport.Calendar` lists. Anything else
@@ -161,8 +179,9 @@
         # Audit helpers for the update-deps skill. The jar is located via the
         # git root so the caller's working directory is left untouched —
         # subcommands resolve flake.lock, app/elm.json and node_modules
-        # relative to the cwd. Rebuilds the jar when sources changed; cargo
-        # is needed by the rust-major-audit subcommand.
+        # relative to the cwd. Rebuilds the jar when a source is newer than the
+        # marker a finished build leaves, as `mkFlixServerApp` does; cargo is
+        # needed by the rust-major-audit subcommand.
         depsAuditApp = pkgs.writeShellApplication {
           name = "deps-audit";
           runtimeInputs = [ flix pkgs.jdk21_headless pkgs.cargo pkgs.git ];
@@ -170,8 +189,10 @@
             root=$(git rev-parse --show-toplevel)
             dir=$root/.claude/skills/update-deps/scripts-flix
             jar=$dir/artifact/scripts-flix.jar
-            if [ ! -f "$jar" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar" 2>/dev/null)" ]; then
+            if [ ! -f "$jar.ok" ] || [ -n "$(find "$dir/src" -name '*.flix' -newer "$jar.ok" 2>/dev/null)" ]; then
+              rm -f "$jar" "$jar.ok"
               (cd "$dir" && flix build-jar) >&2
+              touch "$jar.ok"
             fi
             java -jar "$jar" "$@"
           '';
@@ -200,8 +221,8 @@
           review-app           = { type = "app"; program = "${mkNodeApp "review-app"           "cd app && elm-review src"}/bin/review-app";                          meta.description = "Run elm-review on app"; };
           review-package       = { type = "app"; program = "${mkNodeApp "review-package"       "cd package && elm-review src"}/bin/review-package";                  meta.description = "Run elm-review on package"; };
           format               = { type = "app"; program = "${mkNodeApp "format"               "elm-format --yes app/src package/src"}/bin/format";                   meta.description = "Format Elm code (elm-format)"; };
-          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
-          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release)"; };
+          tauri-dev            = { type = "app"; program = "${mkTauriApp "tauri-dev"   ""               "cargo tauri dev"}/bin/tauri-dev";                                              meta.description = "Start Tauri v2 native app (dev)"; };
+          tauri-build          = { type = "app"; program = "${mkTauriApp "tauri-build" exportEveryRound "cargo tauri build"}/bin/tauri-build";                                          meta.description = "Build Tauri v2 native app (release; writes every round out first)"; };
           flix-build           = { type = "app"; program = "${mkFlixApp "flix-build" "flix build"}/bin/flix-build";                                                       meta.description = "Build the Flix project"; };
           flix-test            = { type = "app"; program = "${mkFlixApp "flix-test" "flix test"}/bin/flix-test";                                                     meta.description = "Run the Flix project's tests"; };
           cli-run              = { type = "app"; program = "${mkFlixAppWithDb "cli-run"  cliRunCmd}/bin/cli-run";                                                          meta.description = "Run the CLI (CSV -> SQLite, and the kept round out to JSON/JSONL)"; };
