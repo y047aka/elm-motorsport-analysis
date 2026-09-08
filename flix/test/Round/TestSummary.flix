@@ -12,7 +12,7 @@ mod Round.TestSummary {
     use Util.Json.Encode
 
     def metadata(entry: Entry, laps: List[RawLap]): Metadata.Metadata \ IO =
-        TestSupport.onRound(entry, laps, () -> Summary.read(entry, Round.Names.read(entry)))
+        TestSupport.onRound(entry, laps, () -> Summary.read(entry, Round.Drivers.read(entry)))
 
     /// The calendar entries these tests convert. Written out rather than looked
     /// up, so a change to the real calendar cannot quietly rewrite what a test

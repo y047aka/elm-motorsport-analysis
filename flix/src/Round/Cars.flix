@@ -5,7 +5,6 @@ mod Round.Cars {
     use Db.CarRow
     use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawCar
-    use Round.Names
 
     /// Whether a run has loaded the round's cars, asked rather than read back.
     pub def loaded(entry: Entry): Bool \ DbRead =
@@ -16,16 +15,12 @@ mod Round.Cars {
         not List.isEmpty(found)
 
     /// Keyed by car number, which is the whole of what a lap carries of its
-    /// car. The team and the manufacturer are looked up once per round rather
-    /// than joined per row: neither table is a round's, and both are small.
-    pub def read(entry: Entry, names: Names.Names): Map[String, RawCar] \ DbRead =
+    /// car.
+    pub def read(entry: Entry): Map[String, RawCar] \ DbRead =
         Cars.rows(entry)
             |> Sql.map(_ -> Cars.selection())
             |> Sql.selectAll
-            |> List.map(row -> (row#carNumber, named(names, row)))
+            |> List.map(row -> (row#carNumber, CarRow.toRawCar(row)))
             |> List.toMap
-
-    pub def named(names: Names.Names, row: CarRow.CarRow): RawCar \ DbErr =
-        CarRow.toRawCar(Names.team(names, row#teamId), Names.manufacturer(names, row#manufacturerId), row)
 
 }

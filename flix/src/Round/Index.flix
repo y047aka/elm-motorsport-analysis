@@ -15,9 +15,9 @@ mod Round.Index {
     use Motorsport.Sector.Sector
     use Util.Duration.Duration
 
-    pub def read(entry: Entry, names: Round.Names.Names): Index.Index \ DbRead =
+    pub def read(entry: Entry, seats: Round.Drivers.Seats): Index.Index \ DbRead =
         let completions = lapCompletions(entry);
-        let changes = bestTimes(entry, names);
+        let changes = bestTimes(entry, seats);
         {
             lapCompletions = completions,
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
@@ -52,7 +52,7 @@ mod Round.Index {
         (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
         Nil
 
-    def bestTimes(entry: Entry, names: Round.Names.Names): List[(Record, Change)] \ DbRead =
+    def bestTimes(entry: Entry, seats: Round.Drivers.Seats): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
@@ -67,16 +67,16 @@ mod Round.Index {
                 Sql.int("driver_number")
             ))
             |> Sql.selectAll
-            |> List.map(change(names))
+            |> List.map(change(seats))
 
-    def change(names: Round.Names.Names): ((Record, Int32, Int32, String, Int32, Int32)) -> (Record, Change) \ DbErr =
+    def change(seats: Round.Drivers.Seats): ((Record, Int32, Int32, String, Int32, Int32)) -> (Record, Change) \ DbErr =
         row -> match row {
             case (record, elapsed, time, carNumber, lap, driverNumber) => (record, {
                 elapsed   = Util.Duration.fromMillis(elapsed),
                 time      = Util.Duration.fromMillis(time),
                 carNumber = carNumber,
                 lap       = lap,
-                driver    = Round.Names.driver(names, carNumber, driverNumber)
+                driver    = Round.Drivers.nameOf(seats, carNumber, driverNumber)
             })
         }
 

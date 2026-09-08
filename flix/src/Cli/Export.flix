@@ -73,11 +73,11 @@ mod Cli.Export {
         if (not Round.loaded(task#entry))
             Err(CliError.RoundNotLoaded)
         else
-            let names = Round.Names.read(task#entry);
+            let seats = Round.Drivers.read(task#entry);
             Ok(render(
-                Summary.read(task#entry, names),
-                Index.read(task#entry, names),
-                Laps.read(task#entry, names)
+                Summary.read(task#entry, seats),
+                Index.read(task#entry, seats),
+                Laps.read(task#entry, seats)
             ))
 
     def render(

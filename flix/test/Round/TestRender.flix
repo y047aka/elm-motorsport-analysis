@@ -2,7 +2,7 @@ mod Round.TestRender {
 
     use Round.Index
     use Round.Laps
-    use Round.Names
+    use Round.Drivers
     use Round.Render
     use Round.Summary
     use Round.TestSupport
@@ -39,8 +39,8 @@ mod Round.TestRender {
     def summaryOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
             Render.renderSummary(
-                Summary.read(leMans(), Names.read(leMans())),
-                Index.read(leMans(), Names.read(leMans()))
+                Summary.read(leMans(), Drivers.read(leMans())),
+                Index.read(leMans(), Drivers.read(leMans()))
             ))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
@@ -48,7 +48,7 @@ mod Round.TestRender {
     /// thing that has one.
     def jsonlOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
-            Render.renderJsonl(Laps.read(leMans(), Names.read(leMans()))))
+            Render.renderJsonl(Laps.read(leMans(), Drivers.read(leMans()))))
 
     @Test
     def testRenderSummaryRendersTheRoundsSummary(): Unit \ {Assert, IO} =

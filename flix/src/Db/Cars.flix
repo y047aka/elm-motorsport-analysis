@@ -1,8 +1,7 @@
 /// The `cars` table: the cars a round was run by, one row each. The class,
 /// group, team and manufacturer the feed repeats on every lap are here rather
 /// than in `Db.Laps`, which the archive bears out -- no car of a round in it
-/// is described two ways. The team and the manufacturer are ids: 72 team names
-/// and 18 manufacturer spellings are written on the 579 cars.
+/// is described two ways.
 mod Db.Cars {
 
     use Db.CarRow.CarRow
@@ -34,8 +33,8 @@ mod Db.Cars {
         carNumber = Column[CarRow, String],
         carClass = Column[CarRow, String],
         carGroup = Column[CarRow, String],
-        teamId = Column[CarRow, Int32],
-        manufacturerId = Column[CarRow, Int32]
+        team = Column[CarRow, String],
+        manufacturer = Column[CarRow, String]
     }
 
     pub def columns(): Columns = {
@@ -43,8 +42,8 @@ mod Db.Cars {
         carNumber = Schema.text("car_number", r -> r#carNumber),
         carClass = Schema.text("class", r -> r#class),
         carGroup = Schema.text("car_group", r -> r#carGroup),
-        teamId = Schema.integer("team_id", r -> r#teamId),
-        manufacturerId = Schema.integer("manufacturer_id", r -> r#manufacturerId)
+        team = Schema.text("team", r -> r#team),
+        manufacturer = Schema.text("manufacturer", r -> r#manufacturer)
     }
 
     /// A round's cars as the table holds them, a field at a time: each line
@@ -57,8 +56,8 @@ mod Db.Cars {
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
             |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
             |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#teamId, (row, value) -> { +teamId = value | row })
-            |> Sql.field(c#manufacturerId, (row, value) -> { +manufacturerId = value | row })
+            |> Sql.field(c#team, (row, value) -> { +team = value | row })
+            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.
@@ -71,8 +70,8 @@ mod Db.Cars {
         Schema.bound(c#carNumber) ::
         Schema.bound(c#carClass) ::
         Schema.bound(c#carGroup) ::
-        Schema.bound(c#teamId) ::
-        Schema.bound(c#manufacturerId) ::
+        Schema.bound(c#team) ::
+        Schema.bound(c#manufacturer) ::
         Nil
 
     // --------------------------------------------------------------- schema

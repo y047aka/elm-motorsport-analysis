@@ -9,8 +9,8 @@ mod Round.Laps {
     use Motorsport.Wec.RawCar
     use Motorsport.Wec.RawLap
     use Round.Cars
-    use Round.Names
-    use Round.Names.Names
+    use Round.Drivers
+    use Round.Drivers.Seats
 
     /// Whether a run has loaded the round, asked rather than read back: a
     /// summary needs the answer and not the laps.
@@ -30,13 +30,13 @@ mod Round.Laps {
         position = Int32
     }
 
-    pub def read(entry: Entry, names: Names): List[Placed] \ DbRead =
-        let cars = Cars.read(entry, names);
+    pub def read(entry: Entry, seats: Seats): List[Placed] \ DbRead =
+        let cars = Cars.read(entry);
         Laps.rows(entry)
             |> Sql.orderBy(Schema.term(Laps.columns()#sourceRow) :: Nil)
             |> Sql.map(_ -> (Laps.selection(), Sql.int(placeInField())))
             |> Sql.selectAll
-            |> List.map(placed(cars, names))
+            |> List.map(placed(cars, seats))
 
     /// Counted from nought, which is what `Motorsport.Race.TimelineEvent`
     /// reads the lead off. A window runs over the rows the round was scoped
@@ -45,20 +45,20 @@ mod Round.Laps {
     def placeInField(): String =
         "ROW_NUMBER() OVER (PARTITION BY lap_number ORDER BY elapsed_ms, source_row) - 1"
 
-    def placed(cars: Map[String, RawCar], names: Names): ((LapRow, Int32)) -> Placed \ DbErr =
+    def placed(cars: Map[String, RawCar], seats: Seats): ((LapRow, Int32)) -> Placed \ DbErr =
         row -> match row {
-            case (lap, position) => { lap = rawLap(cars, names)(lap), position = position }
+            case (lap, position) => { lap = rawLap(cars, seats)(lap), position = position }
         }
 
     /// A car with laps and no row in `cars` is a round loaded by halves, which
     /// is the one thing a lap cannot say for itself.
-    def rawLap(cars: Map[String, RawCar], names: Names): LapRow -> RawLap \ DbErr =
+    def rawLap(cars: Map[String, RawCar], seats: Seats): LapRow -> RawLap \ DbErr =
         row ->
             match Map.get(row#carNumber, cars) {
                 case None      => DbErr.fail(Db.Error.Incomplete(
                     "car ${row#carNumber} has laps but is not one of the round's cars"))
                 case Some(car) =>
-                    let driver = Names.driver(names, row#carNumber, row#driverNumber);
+                    let driver = Drivers.nameOf(seats, row#carNumber, row#driverNumber);
                     LapRow.toRawLap(car, driver, row)
                         |> Result.mapErr(Db.Error.Unread)
                         |> Db.orRaise

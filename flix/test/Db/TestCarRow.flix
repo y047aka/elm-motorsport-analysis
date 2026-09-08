@@ -2,32 +2,15 @@ mod Db.TestCarRow {
 
     use Db.CarRow
     use Db.Cars
-    use Db.Manufacturers
-    use Db.Numbering
-    use Db.Numbering.Numbering
-    use Db.Teams
     use Db.TestLapRow
     use Db.Value
 
     /// The id a run gave the round; see `Db.TestLapRow`.
     def fujiId(): Int32 = 7
 
-    /// The teams and manufacturers the sample names, numbered as a run would
-    /// number them.
-    def numbered(): (Numbering, Numbering) =
-        let cars = CarRow.firstMentions(TestLapRow.sampleLaps());
-        let (teams, _) = Teams.add(Numbering.none(), cars |> List.map(c -> c#team));
-        let (manufacturers, _) =
-            Manufacturers.add(Numbering.none(), cars |> List.map(c -> c#manufacturer));
-        (teams, manufacturers)
-
     /// Two laps of car 12 and one of car 7, in that order.
     def rows(): List[CarRow.CarRow] =
-        let (teams, manufacturers) = numbered();
-        match CarRow.fromRawLaps(fujiId(), teams, manufacturers, TestLapRow.sampleLaps()) {
-            case Some(rows_) => rows_
-            case None        => unreachable!()
-        }
+        CarRow.fromRawLaps(fujiId(), TestLapRow.sampleLaps())
 
     @Test
     def aCarIsOneRowHoweverManyLapsItRan(): Unit \ Assert =
@@ -40,19 +23,14 @@ mod Db.TestCarRow {
             case Nil      => Assert.assertTrue(false)
         }
 
-    /// The class and the group are the row's; the team and the manufacturer
-    /// are ids into the tables that hold those names.
     @Test
     def theCarIsWhatTheFeedRepeatedOnEveryLapOfIt(): Unit \ Assert =
-        let (teams, manufacturers) = numbered();
         match rows() {
             case row :: _ =>
                 Assert.assertTrue(row#class == "HYPERCAR");
                 Assert.assertTrue(row#carGroup == "H");
-                Assert.assertTrue(Teams.idIn(teams, "Hertz Team JOTA") == Some(row#teamId));
-                Assert.assertTrue(
-                    Manufacturers.idIn(manufacturers, "Porsche") == Some(row#manufacturerId)
-                )
+                Assert.assertTrue(row#team == "Hertz Team JOTA");
+                Assert.assertTrue(row#manufacturer == "Porsche")
             case Nil => Assert.assertTrue(false)
         }
 
@@ -63,7 +41,7 @@ mod Db.TestCarRow {
                 Assert.assertTrue(Cars.values(row)
                     == Value.Integer(7) :: Value.Text("12") ::
                        Value.Text("HYPERCAR") :: Value.Text("H") ::
-                       Value.Integer(1) :: Value.Integer(1) :: Nil)
+                       Value.Text("Hertz Team JOTA") :: Value.Text("Porsche") :: Nil)
             case Nil => Assert.assertTrue(false)
         }
 
@@ -105,8 +83,8 @@ mod Db.TestCarRow {
 
     @Test
     def aCarKeepsWhatTheFileFirstSaidItWas(): Unit \ Assert =
-        match CarRow.firstMentions(contradicting()) {
-            case car :: _ => Assert.assertTrue(car#team == "Hertz Team JOTA")
+        match CarRow.fromRawLaps(fujiId(), contradicting()) {
+            case row :: _ => Assert.assertTrue(row#team == "Hertz Team JOTA")
             case Nil      => Assert.assertTrue(false)
         }
 
@@ -128,19 +106,13 @@ mod Db.TestCarRow {
     def aFileThatAgreesWithItselfReportsNothing(): Unit \ Assert =
         Assert.assertTrue(List.isEmpty(CarRow.disagreements(TestLapRow.sampleLaps())))
 
-    /// What the reading gives back is what the writing was handed, the team
-    /// and the manufacturer being the tables' rather than the row's.
+    /// What the reading gives back is what the writing was handed.
     @Test
     def aRowMakesTheCarItWasMadeFrom(): Unit \ Assert =
-        let (teams, manufacturers) = numbered();
         match rows() {
             case row :: _ =>
-                let car = CarRow.toRawCar("Hertz Team JOTA", "Porsche", row);
-                Assert.assertTrue(
-                    CarRow.fromRawCar(fujiId(), teams, manufacturers, car)
-                        |> Option.map(Cars.values)
-                        == Some(Cars.values(row))
-                )
+                Assert.assertTrue(Cars.values(CarRow.fromRawCar(fujiId(), CarRow.toRawCar(row)))
+                    == Cars.values(row))
             case Nil => Assert.assertTrue(false)
         }
 

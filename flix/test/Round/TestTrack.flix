@@ -26,7 +26,7 @@ mod Round.TestTrack {
 
     def track(entry: Entry, laps: List[RawLap]): Track.Track \ IO =
         TestSupport.onRound(entry, numbered(laps), () ->
-            Summary.read(entry, Round.Names.read(entry)))#track
+            Summary.read(entry, Round.Drivers.read(entry)))#track
 
     /// The fixtures are each written as lap one, which the table's key will not
     /// take twice for the same car. Numbering them changes nothing a share is

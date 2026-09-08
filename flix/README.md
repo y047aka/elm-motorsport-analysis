@@ -34,9 +34,9 @@ laps are 25MB, and 3.4MB on the wire.
 and the `DbRead` effect and read it; `Round.Render` takes what they returned, is
 pure, and turns it into the bytes that go out. None of the five knows whether a
 file or a request is waiting at the other end. Three of them take a
-`Round.Names` as well -- what a row's ids stand for -- because it is read once
-for the round by whichever of the two callers asked, rather than once by each
-of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
+`Round.Drivers` as well -- who sat in the seat a lap names -- because it is read
+once for the round by whichever of the two callers asked, rather than once by
+each of them. `Round.loaded` is what both ask first, and it asks `laps` and `cars`:
 laps without cars is a round half in the database, and answered off the laps
 alone it would be a race whose grid was empty.
 
@@ -58,25 +58,24 @@ what the two sides hand it.
 
 ## The tables
 
-Seven of them, dropped and rebuilt each time as the JSON files are rewritten
+Five of them, dropped and rebuilt each time as the JSON files are rewritten
 each time. Three hold what a round did: `laps` is one lap of one car, `cars` is
-one car of one round, and `car_drivers` is one seat of one car. Four hold what
+one car of one round, and `car_drivers` is one seat of one car. Two hold what
 those three name rather than spell: `rounds` is the calendar written down, and
-`drivers`, `teams` and `manufacturers` number the names the feed repeats. The
-archive's 130,017 laps are run by 579 cars in 1,674 seats, and name 308
-drivers, 72 teams and 18 manufacturer spellings.
+`drivers` numbers the 308 names the feed repeats over 130,017 laps. The archive
+runs those laps with 579 cars in 1,674 seats.
 
-The archive is what says the four can be split off: no car of a round in it is
+The archive is what says the two can be split off: no car of a round in it is
 described two ways, and no seat of one is named two ways. A lap carries its
 car's number and the seat that ran it and nothing else about either, which is
 also all the JSONL writes out.
 
 An id means nothing outside the database a run put it in, and no reader
-computes one. `Db.Numbering` gives them out -- carried between the rounds of a
-run rather than read back between them, since a name turns up in several -- and
-`Db.Rounds.scope` reads a round's back inside the scope it builds, so a
-database written under another calendar scopes to no rows rather than to
-another round's.
+computes one. `Db.Drivers.add` gives a name its number -- carried between the
+rounds of a run rather than read back between them, since a driver turns up in
+several -- and `Db.Rounds.scope` reads a round's id back inside the scope it
+builds, so a database written under another calendar scopes to no rows rather
+than to another round's.
 
 Where the file first mentioned a car is not in `cars`: it is `MIN(source_row)`
 over the round's laps, which is what `Round.Summary` orders the grid by. What
@@ -94,10 +93,8 @@ alike.
 
 Between rounds a car has been described two ways, which is why `cars` is keyed
 by round and not by season -- 2026's Le Mans file spells a manufacturer
-`Mercedes-AMG` where the season's other rounds spell it `Mercedes`. A row of
-`manufacturers` is a spelling for that reason, and `canonical_id` is where the
-two of them are one manufacturer: `cars` still carries what the file said, and
-which manufacturer that was is a join away rather than lost.
+`Mercedes-AMG` where the season's other rounds spell it `Mercedes`. Nothing in
+the tables says those are one manufacturer; nothing asks yet either.
 
 A column takes the type its Flix value already has -- a `Duration` is the
 milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave -- so
@@ -139,9 +136,8 @@ back, `Db.Laps.selection` and `Db.LapRow.toRawLap` being the reverse of the
 load, and one window function beside them for where the car stood in the field
 as it crossed the line -- a reading of the round rather than of any row of it,
 so it rides beside the lap rather than in it. `Round.Cars` hands it the round's
-cars keyed by number, and `Round.Names` what a seat, a team and a manufacturer
-id was: read once for the round rather than once a lap, which is the reading the
-split bought. A car with laps and no row in `cars`, or a lap from a seat with
+cars keyed by number, and `Round.Drivers` who sat in each seat: read once for
+the round rather than once a lap, which is the reading the split bought. A car with laps and no row in `cars`, or a lap from a seat with
 none in `car_drivers`, is a round loaded by halves, and is said so rather than
 written out as a car with no name. `Cli.Export` and `Server.Api` are both
 rendered from what those readers return, so the files written and the round

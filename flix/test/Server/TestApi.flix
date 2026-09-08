@@ -137,10 +137,10 @@ mod Server.TestApi {
             Api.respond(Route.Laps(2025, "fuji_6h")),
             {
                 summary = Render.renderSummary(
-                    Summary.read(fuji(), Round.Names.read(fuji())),
-                    Index.read(fuji(), Round.Names.read(fuji()))
+                    Summary.read(fuji(), Round.Drivers.read(fuji())),
+                    Index.read(fuji(), Round.Drivers.read(fuji()))
                 ),
-                laps    = Render.renderJsonl(Round.Laps.read(fuji(), Round.Names.read(fuji())))
+                laps    = Render.renderJsonl(Round.Laps.read(fuji(), Round.Drivers.read(fuji())))
             }
         ))
 

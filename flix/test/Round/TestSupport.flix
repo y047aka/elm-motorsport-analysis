@@ -6,9 +6,6 @@ mod Round.TestSupport {
     use Db.Cars
     use Db.Drivers
     use Db.Laps
-    use Db.Manufacturers
-    use Db.Numbering
-    use Db.Teams
     use Db.Rounds
 
     use Db.CarRow
@@ -33,8 +30,6 @@ mod Round.TestSupport {
         let outcome = Db.runWithError(() -> Jdbc.withConnection(url(), () -> {
             let rounds = Rounds.create(entry :: Nil);
             Drivers.create();
-            Teams.create();
-            Manufacturers.create();
             CarDrivers.create();
             Cars.create();
             Laps.create();
@@ -49,18 +44,7 @@ mod Round.TestSupport {
                 case Some(rows) => discard CarDrivers.insertRows(rows)
                 case None       => bug!("a seat the run just numbered has no id")
             };
-            let cars = CarRow.firstMentions(laps);
-            let (teams, teamRows) = Teams.add(Numbering.none(), cars |> List.map(c -> c#team));
-            let (manufacturers, manufacturerRows) =
-                Manufacturers.add(Numbering.none(), cars |> List.map(c -> c#manufacturer));
-            discard Teams.insertRows(teamRows);
-            discard Manufacturers.insertRows(manufacturerRows);
-            if (withCars)
-                match CarRow.fromRawLaps(roundId, teams, manufacturers, laps) {
-                    case Some(rows) => discard Cars.insertRows(rows)
-                    case None       => bug!("a car the run just numbered has no id")
-                }
-            else ();
+            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(roundId, laps)) else ();
             discard Laps.insertRows(LapRow.fromRawLaps(roundId, laps));
             read()
         }));
