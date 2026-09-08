@@ -60,7 +60,7 @@ mod Db.Manufacturers {
     }
 
     pub def columns(): Columns = {
-        manufacturerId = Schema.integer("manufacturer_id", r -> r#manufacturerId),
+        manufacturerId = Schema.identity("manufacturer_id", r -> r#manufacturerId),
         name = Schema.text("name", r -> r#name),
         canonicalId = Schema.integer("canonical_id", r -> r#canonicalId)
     }
@@ -96,7 +96,7 @@ mod Db.Manufacturers {
     def keys(): List[Sql.Key[Bound[ManufacturerRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(nameKey()) :: Nil
 
-    /// As `Db.Drivers`: an integer primary key is SQLite's own tree already.
+    /// As `Db.Rounds`: `Schema.identity` makes the id the row's own.
     def storage(): Sql.Storage = Sql.Storage.Rowid
 
     pub def columnNames(): List[String] =

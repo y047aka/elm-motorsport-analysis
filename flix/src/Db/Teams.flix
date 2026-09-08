@@ -39,7 +39,7 @@ mod Db.Teams {
     }
 
     pub def columns(): Columns = {
-        teamId = Schema.integer("team_id", r -> r#teamId),
+        teamId = Schema.identity("team_id", r -> r#teamId),
         name = Schema.text("name", r -> r#name)
     }
 
@@ -70,7 +70,7 @@ mod Db.Teams {
     def keys(): List[Sql.Key[Bound[TeamRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(nameKey()) :: Nil
 
-    /// As `Db.Drivers`: an integer primary key is SQLite's own tree already.
+    /// As `Db.Rounds`: `Schema.identity` makes the id the row's own.
     def storage(): Sql.Storage = Sql.Storage.Rowid
 
     pub def columnNames(): List[String] =

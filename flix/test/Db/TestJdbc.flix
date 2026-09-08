@@ -34,6 +34,31 @@ mod Db.TestJdbc {
         Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
         Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
 
+    /// SQLite builds an index for a primary key unless the key is the row's
+    /// own id, which it is only where the column is declared `integer`. The
+    /// tables that number a name are read through that id, so an index over it
+    /// would be the rows a second time; the ones keyed by more than a number
+    /// say `WITHOUT ROWID` instead and are their key's tree outright.
+    ///
+    /// Neither is a thing the DDL says, so it is asked of a database that took
+    /// it. What either would leave behind is an autoindex named for the table.
+    @Test
+    def aPrimaryKeyBuildsNoIndexOfItsOwn(): Unit \ {Assert, IO} =
+        let indexes = table -> connected(() -> {
+            discard Db.runWithError(() -> Db.execute(table));
+            SqlRead.fetch(
+                "SELECT name FROM sqlite_master WHERE type = 'index'"
+                    + " AND name LIKE 'sqlite_autoindex%' ORDER BY name", Nil)
+        });
+        Assert.assertTrue(indexes(Db.Rounds.createTable()) == Ok(
+            (Some("sqlite_autoindex_rounds_1") :: Nil) :: Nil
+        ));
+        Assert.assertTrue(indexes(Db.Drivers.createTable()) == Ok(
+            (Some("sqlite_autoindex_drivers_1") :: Nil) :: Nil
+        ));
+        Assert.assertTrue(indexes(Db.CarDrivers.createTable()) == Ok(Nil));
+        Assert.assertTrue(indexes(Db.Cars.createTable()) == Ok(Nil))
+
     /// The connection the server answers through.
     @Test
     def aReadingConnectionAnswersAFetch(): Unit \ {Assert, IO} =

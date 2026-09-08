@@ -154,6 +154,13 @@ mod Db.Schema {
     pub def integer(name: String, get: r -> Int32): Column[r, Int32] =
         column(name, "int not null", row -> Value.Integer(get(row)), Sql.int)
 
+    /// The table's own integer primary key. Declared `integer` rather than
+    /// `int` because SQLite makes such a column an alias for the row's own id
+    /// only where the type is spelled exactly that -- and where it does, the
+    /// rows are that key's tree and no second one is built over them.
+    pub def identity(name: String, get: r -> Int32): Column[r, Int32] =
+        column(name, "integer not null", row -> Value.Integer(get(row)), Sql.int)
+
     pub def text(name: String, get: r -> String): Column[r, String] =
         column(name, "text not null", row -> Value.Text(get(row)), Sql.text)
 

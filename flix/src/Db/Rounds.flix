@@ -50,7 +50,7 @@ mod Db.Rounds {
     }
 
     pub def columns(): Columns = {
-        roundId = Schema.integer("round_id", r -> r#roundId),
+        roundId = Schema.identity("round_id", r -> r#roundId),
         season = Schema.integer("season", r -> r#season),
         roundKey = Schema.text("round_key", r -> r#roundKey),
         date = Schema.text("date", r -> r#date)
@@ -143,7 +143,8 @@ mod Db.Rounds {
     def keys(): List[Sql.Key[Bound[RoundRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(namedKey()) :: Nil
 
-    /// An integer primary key is the row's place in SQLite's own tree already.
+    /// `Schema.identity` makes `round_id` the row's own id, so the rows are
+    /// already the key's tree and `WITHOUT ROWID` would only rename it.
     def storage(): Sql.Storage = Sql.Storage.Rowid
 
     pub def columnNames(): List[String] =

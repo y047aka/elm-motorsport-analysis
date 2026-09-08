@@ -47,7 +47,7 @@ mod Db.Drivers {
     }
 
     pub def columns(): Columns = {
-        driverId = Schema.integer("driver_id", r -> r#driverId),
+        driverId = Schema.identity("driver_id", r -> r#driverId),
         name = Schema.text("name", r -> r#name)
     }
 
@@ -80,7 +80,7 @@ mod Db.Drivers {
     def keys(): List[Sql.Key[Bound[DriverRow]]] =
         Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(nameKey()) :: Nil
 
-    /// As `Db.Rounds`: an integer primary key is SQLite's own tree already.
+    /// As `Db.Rounds`: `Schema.identity` makes the id the row's own.
     def storage(): Sql.Storage = Sql.Storage.Rowid
 
     pub def columnNames(): List[String] =
