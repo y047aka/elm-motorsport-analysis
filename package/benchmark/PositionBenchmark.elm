@@ -22,12 +22,16 @@ whole.
 
 That fixture is 2025's Le Mans bounded by lap number: the whole field of
 sixty-two cars, since `assignPositions` costs the laps times the cars and a
-smaller field would be a different race. The bound is low enough to sample, so
-it is also low enough to hide the shape -- `assignPositions` grows with the
-square of the laps, and reading that off means running
-`generate-position-fixture.mjs --laps=N` at two of them rather than reading one
-number. It is a fixture of its own because `PerFrameBenchmark`'s is a whole
-round: half distance means nothing in a bounded one.
+smaller field would be a different race. The bound has to be low enough to
+sample, which is low enough to hide how the cost grows -- so `assignPositions`
+is asked at the bound and at the halves of it, and what the four say together
+is the exponent. Doubling the laps doubles the answer if the cost is the laps
+and quadruples it if it is the laps squared, which is the whole question a
+round of them cannot be run to settle. `generate-position-fixture.mjs --laps=N`
+moves all four.
+
+It is a fixture of its own because `PerFrameBenchmark`'s is a whole round: half
+distance means nothing in a bounded one.
 
 -}
 
@@ -61,9 +65,29 @@ suite =
             (\_ -> Legacy.attach legacyLaps grid)
             "reading them off the lap"
             (\_ -> Laps.attach currentLaps grid)
-        , Benchmark.benchmark "assignPositions, which the second no longer runs"
-            (\_ -> Legacy.assignPositions attached)
+        , Benchmark.scale "assignPositions, which the second no longer runs"
+            (scaled |> List.map (\( name, cars ) -> ( name, \_ -> Legacy.assignPositions cars )))
         ]
+
+
+{-| The laps of the round attached to their cars, at the fixture's bound and at
+the halves of it. Built here rather than inside the benchmark, since attaching
+is not what is being timed.
+
+`assignPositions` counts the field out of the laps' elapsed times and reads no
+position, so the one these already carry is overwritten with itself and the
+work is what it was.
+
+-}
+scaled : List ( String, List Car )
+scaled =
+    [ Fixture.lapCap // 8, Fixture.lapCap // 4, Fixture.lapCap // 2, Fixture.lapCap ]
+        |> List.map (\bound -> ( String.fromInt bound ++ " laps", attachedTo bound ))
+
+
+attachedTo : Int -> List Car
+attachedTo bound =
+    Laps.attach (currentLaps |> List.filter (\lap -> lap.lapNumber <= bound)) grid
 
 
 {-| The starting grid both sides attach laps to, decoded once: what is being
@@ -87,12 +111,3 @@ legacyLaps =
 currentLaps : List Laps.RawLap
 currentLaps =
     Laps.fromJsonl Fixture.rawJsonl |> Result.withDefault []
-
-
-{-| Laps on their cars, which is what `assignPositions` was handed. It counts
-the field out of the laps' elapsed times and reads no position, so the one
-these already carry is overwritten with itself and the work is what it was.
--}
-attached : List Car
-attached =
-    Laps.attach currentLaps grid

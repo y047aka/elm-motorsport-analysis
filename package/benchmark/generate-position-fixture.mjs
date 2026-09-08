@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 // It is also the only round with mini-sectors and the one with the most laps.
 const { round, laps: lapCap } = {
   round: "2025/le_mans_24h",
-  laps: 10,
+  laps: 40,
   ...Object.fromEntries(
     process.argv.slice(2).map((arg) => {
       const [key, value] = arg.replace(/^--/, "").split("=");
@@ -32,10 +32,9 @@ const summary = readFileSync(summarySource, "utf8");
 // costs the laps times the cars, so a smaller field would be a different race.
 //
 // It is low because elm-benchmark runs a benchmark until it has a sample it
-// trusts, and a round of laps is far too much work per run to get one. What
-// the bound costs is the shape: `assignPositions` is quadratic in the laps and
-// a low bound hides it, so the question of how it grows is two runs at two
-// bounds rather than one run at any.
+// trusts, and a round of laps is far too much work per run to get one. The
+// bound is carried into the fixture so that `Benchmark.scale` can take it and
+// the halves of it, which is how the shape is read without running twice.
 const lines = readFileSync(lapsSource, "utf8").split("\n").filter((line) => line.length > 0);
 const kept = lines.filter((line) => JSON.parse(line).lapNumber <= lapCap);
 const jsonl = kept.join("\n") + "\n";
@@ -71,13 +70,20 @@ const from = (path) => relative(resolve(here, "../.."), path);
 const [firstLine] = kept;
 const firstLineBeforePosition = firstLine.replace(/, "position": \d+ \}$/, " }");
 
-const elm = `module Fixture.Positions exposing (rawJsonl, rawJsonlBeforePosition, rawLap, rawLapBeforePosition, rawSummary)
+const elm = `module Fixture.Positions exposing (lapCap, rawJsonl, rawJsonlBeforePosition, rawLap, rawLapBeforePosition, rawSummary)
 
 {-| Auto-generated from ${from(summarySource)} and the first ${lapCap} laps of
 ${from(lapsSource)}. Do not edit by hand. Run
 \`node generate-position-fixture.mjs\` to regenerate, \`--laps=N\` for a
 different bound.
 -}
+
+
+{-| The lap the fixture stops at, which is what \`PositionBenchmark\` scales to.
+-}
+lapCap : Int
+lapCap =
+    ${lapCap}
 
 
 rawSummary : String
