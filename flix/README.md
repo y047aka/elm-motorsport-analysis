@@ -88,6 +88,22 @@ three teams' over the three the archive holds -- so `entries` is keyed by the
 season and the number together, and the class, group, team and manufacturer the
 feed repeats on every lap of every round are written there once.
 
+Two things about `cars` are worth saying rather than reading off it. It holds
+no fact the other tables do not: its rows are `DISTINCT round_id, car_number`
+over `laps` -- exactly, in the archive and by construction, since
+`Db.CarRow.fromRawLaps` builds them off `firstMentions` of the round's laps --
+and the `entry_id` on them follows from the round's season and the car's
+number. It is a join the tables keep rather than an entity they hold, which is
+also why `Round.loaded` asking it detects a write that stopped partway and
+nothing else. `car_drivers` looks the same and is not: its rows are the laps'
+distinct seats too, but the `driver_id` on them is not in `laps` at all.
+
+The `car_number` on a `cars` row follows from its `entry_id`, so the table is
+not in BCNF and knowingly. `Round.Summary` joins the round's cars to
+`MIN(source_row)` and to lap 1 by that number, and both are readings of `laps`;
+reaching it through `entries` instead would put a second hop under each of
+them, to hold 579 rows of two bytes.
+
 What one row per car cannot hold is a file that describes one car two ways, and
 one row per seat a file that names one seat two ways. Each keeps the first
 mention and the second reaches no column, so `Db.CarRow.disagreements` and
