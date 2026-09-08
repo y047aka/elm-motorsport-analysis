@@ -2,6 +2,7 @@ mod Round.TestRender {
 
     use Round.Index
     use Round.Laps
+    use Round.Names
     use Round.Render
     use Round.Summary
     use Round.TestSupport
@@ -37,13 +38,17 @@ mod Round.TestRender {
 
     def summaryOf(laps: List[RawLap]): String \ IO =
         TestSupport.onRound(leMans(), laps, () ->
-            Render.renderSummary(Summary.read(leMans()), Index.read(leMans())))
+            Render.renderSummary(
+                Summary.read(leMans(), Names.read(leMans())),
+                Index.read(leMans(), Names.read(leMans()))
+            ))
 
     /// Read back rather than rendered from the laps in hand: a lap's place in
     /// the field is counted over the round's rows, so the reader is the only
     /// thing that has one.
     def jsonlOf(laps: List[RawLap]): String \ IO =
-        TestSupport.onRound(leMans(), laps, () -> Render.renderJsonl(Laps.read(leMans())))
+        TestSupport.onRound(leMans(), laps, () ->
+            Render.renderJsonl(Laps.read(leMans(), Names.read(leMans()))))
 
     @Test
     def testRenderSummaryRendersTheRoundsSummary(): Unit \ {Assert, IO} =

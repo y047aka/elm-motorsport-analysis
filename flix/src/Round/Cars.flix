@@ -26,10 +26,6 @@ mod Round.Cars {
             |> List.toMap
 
     pub def named(names: Names.Names, row: CarRow.CarRow): RawCar \ DbErr =
-        CarRow.toRawCar(
-            Names.nameOf(names#teams, "team", row#teamId),
-            Names.nameOf(names#manufacturers, "manufacturer", row#manufacturerId),
-            row
-        )
+        CarRow.toRawCar(Names.team(names, row#teamId), Names.manufacturer(names, row#manufacturerId), row)
 
 }

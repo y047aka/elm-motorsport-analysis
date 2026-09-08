@@ -73,7 +73,12 @@ mod Cli.Export {
         if (not Round.loaded(task#entry))
             Err(CliError.RoundNotLoaded)
         else
-            Ok(render(Summary.read(task#entry), Index.read(task#entry), Laps.read(task#entry)))
+            let names = Round.Names.read(task#entry);
+            Ok(render(
+                Summary.read(task#entry, names),
+                Index.read(task#entry, names),
+                Laps.read(task#entry, names)
+            ))
 
     def render(
         metadata: Motorsport.Metadata.Metadata,

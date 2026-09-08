@@ -23,10 +23,10 @@ mod Round.Summary {
     use Util.Duration.Duration
     use Util.HourClock.Hour
 
-    pub def read(entry: Entry): Metadata.Metadata \ DbRead =
+    pub def read(entry: Entry, names: Round.Names.Names): Metadata.Metadata \ DbRead =
         let race = particulars(entry);
         let shape = track(entry);
-        Metadata.fromReadings(entry, race, shape, cars(entry, Round.Names.read()))
+        Metadata.fromReadings(entry, race, shape, cars(entry, names))
 
     /// The round's rows as a fragment, for the queries reading them from
     /// inside one of their own.
@@ -62,16 +62,13 @@ mod Round.Summary {
     // ----------------------------------------------------------------- cars
 
     def cars(entry: Entry, names: Round.Names.Names): List[CarBuild] \ DbRead =
-        carBuilds(entry, names, driverNames(entry, Round.Drivers.read(entry)))
+        carBuilds(entry, names, driverNames(entry, names))
 
     /// `(car number, driver name)` in the order the file first showed each
     /// seat, which is the order a car's drivers are listed in. The order is
     /// the laps' and the name is `car_drivers`', so the reading is of the one
     /// and the naming of the other.
-    def driverNames(
-        entry: Entry,
-        seats: Map[(String, Int32), String]
-    ): List[(String, String)] \ DbRead =
+    def driverNames(entry: Entry, names: Round.Names.Names): List[(String, String)] \ DbRead =
         let c = Laps.columns();
         Sql.access(
                 Sql.frags(
@@ -86,7 +83,7 @@ mod Round.Summary {
             |> Sql.map(d -> (d#carNumber, d#driverNumber))
             |> Sql.selectAll
             |> List.map(match (carNumber, driverNumber) ->
-                (carNumber, Round.Drivers.nameOf(seats, carNumber, driverNumber)))
+                (carNumber, Round.Names.driver(names, carNumber, driverNumber)))
 
     /// A car is what `cars` says it was; where the file first mentioned it is
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.
@@ -176,8 +173,8 @@ mod Round.Summary {
                     drivers      = driversOf(carNumber, drivers),
                     class        = class,
                     group        = group,
-                    team         = Round.Names.nameOf(names#teams, "team", teamId),
-                    manufacturer = Round.Names.nameOf(names#manufacturers, "manufacturer", manufacturerId)
+                    team         = Round.Names.team(names, teamId),
+                    manufacturer = Round.Names.manufacturer(names, manufacturerId)
                 };
                 {
                     car         = car,

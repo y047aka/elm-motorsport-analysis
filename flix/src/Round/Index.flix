@@ -15,9 +15,9 @@ mod Round.Index {
     use Motorsport.Sector.Sector
     use Util.Duration.Duration
 
-    pub def read(entry: Entry): Index.Index \ DbRead =
+    pub def read(entry: Entry, names: Round.Names.Names): Index.Index \ DbRead =
         let completions = lapCompletions(entry);
-        let changes = bestTimes(entry, Round.Drivers.read(entry));
+        let changes = bestTimes(entry, names);
         {
             lapCompletions = completions,
             bestTimes      = Index.records() |> List.map(record -> (record, changesOf(record, changes)))
@@ -52,10 +52,7 @@ mod Round.Index {
         (Record.FastestSector(Sector.S3), 1, "s3_ms") ::
         Nil
 
-    def bestTimes(
-        entry: Entry,
-        seats: Map[(String, Int32), String]
-    ): List[(Record, Change)] \ DbRead =
+    def bestTimes(entry: Entry, names: Round.Names.Names): List[(Record, Change)] \ DbRead =
         let (readings, record) = Sql.unionAllTagged("k", branches(entry));
         Sql.rows(Sql.raw("(" + standing() + ")"))
             |> Sql.using(Sql.frags(Sql.raw("v AS (") :: readings :: Sql.raw(")") :: Nil))
@@ -70,16 +67,16 @@ mod Round.Index {
                 Sql.int("driver_number")
             ))
             |> Sql.selectAll
-            |> List.map(change(seats))
+            |> List.map(change(names))
 
-    def change(seats: Map[(String, Int32), String]): ((Record, Int32, Int32, String, Int32, Int32)) -> (Record, Change) \ DbErr =
+    def change(names: Round.Names.Names): ((Record, Int32, Int32, String, Int32, Int32)) -> (Record, Change) \ DbErr =
         row -> match row {
             case (record, elapsed, time, carNumber, lap, driverNumber) => (record, {
                 elapsed   = Util.Duration.fromMillis(elapsed),
                 time      = Util.Duration.fromMillis(time),
                 carNumber = carNumber,
                 lap       = lap,
-                driver    = Round.Drivers.nameOf(seats, carNumber, driverNumber)
+                driver    = Round.Names.driver(names, carNumber, driverNumber)
             })
         }
 
