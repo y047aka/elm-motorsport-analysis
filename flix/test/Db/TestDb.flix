@@ -21,6 +21,31 @@ mod Db.TestDb {
             case _ => Assert.assertTrue(false)
         }
 
+    /// The savepoint is SQLite's, so it goes out as a statement like any
+    /// other -- which is what lets a handler standing in for a database see it.
+    @Test
+    def aSavepointIsMarkedAndReleasedAroundWhatItHolds(): Unit \ Assert =
+        let (_, statements) = Db.runRecording(() ->
+            Db.runWithError(() -> Db.atomically("round", () -> Db.execute("SELECT 1"))));
+        Assert.assertTrue(
+            statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
+                == "SAVEPOINT round" :: "SELECT 1" :: "RELEASE round" :: Nil
+        )
+
+    /// A failure inside is taken back to the mark and raised again, and the
+    /// mark is released either way so the caller is not left standing in one.
+    @Test
+    def aFailureInsideIsTakenBackToTheMark(): Unit \ Assert =
+        let refused = Db.Error.Incomplete("the round was not what it should have been");
+        let (result, statements) = Db.runRecording(() ->
+            (Db.runWithError(() -> Db.atomically("round", () -> DbErr.fail(refused))):
+                Result[Db.Error, Unit]));
+        Assert.assertTrue(result == Err(refused));
+        Assert.assertTrue(
+            statements |> List.map(s -> match s { case Statement.Execute(sql) => sql case _ => "" })
+                == "SAVEPOINT round" :: "ROLLBACK TO round" :: "RELEASE round" :: Nil
+        )
+
     @Test
     def theRowsReachTheBoundary(): Unit \ Assert =
         let (result, statements) = Db.runRecording(() -> Db.runWithError(() -> Laps.insertRows(sampleRows())));

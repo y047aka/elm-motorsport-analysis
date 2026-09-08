@@ -146,6 +146,28 @@ mod Db {
             case Err(e)    => rollback(); DbErr.fail(e)
         }
 
+    /// As `transact`, of a part of one: the statements `f` sends are undone
+    /// together when a failure ends it, and what its caller sent before is
+    /// still to be committed.
+    ///
+    /// The savepoint is SQLite's rather than the driver's, so it goes out as a
+    /// statement -- which is what `runRecording` keeps and `runFailing`
+    /// refuses, like every other. `Db.Jdbc` marks one of the driver's per
+    /// insert, and that is the batch's alone.
+    pub def atomically(name: String, f: Unit -> a \ ef): a \ (ef - DbErr) + DbWrite =
+        execute("SAVEPOINT ${name}");
+        match runWithError(f) {
+            case Ok(value) => execute("RELEASE ${name}"); value
+            case Err(e)    => undo(name); DbErr.fail(e)
+        }
+
+    /// As `rollback`: what a failure is taken back with says nothing the
+    /// failure does not. The savepoint is released either way, so a caller
+    /// that goes on is not left standing inside one.
+    def undo(name: String): Unit \ SqlWrite =
+        discard SqlWrite.execute("ROLLBACK TO ${name}");
+        discard SqlWrite.execute("RELEASE ${name}")
+
     /// What `runRecording` keeps.
     pub enum Statement {
         case Execute(String)

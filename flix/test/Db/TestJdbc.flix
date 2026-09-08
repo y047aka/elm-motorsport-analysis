@@ -34,6 +34,30 @@ mod Db.TestJdbc {
         Assert.assertTrue(Jdbc.classify(1, "no such table: laps") == Db.Error.Refused("no such table: laps"));
         Assert.assertTrue(Jdbc.classify(1555, "constraint") == Db.Error.Refused("constraint"))
 
+    /// What `Db.atomically` marks is SQLite's own savepoint, so this is where
+    /// it is driven against one: a round of a load sends rows to several
+    /// tables, and a failure at the last of them has to leave none of the
+    /// others behind. `Db.Jdbc`'s savepoint is the insert's alone and would
+    /// keep them.
+    @Test
+    def aFailedRoundLeavesNoneOfItsRowsBehind(): Unit \ {Assert, IO} =
+        let refused = Db.Error.Incomplete("the round was not what it should have been");
+        let counted = connected(() -> {
+            discard Db.runWithError(() -> {
+                Db.execute("CREATE TABLE t (n int not null)");
+                Db.execute("INSERT INTO t VALUES (1)")
+            });
+            discard (Db.runWithError(() -> Db.atomically("round", () -> {
+                Db.execute("INSERT INTO t VALUES (2)");
+                Db.execute("INSERT INTO t VALUES (3)");
+                DbErr.fail(refused)
+            })): Result[Db.Error, Unit]);
+            discard Db.runWithError(() -> Db.atomically("round", () ->
+                Db.execute("INSERT INTO t VALUES (4)")));
+            SqlRead.fetch("SELECT n FROM t ORDER BY n", Nil)
+        });
+        Assert.assertTrue(counted == Ok((Some("1") :: Nil) :: (Some("4") :: Nil) :: Nil))
+
     /// SQLite builds an index for a primary key unless the key is the row's
     /// own id, which it is only where the column is declared `integer`. The
     /// tables that number a name are read through that id, so an index over it

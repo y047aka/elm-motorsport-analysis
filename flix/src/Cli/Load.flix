@@ -128,9 +128,13 @@ mod Cli.Load {
                     )
         }
 
-    /// The numbering comes back whether the round loaded or not: a round that
-    /// failed partway may already have sent its driver rows, and reusing the
-    /// numbers it took would be a name written twice under one id.
+    /// The round's rows land together or not at all, and the numbering
+    /// follows them: a round that failed leaves no rows, so the names it took
+    /// numbers for are free again and the next round numbers them itself.
+    ///
+    /// Advancing the numbering past a round that failed would leave a name
+    /// numbered and unwritten, and every later round would then commit an id
+    /// with no row behind it.
     def processFile(
         rounds: List[RoundRow],
         numbering: Numbered,
@@ -156,10 +160,10 @@ mod Cli.Load {
                     teams = addedTeams,
                     manufacturers = addedManufacturers
                 };
-                let outcome = Db.runWithError(() ->
-                        reportViolations(task, load(rounds, numbered, added, seats, task, rawLaps)))
+                let outcome = Db.runWithError(() -> Db.atomically("round", () ->
+                        reportViolations(task, load(rounds, numbered, added, seats, task, rawLaps))))
                     |> Result.mapErr(CliError.Database);
-                (outcome, numbered)
+                (outcome, if (Result.isOk(outcome)) numbered else numbering)
         }
 
     def decode(task: FileTask.FileTask): String -> Result[CliError, List[RawLap]] =
