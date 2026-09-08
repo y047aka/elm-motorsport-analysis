@@ -49,6 +49,15 @@ mod Sql.TestStatement {
             Sql.Storage.Rowid);
         Assert.assertTrue(String.contains({substr = "  PRIMARY KEY (round),\n  UNIQUE (lap_number)\n)"}, ddl))
 
+    /// Named for the table and the columns, so two indexes of one table are
+    /// two names.
+    @Test
+    def anIndexIsNamedForWhatItIsOver(): Unit \ Assert =
+        Assert.assertTrue(
+            Sql.createIndex("laps_round", "laps", columns())
+                == "CREATE INDEX laps_round ON laps (round, lap_number)"
+        )
+
     @Test
     def droppingATableThatIsNotThereIsNotAnError(): Unit \ Assert =
         Assert.assertTrue(Sql.dropTableIfExists("laps") == "DROP TABLE IF EXISTS laps")

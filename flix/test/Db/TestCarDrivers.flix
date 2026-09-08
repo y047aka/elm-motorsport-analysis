@@ -99,6 +99,18 @@ mod Db.TestCarDrivers {
         Assert.assertTrue(String.contains({substr = "PRIMARY KEY (driver_id)"}, Drivers.createTable()));
         Assert.assertTrue(String.contains({substr = "UNIQUE (name)"}, Drivers.createTable()))
 
+    /// The key leads with the round, so the seats one driver filled are not a
+    /// range of it. The index is what a reading across rounds descends.
+    @Test
+    def theSeatsAreReachableByTheirDriver(): Unit \ Assert =
+        Assert.assertTrue(
+            CarDrivers.byDriver() |> List.forAll(c -> List.memberOf(c#name, CarDrivers.columnNames()))
+        );
+        Assert.assertTrue(
+            CarDrivers.createIndex()
+                == "CREATE INDEX car_drivers_driver_id ON car_drivers (driver_id)"
+        )
+
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
         Assert.assertTrue(

@@ -137,6 +137,17 @@ mod Db.Schema {
             storage
         )
 
+    /// A tree the table carries beside its key, named for the table and the
+    /// columns it is over so that two of them cannot collide.
+    pub def createIndex(table: String, over: List[Bound[r]]): String =
+        Sql.createIndex(indexName(table, over), table, over |> List.map(declare))
+
+    pub def addIndex(table: String, over: List[Bound[r]]): Unit \ DbWrite =
+        Db.execute(createIndex(table, over))
+
+    def indexName(table: String, over: List[Bound[r]]): String =
+        columnNames(over) |> List.foldLeft((acc, name) -> acc + "_" + name, table)
+
     pub def insertRows(table: String, columns: List[Bound[r]], rows: List[r]): Int32 \ DbWrite =
         let (statement, bound_) = Sql.insertRows(table, columns, rows);
         Db.insertMany(statement, bound_)

@@ -131,10 +131,17 @@ mod Db.CarDrivers {
         Schema.bound(c#driverId) ::
         Nil
 
+    /// The driver a seat was filled by, which is how a reading spanning rounds
+    /// reaches the seats: the key leads with the round, so nothing in it says
+    /// where one driver sat.
+    pub def byDriver(): List[Bound[CarDriverRow]] =
+        Schema.bound(columns()#driverId) :: Nil
+
     // --------------------------------------------------------------- schema
 
     pub def create(): Unit \ DbWrite =
-        Schema.recreate(table(), all(), Nil, keys(), storage())
+        Schema.recreate(table(), all(), Nil, keys(), storage());
+        Schema.addIndex(table(), byDriver())
 
     pub def insertRows(rows_: List[CarDriverRow]): Int32 \ DbWrite =
         Schema.insertRows(table(), all(), rows_)
@@ -145,10 +152,15 @@ mod Db.CarDrivers {
     pub def createTable(): String =
         Schema.createTable(table(), all(), Nil, keys(), storage())
 
+    pub def createIndex(): String =
+        Schema.createIndex(table(), byDriver())
+
     def keys(): List[Sql.Key[Bound[CarDriverRow]]] =
         Sql.Key.Primary(primaryKey()) :: Nil
 
-    /// As `Db.Laps` and `Db.Cars`: nothing reaches a row but through its key.
+    /// As `Db.Laps` and `Db.Cars`, the rows are the primary key's tree. The
+    /// index beside it carries that key rather than a row id, which is what
+    /// SQLite makes a secondary index of such a table out of.
     def storage(): Sql.Storage = Sql.Storage.WithoutRowid
 
     pub def columnNames(): List[String] =

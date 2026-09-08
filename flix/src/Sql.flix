@@ -442,6 +442,15 @@ mod Sql {
             + (declared |> List.map(d -> "  ${d}") |> List.join(",\n"))
             + "\n)" + storageText(storage)
 
+    /// A tree over columns the key does not lead with, which is the only way
+    /// a query reaching rows by them does not read the table through.
+    pub def createIndex(
+        name: String,
+        table: String,
+        over: List[{name = String | r}]
+    ): String =
+        "CREATE INDEX " + name + " ON " + table + " (" + names(over) + ")"
+
     def storageText(storage: Storage): String =
         match storage {
             case Storage.Rowid        => ""
