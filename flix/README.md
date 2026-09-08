@@ -58,14 +58,15 @@ what the two sides hand it.
 
 ## The tables
 
-Five of them, dropped and rebuilt each time as the JSON files are rewritten
-each time. Three hold what a round did: `laps` is one lap of one car, `cars` is
-one car of one round, and `car_drivers` is one seat of one car. Two hold what
-those three name rather than spell: `rounds` is the calendar written down, and
-`drivers` numbers the 308 names the feed repeats over 130,017 laps. The archive
-runs those laps with 579 cars in 1,674 seats.
+Six of them, dropped and rebuilt each time as the JSON files are rewritten each
+time. Three hold what a round did: `laps` is one lap of one car, `cars` is one
+car of one round, and `car_drivers` is one seat of one car. Three hold what
+those name rather than spell: `rounds` is the calendar written down, `drivers`
+numbers the 308 names the feed repeats over 130,017 laps, and `entries` the 186
+cars the three seasons were contested by. The archive runs those laps with 579
+car-rounds in 1,674 seats.
 
-The archive is what says the two can be split off: no car of a round in it is
+The archive is what says the three can be split off: no car of a round in it is
 described two ways, and no seat of one is named two ways. A lap carries its
 car's number and the seat that ran it and nothing else about either, which is
 also all the JSONL writes out.
@@ -79,7 +80,13 @@ than to another round's.
 
 Where the file first mentioned a car is not in `cars`: it is `MIN(source_row)`
 over the round's laps, which is what `Round.Summary` orders the grid by. What
-`cars` holds is what the file said, and nothing counted off it.
+the tables hold of a car is what the file said, and nothing counted off it.
+
+`cars` says which entry ran which round and nothing else. A car number is an
+entry within its season and a different one across seasons -- number 12 was
+three teams' over the three the archive holds -- so `entries` is keyed by the
+season and the number together, and the class, group, team and manufacturer the
+feed repeats on every lap of every round are written there once.
 
 What one row per car cannot hold is a file that describes one car two ways, and
 one row per seat a file that names one seat two ways. Each keeps the first
@@ -91,14 +98,20 @@ one of the two that changes what the rows mean rather than how they read: the
 second name's laps are credited to the first, in the grid and in the records
 alike.
 
-Between rounds a car has been described two ways, which is why `cars` is keyed
-by round and not by season -- 2026's Le Mans file spells a manufacturer
-`Mercedes-AMG` where the season's other rounds spell it `Mercedes`. Nothing in
-the tables says those are one manufacturer; nothing asks yet either.
+Between rounds a car has been described two ways, and holding the description
+once per season is what finds it: 2026's Le Mans file spells cars 61 and 79
+`Mercedes-AMG` where that season's other three rounds spell them `Mercedes`.
+`Db.Entries.add` keeps the first round's description and reports the later
+round's, as the two within-round readings do, and the export carries the
+season's spelling rather than each round's.
 
 A column takes the type its Flix value already has -- a `Duration` is the
 milliseconds it holds, `kph` and `topSpeed` stay the text the feed gave -- so
-the load parses nothing the decoder did not. `hour_offset_ms` is the one no row
+the load parses nothing the decoder did not. Two of them say more than the
+type: `flag_at_fl` is checked against every `Motorsport.Wec.Flag` there is,
+drawn from `Wec.flags` rather than written beside it, and `car_group` is
+nullable because the feed spells a car with no sub-class as one whose group is
+empty, which is an absence rather than a value. `hour_offset_ms` is the one no row
 binds: `(hour - elapsed) mod 24h` is a column the database makes, which is what
 `Db.Schema.Computed` is and why it is not a `Column` -- there is no row to bind
 it from, so it cannot reach a table's `all`, the ordering the insert follows.
@@ -126,8 +139,8 @@ The readers of the tables. `Cli.Load.Validation` runs its five rules as
 SQL over the round just loaded, leaving only the message formatting in Flix:
 three are a comparison per row, and the two that walk a lap need the mini-sectors
 in track order, which is what those columns are for. `Round.Summary`
-reads the round's summary the same way, joining `cars` to the laps its grid order
-and its first lap come from. `Round.Index` reads the two indices a
+reads the round's summary the same way, joining `cars` to `entries` for what a
+car was and to the laps its grid order and its first lap come from. `Round.Index` reads the two indices a
 race is read at a moment through -- when the lap counter went up, and when each
 of the twenty records changed hands -- which are a walk of every lap of the round
 each: a `GROUP BY` for the first, and for the second one window over every
@@ -158,7 +171,14 @@ against 62 cars, and `GROUP BY` is not.
 in the tables recovers. It is what makes `laps` an image of the CSV rather than
 a set of it, and every reading that would move off Flix needs it: the validator's
 baseline is the file's first row, a car's drivers are in the order the file
-first showed them, and so is the grid.
+first showed them, and so is the grid. Nothing is keyed by it: the reader
+numbers it one to n over the round's laps, so no two of them can share a place,
+and a unique index over 130,017 rows asserting that cost 1.88MB and no time.
+
+`car_drivers` carries the one index the tables declare, over `driver_id`. Its
+key leads with the round, so nothing in it reaches the seats one driver sat in
+-- the reading `drivers` was separated out for, and 51.5ms of scanning every
+lap without it.
 
 ## `SqlRead`, `SqlWrite` and `DbErr`
 

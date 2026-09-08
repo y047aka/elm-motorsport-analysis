@@ -380,7 +380,32 @@ CSV と JSONL を目視で突合して検証できる。この利点を、DB 側
 | B-3 | `manufacturers` + `canonical_id`、`teams` | **取り消した**。下記 |
 | B-4 | `hour_offset_ms` を生成列に | `Db.Schema.Computed`。raw SQL が 1 つ減り、ストレージ増は 0（VIRTUAL） |
 
-**累計 23.23 → 14.28MB（−38.5%）。全 14 ラウンドの export はどの段階でもバイト単位で不変。**
+**Phase B までの累計 23.23 → 14.28MB（−38.5%）。全 14 ラウンドの export はどの段階でもバイト単位で不変。**
+
+**Phase B'（スキーマそのもののレビューから、実施済み）**
+
+Phase A/B 完了後、コードではなく出来上がったスキーマを対象にレビューして 4 件。
+
+| PR | 内容 | 実測 |
+|---|---|---|
+| B'-1 | `laps` の `UNIQUE (round_id, source_row)` を削除 | **14.28 → 12.39MB（−13.2%）**。`source_row` は `List.zipWithIndex + 1` で構造上重複しえず、制約は発火不可能だった。索引経路は行ごとに主キーを引き直すので速度も出ておらず、`ORDER BY source_row` は 30.0ms → 29.3ms |
+| B'-2 | `car_drivers(driver_id)` に索引 | 12.39 → 12.42MB。1 ドライバーの全ラウンドのラップが 51.5ms → 1.0ms。`drivers` を分けた目的のクエリが 13 万行の全走査だった。`Sql.createIndex` / `Schema.addIndex` を足した |
+| B'-3 | `flag_at_fl` に CHECK、`car_group` を nullable に | 容量は不変。CHECK は `Wec.flags` から引くので列と enum が離れない。`car_group` の `''` 379 件が NULL に。`Value.NullableText` / `Sql.optionalText` / `Schema.nullableText` を足した |
+| B'-4 | `entries` テーブル、`cars` を接合表に | 12.42MB（不変）。579 行が 186 個の記述を 4.5 回書いていた状態を解消。**export が 2 値だけ変わる**（下記） |
+
+**累計 23.23 → 12.42MB（−46.5%）。**
+
+B'-4 だけは export が変わる。2026 年の 61 号車と 79 号車は、シーズン 4 戦のうち
+ル・マンだけ `Mercedes-AMG`、他 3 戦は `Mercedes` とフィードが綴っており、記述を
+シーズンに 1 つ持つとこれが取り込み時に報告される。
+
+```
+le_mans_24h: [car 61] season-2026 entry: manufacturer kept="Mercedes" found="Mercedes-AMG"
+```
+
+export は 14 ラウンド全体で**この 2 値以外バイト単位で不変**。`Mercedes-AMG` は
+下の申し送りにある「`manufacturers.json` に無い 4 綴り」の 1 つなので、この 2 台は
+車番由来の色ではなく Mercedes として描かれるようになる。残る 3 つは未解決。
 
 ### レビューで直したもの（Phase A/B 完了後）
 
@@ -439,16 +464,23 @@ B-3 は同じ形をしていて、そのどちらも無かった。将来クエ�
   アプリが正規名を引くようにすれば解決する。残る 3 つは単純に未登録である。
 - **外部キーは宣言していない（`PRAGMA foreign_keys` も既定の off のまま）。**
   有効にすると 2 つ手当てが要る。ひとつは `DROP TABLE` の順序 —— いまは各テーブルが
-  自分で drop→create するので、参照される側が先に消える。もうひとつは
-  `Round.TestSupport.onLapsAlone`、つまり「cars の無い laps」という
-  `Db.Error.Incomplete` の唯一のフィクスチャで、FK を有効にすると構築できなくなる。
-  読み取り時の検出を書き込み時の制約に移す価値はあるが、その 2 つを同時に書き換える
-  必要がある。
+  自分で drop→create するので、参照される側が先に消える。FK が有効なとき `DROP TABLE`
+  は暗黙の `DELETE FROM` を走らせるため、drop を子→親、create を親→子に分ける必要が
+  ある。もうひとつは `Round.TestSupport.onLapsAlone`、つまり「cars の無い laps」という
+  `Db.Error.Incomplete` の唯一のフィクスチャで、`laps → cars` の FK を有効にすると
+  構築できなくなる。
+  コストは論点ではない（500k 行の挿入で +12%、実測 +0.3s）。価値があるのは
+  `car_drivers.driver_id → drivers` の 1 本で、これはレビューで実際に見つかった採番
+  バグの不変条件そのもの。`round_id` の 3 本はアプリ側が既に `Db.Error.Incomplete` で
+  より良いメッセージ付きで守っており、`laps → cars` は `Round.loaded` の設計判断と
+  衝突する（「半分ロード」が表現不可能になる）。
+  `PRAGMA foreign_keys` はトランザクション内では黙って no-op なので、
+  `Db.Jdbc` の `configure` に置く必要がある。
 - **Elm はこの環境でコンパイルできなかった。** `package.elm-lang.org` が
   ネットワークポリシーで遮断されており、`elm make` / `elm-test` が動かない。
   A-2 の Elm 差分（`Data/Wec/Laps.elm`、`package/tests/`）は elm-format による
   構文検証と目視レビューのみで、型検査は CI 任せである。Flix 側は cold build /
-  402 tests / スタック 704k / 全 14 ラウンドの実走で検証済み。
+  414 tests / スタック 704k / 全 14 ラウンドの実走で検証済み。
 **Phase C — 独立した最終工程（ワイヤ形式）**
 
 | PR | 内容 | 効果 |
