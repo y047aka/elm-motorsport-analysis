@@ -128,6 +128,9 @@ mod Sql {
     pub def text(expr: String): Sel[String] =
         cell(raw(expr), (name, c) -> c |> Option.toOk(Error.Unread("column `${name}` was null")))
 
+    pub def optionalText(expr: String): Sel[Option[String]] =
+        cell(raw(expr), (_, c) -> Ok(c))
+
     pub def int(expr: String): Sel[Int32] =
         intOf(raw(expr))
 

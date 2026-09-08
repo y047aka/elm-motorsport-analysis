@@ -131,7 +131,7 @@ mod Round.Summary {
         roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
         class = Column[CarRow, String],
-        carGroup = Column[CarRow, String],
+        carGroup = Column[CarRow, Option[String]],
         team = Column[CarRow, String],
         manufacturer = Column[CarRow, String]
     } =
@@ -159,7 +159,7 @@ mod Round.Summary {
 
     def carBuild(
         drivers: List[(String, String)],
-        row: (String, String, String, String, String, Option[Int32], Option[Int32])
+        row: (String, String, Option[String], String, String, Option[Int32], Option[Int32])
     ): CarBuild =
         match row {
             case (carNumber, class, group, team, manufacturer, lap1S1, lap1Elapsed) =>
@@ -167,7 +167,7 @@ mod Round.Summary {
                     carNumber    = carNumber,
                     drivers      = driversOf(carNumber, drivers),
                     class        = class,
-                    group        = group,
+                    group        = group |> Option.getWithDefault(""),
                     team         = team,
                     manufacturer = manufacturer
                 };

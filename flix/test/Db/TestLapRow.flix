@@ -211,6 +211,20 @@ mod Db.TestLapRow {
         Assert.assertTrue(String.endsWith({suffix = ") WITHOUT ROWID"}, ddl));
         Assert.assertTrue(String.contains({substr = "PRIMARY KEY"}, ddl))
 
+    /// The column is checked against every flag there is, so a sixth one
+    /// reaches the table only by being a `Motorsport.Wec.Flag` first.
+    @Test
+    def theFlagColumnTakesTheFlagsAndNoOtherText(): Unit \ Assert =
+        let ddl = Db.Laps.createTable();
+        Assert.assertTrue(String.contains(
+            {substr = "flag_at_fl text not null check (flag_at_fl in ('GF', 'SF', 'FCY', 'FF', 'RF'))"},
+            ddl
+        ));
+        Assert.assertTrue(
+            Motorsport.Wec.flags()
+                |> List.forAll(f -> Motorsport.Wec.flagFromString(Motorsport.Wec.flagToString(f)) == Some(f))
+        )
+
     /// `source_row` is numbered by the reader rather than read from the feed,
     /// one to n over the file's laps, so a round holds at most one lap at each
     /// place with no key declared over it.

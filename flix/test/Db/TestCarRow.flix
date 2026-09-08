@@ -28,11 +28,22 @@ mod Db.TestCarRow {
         match rows() {
             case row :: _ =>
                 Assert.assertTrue(row#class == "HYPERCAR");
-                Assert.assertTrue(row#carGroup == "H");
+                Assert.assertTrue(row#carGroup == Some("H"));
                 Assert.assertTrue(row#team == "Hertz Team JOTA");
                 Assert.assertTrue(row#manufacturer == "Porsche")
             case Nil => Assert.assertTrue(false)
         }
+
+    /// The feed spells a car with no sub-class as one whose group is empty,
+    /// and the round trip back to the feed's spelling is what the summary
+    /// reads.
+    @Test
+    def aCarWithNoSubClassHasNoGroupRatherThanAnEmptyOne(): Unit \ Assert =
+        let plain = CarRow.fromRawCar(fujiId(), { carNumber = "9", class = "LMGT3",
+            group = "", team = "Iron Lynx", manufacturer = "Mercedes-AMG" });
+        Assert.assertTrue(plain#carGroup == None);
+        Assert.assertTrue(CarRow.toRawCar(plain)#group == "");
+        Assert.assertTrue(String.contains({substr = "car_group text,"}, Cars.createTable()))
 
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
@@ -40,7 +51,7 @@ mod Db.TestCarRow {
             case row :: _ =>
                 Assert.assertTrue(Cars.values(row)
                     == Value.Integer(7) :: Value.Text("12") ::
-                       Value.Text("HYPERCAR") :: Value.Text("H") ::
+                       Value.Text("HYPERCAR") :: Value.NullableText(Some("H")) ::
                        Value.Text("Hertz Team JOTA") :: Value.Text("Porsche") :: Nil)
             case Nil => Assert.assertTrue(false)
         }

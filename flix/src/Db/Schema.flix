@@ -175,8 +175,17 @@ mod Db.Schema {
     pub def text(name: String, get: r -> String): Column[r, String] =
         column(name, "text not null", row -> Value.Text(get(row)), Sql.text)
 
+    /// The allowed values are written into the schema rather than bound, so
+    /// they are the program's own: nothing a file said can reach here.
+    pub def checkedText(name: String, allowed: List[String], get: r -> String): Column[r, String] =
+        let inSet = allowed |> List.map(value -> "'${value}'") |> List.join(", ");
+        column(name, "text not null check (${name} in (${inSet}))", row -> Value.Text(get(row)), Sql.text)
+
     pub def boolean(name: String, get: r -> Bool): Column[r, Bool] =
         column(name, "int not null", row -> Value.Boolean(get(row)), Sql.bool)
+
+    pub def nullableText(name: String, get: r -> Option[String]): Column[r, Option[String]] =
+        column(name, "text", row -> Value.NullableText(get(row)), Sql.optionalText)
 
     pub def nullableInteger(name: String, get: r -> Option[Int32]): Column[r, Option[Int32]] =
         column(name, "int", row -> Value.NullableInteger(get(row)), Sql.optionalInt)

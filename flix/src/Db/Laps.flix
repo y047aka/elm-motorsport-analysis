@@ -90,10 +90,13 @@ mod Db.Laps {
         hourMs = Schema.integer("hour_ms", r -> r#hourMs),
         topSpeed = Schema.text("top_speed", r -> r#topSpeed),
         pitTimeMs = Schema.nullableInteger("pit_time_ms", r -> r#pitTimeMs),
-        flagAtFl = Schema.text("flag_at_fl", r -> r#flagAtFl),
+        flagAtFl = Schema.checkedText("flag_at_fl", flagNames(), r -> r#flagAtFl),
         miniSectorTimeMs = Schema.nullableIntArray("mini_sector_time_ms", r -> r#miniSectorTimeMs),
         miniSectorElapsedMs = Schema.nullableIntArray("mini_sector_elapsed_ms", r -> r#miniSectorElapsedMs)
     }
+
+    def flagNames(): List[String] =
+        Motorsport.Wec.flags() |> List.map(Motorsport.Wec.flagToString)
 
     /// A round's laps as the table holds them, a field at a time: each line
     /// names the column and the field its cell lands in, and a field left out

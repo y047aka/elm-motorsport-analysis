@@ -32,7 +32,7 @@ mod Db.Cars {
         roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
         carClass = Column[CarRow, String],
-        carGroup = Column[CarRow, String],
+        carGroup = Column[CarRow, Option[String]],
         team = Column[CarRow, String],
         manufacturer = Column[CarRow, String]
     }
@@ -41,7 +41,7 @@ mod Db.Cars {
         roundId = Schema.integer("round_id", r -> r#roundId),
         carNumber = Schema.text("car_number", r -> r#carNumber),
         carClass = Schema.text("class", r -> r#class),
-        carGroup = Schema.text("car_group", r -> r#carGroup),
+        carGroup = Schema.nullableText("car_group", r -> r#carGroup),
         team = Schema.text("team", r -> r#team),
         manufacturer = Schema.text("manufacturer", r -> r#manufacturer)
     }

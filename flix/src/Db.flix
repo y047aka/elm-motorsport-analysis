@@ -82,6 +82,7 @@ mod Db {
         case Text(String)
         case Integer(Int32)
         case Boolean(Bool)
+        case NullableText(Option[String])
         case NullableInteger(Option[Int32])
         case NullableIntArray(Option[List[Option[Int32]]])
     }

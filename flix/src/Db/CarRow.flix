@@ -10,7 +10,7 @@ mod Db.CarRow {
         roundId = Int32,
         carNumber = String,
         class = String,
-        carGroup = String,
+        carGroup = Option[String],
         team = String,
         manufacturer = String
     }
@@ -96,16 +96,21 @@ mod Db.CarRow {
             roundId = roundId,
             carNumber = car#carNumber,
             class = car#class,
-            carGroup = car#group,
+            carGroup = grouped(car#group),
             team = car#team,
             manufacturer = car#manufacturer
         }
+
+    /// The feed spells a car with no sub-class as one with an empty group,
+    /// which is the same thing said two ways and only one of them a value.
+    def grouped(group: String): Option[String] =
+        if (group == "") None else Some(group)
 
     pub def toRawCar(row: CarRow): RawCar =
         {
             carNumber    = row#carNumber,
             class        = row#class,
-            group        = row#carGroup,
+            group        = row#carGroup |> Option.getWithDefault(""),
             team         = row#team,
             manufacturer = row#manufacturer
         }
