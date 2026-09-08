@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 // It is also the only round with mini-sectors and the one with the most laps.
 const { round, laps: lapCap } = {
   round: "2025/le_mans_24h",
-  laps: 40,
+  laps: 20,
   ...Object.fromEntries(
     process.argv.slice(2).map((arg) => {
       const [key, value] = arg.replace(/^--/, "").split("=");

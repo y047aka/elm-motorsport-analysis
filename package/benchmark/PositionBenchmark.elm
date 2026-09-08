@@ -24,14 +24,15 @@ That fixture is 2025's Le Mans bounded by lap number: the whole field of
 sixty-two cars, since `assignPositions` costs the laps times the cars and a
 smaller field would be a different race. The bound has to be low enough to
 sample, which is low enough to hide how the cost grows -- so `assignPositions`
-is asked at the bound and at the quarter and half of it, and what the three say
-together is the shape.
+is asked at the bound and at the eighth, quarter and half of it, and what the
+four say together is the shape.
 
-Three because the cost is two terms and not one: finding the round's last lap
+Four because the cost is two terms and not one: finding the round's last lap
 walks every lap once, and placing the field walks the cars once per lap number.
 The second overtakes the first somewhere above forty laps, so no single bound
 low enough to run says what a whole round would cost, and a pair of them says
-it wrong. `generate-position-fixture.mjs --laps=N` moves all three.
+it wrong -- two terms need three points to fix and a fourth to be checked by.
+`generate-position-fixture.mjs --laps=N` moves all four.
 
 It is a fixture of its own because `PerFrameBenchmark`'s is a whole round: half
 distance means nothing in a bounded one.
@@ -74,8 +75,8 @@ suite =
 
 
 {-| The laps of the round attached to their cars, at the fixture's bound and at
-the quarter and half of it. Built here rather than inside the benchmark, since
-attaching is not what is being timed.
+the eighth, quarter and half of it. Built here rather than inside the
+benchmark, since attaching is not what is being timed.
 
 `assignPositions` counts the field out of the laps' elapsed times and reads no
 position, so the one these already carry is overwritten with itself and the
@@ -84,7 +85,7 @@ work is what it was.
 -}
 scaled : List ( String, List Car )
 scaled =
-    [ Fixture.lapCap // 4, Fixture.lapCap // 2, Fixture.lapCap ]
+    [ Fixture.lapCap // 8, Fixture.lapCap // 4, Fixture.lapCap // 2, Fixture.lapCap ]
         |> List.map (\bound -> ( String.fromInt bound ++ " laps", attachedTo bound ))
 
 
