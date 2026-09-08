@@ -196,6 +196,42 @@ key leads with the round, so nothing in it reaches the seats one driver sat in
 -- the reading `drivers` was separated out for, and 51.5ms of scanning every
 lap without it.
 
+No foreign key is declared and `PRAGMA foreign_keys` is left off. What a
+declaration would add is one check the code does not already make: every
+`round_id` is `Db.Rounds.idIn`'s, which fails the round by name rather than by
+constraint, and a car or a seat the run did not number fails the same way, but
+nothing beyond the load's own numbering says a `driver_id` has a row. Turning
+them on costs two rewrites, neither of them the declarations: with the pragma
+on, `DROP TABLE` runs an implicit `DELETE FROM`, so the drops have to run
+children first while the creates run parents first, and the pragma itself is a
+silent no-op inside a transaction, so it belongs in `Db.Jdbc.connect` beside
+the journal mode. The one fixture in the way is `Round.TestSupport.onLapsAlone`
+-- laps with no cars, which is what `Round.loaded` is asking about, and what a
+`laps` to `cars` key would make unbuildable.
+
+## Why SQLite
+
+The database is not a system of record. It is a cache derived from the CSV, and
+dropping every table on each run is the design saying so, which is what takes
+durability, replication, migration and availability out of the question
+entirely. What is left is one writer, no point lookups, no concurrent writes,
+no transactions between users, and reads that are whole-round scans, `GROUP
+BY`, window functions and `json_each`. SQLite answers all of it from one file
+in the working copy.
+
+DuckDB is the near miss worth recording, since its column store and native
+`LIST` types fit the mini-sectors better than JSON text does: its files lock
+per process, so nothing reads one while a run writes it, and
+`.#serve-api` staying up across a `.#cli-run` is exactly that. A document store
+is what the export already is -- one round, one file -- and moving the tables
+there would take the window functions the indices are counted with. NewSQL
+solves distributed writes and horizontal scale, and there is one writer and one
+region here.
+
+Nothing about the scale argues otherwise later, either: the whole of the WEC,
+twenty seasons of it, is on the order of 1.5 million laps and 150MB in these
+tables, and adding other series keeps it in the low gigabytes.
+
 ## `SqlRead`, `SqlWrite` and `DbErr`
 
 Reaching a database is an effect rather than a module of functions, so that

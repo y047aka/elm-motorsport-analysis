@@ -147,7 +147,9 @@ also once, and a round waits on it as it waits on the calendar. That file is
 written by hand and no compiler reads it, so a mistake in it shows as cars drawn
 by their numbers rather than as a build that fails. Unlike an unlisted round, an
 unnamed manufacturer stops nothing: the car keeps the name the feed gave it and
-takes a colour from its number.
+takes a colour from its number. What the feed spells is
+`SELECT DISTINCT manufacturer FROM entries` once a run has loaded, so which of
+them the file has no row for is one query rather than a reading of the cars.
 
 ### The shadcn components
 
