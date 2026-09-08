@@ -4,7 +4,7 @@
 /// Which manufacturers there are is the feed's to say and the app's to colour;
 /// what is here is only the knowledge that two of its spellings are one
 /// manufacturer, which no reading of the files recovers.
-mod Motorsport.Manufacturer {
+mod Motorsport.Wec.Manufacturer {
 
     /// 2026's Le Mans file writes `Mercedes-AMG` where the season's other
     /// rounds write `Mercedes`.

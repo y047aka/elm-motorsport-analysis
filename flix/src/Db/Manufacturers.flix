@@ -13,7 +13,7 @@ mod Db.Manufacturers {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
-    use Motorsport.Manufacturer
+    use Motorsport.Wec.Manufacturer
     use Sql.Sel
 
     pub def table(): String = "manufacturers"

@@ -27,12 +27,12 @@ mod Round.Names {
 
     /// A car naming a team or a manufacturer no row answers to is a round
     /// loaded by halves, which is the one thing the car's row cannot say for
-    /// itself.
+    /// itself. Neither table is a round's, so neither is the miss.
     pub def nameOf(names: Map[Int32, String], what: String, id: Int32): String \ DbErr =
         match Map.get(id, names) {
             case Some(name) => name
             case None       => DbErr.fail(Db.Error.Incomplete(
-                "a car names ${what} ${id}, which is not one of the round's ${what}s"))
+                "a car names ${what} ${id}, which no row in ${what}s answers to"))
         }
 
 }
