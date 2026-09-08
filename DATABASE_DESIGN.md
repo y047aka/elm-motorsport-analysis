@@ -380,7 +380,22 @@ CSV と JSONL を目視で突合して検証できる。この利点を、DB 側
 | B-3 | `manufacturers` + `canonical_id`、`teams`、`Db.Numbering` の抽出 | 14.29 → 14.30MB。サイズではなく同一性のための変更 |
 | B-4 | `hour_offset_ms` を生成列に | `Db.Schema.Computed`。raw SQL が 1 つ減り、ストレージ増は 0（VIRTUAL） |
 
-**累計 23.23 → 14.30MB（−38.4%）。全 14 ラウンドの export はどの段階でもバイト単位で不変。**
+**累計 23.23 → 14.28MB（−38.5%）。全 14 ラウンドの export はどの段階でもバイト単位で不変。**
+
+### レビューで直したもの（Phase A/B 完了後）
+
+`origin/main` の worktree と突き合わせる客観レビューで 4 件出て、すべて直した。
+
+| # | 内容 | 直し方 |
+|---|---|---|
+| 1 | `Storage.Rowid` の根拠が誤り。`Schema.integer` は `int` を出すが、SQLite が主キーを rowid の別名にするのは型が厳密に `integer` のときだけ。4 テーブルが rowid ヒープと主キー索引を二重持ちしていた | `Schema.identity` を足して `integer` を宣言。主キーの autoindex が 4 つ消えた。DDL からは読めない性質なので `Db.TestJdbc` が実データベースに問う |
+| 2 | 採番が失敗した INSERT を生き延びる。`Db.Jdbc` の savepoint は insert 1 回分なので、drivers が入って teams が落ちるとドライバー行だけ残り、採番は進んだまま。以降のラウンドが存在しない id を参照する | `Db.atomically` を足してラウンドを 1 つの savepoint で囲み、採番は行が入ったときだけ進める。「常に進める / 常に巻き戻す」のどちらでも直らない |
+| 3 | シートの改名で 2 人目のドライバーが 1 人目に計上される | 判断の結果、警告のまま（`CarRow` と対称）。`flix/README.md` に、車の記述違いと違って行の意味が変わる旨を明記した |
+| 4 | `flix/README.md` と CLAUDE.md がコードと矛盾（2 テーブル構成・`(season, round, car_number)` キー・`driver_name`・削除済みの `Schema.scopeOf`） | 実装に合わせて書き直した。**この更新を D-1 に回した当初の順序が誤り**で、無効化した変更と同じコミットに入れるべきだった |
+
+小さいものも同時に直した: `Round.Names` のエラー文言、`Motorsport.Manufacturer` を
+`Motorsport.Wec` 配下へ、`Round.Drivers` を `Round.Names` に統合して 1 ラウンドあたり
+5 回走っていた読み取りを 1 回に。
 
 ### 計画から変えた点
 
