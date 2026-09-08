@@ -2,15 +2,27 @@ mod Db.TestCarRow {
 
     use Db.CarRow
     use Db.Cars
+    use Db.Entries
     use Db.TestLapRow
     use Db.Value
 
     /// The id a run gave the round; see `Db.TestLapRow`.
     def fujiId(): Int32 = 7
 
+    def season(): Int32 = 2025
+
+    /// The entries the sample names, numbered as a run would number them.
+    def numbering(): Entries.Numbering =
+        let (numbered, _, _) = Entries.add(
+            Entries.noneNumbered(), season(), CarRow.firstMentions(TestLapRow.sampleLaps()));
+        numbered
+
     /// Two laps of car 12 and one of car 7, in that order.
     def rows(): List[CarRow.CarRow] =
-        CarRow.fromRawLaps(fujiId(), TestLapRow.sampleLaps())
+        match CarRow.fromRawLaps(fujiId(), season(), numbering(), TestLapRow.sampleLaps()) {
+            case Some(built) => built
+            case None        => Nil
+        }
 
     @Test
     def aCarIsOneRowHoweverManyLapsItRan(): Unit \ Assert =
@@ -23,36 +35,28 @@ mod Db.TestCarRow {
             case Nil      => Assert.assertTrue(false)
         }
 
+    /// The row says which entry ran, and the entry says what it was.
     @Test
-    def theCarIsWhatTheFeedRepeatedOnEveryLapOfIt(): Unit \ Assert =
+    def theRowNamesTheSeasonsEntryRatherThanDescribingIt(): Unit \ Assert =
         match rows() {
             case row :: _ =>
-                Assert.assertTrue(row#class == "HYPERCAR");
-                Assert.assertTrue(row#carGroup == Some("H"));
-                Assert.assertTrue(row#team == "Hertz Team JOTA");
-                Assert.assertTrue(row#manufacturer == "Porsche")
+                Assert.assertTrue(Some(row#entryId) == Entries.idIn(numbering(), season(), "12"))
             case Nil => Assert.assertTrue(false)
         }
 
-    /// The feed spells a car with no sub-class as one whose group is empty,
-    /// and the round trip back to the feed's spelling is what the summary
-    /// reads.
+    /// A car the run did not number is a load that wrote the entries and the
+    /// cars from different readings of the file.
     @Test
-    def aCarWithNoSubClassHasNoGroupRatherThanAnEmptyOne(): Unit \ Assert =
-        let plain = CarRow.fromRawCar(fujiId(), { carNumber = "9", class = "LMGT3",
-            group = "", team = "Iron Lynx", manufacturer = "Mercedes-AMG" });
-        Assert.assertTrue(plain#carGroup == None);
-        Assert.assertTrue(CarRow.toRawCar(plain)#group == "");
-        Assert.assertTrue(String.contains({substr = "car_group text,"}, Cars.createTable()))
+    def aCarTheRunDidNotNumberIsNoRowAtAll(): Unit \ Assert =
+        Assert.assertTrue(Option.isEmpty(CarRow.fromRawLaps(
+            fujiId(), season(), Entries.noneNumbered(), TestLapRow.sampleLaps())))
 
     @Test
     def theRowIsBoundInTheOrderTheColumnsAreNamed(): Unit \ Assert =
         match rows() {
             case row :: _ =>
                 Assert.assertTrue(Cars.values(row)
-                    == Value.Integer(7) :: Value.Text("12") ::
-                       Value.Text("HYPERCAR") :: Value.NullableText(Some("H")) ::
-                       Value.Text("Hertz Team JOTA") :: Value.Text("Porsche") :: Nil)
+                    == Value.Integer(7) :: Value.Text("12") :: Value.Integer(row#entryId) :: Nil)
             case Nil => Assert.assertTrue(false)
         }
 
@@ -92,13 +96,6 @@ mod Db.TestCarRow {
             case laps => laps
         }
 
-    @Test
-    def aCarKeepsWhatTheFileFirstSaidItWas(): Unit \ Assert =
-        match CarRow.fromRawLaps(fujiId(), contradicting()) {
-            case row :: _ => Assert.assertTrue(row#team == "Hertz Team JOTA")
-            case Nil      => Assert.assertTrue(false)
-        }
-
     /// The second description reaches no column, so the load says it or
     /// nothing does.
     @Test
@@ -116,15 +113,5 @@ mod Db.TestCarRow {
     @Test
     def aFileThatAgreesWithItselfReportsNothing(): Unit \ Assert =
         Assert.assertTrue(List.isEmpty(CarRow.disagreements(TestLapRow.sampleLaps())))
-
-    /// What the reading gives back is what the writing was handed.
-    @Test
-    def aRowMakesTheCarItWasMadeFrom(): Unit \ Assert =
-        match rows() {
-            case row :: _ =>
-                Assert.assertTrue(Cars.values(CarRow.fromRawCar(fujiId(), CarRow.toRawCar(row)))
-                    == Cars.values(row))
-            case Nil => Assert.assertTrue(false)
-        }
 
 }

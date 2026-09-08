@@ -1,7 +1,6 @@
-/// The `cars` table: the cars a round was run by, one row each. The class,
-/// group, team and manufacturer the feed repeats on every lap are here rather
-/// than in `Db.Laps`, which the archive bears out -- no car of a round in it
-/// is described two ways.
+/// The `cars` table: the cars a round was run by, one row each, and which of
+/// the season's entries each was. What the feed says about a car is
+/// `Db.Entries`; this is the rounds it ran.
 mod Db.Cars {
 
     use Db.CarRow.CarRow
@@ -31,19 +30,13 @@ mod Db.Cars {
     pub type alias Columns = {
         roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
-        carClass = Column[CarRow, String],
-        carGroup = Column[CarRow, Option[String]],
-        team = Column[CarRow, String],
-        manufacturer = Column[CarRow, String]
+        entryId = Column[CarRow, Int32]
     }
 
     pub def columns(): Columns = {
         roundId = Schema.integer("round_id", r -> r#roundId),
         carNumber = Schema.text("car_number", r -> r#carNumber),
-        carClass = Schema.text("class", r -> r#class),
-        carGroup = Schema.nullableText("car_group", r -> r#carGroup),
-        team = Schema.text("team", r -> r#team),
-        manufacturer = Schema.text("manufacturer", r -> r#manufacturer)
+        entryId = Schema.integer("entry_id", r -> r#entryId)
     }
 
     /// A round's cars as the table holds them, a field at a time: each line
@@ -54,10 +47,7 @@ mod Db.Cars {
         Sql.record({})
             |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
             |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#carClass, (row, value) -> { +class = value | row })
-            |> Sql.field(c#carGroup, (row, value) -> { +carGroup = value | row })
-            |> Sql.field(c#team, (row, value) -> { +team = value | row })
-            |> Sql.field(c#manufacturer, (row, value) -> { +manufacturer = value | row })
+            |> Sql.field(c#entryId, (row, value) -> { +entryId = value | row })
 
     /// The order the table declares them in, and so the order the insert binds
     /// them.
@@ -68,10 +58,7 @@ mod Db.Cars {
         let c = columns();
         Schema.bound(c#roundId) ::
         Schema.bound(c#carNumber) ::
-        Schema.bound(c#carClass) ::
-        Schema.bound(c#carGroup) ::
-        Schema.bound(c#team) ::
-        Schema.bound(c#manufacturer) ::
+        Schema.bound(c#entryId) ::
         Nil
 
     // --------------------------------------------------------------- schema

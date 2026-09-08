@@ -6,6 +6,8 @@ mod Round.Summary {
 
     use Db.CarRow.CarRow
     use Db.Cars
+    use Db.Entries
+    use Db.Entries.EntryRow
     use Db.LapRow.LapRow
     use Db.Laps
     use Db.Rounds
@@ -89,15 +91,18 @@ mod Round.Summary {
     /// the laps', and is the order the grid keeps where no lap 1 reorders it.
     def carBuilds(entry: Entry, drivers: List[(String, String)]): List[CarBuild] \ DbRead =
         let car = carColumns();
+        let entered = entryColumns();
         let lap1 = lap1Columns();
         Sql.access(
                 Sql.frags(
-                    Sql.raw(Cars.table() + " c JOIN f ON") ::
+                    Sql.raw(Cars.table() + " c JOIN " + Entries.table() + " e ON") ::
+                    Sql.term(Sql.eq(Schema.expr(entered#entryId), Schema.expr(car#entryId))) ::
+                    Sql.raw("JOIN f ON") ::
                     Sql.term(Sql.eq(Sql.column("f.car_number"), Schema.expr(car#carNumber))) ::
                     Sql.raw("LEFT JOIN l1 ON") ::
                     Sql.term(Sql.eq(Schema.expr(lap1#carNumber), Schema.expr(car#carNumber))) :: Nil
                 ),
-                { car = car, lap1 = lap1 }
+                { car = car, entry = entered, lap1 = lap1 }
             )
             |> Sql.filter(t -> Rounds.scope(t#car#roundId, entry))
             |> Sql.using(Sql.frags(
@@ -116,10 +121,10 @@ mod Round.Summary {
             |> Sql.orderBy(Sql.raw("f.first_seen") :: Nil)
             |> Sql.map(t -> (
                 t#car#carNumber,
-                t#car#class,
-                t#car#carGroup,
-                t#car#team,
-                t#car#manufacturer,
+                t#entry#carClass,
+                t#entry#carGroup,
+                t#entry#team,
+                t#entry#manufacturer,
                 t#lap1#s1Ms,
                 Sql.orNull(t#lap1#elapsedMs)
             ))
@@ -130,19 +135,31 @@ mod Round.Summary {
     def carColumns(): {
         roundId = Column[CarRow, Int32],
         carNumber = Column[CarRow, String],
-        class = Column[CarRow, String],
-        carGroup = Column[CarRow, Option[String]],
-        team = Column[CarRow, String],
-        manufacturer = Column[CarRow, String]
+        entryId = Column[CarRow, Int32]
     } =
         let c = Cars.columns();
         {
-            roundId        = Schema.qualified("c", c#roundId),
-            carNumber      = Schema.qualified("c", c#carNumber),
-            class          = Schema.qualified("c", c#carClass),
-            carGroup       = Schema.qualified("c", c#carGroup),
-            team           = Schema.qualified("c", c#team),
-            manufacturer   = Schema.qualified("c", c#manufacturer)
+            roundId   = Schema.qualified("c", c#roundId),
+            carNumber = Schema.qualified("c", c#carNumber),
+            entryId   = Schema.qualified("c", c#entryId)
+        }
+
+    /// The season's entries under the name the join gives that side, which is
+    /// where a car's description is.
+    def entryColumns(): {
+        entryId = Column[EntryRow, Int32],
+        carClass = Column[EntryRow, String],
+        carGroup = Column[EntryRow, Option[String]],
+        team = Column[EntryRow, String],
+        manufacturer = Column[EntryRow, String]
+    } =
+        let e = Entries.columns();
+        {
+            entryId      = Schema.qualified("e", e#entryId),
+            carClass     = Schema.qualified("e", e#carClass),
+            carGroup     = Schema.qualified("e", e#carGroup),
+            team         = Schema.qualified("e", e#team),
+            manufacturer = Schema.qualified("e", e#manufacturer)
         }
 
     /// Each is a column of `laps`, so what it reads back as is the type the

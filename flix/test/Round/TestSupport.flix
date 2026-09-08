@@ -5,6 +5,7 @@ mod Round.TestSupport {
     use Db.CarDrivers
     use Db.Cars
     use Db.Drivers
+    use Db.Entries
     use Db.Laps
     use Db.Rounds
 
@@ -31,6 +32,7 @@ mod Round.TestSupport {
             let rounds = Rounds.create(entry :: Nil);
             Drivers.create();
             CarDrivers.create();
+            Entries.create();
             Cars.create();
             Laps.create();
             let roundId = match Rounds.idIn(rounds, entry) {
@@ -44,7 +46,13 @@ mod Round.TestSupport {
                 case Some(rows) => discard CarDrivers.insertRows(rows)
                 case None       => bug!("a seat the run just numbered has no id")
             };
-            if (withCars) discard Cars.insertRows(CarRow.fromRawLaps(roundId, laps)) else ();
+            let (entered, entries, _) =
+                Entries.add(Entries.noneNumbered(), entry#season, CarRow.firstMentions(laps));
+            discard Entries.insertRows(entries);
+            if (withCars) match CarRow.fromRawLaps(roundId, entry#season, entered, laps) {
+                case Some(cars) => discard Cars.insertRows(cars)
+                case None       => bug!("a car the run just numbered has no id")
+            } else ();
             discard Laps.insertRows(LapRow.fromRawLaps(roundId, laps));
             read()
         }));
