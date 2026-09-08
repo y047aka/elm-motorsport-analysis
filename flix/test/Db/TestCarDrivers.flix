@@ -86,19 +86,6 @@ mod Db.TestCarDrivers {
 
     // ------------------------------------------------------------ the schema
 
-    /// See `Db.TestLapRow`: `all` and `selection` are two orderings of the one
-    /// declaration, and no compiler sees them together.
-    @Test
-    def theReadingsNameTheColumnsTheLoadBound(): Unit \ Assert =
-        Assert.assertTrue(
-            Sql.toSql(Sql.clause(CarDrivers.selection()))
-                == ("SELECT " + List.join(", ", CarDrivers.columnNames()), Nil)
-        );
-        Assert.assertTrue(
-            Sql.toSql(Sql.clause(Drivers.selection()))
-                == ("SELECT " + List.join(", ", Drivers.columnNames()), Nil)
-        )
-
     @Test
     def theKeysNameColumnsTheTablesDeclare(): Unit \ Assert =
         Assert.assertTrue(

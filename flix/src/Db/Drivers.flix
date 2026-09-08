@@ -8,7 +8,6 @@ mod Db.Drivers {
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
-    use Sql.Sel
 
     pub def table(): String = "drivers"
 
@@ -41,9 +40,6 @@ mod Db.Drivers {
     pub def idIn(numbering: Numbering, name: String): Option[Int32] =
         Map.get(name, numbering)
 
-    pub def rows(): Sql.Rows[Columns] =
-        Sql.access(Sql.raw(table()), columns())
-
     pub def primaryKey(): List[Bound[DriverRow]] =
         Schema.bound(columns()#driverId) :: Nil
 
@@ -62,14 +58,8 @@ mod Db.Drivers {
         name = Schema.text("name", r -> r#name)
     }
 
-    pub def selection(): Sel[DriverRow] =
-        let c = columns();
-        Sql.record({})
-            |> Sql.field(c#driverId, (row, value) -> { +driverId = value | row })
-            |> Sql.field(c#name, (row, value) -> { +name = value | row })
-
     /// The order the table declares them in, and so the order the insert binds
-    /// them. This and `selection` are two orderings of the one declaration.
+    /// them.
     pub def all(): List[Bound[DriverRow]] =
         let c = columns();
         Schema.bound(c#driverId) :: Schema.bound(c#name) :: Nil

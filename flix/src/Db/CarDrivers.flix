@@ -9,14 +9,11 @@ mod Db.CarDrivers {
 
     use Db.Drivers
     use Db.Drivers.Numbering
-    use Db.Rounds
     use Db.Schema
     use Db.Schema.Bound
     use Db.Schema.Column
     use Db.Value
-    use Motorsport.Calendar.Entry
     use Motorsport.Wec.RawLap
-    use Sql.Sel
 
     pub def table(): String = "car_drivers"
 
@@ -31,10 +28,6 @@ mod Db.CarDrivers {
     pub def primaryKey(): List[Bound[CarDriverRow]] =
         let c = columns();
         Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Schema.bound(c#driverNumber) :: Nil
-
-    pub def rows(entry: Entry): Sql.Rows[Columns] =
-        Sql.access(Sql.raw(table()), columns())
-            |> Sql.filter(c -> Rounds.scope(Schema.qualified(table(), c#roundId), entry))
 
     // -------------------------------------------------------- the feed's side
 
@@ -128,16 +121,8 @@ mod Db.CarDrivers {
         driverId = Schema.integer("driver_id", r -> r#driverId)
     }
 
-    pub def selection(): Sel[CarDriverRow] =
-        let c = columns();
-        Sql.record({})
-            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
-            |> Sql.field(c#carNumber, (row, value) -> { +carNumber = value | row })
-            |> Sql.field(c#driverNumber, (row, value) -> { +driverNumber = value | row })
-            |> Sql.field(c#driverId, (row, value) -> { +driverId = value | row })
-
     /// The order the table declares them in, and so the order the insert binds
-    /// them. This and `selection` are two orderings of the one declaration.
+    /// them.
     pub def all(): List[Bound[CarDriverRow]] =
         let c = columns();
         Schema.bound(c#roundId) ::

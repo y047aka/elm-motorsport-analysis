@@ -13,7 +13,6 @@ mod Db.Rounds {
     use Db.Schema.Column
     use Db.Value
     use Motorsport.Calendar.Entry
-    use Sql.Sel
 
     pub def table(): String = "rounds"
 
@@ -27,9 +26,6 @@ mod Db.Rounds {
         roundKey = String,
         date = String
     }
-
-    pub def rows(): Sql.Rows[Columns] =
-        Sql.access(Sql.raw(table()), columns())
 
     pub def primaryKey(): List[Bound[RoundRow]] =
         Schema.bound(columns()#roundId) :: Nil
@@ -56,19 +52,8 @@ mod Db.Rounds {
         date = Schema.text("date", r -> r#date)
     }
 
-    pub def selection(): Sel[RoundRow] =
-        let c = columns();
-        Sql.record({})
-            |> Sql.field(c#roundId, (row, value) -> { +roundId = value | row })
-            |> Sql.field(c#season, (row, value) -> { +season = value | row })
-            |> Sql.field(c#roundKey, (row, value) -> { +roundKey = value | row })
-            |> Sql.field(c#date, (row, value) -> { +date = value | row })
-
     /// The order the table declares them in, and so the order the insert binds
     /// them.
-    ///
-    /// This and `selection` are two orderings of the one declaration, and no
-    /// compiler sees them together.
     pub def all(): List[Bound[RoundRow]] =
         let c = columns();
         Schema.bound(c#roundId) ::

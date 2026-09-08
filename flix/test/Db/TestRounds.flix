@@ -45,15 +45,6 @@ mod Db.TestRounds {
             case Nil => Assert.assertTrue(false)
         }
 
-    /// See `Db.TestLapRow`: `all` and `selection` are two orderings of the one
-    /// declaration, and no compiler sees them together.
-    @Test
-    def theReadingNamesTheColumnsTheLoadBound(): Unit \ Assert =
-        Assert.assertTrue(
-            Sql.toSql(Sql.clause(Rounds.selection()))
-                == ("SELECT " + List.join(", ", Rounds.columnNames()), Nil)
-        )
-
     /// The id is the key the other two tables carry; the pair is the one every
     /// reader has, and is what `idOf` looks the id up by.
     @Test
