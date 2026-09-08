@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 // It is also the only round with mini-sectors and the one with the most laps.
 const { round, laps: lapCap } = {
   round: "2025/le_mans_24h",
-  laps: 60,
+  laps: 10,
   ...Object.fromEntries(
     process.argv.slice(2).map((arg) => {
       const [key, value] = arg.replace(/^--/, "").split("=");
@@ -30,6 +30,12 @@ const summary = readFileSync(summarySource, "utf8");
 
 // The bound is on the lap number rather than on the cars: `assignPositions`
 // costs the laps times the cars, so a smaller field would be a different race.
+//
+// It is low because elm-benchmark runs a benchmark until it has a sample it
+// trusts, and a round of laps is far too much work per run to get one. What
+// the bound costs is the shape: `assignPositions` is quadratic in the laps and
+// a low bound hides it, so the question of how it grows is two runs at two
+// bounds rather than one run at any.
 const lines = readFileSync(lapsSource, "utf8").split("\n").filter((line) => line.length > 0);
 const kept = lines.filter((line) => JSON.parse(line).lapNumber <= lapCap);
 const jsonl = kept.join("\n") + "\n";
@@ -60,7 +66,12 @@ for (const [path, contents] of [[summarySource, summary], [lapsSource, jsonl]]) 
 
 const from = (path) => relative(resolve(here, "../.."), path);
 
-const elm = `module Fixture.Positions exposing (rawJsonl, rawJsonlBeforePosition, rawSummary)
+// Decoding is per line, so one is the whole of what the extra field costs and
+// the smallest thing that can be asked it.
+const [firstLine] = kept;
+const firstLineBeforePosition = firstLine.replace(/, "position": \d+ \}$/, " }");
+
+const elm = `module Fixture.Positions exposing (rawJsonl, rawJsonlBeforePosition, rawLap, rawLapBeforePosition, rawSummary)
 
 {-| Auto-generated from ${from(summarySource)} and the first ${lapCap} laps of
 ${from(lapsSource)}. Do not edit by hand. Run
@@ -85,11 +96,27 @@ is the one key the two differ by.
 rawJsonlBeforePosition : String
 rawJsonlBeforePosition =
     """${beforePosition}"""
+
+
+{-| One lap of the round, which is the unit decoding works in.
+-}
+rawLap : String
+rawLap =
+    """${firstLine}
+"""
+
+
+{-| The same lap without its position.
+-}
+rawLapBeforePosition : String
+rawLapBeforePosition =
+    """${firstLineBeforePosition}
+"""
 `;
 
 mkdirSync(dirname(target), { recursive: true });
 writeFileSync(target, elm);
 console.log(
-  `Wrote ${target}: ${kept.length.toLocaleString()} of ${lines.length.toLocaleString()} laps, ` +
-    `${(elm.length / 1e6).toFixed(1)}MB of Elm source`
+  `Wrote ${target}: ${kept.length.toLocaleString()} of ${lines.length.toLocaleString()} laps ` +
+    `(--laps=${lapCap}), ${(elm.length / 1e6).toFixed(1)}MB of Elm source`
 );

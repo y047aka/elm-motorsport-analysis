@@ -13,13 +13,21 @@ line of the JSONL, which is what the first comparison measures, and it saves
 module as it stood before, so the two sides are the code that actually ran
 rather than a sketch of it.
 
-The fixture is 2025's Le Mans, bounded by lap number: the whole field of
+Each is asked in the unit it works in, since a benchmark is run until its
+sample is trusted and a round of laps is too much work per run to reach one.
+Decoding is per line, so it is asked of one lap: the extra field costs what it
+costs there, and a round is that times the laps. Attaching is not -- it groups
+the round's laps and walks the field per lap number -- so it takes the fixture
+whole.
+
+That fixture is 2025's Le Mans bounded by lap number: the whole field of
 sixty-two cars, since `assignPositions` costs the laps times the cars and a
-smaller field would be a different race. `generate-position-fixture.mjs
---laps=N` is where that bound is, and running it at two of them is what says
-whether the cost is the shape it looks. It is a fixture of its own because
-`PerFrameBenchmark`'s is a whole round -- half distance means nothing in a
-bounded one.
+smaller field would be a different race. The bound is low enough to sample, so
+it is also low enough to hide the shape -- `assignPositions` grows with the
+square of the laps, and reading that off means running
+`generate-position-fixture.mjs --laps=N` at two of them rather than reading one
+number. It is a fixture of its own because `PerFrameBenchmark`'s is a whole
+round: half distance means nothing in a bounded one.
 
 -}
 
@@ -43,12 +51,12 @@ main =
 suite : Benchmark
 suite =
     describe "where the car stood as it crossed the line"
-        [ Benchmark.compare "decoding the round's laps"
+        [ Benchmark.compare "decoding one lap"
             "without a position"
-            (\_ -> Legacy.fromJsonl Fixture.rawJsonlBeforePosition)
+            (\_ -> Legacy.fromJsonl Fixture.rawLapBeforePosition)
             "with one"
-            (\_ -> Laps.fromJsonl Fixture.rawJsonl)
-        , Benchmark.compare "putting them on the cars"
+            (\_ -> Laps.fromJsonl Fixture.rawLap)
+        , Benchmark.compare "putting a round's laps on the cars"
             "counting the positions here"
             (\_ -> Legacy.attach legacyLaps grid)
             "reading them off the lap"
