@@ -180,8 +180,7 @@ mod Db.TestLapRow {
     @Test
     def theKeysNameColumnsTheTableDeclares(): Unit \ Assert =
         let declared = Db.Laps.columnNames();
-        let named = List.append(Laps.primaryKey(), Laps.sourceKey())
-            |> List.map(c -> c#name);
+        let named = Laps.primaryKey() |> List.map(c -> c#name);
         Assert.assertTrue(named |> List.forAll(name -> List.memberOf(name, declared)));
         Assert.assertTrue(
             String.contains({substr = "PRIMARY KEY (round_id, car_number, lap_number)"},
@@ -211,6 +210,13 @@ mod Db.TestLapRow {
         let ddl = Db.Laps.createTable();
         Assert.assertTrue(String.endsWith({suffix = ") WITHOUT ROWID"}, ddl));
         Assert.assertTrue(String.contains({substr = "PRIMARY KEY"}, ddl))
+
+    /// `source_row` is numbered by the reader rather than read from the feed,
+    /// one to n over the file's laps, so a round holds at most one lap at each
+    /// place with no key declared over it.
+    @Test
+    def theFilesOrderingIsIndexedByNothing(): Unit \ Assert =
+        Assert.assertTrue(not String.contains({substr = "UNIQUE"}, Db.Laps.createTable()))
 
     /// The reading names every column the load bound, and in that order:
     /// `Db.Laps.all` and `selection` are two orderings of the one declaration,

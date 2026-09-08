@@ -38,12 +38,6 @@ mod Db.Laps {
         let c = columns();
         Schema.bound(c#roundId) :: Schema.bound(c#carNumber) :: Schema.bound(c#lapNumber) :: Nil
 
-    /// The place the file listed a lap in, which a round has at most one lap
-    /// at.
-    pub def sourceKey(): List[Bound[LapRow]] =
-        let c = columns();
-        Schema.bound(c#roundId) :: Schema.bound(c#sourceRow) :: Nil
-
     // ---------------------------------------------------------- the columns
 
     /// What a projection picks from, and what every other view of the table
@@ -207,7 +201,7 @@ mod Db.Laps {
         Schema.createTable(table(), all(), computed(), keys(), storage())
 
     def keys(): List[Sql.Key[Bound[LapRow]]] =
-        Sql.Key.Primary(primaryKey()) :: Sql.Key.Unique(sourceKey()) :: Nil
+        Sql.Key.Primary(primaryKey()) :: Nil
 
     /// Nothing reaches a row of this table but through a key of it, so the
     /// rows are the primary key's tree rather than a second one under it.
