@@ -73,13 +73,21 @@ mod Motorsport.Timeline {
 
     /// A stop is read off the lap it ended on, so the lap carries when the car
     /// came out and how long it was in; when it went in is the difference.
+    ///
+    /// A stop longer than the race was old when it ended went in before the
+    /// start, which is not a moment of the race: the start stands in for it, as
+    /// `Motorsport.Instant.fromDuration` makes it on the Elm side. Written out,
+    /// a negative would be spelled in a way nothing reads back.
     def stops(rows: List[(String, Int32, Duration, Duration)]): List[Event] =
         rows |> List.flatMap(match (carNumber, lapNumber, elapsed, duration) ->
-            let entered = Util.Duration.fromMillis(
+            let entered = atOrAfterStart(
                 Util.Duration.millis(elapsed) - Util.Duration.millis(duration));
             { elapsed = entered, eventType = EventType.Of(carNumber, CarEvent.PitIn(lapNumber, duration)) } ::
             { elapsed = elapsed, eventType = EventType.Of(carNumber, CarEvent.PitOut(lapNumber, duration)) } ::
             Nil)
+
+    def atOrAfterStart(ms: Int32): Duration =
+        if (ms < 0) Util.Duration.zero() else Util.Duration.fromMillis(ms)
 
     /// A car still running when the race was scheduled to end took the flag;
     /// one whose last lap fell short of it retired. The rows say when each car

@@ -118,6 +118,15 @@ mod Round.TestTimeline {
         });
         Assert.assertTrue(stops == (4, "1:10.000") :: (4, "1:10.000") :: Nil)
 
+    /// A stop longer than the race was old when it ended went in before the
+    /// start, and the start is what it reads back as: a moment before the race
+    /// began is not one, and written out it would be a time nothing parses.
+    @Test
+    def aStopReachingBackPastTheStartBeginsAtIt(): Unit \ {Assert, IO} =
+        let events = timelineOf("1:00:00.000",
+            pitLap("7", 1, "1:00.000", "1:10.000") :: Nil);
+        Assert.assertTrue(named("pitIn", events) == ("0.000", "pitIn", "7") :: Nil)
+
     /// A lap the car did not stop on is not a stop.
     @Test
     def aLapWithNoPitTimeIsNoStop(): Unit \ {Assert, IO} =

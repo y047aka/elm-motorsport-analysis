@@ -41,8 +41,8 @@ beside it read the same race at an instant, and are
 counter's ceiling and `lapCountAt` can never disagree about how long the race
 was.
 
-`timelineEvents` arrives with the round's summary, from `Round.Timeline`, as
-`lapCompletions` and `bestTimeChanges` do.
+`timelineEvents` arrives in a file of its own, from `Round.Timeline`; the two
+indices come with the round's summary.
 
 `timeLimit` is when the race was scheduled to end, and the one thing here the
 laps do not say -- it only looks as though they do, being a whole-hour estimate
